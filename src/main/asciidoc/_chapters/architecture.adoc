@@ -260,6 +260,92 @@ For region name, we only accept `byte[]` as the parameter type and it may be a f
 
 Information on non-Java clients and custom protocols is covered in <<external_apis>>
 
+[[client.masterregistry]]
+=== Master Registry (new as of 2.3.0)
+
+Client internally works with a _connection registry_ to fetch the metadata needed by connections.
+This connection registry implementation is responsible for fetching the following metadata.
+
+* Active master address
+* Current meta region(s) locations
+* Cluster ID (unique to this cluster)
+
+This information is needed as a part of various client operations like connection set up, scans,
+gets, etc. Traditionally, the connection registry implementation has been based on ZooKeeper as the
+source of truth and clients fetched the metadata directly from the ZooKeeper quorum. HBase 2.3.0
+introduces a new connection registry implementation based on direct communication with the Masters.
+With this implementation, clients now fetch required metadata via master RPC end points instead of
+maintaining connections to ZooKeeper. This change was done for the following reasons.
+
+* Reduce load on ZooKeeper since that is critical for cluster operation.
+* Holistic client timeout and retry configurations since the new registry brings all the client
+operations under HBase rpc framework.
+* Remove the ZooKeeper client dependency on HBase client library.
+
+This means:
+
+* At least a single active or stand by master is needed for cluster connection setup. Refer to
+<<master.runtime>> for more details.
+* Master can be in a critical path of read/write operations, especially if the client metadata cache
+is empty or stale.
+* There is higher connection load on the masters that before since the clients talk directly to
+HMasters instead of ZooKeeper ensemble`
+
+To reduce hot-spotting on a single master, all the masters (active & stand-by) expose the needed
+service to fetch the connection metadata. This lets the client connect to any master (not just active).
+
+Both ZooKeeper- and Master-based connection registry implementations are available in 2.3+. For
+2.3 and earlier, the ZooKeeper-based implementation remains the default configuration.
+The Master-based implementation becomes the default in 3.0.0.
+
+Change the connection registry implementation by updating the value configured for
+`hbase.client.registry.impl`. To explicitly enable the ZooKeeper-based registry, use
+
+[source, xml]
+<property>
+    <name>hbase.client.registry.impl</name>
+    <value>org.apache.hadoop.hbase.client.ZKConnectionRegistry</value>
+ </property>
+
+To explicitly enable the Master-based registry, use
+
+[source, xml]
+<property>
+    <name>hbase.client.registry.impl</name>
+    <value>org.apache.hadoop.hbase.client.MasterRegistry</value>
+ </property>
+
+==== MasterRegistry RPC hedging
+
+MasterRegistry implements hedging of connection registry RPCs across active and stand-by masters.
+This lets the client make the same request to multiple servers and which ever responds first is
+returned back to the client immediately. This improves performance, especially when a subset of
+servers are under load. The hedging fan out size is configurable, meaning the number of requests
+that are hedged in a single attempt, using the configuration key
+_hbase.client.master_registry.hedged.fanout_ in the client configuration. It defaults to 2. With
+this default, the RPCs are tried in batches of 2. The hedging policy is still primitive and does not
+adapt to any sort of live rpc performance metrics.
+
+==== Additional Notes
+
+* Clients hedge the requests in a randomized order to avoid hot-spotting a single master.
+* Cluster internal connections (masters &lt;-&gt; regionservers) still use ZooKeeper based connection
+registry.
+* Inter cluster replication still uses ZooKeeper based connection registry to simplify configuration
+management.
+
+For more implementation details, please refer to the https://github.com/apache/hbase/tree/master/dev-support/design-docs[design doc] and
+https://issues.apache.org/jira/browse/HBASE-18095[HBASE-18095].
+
+'''
+NOTE: (Advanced) In case of any issues with the master based registry, use the following
+configuration to fallback to the ZooKeeper based connection registry implementation.
+[source, xml]
+<property>
+    <name>hbase.client.registry.impl</name>
+    <value>org.apache.hadoop.hbase.client.ZKConnectionRegistry</value>
+ </property>
+
 [[client.filter]]
 == Client Request Filters
 
