@@ -50,6 +50,8 @@ public class FsDelegationToken {
   private boolean hasForwardedToken = false;
   private Token<?> userToken = null;
   private FileSystem fs = null;
+  private long tokenExpireTime = -1L;
+  private long renewAheadTime = Long.MAX_VALUE;
 
   /*
    * @param renewer the account name that is allowed to renew the token.
@@ -57,6 +59,17 @@ public class FsDelegationToken {
   public FsDelegationToken(final UserProvider userProvider, final String renewer) {
     this.userProvider = userProvider;
     this.renewer = renewer;
+  }
+
+  /**
+   * @param renewer the account name that is allowed to renew the token.
+   * @param renewAheadTime how long in millis
+   */
+  public FsDelegationToken(final UserProvider userProvider, final String renewer,
+    long renewAheadTime) {
+    this.userProvider = userProvider;
+    this.renewer = renewer;
+    this.renewAheadTime = renewAheadTime;
   }
 
   /**
@@ -100,13 +113,20 @@ public class FsDelegationToken {
     if (userProvider.isHadoopSecurityEnabled()) {
       this.fs = fs;
       userToken = userProvider.getCurrent().getToken(tokenKind, fs.getCanonicalServiceName());
-      if (userToken == null) {
+      //We should acquire token when never acquired before or token is expiring or already expired
+      if (userToken == null || tokenExpireTime <= 0
+        || System.currentTimeMillis() > tokenExpireTime - renewAheadTime) {
         hasForwardedToken = false;
         try {
           userToken = fs.getDelegationToken(renewer);
-        } catch (NullPointerException npe) {
+          //After acquired the new token,we quickly renew it to get the token expiration
+          //time to confirm to renew it before expiration
+          tokenExpireTime = userToken.renew(fs.getConf());
+          LOG.debug("Acquired new token " + userToken + ". Expiration time: " + tokenExpireTime);
+          userProvider.getCurrent().addToken(userToken);
+        } catch (InterruptedException | NullPointerException e) {
           // we need to handle NullPointerException in case HADOOP-10009 is missing
-          LOG.error("Failed to get token for " + renewer);
+          LOG.error("Failed to get token for " + renewer, e);
         }
       } else {
         hasForwardedToken = true;
