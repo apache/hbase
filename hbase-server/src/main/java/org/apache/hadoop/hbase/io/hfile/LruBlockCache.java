@@ -1015,6 +1015,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
     @Override
     public void run() {
+      enteringRun = true;
       long freedSumMb = 0;
       int heavyEvictionCount = 0;
       int freedDataOverheadPercent = 0;
