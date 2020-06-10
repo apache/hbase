@@ -294,7 +294,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 </tr>
                 <tr>
                     <td>ZooKeeper Client Version</td>
-                    <td><% org.apache.zookeeper.Version.getVersion() %>, revision=<% org.apache.zookeeper.Version.getRevision() %></td>
+                    <td><% org.apache.zookeeper.Version.getVersion() %></td>
                     <td>ZooKeeper client version and revision</td>
                 </tr>
                 <tr>
