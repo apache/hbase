@@ -235,12 +235,19 @@ public class RSProcedureDispatcher
     private int numberOfAttemptsSoFar = 0;
     private long maxWaitTime = -1;
 
+    private final long rsRpcRetryInterval;
+    private static final String RS_RPC_RETRY_INTERVAL_CONF_KEY =
+        "hbase.regionserver.rpc.retry.interval";
+    private static final int DEFAULT_RS_RPC_RETRY_INTERVAL = 100;
+
     private ExecuteProceduresRequest.Builder request = null;
 
     public ExecuteProceduresRemoteCall(final ServerName serverName,
         final Set<RemoteProcedure> remoteProcedures) {
       this.serverName = serverName;
       this.remoteProcedures = remoteProcedures;
+      this.rsRpcRetryInterval = master.getConfiguration().getLong(RS_RPC_RETRY_INTERVAL_CONF_KEY,
+        DEFAULT_RS_RPC_RETRY_INTERVAL);
     }
 
     private AdminService.BlockingInterface getRsAdmin() throws IOException {
@@ -265,8 +272,8 @@ public class RSProcedureDispatcher
           LOG.warn("Waiting a little before retrying {}, try={}, can wait up to {}ms",
             serverName, numberOfAttemptsSoFar, remainingTime);
           numberOfAttemptsSoFar++;
-          // Retry every 100ms up to maximum wait time.
-          submitTask(this, 100, TimeUnit.MILLISECONDS);
+          // Retry every rsRpcRetryInterval millis up to maximum wait time.
+          submitTask(this, rsRpcRetryInterval, TimeUnit.MILLISECONDS);
           return true;
         }
         LOG.warn("{} is throwing ServerNotRunningYetException for {}ms; trying another server",
@@ -311,10 +318,12 @@ public class RSProcedureDispatcher
       numberOfAttemptsSoFar++;
       // Add some backoff here as the attempts rise otherwise if a stuck condition, will fill logs
       // with failed attempts. None of our backoff classes -- RetryCounter or ClientBackoffPolicy
-      // -- fit here nicely so just do something simple; increment by 100ms * retry^2 on each try
+      // -- fit here nicely so just do something simple; increment by rsRpcRetryInterval millis *
+      // retry^2 on each try
       // up to max of 10 seconds (don't want to back off too much in case of situation change).
       submitTask(this,
-        Math.min(100 * (this.numberOfAttemptsSoFar * this.numberOfAttemptsSoFar), 10 * 1000),
+        Math.min(rsRpcRetryInterval * (this.numberOfAttemptsSoFar * this.numberOfAttemptsSoFar),
+          10 * 1000),
         TimeUnit.MILLISECONDS);
       return true;
     }
