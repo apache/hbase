@@ -363,16 +363,16 @@ public class SyncTable extends Configured implements Tool {
         boolean rowMatched;
         int rowComparison = compareRowKeys(nextSourceRow, nextTargetRow);
         if (rowComparison < 0) {
-          if (LOG.isInfoEnabled()) {
-            LOG.info("Target missing row: " + Bytes.toHex(nextSourceRow));
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Target missing row: " + Bytes.toString(nextSourceRow));
           }
           context.getCounter(Counter.TARGETMISSINGROWS).increment(1);
 
           rowMatched = syncRowCells(context, nextSourceRow, sourceCells, EMPTY_CELL_SCANNER);
           nextSourceRow = sourceCells.nextRow();  // advance only source to next row
         } else if (rowComparison > 0) {
-          if (LOG.isInfoEnabled()) {
-            LOG.info("Source missing row: " + Bytes.toHex(nextTargetRow));
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Source missing row: " + Bytes.toString(nextTargetRow));
           }
           context.getCounter(Counter.SOURCEMISSINGROWS).increment(1);
 
@@ -557,10 +557,10 @@ public class SyncTable extends Configured implements Tool {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Different values: ");
               LOG.debug("  source cell: " + sourceCell
-                  + " value: " + Bytes.toHex(sourceCell.getValueArray(),
+                  + " value: " + Bytes.toString(sourceCell.getValueArray(),
                       sourceCell.getValueOffset(), sourceCell.getValueLength()));
               LOG.debug("  target cell: " + targetCell
-                  + " value: " + Bytes.toHex(targetCell.getValueArray(),
+                  + " value: " + Bytes.toString(targetCell.getValueArray(),
                       targetCell.getValueOffset(), targetCell.getValueLength()));
             }
             context.getCounter(Counter.DIFFERENTCELLVALUES).increment(1);
