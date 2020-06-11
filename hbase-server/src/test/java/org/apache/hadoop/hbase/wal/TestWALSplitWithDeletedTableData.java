@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
@@ -47,7 +49,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({RegionServerTests.class, LargeTests.class})
 public class TestWALSplitWithDeletedTableData {
 
   @ClassRule
@@ -93,10 +95,10 @@ public class TestWALSplitWithDeletedTableData {
     Path tableDir = CommonFSUtils.getWALTableDir(TEST_UTIL.getConfiguration(), t1);
     // Dropping table 't1' removed the table directory from the WAL FS completely
     assertFalse(TEST_UTIL.getDFSCluster().getFileSystem().exists(tableDir));
-    HRegionServer rs1 = cluster.getRegionServer(1);
+    ServerName rs1 = cluster.getRegionServer(1).getServerName();
     // Kill one RS and wait for the WAL split and replay be over.
-    rs1.kill();
-    cluster.waitForRegionServerToStop(rs1.getServerName(), 60 * 1000);
+    cluster.killRegionServer(rs1);
+    cluster.waitForRegionServerToStop(rs1, 60 * 1000);
     assertEquals(1, cluster.getNumLiveRegionServers());
     Thread.sleep(1 * 1000);
     TEST_UTIL.waitUntilNoRegionsInTransition(60 * 1000);
