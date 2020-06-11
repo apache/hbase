@@ -1059,7 +1059,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
           // how to change percent of caching blocks.
           freedDataOverheadPercent =
             (int) (freedSumMb * 100 / cache.heavyEvictionMbSizeLimit) - 100;
-          if (freedDataOverheadPercent > 0) {
+          if (freedSumMb > cache.heavyEvictionMbSizeLimit) {
             // Now we are in the situation when we are above the limit
             // But maybe we are going to ignore it because it will end quite soon
             heavyEvictionCount++;
