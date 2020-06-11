@@ -58,7 +58,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
    * @return a writer that wraps a {@link WALProvider.Writer} and its Path. Caller should close.
    */
   protected RecoveredEditsWriter createRecoveredEditsWriter(TableName tableName, byte[] region,
-      long seqId, MonitoredTask status) throws IOException {
+      long seqId) throws IOException {
     Path regionEditsPath = getRegionSplitEditsPath(tableName, region, seqId,
       walSplitter.getFileBeingSplit().getPath().getName(), walSplitter.getTmpDirName(),
       walSplitter.conf);
@@ -73,16 +73,22 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
     WALProvider.Writer w = walSplitter.createWriter(regionEditsPath);
     final String msg = "Creating recovered edits writer path=" + regionEditsPath;
     LOG.info(msg);
-    status.setStatus(msg);
+    if (status != null) {
+      status.setStatus(msg);
+    }
     return new RecoveredEditsWriter(region, regionEditsPath, w, seqId);
   }
 
   protected Path closeRecoveredEditsWriter(RecoveredEditsWriter editsWriter,
-      List<IOException> thrown, MonitoredTask status) throws IOException {
+      List<IOException> thrown) throws IOException {
     try {
       editsWriter.writer.close();
     } catch (IOException ioe) {
-      LOG.error("Could not close recovered edits at {}", editsWriter.path, ioe);
+      final String errorMsg = "Could not close recovered edits at " + editsWriter.path;
+      LOG.error(errorMsg, ioe);
+      if (status != null) {
+        status.setStatus(errorMsg);
+      }
       thrown.add(ioe);
       return null;
     }
@@ -90,12 +96,18 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       + editsWriter.editsWritten + " edits, skipped " + editsWriter.editsSkipped + " edits in " + (
       editsWriter.nanosSpent / 1000 / 1000) + " ms)";
     LOG.info(msg);
-    status.setStatus(msg);
+    if (status != null) {
+      status.setStatus(msg);
+    }
     if (editsWriter.editsWritten == 0) {
       // just remove the empty recovered.edits file
-      if (walSplitter.walFS.exists(editsWriter.path) &&
-        !walSplitter.walFS.delete(editsWriter.path, false)) {
-        LOG.warn("Failed deleting empty {}", editsWriter.path);
+      if (walSplitter.walFS.exists(editsWriter.path)
+          && !walSplitter.walFS.delete(editsWriter.path, false)) {
+        final String errorMsg = "Failed deleting empty " + editsWriter.path;
+        LOG.warn(errorMsg);
+        if (status != null) {
+          status.setStatus(errorMsg);
+        }
         throw new IOException("Failed deleting empty  " + editsWriter.path);
       }
       return null;
@@ -112,15 +124,26 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       // TestHLogSplit#testThreading is an example.
       if (walSplitter.walFS.exists(editsWriter.path)) {
         if (!walSplitter.walFS.rename(editsWriter.path, dst)) {
-          throw new IOException(
-            "Failed renaming recovered edits " + editsWriter.path + " to " + dst);
+          final String errorMsg =
+            "Failed renaming recovered edits " + editsWriter.path + " to " + dst;
+          if (status != null) {
+            status.setStatus(errorMsg);
+          }
+          throw new IOException(errorMsg);
         }
         final String renameEditMsg = "Rename recovered edits " + editsWriter.path + " to " + dst;
         LOG.info(renameEditMsg);
-        status.setStatus(renameEditMsg);
+        if (status != null) {
+          status.setStatus(renameEditMsg);
+        }
       }
     } catch (IOException ioe) {
-      LOG.error("Could not rename recovered edits {} to {}", editsWriter.path, dst, ioe);
+      final String errorMsg = "Could not rename recovered edits " + editsWriter.path
+        + " to " + dst;
+      LOG.error(errorMsg, ioe);
+      if (status != null) {
+        status.setStatus(errorMsg);
+      }
       thrown.add(ioe);
       return null;
     }

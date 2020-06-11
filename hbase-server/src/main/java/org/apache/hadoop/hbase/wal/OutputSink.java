@@ -123,7 +123,9 @@ abstract class OutputSink {
     controller.checkForErrors();
     final String msg = this.writerThreads.size() + " split writer threads finished";
     LOG.info(msg);
-    status.setStatus(msg);
+    if (status != null) {
+      status.setStatus(msg);
+    }
     return (!progressFailed);
   }
 

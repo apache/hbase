@@ -129,7 +129,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     try {
       isSuccessful = finishWriterThreads();
     } finally {
-      isSuccessful &= writeRemainingEntryBuffers(status);
+      isSuccessful &= writeRemainingEntryBuffers();
     }
     return isSuccessful ? splits : null;
   }
@@ -137,10 +137,9 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   /**
    * Write out the remaining RegionEntryBuffers and close the writers.
    *
-   * @param status MonitoredTask instance to capture WAL splitting
    * @return true when there is no error.
    */
-  private boolean writeRemainingEntryBuffers(MonitoredTask status) throws IOException {
+  private boolean writeRemainingEntryBuffers() throws IOException {
     for (EntryBuffers.RegionEntryBuffer buffer : entryBuffers.buffers.values()) {
       closeCompletionService.submit(() -> {
         append(buffer);

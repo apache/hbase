@@ -62,7 +62,7 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
     }
     RecoveredEditsWriter writer =
       getRecoveredEditsWriter(buffer.tableName, buffer.encodedRegionName,
-        entries.get(0).getKey().getSequenceId(), status);
+        entries.get(0).getKey().getSequenceId());
     if (writer != null) {
       writer.writeRegionEntries(entries);
     }
@@ -74,12 +74,12 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
    * @return null if this region shouldn't output any logs
    */
   private RecoveredEditsWriter getRecoveredEditsWriter(TableName tableName, byte[] region,
-      long seqId, MonitoredTask status) throws IOException {
+      long seqId) throws IOException {
     RecoveredEditsWriter ret = writers.get(Bytes.toString(region));
     if (ret != null) {
       return ret;
     }
-    ret = createRecoveredEditsWriter(tableName, region, seqId, status);
+    ret = createRecoveredEditsWriter(tableName, region, seqId);
     if (ret == null) {
       return null;
     }
@@ -93,7 +93,7 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
     try {
       isSuccessful = finishWriterThreads();
     } finally {
-      isSuccessful &= closeWriters(status);
+      isSuccessful &= closeWriters();
     }
     return isSuccessful ? splits : null;
   }
@@ -101,14 +101,13 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   /**
    * Close all of the output streams.
    *
-   * @param status MonitoredTask instance to capture WAL splitting
    * @return true when there is no error.
    */
-  private boolean closeWriters(MonitoredTask status) throws IOException {
+  private boolean closeWriters() throws IOException {
     List<IOException> thrown = Lists.newArrayList();
     for (RecoveredEditsWriter writer : writers.values()) {
       closeCompletionService.submit(() -> {
-        Path dst = closeRecoveredEditsWriter(writer, thrown, status);
+        Path dst = closeRecoveredEditsWriter(writer, thrown);
         splits.add(dst);
         return null;
       });

@@ -68,14 +68,14 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
     // The key point is create a new writer, write edits then close writer.
     RecoveredEditsWriter writer =
       createRecoveredEditsWriter(buffer.tableName, buffer.encodedRegionName,
-        entries.get(0).getKey().getSequenceId(), this.status);
+        entries.get(0).getKey().getSequenceId());
     if (writer != null) {
       openingWritersNum.incrementAndGet();
       writer.writeRegionEntries(entries);
       regionEditsWrittenMap.compute(Bytes.toString(buffer.encodedRegionName),
         (k, v) -> v == null ? writer.editsWritten : v + writer.editsWritten);
       List<IOException> thrown = new ArrayList<>();
-      Path dst = closeRecoveredEditsWriter(writer, thrown, status);
+      Path dst = closeRecoveredEditsWriter(writer, thrown);
       splits.add(dst);
       openingWritersNum.decrementAndGet();
       if (!thrown.isEmpty()) {
@@ -90,7 +90,7 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
     try {
       isSuccessful = finishWriterThreads();
     } finally {
-      isSuccessful &= writeRemainingEntryBuffers(status);
+      isSuccessful &= writeRemainingEntryBuffers();
     }
     return isSuccessful ? splits : null;
   }
@@ -98,10 +98,9 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   /**
    * Write out the remaining RegionEntryBuffers and close the writers.
    *
-   * @param status MonitoredTask instance to capture WAL splitting
    * @return true when there is no error.
    */
-  private boolean writeRemainingEntryBuffers(MonitoredTask status) throws IOException {
+  private boolean writeRemainingEntryBuffers() throws IOException {
     for (EntryBuffers.RegionEntryBuffer buffer : entryBuffers.buffers.values()) {
       closeCompletionService.submit(() -> {
         append(buffer);
