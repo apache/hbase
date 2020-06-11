@@ -427,6 +427,19 @@ public abstract class CommonFSUtils {
   }
 
   /**
+   * Returns the {@link org.apache.hadoop.fs.Path} object representing the region
+   * directory under path rootdir
+   *
+   * @param rootdir    qualified path of HBase root directory
+   * @param tableName  name of table
+   * @param regionName The encoded region name
+   * @return {@link org.apache.hadoop.fs.Path} for region
+   */
+  public static Path getRegionDir(Path rootdir, TableName tableName, String regionName) {
+    return new Path(getTableDir(rootdir, tableName), regionName);
+  }
+
+  /**
    * Returns the {@link org.apache.hadoop.hbase.TableName} object representing
    * the table directory under
    * path rootdir
