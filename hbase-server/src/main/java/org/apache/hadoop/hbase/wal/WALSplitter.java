@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -284,22 +285,33 @@ public class WALSplitter {
         String encodedRegionNameAsStr = Bytes.toString(region);
         lastFlushedSequenceId = lastFlushedSequenceIds.get(encodedRegionNameAsStr);
         if (lastFlushedSequenceId == null) {
-          if (sequenceIdChecker != null) {
-            RegionStoreSequenceIds ids = sequenceIdChecker.getLastSequenceId(region);
-            Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-            for (StoreSequenceId storeSeqId : ids.getStoreSequenceIdList()) {
-              maxSeqIdInStores.put(storeSeqId.getFamilyName().toByteArray(),
-                storeSeqId.getSequenceId());
+          if (!(isRegionDirPresentUnderRoot(entry.getKey().getTableName(), encodedRegionNameAsStr))) {
+            // The region directory itself is not present in the FS. This indicates that
+            // the region/table is already removed. We can just skip all the edits for this
+            // region. Setting lastFlushedSequenceId as Long.MAX_VALUE so that all edits
+            // will get skipped by the seqId check below.
+            // See more details at https://issues.apache.org/jira/browse/HBASE-24189
+            LOG.info("{} no longer available in the FS. Skipping all edits for this region.",
+                encodedRegionNameAsStr);
+            lastFlushedSequenceId = Long.MAX_VALUE;
+          } else {
+            if (sequenceIdChecker != null) {
+              RegionStoreSequenceIds ids = sequenceIdChecker.getLastSequenceId(region);
+              Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+              for (StoreSequenceId storeSeqId : ids.getStoreSequenceIdList()) {
+                maxSeqIdInStores.put(storeSeqId.getFamilyName().toByteArray(),
+                    storeSeqId.getSequenceId());
+              }
+              regionMaxSeqIdInStores.put(encodedRegionNameAsStr, maxSeqIdInStores);
+              lastFlushedSequenceId = ids.getLastFlushedSequenceId();
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("DLS Last flushed sequenceid for " + encodedRegionNameAsStr + ": "
+                    + TextFormat.shortDebugString(ids));
+              }
             }
-            regionMaxSeqIdInStores.put(encodedRegionNameAsStr, maxSeqIdInStores);
-            lastFlushedSequenceId = ids.getLastFlushedSequenceId();
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("DLS Last flushed sequenceid for " + encodedRegionNameAsStr + ": " +
-                  TextFormat.shortDebugString(ids));
+            if (lastFlushedSequenceId == null) {
+              lastFlushedSequenceId = -1L;
             }
-          }
-          if (lastFlushedSequenceId == null) {
-            lastFlushedSequenceId = -1L;
           }
           lastFlushedSequenceIds.put(encodedRegionNameAsStr, lastFlushedSequenceId);
         }
@@ -374,6 +386,12 @@ public class WALSplitter {
       }
     }
     return !progressFailed;
+  }
+
+  private boolean isRegionDirPresentUnderRoot(TableName tableName, String regionName)
+      throws IOException {
+    Path regionDirPath = CommonFSUtils.getRegionDir(this.rootDir, tableName, regionName);
+    return this.rootFS.exists(regionDirPath);
   }
 
   /**
