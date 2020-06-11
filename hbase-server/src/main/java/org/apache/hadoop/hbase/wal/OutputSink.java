@@ -59,7 +59,7 @@ abstract class OutputSink {
 
   protected final List<Path> splits = new ArrayList<>();
 
-  private MonitoredTask status = null;
+  protected MonitoredTask status = null;
 
   /**
    * Used when close this output sink.
@@ -138,13 +138,11 @@ abstract class OutputSink {
 
   /**
    * @param buffer A buffer of some number of edits for a given region.
-   * @param status MonitoredTask instance to capture WAL splitting
    * @throws IOException For any IO errors
    */
-  abstract void append(EntryBuffers.RegionEntryBuffer buffer, MonitoredTask status)
-    throws IOException;
+  abstract void append(EntryBuffers.RegionEntryBuffer buffer) throws IOException;
 
-  abstract List<Path> close(MonitoredTask status) throws IOException;
+  abstract List<Path> close() throws IOException;
 
   /**
    * @return a map from encoded region ID to the number of edits written out for that region.
@@ -220,7 +218,7 @@ abstract class OutputSink {
     }
 
     private void writeBuffer(EntryBuffers.RegionEntryBuffer buffer) throws IOException {
-      outputSink.append(buffer, status);
+      outputSink.append(buffer);
     }
 
     private void finish() {

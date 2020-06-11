@@ -77,7 +77,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   }
 
   @Override
-  void append(RegionEntryBuffer buffer, MonitoredTask status) throws IOException {
+  void append(RegionEntryBuffer buffer) throws IOException {
     Map<String, CellSet> familyCells = new HashMap<>();
     Map<String, Long> familySeqIds = new HashMap<>();
     boolean isMetaTable = buffer.tableName.equals(META_TABLE_NAME);
@@ -124,7 +124,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   }
 
   @Override
-  public List<Path> close(MonitoredTask status) throws IOException {
+  public List<Path> close() throws IOException {
     boolean isSuccessful = true;
     try {
       isSuccessful = finishWriterThreads();
@@ -143,7 +143,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   private boolean writeRemainingEntryBuffers(MonitoredTask status) throws IOException {
     for (EntryBuffers.RegionEntryBuffer buffer : entryBuffers.buffers.values()) {
       closeCompletionService.submit(() -> {
-        append(buffer, status);
+        append(buffer);
         return null;
       });
     }

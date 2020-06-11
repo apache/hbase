@@ -364,7 +364,7 @@ public class WALSplitter {
           // Set progress_failed to true as the immediate following statement will reset its value
           // when close() throws exception, progress_failed has the right value
           progressFailed = true;
-          progressFailed = outputSink.close(status) == null;
+          progressFailed = outputSink.close() == null;
         }
       } finally {
         long processCost = EnvironmentEdgeManager.currentTime() - startTS;

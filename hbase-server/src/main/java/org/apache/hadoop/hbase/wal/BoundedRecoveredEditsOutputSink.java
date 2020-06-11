@@ -58,7 +58,7 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public void append(EntryBuffers.RegionEntryBuffer buffer, MonitoredTask status)
+  public void append(EntryBuffers.RegionEntryBuffer buffer)
       throws IOException {
     List<WAL.Entry> entries = buffer.entryBuffer;
     if (entries.isEmpty()) {
@@ -68,7 +68,7 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
     // The key point is create a new writer, write edits then close writer.
     RecoveredEditsWriter writer =
       createRecoveredEditsWriter(buffer.tableName, buffer.encodedRegionName,
-        entries.get(0).getKey().getSequenceId(), status);
+        entries.get(0).getKey().getSequenceId(), this.status);
     if (writer != null) {
       openingWritersNum.incrementAndGet();
       writer.writeRegionEntries(entries);
@@ -85,7 +85,7 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public List<Path> close(MonitoredTask status) throws IOException {
+  public List<Path> close() throws IOException {
     boolean isSuccessful = true;
     try {
       isSuccessful = finishWriterThreads();
@@ -104,7 +104,7 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   private boolean writeRemainingEntryBuffers(MonitoredTask status) throws IOException {
     for (EntryBuffers.RegionEntryBuffer buffer : entryBuffers.buffers.values()) {
       closeCompletionService.submit(() -> {
-        append(buffer, status);
+        append(buffer);
         return null;
       });
     }

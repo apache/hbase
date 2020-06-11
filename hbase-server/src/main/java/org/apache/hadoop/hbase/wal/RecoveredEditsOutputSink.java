@@ -53,7 +53,7 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public void append(EntryBuffers.RegionEntryBuffer buffer, MonitoredTask status)
+  public void append(EntryBuffers.RegionEntryBuffer buffer)
       throws IOException {
     List<WAL.Entry> entries = buffer.entryBuffer;
     if (entries.isEmpty()) {
@@ -88,7 +88,7 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public List<Path> close(MonitoredTask status) throws IOException {
+  public List<Path> close() throws IOException {
     boolean isSuccessful = true;
     try {
       isSuccessful = finishWriterThreads();
