@@ -1723,8 +1723,13 @@ public class HMaster extends HRegionServer implements MasterServices {
     return true;
   }
 
+  /**
+   * Execute region plans with throttling
+   * @param plans to execute
+   * @return succeeded plans
+   */
   public List<RegionPlan> executeRegionPlansWithThrottling(List<RegionPlan> plans) {
-    List<RegionPlan> sucRPs = new ArrayList<>();
+    List<RegionPlan> successRegionPlans = new ArrayList<>();
     int maxRegionsInTransition = getMaxRegionsInTransition();
     long balanceStartTime = System.currentTimeMillis();
     long cutoffTime = balanceStartTime + this.maxBlancingTime;
@@ -1747,6 +1752,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
         //rpCount records balance plans processed, does not care if a plan succeeds
         rpCount++;
+        successRegionPlans.add(plan);
 
         if (this.maxBlancingTime > 0) {
           balanceThrottling(balanceStartTime + rpCount * balanceInterval, maxRegionsInTransition,
@@ -1764,7 +1770,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
     }
-    return sucRPs;
+    return successRegionPlans;
   }
 
   @Override
