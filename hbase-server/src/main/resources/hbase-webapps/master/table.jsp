@@ -318,7 +318,7 @@ if (fqtn != null && master.isInitialized()) {
         </tbody>
       </table>
     </div>
-    <div class="tab-pane active" id="metaTab_localityStats">
+    <div class="tab-pane" id="metaTab_localityStats">
        <table id="tableRegionTable" class="tablesorter table table-striped">
          <thead>
            <tr>
@@ -954,7 +954,7 @@ if (fqtn != null && master.isInitialized()) {
         here</a> to see all regions.</p>
       <% } %>
     </div>
-    <div class="tab-pane active" id="tab_localityStats">
+    <div class="tab-pane" id="tab_localityStats">
       <table id="regionServerDetailsTable" class="tablesorter table table-striped">
         <thead>
           <tr>
