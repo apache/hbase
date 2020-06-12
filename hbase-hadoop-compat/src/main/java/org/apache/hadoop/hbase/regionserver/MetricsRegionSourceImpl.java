@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -310,12 +309,12 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
               regionNamePrefix + MetricsRegionSource.MAX_FLUSH_QUEUE_SIZE,
               MetricsRegionSource.MAX_FLUSH_QUEUE_DESC),
           this.regionWrapper.getMaxFlushQueueSize());
-      addCounter(mrb, this.regionWrapper.getMemstoreOnlyReadRequestsCount(),
-        MetricsRegionSource.READ_REQUEST_ONLY_ON_MEMSTORE,
-        MetricsRegionSource.READ_REQUEST_ONLY_ON_MEMSTORE_DESC);
-      addCounter(mrb, this.regionWrapper.getMixedReadRequestsCount(),
-        MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE,
-        MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE_DESC);
+      addCounter(mrb, this.regionWrapper.getMemstoreOnlyRowReadsCount(),
+        MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE,
+        MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE_DESC);
+      addCounter(mrb, this.regionWrapper.getMixedRowReadsCount(),
+        MetricsRegionSource.MIXED_ROW_READS,
+        MetricsRegionSource.MIXED_ROW_READS_ON_STORE_DESC);
     }
   }
 

@@ -94,7 +94,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private final long maxRowSize;
   private final long cellsPerHeartbeatCheck;
   @VisibleForTesting
-  long memstorOnlyReads;
+  long memstoreOnlyReads;
   @VisibleForTesting
   long mixedReads;
 
@@ -760,7 +760,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     } else {
       // for testing.
       if (memstoreRead) {
-        memstorOnlyReads++;
+        memstoreOnlyReads++;
       } else {
         mixedReads++;
       }

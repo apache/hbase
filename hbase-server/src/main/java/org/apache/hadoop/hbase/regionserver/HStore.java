@@ -118,7 +118,6 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 /**
  * A Store holds a column family in a Region.  Its a memstore and a set of zero
  * or more StoreFiles, which stretch backwards over time.
@@ -164,9 +163,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   volatile boolean forceMajor = false;
   private AtomicLong storeSize = new AtomicLong();
   private AtomicLong totalUncompressedBytes = new AtomicLong();
-  private LongAdder memstoreOnlyReadRequests = new LongAdder();
+  private LongAdder memstoreOnlyRowReadsCount = new LongAdder();
   // rows that has cells from both memstore and files (or only files)
-  private LongAdder mixedReadRequests = new LongAdder();
+  private LongAdder mixedRowReadsCount = new LongAdder();
 
   private boolean cacheOnWriteLogged;
 
@@ -2903,20 +2902,20 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   @Override
-  public long getMemstoreOnlyReadsCount() {
-    return memstoreOnlyReadRequests.sum();
+  public long getMemstoreOnlyRowReadsCount() {
+    return memstoreOnlyRowReadsCount.sum();
   }
 
   @Override
-  public long getMixedReadRequestsCount() {
-    return mixedReadRequests.sum();
+  public long getMixedRowReadsCount() {
+    return mixedRowReadsCount.sum();
   }
 
   void updateMetricsStore(boolean memstoreRead) {
     if (memstoreRead) {
-      memstoreOnlyReadRequests.increment();
+      memstoreOnlyRowReadsCount.increment();
     } else {
-      mixedReadRequests.increment();
+      mixedRowReadsCount.increment();
     }
   }
 }

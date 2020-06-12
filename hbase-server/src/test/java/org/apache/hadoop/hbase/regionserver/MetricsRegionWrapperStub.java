@@ -187,14 +187,14 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
-  public Map<String, Long> getMemstoreOnlyReadRequestsCount() {
+  public Map<String, Long> getMemstoreOnlyRowReadsCount() {
     Map<String, Long> map = new HashMap<>();
     map.put("info", 0L);
     return map;
   }
 
   @Override
-  public Map<String, Long> getMixedReadRequestsCount() {
+  public Map<String, Long> getMixedRowReadsCount() {
     Map<String, Long> map = new HashMap<>();
     map.put("info", 0L);
     return map;

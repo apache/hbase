@@ -61,7 +61,6 @@ import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPL
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_SUCCESS_DESC;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_SUCCESS_KEY;
 
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -322,12 +321,12 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
         mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
             MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC),
             tableWrapperAgg.getNumReferenceFiles(tableName.getNameAsString()));
-        addGauge(mrb, tableWrapperAgg.getMemstoreOnlyReadRequestsCount(tableName.getNameAsString()),
-          MetricsRegionSource.READ_REQUEST_ONLY_ON_MEMSTORE,
-          MetricsRegionSource.READ_REQUEST_ONLY_ON_MEMSTORE_DESC);
-        addGauge(mrb, tableWrapperAgg.getMixedReadRequestsCount(tableName.getNameAsString()),
-          MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE,
-          MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE_DESC);
+        addGauge(mrb, tableWrapperAgg.getMemstoreOnlyRowReadsCount(tableName.getNameAsString()),
+          MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE,
+          MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE_DESC);
+        addGauge(mrb, tableWrapperAgg.getMixedRowReadsCount(tableName.getNameAsString()),
+          MetricsRegionSource.MIXED_ROW_READS,
+          MetricsRegionSource.MIXED_ROW_READS_ON_STORE_DESC);
       }
     }
   }

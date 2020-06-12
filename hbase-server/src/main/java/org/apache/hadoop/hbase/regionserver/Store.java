@@ -286,10 +286,10 @@ public interface Store {
   /**
    * @return the number of read requests purely from the memstore.
    */
-  long getMemstoreOnlyReadsCount();
+  long getMemstoreOnlyRowReadsCount();
 
   /**
    * @return the number of read requests from the files under this store.
    */
-  long getMixedReadRequestsCount();
+  long getMixedRowReadsCount();
 }

@@ -237,12 +237,12 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
-  public Map<String, Long> getMemstoreOnlyReadRequestsCount() {
+  public Map<String, Long> getMemstoreOnlyRowReadsCount() {
     return readsOnlyFromMemstore;
   }
 
   @Override
-  public Map<String, Long> getMixedReadRequestsCount() {
+  public Map<String, Long> getMixedRowReadsCount() {
     return mixedReadsOnStore;
   }
 
@@ -299,7 +299,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           if (tempVal == null) {
             tempVal = 0L;
           } else {
-            tempVal += store.getMixedReadRequestsCount();
+            tempVal += store.getMixedRowReadsCount();
           }
           mixedReadsOnStore.put(store.getColumnFamilyName(), tempVal);
           if (readsOnlyFromMemstore == null) {
@@ -309,7 +309,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           if (tempVal == null) {
             tempVal = 0L;
           } else {
-            tempVal += store.getMemstoreOnlyReadsCount();
+            tempVal += store.getMemstoreOnlyRowReadsCount();
           }
           readsOnlyFromMemstore.put(store.getColumnFamilyName(), tempVal);
         }

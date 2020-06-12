@@ -96,12 +96,12 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
             if (tempVal == null) {
               tempVal = 0L;
             }
-            memstoreReadCount = store.getMemstoreOnlyReadsCount() + tempVal;
+            memstoreReadCount = store.getMemstoreOnlyRowReadsCount() + tempVal;
             tempVal = mt.perStoreMixedReadCount.get(tempKey);
             if (tempVal == null) {
               tempVal = 0L;
             }
-            mixedReadCount = store.getMixedReadRequestsCount() + tempVal;
+            mixedReadCount = store.getMixedRowReadsCount() + tempVal;
             // accumulate the count
             mt.perStoreMemstoreOnlyReadCount.put(tempKey, memstoreReadCount);
             mt.perStoreMixedReadCount.put(tempKey, mixedReadCount);
@@ -150,7 +150,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   }
 
   @Override
-  public Map<String, Long> getMemstoreOnlyReadRequestsCount(String table) {
+  public Map<String, Long> getMemstoreOnlyRowReadsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null) {
       return null;
@@ -160,7 +160,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   }
 
   @Override
-  public Map<String, Long> getMixedReadRequestsCount(String table) {
+  public Map<String, Long> getMixedRowReadsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null) {
       return null;
