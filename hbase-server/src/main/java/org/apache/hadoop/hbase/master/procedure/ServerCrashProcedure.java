@@ -308,7 +308,8 @@ public class ServerCrashProcedure
     MasterWalManager mwm = env.getMasterServices().getMasterWalManager();
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
     // TODO: For Matteo. Below BLOCKs!!!! Redo so can relinquish executor while it is running.
-    // PROBLEM!!! WE BLOCK HERE.
+    // PROBLEM!!! WE BLOCK HERE. Can block for hours if hundreds of WALs to split and hundreds
+    // of SCPs running because big cluster crashed down.
     am.getRegionStates().logSplitting(this.serverName);
     mwm.splitLog(this.serverName);
     if (!carryingMeta) {
