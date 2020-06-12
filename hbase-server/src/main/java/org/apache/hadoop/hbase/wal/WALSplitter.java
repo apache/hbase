@@ -265,10 +265,9 @@ public class WALSplitter {
           if (!(isRegionDirPresentUnderRoot(entry.getKey().getTableName(),
               encodedRegionNameAsStr))) {
             // The region directory itself is not present in the FS. This indicates that
-            // the region/table is already removed. We can just skip all the edits for this
-            // region. Setting lastFlushedSequenceId as Long.MAX_VALUE so that all edits
-            // will get skipped by the seqId check below.
-            // See more details at https://issues.apache.org/jira/browse/HBASE-24189
+            // region/table is already removed. We can skip all the edits for this region.
+            // Setting lastFlushedSequenceId as Long.MAX_VALUE so that all edits will get
+            // skipped by the seqId check below. See more details in HBASE-24189
             LOG.info("{} no longer available in the FS. Skipping all edits for this region.",
                 encodedRegionNameAsStr);
             lastFlushedSequenceId = Long.MAX_VALUE;
