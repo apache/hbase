@@ -628,7 +628,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       for (HStoreFile storeFile : results) {
         if (compactedStoreFiles.contains(storeFile.getPath().getName())) {
           LOG.warn("Clearing the compacted storefile {} from this store", storeFile);
-          storeFile.getReader().close(true);
+          storeFile.getReader().close(storeFile.getCacheConf() != null ?
+                  storeFile.getCacheConf().shouldEvictOnClose() : true);
           filesToRemove.add(storeFile);
         }
       }
@@ -960,7 +961,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
           storeEngine.getStoreFileManager().clearCompactedFiles();
       // clear the compacted files
       if (CollectionUtils.isNotEmpty(compactedfiles)) {
-        removeCompactedfiles(compactedfiles);
+        removeCompactedfiles(compactedfiles, cacheConf != null ?
+          cacheConf.shouldEvictOnClose() : true);
       }
       if (!result.isEmpty()) {
         // initialize the thread pool for closing store files in parallel.
@@ -2650,7 +2652,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         lock.readLock().unlock();
       }
       if (CollectionUtils.isNotEmpty(copyCompactedfiles)) {
-        removeCompactedfiles(copyCompactedfiles);
+        removeCompactedfiles(copyCompactedfiles, true);
       }
     } finally {
       archiveLock.unlock();
@@ -2660,8 +2662,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   /**
    * Archives and removes the compacted files
    * @param compactedfiles The compacted files in this store that are not active in reads
+   * @param evictOnClose true if blocks should be evicted from the cache when an HFile reader is
+   *   closed, false if not
    */
-  private void removeCompactedfiles(Collection<HStoreFile> compactedfiles)
+  private void removeCompactedfiles(Collection<HStoreFile> compactedfiles, boolean evictOnClose)
       throws IOException {
     final List<HStoreFile> filesToRemove = new ArrayList<>(compactedfiles.size());
     final List<Long> storeFileSizes = new ArrayList<>(compactedfiles.size());
@@ -2686,7 +2690,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
             LOG.trace("Closing and archiving the file {}", file);
             // Copy the file size before closing the reader
             final long length = r.length();
-            r.close(true);
+            r.close(evictOnClose);
             // Just close and return
             filesToRemove.add(file);
             // Only add the length if we successfully added the file to `filesToRemove`
