@@ -314,6 +314,21 @@ public class SplitLogManager {
     return false;
   }
 
+  /**
+   * Get the amount of time in milliseconds to wait till next check.
+   * Check less frequently if a bunch of work to do still. At a max, check every minute.
+   * At a minimum, check every 100ms. This is to alleviate case where perhaps there are a bunch of
+   * threads waiting on a completion. For example, if the zk-based implementation, we will scan the
+   * '/hbase/splitWAL' dir every time through this loop. If there are lots of WALs to
+   * split -- could be tens of thousands if big cluster -- then it will take a while. If
+   * the Master has many SCPs waiting on wal splitting -- could be up to 10 x the configured
+   * PE thread count (default would be 160) -- then the Master will be putting up a bunch of
+   * load on zk.
+   */
+  static int getBatchWaitTimeMillis(int remainingTasks) {
+    return remainingTasks < 10? 100: remainingTasks < 100? 1000: 60_000;
+  }
+
   private void waitForSplittingCompletion(TaskBatch batch, MonitoredTask status) {
     synchronized (batch) {
       while ((batch.done + batch.error) != batch.installed) {
@@ -338,7 +353,7 @@ public class SplitLogManager {
               return;
             }
           }
-          batch.wait(100);
+          batch.wait(getBatchWaitTimeMillis(remainingTasks));
           if (server.isStopped()) {
             LOG.warn("Stopped while waiting for log splits to be completed");
             return;
