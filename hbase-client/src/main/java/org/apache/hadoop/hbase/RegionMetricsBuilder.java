@@ -51,7 +51,8 @@ public final class RegionMetricsBuilder {
         .setCompactingCellCount(regionLoadPB.getTotalCompactingKVs())
         .setCompletedSequenceId(regionLoadPB.getCompleteSequenceId())
         .setDataLocality(regionLoadPB.hasDataLocality() ? regionLoadPB.getDataLocality() : 0.0f)
-        .setDataLocalityForSsd(regionLoadPB.hasDataLocalityForSsd() ? regionLoadPB.getDataLocalityForSsd() : 0.0f)
+        .setDataLocalityForSsd(regionLoadPB.hasDataLocalityForSsd() ?
+          regionLoadPB.getDataLocalityForSsd() : 0.0f)
         .setFilteredReadRequestCount(regionLoadPB.getFilteredReadRequestsCount())
         .setStoreFileUncompressedDataIndexSize(new Size(regionLoadPB.getTotalStaticIndexSizeKB(),
           Size.Unit.KILOBYTE))
