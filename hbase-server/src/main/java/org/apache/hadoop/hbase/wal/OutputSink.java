@@ -90,7 +90,7 @@ abstract class OutputSink {
    */
   void startWriterThreads() throws IOException {
     for (int i = 0; i < numThreads; i++) {
-      WriterThread t = new WriterThread(controller, entryBuffers, this, i, status);
+      WriterThread t = new WriterThread(controller, entryBuffers, this, i);
       t.start();
       writerThreads.add(t);
     }
@@ -123,9 +123,7 @@ abstract class OutputSink {
     controller.checkForErrors();
     final String msg = this.writerThreads.size() + " split writer threads finished";
     LOG.info(msg);
-    if (status != null) {
-      status.setStatus(msg);
-    }
+    updateStatusWithMsg(msg);
     return (!progressFailed);
   }
 
@@ -163,20 +161,28 @@ abstract class OutputSink {
    */
   abstract boolean keepRegionEvent(WAL.Entry entry);
 
+  /**
+   * Set status message in {@link MonitoredTask} instance that is set in this OutputSink
+   * @param msg message to update the status with
+   */
+  protected final void updateStatusWithMsg(String msg) {
+    if (status != null) {
+      status.setStatus(msg);
+    }
+  }
+
   public static class WriterThread extends Thread {
     private volatile boolean shouldStop = false;
     private WALSplitter.PipelineController controller;
     private EntryBuffers entryBuffers;
     private OutputSink outputSink = null;
-    private final MonitoredTask status;
 
     WriterThread(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
-        OutputSink sink, int i, MonitoredTask status) {
+        OutputSink sink, int i) {
       super(Thread.currentThread().getName() + "-Writer-" + i);
       this.controller = controller;
       this.entryBuffers = entryBuffers;
       outputSink = sink;
-      this.status = status;
     }
 
     @Override
