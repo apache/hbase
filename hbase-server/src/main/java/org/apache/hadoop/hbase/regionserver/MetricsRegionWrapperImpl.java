@@ -59,7 +59,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long numReferenceFiles;
   private long maxFlushQueueSize;
   private long maxCompactionQueueSize;
-  private Map<String, Long> readsFromMemstore;
+  private Map<String, Long> readsOnlyFromMemstore;
   private Map<String, Long> mixedReadsOnStore;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
@@ -237,12 +237,12 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
-  public Map<String, Long> getMemstoreReadRequestsCount() {
-    return readsFromMemstore;
+  public Map<String, Long> getMemstoreOnlyReadRequestsCount() {
+    return readsOnlyFromMemstore;
   }
 
   @Override
-  public Map<String, Long> getMixedReadRequestCount() {
+  public Map<String, Long> getMixedReadRequestsCount() {
     return mixedReadsOnStore;
   }
 
@@ -302,16 +302,16 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
             tempVal += store.getMixedReadRequestsCount();
           }
           mixedReadsOnStore.put(store.getColumnFamilyName(), tempVal);
-          if (readsFromMemstore == null) {
-            readsFromMemstore = new HashMap<String, Long>();
+          if (readsOnlyFromMemstore == null) {
+            readsOnlyFromMemstore = new HashMap<String, Long>();
           }
-          tempVal = readsFromMemstore.get(store.getColumnFamilyName());
+          tempVal = readsOnlyFromMemstore.get(store.getColumnFamilyName());
           if (tempVal == null) {
             tempVal = 0L;
           } else {
-            tempVal += store.getReadRequestsCountFromMemstore();
+            tempVal += store.getMemstoreOnlyReadsCount();
           }
-          readsFromMemstore.put(store.getColumnFamilyName(), tempVal);
+          readsOnlyFromMemstore.put(store.getColumnFamilyName(), tempVal);
         }
       }
 

@@ -92,18 +92,18 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
             }
             mt.storeCount += 1;
             tempKey = tbl.getNameAsString() + UNDERSCORE + familyName;
-            Long tempVal = mt.perStoreMemstoreReadCount.get(tempKey);
+            Long tempVal = mt.perStoreMemstoreOnlyReadCount.get(tempKey);
             if (tempVal == null) {
               tempVal = 0L;
             }
-            memstoreReadCount = store.getReadRequestsCountFromMemstore() + tempVal;
+            memstoreReadCount = store.getMemstoreOnlyReadsCount() + tempVal;
             tempVal = mt.perStoreMixedReadCount.get(tempKey);
             if (tempVal == null) {
               tempVal = 0L;
             }
             mixedReadCount = store.getMixedReadRequestsCount() + tempVal;
             // accumulate the count
-            mt.perStoreMemstoreReadCount.put(tempKey, memstoreReadCount);
+            mt.perStoreMemstoreOnlyReadCount.put(tempKey, memstoreReadCount);
             mt.perStoreMixedReadCount.put(tempKey, mixedReadCount);
           }
 
@@ -150,17 +150,17 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   }
 
   @Override
-  public Map<String, Long> getMemstoreReadRequestsCount(String table) {
+  public Map<String, Long> getMemstoreOnlyReadRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null) {
       return null;
     } else {
-      return metricsTable.perStoreMemstoreReadCount;
+      return metricsTable.perStoreMemstoreOnlyReadCount;
     }
   }
 
   @Override
-  public Map<String, Long> getMixedRequestsCount(String table) {
+  public Map<String, Long> getMixedReadRequestsCount(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null) {
       return null;
@@ -340,7 +340,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     long totalStoreFileAge;
     long referenceFileCount;
     long cpRequestCount;
-    Map<String, Long> perStoreMemstoreReadCount = new HashMap<>();
+    Map<String, Long> perStoreMemstoreOnlyReadCount = new HashMap<>();
     Map<String, Long> perStoreMixedReadCount = new HashMap<>();
   }
 

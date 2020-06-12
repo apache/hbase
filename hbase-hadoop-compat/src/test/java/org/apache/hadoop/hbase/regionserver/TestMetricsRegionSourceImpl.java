@@ -221,14 +221,14 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
-    public Map<String, Long> getMemstoreReadRequestsCount() {
+    public Map<String, Long> getMemstoreOnlyReadRequestsCount() {
       Map<String, Long> map = new HashMap<String, Long>();
       map.put("info", 0L);
       return map;
     }
 
     @Override
-    public Map<String, Long> getMixedReadRequestCount() {
+    public Map<String, Long> getMixedReadRequestsCount() {
       Map<String, Long> map = new HashMap<String, Long>();
       map.put("info", 0L);
       return map;

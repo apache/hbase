@@ -110,12 +110,12 @@ public interface MetricsTableWrapperAggregate {
   long getNumReferenceFiles(String table);
 
   /**
-   * @return number of get requests from memstore per store for this table
+   * @return number of read requests only from memstore per store for this table
    */
-  Map<String, Long> getMemstoreReadRequestsCount(String table);
+  Map<String, Long> getMemstoreOnlyReadRequestsCount(String table);
 
   /**
-   * @return number of get requests from file per store for this table
+   * @return number of read requests from file and memstore per store for this table
    */
-  Map<String, Long> getMixedRequestsCount(String table);
+  Map<String, Long> getMixedReadRequestsCount(String table);
 }

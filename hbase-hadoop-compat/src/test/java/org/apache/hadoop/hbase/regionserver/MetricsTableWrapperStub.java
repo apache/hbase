@@ -114,14 +114,14 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   }
 
   @Override
-  public Map<String, Long> getMemstoreReadRequestsCount(String table) {
+  public Map<String, Long> getMemstoreOnlyReadRequestsCount(String table) {
     Map<String, Long> map = new HashMap<String, Long>();
     map.put("table_info", 3L);
     return map;
   }
 
   @Override
-  public Map<String, Long> getMixedRequestsCount(String table) {
+  public Map<String, Long> getMixedReadRequestsCount(String table) {
     Map<String, Long> map = new HashMap<String, Long>();
     map.put("table_info", 3L);
     return map;

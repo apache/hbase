@@ -310,10 +310,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
               regionNamePrefix + MetricsRegionSource.MAX_FLUSH_QUEUE_SIZE,
               MetricsRegionSource.MAX_FLUSH_QUEUE_DESC),
           this.regionWrapper.getMaxFlushQueueSize());
-      addCounter(mrb, this.regionWrapper.getMemstoreReadRequestsCount(),
-        MetricsRegionSource.READ_REQUEST_ON_MEMSTORE,
-        MetricsRegionSource.READ_REQUEST_ON_MEMSTORE_DESC);
-      addCounter(mrb, this.regionWrapper.getMixedReadRequestCount(),
+      addCounter(mrb, this.regionWrapper.getMemstoreOnlyReadRequestsCount(),
+        MetricsRegionSource.READ_REQUEST_ONLY_ON_MEMSTORE,
+        MetricsRegionSource.READ_REQUEST_ONLY_ON_MEMSTORE_DESC);
+      addCounter(mrb, this.regionWrapper.getMixedReadRequestsCount(),
         MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE,
         MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE_DESC);
     }
@@ -322,9 +322,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private void addCounter(MetricsRecordBuilder mrb, Map<String, Long> metricMap, String metricName,
       String metricDesc) {
     if (metricMap != null) {
-      Iterator<Entry<String, Long>> iterator = metricMap.entrySet().iterator();
-      while (iterator.hasNext()) {
-        Entry<String, Long> entry = iterator.next();
+      for (Entry<String, Long> entry : metricMap.entrySet()) {
         // append 'store' and its name to the metric
         mrb.addCounter(Interns.info(
           this.regionNamePrefix1 + _STORE + entry.getKey() + this.regionNamePrefix2 + metricName,

@@ -164,7 +164,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   volatile boolean forceMajor = false;
   private AtomicLong storeSize = new AtomicLong();
   private AtomicLong totalUncompressedBytes = new AtomicLong();
-  private LongAdder readRequestsFromMemstore = new LongAdder();
+  private LongAdder memstoreOnlyReadRequests = new LongAdder();
+  // rows that has cells from both memstore and files (or only files)
   private LongAdder mixedReadRequests = new LongAdder();
 
   private boolean cacheOnWriteLogged;
@@ -2902,8 +2903,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   @Override
-  public long getReadRequestsCountFromMemstore() {
-    return readRequestsFromMemstore.sum();
+  public long getMemstoreOnlyReadsCount() {
+    return memstoreOnlyReadRequests.sum();
   }
 
   @Override
@@ -2913,7 +2914,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
   void updateMetricsStore(boolean memstoreRead) {
     if (memstoreRead) {
-      readRequestsFromMemstore.increment();
+      memstoreOnlyReadRequests.increment();
     } else {
       mixedReadRequests.increment();
     }

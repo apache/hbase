@@ -94,9 +94,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private final long maxRowSize;
   private final long cellsPerHeartbeatCheck;
   @VisibleForTesting
-  long memstoreReads;
+  long memstorOnlyReads;
   @VisibleForTesting
-  long fileReads;
+  long mixedReads;
 
   // 1) Collects all the KVHeap that are eagerly getting closed during the
   //    course of a scan
@@ -641,9 +641,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
                * Increment the metric if all the cells are from memstore.
                * If not we will account it for mixed reads
                */
-              if (onlyFromMemstore && !heap.isCellFromMemstoreScanner()) {
-                onlyFromMemstore = false;
-              }
+              onlyFromMemstore = onlyFromMemstore && heap.isLatestCellFromMemstore();
               // Update the progress of the scanner context
               scannerContext.incrementSizeProgress(cellSize, cell.heapSize());
               scannerContext.incrementBatchProgress(1);
@@ -762,9 +760,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     } else {
       // for testing.
       if (memstoreRead) {
-        memstoreReads++;
+        memstorOnlyReads++;
       } else {
-        fileReads++;
+        mixedReads++;
       }
     }
   }

@@ -174,13 +174,13 @@ public interface MetricsRegionWrapper {
   long getMaxCompactedStoreFileRefCount();
 
   /**
-   * @return the number of reads on memstore per store
+   * @return the number of reads only on memstore per store
    */
-  Map<String, Long> getMemstoreReadRequestsCount();
+  Map<String, Long> getMemstoreOnlyReadRequestsCount();
 
   /**
-   * @return the mixed reads happening per store
+   * @return the happening on memstore and file per store
    */
-  Map<String, Long> getMixedReadRequestCount();
+  Map<String, Long> getMixedReadRequestsCount();
 
 }

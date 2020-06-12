@@ -405,7 +405,7 @@ public class TestStoreScanner {
       // We should have gone the optimize route 5 times totally... an INCLUDE for the four cells
       // in the row plus the DONE on the end.
       assertEquals(5, scanner.count.get());
-      assertEquals(1, scanner.memstoreReads);
+      assertEquals(1, scanner.memstorOnlyReads);
       // For a full row Get, there should be no opportunity for scanner optimization.
       assertEquals(0, scanner.optimization.get());
     }
@@ -481,7 +481,7 @@ public class TestStoreScanner {
       assertEquals("First qcode is SEEK_NEXT_COL and second INCLUDE_AND_SEEK_NEXT_ROW", 3,
         scanner.count.get());
       assertEquals("Memstore Read count should be", 1,
-        scanner.memstoreReads);
+        scanner.memstorOnlyReads);
     }
   }
 
@@ -581,7 +581,7 @@ public class TestStoreScanner {
       List<Cell> results = new ArrayList<>();
       assertEquals(true, scan.next(results));
       assertEquals(1, results.size());
-      assertEquals(1, scan.memstoreReads);
+      assertEquals(1, scan.memstorOnlyReads);
       assertEquals(kvs[0], results.get(0));
     }
   }

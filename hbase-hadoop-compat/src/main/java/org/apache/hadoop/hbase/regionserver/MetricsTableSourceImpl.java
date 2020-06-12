@@ -322,10 +322,10 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
         mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
             MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC),
             tableWrapperAgg.getNumReferenceFiles(tableName.getNameAsString()));
-        addGauge(mrb, tableWrapperAgg.getMemstoreReadRequestsCount(tableName.getNameAsString()),
-          MetricsRegionSource.READ_REQUEST_ON_MEMSTORE,
-          MetricsRegionSource.READ_REQUEST_ON_MEMSTORE_DESC);
-        addGauge(mrb, tableWrapperAgg.getMixedRequestsCount(tableName.getNameAsString()),
+        addGauge(mrb, tableWrapperAgg.getMemstoreOnlyReadRequestsCount(tableName.getNameAsString()),
+          MetricsRegionSource.READ_REQUEST_ONLY_ON_MEMSTORE,
+          MetricsRegionSource.READ_REQUEST_ONLY_ON_MEMSTORE_DESC);
+        addGauge(mrb, tableWrapperAgg.getMixedReadRequestsCount(tableName.getNameAsString()),
           MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE,
           MetricsRegionSource.MIXED_READ_REQUEST_ON_STORE_DESC);
       }
@@ -335,9 +335,7 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
   private void addGauge(MetricsRecordBuilder mrb, Map<String, Long> metricMap, String metricName,
       String metricDesc) {
     if (metricMap != null) {
-      Iterator<Entry<String, Long>> iterator = metricMap.entrySet().iterator();
-      while (iterator.hasNext()) {
-        Entry<String, Long> entry = iterator.next();
+      for (Entry<String, Long> entry : metricMap.entrySet()) {
         // append 'store' and its name to the metric
         mrb.addGauge(Interns.info(this.tableNamePrefixPart1 + _STORE
             + entry.getKey().split(MetricsTableWrapperAggregate.UNDERSCORE)[1]

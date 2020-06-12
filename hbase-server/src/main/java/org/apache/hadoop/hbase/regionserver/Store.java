@@ -284,9 +284,9 @@ public interface Store {
   int getCurrentParallelPutCount();
 
   /**
-   * @return the number of read requests that was targeted at the memstore part of this store
+   * @return the number of read requests purely from the memstore.
    */
-  long getReadRequestsCountFromMemstore();
+  long getMemstoreOnlyReadsCount();
 
   /**
    * @return the number of read requests from the files under this store.
