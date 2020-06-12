@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -154,6 +154,15 @@ public class TestSplitLogManager {
       slm.stop();
     }
     TEST_UTIL.shutdownMiniZKCluster();
+  }
+
+  @Test
+  public void testBatchWaitMillis() {
+    assertEquals(100, SplitLogManager.getBatchWaitTimeMillis(0));
+    assertEquals(100, SplitLogManager.getBatchWaitTimeMillis(1));
+    assertEquals(1000, SplitLogManager.getBatchWaitTimeMillis(10));
+    assertEquals(60_000, SplitLogManager.getBatchWaitTimeMillis(101));
+    assertEquals(60_000, SplitLogManager.getBatchWaitTimeMillis(1011));
   }
 
   private interface Expr {
