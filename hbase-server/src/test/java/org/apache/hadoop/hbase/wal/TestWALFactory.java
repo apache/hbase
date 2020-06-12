@@ -181,12 +181,15 @@ public class TestWALFactory {
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
     final int howmany = 3;
     RegionInfo[] infos = new RegionInfo[3];
+    Path tableDataDir = CommonFSUtils.getTableDir(hbaseDir, tableName);
+    fs.mkdirs(tableDataDir);
     Path tabledir = FSUtils.getWALTableDir(conf, tableName);
     fs.mkdirs(tabledir);
     for (int i = 0; i < howmany; i++) {
       infos[i] = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("" + i))
           .setEndKey(Bytes.toBytes("" + (i + 1))).build();
       fs.mkdirs(new Path(tabledir, infos[i].getEncodedName()));
+      fs.mkdirs(new Path(tableDataDir, infos[i].getEncodedName()));
       LOG.info("allo " + new Path(tabledir, infos[i].getEncodedName()).toString());
     }
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);

@@ -174,7 +174,7 @@ public class TestWALReaderOnSecureWAL {
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
     Path rootdir = FSUtils.getRootDir(conf);
     try {
-      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, null, null);
+      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null);
       s.splitLogFile(listStatus[0], null);
       Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
         "corrupt");
@@ -218,7 +218,7 @@ public class TestWALReaderOnSecureWAL {
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
     Path rootdir = FSUtils.getRootDir(conf);
     try {
-      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, null, null);
+      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null);
       s.splitLogFile(listStatus[0], null);
       Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
         "corrupt");
