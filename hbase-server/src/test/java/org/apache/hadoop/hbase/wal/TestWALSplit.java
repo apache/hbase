@@ -803,7 +803,7 @@ public class TestWALSplit {
     assertTrue("There should be some log greater than size 0.", 0 < largestSize);
     // Set up a splitter that will throw an IOE on the output side
     WALSplitter logSplitter = new WALSplitter(wals,
-        conf, HBASEDIR, fs, null, null, this.mode) {
+        conf, HBASEDIR, fs, HBASEDIR, fs, null, null, this.mode) {
       @Override
       protected Writer createWriter(Path logfile) throws IOException {
         Writer mockWriter = Mockito.mock(Writer.class);
@@ -989,7 +989,7 @@ public class TestWALSplit {
 
     // Create a splitter that reads and writes the data without touching disk
     WALSplitter logSplitter = new WALSplitter(wals,
-        localConf, HBASEDIR, fs, null, null, this.mode) {
+        localConf, HBASEDIR, fs, HBASEDIR, fs, null, null, this.mode) {
 
       /* Produce a mock writer that doesn't write anywhere */
       @Override
@@ -1140,7 +1140,7 @@ public class TestWALSplit {
         logfiles != null && logfiles.length > 0);
 
     WALSplitter logSplitter = new WALSplitter(wals,
-        conf, HBASEDIR, fs, null, null, this.mode) {
+        conf, HBASEDIR, fs, HBASEDIR, fs, null, null, this.mode) {
       @Override
       protected Writer createWriter(Path logfile)
           throws IOException {

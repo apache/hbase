@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -172,12 +173,15 @@ public class TestWALFactory {
     Path oldLogDir = new Path(hbaseWALDir, HConstants.HREGION_OLDLOGDIR_NAME);
     final int howmany = 3;
     HRegionInfo[] infos = new HRegionInfo[3];
+    Path tableDataDir = CommonFSUtils.getTableDir(hbaseDir, tableName);
+    fs.mkdirs(tableDataDir);
     Path tabledir = FSUtils.getWALTableDir(conf, tableName);
     fs.mkdirs(tabledir);
     for(int i = 0; i < howmany; i++) {
       infos[i] = new HRegionInfo(tableName,
                 Bytes.toBytes("" + i), Bytes.toBytes("" + (i+1)), false);
       fs.mkdirs(new Path(tabledir, infos[i].getEncodedName()));
+      fs.mkdirs(new Path(tableDataDir, infos[i].getEncodedName()));
       LOG.info("allo " + new Path(tabledir, infos[i].getEncodedName()).toString());
     }
     HTableDescriptor htd = new HTableDescriptor(tableName);
