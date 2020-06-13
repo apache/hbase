@@ -83,9 +83,8 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
     registry = agg.getMetricsRegistry();
 
-    regionNamePrefix1 = "Namespace_" + regionWrapper.getNamespace() +
-    "_table_" + regionWrapper.getTableName() +
-        "_region_" + regionWrapper.getRegionName();
+    regionNamePrefix1 = "Namespace_" + regionWrapper.getNamespace() + "_table_"
+        + regionWrapper.getTableName() + "_region_" + regionWrapper.getRegionName();
     regionNamePrefix2 = "_metric_";
     regionNamePrefix = regionNamePrefix1 + regionNamePrefix2;
 

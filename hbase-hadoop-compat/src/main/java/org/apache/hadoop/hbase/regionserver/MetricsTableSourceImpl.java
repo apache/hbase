@@ -78,7 +78,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class MetricsTableSourceImpl implements MetricsTableSource {
 
-  private static final String _STORE = "_store_";
+  private static final String _COLUMNFAMILY = "_columnfamily_";
 
   private static final Logger LOG = LoggerFactory.getLogger(MetricsTableSourceImpl.class);
 
@@ -336,7 +336,7 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     if (metricMap != null) {
       for (Entry<String, Long> entry : metricMap.entrySet()) {
         // append 'store' and its name to the metric
-        mrb.addGauge(Interns.info(this.tableNamePrefixPart1 + _STORE
+        mrb.addGauge(Interns.info(this.tableNamePrefixPart1 + _COLUMNFAMILY
             + entry.getKey().split(MetricsTableWrapperAggregate.UNDERSCORE)[1]
             + this.tableNamePrefixPart2 + metricName,
           metricDesc), entry.getValue());

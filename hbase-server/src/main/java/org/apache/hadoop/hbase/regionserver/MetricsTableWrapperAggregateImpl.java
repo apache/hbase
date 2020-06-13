@@ -29,6 +29,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsExecutor;
@@ -40,17 +41,19 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   private final HRegionServer regionServer;
   private ScheduledExecutorService executor;
   private Runnable runnable;
-  private static final int PERIOD = 45;
+  private long period;
   private ScheduledFuture<?> tableMetricsUpdateTask;
   private ConcurrentHashMap<TableName, MetricsTableValues> metricsTableMap
     = new ConcurrentHashMap<>();
 
   public MetricsTableWrapperAggregateImpl(final HRegionServer regionServer) {
     this.regionServer = regionServer;
+    this.period = regionServer.getConfiguration().getLong(HConstants.REGIONSERVER_METRICS_PERIOD,
+      HConstants.DEFAULT_REGIONSERVER_METRICS_PERIOD) + 1000;
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new TableMetricsWrapperRunnable();
-    this.tableMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, PERIOD,
-      PERIOD, TimeUnit.SECONDS);
+    this.tableMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, period,
+      period, TimeUnit.MILLISECONDS);
   }
 
   public class TableMetricsWrapperRunnable implements Runnable {
