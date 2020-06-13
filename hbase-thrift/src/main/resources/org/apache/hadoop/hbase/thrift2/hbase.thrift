@@ -460,8 +460,8 @@ enum TLogType {
 }
 
 enum TFilterByOperator {
-  AND = 1,
-  OR = 2
+  AND,
+  OR
 }
 
 /**
@@ -475,7 +475,7 @@ struct TLogQueryFilter {
   4: optional string userName
   5: optional i32 limit = 10
   6: optional TLogType logType = 1
-  7: optional TFilterByOperator filterByOperator = 2
+  7: optional TFilterByOperator filterByOperator = TFilterByOperator.OR
 }
 
 
