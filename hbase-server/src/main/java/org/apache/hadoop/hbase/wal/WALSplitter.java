@@ -111,6 +111,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEditsReplaySink;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -143,7 +144,9 @@ public class WALSplitter {
 
   // Parameters for split process
   protected final Path walDir;
+  protected final Path rootDir;
   protected final FileSystem walFS;
+  protected final FileSystem rootFS;
   protected final Configuration conf;
 
   // Major subcomponents of the split process.
@@ -189,15 +192,17 @@ public class WALSplitter {
   public final static String SPLIT_WRITER_CREATION_BOUNDED = "hbase.split.writer.creation.bounded";
 
   @VisibleForTesting
-  WALSplitter(final WALFactory factory, Configuration conf, Path walDir,
-      FileSystem walFS, LastSequenceId idChecker,
-      CoordinatedStateManager csm, RecoveryMode mode) {
+  WALSplitter(final WALFactory factory, Configuration conf, Path walDir, FileSystem walFS,
+      Path rootDir, FileSystem rootFS, LastSequenceId idChecker, CoordinatedStateManager csm,
+      RecoveryMode mode) {
     this.conf = HBaseConfiguration.create(conf);
     String codecClassName = conf
         .get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
     this.conf.set(HConstants.RPC_CODEC_CONF_KEY, codecClassName);
     this.walDir = walDir;
     this.walFS = walFS;
+    this.rootDir = rootDir;
+    this.rootFS = rootFS;
     this.sequenceIdChecker = idChecker;
     this.csm = (BaseCoordinatedStateManager)csm;
     this.walFactory = factory;
@@ -249,7 +254,10 @@ public class WALSplitter {
   public static boolean splitLogFile(Path walDir, FileStatus logfile, FileSystem walFS,
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
       CoordinatedStateManager cp, RecoveryMode mode, final WALFactory factory) throws IOException {
-    WALSplitter s = new WALSplitter(factory, conf, walDir, walFS, idChecker, cp, mode);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
+    FileSystem rootFS = rootDir.getFileSystem(conf);
+    WALSplitter s = new WALSplitter(factory, conf, walDir, walFS, rootDir, rootFS, idChecker, cp,
+        mode);
     return s.splitLogFile(logfile, reporter);
   }
 
@@ -263,9 +271,11 @@ public class WALSplitter {
         Collections.singletonList(logDir), null);
     List<Path> splits = new ArrayList<Path>();
     if (logfiles != null && logfiles.length > 0) {
+      Path rootDir = CommonFSUtils.getRootDir(conf);
+      FileSystem rootFS = rootDir.getFileSystem(conf);
       for (FileStatus logfile: logfiles) {
-        WALSplitter s = new WALSplitter(factory, conf, walRootDir, walFs, null, null,
-            RecoveryMode.LOG_SPLITTING);
+        WALSplitter s = new WALSplitter(factory, conf, walRootDir, walFs, rootDir, rootFS, null,
+            null, RecoveryMode.LOG_SPLITTING);
         if (s.splitLogFile(logfile, null)) {
           finishSplitLogFile(walRootDir, oldLogDir, logfile.getPath(), conf);
           if (s.outputSink.splits != null) {
@@ -347,33 +357,44 @@ public class WALSplitter {
         String encodedRegionNameAsStr = Bytes.toString(region);
         lastFlushedSequenceId = lastFlushedSequenceIds.get(encodedRegionNameAsStr);
         if (lastFlushedSequenceId == null) {
-          if (this.distributedLogReplay) {
-            RegionStoreSequenceIds ids =
-                csm.getSplitLogWorkerCoordination().getRegionFlushedSequenceId(failedServerName,
-                  encodedRegionNameAsStr);
-            if (ids != null) {
+          if (!(isRegionDirPresentUnderRoot(entry.getKey().getTablename(),
+              encodedRegionNameAsStr))) {
+            // The region directory itself is not present in the FS. This indicates that
+            // region/table is already removed. We can skip all the edits for this region.
+            // Setting lastFlushedSequenceId as Long.MAX_VALUE so that all edits will get
+            // skipped by the seqId check below. See more details in HBASE-24189
+            LOG.info(encodedRegionNameAsStr
+                + " no longer available in the FS. Skipping all edits for this region.");
+            lastFlushedSequenceId = Long.MAX_VALUE;
+          } else {
+            if (this.distributedLogReplay) {
+              RegionStoreSequenceIds ids = csm.getSplitLogWorkerCoordination()
+                  .getRegionFlushedSequenceId(failedServerName, encodedRegionNameAsStr);
+              if (ids != null) {
+                lastFlushedSequenceId = ids.getLastFlushedSequenceId();
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("DLR Last flushed sequenceid for " + encodedRegionNameAsStr + ": "
+                      + TextFormat.shortDebugString(ids));
+                }
+              }
+            } else if (sequenceIdChecker != null) {
+              RegionStoreSequenceIds ids = sequenceIdChecker.getLastSequenceId(region);
+              Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(
+                  Bytes.BYTES_COMPARATOR);
+              for (StoreSequenceId storeSeqId : ids.getStoreSequenceIdList()) {
+                maxSeqIdInStores.put(storeSeqId.getFamilyName().toByteArray(),
+                    storeSeqId.getSequenceId());
+              }
+              regionMaxSeqIdInStores.put(encodedRegionNameAsStr, maxSeqIdInStores);
               lastFlushedSequenceId = ids.getLastFlushedSequenceId();
               if (LOG.isDebugEnabled()) {
-                LOG.debug("DLR Last flushed sequenceid for " + encodedRegionNameAsStr + ": " +
-                  TextFormat.shortDebugString(ids));
+                LOG.debug("DLS Last flushed sequenceid for " + encodedRegionNameAsStr + ": "
+                    + TextFormat.shortDebugString(ids));
               }
             }
-          } else if (sequenceIdChecker != null) {
-            RegionStoreSequenceIds ids = sequenceIdChecker.getLastSequenceId(region);
-            Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
-            for (StoreSequenceId storeSeqId : ids.getStoreSequenceIdList()) {
-              maxSeqIdInStores.put(storeSeqId.getFamilyName().toByteArray(),
-                storeSeqId.getSequenceId());
+            if (lastFlushedSequenceId == null) {
+              lastFlushedSequenceId = -1L;
             }
-            regionMaxSeqIdInStores.put(encodedRegionNameAsStr, maxSeqIdInStores);
-            lastFlushedSequenceId = ids.getLastFlushedSequenceId();
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("DLS Last flushed sequenceid for " + encodedRegionNameAsStr + ": " +
-                  TextFormat.shortDebugString(ids));
-            }
-          }
-          if (lastFlushedSequenceId == null) {
-            lastFlushedSequenceId = -1L;
           }
           lastFlushedSequenceIds.put(encodedRegionNameAsStr, lastFlushedSequenceId);
         }
@@ -442,6 +463,12 @@ public class WALSplitter {
       }
     }
     return !progress_failed;
+  }
+
+  private boolean isRegionDirPresentUnderRoot(TableName tableName, String regionName)
+      throws IOException {
+    Path regionDirPath = CommonFSUtils.getRegionDir(this.rootDir, tableName, regionName);
+    return this.rootFS.exists(regionDirPath);
   }
 
   /**

@@ -155,7 +155,7 @@ public class TestWALReaderOnSecureWAL {
         RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     Path rootdir = FSUtils.getRootDir(conf);
     try {
-      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, null, null, mode);
+      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null, mode);
       s.splitLogFile(listStatus[0], null);
       Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
         "corrupt");
@@ -200,7 +200,7 @@ public class TestWALReaderOnSecureWAL {
         RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     Path rootdir = FSUtils.getRootDir(conf);
     try {
-      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, null, null, mode);
+      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null, mode);
       s.splitLogFile(listStatus[0], null);
       Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
         "corrupt");
