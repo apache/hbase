@@ -178,7 +178,7 @@ public class HDFSBlocksDistribution {
    * @param weight the weight
    * @param weightForSsd the weight for ssd
    */
-  private void addHostAndBlockWeight(param visitorString host, long weight, long weightForSsd) {
+  private void addHostAndBlockWeight(String host, long weight, long weightForSsd) {
     if (host == null) {
       // erroneous data
       return;
