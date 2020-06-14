@@ -52,6 +52,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -809,6 +810,16 @@ public class RemoteHTable implements Table {
   public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
       CompareOperator compareOp, byte[] value, RowMutations rm) throws IOException {
     throw new UnsupportedOperationException("checkAndMutate not implemented");
+  }
+
+  @Override
+  public boolean checkAndMutate(CheckAndMutate checkAndMutate) {
+    throw new NotImplementedException("Implement later");
+  }
+
+  @Override
+  public boolean[] checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+    throw new NotImplementedException("Implement later");
   }
 
   @Override
