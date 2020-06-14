@@ -151,13 +151,18 @@ public class HDFSBlocksDistribution {
     }
 
     addUniqueWeight(weight);
-    for (int i = 0; i < hosts.length; i++) {
-      long weightForSsd = 0;
-      if (storageTypes != null && storageTypes.length == hosts.length
-        && storageTypes[i] == StorageType.SSD) {
-        weightForSsd = weight;
+    if (storageTypes != null && storageTypes.length == hosts.length) {
+      for (int i = 0; i < hosts.length; i++) {
+        long weightForSsd = 0;
+        if (storageTypes[i] == StorageType.SSD) {
+          weightForSsd = weight;
+        }
+        addHostAndBlockWeight(hosts[i], weight, weightForSsd);
       }
-      addHostAndBlockWeight(hosts[i], weight, weightForSsd);
+    } else {
+      for (String hostname : hosts) {
+        addHostAndBlockWeight(hostname, weight, 0);
+      }
     }
   }
 
