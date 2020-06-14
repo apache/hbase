@@ -600,8 +600,6 @@ public final class RequestConverter {
     for (Action action : rowMutationsList) {
       builder.clear();
       getRegionActionBuilderWithRegion(builder, regionName);
-      actionBuilder.clear();
-      mutationBuilder.clear();
 
       buildNoDataRegionAction((RowMutations) action.getAction(), cells, builder, actionBuilder,
         mutationBuilder);
@@ -620,17 +618,19 @@ public final class RequestConverter {
     for (Action action : checkAndMutates) {
       builder.clear();
       getRegionActionBuilderWithRegion(builder, regionName);
-      actionBuilder.clear();
-      mutationBuilder.clear();
 
       CheckAndMutate cam = (CheckAndMutate) action.getAction();
       builder.setCondition(buildCondition(cam.getRow(), cam.getFamily(), cam.getQualifier(),
         cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange()));
 
       if (cam.getAction() instanceof Put) {
+        actionBuilder.clear();
+        mutationBuilder.clear();
         buildNoDataRegionAction((Put) cam.getAction(), cells, builder, actionBuilder,
           mutationBuilder);
       } else if (cam.getAction() instanceof Delete) {
+        actionBuilder.clear();
+        mutationBuilder.clear();
         buildNoDataRegionAction((Delete) cam.getAction(), cells, builder, actionBuilder,
           mutationBuilder);
       } else if (cam.getAction() instanceof RowMutations) {
@@ -693,8 +693,10 @@ public final class RequestConverter {
         throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
           mutation.getClass().getName());
       }
+      mutationBuilder.clear();
       MutationProto mp = ProtobufUtil.toMutationNoData(type, mutation, mutationBuilder);
       cells.add(mutation);
+      actionBuilder.clear();
       regionActionBuilder.addAction(actionBuilder.setMutation(mp).build());
     }
   }
