@@ -205,6 +205,17 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   }
 
   @Override
+  public CompletableFuture<Boolean> checkAndMutate(CheckAndMutate checkAndMutate) {
+    return wrap(rawTable.checkAndMutate(checkAndMutate));
+  }
+
+  @Override
+  public List<CompletableFuture<Boolean>> checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+    return rawTable.checkAndMutate(checkAndMutates).stream()
+      .map(this::wrap).collect(toList());
+  }
+
+  @Override
   public CompletableFuture<Void> mutateRow(RowMutations mutation) {
     return wrap(rawTable.mutateRow(mutation));
   }

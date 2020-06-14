@@ -454,6 +454,7 @@ message RegionAction {
   // When set, run mutations as atomic unit.
   optional bool atomic = 2;
   repeated Action action = 3;
+  optional Condition condition = 4;
 }
 
 /*
@@ -498,6 +499,7 @@ message RegionActionResult {
   repeated ResultOrException resultOrException = 1;
   // If the operation failed globally for this region, this exception is set
   optional NameBytesPair exception = 2;
+  optional bool processed = 3;
 }
 
 /**
@@ -510,13 +512,16 @@ message RegionActionResult {
 message MultiRequest {
   repeated RegionAction regionAction = 1;
   optional uint64 nonceGroup = 2;
-  optional Condition condition = 3;
+  // Moved this to RegionAction in HBASE-8458. Keep it for backward compatibility. Need to remove
+  // it in the future.
+  optional Condition condition = 3 [deprecated=true];
 }
 
 message MultiResponse {
   repeated RegionActionResult regionActionResult = 1;
-  // used for mutate to indicate processed only
-  optional bool processed = 2;
+  // Moved this to RegionActionResult in HBASE-8458. Keep it for backward compatibility. Need to
+  // remove it in the future.
+  optional bool processed = 2 [deprecated=true];
   optional MultiRegionLoadStats regionStatistics = 3;
 }
 
