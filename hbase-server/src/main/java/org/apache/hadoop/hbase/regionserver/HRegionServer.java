@@ -1695,7 +1695,7 @@ public class HRegionServer extends Thread implements
 
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();
     float dataLocality = hdfsBd.getBlockLocalityIndex(serverName.getHostname());
-    float dataLocalityForSsd = hdfsBd.getBlockLocalityIndex(serverName.getHostname(), true);
+    float dataLocalityForSsd = hdfsBd.getBlockLocalityIndexForSsd(serverName.getHostname());
     if (regionLoadBldr == null) {
       regionLoadBldr = RegionLoad.newBuilder();
     }

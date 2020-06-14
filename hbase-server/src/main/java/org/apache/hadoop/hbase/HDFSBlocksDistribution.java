@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -26,6 +27,7 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.yetus.audience.InterfaceAudience;
 
 
@@ -136,6 +138,7 @@ public class HDFSBlocksDistribution {
   public void addHostsAndBlockWeight(String[] hosts, long weight) {
     addHostsAndBlockWeight(hosts, weight, null);
   }
+
   /**
    * add some weight to a list of hosts, update the value of unique block weight
    * @param hosts the list of the host
@@ -165,7 +168,6 @@ public class HDFSBlocksDistribution {
   private void addUniqueWeight(long weight) {
     uniqueBlocksTotalWeight += weight;
   }
-
 
   /**
    * add some weight to a specific host
@@ -220,32 +222,43 @@ public class HDFSBlocksDistribution {
   }
 
   /**
-   * return the locality index of a given host
+   * Implementations 'visit' hostAndWeight.
+   */
+  public interface Visitor {
+    float visit(final HostAndWeight hostAndWeight);
+  }
+
+  /**
    * @param host the host name
    * @return the locality index of the given host
    */
   public float getBlockLocalityIndex(String host) {
-    return getBlockLocalityIndex(host, false);
+    return getBlockLocalityIndexInternal(host,
+      e -> (float) e.weight / (float) uniqueBlocksTotalWeight);
   }
+
   /**
-   * return the locality index of a given host
    * @param host the host name
-   * @param forSsd only calc ssd type
+   * @return the locality index with ssd of the given host
+   */
+  public float getBlockLocalityIndexForSsd(String host) {
+    return getBlockLocalityIndexInternal(host,
+      e -> (float) e.weightForSsd / (float) uniqueBlocksTotalWeight);
+  }
+
+  /**
+   * @param host the host name
+   * @param visitor
    * @return the locality index of the given host
    */
-  public float getBlockLocalityIndex(String host, boolean forSsd) {
+  private float getBlockLocalityIndexInternal(String host, Visitor visitor) {
     float localityIndex = 0;
     HostAndWeight hostAndWeight = this.hostAndWeights.get(host);
     if (hostAndWeight != null && uniqueBlocksTotalWeight != 0) {
-      if (forSsd){
-        localityIndex=(float)hostAndWeight.weightForSsd/(float)uniqueBlocksTotalWeight;
-      }else {
-        localityIndex=(float)hostAndWeight.weight/(float)uniqueBlocksTotalWeight;
-      }
+      localityIndex = visitor.visit(hostAndWeight);
     }
     return localityIndex;
   }
-
 
   /**
    * This will add the distribution from input to this object
