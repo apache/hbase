@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -27,7 +26,6 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.yetus.audience.InterfaceAudience;
 
 
@@ -180,7 +178,7 @@ public class HDFSBlocksDistribution {
    * @param weight the weight
    * @param weightForSsd the weight for ssd
    */
-  private void addHostAndBlockWeight(String host, long weight, long weightForSsd) {
+  private void addHostAndBlockWeight(param visitorString host, long weight, long weightForSsd) {
     if (host == null) {
       // erroneous data
       return;
@@ -253,7 +251,6 @@ public class HDFSBlocksDistribution {
 
   /**
    * @param host the host name
-   * @param visitor
    * @return the locality index of the given host
    */
   private float getBlockLocalityIndexInternal(String host, Visitor visitor) {
