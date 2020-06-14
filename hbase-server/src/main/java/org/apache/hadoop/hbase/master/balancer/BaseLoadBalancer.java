@@ -126,6 +126,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    *
    * Cluster tracks a list of unassigned regions, region assignments, and the server
    * topology in terms of server names, hostnames and racks.
+   *
    */
   protected static class Cluster {
     ServerName[] servers;
@@ -185,6 +186,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     private float[][] rackLocalities;
     // Maps localityType -> region -> [server|rack]Index with highest locality
     private int[][] regionsToMostLocalEntities;
+    // Maps region -> server index with highest ssd locality
+    private int[] regionsToMostSsdLocalServer;
 
     protected Cluster(
         Map<ServerName, List<RegionInfo>> clusterState,
@@ -537,10 +540,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
      * Looks up locality from cache of localities. Will create cache if it does
      * not already exist.
      */
-    public float getOrComputeLocality(int region, int entity, LocalityType type) {
+    public float getOrComputeLocality(int region, int entity, LocalityType type, IncludeStorageType includeStorageType) {
       switch (type) {
         case SERVER:
-          return getLocalityOfRegion(region, entity);
+          return getLocalityOfRegion(region, entity, includeStorageType);
         case RACK:
           return getOrComputeRackLocalities()[region][entity];
         default:
@@ -552,8 +555,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
      * Returns locality weighted by region size in MB. Will create locality cache
      * if it does not already exist.
      */
-    public double getOrComputeWeightedLocality(int region, int server, LocalityType type) {
-      return getRegionSizeMB(region) * getOrComputeLocality(region, server, type);
+    public double getOrComputeWeightedLocality(int region, int server, LocalityType type, IncludeStorageType includeStorageType) {
+      return getRegionSizeMB(region) * getOrComputeLocality(region, server, type, includeStorageType);
     }
 
     /**
@@ -576,14 +579,19 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     private void computeCachedLocalities() {
       rackLocalities = new float[numRegions][numRacks];
       regionsToMostLocalEntities = new int[LocalityType.values().length][numRegions];
+      regionsToMostSsdLocalServer = new int[numRegions];
 
       // Compute localities and find most local server per region
       for (int region = 0; region < numRegions; region++) {
         int serverWithBestLocality = 0;
         float bestLocalityForRegion = 0;
+
+        int serverWithBestSsdLocality = 0;
+        float bestSsdLocalityForRegion = 0;
+
         for (int server = 0; server < numServers; server++) {
           // Aggregate per-rack locality
-          float locality = getLocalityOfRegion(region, server);
+          float locality = getLocalityOfRegion(region, server, IncludeStorageType.ALL);
           int rack = serverIndexToRackIndex[server];
           int numServersInRack = serversPerRack[rack].length;
           rackLocalities[region][rack] += locality / numServersInRack;
@@ -592,8 +600,15 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
             serverWithBestLocality = server;
             bestLocalityForRegion = locality;
           }
+
+          float localityForSsd = getLocalityOfRegion(region, server, IncludeStorageType.SSD);
+          if (localityForSsd > bestSsdLocalityForRegion) {
+            serverWithBestSsdLocality = server;
+            bestSsdLocalityForRegion = localityForSsd;
+          }
         }
         regionsToMostLocalEntities[LocalityType.SERVER.ordinal()][region] = serverWithBestLocality;
+        regionsToMostSsdLocalServer[region] = serverWithBestSsdLocality;
 
         // Find most local rack per region
         int rackWithBestLocality = 0;
@@ -620,6 +635,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     enum LocalityType {
       SERVER,
       RACK
+    }
+
+    enum IncludeStorageType {
+      ALL,
+      SSD
     }
 
     /** An action to move or swap a region */
@@ -979,10 +999,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
     }
 
-    float getLocalityOfRegion(int region, int server) {
+    float getLocalityOfRegion(int region, int server, IncludeStorageType includeStorageType) {
       if (regionFinder != null) {
         HDFSBlocksDistribution distribution = regionFinder.getBlockDistribution(regions[region]);
-        return distribution.getBlockLocalityIndex(servers[server].getHostname());
+        return distribution.getBlockLocalityIndex(servers[server].getHostname()
+          , includeStorageType == IncludeStorageType.SSD);
       } else {
         return 0f;
       }

@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.AssignRegionAction;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.LocalityType;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.IncludeStorageType;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegionsAction;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -53,6 +54,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Optional;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 
@@ -154,6 +156,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private LocalityBasedCandidateGenerator localityCandidateGenerator;
   private ServerLocalityCostFunction localityCost;
   private RackLocalityCostFunction rackLocalityCost;
+  private ServerSsdLocalityCostFunction ssdLocalityCost;
   private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
 
@@ -185,6 +188,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
     localityCost = new ServerLocalityCostFunction(conf, services);
     rackLocalityCost = new RackLocalityCostFunction(conf, services);
+    ssdLocalityCost = new ServerSsdLocalityCostFunction(conf, services);
 
     if (this.candidateGenerators == null) {
       candidateGenerators = Lists.newArrayList();
@@ -209,6 +213,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     costFunctions.add(new MoveCostFunction(conf));
     costFunctions.add(localityCost);
     costFunctions.add(rackLocalityCost);
+    costFunctions.add(ssdLocalityCost);
     costFunctions.add(new TableSkewCostFunction(conf));
     costFunctions.add(regionReplicaHostCostFunction);
     costFunctions.add(regionReplicaRackCostFunction);
@@ -986,6 +991,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   static abstract class LocalityBasedCostFunction extends CostFunction {
 
     private final LocalityType type;
+    private final IncludeStorageType includeStorageType;
 
     private double bestLocality; // best case locality across cluster weighted by local data size
     private double locality; // current locality across cluster weighted by local data size
@@ -995,10 +1001,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     LocalityBasedCostFunction(Configuration conf,
                               MasterServices srv,
                               LocalityType type,
+                              IncludeStorageType includeStorageType,
                               String localityCostKey,
                               float defaultLocalityCost) {
       super(conf);
       this.type = type;
+      this.includeStorageType = includeStorageType;
       this.setMultiplier(conf.getFloat(localityCostKey, defaultLocalityCost));
       this.services = srv;
       this.locality = 0.0;
@@ -1058,7 +1066,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     private double getWeightedLocality(int region, int entity) {
-      return cluster.getOrComputeWeightedLocality(region, entity, type);
+      return cluster.getOrComputeWeightedLocality(region, entity, type, includeStorageType);
     }
 
   }
@@ -1069,13 +1077,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     private static final float DEFAULT_LOCALITY_COST = 25;
 
     ServerLocalityCostFunction(Configuration conf, MasterServices srv) {
-      super(
-          conf,
-          srv,
-          LocalityType.SERVER,
-          LOCALITY_COST_KEY,
-          DEFAULT_LOCALITY_COST
-      );
+      super(conf, srv, LocalityType.SERVER, IncludeStorageType.ALL, LOCALITY_COST_KEY, DEFAULT_LOCALITY_COST);
     }
 
     @Override
@@ -1090,18 +1092,30 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     private static final float DEFAULT_RACK_LOCALITY_COST = 15;
 
     public RackLocalityCostFunction(Configuration conf, MasterServices services) {
-      super(
-          conf,
-          services,
-          LocalityType.RACK,
-          RACK_LOCALITY_COST_KEY,
-          DEFAULT_RACK_LOCALITY_COST
-      );
+      super(conf, services, LocalityType.RACK, IncludeStorageType.ALL, RACK_LOCALITY_COST_KEY,
+        DEFAULT_RACK_LOCALITY_COST);
     }
 
     @Override
     int regionIndexToEntityIndex(int region) {
       return cluster.getRackForRegion(region);
+    }
+  }
+
+  // Hdfs read local replica first, no matter it is ssd or not.
+  // So it is better to make the local replica stored on ssd to get its benefits.
+  static class ServerSsdLocalityCostFunction extends LocalityBasedCostFunction {
+
+    private static final String LOCALITY_COST_KEY = "hbase.master.balancer.stochastic.ssdLocalityCost";
+    private static final float DEFAULT_LOCALITY_COST = 25;
+
+    ServerSsdLocalityCostFunction(Configuration conf, MasterServices srv) {
+      super(conf, srv, LocalityType.SERVER, IncludeStorageType.SSD, LOCALITY_COST_KEY, DEFAULT_LOCALITY_COST);
+    }
+
+    @Override
+    int regionIndexToEntityIndex(int region) {
+      return cluster.regionIndexToServerIndex[region];
     }
   }
 
