@@ -72,7 +72,7 @@ public class HDFSBlocksDistribution {
      * @param weight the weight
      * @param weightForSsd the weight for ssd
      */
-    public void addWeight(long weight,long weightForSsd) {
+    public void addWeight(long weight, long weightForSsd) {
       this.weight += weight;
       this.weightForSsd += weightForSsd;
     }
