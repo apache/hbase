@@ -746,7 +746,7 @@ public final class FSUtils {
       String[] hosts = bl.getHosts();
       long len = bl.getLength();
       StorageType[] storageTypes = bl.getStorageTypes();
-      blocksDistribution.addHostsAndBlockWeight(hosts, len ,storageTypes);
+      blocksDistribution.addHostsAndBlockWeight(hosts, len, storageTypes);
     }
   }
 

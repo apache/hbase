@@ -272,7 +272,7 @@ public class HDFSBlocksDistribution {
     for (Map.Entry<String, HostAndWeight> otherHostAndWeight:
       otherHostAndWeights.entrySet()) {
       addHostAndBlockWeight(otherHostAndWeight.getValue().host,
-        otherHostAndWeight.getValue().weight,otherHostAndWeight.getValue().weightForSsd);
+        otherHostAndWeight.getValue().weight, otherHostAndWeight.getValue().weightForSsd);
     }
     addUniqueWeight(otherBlocksDistribution.getUniqueBlocksTotalWeight());
   }
