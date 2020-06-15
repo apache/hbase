@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -41,13 +40,9 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestExceptionInUnassignedRegion {
-  private static Logger LOG =
-    LoggerFactory.getLogger(TestExceptionInUnassignedRegion.class.getName());
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -55,11 +50,9 @@ public class TestExceptionInUnassignedRegion {
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static TableName TABLE_NAME = TableName.valueOf("test");
+  private static final TableName TABLE_NAME = TableName.valueOf("test");
 
-  private static CountDownLatch countDownLatch = new CountDownLatch(1);
-
-  private static byte[] CF = Bytes.toBytes("cf");
+  private static final byte[] CF = Bytes.toBytes("cf");
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -119,7 +112,6 @@ public class TestExceptionInUnassignedRegion {
     @Override
     public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested) {
       if (!c.getEnvironment().getRegion().getRegionInfo().getTable().isSystemTable()) {
-        countDownLatch.countDown();
         throw new RuntimeException();
       }
     }

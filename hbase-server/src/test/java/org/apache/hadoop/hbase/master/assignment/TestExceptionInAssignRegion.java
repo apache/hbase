@@ -41,13 +41,9 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestExceptionInAssignRegion {
-  private static Logger LOG =
-    LoggerFactory.getLogger(TestExceptionInAssignRegion.class.getName());
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -55,11 +51,11 @@ public class TestExceptionInAssignRegion {
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static TableName TABLE_NAME = TableName.valueOf("test");
+  private static final TableName TABLE_NAME = TableName.valueOf("test");
 
-  private static CountDownLatch countDownLatch = new CountDownLatch(2);
+  private static final CountDownLatch countDownLatch = new CountDownLatch(2);
 
-  private static byte[] CF = Bytes.toBytes("cf");
+  private static final byte[] CF = Bytes.toBytes("cf");
 
   @BeforeClass
   public static void setUp() throws Exception {
