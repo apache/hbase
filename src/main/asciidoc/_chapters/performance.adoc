@@ -257,12 +257,12 @@ The following examples illustrate some of the possibilities.
 Note that you always have at least one write queue, no matter what setting you use.
 
 * The default value of `0` does not split the queue.
-* A value of `.3` uses 30% of the queues for reading and 60% for writing.
+* A value of `.3` uses 30% of the queues for reading and 70% for writing.
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 3 queues would be used for reads and 7 for writes.
 * A value of `.5` uses the same number of read queues and write queues.
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 5 queues would be used for reads and 5 for writes.
-* A value of `.6` uses 60% of the queues for reading and 30% for reading.
-  Given a value of `10` for `hbase.ipc.server.num.callqueue`, 7 queues would be used for reads and 3 for writes.
+* A value of `.6` uses 60% of the queues for reading and 40% for reading.
+  Given a value of `10` for `hbase.ipc.server.num.callqueue`, 6 queues would be used for reads and 4 for writes.
 * A value of `1.0` uses one queue to process write requests, and all other queues process read requests.
   A value higher than `1.0` has the same effect as a value of `1.0`.
   Given a value of `10` for `hbase.ipc.server.num.callqueue`, 9 queues would be used for reads and 1 for writes.
@@ -273,11 +273,11 @@ More queues are used for Gets if the value is below `.5` and more are used for s
 No matter what setting you use, at least one read queue is used for Get operations.
 
 * A value of `0` does not split the read queue.
-* A value of `.3` uses 60% of the read queues for Gets and 30% for Scans.
+* A value of `.3` uses 70% of the read queues for Gets and 30% for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 7 would be used for Gets and 3 for Scans.
 * A value of `.5` uses half the read queues for Gets and half for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 5 would be used for Gets and 5 for Scans.
-* A value of `.6` uses 30% of the read queues for Gets and 60% for Scans.
+* A value of `.7` uses 30% of the read queues for Gets and 70% for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 3 would be used for Gets and 7 for Scans.
 * A value of `1.0` uses all but one of the read queues for Scans.
   Given a value of `20` for `hbase.ipc.server.num.callqueue` and a value of`.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 1 would be used for Gets and 9 for Scans.

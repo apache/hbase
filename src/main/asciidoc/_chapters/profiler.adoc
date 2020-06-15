@@ -34,6 +34,9 @@ HBASE-21926 introduced a new servlet that supports integrated profiling via asyn
 == Prerequisites
 
 Go to https://github.com/jvm-profiling-tools/async-profiler, download a release appropriate for your platform, and install on every cluster host.
+If 4.6 or later linux, be sure to set proc variables as per 'Basic Usage' section in the
+<a href="https://github.com/jvm-profiling-tools/async-profiler">Async Profiler Home Page</a>
+(Not doing this will draw you diagrams with no content).
 
 Set `ASYNC_PROFILER_HOME` in the environment (put it in hbase-env.sh) to the root directory of the async-profiler install location, or pass it on the HBase daemon's command line as a system property as `-Dasync.profiler.home=/path/to/async-profiler`.
 
