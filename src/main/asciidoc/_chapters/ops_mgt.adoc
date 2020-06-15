@@ -2671,7 +2671,7 @@ The definition for each of these metrics is detailed below:
 | The actual date of last successful edit shipment.
 
 | Source
-| `
+| SizeOfLogQueue
 | Number of wal files on this given queue.
 
 | Source
@@ -2711,7 +2711,7 @@ up, while `Source.TimeStampOfLastShippedOp`, `Source.EditsReadFromLogQueue`,
 `Source.OpsShippedToTarget` or `Source.TimeStampOfNextToReplicate` do not change at all,
  then replication flow is failing to progress, and there might be problems within
 clusters communication. This could also happen if replication is manually paused
-(via hbase shell `disable_peer`command, for example), but date keeps getting ingested
+(via hbase shell `disable_peer` command, for example), but date keeps getting ingested
 in the source cluster tables.
 
 == Running Multiple Workloads On a Single Cluster
