@@ -2787,11 +2787,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public void abort(String reason, Throwable cause) {
-    if (isAborted() || isStopped()) {
+    if (!setAbortRequested() || isStopped()) {
       LOG.debug("Abort called but aborted={}, stopped={}", isAborted(), isStopped());
       return;
     }
-    setAbortRequested();
     if (cpHost != null) {
       // HBASE-4014: dump a list of loaded coprocessors.
       LOG.error(HBaseMarkers.FATAL, "Master server abort: loaded coprocessors are: " +

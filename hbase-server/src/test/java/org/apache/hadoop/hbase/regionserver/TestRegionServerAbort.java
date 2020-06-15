@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -24,6 +25,10 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,6 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -171,11 +177,43 @@ public class TestRegionServerAbort {
     assertFalse(cluster.getRegionServer(0).isStopped());
   }
 
+  /**
+   * Tests that only a single abort is processed when multiple aborts are requested.
+   */
+  @Test
+  public void testMultiAbort() {
+    assertTrue(cluster.getRegionServerThreads().size() > 0);
+    JVMClusterUtil.RegionServerThread t = cluster.getRegionServerThreads().get(0);
+    assertTrue(t.isAlive());
+    HRegionServer rs = t.getRegionServer();
+    assertFalse(rs.isAborted());
+    RegionServerCoprocessorHost cpHost = rs.getRegionServerCoprocessorHost();
+    StopBlockingRegionObserver cp = (StopBlockingRegionObserver)cpHost.findCoprocessor(
+        StopBlockingRegionObserver.class.getName());
+    // Enable clean abort.
+    cp.setStopAllowed(true);
+    // Issue two aborts in quick succession.
+    // We need a thread pool here, otherwise the abort() runs into SecurityException when running
+    // from the fork join pool when setting the context classloader.
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      CompletableFuture.runAsync(() -> rs.abort("Abort 1"), executor);
+      CompletableFuture.runAsync(() -> rs.abort("Abort 2"), executor);
+      long testTimeoutMs = 10 * 1000;
+      Waiter.waitFor(cluster.getConf(), testTimeoutMs, (Waiter.Predicate<Exception>) rs::isStopped);
+      // Make sure only one abort is received.
+      assertEquals(1, cp.getNumAbortsRequested());
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
   @CoreCoprocessor
   public static class StopBlockingRegionObserver
       implements RegionServerCoprocessor, RegionCoprocessor, RegionServerObserver, RegionObserver {
     public static final String DO_ABORT = "DO_ABORT";
     private boolean stopAllowed;
+    private AtomicInteger abortCount = new AtomicInteger();
 
     @Override
     public Optional<RegionObserver> getRegionObserver() {
@@ -203,9 +241,14 @@ public class TestRegionServerAbort {
     @Override
     public void preStopRegionServer(ObserverContext<RegionServerCoprocessorEnvironment> env)
         throws IOException {
+      abortCount.incrementAndGet();
       if (!stopAllowed) {
         throw new IOException("Stop not allowed");
       }
+    }
+
+    public int getNumAbortsRequested() {
+      return abortCount.get();
     }
 
     public void setStopAllowed(boolean allowed) {
