@@ -227,6 +227,9 @@ public class AssignmentManager {
     ZKWatcher zkw = master.getZooKeeper();
     // it could be null in some tests
     if (zkw != null) {
+      // here we are still in the early steps of active master startup. There is only one thread(us)
+      // can access AssignmentManager and create region node, so here we do not need to lock the
+      // region node.
       RegionState regionState = MetaTableLocator.getMetaRegionState(zkw);
       RegionStateNode regionNode =
         regionStates.getOrCreateRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
