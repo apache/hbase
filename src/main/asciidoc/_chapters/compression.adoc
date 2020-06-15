@@ -336,9 +336,7 @@ If you are changing codecs, be sure the old codec is still available until all t
 
 .Enabling Compression on a ColumnFamily of an Existing Table using HBaseShell
 ----
-hbase> disable 'test'
 hbase> alter 'test', {NAME => 'cf', COMPRESSION => 'GZ'}
-hbase> enable 'test'
 ----
 
 .Creating a New Table with Compression On a ColumnFamily
@@ -436,15 +434,12 @@ Following is an example using HBase Shell:
 
 .Enable Data Block Encoding On a Table
 ----
-hbase>  disable 'test'
 hbase> alter 'test', { NAME => 'cf', DATA_BLOCK_ENCODING => 'FAST_DIFF' }
 Updating all regions with the new schema...
 0/1 regions updated.
 1/1 regions updated.
 Done.
 0 row(s) in 2.2820 seconds
-hbase> enable 'test'
-0 row(s) in 0.1580 seconds
 ----
 
 .Verifying a ColumnFamily's Data Block Encoding

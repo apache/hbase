@@ -284,22 +284,37 @@ For additional information on setting up Eclipse for HBase development on Window
 
 === IntelliJ IDEA
 
-You can set up IntelliJ IDEA for similar functionality as Eclipse.
-Follow these steps.
+A functional development environment can be setup around an IntelliJ IDEA installation that has the
+plugins necessary for building Java projects with Maven.
 
-. Select
-. You do not need to select a profile.
-  Be sure [label]#Maven project
-  required# is selected, and click btn:[Next].
-. Select the location for the JDK.
+. Use either File > New > "Project from Existing Sources..." or "Project From Version Control.."
+. Depending on your version of IntelliJ, you may need to choose Maven as the "project" or "model"
+type.
 
-.Using the HBase Formatter in IntelliJ IDEA
-Using the Eclipse Code Formatter plugin for IntelliJ IDEA, you can import the HBase code formatter described in <<eclipse.code.formatting,eclipse.code.formatting>>.
+The following plugins are recommended:
+
+. Maven, bundled. This allows IntelliJ to resolve dependencies and recognize the project structure.
+. EditorConfig, bundled. This will apply project whitespace settings found in the the
+`.editorconfig` file available on branches with
+link:https://issues.apache.org/jira/browse/HBASE-23234[HBASE-23234] or later.
+. link:https://plugins.jetbrains.com/plugin/1065-checkstyle-idea/[Checkstyle-IDEA]. Configure this
+against the configuration file found under `hbase-checkstyle/src/main/resources/hbase/checkstyle.xml`
+(If the Intellij checkstyle plugin complains parsing the volunteered hbase `checkstyle.xml`, make
+sure the plugin's `version` popup menu matches the hbase checkstyle version -- see
+link:https://issues.apache.org/jira/browse/HBASE-23242[HBASE-23242] for more).
+This plugin will highlight style errors in the IDE, so you can fix them before they get flagged during the
+pre-commit process.
+. link:https://plugins.jetbrains.com/plugin/8277-protobuf-support/[Protobuf Support]. HBase uses
+link:https://developers.google.com/protocol-buffers/[Protocol Buffers] in a number of places where
+serialization is required. This plugin is helpful when editing these object definitions.
+. link:https://plugins.jetbrains.com/plugin/7391-asciidoc/[AsciiDoc]. HBase uses
+link:http://asciidoc.org[AsciiDoc] for  building it's project documentation. This plugin is helpful
+when editing this book.
 
 === Other IDEs
 
-It would be useful to mirror the <<eclipse,eclipse>> set-up instructions for other IDEs.
-If you would like to assist, please have a look at link:https://issues.apache.org/jira/browse/HBASE-11704[HBASE-11704].
+If you'd have another environment with which you'd like to develop on HBase, please consider
+documenting your setup process here.
 
 [[build]]
 == Building Apache HBase
@@ -307,16 +322,15 @@ If you would like to assist, please have a look at link:https://issues.apache.or
 [[build.basic]]
 === Basic Compile
 
-HBase is compiled using Maven.
-You must use at least Maven 3.0.4.
-To check your Maven version, run the command +mvn -version+.
+HBase is compiled using Maven. You must use at least Maven 3.0.4. To check your Maven version, run
+the command +mvn -version+.
 
-.JDK Version Requirements
-[NOTE]
-====
-Starting with HBase 1.0 you must use Java 7 or later to build from source code.
-See <<java,java>> for more complete information about supported JDK versions.
-====
+[[build.basic.jdk_requirements]]
+==== JDK Version Requirements
+
+HBase has Java version compiler requirements that vary by release branch. At compilation time,
+HBase has the same version requirements as it does for runtime. See <<java,java>> for a complete
+support matrix of Java version by HBase version.
 
 [[maven.build.commands]]
 ==== Maven Build Commands
@@ -382,28 +396,111 @@ mvn clean install -DskipTests
 See the <<hbase.unittests.cmds,hbase.unittests.cmds>> section in <<hbase.unittests,hbase.unittests>>
 
 [[maven.build.hadoop]]
-==== Building against various hadoop versions.
+==== Building against various Hadoop versions
 
-HBase supports building against Apache Hadoop versions: 2.y and 3.y (early release artifacts). By default we build against Hadoop 2.x.
+HBase supports building against Apache Hadoop versions: 2.y and 3.y (early release artifacts).
+Exactly which version of Hadoop is used by default varies by release branch. See the section
+<<hadoop,Hadoop>> for the complete breakdown of supported Hadoop version by HBase release.
 
-To build against a specific release from the Hadoop 2.y line, set e.g. `-Dhadoop-two.version=2.6.3`.
+The mechanism for selecting a Hadoop version at build time is identical across all releases. Which
+version of Hadoop is default varies. We manage Hadoop major version selection by way of Maven
+profiles. Due to the peculiarities of Maven profile mutual exclusion, the profile that builds
+against a particular Hadoop version is activated by setting a property, *not* the usual profile
+activation. Hadoop version profile activation is summarized by the following table.
+
+.Hadoop Profile Activation by HBase Release
+[cols="3*^.^", options="header"]
+|===
+| | Hadoop2 Activation | Hadoop3 Activation
+| HBase 1.3+ | _active by default_ | `-Dhadoop.profile=3.0`
+| HBase 3.0+ | _not supported_ | _active by default_
+|===
+
+[WARNING]
+====
+Please note that where a profile is active by default, `hadoop.profile` must NOT be provided.
+====
+
+Once the Hadoop major version profile is activated, the exact Hadoop version can be
+specified by overriding the appropriate property value. For Hadoop2 versions, the property name
+is `hadoop-two.version`. With Hadoop3 versions, the property name is `hadoop-three.version`.
+
+.Example 1, Building HBase 1.7 against Hadoop 2.10.0
+
+For example, to build HBase 1.7 against Hadoop 2.10.0, the profile is set for Hadoop2 by default,
+so only `hadoop-two.version` must be specified:
 
 [source,bourne]
 ----
-mvn -Dhadoop-two.version=2.6.3 ...
+git checkout branch-1
+mvn -Dhadoop-two.version=2.10.0 ...
 ----
 
-To change the major release line of Hadoop we build against, add a hadoop.profile property when you invoke +mvn+:
+.Example 2, Building HBase 2.3 against Hadoop 3.3.0-SNAPSHOT
+
+This is how a developer might check the compatibility of HBase 2.3 against an unreleased Hadoop
+version (currently 3.3). Both the Hadoop3 profile and version must be specified:
 
 [source,bourne]
 ----
-mvn -Dhadoop.profile=3.0 ...
+git checkout branch-2.3
+mvn -Dhadoop.profile=3.0 -Dhadoop-three.version=3.3.0-SNAPSHOT ...
 ----
 
-The above will build against whatever explicit hadoop 3.y version we have in our _pom.xml_ as our '3.0' version.
-Tests may not all pass so you may need to pass `-DskipTests` unless you are inclined to fix the failing tests.
+.Example 3, Building HBase 3.0 against Hadoop 3.3.0-SNAPSHOT
 
-To pick a particular Hadoop 3.y release, you'd set hadoop-three.version property e.g. `-Dhadoop-three.version=3.0.0`.
+The same developer might want also to check the development version of HBase (currently 3.0)
+against the development version of Hadoop (currently 3.3). In this case, the Hadoop3 profile is
+active by default, so only `hadoop-three.version` must be specified:
+
+[source,bourne]
+----
+git checkout master
+mvn -Dhadoop-three.version=3.3.0-SNAPSHOT ...
+----
+
+[[maven.build.jdk11_hadoop3]]
+==== Building with JDK11 and Hadoop3
+
+HBase manages JDK-specific build settings using Maven profiles. The profile appropriate to the JDK
+in use is automatically activated. Building and running on JDK8 supports both Hadoop2 and Hadoop3.
+For JDK11, only Hadoop3 is supported. Thus, the Hadoop3 profile must be active when building on
+JDK11, and the artifacts used when running HBase on JDK11 must be compiled against Hadoop3.
+Furthermore, the JDK11 profile requires a minimum Hadoop version of 3.2.0. This value is specified
+by the JDK11 profile, but it can be overridden using the `hadoop-three.version` property as normal.
+For details on Hadoop profile activation by HBase branch, see
+<<maven.build.hadoop,Building against various Hadoop versions>>. See <<java,java>> for a complete
+support matrix of Java version by HBase version.
+
+.Example 1, Building HBase 2.3 with JDK11
+
+To build HBase 2.3 with JDK11, the Hadoop3 profile must be activated explicitly.
+
+[source,bourne]
+----
+git checkout branch-2.3
+JAVA_HOME=/usr/lib/jvm/java-11 mvn -Dhadoop.profile=3.0 ...
+----
+
+.Example 2, Building HBase 3.0 with JDK11
+
+For HBase 3.0, the Hadoop3 profile is active by default, no additional properties need be
+specified.
+
+[source,bourne]
+----
+git checkout master
+JAVA_HOME=/usr/lib/jvm/java-11 mvn ...
+----
+
+[[maven.build.jdk11_hadoop3_ide]]
+==== Building and testing in an IDE with JDK11 and Hadoop3
+
+Continuing the discussion from the <<maven.build.jdk11_hadoop3,earlier section>>, building and
+testing with JDK11 and Hadoop3 within an IDE may require additional configuration. Specifically,
+make sure the JVM version used by the IDE is a JDK11, the active JDK Maven profile is for JDK11,
+and the Maven profile for JDK8 is NOT active. Likewise, ensure the Hadoop3 Maven profile is active
+and the Hadoop2 Maven profile is NOT active.
 
 [[build.protobuf]]
 ==== Build Protobuf
@@ -488,6 +585,40 @@ If you see `Unable to find resource 'VM_global_library.vm'`, ignore it.
 It's not an error.
 It is link:https://issues.apache.org/jira/browse/MSITE-286[officially ugly] though.
 
+[[build.on.linux.aarch64]]
+=== Build On Linux Aarch64
+HBase runs on both Windows and UNIX-like systems, and it should run on any platform
+that runs a supported version of Java. This should include JVMs on x86_64 and aarch64.
+The documentation below describes how to build hbase on aarch64 platform.
+
+==== Set Environment Variables
+Manually install Java and Maven on aarch64 servers if they are not installed,
+and set environment variables. For example:
+
+[source,bourne]
+----
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-arm64
+export MAVEN_HOME=/opt/maven
+export PATH=${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${PATH}
+----
+
+==== Use Protobuf Supported On Aarch64
+Now HBase uses protobuf of two versions. Version '3.11.4' of protobuf that hbase uses
+internally and version '2.5.0' as external usage.
+Package protoc-2.5.0 does not work on aarch64 platform, we should add maven
+profile '-Paarch64' when building. It downloads protoc-2.5.0 package from maven
+repository which we made on aarch64 platform locally.
+
+[source,bourne]
+----
+mvn clean install -Paarch64 -DskipTests
+----
+
+[NOTE]
+Protobuf is released with aarch64 protoc since version '3.5.0', and we are planning to
+upgrade protobuf later, then we don't have to add the profile '-Paarch64' anymore.
+
+
 [[releasing]]
 == Releasing Apache HBase
 
@@ -546,24 +677,173 @@ For the build to sign them for you, you a properly configured _settings.xml_ in 
 
 [[maven.release]]
 === Making a Release Candidate
-Only committers may make releases of hbase artifacts.
+Only committers can make releases of hbase artifacts.
 
 .Before You Begin
-Make sure your environment is properly set up. Maven and Git are the main tooling
-used in the below. You'll need a properly configured _settings.xml_ file in your
-local _~/.m2_ maven repository with logins for apache repos (See <<maven.settings.xml>>).
-You will also need to have a published signing key. Browse the Hadoop
-link:http://wiki.apache.org/hadoop/HowToRelease[How To Release] wiki page on
-how to release. It is a model for most of the instructions below. It often has more
-detail on particular steps, for example, on adding your code signing key to the
-project KEYS file up in Apache or on how to update JIRA in preparation for release.
-
-Before you make a release candidate, do a practice run by deploying a SNAPSHOT.
 Check to be sure recent builds have been passing for the branch from where you
 are going to take your release. You should also have tried recent branch tips
 out on a cluster under load, perhaps by running the `hbase-it` integration test
 suite for a few hours to 'burn in' the near-candidate bits.
 
+You will need a published signing key added to the hbase
+link:https://dist.apache.org/repos/dist/release/hbase/KEYS[KEYS] file.
+(For how to add a KEY, see _Step 1._ in link:https://cwiki.apache.org/confluence/display/HADOOP2/HowToRelease[How To Release],
+the Hadoop version of this document).
+
+Next make sure JIRA is properly primed, that all issues targeted against
+the prospective release have been resolved and are present in git on the
+particular branch. If any outstanding issues, move them out of the release by
+adjusting the fix version to remove this pending release as a target.
+Any JIRA with a fix version that matches the release candidate
+target release will be included in the generated _CHANGES.md/RELEASENOTES.md_
+files that ship with the release so make sure JIRA is correct before you begin.
+
+After doing the above, you can move to the manufacture of an RC.
+Building an RC is involved. We've tried to script it. In the next section
+we describe the script. It is followed by a description of the steps
+involved which the script automates.
+
+[[do-release-docker.sh]]
+==== Release Candidate Generating Script
+
+The _dev-support/create-release/do-release-docker.sh_ Release Candidate (RC)
+Generating script is maintained in the master branch but can generate RCs
+for any 2.x+ branch (The script does not work against branch-1). Check out
+and update the master branch when making RCs.
+
+The script builds in a Docker container to ensure we have a consistent
+environment building. It will ask you for passwords for apache and for your
+gpg signing key so it can sign and commit on your behalf. The passwords
+are passed to gpg-agent in the container and purged along with the container
+when the build is done.
+
+[NOTE]
+====
+_dev-support/create-release/do-release-docker.sh_ supercedes the previous
+_dev-support/make_rc.sh_ script. It is more comprehensive automating all
+steps, rather than a portion, building a RC.
+====
+
+The script will:
+
+ * Set version to the release version 
+ * Updates RELEASENOTES.md and CHANGES.md
+ * Tag the RC
+ * Set version to next SNAPSHOT version. 
+ * Builds, signs, and hashes all artifacts. 
+ * Generates the api compatibility report
+ * Pushes release tgzs to the dev dir in a apache dist. 
+ * Pushes to repository.apache.org staging. 
+ * Creates vote email template.
+
+The RC building script is _dev-support/create-release/do-release-docker.sh_.
+Pass _-h_ to _dev-support/create-release/do-release-docker.sh_ to
+see available options:
+
+```
+Usage: do-release-docker.sh [options]
+
+This script runs the release scripts inside a docker image.
+
+Options:
+
+  -d [path]  required. working directory. output will be written to "output" in here.
+  -n         dry run mode. Checks and local builds, but does not upload anything.
+  -t [tag]   tag for the hbase-rm docker image to use for building (default: "latest").
+  -j [path]  path to local JDK installation to use building. By default the script will
+               use openjdk8 installed in the docker image.
+  -s [step]  runs a single step of the process; valid steps are: tag, build, publish. if
+               none specified, runs tag, then build, and then publish.
+```
+
+Running the below command will do all steps above using the
+'rm' working directory under Downloads as workspace: 
+```
+  $ ./dev-support/create-release/do-release-docker.sh -d ~/Downloads/rm  
+```
+
+The script will ask you a set of questions about the release version
+and branch, the version to generate the compatibility report against,
+and so on, before it starts executing (If you set the appropriate
+environment variables, the script will skip asking you questions --
+which can come in handy if you end up having to re-run the script
+multiple times).
+
+On branch 2.1, a Release Candidate (RC) creation can take many hours
+(~8 hours) so run your build on a machine you know will be
+around for this swath of time. Start the build inside a _screen_
+or _tmux_ session in case you become disconnected from your
+build box.
+
+The build is made of three stages: tag, build, and
+publish. If the script fails, you may resort to 'fixing' the
+failure manually and then asking the script to run the
+subsequent stage rather than start over.
+
+When the scripts run, they use the passed working directory.
+Under the working directory is an _output_ dir. In here is
+where the checkouts go, where we build up the _svn_ directory
+to _svn_ commit to _apache/dist/dev_, etc. Each step also
+dumps a log file in here: e.g. _tag.log_ for the tagging
+step and _build.log_ for building.
+
+The _tagging_ step will checkout hbase, set the version number
+in all the poms – e.g. if branch-2.0 is at 2.0.6-SNAPSHOT
+and you are making a 2.0.5 RC, it will set the versions in
+all poms to 2.0.5 – appropriately. It then generate CHANGES.md
+and RELEASENOTES.md by checking out yetus and then
+calling its generator scripts. It then commits the poms with
+their new versions along with the changed CHANGES.md and
+RELEASENOTES.md, tags, and pushes up all changes to the
+apache repo.
+
+The _build_ step will checkout hbase, build all including
+javadoc and doc (javadoc takes the bulk of the time – 4 hours plus),
+run assemblies to produce src and bin tarballs, sign and hash it
+all, and then make a dir under apache dist dev named for the RC.
+It will copy all artifacts in here including top-level CHANGES.md
+and RELEASENOTES.md. It will generate api diff docs and put them
+into this RC dir too. When done, it commits the svn RC.
+
+The publish step will checkout hbase, build, and then copy up all
+artifacts to repository.apache.org (signed and hashed). When done,
+it will dump out an email template with all the correct links in place.
+
+Check the artifacts pushed to the dev distribution directory and up
+in repository.apache.org. If all looks good, check the generated
+email and send to the dev list.
+
+Under the create-release dir, scripts should make some sense:
+```
+do-release-docker.sh   # Main entrance.
+do-release.sh .        # More checks. Not usable really other than by setting env variables before running it.
+release-tag.sh         # Does tagging steps.
+release-build.sh .     # Does the build and publish step.
+release-util.sh        # Utility used by all of the above.
+vote.tmpl              # Template for email to send out.
+hbase-rm               # Has docker image we use.
+```
+
+If the RC fails, the script will do the right thing when it comes
+to edit of the _CHANGES.md_ and _RELEASENOTES.md_ removing the old
+and updating the files with the updated content (No harm verifying
+though).
+
+One trick for checking stuff especially in utility is to do as follows:
+
+```
+$ source release-util.sh ; generate_api_report ../../ rel/2.1.3 2.14RC1
+```
+
+i.e. source the release-util.sh script and then run one of its functions
+passing args. Helped debugging stuff.
+
+[[rc_procedure]]
+==== Release Candidate Procedure
+Here we describe the steps involved generating a Release Candidate, the steps
+automated by the script described in the previous section.
+
+The process below makes use of various tools, mainly _git_ and _maven_.
 
 .Specifying the Heap Space for Maven
 [NOTE]
@@ -579,75 +859,60 @@ MAVEN_OPTS="-Xmx4g -XX:MaxPermSize=256m" mvn package
 You could also set this in an environment variable or alias in your shell.
 ====
 
+===== Update the _CHANGES.md_  and _RELEASENOTES.md_ files and the POM files.
 
-[NOTE]
-====
-The script _dev-support/make_rc.sh_ automates many of the below steps.
-It will checkout a tag, clean the checkout, build src and bin tarballs,
-and deploy the built jars to repository.apache.org.
-It does NOT do the modification of the _CHANGES.txt_ for the release,
-the checking of the produced artifacts to ensure they are 'good' --
-e.g. extracting the produced tarballs, verifying that they
-look right, then starting HBase and checking that everything is running
-correctly -- or the signing and pushing of the tarballs to
-link:https://people.apache.org[people.apache.org].
-Take a look. Modify/improve as you see fit.
-====
+Update _CHANGES.md_ with the changes since the last release. Be careful with where you put
+headings and license. Respect the instructions and warning you find in current
+_CHANGES.md_ and _RELEASENOTES.md_ since these two files are processed by tooling that is
+looking for particular string sequences. See link:https://issues.apache.org/jira/browse/HBASE-21399[HBASE-21399]
+for description on how to make use of yetus generating additions to
+_CHANGES.md_ and _RELEASENOTES.md_ (RECOMMENDED!).  Adding JIRA fixes, make sure the
+URL to the JIRA points to the proper location which lists fixes for this release.
 
-.Procedure: Release Procedure
-. Update the _CHANGES.txt_ file and the POM files.
-+
-Update _CHANGES.txt_ with the changes since the last release.
-Make sure the URL to the JIRA points to the proper location which lists fixes for this release.
-Adjust the version in all the POM files appropriately.
+Next, adjust the version in all the POM files appropriately.
 If you are making a release candidate, you must remove the `-SNAPSHOT` label from all versions
 in all pom.xml files.
 If you are running this receipe to publish a snapshot, you must keep the `-SNAPSHOT` suffix on the hbase version.
 The link:http://www.mojohaus.org/versions-maven-plugin/[Versions Maven Plugin] can be of use here.
 To set a version in all the many poms of the hbase multi-module project, use a command like the following:
-+
+
 [source,bourne]
 ----
 $ mvn clean org.codehaus.mojo:versions-maven-plugin:2.5:set -DnewVersion=2.1.0-SNAPSHOT
 ----
-+
-Make sure all versions in poms are changed! Checkin the _CHANGES.txt_ and any maven version changes.
 
-. Update the documentation.
-+
+Make sure all versions in poms are changed! Checkin the _CHANGES.md_, _RELEASENOTES.md_, and
+any maven version changes.
+
+===== Update the documentation.
+
 Update the documentation under _src/main/asciidoc_.
 This usually involves copying the latest from master branch and making version-particular
-adjustments to suit this release candidate version.
+adjustments to suit this release candidate version. Commit your changes.
 
-. Clean the checkout dir
-+
+===== Clean the checkout dir
 [source,bourne]
 ----
-
 $ mvn clean
 $ git clean -f -x -d
 ----
 
-
-. Run Apache-Rat
+===== Run Apache-Rat
 Check licenses are good
-+
+
 [source,bourne]
 ----
-
-$ mvn apache-rat
+$ mvn apache-rat:check
 ----
-+
+
 If the above fails, check the rat log.
 
-+
 [source,bourne]
 ----
 $ grep 'Rat check' patchprocess/mvn_apache_rat.log
 ----
-+
 
-. Create a release tag.
+===== Create a release tag.
 Presuming you have run basic tests, the rat check, passes and all is
 looking good, now is the time to tag the release candidate (You
 always remove the tag if you need to redo). To tag, do
@@ -656,10 +921,8 @@ All tags should be signed tags; i.e. pass the _-s_ option (See
 link:http://https://git-scm.com/book/id/v2/Git-Tools-Signing-Your-Work[Signing Your Work]
 for how to set up your git environment for signing).
 
-+
 [source,bourne]
 ----
-
 $ git tag -s 2.0.0-alpha4-RC0 -m "Tagging the 2.0.0-alpha4 first Releae Candidate (Candidates start at zero)"
 ----
 
@@ -672,25 +935,22 @@ they are preserved in the Apache repo as in:
 ----
 
 Push the (specific) tag (only) so others have access.
-+
+
 [source,bourne]
 ----
-
 $ git push origin 2.0.0-alpha4-RC0
 ----
-+
+
 For how to delete tags, see
 link:http://www.manikrathee.com/how-to-delete-a-tag-in-git.html[How to Delete a Tag]. Covers
 deleting tags that have not yet been pushed to the remote Apache
 repo as well as delete of tags pushed to Apache.
 
-
-. Build the source tarball.
-+
+===== Build the source tarball.
 Now, build the source tarball. Lets presume we are building the source
 tarball for the tag _2.0.0-alpha4-RC0_ into _/tmp/hbase-2.0.0-alpha4-RC0/_
 (This step requires that the mvn and git clean steps described above have just been done).
-+
+
 [source,bourne]
 ----
 $ git archive --format=tar.gz --output="/tmp/hbase-2.0.0-alpha4-RC0/hbase-2.0.0-alpha4-src.tar.gz" --prefix="hbase-2.0.0-alpha4/" $git_tag
@@ -701,7 +961,7 @@ _/tmp/hbase-2.0.0-alpha4-RC0_ build output directory (We don't want the _RC0_ in
 These bits are currently a release candidate but if the VOTE passes, they will become the release so we do not taint
 the artifact names with _RCX_).
 
-. Build the binary tarball.
+===== Build the binary tarball.
 Next, build the binary tarball. Add the `-Prelease` profile when building.
 It runs the license apache-rat check among other rules that help ensure
 all is wholesome. Do it in two steps.
@@ -710,7 +970,6 @@ First install into the local repository
 
 [source,bourne]
 ----
-
 $ mvn clean install -DskipTests -Prelease
 ----
 
@@ -720,24 +979,21 @@ documentation.
 
 [source,bourne]
 ----
-
 $ mvn install -DskipTests site assembly:single -Prelease
 ----
 
-+
 Otherwise, the build complains that hbase modules are not in the maven repository
 when you try to do it all in one step, especially on a fresh repository.
 It seems that you need the install goal in both steps.
-+
+
 Extract the generated tarball -- you'll find it under
 _hbase-assembly/target_ and check it out.
 Look at the documentation, see if it runs, etc.
 If good, copy the tarball beside the source tarball in the
 build output directory.
 
+===== Deploy to the Maven Repository.
 
-. Deploy to the Maven Repository.
-+
 Next, deploy HBase to the Apache Maven repository. Add the
 apache-release` profile when running the `mvn deploy` command.
 This profile comes from the Apache parent pom referenced by our pom files.
@@ -746,43 +1002,42 @@ _settings.xml_ is configured correctly, as described in <<maven.settings.xml>>.
 This step depends on the local repository having been populate
 by the just-previous bin tarball build.
 
-+
+
 [source,bourne]
 ----
-
 $ mvn deploy -DskipTests -Papache-release -Prelease
 ----
-+
+
 This command copies all artifacts up to a temporary staging Apache mvn repository in an 'open' state.
 More work needs to be done on these maven artifacts to make them generally available.
-+
+
 We do not release HBase tarball to the Apache Maven repository. To avoid deploying the tarball, do not
 include the `assembly:single` goal in your `mvn deploy` command. Check the deployed artifacts as described in the next section.
 
 .make_rc.sh
 [NOTE]
 ====
-If you run the _dev-support/make_rc.sh_ script, this is as far as it takes you.
+If you ran the old _dev-support/make_rc.sh_ script, this is as far as it takes you.
 To finish the release, take up the script from here on out.
 ====
 
-. Make the Release Candidate available.
-+
+===== Make the Release Candidate available.
+
 The artifacts are in the maven repository in the staging area in the 'open' state.
 While in this 'open' state you can check out what you've published to make sure all is good.
 To do this, log in to Apache's Nexus at link:https://repository.apache.org[repository.apache.org] using your Apache ID.
 Find your artifacts in the staging repository. Click on 'Staging Repositories' and look for a new one ending in "hbase" with a status of 'Open', select it.
 Use the tree view to expand the list of repository contents and inspect if the artifacts you expect are present. Check the POMs.
 As long as the staging repo is open you can re-upload if something is missing or built incorrectly.
-+
+
 If something is seriously wrong and you would like to back out the upload, you can use the 'Drop' button to drop and delete the staging repository.
 Sometimes the upload fails in the middle. This is another reason you might have to 'Drop' the upload from the staging repository.
-+
+
 If it checks out, close the repo using the 'Close' button. The repository must be closed before a public URL to it becomes available. It may take a few minutes for the repository to close. Once complete you'll see a public URL to the repository in the Nexus UI. You may also receive an email with the URL. Provide the URL to the temporary staging repository in the email that announces the release candidate.
 (Folks will need to add this repo URL to their local poms or to their local _settings.xml_ file to pull the published release candidate artifacts.)
-+
+
 When the release vote concludes successfully, return here and click the 'Release' button to release the artifacts to central. The release process will automatically drop and delete the staging repository.
-+
+
 .hbase-downstreamer
 [NOTE]
 ====
@@ -793,11 +1048,11 @@ Make sure you are pulling from the repository when tests run and that you are no
 ====
 
 See link:https://www.apache.org/dev/publishing-maven-artifacts.html[Publishing Maven Artifacts] for some pointers on this maven staging process.
-+
+
 If the HBase version ends in `-SNAPSHOT`, the artifacts go elsewhere.
 They are put into the Apache snapshots repository directly and are immediately available.
 Making a SNAPSHOT release, this is what you want to happen.
-+
+
 At this stage, you have two tarballs in your 'build output directory' and a set of artifacts
 in a staging area of the maven repository, in the 'closed' state.
 Next sign, fingerprint and then 'stage' your release candiate build output directory via svnpubsub by committing
@@ -808,7 +1063,6 @@ link:https://dist.apache.org/repos/dist/release/hbase[release/hbase]). In the _v
 
 [source,bourne]
 ----
-
 $ for i in *.tar.gz; do echo $i; gpg --print-md MD5 $i > $i.md5 ; done
 $ for i in *.tar.gz; do echo $i; gpg --print-md SHA512 $i > $i.sha ; done
 $ for i in *.tar.gz; do echo $i; gpg --armor --output $i.asc --detach-sig $i  ; done
@@ -832,11 +1086,10 @@ $ mv 0.96.0RC0 /Users/stack/checkouts/hbase.dist.dev.svn
 $ svn add 0.96.0RC0
 $ svn commit ...
 ----
-+
+
 Ensure it actually gets published by checking link:https://dist.apache.org/repos/dist/dev/hbase/[https://dist.apache.org/repos/dist/dev/hbase/].
 
 Announce the release candidate on the mailing list and call a vote.
-
 
 [[maven.snapshot]]
 === Publishing a SNAPSHOT to maven
@@ -875,6 +1128,50 @@ ____
 Regards the latter, run `mvn apache-rat:check` to verify all files are suitably licensed.
 See link:http://search-hadoop.com/m/DHED4dhFaU[HBase, mail # dev - On recent discussion clarifying ASF release policy]
 for how we arrived at this process.
+
+To help with the release verification, please follow the guideline below and vote based on the your verification.
+
+=== Baseline Verifications for Voting Release Candidates
+
+Although contributors have their own checklist for verifications, the following items are usually used for voting on release candidates.
+
+* CHANGES.md if any
+* RELEASENOTES.md (release notes) if any
+* Generated API compatibility report
+** For what should be compatible please refer the link:https://hbase.apache.org/book.html#hbase.versioning[versioning guideline], especially for items with marked as high severity
+* Use `hbase-vote.sh`  to perform sanity checks for checksum, signatures, files are licensed, built from source, and unit tests.
+** `hbase-vote.sh` shell script is available under `dev-support` directory of HBase source. Following are the usage details.
+
+[source,bourne]
+----
+./dev-support/hbase-vote.sh -h
+hbase-vote. A script for standard vote which verifies the following items
+1. Checksum of sources and binaries
+2. Signature of sources and binaries
+3. Rat check
+4. Built from source
+5. Unit tests
+
+Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>]
+       hbase-vote.sh -h | --help
+
+  -h | --help                   Show this screen.
+  -s | --source '<url>'         A URL pointing to the release candidate sources and binaries
+                                e.g. https://dist.apache.org/repos/dist/dev/hbase/hbase-<version>RC0/
+  -k | --key '<signature>'      A signature of the public key, e.g. 9AD2AE49
+  -f | --keys-file-url '<url>'   the URL of the key file, default is
+                                http://www.apache.org/dist/hbase/KEYS
+  -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
+----
+* If you see any unit test failures, please call out the solo test result and whether it's part of flaky (nightly) tests dashboard, e.g. link:https://builds.apache.org/view/H-L/view/HBase/job/HBase-Find-Flaky-Tests/job/master/lastSuccessfulBuild/artifact/dashboard.html[dashboard of master branch] (please change the test branch accordingly).
+
+=== Additional Verifications for Voting Release Candidates
+
+Other than the common verifications, contributors may call out additional concerns, e.g. for a specific feature by running end to end tests on a distributed environment. This is optional and always encouraged.
+
+* Start a distributed HBase cluster and call out the test result of specific workload on cluster. e.g.
+** Run basic table operations, e.g. `create/put/get/scan/flush/list/disable/drop`
+** Run built-in tests, e.g. `LoadTestTool` (LTT) and `IntegrationTestBigLinkedList` (ITBLL)
 
 [[hbase.release.announcement]]
 == Announcing Releases
@@ -1106,7 +1403,7 @@ Medium Tests (((MediumTests)))::
 Large Tests (((LargeTests)))::
   _Large_ test cases are everything else. They are typically large-scale tests, regression tests
   for specific bugs, timeout tests, or performance tests. No large test suite can take longer than
-  ten minutes. It will be killed as timed out. Cast your test as an Integration Test if it needs
+  thirteen minutes. It will be killed as timed out. Cast your test as an Integration Test if it needs
   to run longer.
 
 Integration Tests (((IntegrationTests)))::
@@ -1117,22 +1414,46 @@ Integration Tests (((IntegrationTests)))::
 [[hbase.unittests.cmds]]
 === Running tests
 
+The state of tests on the hbase branches varies. Some branches keep good test hygiene and all tests pass
+reliably with perhaps an unlucky sporadic flakey test failure. On other branches, the case may be less so with
+frequent flakies and even broken tests in need of attention that fail 100% of the time. Try and figure
+the state of tests on the branch you are currently interested in; the current state of nightly
+link:https://builds.apache.org/view/H-L/view/HBase/job/HBase%20Nightly/[apache jenkins builds] is a good
+place to start. Tests on master branch are generally not in the best of condition as releases
+are less frequent off master. This can make it hard landing patches especially given our dictum that
+patches land on master branch first.
+
+The full test suite can take from 5-6 hours on an anemic VM with 4 CPUs and minimal
+parallelism to 50 minutes or less on a linux machine with dozens of CPUs and plenty of
+RAM.
+
+When you go to run the full test suite, make sure you up the test runner user nproc
+(`ulimit -u` -- make sure it > 6000 or more if more parallelism) and the number of
+open files (`ulimit -n` -- make sure it > 10240 or more) limits on your system.
+Errors because the test run hits
+limits are often only opaquely related to the constraint. You can see the current
+user settings by running `ulimit -a`.
+
 [[hbase.unittests.cmds.test]]
 ==== Default: small and medium category tests
 
-Running `mvn test` will execute all small tests in a single JVM (no fork) and then medium tests in a separate JVM for each test instance.
-Medium tests are NOT executed if there is an error in a small test. Large tests are NOT executed.
+Running `mvn test` will execute all small tests in a single JVM (no fork) and then medium tests in a
+forked, separate JVM for each test instance (For definition of 'small' test and so on, see
+<<hbase.unittests>>). Medium tests are NOT executed if there is an error in a
+small test. Large tests are NOT executed.
 
 [[hbase.unittests.cmds.test.runalltests]]
 ==== Running all tests
 
-Running `mvn test -P runAllTests` will execute small tests in a single JVM then medium and large tests in a separate JVM for each test.
-Medium and large tests are NOT executed if there is an error in a small test.
+Running `mvn test -P runAllTests` will execute small tests in a single JVM, then medium and large tests
+in a forked, separate JVM for each test. Medium and large tests are NOT executed if there is an error in
+a small test.
 
 [[hbase.unittests.cmds.test.localtests.mytest]]
 ==== Running a single test or all tests in a package
 
-To run an individual test, e.g. `MyTest`, rum `mvn test -Dtest=MyTest` You can also pass multiple, individual tests as a comma-delimited list:
+To run an individual test, e.g. `MyTest`, rum `mvn test -Dtest=MyTest` You can also pass multiple,
+individual tests as a comma-delimited list:
 [source,bash]
 ----
 mvn test  -Dtest=MyTest1,MyTest2,MyTest3
@@ -1144,10 +1465,12 @@ mvn test '-Dtest=org.apache.hadoop.hbase.client.*'
 ----
 
 When `-Dtest` is specified, the `localTests` profile will be used.
-Each junit test is executed in a separate JVM (A fork per test class). There is no parallelization when tests are running in this mode.
+Each junit test is executed in a separate JVM (A fork per test class).
+There is no parallelization when tests are running in this mode.
 You will see a new message at the end of the -report: `"[INFO] Tests are skipped"`.
-It's harmless.
-However, you need to make sure the sum of `Tests run:` in the `Results:` section of test reports matching the number of tests you specified because no error will be reported when a non-existent test case is specified.
+It's harmless.  However, you need to make sure the sum of
+`Tests run:` in the `Results:` section of test reports matching the number of tests
+you specified because no error will be reported when a non-existent test case is specified.
 
 [[hbase.unittests.cmds.test.profiles]]
 ==== Other test invocation permutations
@@ -1163,17 +1486,36 @@ For convenience, you can run `mvn test -P runDevTests` to execute both small and
 [[hbase.unittests.test.faster]]
 ==== Running tests faster
 
-By default, `$ mvn test -P runAllTests` runs all small tests in 1 forked instance and the medium and large tests in 5 parallel forked instances. Up these counts to get the build to run faster (you may run into
-rare issues of test mutual interference). For example,
-allowing that you want to have 2 tests in parallel per core, and you need about 2GB of memory per test (at the extreme), if you have an 8 core, 24GB box, you can have 16 tests in parallel.
-but the memory available limits it to 12 (24/2), To run all tests with 12 tests in parallel, do this: +mvn test -P runAllTests -Dsurefire.secondPartForkCount=12+.
-If using a version earlier than  2.0, do: +mvn test -P runAllTests -Dsurefire.secondPartThreadCount=12 +.
-You can also increase the fork count for the first party by setting -Dsurefire.firstPartForkCount to a value > 1.
-The values passed as fork counts can be specified as a fraction of CPU as follows: for two forks per available CPU, set the value to 2.0C; for a fork for every two CPUs, set it to 0.5C.
-To increase the speed, you can as well use a ramdisk.
-You will need 2GB  of memory to run all tests.
-You will also need to delete the files between two  test run.
-The typical way to configure a ramdisk on Linux is:
+By default, `$ mvn test -P runAllTests` runs all tests using a quarter of the CPUs available on machine
+hosting the test run (see `surefire.firstPartForkCount` and `surefire.secondPartForkCount` in the top-level
+hbase `pom.xml` which default to 0.25C, or 1/4 of CPU count). Up these counts to get the build to run faster.
+You can also have hbase modules
+run their tests in parrallel when the dependency graph allows by passing `--threads=N` when you invoke
+maven, where `N` is the amount of parallelism wanted.
+maven, where `N` is the amount of _module_ parallelism wanted.
+
+For example, allowing that you want to use all cores on a machine to run tests,
+you could start up the maven test run with:
+
+----
+  $ x="1.0C";  mvn -Dsurefire.firstPartForkCount=$x -Dsurefire.secondPartForkCount=$x test -PrunAllTests
+----
+
+If a 32 core machine, you should see periods during which 32 forked jvms appear in your process listing each running unit tests.
+Your milage may vary. Dependent on hardware, overcommittment of CPU and/or memory can bring the test suite crashing down,
+usually complaining with a spew of test system exits and incomplete test report xml files. Start gently, with the default fork
+and move up gradually.
+
+Adding the `--threads=N`, maven will run N maven modules in parallel (when module inter-dependencies allow). Be aware, if you have
+set the forkcount to `1.0C`, and the `--threads` count to '2', the number of concurrent test runners can approach
+2 * CPU, a count likely to overcommit the host machine (with attendant test exits failures).
+
+You will need ~2.2GB of memory per forked JVM plus the memory used by maven itself (3-4G).
+
+===== RAM Disk
+
+To increase the speed, you can as well use a ramdisk. 2-3G should be sufficient. Be sure to
+delete the files between each test run. The typical way to configure a ramdisk on Linux is:
 
 ----
 $ sudo mkdir /ram2G
@@ -1183,17 +1525,7 @@ sudo mount -t tmpfs -o size=2048M tmpfs /ram2G
 You can then use it to run all HBase tests on 2.0 with the command:
 
 ----
-mvn test
-                        -P runAllTests -Dsurefire.secondPartForkCount=12
-                        -Dtest.build.data.basedirectory=/ram2G
-----
-
-On earlier versions, use:
-
-----
-mvn test
-                        -P runAllTests -Dsurefire.secondPartThreadCount=12
-                        -Dtest.build.data.basedirectory=/ram2G
+mvn test -PrunAllTests -Dtest.build.data.basedirectory=/ram2G
 ----
 
 [[hbase.unittests.cmds.test.hbasetests]]
@@ -1396,21 +1728,40 @@ mvn verify
 ----
 
 If you just want to run the integration tests in top-level, you need to run two commands.
-First: +mvn failsafe:integration-test+ This actually runs ALL the integration tests.
+First:
+----
+mvn failsafe:integration-test
+----
+
+This actually runs ALL the integration tests.
 
 NOTE: This command will always output `BUILD SUCCESS` even if there are test failures.
 
 At this point, you could grep the output by hand looking for failed tests.
-However, maven will do this for us; just use: +mvn
-                        failsafe:verify+ The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.
+However, maven will do this for us; just use:
+----
+mvn failsafe:verify
+----
+
+The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.
 
 [[maven.build.commands.integration.tests2]]
 ===== Running a subset of Integration tests
 
 This is very similar to how you specify running a subset of unit tests (see above), but use the property `it.test` instead of `test`.
-To just run `IntegrationTestClassXYZ.java`, use: +mvn
-                            failsafe:integration-test -Dit.test=IntegrationTestClassXYZ+                        The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java: +mvn failsafe:integration-test -Dit.test=*ClassX*+ This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*". You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups. This would look something like: +mvn
-                            failsafe:integration-test -Dit.test=*ClassX*, *ClassY+
+To just run `IntegrationTestClassXYZ.java`, use:
+----
+mvn failsafe:integration-test -Dit.test=IntegrationTestClassXYZ -DfailIfNoTests=false
+----
+The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java:
+----
+mvn failsafe:integration-test -Dit.test=*ClassX* -DfailIfNoTests=false
+----
+
+This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*". You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups. This would look something like:
+----
+mvn failsafe:integration-test -Dit.test=*ClassX*,*ClassY -DfailIfNoTests=false
+----
 
 [[maven.build.commands.integration.tests.distributed]]
 ==== Running integration tests against distributed cluster
@@ -2047,32 +2398,123 @@ Patches larger than one screen, or patches that will be tricky to review, should
 For more information on how to use ReviewBoard, see link:http://www.reviewboard.org/docs/manual/1.5/[the ReviewBoard
                         documentation].
 
+[[github]]
+==== GitHub
+Submitting link:https://github.com/apache/hbase[GitHub] pull requests is another accepted form of
+contributing patches. Refer to GitHub link:https://help.github.com/[documentation] for details on
+how to create pull requests.
+
+NOTE: This section is incomplete and needs to be updated. Refer to
+link:https://issues.apache.org/jira/browse/HBASE-23557[HBASE-23557]
+
+===== GitHub Tooling
+
+====== Browser bookmarks
+
+Following is a useful javascript based browser bookmark that redirects from GitHub pull
+requests to the corresponding jira work item. This redirects based on the HBase jira  ID mentioned
+in the issue title for the PR. Add the following javascript snippet as a browser bookmark to the
+tool bar. Clicking on it while you are on an HBase GitHub PR page redirects you to the corresponding
+jira item.
+
+[source, javascript]
+-----
+javascript:location.href='https://issues.apache.org/jira/browse/'+document.getElementsByClassName("js-issue-title")[0].innerHTML.match(/HBASE-\d+/)[0];
+-----
+
 ==== Guide for HBase Committers
+
+===== Becoming a committer
+
+Committers are responsible for reviewing and integrating code changes, testing
+and voting on release candidates, weighing in on design discussions, as well as
+other types of project contributions. The PMC votes to make a contributor a
+committer based on an assessment of their contributions to the project. It is
+expected that committers demonstrate a sustained history of high-quality
+contributions to the project and community involvement.
+
+Contributions can be made in many ways. There is no single path to becoming a
+committer, nor any expected timeline. Submitting features, improvements, and bug
+fixes is the most common avenue, but other methods are both recognized and
+encouraged (and may be even more important to the health of HBase as a project and a
+community). A non-exhaustive list of potential contributions (in no particular
+order):
+
+* <<appendix_contributing_to_documentation,Update the documentation>> for new
+  changes, best practices, recipes, and other improvements.
+* Keep the website up to date.
+* Perform testing and report the results. For instance, scale testing and
+  testing non-standard configurations is always appreciated.
+* Maintain the shared Jenkins testing environment and other testing
+  infrastructure.
+* <<hbase.rc.voting,Vote on release candidates>> after performing validation, even if non-binding.
+  A non-binding vote is a vote by a non-committer.
+* Provide input for discussion threads on the link:/mail-lists.html[mailing lists] (which usually have
+  `[DISCUSS]` in the subject line).
+* Answer questions questions on the user or developer mailing lists and on
+  Slack.
+* Make sure the HBase community is a welcoming one and that we adhere to our
+  link:/coc.html[Code of conduct]. Alert the PMC if you
+  have concerns.
+* Review other people's work (both code and non-code) and provide public
+  feedback.
+* Report bugs that are found, or file new feature requests.
+* Triage issues and keep JIRA organized. This includes closing stale issues,
+  labeling new issues, updating metadata, and other tasks as needed.
+* Mentor new contributors of all sorts.
+* Give talks and write blogs about HBase. Add these to the link:/[News] section
+  of the website.
+* Provide UX feedback about HBase, the web UI, the CLI, APIs, and the website.
+* Write demo applications and scripts.
+* Help attract and retain a diverse community.
+* Interact with other projects in ways that benefit HBase and those other
+  projects.
+
+Not every individual is able to do all (or even any) of the items on this list.
+If you think of other ways to contribute, go for it (and add them to the list).
+A pleasant demeanor and willingness to contribute are all you need to make a
+positive impact on the HBase project. Invitations to become a committer are the
+result of steady interaction with the community over the long term, which builds
+trust and recognition.
 
 ===== New committers
 
-New committers are encouraged to first read Apache's generic committer documentation:
+New committers are encouraged to first read Apache's generic committer
+documentation:
 
 * link:https://www.apache.org/dev/new-committers-guide.html[Apache New Committer Guide]
 * link:https://www.apache.org/dev/committers.html[Apache Committer FAQ]
 
 ===== Review
 
-HBase committers should, as often as possible, attempt to review patches submitted by others.
-Ideally every submitted patch will get reviewed by a committer _within a few days_.
-If a committer reviews a patch they have not authored, and believe it to be of sufficient quality, then they can commit the patch, otherwise the patch should be cancelled with a clear explanation for why it was rejected.
+HBase committers should, as often as possible, attempt to review patches
+submitted by others. Ideally every submitted patch will get reviewed by a
+committer _within a few days_. If a committer reviews a patch they have not
+authored, and believe it to be of sufficient quality, then they can commit the
+patch. Otherwise the patch should be cancelled with a clear explanation for why
+it was rejected.
 
-The list of submitted patches is in the link:https://issues.apache.org/jira/secure/IssueNavigator.jspa?mode=hide&requestId=12312392[HBase Review Queue], which is ordered by time of last modification.
-Committers should scan the list from top to bottom, looking for patches that they feel qualified to review and possibly commit.
+The list of submitted patches is in the
+link:https://issues.apache.org/jira/secure/IssueNavigator.jspa?mode=hide&requestId=12312392[HBase Review Queue],
+which is ordered by time of last modification. Committers should scan the list
+from top to bottom, looking for patches that they feel qualified to review and
+possibly commit. If you see a patch you think someone else is better qualified
+to review, you can mention them by username in the JIRA.
 
-For non-trivial changes, it is required to get another committer to review your own patches before commit.
-Use the btn:[Submit Patch]                        button in JIRA, just like other contributors, and then wait for a `+1` response from another committer before committing.
+For non-trivial changes, it is required that another committer review your
+patches before commit. **Self-commits of non-trivial patches are not allowed.**
+Use the btn:[Submit Patch] button in JIRA, just like other contributors, and
+then wait for a `+1` response from another committer before committing.
 
 ===== Reject
 
-Patches which do not adhere to the guidelines in link:https://hbase.apache.org/book.html#developer[HowToContribute] and to the link:https://wiki.apache.org/hadoop/CodeReviewChecklist[code review checklist] should be rejected.
-Committers should always be polite to contributors and try to instruct and encourage them to contribute better patches.
-If a committer wishes to improve an unacceptable patch, then it should first be rejected, and a new patch should be attached by the committer for review.
+Patches which do not adhere to the guidelines in
+link:https://hbase.apache.org/book.html#developer[HowToContribute] and to the
+link:https://cwiki.apache.org/confluence/display/HADOOP2/CodeReviewChecklist[code review checklist]
+should be rejected. Committers should always be polite to contributors and try
+to instruct and encourage them to contribute better patches. If a committer
+wishes to improve an unacceptable patch, then it should first be rejected, and a
+new patch should be attached by the committer for further review.
 
 [[committing.patches]]
 ===== Commit
@@ -2083,29 +2525,34 @@ Committers commit patches to the Apache HBase GIT repository.
 [NOTE]
 ====
 Make sure your local configuration is correct, especially your identity and email.
-Examine the output of the +$ git config
-                                --list+ command and be sure it is correct.
-See this GitHub article, link:https://help.github.com/articles/set-up-git[Set Up Git] if you need pointers.
+Examine the output of the +$ git config --list+ command and be sure it is correct.
+See link:https://help.github.com/articles/set-up-git[Set Up Git] if you need
+pointers.
 ====
 
-When you commit a patch, please:
+When you commit a patch:
 
-. Include the Jira issue id in the commit message along with a short description of the change. Try
-  to add something more than just the Jira title so that someone looking at git log doesn't
-  have to go to Jira to discern what the change is about.
-  Be sure to get the issue ID right, as this causes Jira to link to the change in Git (use the
-  issue's "All" tab to see these).
-. Commit the patch to a new branch based off master or other intended branch.
-  It's a good idea to call this branch by the JIRA ID.
-  Then check out the relevant target branch where you want to commit, make sure your local branch has all remote changes, by doing a +git pull --rebase+ or another similar command, cherry-pick the change into each relevant branch (such as master), and do +git push <remote-server>
-  <remote-branch>+.
+. Include the Jira issue ID in the commit message along with a short description
+  of the change. Try to add something more than just the Jira title so that
+  someone looking at `git log` output doesn't have to go to Jira to discern what
+  the change is about. Be sure to get the issue ID right, because this causes
+  Jira to link to the change in Git (use the issue's "All" tab to see these
+  automatic links).
+. Commit the patch to a new branch based off `master` or the other intended
+  branch. It's a good idea to include the JIRA ID in the name of this branch.
+  Check out the relevant target branch where you want to commit, and make sure
+  your local branch has all remote changes, by doing a +git pull --rebase+ or
+  another similar command. Next, cherry-pick the change into each relevant
+  branch (such as master), and push the changes to the remote branch using
+  a command such as +git push <remote-server> <remote-branch>+.
 +
 WARNING: If you do not have all remote changes, the push will fail.
 If the push fails for any reason, fix the problem or ask for help.
 Do not do a +git push --force+.
 +
 Before you can commit a patch, you need to determine how the patch was created.
-The instructions and preferences around the way to create patches have changed, and there will be a transition period.
+The instructions and preferences around the way to create patches have changed,
+and there will be a transition period.
 +
 .Determine How a Patch Was Created
 * If the first few lines of the patch look like the headers of an email, with a From, Date, and
@@ -2132,16 +2579,18 @@ diff --git src/main/asciidoc/_chapters/developer.adoc src/main/asciidoc/_chapter
 +
 .Example of committing a Patch
 ====
-One thing you will notice with these examples is that there are a lot of +git pull+ commands.
-The only command that actually writes anything to the remote repository is +git push+, and you need to make absolutely sure you have the correct versions of everything and don't have any conflicts before pushing.
-The extra +git
-                                        pull+ commands are usually redundant, but better safe than sorry.
+One thing you will notice with these examples is that there are a lot of
++git pull+ commands. The only command that actually writes anything to the
+remote repository is +git push+, and you need to make absolutely sure you have
+the correct versions of everything and don't have any conflicts before pushing.
+The extra +git pull+ commands are usually redundant, but better safe than sorry.
 
-The first example shows how to apply a patch that was generated with +git format-patch+ and apply it to the `master` and `branch-1` branches.
+The first example shows how to apply a patch that was generated with +git
+format-patch+ and apply it to the `master` and `branch-1` branches.
 
-The directive to use +git format-patch+                                    rather than +git diff+, and not to use `--no-prefix`, is a new one.
-See the second example for how to apply a patch created with +git
-                                        diff+, and educate the person who created the patch.
+The directive to use +git format-patch+ rather than +git diff+, and not to use
+`--no-prefix`, is a new one. See the second example for how to apply a patch
+created with +git diff+, and educate the person who created the patch.
 
 ----
 $ git checkout -b HBASE-XXXX
@@ -2163,13 +2612,13 @@ $ git push origin branch-1
 $ git branch -D HBASE-XXXX
 ----
 
-This example shows how to commit a patch that was created using +git diff+ without `--no-prefix`.
-If the patch was created with `--no-prefix`, add `-p0` to the +git apply+ command.
+This example shows how to commit a patch that was created using +git diff+
+without `--no-prefix`. If the patch was created with `--no-prefix`, add `-p0` to
+the +git apply+ command.
 
 ----
 $ git apply ~/Downloads/HBASE-XXXX-v2.patch
-$ git commit -m "HBASE-XXXX Really Good Code Fix (Joe Schmo)" --author=<contributor> -a  # This
-and next command is needed for patches created with 'git diff'
+$ git commit -m "HBASE-XXXX Really Good Code Fix (Joe Schmo)" --author=<contributor> -a  # This and next command is needed for patches created with 'git diff'
 $ git commit --amend --signoff
 $ git checkout master
 $ git pull --rebase
@@ -2190,7 +2639,9 @@ $ git branch -D HBASE-XXXX
 ====
 
 . Resolve the issue as fixed, thanking the contributor.
-  Always set the "Fix Version" at this point, but please only set a single fix version for each branch where the change was committed, the earliest release in that branch in which the change will appear.
+  Always set the "Fix Version" at this point, but only set a single fix version
+  for each branch where the change was committed, the earliest release in that
+  branch in which the change will appear.
 
 ====== Commit Message Format
 
@@ -2205,22 +2656,42 @@ The preferred commit message format is:
 HBASE-12345 Fix All The Things (jane@example.com)
 ----
 
-If the contributor used +git format-patch+ to generate the patch, their commit message is in their patch and you can use that, but be sure the JIRA ID is at the front of the commit message, even if the contributor left it out.
+If the contributor used +git format-patch+ to generate the patch, their commit
+message is in their patch and you can use that, but be sure the JIRA ID is at
+the front of the commit message, even if the contributor left it out.
 
 [[committer.amending.author]]
-====== Add Amending-Author when a conflict cherrypick backporting
+====== Use GitHub's "Co-authored-by" when there are multiple authors
 
 We've established the practice of committing to master and then cherry picking back to branches whenever possible, unless
 
 * it's breaking compat: In which case, if it can go in minor releases, backport to branch-1 and branch-2.
 * it's a new feature: No for maintenance releases, For minor releases, discuss and arrive at consensus.
 
-When there is a minor conflict we can fix it up and just proceed with the commit.
-The resulting commit retains the original author.
-When the amending author is different from the original committer, add notice of this at the end of the commit message as: `Amending-Author: Author
-                                <committer&apache>` See discussion at link:http://search-hadoop.com/m/DHED4wHGYS[HBase, mail # dev
-                                - [DISCUSSION] Best practice when amending commits cherry picked
-                                from master to branch].
+There are occasions when there are multiple author for a patch.
+For example when there is a minor conflict we can fix it up and just proceed with the commit.
+The amending author will be different from the original committer, so you should also attribute to the original author by
+adding one or more `Co-authored-by` trailers to the commit's message.
+See link:https://help.github.com/en/articles/creating-a-commit-with-multiple-authors/[the GitHub documentation for "Creating a commit with multiple authors"].
+
+In short, these are the steps to add Co-authors that will be tracked by GitHub:
+
+. Collect the name and email address for each co-author.
+. Commit the change, but after your commit description, instead of a closing quotation, add two empty lines. (Do not close the commit message with a quotation mark)
+. On the next line of the commit message, type `Co-authored-by: name <name@example.com>`. After the co-author information, add a closing quotation mark.
+
+Here is the example from the GitHub page, using 2 Co-authors:
+[source,xml]
+----
+$ git commit -m "Refactor usability tests.
+>
+>
+Co-authored-by: name <name@example.com>
+Co-authored-by: another-name <another-name@example.com>"
+----
+
+Note: `Amending-Author: Author <committer@apache>` was used prior to this
+link:https://lists.apache.org/thread.html/f00b5f9b65570e777dbb31c37d7b0ffc55c5fc567aefdb456608a042@%3Cdev.hbase.apache.org%3E[DISCUSSION].
 
 ====== Close related GitHub PRs
 
@@ -2252,6 +2723,28 @@ Avoid merge commits, as they create problems in the git history.
 ====== Committing Documentation
 
 See <<appendix_contributing_to_documentation,appendix contributing to documentation>>.
+
+====== How to re-trigger github Pull Request checks/re-build
+
+A Pull Request (PR) submission triggers the hbase yetus checks. The checks make
+sure the patch doesn't break the build or introduce test failures. The checks take
+around four hours to run (They are the same set run when you submit a patch via
+HBASE JIRA). When finished, they add a report to the PR as a comment. If a problem
+w/ the patch -- failed compile, checkstyle violation, or an added findbugs --
+the original author makes fixes and pushes a new patch. This re-runs the checks
+to produce a new report.
+
+Sometimes though, the patch is good but a flakey, unrelated test has the report vote -1
+on the patch. In this case, **committers** can retrigger the check run by doing a force push of the
+exact same patch. Or, click on the `Console output` link which shows toward the end
+of the report (For example `https://builds.apache.org/job/HBase-PreCommit-GitHub-PR/job/PR-289/1/console`).
+This will take you to `builds.apache.org`, to the build run that failed. See the
+"breadcrumbs" along the top (where breadcrumbs is the listing of the directories that
+gets us to this particular build page). It'll look something like
+`Jenkins > HBase-PreCommit-GitHub-PR > PR-289 > #1`. Click on the
+PR number -- i.e. PR-289 in our example -- and then, when you've arrived at the PR page,
+find the 'Build with Parameters' menu-item (along top left-hand menu). Click here and
+then `Build` leaving the JIRA_ISSUE_KEY empty. This will re-run your checks.
 
 ==== Dialog
 

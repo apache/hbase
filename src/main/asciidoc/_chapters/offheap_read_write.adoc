@@ -46,29 +46,41 @@ image::offheap-overview.png[]
 == Offheap read-path
 In HBase-2.0.0, link:https://issues.apache.org/jira/browse/HBASE-11425[HBASE-11425] changed the HBase read path so it
 could hold the read-data off-heap (from BucketCache) avoiding copying of cached data on to the java heap.
-This reduces GC pauses given there is less garbage made and so less to clear. The off-heap read path has a performance
-that is similar/better to that of the on-heap LRU cache.  This feature is available since HBase 2.0.0.
-If the BucketCache is in `file` mode, fetching will always be slower compared to the native on-heap LruBlockCache.
+This reduces GC pauses given there is less garbage made and so less to clear. The off-heap read path can have a performance
+that is similar or better to that of the on-heap LRU cache.  This feature is available since HBase 2.0.0.
 Refer to below blogs for more details and test results on off heaped read path
 link:https://blogs.apache.org/hbase/entry/offheaping_the_read_path_in[Offheaping the Read Path in Apache HBase: Part 1 of 2]
 and link:https://blogs.apache.org/hbase/entry/offheap-read-path-in-production[Offheap Read-Path in Production - The Alibaba story]
 
-For an end-to-end off-heaped read-path, first of all there should be an off-heap backed <<offheap.blockcache, BucketCache>>. Configure 'hbase.bucketcache.ioengine' to off-heap in
-_hbase-site.xml_. Also specify the total capacity of the BucketCache using `hbase.bucketcache.size` config. Please remember to adjust value of 'HBASE_OFFHEAPSIZE' in
-_hbase-env.sh_. This is how we specify the max possible off-heap memory allocation for the RegionServer java process.
-This should be bigger than the off-heap BC size. Please keep in mind that there is no default for `hbase.bucketcache.ioengine`
-which means the BC is turned OFF by default (See <<direct.memory, Direct Memory Usage In HBase>>).
+For an end-to-end off-heaped read-path, all you have to do is enable an off-heap backed <<offheap.blockcache>>(BC). 
+Configure _hbase.bucketcache.ioengine_ to be _offheap_ in _hbase-site.xml_ (See <<bc.deploy.modes>> to learn more about _hbase.bucketcache.ioengine_ options).
+Also specify the total capacity of the BC using `hbase.bucketcache.size` config. Please remember to adjust value of 'HBASE_OFFHEAPSIZE' in
+_hbase-env.sh_ (See <<bc.example>> for help sizing and an example enabling). This configuration is for specifying the maximum
+possible off-heap memory allocation for the RegionServer java process. This should be bigger than the off-heap BC size
+to accommodate usage by other features making use of off-heap memory such as Server RPC buffer pool and short-circuit
+reads (See discussion in <<bc.example>>).
 
-Next thing to tune is the ByteBuffer pool on the RPC server side:
+Please keep in mind that there is no default for `hbase.bucketcache.ioengine`
+which means the BC is OFF by default (See <<direct.memory>>). 
+
+This is all you need to do to enable off-heap read path. Most buffers in HBase are already off-heap. With BC off-heap,
+the read pipeline will copy data between HDFS and the server socket send of the results back to the client.
+
+[[regionserver.offheap.rpc.bb.tuning]]
+===== Tuning the RPC buffer pool
+It is possible to tune the ByteBuffer pool on the RPC server side
+used to accumulate the cell bytes and create result cell blocks to send back to the client side.
+`hbase.ipc.server.reservoir.enabled` can be used to turn this pool ON or OFF. By default this pool is ON and available. HBase will create off-heap ByteBuffers
+and pool them them by default. Please make sure not to turn this OFF if you want end-to-end off-heaping in read path.
 
 NOTE: the config keys which start with prefix `hbase.ipc.server.reservoir` are deprecated in HBase3.x. If you are still
 in HBase2.x, then just use the old config keys. otherwise if in HBase3.x, please use the new config keys.
 (See <<regionserver.read.hdfs.block.offheap,deprecated and new configs in HBase3.x>>)
 
-The buffers from this pool will be used to accumulate the cell bytes and create a result cell block to send back to the client side.
-`hbase.ipc.server.reservoir.enabled` can be used to turn this pool ON or OFF. By default this pool is ON and available. HBase will create off heap ByteBuffers
-and pool them. Please make sure not to turn this OFF if you want end-to-end off-heaping in read path.
-If this pool is turned off, the server will create temp buffers on heap to accumulate the cell bytes and make a result cell block. This can impact the GC on a highly read loaded server.
+If this pool is turned off, the server will create temp buffers on heap to accumulate the cell bytes and
+make a result cell block. This can impact the GC on a highly read loaded server.
+Next thing to tune is the ByteBuffer pool on the RPC server side:
+
 The user can tune this pool with respect to how many buffers are in the pool and what should be the size of each ByteBuffer.
 Use the config `hbase.ipc.server.reservoir.initial.buffer.size` to tune each of the buffer sizes. Default is 64 KB for HBase2.x, while it will be changed to 65KB by default for HBase3.x
 (see link:https://issues.apache.org/jira/browse/HBASE-22532[HBASE-22532])

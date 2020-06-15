@@ -724,6 +724,17 @@ Insure the JCE jars are on the classpath on both server and client systems.
 You may also need to download the link:http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html[unlimited strength JCE policy files].
 Uncompress and extract the downloaded file, and install the policy jars into _<java-home>/lib/security_.
 
+[[trouble.client.masterregistry]]
+=== Trouble shooting master registry issues
+
+* For connectivity issues, usually an exception like "MasterRegistryFetchException: Exception making rpc to masters..." is logged in the client logs. The logging includes the
+list of master end points that were attempted by the client. The bottom part of the stack trace should include the underlying reason. If you suspect connectivity
+issues (ConnectionRefused?), make sure the master end points are accessible from client.
+* If there is a suspicion of higher load on the masters due to hedging of RPCs, it can be controlled by either reducing the hedging fan out (via _hbase.rpc.hedged.fanout_) or
+by restricting the set of masters that clients can access for the master registry purposes (via _hbase.masters_).
+
+Refer to <<client.masterregistry>> and <<client_dependencies>> for more details.
+
 [[trouble.mapreduce]]
 == MapReduce
 
@@ -870,9 +881,9 @@ Snapshots::
   When you create a snapshot, HBase retains everything it needs to recreate the table's
   state at that time of the snapshot. This includes deleted cells or expired versions.
   For this reason, your snapshot usage pattern should be well-planned, and you should
-  prune snapshots that you no longer need. Snapshots are stored in `/hbase/.snapshots`,
+  prune snapshots that you no longer need. Snapshots are stored in `/hbase/.hbase-snapshot`,
   and archives needed to restore snapshots are stored in
-  `/hbase/.archive/<_tablename_>/<_region_>/<_column_family_>/`.
+  `/hbase/archive/<_tablename_>/<_region_>/<_column_family_>/`.
 
   *Do not* manage snapshots or archives manually via HDFS. HBase provides APIs and
   HBase Shell commands for managing them. For more information, see <<ops.snapshots>>.
@@ -1290,7 +1301,7 @@ If you have a DNS server, you can set `hbase.zookeeper.dns.interface` and `hbase
 
 ZooKeeper is the cluster's "canary in the mineshaft". It'll be the first to notice issues if any so making sure its happy is the short-cut to a humming cluster.
 
-See the link:https://wiki.apache.org/hadoop/ZooKeeper/Troubleshooting[ZooKeeper Operating Environment Troubleshooting] page.
+See the link:https://cwiki.apache.org/confluence/display/HADOOP2/ZooKeeper+Troubleshooting[ZooKeeper Operating Environment Troubleshooting] page.
 It has suggestions and tools for checking disk and networking performance; i.e.
 the operating environment your ZooKeeper and HBase are running in.
 

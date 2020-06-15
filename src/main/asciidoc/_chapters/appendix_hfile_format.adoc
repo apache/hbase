@@ -106,11 +106,11 @@ In the version 2 every block in the data section contains the following fields:
 .. BLOOM_CHUNK – Bloom filter chunks
 .. META – meta blocks (not used for Bloom filters in version 2 anymore)
 .. INTERMEDIATE_INDEX – intermediate-level index blocks in a multi-level blockindex
-.. ROOT_INDEX – root>level index blocks in a multi>level block index
-.. FILE_INFO – the ``file info'' block, a small key>value map of metadata
-.. BLOOM_META – a Bloom filter metadata block in the load>on>open section
-.. TRAILER – a fixed>size file trailer.
-  As opposed to the above, this is not an HFile v2 block but a fixed>size (for each HFile version) data structure
+.. ROOT_INDEX – root-level index blocks in a multi-level block index
+.. FILE_INFO – the ''file info'' block, a small key-value map of metadata
+.. BLOOM_META – a Bloom filter metadata block in the load-on-open section
+.. TRAILER – a fixed-size file trailer.
+  As opposed to the above, this is not an HFile v2 block but a fixed-size (for each HFile version) data structure
 .. INDEX_V1 – this block type is only used for legacy HFile v1 block
 . Compressed size of the block's data, not including the header (int).
 +
@@ -127,7 +127,7 @@ The above format of blocks is used in the following HFile sections:
 
 Scanned block section::
   The section is named so because it contains all data blocks that need to be read when an HFile is scanned sequentially.
-  Also contains leaf block index and Bloom chunk blocks.
+  Also contains Leaf index blocks and Bloom chunk blocks.
 Non-scanned block section::
   This section still contains unified-format v2 blocks but it does not have to be read when doing a sequential scan.
   This section contains "meta" blocks and intermediate-level index blocks.
@@ -140,10 +140,10 @@ There are three types of block indexes in HFile version 2, stored in two differe
 
 . Data index -- version 2 multi-level block index, consisting of:
 .. Version 2 root index, stored in the data block index section of the file
-.. Optionally, version 2 intermediate levels, stored in the non%root format in   the data index section of the file. Intermediate levels can only be present if leaf level blocks are present
-.. Optionally, version 2 leaf levels, stored in the non%root format inline with   data blocks
+.. Optionally, version 2 intermediate levels, stored in the non-root format in   the data index section of the file. Intermediate levels can only be present if leaf level blocks are present
+.. Optionally, version 2 leaf levels, stored in the non-root format inline with   data blocks
 . Meta index -- version 2 root index format only, stored in the meta index section of the file
-. Bloom index -- version 2 root index format only, stored in the ``load-on-open'' section as part of Bloom filter metadata.
+. Bloom index -- version 2 root index format only, stored in the ''load-on-open'' section as part of Bloom filter metadata.
 
 ==== Root block index format in version 2
 
@@ -156,7 +156,7 @@ A version 2 root index block is a sequence of entries of the following format, s
 
 . Offset (long)
 +
-This offset may point to a data block or to a deeper>level index block.
+This offset may point to a data block or to a deeper-level index block.
 
 . On-disk size (int)
 . Key (a serialized byte array stored using Bytes.writeByteArray)
@@ -172,7 +172,7 @@ For the data index and the meta index the number of entries is stored in the tra
 For a multi-level block index we also store the following fields in the root index block in the load-on-open section of the HFile, in addition to the data structure described above:
 
 . Middle leaf index block offset
-. Middle leaf block on-disk size (meaning the leaf index block containing the reference to the ``middle'' data block of the file)
+. Middle leaf block on-disk size (meaning the leaf index block containing the reference to the ''middle'' data block of the file)
 . The index of the mid-key (defined below) in the middle leaf-level block.
 
 
@@ -200,9 +200,9 @@ Every non-root index block is structured as follows.
 . Entries.
   Each entry contains:
 +
-. Offset of the block referenced by this entry in the file (long)
-. On>disk size of the referenced block (int)
-. Key.
+.. Offset of the block referenced by this entry in the file (long)
+.. On-disk size of the referenced block (int)
+.. Key.
   The length can be calculated from entryOffsets.
 
 
@@ -214,7 +214,7 @@ In contrast with version 1, in a version 2 HFile Bloom filter metadata is stored
 +
 . Bloom filter version = 3 (int). There used to be a DynamicByteBloomFilter class that had the Bloom   filter version number 2
 . The total byte size of all compound Bloom filter chunks (long)
-. Number of hash functions (int
+. Number of hash functions (int)
 . Type of hash functions (int)
 . The total key count inserted into the Bloom filter (long)
 . The maximum total number of keys in the Bloom filter (long)
@@ -246,7 +246,7 @@ This is because we need to know the comparator at the time of parsing the load-o
 ==== Fixed file trailer format differences between versions 1 and 2
 
 The following table shows common and different fields between fixed file trailers in versions 1 and 2.
-Note that the size of the trailer is different depending on the version, so it is ``fixed'' only within one version.
+Note that the size of the trailer is different depending on the version, so it is ''fixed'' only within one version.
 However, the version is always stored as the last four-byte integer in the file.
 
 .Differences between HFile Versions 1 and 2

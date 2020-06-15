@@ -20,13 +20,13 @@ under the License.
 = Apache HBase (TM) Metrics
 
 == Introduction
-Apache HBase (TM) emits Hadoop link:http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html[metrics].
+Apache HBase (TM) emits Hadoop link:https://hadoop.apache.org/core/docs/stable/api/org/apache/hadoop/metrics/package-summary.html[metrics].
 
 == Setup
 
-First read up on Hadoop link:http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html[metrics].
+First read up on Hadoop link:https://hadoop.apache.org/core/docs/stable/api/org/apache/hadoop/metrics/package-summary.html[metrics].
 
-If you are using ganglia, the link:http://wiki.apache.org/hadoop/GangliaMetrics[GangliaMetrics] wiki page is useful read.
+If you are using ganglia, the link:https://cwiki.apache.org/confluence/display/HADOOP2/GangliaMetrics[GangliaMetrics] wiki page is useful read.
 
 To have HBase emit metrics, edit `$HBASE_HOME/conf/hadoop-metrics.properties` and enable metric 'contexts' per plugin.  As of this writing, hadoop supports *file* and *ganglia* plugins. Yes, the hbase metrics files is named hadoop-metrics rather than _hbase-metrics_ because currently at least the hadoop metrics system has the properties filename hardcoded. Per metrics _context_, comment out the NullContext and enable one or more plugins instead.
 
@@ -41,9 +41,9 @@ The _jvm_ context is useful for long-term stats on running hbase jvms -- memory 
 
 == Using with JMX
 
-In addition to the standard output contexts supported by the Hadoop
-metrics package, you can also export HBase metrics via Java Management
-Extensions (JMX).  This will allow viewing HBase stats in JConsole or
+In addition to the standard output contexts supported by the Hadoop 
+metrics package, you can also export HBase metrics via Java Management 
+Extensions (JMX).  This will allow viewing HBase stats in JConsole or 
 any other JMX client.
 
 === Enable HBase stats collection
@@ -67,7 +67,7 @@ rpc.period=60
 === Setup JMX Remote Access
 
 For remote access, you will need to configure JMX remote passwords and access profiles.  Create the files:
-`$HBASE_HOME/conf/jmxremote.passwd` (set permissions
+`$HBASE_HOME/conf/jmxremote.passwd` (set permissions 
         to 600):: +
 ----
 monitorRole monitorpass
@@ -98,4 +98,5 @@ After restarting the processes you want to monitor, you should now be able to ru
 
 == Understanding HBase Metrics
 
-For more information on understanding HBase metrics, see the link:book.html#hbase_metrics[metrics section] in the Apache HBase Reference Guide.
+For more information on understanding HBase metrics, see the link:book.html#hbase_metrics[metrics section] in the Apache HBase Reference Guide. 
+
