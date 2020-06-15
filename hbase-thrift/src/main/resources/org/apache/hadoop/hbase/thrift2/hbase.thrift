@@ -459,6 +459,11 @@ enum TLogType {
   LARGE_LOG = 2
 }
 
+enum TFilterByOperator {
+  AND,
+  OR
+}
+
 /**
  * Thrift wrapper around
  * org.apache.hadoop.hbase.client.LogQueryFilter
@@ -470,6 +475,7 @@ struct TLogQueryFilter {
   4: optional string userName
   5: optional i32 limit = 10
   6: optional TLogType logType = 1
+  7: optional TFilterByOperator filterByOperator = TFilterByOperator.OR
 }
 
 
