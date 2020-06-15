@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -92,6 +93,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TDataBlockEncoding;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
+import org.apache.hadoop.hbase.thrift2.generated.TFilterByOperator;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TIOError;
@@ -1759,6 +1761,12 @@ public class TestThriftHBaseServiceHandler {
     clearedResponses.forEach(Assert::assertTrue);
     TLogQueryFilter tLogQueryFilter = new TLogQueryFilter();
     tLogQueryFilter.setLimit(15);
+    Assert.assertEquals(tLogQueryFilter.getFilterByOperator(), TFilterByOperator.OR);
+    LogQueryFilter logQueryFilter = ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
+    Assert.assertEquals(logQueryFilter.getFilterByOperator(), LogQueryFilter.FilterByOperator.OR);
+    tLogQueryFilter.setFilterByOperator(TFilterByOperator.AND);
+    logQueryFilter = ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
+    Assert.assertEquals(logQueryFilter.getFilterByOperator(), LogQueryFilter.FilterByOperator.AND);
     List<TOnlineLogRecord> tLogRecords =
       thriftHBaseServiceHandler.getSlowLogResponses(tServerNames, tLogQueryFilter);
     assertEquals(tLogRecords.size(), 0);
