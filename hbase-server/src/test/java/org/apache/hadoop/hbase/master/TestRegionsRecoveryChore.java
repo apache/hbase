@@ -488,6 +488,10 @@ public class TestRegionsRecoveryChore {
         return compactedStoreRefCount;
       }
 
+      @Override
+      public float getDataLocalityForSsd() {
+        return 0;
+      }
     };
     return regionMetrics;
   }

@@ -21,6 +21,8 @@ import static junit.framework.Assert.assertEquals;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -50,13 +52,19 @@ public class TestHDFSBlocksDistribution {
     distribution.addHostsAndBlockWeight(new String[] {"testTwo"}, 222);
     assertEquals("Should be two hosts", 2, distribution.getHostAndWeights().size());
     assertEquals("Total weight should be 525", 525, distribution.getUniqueBlocksTotalWeight());
+    distribution.addHostsAndBlockWeight(new String[] {"test"}, 100
+      , new StorageType[] { StorageType.SSD});
+    assertEquals("test host should have weight 403", 403
+      , distribution.getHostAndWeights().get("test").getWeight());
+    assertEquals("test host should have weight for ssd 100", 100
+      , distribution.getHostAndWeights().get("test").getWeightForSsd());
   }
 
   public class MockHDFSBlocksDistribution extends HDFSBlocksDistribution {
     @Override
     public Map<String,HostAndWeight> getHostAndWeights() {
       HashMap<String, HostAndWeight> map = new HashMap<>();
-      map.put("test", new HostAndWeight(null, 100));
+      map.put("test", new HostAndWeight(null, 100, 0));
       return map;
     }
 
