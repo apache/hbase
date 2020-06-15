@@ -81,9 +81,9 @@ class MasterMetaBootstrap {
       // down hosting server which calls AM#stop.
       if (metaState != null && metaState.getServerName() != null) {
         // Try to retain old assignment.
-        assignmentManager.assign(hri, metaState.getServerName());
+        assignmentManager.assignAsync(hri, metaState.getServerName());
       } else {
-        assignmentManager.assign(hri);
+        assignmentManager.assignAsync(hri);
       }
     }
     unassignExcessMetaReplica(numReplicas);

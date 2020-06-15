@@ -616,6 +616,24 @@ public class AssignmentManager {
     return assign(regionInfo, null);
   }
 
+  public Future<byte[]> assignAsync(RegionInfo regionInfo, ServerName sn) throws IOException {
+    RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
+    TransitRegionStateProcedure proc;
+    regionNode.lock();
+    try {
+      preTransitCheck(regionNode, STATES_EXPECTED_ON_ASSIGN);
+      proc = TransitRegionStateProcedure.assign(getProcedureEnvironment(), regionInfo, sn);
+      regionNode.setProcedure(proc);
+    } finally {
+      regionNode.unlock();
+    }
+    return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(), proc);
+  }
+
+  public Future<byte[]> assignAsync(RegionInfo regionInfo) throws IOException {
+    return assignAsync(regionInfo, null);
+  }
+
   public long unassign(RegionInfo regionInfo) throws IOException {
     RegionStateNode regionNode = regionStates.getRegionStateNode(regionInfo);
     if (regionNode == null) {
