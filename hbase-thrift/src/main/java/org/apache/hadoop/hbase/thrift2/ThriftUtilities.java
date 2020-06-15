@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TDataBlockEncoding;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
+import org.apache.hadoop.hbase.thrift2.generated.TFilterByOperator;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THRegionInfo;
 import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
@@ -1501,14 +1502,54 @@ public class ThriftUtilities {
   }
 
   public static TLogQueryFilter getSlowLogQueryFromHBase(
-      LogQueryFilter slowLogQueryFilter) {
+      LogQueryFilter logQueryFilter) {
     TLogQueryFilter tLogQueryFilter = new TLogQueryFilter();
-    tLogQueryFilter.setRegionName(slowLogQueryFilter.getRegionName());
-    tLogQueryFilter.setClientAddress(slowLogQueryFilter.getClientAddress());
-    tLogQueryFilter.setTableName(slowLogQueryFilter.getTableName());
-    tLogQueryFilter.setUserName(slowLogQueryFilter.getUserName());
-    tLogQueryFilter.setLimit(slowLogQueryFilter.getLimit());
+    tLogQueryFilter.setRegionName(logQueryFilter.getRegionName());
+    tLogQueryFilter.setClientAddress(logQueryFilter.getClientAddress());
+    tLogQueryFilter.setTableName(logQueryFilter.getTableName());
+    tLogQueryFilter.setUserName(logQueryFilter.getUserName());
+    tLogQueryFilter.setLimit(logQueryFilter.getLimit());
+    TLogType tLogType = gettLogTypeFromHBase(logQueryFilter);
+    tLogQueryFilter.setLogType(tLogType);
+    TFilterByOperator tFilterByOperator = getTFilterByFromHBase(logQueryFilter);
+    tLogQueryFilter.setFilterByOperator(tFilterByOperator);
     return tLogQueryFilter;
+  }
+
+  private static TLogType gettLogTypeFromHBase(final LogQueryFilter logQueryFilter) {
+    TLogType tLogType;
+    switch (logQueryFilter.getType()) {
+      case SLOW_LOG: {
+        tLogType = TLogType.SLOW_LOG;
+        break;
+      }
+      case LARGE_LOG: {
+        tLogType = TLogType.LARGE_LOG;
+        break;
+      }
+      default: {
+        tLogType = TLogType.SLOW_LOG;
+      }
+    }
+    return tLogType;
+  }
+
+  private static TFilterByOperator getTFilterByFromHBase(final LogQueryFilter logQueryFilter) {
+    TFilterByOperator tFilterByOperator;
+    switch (logQueryFilter.getFilterByOperator()) {
+      case AND: {
+        tFilterByOperator = TFilterByOperator.AND;
+        break;
+      }
+      case OR: {
+        tFilterByOperator = TFilterByOperator.OR;
+        break;
+      }
+      default: {
+        tFilterByOperator = TFilterByOperator.OR;
+      }
+    }
+    return tFilterByOperator;
   }
 
   public static LogQueryFilter getSlowLogQueryFromThrift(
@@ -1519,7 +1560,49 @@ public class ThriftUtilities {
     logQueryFilter.setTableName(tLogQueryFilter.getTableName());
     logQueryFilter.setUserName(tLogQueryFilter.getUserName());
     logQueryFilter.setLimit(tLogQueryFilter.getLimit());
+    LogQueryFilter.Type type = getLogTypeFromThrift(tLogQueryFilter);
+    logQueryFilter.setType(type);
+    LogQueryFilter.FilterByOperator filterByOperator = getFilterByFromThrift(tLogQueryFilter);
+    logQueryFilter.setFilterByOperator(filterByOperator);
     return logQueryFilter;
+  }
+
+  private static LogQueryFilter.Type getLogTypeFromThrift(
+      final TLogQueryFilter tSlowLogQueryFilter) {
+    LogQueryFilter.Type type;
+    switch (tSlowLogQueryFilter.getLogType()) {
+      case SLOW_LOG: {
+        type = LogQueryFilter.Type.SLOW_LOG;
+        break;
+      }
+      case LARGE_LOG: {
+        type = LogQueryFilter.Type.LARGE_LOG;
+        break;
+      }
+      default: {
+        type = LogQueryFilter.Type.SLOW_LOG;
+      }
+    }
+    return type;
+  }
+
+  private static LogQueryFilter.FilterByOperator getFilterByFromThrift(
+      final TLogQueryFilter tLogQueryFilter) {
+    LogQueryFilter.FilterByOperator filterByOperator;
+    switch (tLogQueryFilter.getFilterByOperator()) {
+      case AND: {
+        filterByOperator = LogQueryFilter.FilterByOperator.AND;
+        break;
+      }
+      case OR: {
+        filterByOperator = LogQueryFilter.FilterByOperator.OR;
+        break;
+      }
+      default: {
+        filterByOperator = LogQueryFilter.FilterByOperator.OR;
+      }
+    }
+    return filterByOperator;
   }
 
   public static List<TOnlineLogRecord> getSlowLogRecordsFromHBase(
