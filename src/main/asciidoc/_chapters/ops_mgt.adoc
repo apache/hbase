@@ -51,7 +51,8 @@ Options:
 Commands:
 Some commands take arguments. Pass no args or -h for usage.
   shell           Run the HBase shell
-  hbck            Run the hbase 'fsck' tool
+  hbck            Run the HBase 'fsck' tool. Defaults read-only hbck1.
+                  Pass '-j /path/to/HBCK2.jar' to run hbase-2.x HBCK2.
   snapshot        Tool for managing snapshots
   wal             Write-ahead-log analyzer
   hfile           Store file analyzer
@@ -386,12 +387,33 @@ Each command except `RowCounter` and `CellCounter` accept a single `--help` argu
 [[hbck]]
 === HBase `hbck`
 
-To run `hbck` against your HBase cluster run `$./bin/hbase hbck`. At the end of the command's output it prints `OK` or `INCONSISTENCY`.
-If your cluster reports inconsistencies, pass `-details` to see more detail emitted.
-If inconsistencies, run `hbck` a few times because the inconsistency may be transient (e.g. cluster is starting up or a region is splitting).
- Passing `-fix` may correct the inconsistency (This is an experimental feature).
+The `hbck` tool that shipped with hbase-1.x has been made read-only in hbase-2.x. It is not able to repair
+hbase-2.x clusters as hbase internals have changed. Nor should its assessments in read-only mode be
+trusted as it does not understand hbase-2.x operation.
 
-For more information, see <<hbck.in.depth>>.
+A new tool, <<HBCK2>>, described in the next section, replaces `hbck`.
+
+[[HBCK2]]
+=== HBase `HBCK2`
+
+`HBCK2` is the successor to <<hbck>>, the hbase-1.x fix tool (A.K.A `hbck1`). Use it in place of `hbck1`
+making repairs against hbase-2.x installs.
+
+`HBCK2` does not ship as part of hbase. It can be found as a subproject of the companion
+link:https://github.com/apache/hbase-operator-tools[hbase-operator-tools] repository at
+link:https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2[Apache HBase HBCK2 Tool].
+`HBCK2` was moved out of hbase so it could evolve at a cadence apart from that of hbase core.
+
+See the [https://github.com/apache/hbase-operator-tools/tree/master/hbase-hbck2](HBCK2) Home Page
+for how `HBCK2` differs from `hbck1`, and for how to build and use it.
+
+Once built, you can run `HBCK2` as follows:
+
+```
+$ hbase hbck -j /path/to/HBCK2.jar
+```
+
+This will generate `HBCK2` usage describing commands and options.
 
 [[hfile_tool2]]
 === HFile Tool
@@ -399,6 +421,8 @@ For more information, see <<hbck.in.depth>>.
 See <<hfile_tool>>.
 
 === WAL Tools
+For bulk replaying WAL files or _recovered.edits_ files, see
+<<walplayer>>. For reading/verifying individual files, read on.
 
 [[hlog_tool]]
 ==== FSHLog tool
@@ -506,6 +530,13 @@ Caching for the input Scan is configured via `hbase.client.scanner.caching`     
 By default, CopyTable utility only copies the latest version of row cells unless `--versions=n` is explicitly specified in the command.
 ====
 
+.Data Load
+[NOTE]
+====
+CopyTable does not perform a diff, it copies all Cells in between the specified startrow/stoprow starttime/endtime range.
+This means that already existing cells with same values will still be copied.
+====
+
 See Jonathan Hsieh's link:https://blog.cloudera.com/blog/2012/06/online-hbase-backups-with-copytable-2/[Online
           HBase Backups with CopyTable] blog post for more on `CopyTable`.
 
@@ -531,21 +562,22 @@ $ ./bin/hbase org.apache.hadoop.hbase.mapreduce.HashTable --help
 Usage: HashTable [options] <tablename> <outputpath>
 
 Options:
- batchsize     the target amount of bytes to hash in each batch
-               rows are added to the batch until this size is reached
-               (defaults to 8000 bytes)
- numhashfiles  the number of hash files to create
-               if set to fewer than number of regions then
-               the job will create this number of reducers
-               (defaults to 1/100 of regions -- at least 1)
- startrow      the start row
- stoprow       the stop row
- starttime     beginning of the time range (unixtime in millis)
-               without endtime means from starttime to forever
- endtime       end of the time range.  Ignored if no starttime specified.
- scanbatch     scanner batch size to support intra row scans
- versions      number of cell versions to include
- families      comma-separated list of families to include
+ batchsize         the target amount of bytes to hash in each batch
+                   rows are added to the batch until this size is reached
+                   (defaults to 8000 bytes)
+ numhashfiles      the number of hash files to create
+                   if set to fewer than number of regions then
+                   the job will create this number of reducers
+                   (defaults to 1/100 of regions -- at least 1)
+ startrow          the start row
+ stoprow           the stop row
+ starttime         beginning of the time range (unixtime in millis)
+                   without endtime means from starttime to forever
+ endtime           end of the time range.  Ignored if no starttime specified.
+ scanbatch         scanner batch size to support intra row scans
+ versions          number of cell versions to include
+ families          comma-separated list of families to include
+ ignoreTimestamps  if true, ignores cell timestamps
 
 Args:
  tablename     Name of the table to hash
@@ -584,6 +616,10 @@ Options:
                   (defaults to true)
  doPuts           if false, does not perform puts
                   (defaults to true)
+ ignoreTimestamps if true, ignores cells timestamps while comparing
+                  cell values. Any missing cell on target then gets
+                  added with current time as timestamp
+                  (defaults to false)
 
 Args:
  sourcehashdir    path to HashTable output dir for source table
@@ -597,6 +633,13 @@ Examples:
  $ bin/hbase org.apache.hadoop.hbase.mapreduce.SyncTable --dryrun=true --sourcezkcluster=zk1.example.com,zk2.example.com,zk3.example.com:2181:/hbase hdfs://nn:9000/hashes/tableA tableA tableA
 ----
 
+Cell comparison takes ROW/FAMILY/QUALIFIER/TIMESTAMP/VALUE into account for equality. When syncing at the target, missing cells will be
+added with original timestamp value from source. That may cause unexpected results after SyncTable completes, for example, if missing
+cells on target have a delete marker with a timestamp T2 (say, a bulk delete performed by mistake), but source cells timestamps have an
+older value T1, then those cells would still be unavailable at target because of the newer delete marker timestamp. Since cell timestamps
+might not be relevant to all use cases, _ignoreTimestamps_ option adds the flexibility to avoid using cells timestamp in the comparison.
+When using _ignoreTimestamps_ set to true, this option must be specified for both HashTable and SyncTable steps.
+
 The *dryrun* option is useful when a read only, diff report is wanted, as it will produce only COUNTERS indicating the differences, but will not perform
 any actual changes. It can be used as an alternative to VerifyReplication tool.
 
@@ -606,6 +649,7 @@ Setting doDeletes to false modifies default behaviour to not delete target cells
 Similarly, setting doPuts to false modifies default behaviour to not add missing cells on target. Setting both doDeletes
 and doPuts to false would give same effect as setting dryrun to true.
 
+
 .Additional info on doDeletes/doPuts
 [NOTE]
 ====
@@ -614,6 +658,16 @@ link:https://jira.apache.org/jira/browse/HBASE-20305[HBASE-20305], so these may 
 all released versions.
 For major 1.x versions, minimum minor release including it is *1.4.10*.
 For major 2.x versions, minimum minor release including it is *2.1.5*.
+====
+
+.Additional info on ignoreTimestamps
+[NOTE]
+====
+"ignoreTimestamps" was only added by
+link:https://issues.apache.org/jira/browse/HBASE-24302[HBASE-24302], so it may not be available on
+all released versions.
+For major 1.x versions, minimum minor release including it is *1.4.14*.
+For major 2.x versions, minimum minor release including it is *2.2.5*.
 ====
 
 .Set doDeletes to false on Two-Way Replication scenarios
@@ -633,8 +687,11 @@ which does not give any meaningful result.
 .Remote Clusters on different Kerberos Realms
 [NOTE]
 ====
-Currently, SyncTable can't be ran for remote clusters on different Kerberos realms.
-There's some work in progress to resolve this on link:https://jira.apache.org/jira/browse/HBASE-20586[HBASE-20586]
+Often, remote clusters may be deployed on different Kerberos Realms.
+link:https://jira.apache.org/jira/browse/HBASE-20586[HBASE-20586] added SyncTable support for
+cross realm authentication, allowing a SyncTable process running on target cluster to connect to
+source cluster and read both HashTable output files and the given HBase table when performing the
+required comparisons.
 ====
 
 [[export]]
@@ -847,6 +904,13 @@ The output can optionally be mapped to another set of tables.
 
 WALPlayer can also generate HFiles for later bulk importing, in that case only a single table and no mapping can be specified.
 
+.WALPrettyPrinter/FSHLog Tool
+[NOTE]
+====
+To read or verify single WAL files or _recovered.edits_ files, since they share the WAL format,
+see <<_wal_tools>>.
+====
+
 Invoke via:
 
 ----
@@ -947,14 +1011,84 @@ See link:https://issues.apache.org/jira/browse/HBASE-4391[HBASE-4391 Add ability
 [[compaction.tool]]
 === Offline Compaction Tool
 
-See the usage for the
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
-Run it like:
+*CompactionTool* provides a way of running compactions (either minor or major) as an independent
+process from the RegionServer. It reuses same internal implementation classes executed by RegionServer
+compaction feature. However, since this runs on a complete separate independent java process, it
+releases RegionServers from the overhead involved in rewrite a set of hfiles, which can be critical
+for latency sensitive use cases.
 
-[source, bash]
+Usage:
 ----
 $ ./bin/hbase org.apache.hadoop.hbase.regionserver.CompactionTool
+
+Usage: java org.apache.hadoop.hbase.regionserver.CompactionTool \
+  [-compactOnce] [-major] [-mapred] [-D<property=value>]* files...
+
+Options:
+ mapred         Use MapReduce to run compaction.
+ compactOnce    Execute just one compaction step. (default: while needed)
+ major          Trigger major compaction.
+
+Note: -D properties will be applied to the conf used.
+For example:
+ To stop delete of compacted file, pass -Dhbase.compactiontool.delete=false
+ To set tmp dir, pass -Dhbase.tmp.dir=ALTERNATE_DIR
+
+Examples:
+ To compact the full 'TestTable' using MapReduce:
+ $ hbase org.apache.hadoop.hbase.regionserver.CompactionTool -mapred hdfs://hbase/data/default/TestTable
+
+ To compact column family 'x' of the table 'TestTable' region 'abc':
+ $ hbase org.apache.hadoop.hbase.regionserver.CompactionTool hdfs://hbase/data/default/TestTable/abc/x
 ----
+
+As shown by usage options above, *CompactionTool* can run as a standalone client or a mapreduce job.
+When running as mapreduce job, each family dir is handled as an input split, and is processed
+by a separate map task.
+
+The *compactionOnce* parameter controls how many compaction cycles will be performed until
+*CompactionTool* program decides to finish its work. If omitted, it will assume it should keep
+running compactions on each specified family as determined by the given compaction policy
+configured. For more info on compaction policy, see <<compaction,compaction>>.
+
+If a major compaction is desired, *major* flag can be specified. If omitted, *CompactionTool* will
+assume minor compaction is wanted by default.
+
+It also allows for configuration overrides with `-D` flag. In the usage section above, for example,
+`-Dhbase.compactiontool.delete=false` option will instruct compaction engine to not delete original
+files from temp folder.
+
+Files targeted for compaction must be specified as parent hdfs dirs. It allows for multiple dirs
+definition, as long as each for these dirs are either a *family*, a *region*, or a *table* dir. If a
+table or region dir is passed, the program will recursively iterate through related sub-folders,
+effectively running compaction for each family found below the table/region level.
+
+Since these dirs are nested under *hbase* hdfs directory tree, *CompactionTool* requires hbase super
+user permissions in order to have access to required hfiles.
+
+.Running in MapReduce mode
+[NOTE]
+====
+MapReduce mode offers the ability to process each family dir in parallel, as a separate map task.
+Generally, it would make sense to run in this mode when specifying one or more table dirs as targets
+for compactions. The caveat, though, is that if number of families to be compacted become too large,
+the related mapreduce job may have indirect impacts on *RegionServers* performance .
+Since *NodeManagers* are normally co-located with RegionServers, such large jobs could
+compete for IO/Bandwidth resources with the *RegionServers*.
+====
+
+.MajorCompaction completely disabled on RegionServers due performance impacts
+[NOTE]
+====
+*Major compactions* can be a costly operation (see <<compaction,compaction>>), and can indeed
+impact performance on RegionServers, leading operators to completely disable it for critical
+low latency application. *CompactionTool* could be used as an alternative in such scenarios,
+although, additional custom application logic would need to be implemented, such as deciding
+scheduling and selection of tables/regions/families target for a given compaction run.
+====
+
+For additional details about CompactionTool, see also
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
 
 === `hbase clean`
 
@@ -1327,7 +1461,7 @@ But usually disks do the "John Wayne" -- i.e.
 take a while to go down spewing errors in _dmesg_ -- or for some reason, run much slower than their companions.
 In this case you want to decommission the disk.
 You have two options.
-You can link:https://wiki.apache.org/hadoop/FAQ#I_want_to_make_a_large_cluster_smaller_by_taking_out_a_bunch_of_nodes_simultaneously._How_can_this_be_done.3F[decommission
+You can link:https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html[decommission
             the datanode] or, less disruptive in that only the bad disks data will be rereplicated, can stop the datanode, unmount the bad volume (You can't umount a volume while the datanode is using it), and then restart the datanode (presuming you have set dfs.datanode.failed.volumes.tolerated > 0). The regionserver will throw some errors in its logs as it recalibrates where to get its data from -- it will likely roll its WAL log too -- but in general but for some latency spikes, it should keep on chugging.
 
 .Short Circuit Reads
@@ -1400,15 +1534,6 @@ Monitor the output of the _/tmp/log.txt_ file to follow the progress of the scri
 Use the following guidelines if you want to create your own rolling restart script.
 
 . Extract the new release, verify its configuration, and synchronize it to all nodes of your cluster using `rsync`, `scp`, or another secure synchronization mechanism.
-. Use the hbck utility to ensure that the cluster is consistent.
-+
-----
-
-$ ./bin/hbck
-----
-+
-Perform repairs if required.
-See <<hbck,hbck>> for details.
 
 . Restart the master first.
   You may need to modify these commands if your new HBase directory is different from the old one, such as for an upgrade.
@@ -1440,7 +1565,6 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
 ----
 
 . Restart the Master again, to clear out the dead servers list and re-enable the load balancer.
-. Run the `hbck` utility again, to be sure the cluster is consistent.
 
 [[adding.new.node]]
 === Adding a New Node
@@ -1996,23 +2120,45 @@ include::slow_log_responses_from_systable.adoc[]
 === Block Cache Monitoring
 
 Starting with HBase 0.98, the HBase Web UI includes the ability to monitor and report on the performance of the block cache.
-To view the block cache reports, click .
+To view the block cache reports, see the Block Cache section of the region server UI.
 Following are a few examples of the reporting capabilities.
 
-.Basic Info
+.Basic Info shows the cache implementation.
 image::bc_basic.png[]
 
-.Config
+.Config shows all cache configuration options.
 image::bc_config.png[]
 
-.Stats
+.Stats shows statistics about the performance of the cache.
 image::bc_stats.png[]
 
-.L1 and L2
+.L1 and L2 show information about the L1 and L2 caches.
 image::bc_l1.png[]
 
 This is not an exhaustive list of all the screens and reports available.
 Have a look in the Web UI.
+
+=== Snapshot Space Usage Monitoring
+
+Starting with HBase 0.95, Snapshot usage information on individual snapshots was shown in the HBase Master Web UI. This was further enhanced starting with HBase 1.3 to show the total Storefile size of the Snapshot Set. The following metrics are shown in the Master Web UI with HBase 1.3 and later.
+
+* Shared Storefile Size is the Storefile size shared between snapshots and active tables.
+* Mob Storefile Size is the Mob Storefile size shared between snapshots and active tables.
+* Archived Storefile Size is the Storefile size in Archive.
+
+The format of Archived Storefile Size is NNN(MMM). NNN is the total Storefile size in Archive, MMM is the total Storefile size in Archive that is specific to the snapshot (not shared with other snapshots and tables).
+
+.Master Snapshot Overview
+image::master-snapshot.png[]
+
+.Snapshot Storefile Stats Example 1
+image::1-snapshot.png[]
+
+.Snapshot Storefile Stats Example 2
+image::2-snapshots.png[]
+
+.Empty Snapshot Storfile Stats Example
+image::empty-snapshots.png[]
 
 == Cluster Replication
 
@@ -2029,6 +2175,9 @@ Some use cases for cluster replication include:
 
 NOTE: Replication is enabled at the granularity of the column family.
 Before enabling replication for a column family, create the table and all column families to be replicated, on the destination cluster.
+
+NOTE: Replication is asynchronous as we send WAL to another cluster in background, which means that when you want to do recovery through replication, you could loss some data. To address this problem, we have introduced a new feature called synchronous replication. As the mechanism is a bit different so we use a separated section to describe it. Please see
+<<Synchronous Replication,Synchronous Replication>>.
 
 === Replication Overview
 
@@ -2852,14 +3001,17 @@ Since the cluster is up, there is a risk that edits could be missed in the copy 
 The <<export,export>> approach dumps the content of a table to HDFS on the same cluster.
 To restore the data, the <<import,import>> utility would be used.
 
-Since the cluster is up, there is a risk that edits could be missed in the export process.
+Since the cluster is up, there is a risk that edits could be missed in the export process. If you want to know more about HBase back-up and restore see the page on link:http://hbase.apache.org/book.html#backuprestore[Backup and Restore].
 
 [[ops.snapshots]]
 == HBase Snapshots
 
-HBase Snapshots allow you to take a snapshot of a table without too much impact on Region Servers.
-Snapshot, Clone and restore operations don't involve data copying.
-Also, Exporting the snapshot to another cluster doesn't have impact on the Region Servers.
+HBase Snapshots allow you to take a copy of a table (both contents and metadata)with a very small performance impact. A Snapshot is an immutable
+collection of table metadata and a list of HFiles that comprised the table at the time the Snapshot was taken. A "clone"
+of a snapshot creates a new table from that snapshot, and a "restore" of a snapshot returns the contents of a table to
+what it was when the snapshot was created. The "clone" and "restore" operations do not require any data to be copied,
+as the underlying HFiles (the files which contain the data for an HBase table) are not modified with either action.
+Simiarly, exporting a snapshot to another cluster has little impact on RegionServers of the local cluster.
 
 Prior to version 0.94.6, the only way to backup or to clone a table is to use CopyTable/ExportTable, or to copy all the hfiles in HDFS after disabling the table.
 The disadvantages of these methods are that you can degrade region server performance (Copy/Export Table) or you need to disable the table, that means no reads or writes; and this is usually unacceptable.
@@ -3193,8 +3345,6 @@ HDFS replication factor only affects your disk usage and is invisible to most HB
 You can view the current number of regions for a given table using the HMaster UI.
 In the [label]#Tables# section, the number of online regions for each table is listed in the [label]#Online Regions# column.
 This total only includes the in-memory state and does not include disabled or offline regions.
-If you do not want to use the HMaster UI, you can determine the number of regions by counting the number of subdirectories of the /hbase/<table>/ subdirectories in HDFS, or by running the `bin/hbase hbck` command.
-Each of these methods may return a slightly different number, depending on the status of each region.
 
 [[ops.capacity.regions.count]]
 ==== Number of regions per RS - upper bound
@@ -3481,8 +3631,8 @@ If it appears stuck, restart the Master process.
 
 === Remove RegionServer Grouping
 Removing RegionServer Grouping feature from a cluster on which it was enabled involves
-more steps in addition to removing the relevant properties from `hbase-site.xml`. This is
-to clean the RegionServer grouping related meta data so that if the feature is re-enabled
+more steps in addition to removing the relevant properties from `hbase-site.xml`. This is 
+to clean the RegionServer grouping related meta data so that if the feature is re-enabled 
 in the future, the old meta data will not affect the functioning of the cluster.
 
 - Move all tables in non-default rsgroups to `default` regionserver group
@@ -3491,7 +3641,7 @@ in the future, the old meta data will not affect the functioning of the cluster.
 #Reassigning table t1 from non default group - hbase shell
 hbase(main):005:0> move_tables_rsgroup 'default',['t1']
 ----
-- Move all regionservers in non-default rsgroups to `default` regionserver group
+- Move all regionservers in non-default rsgroups to `default` regionserver group    
 [source, bash]
 ----
 #Reassigning all the servers in the non-default rsgroup to default - hbase shell
@@ -3575,21 +3725,21 @@ To check normalizer status and enable/disable normalizer
 [source,bash]
 ----
 hbase(main):001:0> normalizer_enabled
-true
+true 
 0 row(s) in 0.4870 seconds
-
+ 
 hbase(main):002:0> normalizer_switch false
-true
+true 
 0 row(s) in 0.0640 seconds
-
+ 
 hbase(main):003:0> normalizer_enabled
-false
+false 
 0 row(s) in 0.0120 seconds
-
+ 
 hbase(main):004:0> normalizer_switch true
 false
 0 row(s) in 0.0200 seconds
-
+ 
 hbase(main):005:0> normalizer_enabled
 true
 0 row(s) in 0.0090 seconds
@@ -3608,19 +3758,19 @@ merge action being taken as a result of the normalization plan computed by Simpl
 
 Consider an user table with some pre-split regions having 3 equally large regions
 (about 100K rows) and 1 relatively small region (about 25K rows). Following is the
-snippet from an hbase meta table scan showing each of the pre-split regions for
+snippet from an hbase meta table scan showing each of the pre-split regions for 
 the user table.
 
 ----
-table_p8ddpd6q5z,,1469494305548.68b9892220865cb6048 column=info:regioninfo, timestamp=1469494306375, value={ENCODED => 68b9892220865cb604809c950d1adf48, NAME => 'table_p8ddpd6q5z,,1469494305548.68b989222 09c950d1adf48.   0865cb604809c950d1adf48.', STARTKEY => '', ENDKEY => '1'}
-....
-table_p8ddpd6q5z,1,1469494317178.867b77333bdc75a028 column=info:regioninfo, timestamp=1469494317848, value={ENCODED => 867b77333bdc75a028bb4c5e4b235f48, NAME => 'table_p8ddpd6q5z,1,1469494317178.867b7733 bb4c5e4b235f48.  3bdc75a028bb4c5e4b235f48.', STARTKEY => '1', ENDKEY => '3'}
-....
-table_p8ddpd6q5z,3,1469494328323.98f019a753425e7977 column=info:regioninfo, timestamp=1469494328486, value={ENCODED => 98f019a753425e7977ab8636e32deeeb, NAME => 'table_p8ddpd6q5z,3,1469494328323.98f019a7 ab8636e32deeeb.  53425e7977ab8636e32deeeb.', STARTKEY => '3', ENDKEY => '7'}
-....
-table_p8ddpd6q5z,7,1469494339662.94c64e748979ecbb16 column=info:regioninfo, timestamp=1469494339859, value={ENCODED => 94c64e748979ecbb166f6cc6550e25c6, NAME => 'table_p8ddpd6q5z,7,1469494339662.94c64e74 6f6cc6550e25c6.   8979ecbb166f6cc6550e25c6.', STARTKEY => '7', ENDKEY => '8'}
-....
-table_p8ddpd6q5z,8,1469494339662.6d2b3f5fd1595ab8e7 column=info:regioninfo, timestamp=1469494339859, value={ENCODED => 6d2b3f5fd1595ab8e7c031876057b1ee, NAME => 'table_p8ddpd6q5z,8,1469494339662.6d2b3f5f c031876057b1ee.   d1595ab8e7c031876057b1ee.', STARTKEY => '8', ENDKEY => ''}
+table_p8ddpd6q5z,,1469494305548.68b9892220865cb6048 column=info:regioninfo, timestamp=1469494306375, value={ENCODED => 68b9892220865cb604809c950d1adf48, NAME => 'table_p8ddpd6q5z,,1469494305548.68b989222 09c950d1adf48.   0865cb604809c950d1adf48.', STARTKEY => '', ENDKEY => '1'} 
+.... 
+table_p8ddpd6q5z,1,1469494317178.867b77333bdc75a028 column=info:regioninfo, timestamp=1469494317848, value={ENCODED => 867b77333bdc75a028bb4c5e4b235f48, NAME => 'table_p8ddpd6q5z,1,1469494317178.867b7733 bb4c5e4b235f48.  3bdc75a028bb4c5e4b235f48.', STARTKEY => '1', ENDKEY => '3'} 
+.... 
+table_p8ddpd6q5z,3,1469494328323.98f019a753425e7977 column=info:regioninfo, timestamp=1469494328486, value={ENCODED => 98f019a753425e7977ab8636e32deeeb, NAME => 'table_p8ddpd6q5z,3,1469494328323.98f019a7 ab8636e32deeeb.  53425e7977ab8636e32deeeb.', STARTKEY => '3', ENDKEY => '7'} 
+.... 
+table_p8ddpd6q5z,7,1469494339662.94c64e748979ecbb16 column=info:regioninfo, timestamp=1469494339859, value={ENCODED => 94c64e748979ecbb166f6cc6550e25c6, NAME => 'table_p8ddpd6q5z,7,1469494339662.94c64e74 6f6cc6550e25c6.   8979ecbb166f6cc6550e25c6.', STARTKEY => '7', ENDKEY => '8'} 
+.... 
+table_p8ddpd6q5z,8,1469494339662.6d2b3f5fd1595ab8e7 column=info:regioninfo, timestamp=1469494339859, value={ENCODED => 6d2b3f5fd1595ab8e7c031876057b1ee, NAME => 'table_p8ddpd6q5z,8,1469494339662.6d2b3f5f c031876057b1ee.   d1595ab8e7c031876057b1ee.', STARTKEY => '8', ENDKEY => ''}  
 ----
 Invoking the normalizer using ‘normalize’ int the HBase shell, the below log snippet
 from HMaster log shows the normalization plan computed as per the logic defined for
@@ -3646,15 +3796,15 @@ and end key as ‘1’, with another region having start key as ‘1’ and end 
 Now, that these regions have been merged we see a single new region with start key
 as ‘’ and end key as ‘3’
 ----
-table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:mergeA, timestamp=1469516907431,
-value=PBUF\x08\xA5\xD9\x9E\xAF\xE2*\x12\x1B\x0A\x07default\x12\x10table_p8ddpd6q5z\x1A\x00"\x011(\x000\x00 ea74d246741ba.   8\x00
+table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:mergeA, timestamp=1469516907431, 
+value=PBUF\x08\xA5\xD9\x9E\xAF\xE2*\x12\x1B\x0A\x07default\x12\x10table_p8ddpd6q5z\x1A\x00"\x011(\x000\x00 ea74d246741ba.   8\x00 
 table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:mergeB, timestamp=1469516907431,
-value=PBUF\x08\xB5\xBA\x9F\xAF\xE2*\x12\x1B\x0A\x07default\x12\x10table_p8ddpd6q5z\x1A\x011"\x013(\x000\x0 ea74d246741ba.   08\x00
+value=PBUF\x08\xB5\xBA\x9F\xAF\xE2*\x12\x1B\x0A\x07default\x12\x10table_p8ddpd6q5z\x1A\x011"\x013(\x000\x0 ea74d246741ba.   08\x00 
 table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:regioninfo, timestamp=1469516907431, value={ENCODED => e06c9b83c4a252b130eea74d246741ba, NAME => 'table_p8ddpd6q5z,,1469516907210.e06c9b83c ea74d246741ba.   4a252b130eea74d246741ba.', STARTKEY => '', ENDKEY => '3'}
-....
-table_p8ddpd6q5z,3,1469514778736.bf024670a847c0adff column=info:regioninfo, timestamp=1469514779417, value={ENCODED => bf024670a847c0adffb74b2e13408b32, NAME => 'table_p8ddpd6q5z,3,1469514778736.bf024670 b74b2e13408b32.  a847c0adffb74b2e13408b32.' STARTKEY => '3', ENDKEY => '7'}
-....
-table_p8ddpd6q5z,7,1469514790152.7c5a67bc755e649db2 column=info:regioninfo, timestamp=1469514790312, value={ENCODED => 7c5a67bc755e649db22f49af6270f1e1, NAME => 'table_p8ddpd6q5z,7,1469514790152.7c5a67bc 2f49af6270f1e1.  755e649db22f49af6270f1e1.', STARTKEY => '7', ENDKEY => '8'}
+.... 
+table_p8ddpd6q5z,3,1469514778736.bf024670a847c0adff column=info:regioninfo, timestamp=1469514779417, value={ENCODED => bf024670a847c0adffb74b2e13408b32, NAME => 'table_p8ddpd6q5z,3,1469514778736.bf024670 b74b2e13408b32.  a847c0adffb74b2e13408b32.' STARTKEY => '3', ENDKEY => '7'} 
+.... 
+table_p8ddpd6q5z,7,1469514790152.7c5a67bc755e649db2 column=info:regioninfo, timestamp=1469514790312, value={ENCODED => 7c5a67bc755e649db22f49af6270f1e1, NAME => 'table_p8ddpd6q5z,7,1469514790152.7c5a67bc 2f49af6270f1e1.  755e649db22f49af6270f1e1.', STARTKEY => '7', ENDKEY => '8'} 
 ....
 table_p8ddpd6q5z,8,1469514790152.58e7503cda69f98f47 column=info:regioninfo, timestamp=1469514790312, value={ENCODED => 58e7503cda69f98f4755178e74288c3a, NAME => 'table_p8ddpd6q5z,8,1469514790152.58e7503c 55178e74288c3a.  da69f98f4755178e74288c3a.', STARTKEY => '8', ENDKEY => ''}
 ----
@@ -3680,6 +3830,7 @@ have auto normalization turned on …..…..….
 server=hbase-test-rc-5.openstacklocal,16020,1469419333913}
 2016-07-26 07:39:46,246 DEBUG [AM.ZK.Worker-pool2-t278] master.RegionStates: Onlined d6b5625df331cfec84dce4f1122c567f on hbase-test-rc-5.openstacklocal,16020,1469419333913 {ENCODED => d6b5625df331cfec84dce4f1122c567f, NAME => 'table_h2osxu3wat,154717,1469518785661.d6b5625df331cfec84dce4f1122c567f.', STARTKEY => '154717', ENDKEY => '3'}
 ----
+
 
 
 [[auto_reopen_regions]]
