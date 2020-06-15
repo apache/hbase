@@ -1143,7 +1143,11 @@ Disable Nagle’s algorithm. Delayed ACKs can add up to ~200ms to RPC round trip
 Detect regionserver failure as fast as reasonable. Set the following parameters:
 
 * In `hbase-site.xml`, set `zookeeper.session.timeout` to 30 seconds or less to bound failure detection (20-30 seconds is a good start).
-- Notice: the `sessionTimeout` of zookeeper is limited between 2 times and 20 times the `tickTime`(the basic time unit in milliseconds used by ZooKeeper.the default value is 2000ms.It is used to do heartbeats and the minimum session timeout will be twice the tickTime).
+- Note: Zookeeper clients negotiate a session timeout with the server during client init. Server enforces this timeout to be in the
+range [`minSessionTimeout`, `maxSessionTimeout`] and both these timeouts (measured in milliseconds) are configurable in Zookeeper service configuration.
+If not configured, these default to 2 * `tickTime` and 20 * `tickTime` respectively (`tickTime` is the basic time unit used by ZooKeeper,
+as measured in milliseconds. It is used to regulate heartbeats, timeouts etc.). Refer to Zookeeper documentation for additional details.
+
 * Detect and avoid unhealthy or failed HDFS DataNodes: in `hdfs-site.xml` and `hbase-site.xml`, set the following parameters:
 - `dfs.namenode.avoid.read.stale.datanode = true`
 - `dfs.namenode.avoid.write.stale.datanode = true`
@@ -1160,7 +1164,7 @@ the regionserver/dfsclient side.
 
 * In `hbase-site.xml`, set the following parameters:
 - `dfs.client.read.shortcircuit = true`
-- `dfs.client.read.shortcircuit.skip.checksum = true` so we don't double checksum (HBase does its own checksumming to save on i/os. See <<hbase.regionserver.checksum.verify.performance>> for more on this.
+- `dfs.client.read.shortcircuit.skip.checksum = true` so we don't double checksum (HBase does its own checksumming to save on i/os. See <<hbase.regionserver.checksum.verify.performance>> for more on this. 
 - `dfs.domain.socket.path` to match what was set for the datanodes.
 - `dfs.client.read.shortcircuit.buffer.size = 131072` Important to avoid OOME -- hbase has a default it uses if unset, see `hbase.dfs.client.read.shortcircuit.buffer.size`; its default is 131072.
 * Ensure data locality. In `hbase-site.xml`, set `hbase.hstore.min.locality.to.skip.major.compact = 0.7` (Meaning that 0.7 \<= n \<= 1)
