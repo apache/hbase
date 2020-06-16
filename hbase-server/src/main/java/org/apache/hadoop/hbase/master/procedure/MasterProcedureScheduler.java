@@ -701,12 +701,12 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
    * Suspend the procedure if the specified set of regions are already locked.
    * @param procedure the procedure trying to acquire the lock on the regions
    * @param table the table name of the regions we are trying to lock
-   * @param regionInfo the list of regions we are trying to lock
+   * @param regionInfos the list of regions we are trying to lock
    * @return true if the procedure has to wait for the regions to be available
    */
   public boolean waitRegions(final Procedure<?> procedure, final TableName table,
-      final RegionInfo... regionInfo) {
-    Arrays.sort(regionInfo, RegionInfo.COMPARATOR);
+      final RegionInfo... regionInfos) {
+    Arrays.sort(regionInfos, RegionInfo.COMPARATOR);
     schedLock();
     try {
       assert table != null;
@@ -716,14 +716,14 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
       // acquire region xlocks or wait
       boolean hasLock = true;
-      final LockAndQueue[] regionLocks = new LockAndQueue[regionInfo.length];
-      for (int i = 0; i < regionInfo.length; ++i) {
-        assert regionInfo[i] != null;
-        assert regionInfo[i].getTable() != null;
-        assert regionInfo[i].getTable().equals(table): regionInfo[i] + " " + procedure;
-        assert i == 0 || regionInfo[i] != regionInfo[i - 1] : "duplicate region: " + regionInfo[i];
+      final LockAndQueue[] regionLocks = new LockAndQueue[regionInfos.length];
+      for (int i = 0; i < regionInfos.length; ++i) {
+        assert regionInfos[i] != null;
+        assert regionInfos[i].getTable() != null;
+        assert regionInfos[i].getTable().equals(table): regionInfos[i] + " " + procedure;
+        assert i == 0 || regionInfos[i] != regionInfos[i - 1] : "duplicate region: " + regionInfos[i];
 
-        regionLocks[i] = locking.getRegionLock(regionInfo[i].getEncodedName());
+        regionLocks[i] = locking.getRegionLock(regionInfos[i].getEncodedName());
         if (!regionLocks[i].tryExclusiveLock(procedure)) {
           LOG.info("Waiting on xlock for {} held by pid={}", procedure,
               regionLocks[i].getExclusiveLockProcIdOwner());
@@ -759,26 +759,26 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   /**
    * Wake the procedures waiting for the specified regions
    * @param procedure the procedure that was holding the regions
-   * @param regionInfo the list of regions the procedure was holding
+   * @param regionInfos the list of regions the procedure was holding
    */
   public void wakeRegions(final Procedure<?> procedure,final TableName table,
-      final RegionInfo... regionInfo) {
-    Arrays.sort(regionInfo, RegionInfo.COMPARATOR);
+      final RegionInfo... regionInfos) {
+    Arrays.sort(regionInfos, RegionInfo.COMPARATOR);
     schedLock();
     try {
       int numProcs = 0;
-      final Procedure<?>[] nextProcs = new Procedure[regionInfo.length];
-      for (int i = 0; i < regionInfo.length; ++i) {
-        assert regionInfo[i].getTable().equals(table);
-        assert i == 0 || regionInfo[i] != regionInfo[i - 1] : "duplicate region: " + regionInfo[i];
+      final Procedure<?>[] nextProcs = new Procedure[regionInfos.length];
+      for (int i = 0; i < regionInfos.length; ++i) {
+        assert regionInfos[i].getTable().equals(table);
+        assert i == 0 || regionInfos[i] != regionInfos[i - 1] : "duplicate region: " + regionInfos[i];
 
-        LockAndQueue regionLock = locking.getRegionLock(regionInfo[i].getEncodedName());
+        LockAndQueue regionLock = locking.getRegionLock(regionInfos[i].getEncodedName());
         if (regionLock.releaseExclusiveLock(procedure)) {
           if (!regionLock.isWaitingQueueEmpty()) {
             // release one procedure at the time since regions has an xlock
             nextProcs[numProcs++] = regionLock.removeFirst();
           } else {
-            locking.removeRegionLock(regionInfo[i].getEncodedName());
+            locking.removeRegionLock(regionInfos[i].getEncodedName());
           }
         }
       }
