@@ -2629,6 +2629,91 @@ You can use the HBase Shell command `status 'replication'` to monitor the replic
 * `status 'replication', 'source'` -- prints the status for each replication source, sorted by hostname.
 * `status 'replication', 'sink'` -- prints the status for each replication sink, sorted by hostname.
 
+==== Understanding the output
+
+The command output will vary according to the state of replication. For example right after a restart
+and if destination peer is not reachable, no replication source threads would be running,
+so no metrics would get displayed:
+
+----
+hbase01.home:
+SOURCE: PeerID=1
+Normal Queue: 1
+No Reader/Shipper threads runnning yet.
+SINK: TimeStampStarted=1591985197350, Waiting for OPs...
+----
+
+Under normal circumstances, a healthy, active-active replication deployment would
+show the following:
+
+----
+    hbase01.home:
+      SOURCE: PeerID=1
+         Normal Queue: 1
+           AgeOfLastShippedOp=0, TimeStampOfLastShippedOp=Fri Jun 12 18:49:23 BST 2020, SizeOfLogQueue=1, EditsReadFromLogQueue=1, OpsShippedToTarget=1, TimeStampOfNextToReplicate=Fri Jun 12 18:49:23 BST 2020, Replication Lag=0
+      SINK: TimeStampStarted=1591983663458, AgeOfLastAppliedOp=0, TimeStampsOfLastAppliedOp=Fri Jun 12 18:57:18 BST 2020
+----
+
+The definition for each of these metrics is detailed below:
+
+[cols="1,1,1", options="header"]
+|===
+| Type
+| Metric Name
+| Description
+
+| Source
+| AgeOfLastShippedOp
+| How long last successfully shipped edit took to effectively get replicated on target.
+
+| Source
+| TimeStampOfLastShippedOp
+| The actual date of last successful edit shipment.
+
+| Source
+| SizeOfLogQueue
+| Number of wal files on this given queue.
+
+| Source
+| EditsReadFromLogQueue
+| How many edits have been read from this given queue since this source thread started.
+
+| Source
+| OpsShippedToTarget
+| How many edits have been shipped to target since this source thread started.
+
+| Source
+| TimeStampOfNextToReplicate
+| Date of the current edit been attempted to replicate.
+
+| Source
+| Replication Lag
+| The elapsed time (in millis), since the last edit to replicate was read by this source
+thread and effectively replicated to target
+
+| Sink
+| TimeStampStarted
+| Date (in millis) of when this Sink thread started.
+
+| Sink
+| AgeOfLastAppliedOp
+| How long it took to apply the last successful shipped edit.
+
+| Sink
+| TimeStampsOfLastAppliedOp
+| Date of last successful applied edit.
+
+|===
+
+Growing values for `Source.TimeStampsOfLastAppliedOp` and/or
+`Source.Replication Lag` would indicate replication delays. If those numbers keep going
+up, while `Source.TimeStampOfLastShippedOp`, `Source.EditsReadFromLogQueue`,
+`Source.OpsShippedToTarget` or `Source.TimeStampOfNextToReplicate` do not change at all,
+ then replication flow is failing to progress, and there might be problems within
+clusters communication. This could also happen if replication is manually paused
+(via hbase shell `disable_peer` command, for example), but date keeps getting ingested
+in the source cluster tables.
+
 == Running Multiple Workloads On a Single Cluster
 
 HBase provides the following mechanisms for managing the performance of a cluster
