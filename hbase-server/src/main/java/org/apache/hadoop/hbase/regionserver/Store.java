@@ -282,4 +282,14 @@ public interface Store {
   boolean isSloppyMemStore();
 
   int getCurrentParallelPutCount();
+
+  /**
+   * @return the number of read requests purely from the memstore.
+   */
+  long getMemstoreOnlyRowReadsCount();
+
+  /**
+   * @return the number of read requests from the files under this store.
+   */
+  long getMixedRowReadsCount();
 }
