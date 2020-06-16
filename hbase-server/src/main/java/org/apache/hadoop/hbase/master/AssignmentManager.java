@@ -3220,12 +3220,16 @@ public class AssignmentManager extends ZooKeeperListener {
       // maybe because it crashed.
       PairOfSameType<HRegionInfo> p = MetaTableAccessor.getMergeRegions(result);
       if (p.getFirst() != null && p.getSecond() != null) {
-        int numReplicas = server.getTableDescriptors().get(p.getFirst().
-            getTable()).getRegionReplication();
-        for (HRegionInfo merge : p) {
-          for (int i = 1; i < numReplicas; i++) {
-            replicasToClose.add(RegionReplicaUtil.getRegionInfoForReplica(merge, i));
+        HTableDescriptor desc = server.getTableDescriptors().get(p.getFirst().getTable());
+        if (desc != null) {
+          int numReplicas = desc.getRegionReplication();
+          for (HRegionInfo merge : p) {
+            for (int i = 1; i < numReplicas; i++) {
+              replicasToClose.add(RegionReplicaUtil.getRegionInfoForReplica(merge, i));
+            }
           }
+        } else {
+          LOG.warn("Found no table descriptor on filesystem for " + p.getFirst().getTable());
         }
       }
       RegionLocations rl =  MetaTableAccessor.getRegionLocations(result);
