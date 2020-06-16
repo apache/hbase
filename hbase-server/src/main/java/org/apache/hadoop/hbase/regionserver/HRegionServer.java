@@ -1962,9 +1962,9 @@ public class HRegionServer extends Thread implements
     // Default is 2 mins. The default value for TTLCleaner is 5 mins so we set this to
     // 2 mins so that compacted files can be archived before the TTLCleaner runs
     int cleanerInterval =
-    conf.getInt("hbase.hfile.compaction.discharger.interval", 2 * 60 * 1000);
+      conf.getInt("hbase.hfile.compaction.discharger.interval", 2 * 60 * 1000);
     this.compactedFileDischarger =
-    new CompactedHFilesDischarger(cleanerInterval, this, this);
+      new CompactedHFilesDischarger(cleanerInterval, this, this);
     choreService.scheduleChore(compactedFileDischarger);
 
     // Start executor services

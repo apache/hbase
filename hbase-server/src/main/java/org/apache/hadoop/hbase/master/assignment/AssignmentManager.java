@@ -1553,7 +1553,8 @@ public class AssignmentManager {
       ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
       carryingMeta = isCarryingMeta(serverName);
       if (!force && serverNode != null && !serverNode.isInState(ServerState.ONLINE)) {
-        LOG.info("Skip adding SCP for {} (meta={}) -- running?", serverNode, carryingMeta);
+        LOG.info("Skip adding ServerCrashProcedure for {} (meta={}) -- running?",
+          serverNode, carryingMeta);
         return Procedure.NO_PROC_ID;
       } else {
         MasterProcedureEnv mpe = procExec.getEnvironment();
@@ -1574,8 +1575,9 @@ public class AssignmentManager {
           pid = procExec.submitProcedure(
               new ServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta));
         }
-        LOG.info("Scheduled SCP pid={} for {} (carryingMeta={}){}.", pid, serverName, carryingMeta,
-            serverNode == null? "": " " + serverNode.toString() + ", oldState=" + oldState);
+        LOG.info("Scheduled ServerCrashProcedure pid={} for {} (carryingMeta={}){}.",
+          pid, serverName, carryingMeta,
+          serverNode == null? "": " " + serverNode.toString() + ", oldState=" + oldState);
       }
     } finally {
       if (serverNode != null) {
