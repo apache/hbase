@@ -373,14 +373,23 @@ public class TestMetaWithReplicas {
     TEST_UTIL.waitFor(30000, () -> newMaster.isInitialized());
     TEST_UTIL.getMiniHBaseCluster().getConfiguration().unset(HConstants.MASTER_IMPL);
 
-    //looking up the failed meta replica
-    AssignmentManager am = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
-    RegionInfo metaReplicaHri = RegionReplicaUtil.getRegionInfoForReplica(
-      RegionInfoBuilder.FIRST_META_REGIONINFO, 2);
-    RegionStateNode metaReplicaRegionNode = am.getRegionStates().getOrCreateRegionStateNode(metaReplicaHri);
 
-    //checking if the assignment failed
-    Assert.assertNull(metaReplicaRegionNode.getRegionLocation());
+    AssignmentManager am = newMaster.getAssignmentManager();
+    //showing one of the replicas got assigned
+    RegionInfo metaReplicaHri = RegionReplicaUtil.getRegionInfoForReplica(
+      RegionInfoBuilder.FIRST_META_REGIONINFO, 1);
+    RegionStateNode metaReplicaRegionNode = am.getRegionStates().getOrCreateRegionStateNode(metaReplicaHri);
+    Assert.assertNotNull(metaReplicaRegionNode.getRegionLocation());
+    //showing one of the replicas failed to be assigned
+    RegionInfo metaReplicaHri2 = RegionReplicaUtil.getRegionInfoForReplica(
+      RegionInfoBuilder.FIRST_META_REGIONINFO, 2);
+    RegionStateNode metaReplicaRegionNode2 = am.getRegionStates().getOrCreateRegionStateNode(metaReplicaHri2);
+    Assert.assertNull(metaReplicaRegionNode2.getRegionLocation());
+
+    //showing master is active and running
+    Assert.assertFalse(newMaster.isStopping());
+    Assert.assertFalse(newMaster.isStopped());
+    Assert.assertTrue(newMaster.isActiveMaster());
   }
 
   public static class BrokenTransitRegionStateProcedure extends TransitRegionStateProcedure {
