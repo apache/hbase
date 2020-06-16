@@ -18,18 +18,19 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -39,7 +40,6 @@ import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
@@ -58,12 +57,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Tests around regionserver shutdown and abort
@@ -145,6 +142,49 @@ public class TestRegionServerAbort {
   }
 
   /**
+   * Tests that only a single abort is processed when multiple aborts are requested.
+   */
+  @Test
+  public void testMultiAbort() {
+    assertTrue(cluster.getRegionServerThreads().size() > 0);
+    JVMClusterUtil.RegionServerThread t = cluster.getRegionServerThreads().get(0);
+    assertTrue(t.isAlive());
+    final HRegionServer rs = t.getRegionServer();
+    assertFalse(rs.isAborted());
+    RegionServerCoprocessorHost cpHost = rs.getRegionServerCoprocessorHost();
+    StopBlockingRegionObserver cp = (StopBlockingRegionObserver)cpHost.findCoprocessor(
+      StopBlockingRegionObserver.class.getName());
+    // Enable clean abort.
+    cp.setStopAllowed(true);
+    // Issue two aborts in quick succession.
+    // We need a thread pool here, otherwise the abort() runs into SecurityException when running
+    // from the fork join pool when setting the context classloader.
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      executor.submit(new Runnable() {
+        @Override public void run() {
+          rs.abort("Abort 1");
+        }
+      });
+      executor.submit(new Runnable() {
+        @Override public void run() {
+          rs.abort("Abort 2");
+        }
+      });
+      long testTimeoutMs = 10 * 1000;
+      Waiter.waitFor(cluster.getConf(), testTimeoutMs, new Waiter.Predicate<Exception>() {
+        @Override public boolean evaluate() throws Exception {
+          return rs.isStopped();
+        }
+      });
+      // Make sure only one abort is received.
+      assertEquals(1, cp.getNumAbortsRequested());
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  /**
    * Test that a coprocessor is able to override a normal regionserver stop request.
    */
   @Test
@@ -162,6 +202,7 @@ public class TestRegionServerAbort {
       implements RegionServerObserver {
     public static final String DO_ABORT = "DO_ABORT";
     private boolean stopAllowed;
+    private AtomicInteger abortCount = new AtomicInteger();
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
@@ -176,9 +217,14 @@ public class TestRegionServerAbort {
     @Override
     public void preStopRegionServer(ObserverContext<RegionServerCoprocessorEnvironment> env)
         throws IOException {
+      abortCount.incrementAndGet();
       if (!stopAllowed) {
         throw new IOException("Stop not allowed");
       }
+    }
+
+    public int getNumAbortsRequested() {
+      return abortCount.get();
     }
 
     @Override
