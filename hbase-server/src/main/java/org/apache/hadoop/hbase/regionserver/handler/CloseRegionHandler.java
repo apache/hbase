@@ -94,9 +94,8 @@ public class CloseRegionHandler extends EventHandler {
   public void process() throws IOException {
     String name = regionInfo.getEncodedName();
     LOG.trace("Processing close of {}", name);
-    String encodedRegionName = regionInfo.getEncodedName();
     // Check that this region is being served here
-    HRegion region = (HRegion)rsServices.getRegion(encodedRegionName);
+    HRegion region = (HRegion)rsServices.getRegion(name);
     try {
       if (region == null) {
         LOG.warn("Received CLOSE for region {} but currently not serving - ignoring", name);
