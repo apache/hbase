@@ -316,7 +316,7 @@ public class HRegionServer extends HasThread implements
 
   // Go down hard. Used if file system becomes unavailable and also in
   // debugging and unit tests.
-  private volatile boolean abortRequested;
+  private AtomicBoolean abortRequested;
   public static final String ABORT_TIMEOUT = "hbase.regionserver.abort.timeout";
   // Default abort timeout is 1200 seconds for safe
   private static final long DEFAULT_ABORT_TIMEOUT = 1200000;
@@ -578,7 +578,7 @@ public class HRegionServer extends HasThread implements
       HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY,
       HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT);
 
-    this.abortRequested = false;
+    this.abortRequested = new AtomicBoolean(false);
     this.stopped = false;
 
     rpcServices = createRpcServices();
@@ -1026,7 +1026,7 @@ public class HRegionServer extends HasThread implements
           } else if (!this.stopping) {
             this.stopping = true;
             LOG.info("Closing user regions");
-            closeUserRegions(this.abortRequested);
+            closeUserRegions(this.abortRequested.get());
           } else if (this.stopping) {
             boolean allUserRegionsOffline = areAllUserRegionsOffline();
             if (allUserRegionsOffline) {
@@ -1042,7 +1042,7 @@ public class HRegionServer extends HasThread implements
               // Make sure all regions have been closed -- some regions may
               // have not got it because we were splitting at the time of
               // the call to closeUserRegions.
-              closeUserRegions(this.abortRequested);
+              closeUserRegions(this.abortRequested.get());
             }
             LOG.debug("Waiting on " + getOnlineRegionsAsPrintableString());
           }
@@ -1069,7 +1069,7 @@ public class HRegionServer extends HasThread implements
       mxBean = null;
     }
 
-    if (abortRequested) {
+    if (abortRequested.get()) {
       Timer abortMonitor = new Timer("Abort regionserver monitor", true);
       TimerTask abortTimeoutTask = null;
       try {
@@ -1123,18 +1123,18 @@ public class HRegionServer extends HasThread implements
 
     // Stop the snapshot and other procedure handlers, forcefully killing all running tasks
     if (rspmHost != null) {
-      rspmHost.stop(this.abortRequested || this.killed);
+      rspmHost.stop(this.abortRequested.get() || this.killed);
     }
 
     if (this.killed) {
       // Just skip out w/o closing regions.  Used when testing.
-    } else if (abortRequested) {
+    } else if (abortRequested.get()) {
       if (this.fsOk) {
-        closeUserRegions(abortRequested); // Don't leave any open file handles
+        closeUserRegions(abortRequested.get()); // Don't leave any open file handles
       }
       LOG.info("aborting server " + this.serverName);
     } else {
-      closeUserRegions(abortRequested);
+      closeUserRegions(abortRequested.get());
       LOG.info("stopping server " + this.serverName);
     }
 
@@ -1152,24 +1152,24 @@ public class HRegionServer extends HasThread implements
 
     // Closing the compactSplit thread before closing meta regions
     if (!this.killed && containsMetaTableRegions()) {
-      if (!abortRequested || this.fsOk) {
+      if (!abortRequested.get() || this.fsOk) {
         if (this.compactSplitThread != null) {
           this.compactSplitThread.join();
           this.compactSplitThread = null;
         }
-        closeMetaTableRegions(abortRequested);
+        closeMetaTableRegions(abortRequested.get());
       }
     }
 
     if (!this.killed && this.fsOk) {
-      waitOnAllRegionsToClose(abortRequested);
+      waitOnAllRegionsToClose(abortRequested.get());
       LOG.info("stopping server " + this.serverName +
         "; all regions closed.");
     }
 
     //fsOk flag may be changed when closing regions throws exception.
     if (this.fsOk) {
-      shutdownWAL(!abortRequested);
+      shutdownWAL(!abortRequested.get());
     }
 
     // Make sure the proxy is down.
@@ -2235,6 +2235,15 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
+   * Sets the abort state if not already set.
+   * @return True if abortRequested set to True successfully, false if an abort is already in
+   * progress.
+   */
+  protected boolean setAbortRequested() {
+    return abortRequested.compareAndSet(false, true);
+  }
+
+  /**
    * Cause the server to exit without closing the regions it is serving, the log
    * it is using and without notifying the master. Used unit testing and on
    * catastrophic events such as HDFS is yanked out from under hbase or we OOME.
@@ -2246,13 +2255,18 @@ public class HRegionServer extends HasThread implements
    */
   @Override
   public void abort(final String reason, Throwable cause) {
+    if (!setAbortRequested()) {
+      // Abort already in progress, ignore the new request.
+      LOG.debug(String.format(
+        "Abort already in progress. Ignoring the current request with reason: %s", reason));
+      return;
+    }
     String msg = "ABORTING region server " + this + ": " + reason;
     if (cause != null) {
       LOG.fatal(msg, cause);
     } else {
       LOG.fatal(msg);
     }
-    this.abortRequested = true;
     // HBASE-4014: show list of coprocessors that were loaded to help debug
     // regionserver crashes.Note that we're implicitly using
     // java.util.HashSet's toString() method to print the coprocessor names.
@@ -2309,7 +2323,7 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public boolean isAborted() {
-    return this.abortRequested;
+    return this.abortRequested.get();
   }
 
   /*

@@ -2652,7 +2652,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   @Override
   public void abort(final String msg, final Throwable t) {
-    if (isAborted() || isStopped()) {
+    if (!setAbortRequested() || isStopped()) {
       return;
     }
     if (cpHost != null) {
