@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -232,31 +231,33 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
 
     void writeRegionEntries(List<WAL.Entry> entries) throws IOException {
       long startTime = System.nanoTime();
-      WAL.Entry currentWalEntry = null;
-      try {
-        int editsCount = 0;
-        for (WAL.Entry logEntry : entries) {
-          currentWalEntry = logEntry;
-          filterCellByStore(logEntry);
-          if (!logEntry.getEdit().isEmpty()) {
+      int editsCount = 0;
+      for (WAL.Entry logEntry : entries) {
+        filterCellByStore(logEntry);
+        if (!logEntry.getEdit().isEmpty()) {
+          try {
             writer.append(logEntry);
-            updateRegionMaximumEditLogSeqNum(logEntry);
-            editsCount++;
-          } else {
-            incrementSkippedEdits(1);
+          } catch (IOException e) {
+            logAndThrowWriterAppendFailure(logEntry, e);
           }
+          updateRegionMaximumEditLogSeqNum(logEntry);
+          editsCount++;
+        } else {
+          incrementSkippedEdits(1);
         }
-        // Pass along summary statistics
-        incrementEdits(editsCount);
-        incrementNanoTime(System.nanoTime() - startTime);
-      } catch (IOException e) {
-        e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
-        final String errorMsg =
-          "Failed to write log entry " + currentWalEntry.toString() + " to log";
-        LOG.error(HBaseMarkers.FATAL, errorMsg, e);
-        updateStatusWithMsg(errorMsg);
-        throw e;
       }
+      // Pass along summary statistics
+      incrementEdits(editsCount);
+      incrementNanoTime(System.nanoTime() - startTime);
+    }
+
+    private void logAndThrowWriterAppendFailure(WAL.Entry logEntry, IOException e)
+        throws IOException {
+      e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
+      final String errorMsg = "Failed to write log entry " + logEntry.toString() + " to log";
+      LOG.error(HBaseMarkers.FATAL, errorMsg, e);
+      updateStatusWithMsg(errorMsg);
+      throw e;
     }
 
     private void filterCellByStore(WAL.Entry logEntry) {
