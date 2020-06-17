@@ -56,6 +56,9 @@ public abstract class OutputSink {
 
   protected final AtomicLong totalSkippedEdits = new AtomicLong();
 
+  /**
+   * List of all the files produced by this sink
+   */
   protected final List<Path> splits = new ArrayList<>();
 
   /**
