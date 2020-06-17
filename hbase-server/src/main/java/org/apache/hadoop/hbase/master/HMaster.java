@@ -1226,7 +1226,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    *   and we will hold here until operator intervention.
    */
   @VisibleForTesting
-  public boolean waitForMetaOnline() throws InterruptedException {
+  public boolean waitForMetaOnline() {
     return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
   }
 
@@ -1234,7 +1234,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return True if region is online and scannable else false if an error or shutdown (Otherwise
    *   we just block in here holding up all forward-progess).
    */
-  private boolean isRegionOnline(RegionInfo ri) throws InterruptedException {
+  private boolean isRegionOnline(RegionInfo ri) {
     RetryCounter rc = null;
     while (!isStopped()) {
       RegionState rs = this.assignmentManager.getRegionStates().getRegionState(ri);
@@ -1265,16 +1265,16 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Check hbase:namespace table is assigned. If not, startup will hang looking for the ns table
    * <p/>
    * This is for rolling upgrading, later we will migrate the data in ns table to the ns family of
-   * meta table. And if this is a new clsuter, this method will return immediately as there will be
+   * meta table. And if this is a new cluster, this method will return immediately as there will be
    * no namespace table/region.
    * @return True if namespace table is up/online.
    */
-  private boolean waitForNamespaceOnline() throws InterruptedException, IOException {
+  private boolean waitForNamespaceOnline() throws IOException {
     TableState nsTableState =
       MetaTableAccessor.getTableState(getConnection(), TableName.NAMESPACE_TABLE_NAME);
     if (nsTableState == null || nsTableState.isDisabled()) {
       // this means we have already migrated the data and disabled or deleted the namespace table,
-      // or this is a new depliy which does not have a namespace table from the beginning.
+      // or this is a new deploy which does not have a namespace table from the beginning.
       return true;
     }
     List<RegionInfo> ris =
@@ -1285,7 +1285,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     // Else there are namespace regions up in meta. Ensure they are assigned before we go on.
     for (RegionInfo ri : ris) {
-      isRegionOnline(ri);
+      if (!isRegionOnline(ri)) {
+        return false;
+      }
     }
     return true;
   }
