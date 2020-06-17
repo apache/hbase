@@ -586,6 +586,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     int count = 0;
     long totalBytesRead = 0;
+    // track the cells for metrics only if it is a user read request.
     boolean onlyFromMemstore = matcher.isUserScan();
     try {
       LOOP: do {
