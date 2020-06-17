@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,35 +19,31 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import java.io.IOException;
-import java.util.Arrays;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Normalization plan to split region.
  */
 @InterfaceAudience.Private
 public class SplitNormalizationPlan implements NormalizationPlan {
-  private static final Logger LOG = LoggerFactory.getLogger(SplitNormalizationPlan.class.getName());
 
-  private RegionInfo regionInfo;
-  private byte[] splitPoint;
+  private final RegionInfo regionInfo;
 
-  public SplitNormalizationPlan(RegionInfo regionInfo, byte[] splitPoint) {
+  public SplitNormalizationPlan(RegionInfo regionInfo) {
     this.regionInfo = regionInfo;
-    this.splitPoint = splitPoint;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public long submit(MasterServices masterServices) throws IOException {
-    return masterServices.splitRegion(regionInfo, null, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    return masterServices.splitRegion(regionInfo, null, HConstants.NO_NONCE,
+      HConstants.NO_NONCE);
   }
 
   @Override
@@ -59,24 +55,33 @@ public class SplitNormalizationPlan implements NormalizationPlan {
     return regionInfo;
   }
 
-  public void setRegionInfo(RegionInfo regionInfo) {
-    this.regionInfo = regionInfo;
-  }
-
-  public byte[] getSplitPoint() {
-    return splitPoint;
-  }
-
-  public void setSplitPoint(byte[] splitPoint) {
-    this.splitPoint = splitPoint;
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .append("regionInfo", regionInfo)
+      .toString();
   }
 
   @Override
-  public String toString() {
-    return "SplitNormalizationPlan{" +
-      "regionInfo=" + regionInfo +
-      ", splitPoint=" + Arrays.toString(splitPoint) +
-      '}';
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    SplitNormalizationPlan that = (SplitNormalizationPlan) o;
+
+    return new EqualsBuilder()
+      .append(regionInfo, that.regionInfo)
+      .isEquals();
   }
 
+  @Override public int hashCode() {
+    return new HashCodeBuilder(17, 37)
+      .append(regionInfo)
+      .toHashCode();
+  }
 }
