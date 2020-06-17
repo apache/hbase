@@ -22,13 +22,11 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getClientPrinc
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getKeytabFileForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getSecuredConfiguration;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -64,7 +62,15 @@ public class TestUsersOperationsWithSecureHadoop {
   private static String CLIENT_NAME;
 
   @BeforeClass
-  public static void setUp() throws Exception {
+  public static void checkAndSetUp() throws Exception {
+    // check localhost kerberos users
+    Process process = Runtime.getRuntime().exec(new String[]{"bash", "-c", "klist"});
+    boolean timeout = process.waitFor(2, TimeUnit.SECONDS);
+    assertTrue("localhost exec klist timeout!", timeout);
+    int ret = process.exitValue();
+    assertNotEquals("localhost have an existing ticket!", 0, ret);
+
+    // setup MiniKdc
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     PRINCIPAL = "hbase/" + HOST;
     CLIENT_NAME = "foo";
