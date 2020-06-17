@@ -21,7 +21,8 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
 /**
- * Returns a {@code TableName} based on currently running test method name.
+ * Returns a {@code TableName} based on currently running test method name. Supports
+ *  tests built on the {@link org.junit.runners.Parameterized} runner.
  */
 public class TableNameTestRule extends TestWatcher {
 
