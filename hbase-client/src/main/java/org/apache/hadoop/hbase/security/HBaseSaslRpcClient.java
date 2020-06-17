@@ -149,15 +149,13 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
         }
       }
 
-      if(isComplete()){
-        try {
-          readStatus(inStream);
-        }
-        catch (Exception e){
-          if(e instanceof RemoteException){
-            LOG.debug("Sasl connection failed: ", e);
-            throw e;
-          }
+      try {
+        readStatus(inStream);
+      }
+      catch (IOException e){
+        if(e instanceof RemoteException){
+          LOG.debug("Sasl connection failed: ", e);
+          throw e;
         }
       }
       if (LOG.isDebugEnabled()) {
