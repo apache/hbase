@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.apache.hadoop.hbase.wal.BoundedRecoveredHFilesOutputSink.DEFAULT_WAL_SPLIT_TO_HFILE;
-import static org.apache.hadoop.hbase.wal.BoundedRecoveredHFilesOutputSink.WAL_SPLIT_TO_HFILE;
 import static org.apache.hadoop.hbase.wal.WALSplitUtil.finishSplitLogFile;
-
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -63,17 +60,19 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
+
 /**
- * This class is responsible for splitting up a bunch of regionserver commit log
- * files that are no longer being written to, into new files, one per region, for
- * recovering data on startup. Delete the old log files when finished.
+ * Split RegionServer WAL files. Splits the WAL into new files,
+ * one per region, to be picked up on Region reopen. Deletes the split WAL when finished.
+ * See {@link #split(Path, Path, Path, FileSystem, Configuration, WALFactory)} or
+ * {@link #splitLogFile(Path, FileStatus, FileSystem, Configuration, CancelableProgressable,
+ *   LastSequenceId, SplitLogWorkerCoordination, WALFactory, RegionServerServices)} for
+ *   entry-point.
  */
 @InterfaceAudience.Private
 public class WALSplitter {
@@ -96,7 +95,12 @@ public class WALSplitter {
   OutputSink outputSink;
   private EntryBuffers entryBuffers;
 
+  /**
+   * Coordinator for split log. Used by the zk-based log splitter.
+   * Not used by the procedure v2-based log splitter.
+   */
   private SplitLogWorkerCoordination splitLogWorkerCoordination;
+
   private final WALFactory walFactory;
 
   private MonitoredTask status;
@@ -115,7 +119,20 @@ public class WALSplitter {
 
   private final String tmpDirName;
 
+  /**
+   * Split WAL directly to hfiles instead of into intermediary 'recovered.edits' files.
+   */
+  public static final String WAL_SPLIT_TO_HFILE = "hbase.wal.split.to.hfile";
+  public static final boolean DEFAULT_WAL_SPLIT_TO_HFILE = false;
+
+  /**
+   * True if we are to run with bounded amount of writers rather than let the count blossom.
+   * Default is 'false'. Does not apply if you have set 'hbase.wal.split.to.hfile' as that
+   * is always bounded. Only applies when you are doing recovery to 'recovered.edits'
+   * files (the old default). Bounded writing tends to have higher throughput.
+   */
   public final static String SPLIT_WRITER_CREATION_BOUNDED = "hbase.split.writer.creation.bounded";
+
   public final static String SPLIT_WAL_BUFFER_SIZE = "hbase.regionserver.hlog.splitlog.buffersize";
   public final static String SPLIT_WAL_WRITER_THREADS =
       "hbase.regionserver.hlog.splitlog.writer.threads";
@@ -184,11 +201,7 @@ public class WALSplitter {
   }
 
   /**
-   * Splits a WAL file into region's recovered-edits directory.
-   * This is the main entry point for distributed log splitting from SplitLogWorker.
-   * <p>
-   * If the log file has N regions then N recovered.edits files will be produced.
-   * <p>
+   * Splits a WAL file.
    * @return false if it is interrupted by the progress-able.
    */
   public static boolean splitLogFile(Path walDir, FileStatus logfile, FileSystem walFS,
@@ -202,10 +215,13 @@ public class WALSplitter {
     return s.splitLogFile(logfile, reporter);
   }
 
-  // A wrapper to split one log folder using the method used by distributed
-  // log splitting. Used by tools and unit tests. It should be package private.
-  // It is public only because TestWALObserver is in a different package,
-  // which uses this method to do log splitting.
+  /**
+   * Split a folder of WAL files. Delete the directory when done.
+   * Used by tools and unit tests. It should be package private.
+   * It is public only because TestWALObserver is in a different package,
+   * which uses this method to do log splitting.
+   * @return List of output files created by the split.
+   */
   @VisibleForTesting
   public static List<Path> split(Path walDir, Path logDir, Path oldLogDir, FileSystem walFS,
       Configuration conf, final WALFactory factory) throws IOException {
@@ -233,7 +249,7 @@ public class WALSplitter {
   }
 
   /**
-   * log splitting implementation, splits one log file.
+   * WAL splitting implementation, splits one log file.
    * @param logfile should be an actual log file.
    */
   @VisibleForTesting
@@ -285,7 +301,8 @@ public class WALSplitter {
         String encodedRegionNameAsStr = Bytes.toString(region);
         lastFlushedSequenceId = lastFlushedSequenceIds.get(encodedRegionNameAsStr);
         if (lastFlushedSequenceId == null) {
-          if (!(isRegionDirPresentUnderRoot(entry.getKey().getTableName(), encodedRegionNameAsStr))) {
+          if (!(isRegionDirPresentUnderRoot(entry.getKey().getTableName(),
+              encodedRegionNameAsStr))) {
             // The region directory itself is not present in the FS. This indicates that
             // the region/table is already removed. We can just skip all the edits for this
             // region. Setting lastFlushedSequenceId as Long.MAX_VALUE so that all edits

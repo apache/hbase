@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashMap;
@@ -29,7 +28,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
@@ -51,12 +49,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A WALSplitter sink that outputs {@link org.apache.hadoop.hbase.io.hfile.HFile}s.
+ * Runs with a bounded number of HFile writers at any one time rather than let the count run up.
+ * @see BoundedRecoveredEditsOutputSink for a sink implementation that writes intermediate
+ *   recovered.edits files.
+ */
 @InterfaceAudience.Private
 public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   private static final Logger LOG = LoggerFactory.getLogger(BoundedRecoveredHFilesOutputSink.class);
-
-  public static final String WAL_SPLIT_TO_HFILE = "hbase.wal.split.to.hfile";
-  public static final boolean DEFAULT_WAL_SPLIT_TO_HFILE = false;
 
   private final WALSplitter walSplitter;
 
@@ -80,6 +81,8 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     Map<String, CellSet> familyCells = new HashMap<>();
     Map<String, Long> familySeqIds = new HashMap<>();
     boolean isMetaTable = buffer.tableName.equals(META_TABLE_NAME);
+    // First iterate all Cells to find which column families are present and to stamp Cell with
+    // sequence id.
     for (WAL.Entry entry : buffer.entries) {
       long seqId = entry.getKey().getSequenceId();
       List<Cell> cells = entry.getEdit().getCells();
@@ -99,12 +102,13 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
       }
     }
 
-    // The key point is create a new writer for each column family, write edits then close writer.
+    // Create a new hfile writer for each column family, write edits then close writer.
     String regionName = Bytes.toString(buffer.encodedRegionName);
     for (Map.Entry<String, CellSet> cellsEntry : familyCells.entrySet()) {
       String familyName = cellsEntry.getKey();
       StoreFileWriter writer = createRecoveredHFileWriter(buffer.tableName, regionName,
         familySeqIds.get(familyName), familyName, isMetaTable);
+      LOG.trace("Created {}", writer.getPath());
       openingWritersNum.incrementAndGet();
       try {
         for (Cell cell : cellsEntry.getValue()) {
@@ -118,6 +122,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
         openingWritersNum.decrementAndGet();
       } finally {
         writer.close();
+        LOG.trace("Closed {}, edits={}", writer.getPath(), familyCells.size());
       }
     }
   }
