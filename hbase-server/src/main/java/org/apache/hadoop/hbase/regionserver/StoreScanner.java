@@ -370,7 +370,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
     seekAllScanner(scanInfo, scanners);
   }
-  
+
   // Used to instantiate a scanner for compaction in test
   @VisibleForTesting
   StoreScanner(ScanInfo scanInfo, int maxVersions, ScanType scanType,
@@ -586,7 +586,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     int count = 0;
     long totalBytesRead = 0;
-    boolean onlyFromMemstore = true;
+    boolean onlyFromMemstore = matcher.isUserScan();
     try {
       LOOP: do {
         // Update and check the time limit based on the configured value of cellsPerTimeoutCheck

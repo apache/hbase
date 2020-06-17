@@ -554,7 +554,7 @@ public class TestStoreScanner {
       assertEquals(kvs[0], results.get(0));
     }
   }
-  
+
   /*
    * Test test shows exactly how the matcher's return codes confuses the StoreScanner
    * and prevent it from doing the right thing.  Seeking once, then nexting twice
