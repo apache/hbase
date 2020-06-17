@@ -148,6 +148,18 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
           inStream.readFully(saslToken);
         }
       }
+
+      if(isComplete()){
+        try {
+          readStatus(inStream);
+        }
+        catch (Exception e){
+          if(e instanceof RemoteException){
+            LOG.debug("Sasl connection failed: ", e);
+            throw e;
+          }
+        }
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug("SASL client context established. Negotiated QoP: "
             + saslClient.getNegotiatedProperty(Sasl.QOP));
