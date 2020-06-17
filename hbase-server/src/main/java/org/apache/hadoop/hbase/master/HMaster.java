@@ -1200,7 +1200,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    *   and we will hold here until operator intervention.
    */
   @VisibleForTesting
-  public boolean waitForMetaOnline() throws InterruptedException {
+  public boolean waitForMetaOnline() {
     return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
   }
 
@@ -1208,7 +1208,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return True if region is online and scannable else false if an error or shutdown (Otherwise
    *   we just block in here holding up all forward-progess).
    */
-  private boolean isRegionOnline(RegionInfo ri) throws InterruptedException {
+  private boolean isRegionOnline(RegionInfo ri) {
     RetryCounter rc = null;
     while (!isStopped()) {
       RegionState rs = this.assignmentManager.getRegionStates().getRegionState(ri);
@@ -1241,7 +1241,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return True if namespace table is up/online.
    */
   @VisibleForTesting
-  public boolean waitForNamespaceOnline() throws InterruptedException {
+  public boolean waitForNamespaceOnline() {
     List<RegionInfo> ris = this.assignmentManager.getRegionStates().
         getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME);
     if (ris.isEmpty()) {
@@ -1251,7 +1251,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     // Else there are namespace regions up in meta. Ensure they are assigned before we go on.
     for (RegionInfo ri: ris) {
-      isRegionOnline(ri);
+      if (!isRegionOnline(ri)) {
+        return false;
+      }
     }
     return true;
   }
