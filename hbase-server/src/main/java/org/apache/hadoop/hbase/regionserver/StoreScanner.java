@@ -345,10 +345,27 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   // Used to instantiate a scanner for user scan in test
   @VisibleForTesting
   StoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
+      List<? extends KeyValueScanner> scanners, ScanType scanType) throws IOException {
+    // 0 is passed as readpoint because the test bypasses Store
+    this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L, scan.getCacheBlocks(),
+        scanType);
+    if (scanType == ScanType.USER_SCAN) {
+      this.matcher =
+          UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
+    } else {
+      this.matcher = CompactionScanQueryMatcher.create(scanInfo, scanType, Long.MAX_VALUE,
+        HConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
+    }
+    seekAllScanner(scanInfo, scanners);
+  }
+
+  // Used to instantiate a scanner for user scan in test
+  @VisibleForTesting
+  StoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
       List<? extends KeyValueScanner> scanners) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
-    this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L,
-        scan.getCacheBlocks(), ScanType.USER_SCAN);
+    this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L, scan.getCacheBlocks(),
+        ScanType.USER_SCAN);
     this.matcher =
         UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
     seekAllScanner(scanInfo, scanners);
@@ -569,7 +586,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     int count = 0;
     long totalBytesRead = 0;
-    boolean onlyFromMemstore = true;
+    // track the cells for metrics only if it is a user read request.
+    boolean onlyFromMemstore = matcher.isUserScan();
     try {
       LOOP: do {
         // Update and check the time limit based on the configured value of cellsPerTimeoutCheck
@@ -747,7 +765,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     } finally {
       // increment only if we have some result
-      if (count > 0) {
+      if (count > 0 && matcher.isUserScan()) {
         // if true increment memstore metrics, if not the mixed one
         updateMetricsStore(onlyFromMemstore);
       }
