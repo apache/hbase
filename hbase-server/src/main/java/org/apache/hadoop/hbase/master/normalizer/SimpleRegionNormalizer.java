@@ -369,7 +369,8 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       }
       final long currentSizeMb = getRegionSizeMB(current);
       final long nextSizeMb = getRegionSizeMB(next);
-      if (currentSizeMb + nextSizeMb < avgRegionSizeMb) {
+      // always merge away empty regions when they present themselves.
+      if (currentSizeMb == 0 || nextSizeMb == 0 || currentSizeMb + nextSizeMb < avgRegionSizeMb) {
         plans.add(new MergeNormalizationPlan(current, next));
         candidateIdx++;
       }
@@ -411,7 +412,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       if (regionSize > 2 * avgRegionSize) {
         LOG.info("Table {}, large region {} has size {}, more than twice avg size {}, splitting",
           ctx.getTableName(), hri.getRegionNameAsString(), regionSize, avgRegionSize);
-        plans.add(new SplitNormalizationPlan(hri, null));
+        plans.add(new SplitNormalizationPlan(hri));
       }
     }
     return plans;
