@@ -144,6 +144,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   public static final String STORESCANNER_PREAD_MAX_BYTES = "hbase.storescanner.pread.max.bytes";
 
   private final Scan.ReadType readType;
+  private final ScanType scanType;
 
   // A flag whether use pread for scan
   // it maybe changed if we use Scan.ReadType.DEFAULT and we have read lots of data.
@@ -185,6 +186,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
     this.useRowColBloom = numColumns > 1 || (!get && numColumns == 1);
     this.maxRowSize = scanInfo.getTableMaxRowSize();
+    this.scanType = scanType;
     if (get) {
       this.readType = Scan.ReadType.PREAD;
       this.scanUsePread = true;
@@ -345,10 +347,22 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   // Used to instantiate a scanner for user scan in test
   @VisibleForTesting
   StoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
+      List<? extends KeyValueScanner> scanners, ScanType scanType) throws IOException {
+    // 0 is passed as readpoint because the test bypasses Store
+    this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L, scan.getCacheBlocks(),
+        scanType);
+    this.matcher =
+        UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
+    seekAllScanner(scanInfo, scanners);
+  }
+
+  // Used to instantiate a scanner for user scan in test
+  @VisibleForTesting
+  StoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
       List<? extends KeyValueScanner> scanners) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
-    this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L,
-        scan.getCacheBlocks(), ScanType.USER_SCAN);
+    this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L, scan.getCacheBlocks(),
+        ScanType.USER_SCAN);
     this.matcher =
         UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
     seekAllScanner(scanInfo, scanners);
@@ -747,7 +761,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     } finally {
       // increment only if we have some result
-      if (count > 0) {
+      if (count > 0 && (get || scanType == ScanType.USER_SCAN)) {
         // if true increment memstore metrics, if not the mixed one
         updateMetricsStore(onlyFromMemstore);
       }

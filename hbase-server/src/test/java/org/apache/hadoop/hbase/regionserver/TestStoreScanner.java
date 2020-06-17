@@ -588,6 +588,27 @@ public class TestStoreScanner {
     }
   }
 
+  @Test
+  public void testNonUserScan() throws IOException {
+    // returns only 1 of these 2 even though same timestamp
+    KeyValue[] kvs = new KeyValue[] { create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
+        create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"), };
+    List<KeyValueScanner> scanners = Arrays.asList(
+      new KeyValueScanner[] { new KeyValueScanFixture(CellComparator.getInstance(), kvs) });
+
+    Scan scanSpec = new Scan().withStartRow(Bytes.toBytes("R1"));
+    // this only uses maxVersions (default=1) and TimeRange (default=all)
+    try (StoreScanner scan =
+        new StoreScanner(scanSpec, scanInfo, null, scanners, ScanType.COMPACT_RETAIN_DELETES)) {
+      List<Cell> results = new ArrayList<>();
+      assertEquals(true, scan.next(results));
+      assertEquals(1, results.size());
+      // the type is not a user scan. so it won't account for the memstore reads
+      assertEquals(0, scan.memstoreOnlyReads);
+      assertEquals(kvs[0], results.get(0));
+    }
+  }
+
   /*
    * Test test shows exactly how the matcher's return codes confuses the StoreScanner
    * and prevent it from doing the right thing.  Seeking once, then nexting twice
