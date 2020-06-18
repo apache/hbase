@@ -381,13 +381,15 @@ public class ServerCrashProcedure
 
   @Override
   public void toStringClassDetails(StringBuilder sb) {
-    sb.append(getClass().getSimpleName());
-    sb.append(" server=");
-    sb.append(serverName);
+    sb.append(getProcName());
     sb.append(", splitWal=");
     sb.append(shouldSplitWal);
     sb.append(", meta=");
     sb.append(carryingMeta);
+  }
+
+  @Override public String getProcName() {
+    return getClass().getSimpleName() + " " + this.serverName;
   }
 
   @Override

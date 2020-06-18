@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
@@ -31,14 +30,14 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+
 /**
  * A remote procedure which is used to send split WAL request to region server.
- * it will return null if the task is succeed or return a DoNotRetryIOException
- * {@link SplitWALProcedure} will help handle the situation that encounter
- * DoNotRetryIOException. Otherwise it will retry until succeed.
+ * It will return null if the task succeeded or return a DoNotRetryIOException.
+ * {@link SplitWALProcedure} will help handle the situation that encounters
+ * DoNotRetryIOException. Otherwise it will retry until success.
  */
 @InterfaceAudience.Private
 public class SplitWALRemoteProcedure extends ServerRemoteProcedure
@@ -96,20 +95,18 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
   @Override
   protected void complete(MasterProcedureEnv env, Throwable error) {
     if (error == null) {
-      LOG.info("split WAL {} on {} succeeded", walPath, targetServer);
       try {
         env.getMasterServices().getSplitWALManager().deleteSplitWAL(walPath);
       } catch (IOException e) {
-        LOG.warn("remove WAL {} failed, ignore...", walPath, e);
+        LOG.warn("Failed split of {}; ignore...", walPath, e);
       }
       succ = true;
     } else {
       if (error instanceof DoNotRetryIOException) {
-        LOG.warn("WAL split task of {} send to a wrong server {}, will retry on another server",
-          walPath, targetServer, error);
+        LOG.warn("Sent {} to wrong server {}, try another", walPath, targetServer, error);
         succ = true;
       } else {
-        LOG.warn("split WAL {} failed, retry...", walPath, error);
+        LOG.warn("Failed split of {}, retry...", walPath, error);
         succ = false;
       }
     }
@@ -133,5 +130,17 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
   @Override
   public ServerOperationType getServerOperationType() {
     return ServerOperationType.SPLIT_WAL_REMOTE;
+  }
+
+  @Override protected void toStringClassDetails(StringBuilder builder) {
+    builder.append(getProcName());
+    if (this.targetServer != null) {
+      builder.append(", worker=");
+      builder.append(this.targetServer);
+    }
+  }
+
+  @Override public String getProcName() {
+    return getClass().getSimpleName() + " " + SplitWALProcedure.getWALNameFromStrPath(getWAL());
   }
 }

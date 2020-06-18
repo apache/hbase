@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
-
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.CHECK;
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.FORCE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.DELETED;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.FAILURE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.IN_PROGRESS;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.SUCCESS;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,7 +55,6 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -88,6 +85,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * completed (either with success or with error) it will be not be submitted
  * again. If a task is resubmitted then there is a risk that old "delete task"
  * can delete the re-submission.
+ * @see SplitWALManager for an alternate implementation based on Procedures.
  */
 @InterfaceAudience.Private
 public class SplitLogManager {
@@ -121,21 +119,28 @@ public class SplitLogManager {
       throws IOException {
     this.server = master;
     this.conf = conf;
-    this.choreService =
-        new ChoreService(master.getServerName().toShortString() + ".splitLogManager.");
+    // If no CoordinatedStateManager, skip registering as a chore service (The
+    // CoordinatedStateManager is non-null if we are running the ZK-based distributed WAL
+    // splitting. It is null if we are configured to use procedure-based distributed WAL
+    // splitting.
     if (server.getCoordinatedStateManager() != null) {
+      this.choreService =
+        new ChoreService(master.getServerName().toShortString() + ".splitLogManager.");
       SplitLogManagerCoordination coordination = getSplitLogManagerCoordination();
       Set<String> failedDeletions = Collections.synchronizedSet(new HashSet<String>());
       SplitLogManagerDetails details = new SplitLogManagerDetails(tasks, master, failedDeletions);
       coordination.setDetails(details);
       coordination.init();
-    }
-    this.unassignedTimeout =
+      this.unassignedTimeout =
         conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
-    this.timeoutMonitor =
+      this.timeoutMonitor =
         new TimeoutMonitor(conf.getInt("hbase.splitlog.manager.timeoutmonitor.period", 1000),
-            master);
-    choreService.scheduleChore(timeoutMonitor);
+          master);
+      this.choreService.scheduleChore(timeoutMonitor);
+    } else {
+      this.choreService = null;
+      this.timeoutMonitor = null;
+    }
   }
 
   private SplitLogManagerCoordination getSplitLogManagerCoordination() {
@@ -560,7 +565,9 @@ public class SplitLogManager {
 
     @Override
     protected void chore() {
-      if (server.getCoordinatedStateManager() == null) return;
+      if (server.getCoordinatedStateManager() == null) {
+        return;
+      }
 
       int resubmitted = 0;
       int unassigned = 0;
