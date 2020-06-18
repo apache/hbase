@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
 
 /**
  * Handles log splitting a wal
+ * Used by the zk-based distributed log splitting. Created by ZKSplitLogWorkerCoordination.
  */
 @InterfaceAudience.Private
 public class WALSplitterHandler extends EventHandler {
