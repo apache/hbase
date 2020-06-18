@@ -53,7 +53,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new TableMetricsWrapperRunnable();
     this.tableMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, period,
-      this.period, TimeUnit.MILLISECONDS);
+      period, TimeUnit.MILLISECONDS);
   }
 
   public class TableMetricsWrapperRunnable implements Runnable {
@@ -61,7 +61,6 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     @Override
     public void run() {
       Map<TableName, MetricsTableValues> localMetricsTableMap = new HashMap<>();
-
       for (Region r : regionServer.getOnlineRegionsLocalContext()) {
         TableName tbl = r.getTableDescriptor().getTableName();
         MetricsTableValues mt = localMetricsTableMap.get(tbl);
@@ -69,11 +68,17 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
           mt = new MetricsTableValues();
           localMetricsTableMap.put(tbl, mt);
         }
+        long memstoreReadCount = 0L;
+        long mixedReadCount = 0L;
+        String tempKey = null;
         if (r.getStores() != null) {
+          String familyName = null;
           for (Store store : r.getStores()) {
+            familyName = store.getColumnFamilyName();
+
             mt.storeFileCount += store.getStorefilesCount();
-            mt.memstoreSize += (store.getMemStoreSize().getDataSize() +
-              store.getMemStoreSize().getHeapSize() + store.getMemStoreSize().getOffHeapSize());
+            mt.memstoreSize += (store.getMemStoreSize().getDataSize()
+                + store.getMemStoreSize().getHeapSize() + store.getMemStoreSize().getOffHeapSize());
             mt.storeFileSize += store.getStorefilesSize();
             mt.referenceFileCount += store.getNumReferenceFiles();
             if (store.getMaxStoreFileAge().isPresent()) {
@@ -89,13 +94,27 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
                   (long) store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount();
             }
             mt.storeCount += 1;
+            tempKey = tbl.getNameAsString() + UNDERSCORE + familyName;
+            Long tempVal = mt.perStoreMemstoreOnlyReadCount.get(tempKey);
+            if (tempVal == null) {
+              tempVal = 0L;
+            }
+            memstoreReadCount = store.getMemstoreOnlyRowReadsCount() + tempVal;
+            tempVal = mt.perStoreMixedReadCount.get(tempKey);
+            if (tempVal == null) {
+              tempVal = 0L;
+            }
+            mixedReadCount = store.getMixedRowReadsCount() + tempVal;
+            // accumulate the count
+            mt.perStoreMemstoreOnlyReadCount.put(tempKey, memstoreReadCount);
+            mt.perStoreMixedReadCount.put(tempKey, mixedReadCount);
           }
+
           mt.regionCount += 1;
 
           mt.readRequestCount += r.getReadRequestsCount();
-          mt.filteredReadRequestCount += getFilteredReadRequestCount(tbl.getNameAsString());
+          mt.filteredReadRequestCount += r.getFilteredReadRequestsCount();
           mt.writeRequestCount += r.getWriteRequestsCount();
-
         }
       }
 
@@ -130,6 +149,35 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       return 0;
     } else {
       return metricsTable.readRequestCount;
+    }
+  }
+
+  @Override
+  public Map<String, Long> getMemstoreOnlyRowReadsCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return null;
+    } else {
+      return metricsTable.perStoreMemstoreOnlyReadCount;
+    }
+  }
+
+  @Override
+  public Map<String, Long> getMixedRowReadsCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return null;
+    } else {
+      return metricsTable.perStoreMixedReadCount;
+    }
+  }
+
+  public long getCpRequestsCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    } else {
+      return metricsTable.cpRequestCount;
     }
   }
 
@@ -294,6 +342,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     long totalStoreFileAge;
     long referenceFileCount;
     long cpRequestCount;
+    Map<String, Long> perStoreMemstoreOnlyReadCount = new HashMap<>();
+    Map<String, Long> perStoreMixedReadCount = new HashMap<>();
   }
 
 }
