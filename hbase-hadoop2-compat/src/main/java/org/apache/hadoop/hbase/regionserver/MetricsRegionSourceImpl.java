@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.metrics.Interns;
@@ -33,6 +35,8 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionSourceImpl.class);
 
+  private static final String _STORE = "_store_";
+
   private AtomicBoolean closed = new AtomicBoolean(false);
 
   // Non-final so that we can null out the wrapper
@@ -45,6 +49,8 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final DynamicMetricsRegistry registry;
 
   private final String regionNamePrefix;
+  private final String regionNamePrefix1;
+  private final String regionNamePrefix2;
   private final String regionPutKey;
   private final String regionDeleteKey;
   private final String regionGetKey;
@@ -77,10 +83,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
     registry = agg.getMetricsRegistry();
 
-    regionNamePrefix = "Namespace_" + regionWrapper.getNamespace() +
-        "_table_" + regionWrapper.getTableName() +
-        "_region_" + regionWrapper.getRegionName()  +
-        "_metric_";
+    regionNamePrefix1 = "Namespace_" + regionWrapper.getNamespace() + "_table_"
+        + regionWrapper.getTableName() + "_region_" + regionWrapper.getRegionName();
+    regionNamePrefix2 = "_metric_";
+    regionNamePrefix = regionNamePrefix1 + regionNamePrefix2;
 
     String suffix = "Count";
 
@@ -298,6 +304,24 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
               regionNamePrefix + MetricsRegionSource.MAX_FLUSH_QUEUE_SIZE,
               MetricsRegionSource.MAX_FLUSH_QUEUE_DESC),
           this.regionWrapper.getMaxFlushQueueSize());
+      addCounter(mrb, this.regionWrapper.getMemstoreOnlyRowReadsCount(),
+        MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE,
+        MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE_DESC);
+      addCounter(mrb, this.regionWrapper.getMixedRowReadsCount(),
+        MetricsRegionSource.MIXED_ROW_READS,
+        MetricsRegionSource.MIXED_ROW_READS_ON_STORE_DESC);
+    }
+  }
+
+  private void addCounter(MetricsRecordBuilder mrb, Map<String, Long> metricMap, String metricName,
+      String metricDesc) {
+    if (metricMap != null) {
+      for (Entry<String, Long> entry : metricMap.entrySet()) {
+        // append 'store' and its name to the metric
+        mrb.addCounter(Interns.info(
+          this.regionNamePrefix1 + _STORE + entry.getKey() + this.regionNamePrefix2 + metricName,
+          metricDesc), entry.getValue());
+      }
     }
   }
 

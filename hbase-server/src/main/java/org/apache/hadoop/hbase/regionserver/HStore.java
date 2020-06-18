@@ -46,12 +46,14 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -116,7 +118,6 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
-
 /**
  * A Store holds a column family in a Region.  Its a memstore and a set of zero
  * or more StoreFiles, which stretch backwards over time.
@@ -164,6 +165,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   static int closeCheckInterval = 0;
   private AtomicLong storeSize = new AtomicLong();
   private AtomicLong totalUncompressedBytes = new AtomicLong();
+  private LongAdder memstoreOnlyRowReadsCount = new LongAdder();
+  // rows that has cells from both memstore and files (or only files)
+  private LongAdder mixedRowReadsCount = new LongAdder();
 
   private boolean cacheOnWriteLogged;
 
@@ -338,7 +342,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       confPrintThreshold = 10;
     }
     this.parallelPutCountPrintThreshold = confPrintThreshold;
-    LOG.info("{} created,  memstore type={}, storagePolicy={}, verifyBulkLoads={}, "
+
+    LOG.info("Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}, "
             + "parallelPutCountPrintThreshold={}, encoding={}, compression={}",
         this, memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,
         parallelPutCountPrintThreshold, family.getDataBlockEncoding(),
@@ -2560,7 +2565,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align(ClassSize.OBJECT + (27 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG)
+      ClassSize.align(ClassSize.OBJECT + (29 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG)
               + (6 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
@@ -2873,8 +2878,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   /**
-   * @return get maximum ref count of storeFile among all compacted HStore Files
-   *   for the HStore
+   * @return get maximum ref count of storeFile among all compacted HStore Files for the HStore
    */
   public int getMaxCompactedStoreFileRefCount() {
     OptionalInt maxCompactedStoreFileRefCount = this.storeEngine.getStoreFileManager()
@@ -2897,7 +2901,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     if (rss == null) {
       return;
     }
-    List<Entry<String,Long>> filesWithSizes = new ArrayList<>(archivedFiles.size());
+    List<Entry<String, Long>> filesWithSizes = new ArrayList<>(archivedFiles.size());
     Iterator<Long> fileSizeIter = fileSizes.iterator();
     for (StoreFile storeFile : archivedFiles) {
       final long fileSize = fileSizeIter.next();
@@ -2912,6 +2916,23 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     boolean success = rss.reportFileArchivalForQuotas(getTableName(), filesWithSizes);
     if (!success) {
       LOG.warn("Failed to report archival of files: " + filesWithSizes);
+    }
+  }
+  @Override
+  public long getMemstoreOnlyRowReadsCount() {
+    return memstoreOnlyRowReadsCount.sum();
+  }
+
+  @Override
+  public long getMixedRowReadsCount() {
+    return mixedRowReadsCount.sum();
+  }
+
+  void updateMetricsStore(boolean memstoreRead) {
+    if (memstoreRead) {
+      memstoreOnlyRowReadsCount.increment();
+    } else {
+      mixedRowReadsCount.increment();
     }
   }
 }
