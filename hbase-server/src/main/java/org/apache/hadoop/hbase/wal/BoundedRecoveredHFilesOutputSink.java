@@ -226,13 +226,14 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
       try {
         return walSplitter.rsServices.getConnection().getAdmin().getDescriptor(tableName);
       } catch (IOException e) {
-        LOG.warn("Failed to get table descriptor for table {}", tableName, e);
+        LOG.warn("Failed to get table descriptor for {}", tableName, e);
       }
     }
+    LOG.info("Failed getting {} table descriptor from master; trying local", tableName);
     try {
       return walSplitter.tableDescriptors.get(tableName);
     } catch (IOException e) {
-      LOG.warn("Failed to get table descriptor for table {}", tableName, e);
+      LOG.warn("Failed to get table descriptor for {}", tableName, e);
       return null;
     }
   }

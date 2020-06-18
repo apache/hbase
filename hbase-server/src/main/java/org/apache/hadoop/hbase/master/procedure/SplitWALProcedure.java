@@ -185,8 +185,11 @@ public class SplitWALProcedure
 
   @Override
   protected void afterReplay(MasterProcedureEnv env){
-    if(worker != null){
-      env.getMasterServices().getSplitWALManager().addUsedSplitWALWorker(worker);
+    if (worker != null) {
+      if (env != null && env.getMasterServices() != null &&
+          env.getMasterServices().getSplitWALManager() != null) {
+        env.getMasterServices().getSplitWALManager().addUsedSplitWALWorker(worker);
+      }
     }
   }
 
