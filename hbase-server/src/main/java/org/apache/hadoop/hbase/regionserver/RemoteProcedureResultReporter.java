@@ -57,11 +57,11 @@ class RemoteProcedureResultReporter extends Thread {
   public void complete(long procId, Throwable error) {
     RemoteProcedureResult.Builder builder = RemoteProcedureResult.newBuilder().setProcId(procId);
     if (error != null) {
-      LOG.debug("Failed to complete execution of proc pid={}", procId, error);
+      LOG.debug("Failed to complete execution of pid={}", procId, error);
       builder.setStatus(RemoteProcedureResult.Status.ERROR).setError(
         ForeignExceptionUtil.toProtoForeignException(server.getServerName().toString(), error));
     } else {
-      LOG.debug("Successfully complete execution of proc pid={}", procId);
+      LOG.debug("Successfully complete execution of pid={}", procId);
       builder.setStatus(RemoteProcedureResult.Status.SUCCESS);
     }
     results.add(builder.build());
@@ -102,7 +102,7 @@ class RemoteProcedureResultReporter extends Thread {
         } else {
           pauseTime = INIT_PAUSE_TIME_MS; // Reset.
         }
-        LOG.info("Failed report procedure " + TextFormat.shortDebugString(request) + "; retry (#" +
+        LOG.info("Failed procedure report " + TextFormat.shortDebugString(request) + "; retry (#" +
           tries + ")" + (pause ? " after " + pauseTime + "ms delay (Master is coming online...)."
             : " immediately."),
           e);
