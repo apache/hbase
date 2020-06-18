@@ -61,7 +61,7 @@ public class SplitWALCallable implements RSProcedureCallable {
           MasterProcedureProtos.SplitWALParameter.parseFrom(parameter);
       this.walPath = param.getWalPath();
     } catch (InvalidProtocolBufferException e) {
-      LOG.error("parse proto buffer of split WAL request failed ", e);
+      LOG.error("Parse proto buffer of split WAL request failed ", e);
       initError = e;
     }
   }
