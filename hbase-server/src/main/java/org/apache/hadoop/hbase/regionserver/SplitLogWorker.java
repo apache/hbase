@@ -183,24 +183,24 @@ public class SplitLogWorker implements Runnable {
         return Status.PREEMPTED;
       }
     } catch (InterruptedIOException iioe) {
-      LOG.warn("Resigning, interrupted splitting WAL {}", filename, iioe);
+      LOG.warn("Resigning, interrupted splitting WAL {}", name, iioe);
       return Status.RESIGNED;
     } catch (IOException e) {
       if (e instanceof FileNotFoundException) {
         // A wal file may not exist anymore. Nothing can be recovered so move on
-        LOG.warn("Done, WAL {} does not exist anymore", filename, e);
+        LOG.warn("Done, WAL {} does not exist anymore", name, e);
         return Status.DONE;
       }
       Throwable cause = e.getCause();
       if (e instanceof RetriesExhaustedException && (cause instanceof NotServingRegionException
           || cause instanceof ConnectException || cause instanceof SocketTimeoutException)) {
-        LOG.warn("Resigning, can't connect to target regionserver splitting WAL {}", filename, e);
+        LOG.warn("Resigning, can't connect to target regionserver splitting WAL {}", name, e);
         return Status.RESIGNED;
       } else if (cause instanceof InterruptedException) {
-        LOG.warn("Resigning, interrupted splitting WAL {}", filename, e);
+        LOG.warn("Resigning, interrupted splitting WAL {}", name, e);
         return Status.RESIGNED;
       }
-      LOG.warn("Error splitting WAL {}", filename, e);
+      LOG.warn("Error splitting WAL {}", name, e);
       return Status.ERR;
     }
     return Status.DONE;
