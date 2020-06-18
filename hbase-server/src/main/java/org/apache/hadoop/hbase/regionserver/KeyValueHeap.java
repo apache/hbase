@@ -112,6 +112,10 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     return this.current.peek();
   }
 
+  boolean isLatestCellFromMemstore() {
+    return !this.current.isFileScanner();
+  }
+
   @Override
   public Cell next()  throws IOException {
     if(this.current == null) {
