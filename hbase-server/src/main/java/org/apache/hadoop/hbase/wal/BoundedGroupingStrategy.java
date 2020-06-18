@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.RegionGroupingProvider.RegionGroupingStrategy;
@@ -68,6 +69,6 @@ public class BoundedGroupingStrategy implements RegionGroupingStrategy{
     for (int i = 0; i < regionGroupNumber; i++) {
       groupNames[i] = providerId + GROUP_NAME_DELIMITER + "regiongroup-" + i;
     }
+    FSHLog.setDefaultSyncerCount(FSHLog.getDefaultSyncerCount() / regionGroupNumber + 1);
   }
-
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.wal;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.RegionGroupingProvider.RegionGroupingStrategy;
@@ -47,6 +48,7 @@ public class NamespaceGroupingStrategy implements RegionGroupingStrategy {
   @Override
   public void init(Configuration config, String providerId) {
     this.providerId = providerId;
+    FSHLog.setDefaultSyncerCount(3);
   }
 
 }

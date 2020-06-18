@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 // imports for classes still in regionserver.wal
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -261,7 +262,9 @@ public class RegionGroupingProvider implements WALProvider {
 
   static class IdentityGroupingStrategy implements RegionGroupingStrategy {
     @Override
-    public void init(Configuration config, String providerId) {}
+    public void init(Configuration config, String providerId) {
+      FSHLog.setDefaultSyncerCount(1);
+    }
     @Override
     public String group(final byte[] identifier, final byte[] namespace) {
       return Bytes.toString(identifier);

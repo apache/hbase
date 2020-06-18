@@ -106,6 +106,11 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   private static final Logger LOG = LoggerFactory.getLogger(FSHLog.class);
 
   /**
+   * default hlog syncer count
+   */
+  private static int defaultSyncerCount = 5;
+
+  /**
    * The nexus at which all incoming handlers meet. Does appends and sync with an ordering. Appends
    * and syncs are each put on the ring which means handlers need to smash up against the ring twice
    * (can we make it once only? ... maybe not since time to append is so different from time to sync
@@ -149,6 +154,14 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   private final int closeErrorsTolerated;
 
   private final AtomicInteger closeErrorCount = new AtomicInteger();
+
+  public static void setDefaultSyncerCount(int count) {
+    defaultSyncerCount = count;
+  }
+
+  public static int getDefaultSyncerCount() {
+    return defaultSyncerCount;
+  }
 
   /**
    * Exception handler to pass the disruptor ringbuffer. Same as native implementation only it logs
@@ -230,7 +243,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     this.disruptor.getRingBuffer().next();
     int maxHandlersCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200);
     this.ringBufferEventHandler = new RingBufferEventHandler(
-        conf.getInt("hbase.regionserver.hlog.syncer.count", 5), maxHandlersCount);
+        conf.getInt("hbase.regionserver.hlog.syncer.count", defaultSyncerCount), maxHandlersCount);
     this.disruptor.setDefaultExceptionHandler(new RingBufferExceptionHandler());
     this.disruptor.handleEventsWith(new RingBufferEventHandler[] { this.ringBufferEventHandler });
     // Starting up threads in constructor is a no no; Interface should have an init call.
