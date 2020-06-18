@@ -443,7 +443,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize=" +
       StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix=" +
-      walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir);
+      walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir +
+      ", maxLogs=" + this.maxLogs);
     this.slowSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(SLOW_SYNC_TIME_MS,
       conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS)));
     this.rollOnSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(ROLL_ON_SYNC_TIME_MS,
