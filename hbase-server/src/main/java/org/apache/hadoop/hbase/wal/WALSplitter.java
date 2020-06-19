@@ -269,6 +269,7 @@ public class WALSplitter {
 
     status = TaskMonitor.get().createStatus(
           "Splitting log file " + logfile.getPath() + "into a temporary staging area.");
+    status.enableStatusJournal(true);
     Reader logFileReader = null;
     this.fileBeingSplit = logfile;
     long startTS = EnvironmentEdgeManager.currentTime();
@@ -276,7 +277,7 @@ public class WALSplitter {
       long logLength = logfile.getLen();
       LOG.info("Splitting WAL={}, size={} ({} bytes)", logPath, StringUtils.humanSize(logLength),
           logLength);
-      status.setStatus("Opening log file");
+      status.setStatus("Opening log file " + logPath);
       if (reporter != null && !reporter.progress()) {
         progressFailed = true;
         return false;
@@ -291,6 +292,7 @@ public class WALSplitter {
       int numOpenedFilesBeforeReporting = conf.getInt("hbase.splitlog.report.openedfiles", 3);
       int numOpenedFilesLastCheck = 0;
       outputSink.setReporter(reporter);
+      outputSink.setStatus(status);
       outputSink.startWriterThreads();
       outputSinkStarted = true;
       Entry entry;
@@ -375,7 +377,9 @@ public class WALSplitter {
       e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
       throw e;
     } finally {
-      LOG.debug("Finishing writing output logs and closing down");
+      final String log = "Finishing writing output logs and closing down";
+      LOG.debug(log);
+      status.setStatus(log);
       try {
         if (null != logFileReader) {
           logFileReader.close();
@@ -400,6 +404,10 @@ public class WALSplitter {
             ", corrupted=" + isCorrupted + ", progress failed=" + progressFailed;
         LOG.info(msg);
         status.markComplete(msg);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("WAL split completed for {} , Journal Log: {}", logPath,
+            status.prettyPrintJournal());
+        }
       }
     }
     return !progressFailed;
