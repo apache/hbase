@@ -33,6 +33,7 @@ import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -341,10 +342,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       confPrintThreshold = 10;
     }
     this.parallelPutCountPrintThreshold = confPrintThreshold;
-<<<<<<< HEAD
-=======
 
->>>>>>> ef809c198b... HBASE-24205 - Create metric to know the number of reads that happens (#1920)
     LOG.info("Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}, "
             + "parallelPutCountPrintThreshold={}, encoding={}, compression={}",
         getColumnFamilyName(), memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,
@@ -2803,8 +2801,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     return currentParallelPutCount.get();
   }
 
-<<<<<<< HEAD
-=======
   public int getStoreRefCount() {
     return this.storeEngine.getStoreFileManager().getStorefiles().stream()
       .filter(sf -> sf.getReader() != null).filter(HStoreFile::isHFile)
@@ -2826,7 +2822,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       ? maxCompactedStoreFileRefCount.getAsInt() : 0;
   }
 
->>>>>>> ef809c198b... HBASE-24205 - Create metric to know the number of reads that happens (#1920)
   void reportArchivedFilesForQuota(List<? extends StoreFile> archivedFiles, List<Long> fileSizes) {
     // Sanity check from the caller
     if (archivedFiles.size() != fileSizes.size()) {

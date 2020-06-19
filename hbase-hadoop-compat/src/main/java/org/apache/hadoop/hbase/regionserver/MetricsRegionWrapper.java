@@ -154,19 +154,6 @@ public interface MetricsRegionWrapper {
    * Get the replica id of this region.
    */
   int getReplicaId();
-<<<<<<< HEAD
-=======
-
-  /**
-   * @return the number of references active on the store
-   */
-  long getStoreRefCount();
-
-  /**
-   * @return the max number of references active on any store file among
-   *   all compacted store files that belong to this region
-   */
-  long getMaxCompactedStoreFileRefCount();
 
   /**
    * @return the number of row reads completely on memstore per store
@@ -177,6 +164,4 @@ public interface MetricsRegionWrapper {
    * @return the number of row reads on memstore and file per store
    */
   Map<String, Long> getMixedRowReadsCount();
-
->>>>>>> ef809c198b... HBASE-24205 - Create metric to know the number of reads that happens (#1920)
 }
