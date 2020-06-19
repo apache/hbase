@@ -1168,7 +1168,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     MasterMetaBootstrap metaBootstrap = createMetaBootstrap();
     try {
       metaBootstrap.assignMetaReplicas();
-    } catch (HBaseIOException | KeeperException e){
+    } catch (IOException | KeeperException e){
       LOG.error("Assigning meta replica failed: ", e);
     }
     status.setStatus("Starting quota manager");
