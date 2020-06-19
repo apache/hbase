@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master.normalizer;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import java.io.IOException;
+import java.util.concurrent.Future;
 
 /**
  * Interface for normalization plan.
@@ -33,10 +35,13 @@ public interface NormalizationPlan {
   }
 
   /**
-   * Executes normalization plan on cluster (does actual splitting/merging work).
+   * Submits normalization plan on cluster (does actual splitting/merging work) and
+   * returns Future reference for caller.
    * @param admin instance of Admin
+   * @return Future reference to submitted task
+   * @throws IOException If plan submission to Admin fails
    */
-  void execute(Admin admin);
+  Future<Void> submit(Admin admin) throws IOException;
 
   /**
    * @return the type of this plan

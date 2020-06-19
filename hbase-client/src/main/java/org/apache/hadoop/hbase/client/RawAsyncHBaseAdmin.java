@@ -1294,7 +1294,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
 
-      MergeTableRegionsRequest request = null;
+      MergeTableRegionsRequest request;
       try {
         request = RequestConverter.buildMergeTableRegionsRequest(encodedNameOfRegionsToMerge,
           forcible, ng.getNonceGroup(), ng.newNonce());

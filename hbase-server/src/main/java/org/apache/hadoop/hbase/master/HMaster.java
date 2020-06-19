@@ -461,6 +461,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private long splitPlanCount;
   private long mergePlanCount;
+  private long normalizationPlanFailureCount;
 
   /** jetty server for master to redirect requests to regionserver infoServer */
   private Server masterJettyServer;
@@ -1935,6 +1936,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       Collections.shuffle(allEnabledTables);
 
       try (final Admin admin = asyncClusterConnection.toConnection().getAdmin()) {
+        final List<Future<?>> submittedPlanList = new ArrayList<>();
         for (TableName table : allEnabledTables) {
           if (table.isSystemTable()) {
             continue;
@@ -1957,15 +1959,25 @@ public class HMaster extends HRegionServer implements MasterServices {
             continue;
           }
 
-          // as of this writing, `plan.execute()` is non-blocking, so there's no artificial rate-
-          // limiting of merge requests due to this serial loop.
+          // as of this writing, `plan.submit()` is non-blocking and uses Async Admin APIs to
+          // submit task , so there's no artificial rate-
+          // limiting of merge/split requests due to this serial loop.
           for (NormalizationPlan plan : plans) {
-            plan.execute(admin);
+            Future<Void> future = plan.submit(admin);
+            submittedPlanList.add(future);
             if (plan.getType() == PlanType.SPLIT) {
               splitPlanCount++;
             } else if (plan.getType() == PlanType.MERGE) {
               mergePlanCount++;
             }
+          }
+        }
+        for (Future<?> submittedPlan : submittedPlanList) {
+          try {
+            submittedPlan.get();
+          } catch (Exception e) {
+            normalizationPlanFailureCount++;
+            LOG.error("Submitted normalization plan failed with error: ", e);
           }
         }
       }
