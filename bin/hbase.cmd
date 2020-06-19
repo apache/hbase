@@ -63,7 +63,7 @@ if "%1" == "--help" (
   goto :print_usage
   exit /B 0
 )
-if "%1" == "--help" (
+if "%1" == "-h" (
   goto :print_usage
   exit /B 0
 )

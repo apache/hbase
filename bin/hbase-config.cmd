@@ -37,7 +37,7 @@ if "%1" == "--help" (
   echo Error usage! You should use it like 'hbase --help' or 'hbase -h';
   exit /B 2
 )
-if "%1" == "--help" (
+if "%1" == "-h" (
   echo Error usage! You should use it like 'hbase --help' or 'hbase -h';
   exit /B 2
 )
