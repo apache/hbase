@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -69,12 +70,9 @@ public class TestNettyRpcConnection {
   @Test
   public void testPrivateMethodExecutedInEventLoop() throws IllegalAccessException {
     // make sure the test is executed with "-ea"
-    try {
+    assertThrows(AssertionError.class, () -> {
       assert false;
-      fail();
-    } catch (AssertionError e) {
-      // expected
-    }
+    });
     for (Method method : NettyRpcConnection.class.getDeclaredMethods()) {
       if (Modifier.isPrivate(method.getModifiers()) && !method.getName().contains("$")) {
         LOG.info("checking {}", method);
