@@ -61,6 +61,10 @@ do
     hosts=$1
     shift
     HBASE_REGIONSERVERS=$hosts
+  elif [ "--help" = "$1" ] || [ "-h" = "$1" ]
+  then
+    echo "Error usage! You should use it like 'hbase --help' or 'hbase -h'";
+    exit 1
   else
     # Presume we are at end of options and break
     break

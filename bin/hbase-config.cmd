@@ -33,6 +33,14 @@ if "%1" == "--config" (
   shift
   shift
 )
+if "%1" == "--help" (
+  echo Error usage! You should use it like 'hbase --help' or 'hbase -h';
+  exit /B 2
+)
+if "%1" == "-h" (
+  echo Error usage! You should use it like 'hbase --help' or 'hbase -h';
+  exit /B 2
+)
 
 @rem the root of the hbase installation
 if not defined HBASE_HOME (
