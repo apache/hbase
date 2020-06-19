@@ -628,6 +628,34 @@ public class QuotaTableUtil {
   }
 
   /**
+   * Remove table usage snapshots (u:p columns) for the namespace passed
+   * @param connection connection to re-use
+   * @param namespace the namespace to fetch the list of table usage snapshots
+   */
+  static void deleteTableUsageSnapshotsForNamespace(Connection connection, String namespace)
+    throws IOException {
+    Scan s = new Scan();
+    //Get rows for all tables in namespace
+    s.setRowPrefixFilter(Bytes.add(QUOTA_TABLE_ROW_KEY_PREFIX, Bytes.toBytes(namespace + TableName.NAMESPACE_DELIM)));
+    //Scan for table usage column (u:p) in quota table
+    s.addColumn(QUOTA_FAMILY_USAGE,QUOTA_QUALIFIER_POLICY);
+    //Scan for table quota column (q:s) if table has a space quota defined
+    s.addColumn(QUOTA_FAMILY_INFO,QUOTA_QUALIFIER_SETTINGS);
+    try (Table quotaTable = connection.getTable(QUOTA_TABLE_NAME);
+         ResultScanner rs = quotaTable.getScanner(s)) {
+      for (Result r : rs) {
+        byte[] data = r.getValue(QUOTA_FAMILY_INFO, QUOTA_QUALIFIER_SETTINGS);
+        //if table does not have a table space quota defined, delete table usage column (u:p)
+        if (data == null) {
+          Delete delete = new Delete(r.getRow());
+          delete.addColumns(QUOTA_FAMILY_USAGE,QUOTA_QUALIFIER_POLICY);
+          quotaTable.delete(delete);
+        }
+      }
+    }
+  }
+
+  /**
    * Fetches the computed size of all snapshots against tables in a namespace for space quotas.
    */
   static long getNamespaceSnapshotSize(
