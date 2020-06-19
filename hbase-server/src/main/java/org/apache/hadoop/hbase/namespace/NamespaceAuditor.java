@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.namespace;
 
 import java.io.IOException;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -141,6 +142,10 @@ public class NamespaceAuditor {
 
   public void deleteNamespace(String namespace) throws IOException {
     stateManager.deleteNamespace(namespace);
+    Set<TableName> tableNameSet = getState(namespace).getTables();
+    for (TableName tableName: tableNameSet) {
+      removeFromNamespaceUsage(tableName);
+    }
   }
 
   public void removeFromNamespaceUsage(TableName tableName)

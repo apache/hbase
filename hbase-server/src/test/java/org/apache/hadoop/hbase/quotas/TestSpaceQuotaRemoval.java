@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -137,6 +138,28 @@ public class TestSpaceQuotaRemoval {
 
     // Put some rows now: should not violate as quota settings removed
     helper.verifyNoViolation(tn, put);
+  }
+
+  @Test
+  public void testSetNamespaceSizeQuotaAndThenRemove() throws Exception {
+    Put put = new Put(Bytes.toBytes("to_reject"));
+    put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+            Bytes.toBytes("reject"));
+
+    SpaceViolationPolicy policy = SpaceViolationPolicy.NO_INSERTS;
+
+    //Create namespace
+    NamespaceDescriptor nsd = helper.createNamespace();
+    String ns = nsd.getName();
+
+    // Do puts until we violate space policy on table tn1
+    final TableName tn1 = helper.writeUntilViolationAndVerifyViolationInNamespace(ns, policy, put);
+
+    // Now, remove the quota from namespace
+    helper.removeQuotaFromNamespace(ns);
+
+    // Put a new row now on tn1: should not violate as quota settings removed from namespace
+    helper.verifyNoViolation(tn1, put);
   }
 
   private void setQuotaAndThenRemoveInOneAmongTwoTables(SpaceViolationPolicy policy)

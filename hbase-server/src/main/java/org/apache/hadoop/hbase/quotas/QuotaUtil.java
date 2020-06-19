@@ -267,6 +267,14 @@ public class QuotaUtil extends QuotaTableUtil {
       delete.addColumns(QUOTA_FAMILY_INFO, qualifier);
     }
     doDelete(connection, delete);
+    if (isNamespaceRowKey(rowKey)) {
+      TableName[] tableArray = connection.getAdmin().listTableNamesByNamespace(getNamespaceFromRowKey(rowKey));
+      for (TableName tableName: tableArray) {
+        if (QuotaUtil.getTableQuota(connection, tableName) == null) {
+          deleteTableQuota(connection,tableName);
+        }
+      }
+    }
   }
 
   public static Map<String, UserQuotaState> fetchUserQuotas(final Connection connection,

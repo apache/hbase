@@ -158,6 +158,28 @@ public class SpaceQuotaHelperForTests {
     return tn;
   }
 
+
+  TableName writeUntilViolationAndVerifyViolationInNamespace(
+          String ns, SpaceViolationPolicy policyToViolate, Mutation m) throws Exception {
+    final TableName tn = writeUntilViolationInNamespace(ns, policyToViolate);
+    verifyViolation(policyToViolate, tn, m);
+    return tn;
+  }
+
+  TableName writeUntilViolationInNamespace(String ns, SpaceViolationPolicy policyToViolate) throws Exception {
+    TableName tn = createTableWithRegions(ns,10);
+
+    setQuotaLimit(ns, policyToViolate, 4L);
+
+    // Write more data than should be allowed and flush it to disk
+    writeData(tn, 5L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
+
+    // This should be sufficient time for the chores to run and see the change.
+    Thread.sleep(5000);
+
+    return tn;
+  }
+
   /**
    * Verifies that the given policy on the given table has been violated
    */
@@ -272,12 +294,33 @@ public class SpaceQuotaHelperForTests {
   }
 
   /**
+   * Sets the given quota (policy & limit) on the passed namespace.
+   */
+  void setQuotaLimit(String ns, SpaceViolationPolicy policy, long sizeInMBs)
+          throws Exception {
+    final long sizeLimit = sizeInMBs * SpaceQuotaHelperForTests.ONE_MEGABYTE;
+    QuotaSettings settings = QuotaSettingsFactory.limitNamespaceSpace(ns, sizeLimit, policy);
+    testUtil.getAdmin().setQuota(settings);
+    LOG.debug("Quota limit set for namespace = {}, limit = {}", ns, sizeLimit);
+  }
+
+  /**
    * Removes the space quota from the given table
    */
   void removeQuotaFromtable(final TableName tn) throws Exception {
     QuotaSettings removeQuota = QuotaSettingsFactory.removeTableSpaceLimit(tn);
     testUtil.getAdmin().setQuota(removeQuota);
     LOG.debug("Space quota settings removed from the table ", tn);
+  }
+
+  /**
+   * Removes the space quota from the given namespace
+   */
+  void removeQuotaFromNamespace(String ns) throws Exception {
+    QuotaSettings removeQuota = QuotaSettingsFactory.removeNamespaceSpaceLimit(ns);
+    Admin admin = testUtil.getAdmin();
+    admin.setQuota(removeQuota);
+    LOG.debug("Space quota settings removed from the namespace ", ns);
   }
 
   /**
