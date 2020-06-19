@@ -80,6 +80,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     void init(FileSystem fs, Path path, Configuration c, FSDataInputStream s) throws IOException;
   }
 
+  protected WAL.ServiceLevel serviceLevel;
   protected volatile T wal;
   protected WALFactory factory;
   protected Configuration conf;
@@ -95,17 +96,23 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    */
   private final ReadWriteLock walCreateLock = new ReentrantReadWriteLock();
 
+  @Override
+  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+    this.init(factory, conf, providerId, WAL.ServiceLevel.REGION_SERVER);
+  }
+
   /**
    * @param factory factory that made us, identity used for FS layout. may not be null
    * @param conf may not be null
    * @param providerId differentiate between providers from one factory, used for FS layout. may be
    *          null
+   * @param serviceLevel wal service level
    */
-  @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALFactory factory, Configuration conf, String providerId, WAL.ServiceLevel serviceLevel) throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
+    this.serviceLevel = serviceLevel;
     this.factory = factory;
     this.conf = conf;
     this.providerId = providerId;

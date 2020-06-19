@@ -143,6 +143,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     "hbase.regionserver.wal.disruptor.event.count";
 
   /**
+   * WAL service level, decided by WALProvider
+   */
+  protected final WAL.ServiceLevel serviceLevel;
+
+  /**
    * file system instance
    */
   protected final FileSystem fs;
@@ -376,9 +381,18 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   protected AbstractFSWAL(final FileSystem fs, final Path rootDir, final String logDir,
+    final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
+    final boolean failIfWALExists, final String prefix, final String suffix)
+    throws FailedLogCloseException, IOException {
+    this(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists,
+      prefix, suffix, ServiceLevel.REGION_SERVER);
+  }
+
+  protected AbstractFSWAL(final FileSystem fs, final Path rootDir, final String logDir,
       final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
-      final boolean failIfWALExists, final String prefix, final String suffix)
+      final boolean failIfWALExists, final String prefix, final String suffix, ServiceLevel serviceLevel)
       throws FailedLogCloseException, IOException {
+    this.serviceLevel = serviceLevel;
     this.fs = fs;
     this.walDir = new Path(rootDir, logDir);
     this.walArchiveDir = new Path(rootDir, archiveDir);

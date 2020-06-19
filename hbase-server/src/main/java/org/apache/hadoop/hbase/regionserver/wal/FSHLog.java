@@ -105,6 +105,18 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   // We use ring buffer sequence as txid of FSWALEntry and SyncFuture.
   private static final Logger LOG = LoggerFactory.getLogger(FSHLog.class);
 
+  private static final String TOLERABLE_LOW_REPLICATION = "hbase.regionserver.hlog.tolerable.lowreplication";
+  private static final String LOW_REPLICATION_ROLL_LIMIT = "hbase.regionserver.hlog.lowreplication.rolllimit";
+  private static final int DEFAULT_LOW_REPLICATION_ROLL_LIMIT = 5;
+  private static final String ROLL_ERRORS_TOLERATED = "hbase.regionserver.logroll.errors.tolerated";
+  private static final int DEFAULT_ROLL_ERRORS_TOLERATED = 2;
+  private static final String SYNCER_COUNT = "hbase.regionserver.hlog.syncer.count";
+  private static final int DEFAULT_SYNCER_COUNT = 5;
+  private static final int DEFAULT_BATCH_COUNT = 200;
+  private static final String MAX_BATCH_COUNT = "hbase.regionserver.hlog.max.batch.count";
+  private static final String MIN_BATCH_COUNT = "hbase.regionserver.hlog.min.batch.count";
+  private static final int DEFAULT_MIN_BATCH_COUNT = 20;
+
   /**
    * The nexus at which all incoming handlers meet. Does appends and sync with an ordering. Appends
    * and syncs are each put on the ring which means handlers need to smash up against the ring twice
@@ -176,16 +188,26 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   /**
-   * Constructor.
-   * @param fs filesystem handle
-   * @param root path for stored and archived wals
-   * @param logDir dir where wals are stored
+   *
    * @param conf configuration to use
+   * @param level wal service level
+   * @return default max syncer batch count
    */
+  private static int getDefaultMaxBatchCount(Configuration conf, ServiceLevel level) {
+    int batchCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, DEFAULT_BATCH_COUNT) / level.getRatio();
+    return Math.max(batchCount, conf.getInt(MIN_BATCH_COUNT, DEFAULT_MIN_BATCH_COUNT));
+  }
+
   @VisibleForTesting
   public FSHLog(final FileSystem fs, final Path root, final String logDir, final Configuration conf)
       throws IOException {
     this(fs, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null);
+  }
+
+  public FSHLog(final FileSystem fs, final Path rootDir, final String logDir,
+      final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
+      final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
+    this(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix, ServiceLevel.REGION_SERVER);
   }
 
   /**
@@ -205,32 +227,30 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    *          before being used. If prefix is null, "wal" will be used
    * @param suffix will be url encoded. null is treated as empty. non-empty must start with
    *          {@link org.apache.hadoop.hbase.wal.AbstractFSWALProvider#WAL_FILE_NAME_DELIMITER}
+   * @param serviceLevel wal service level
    */
   public FSHLog(final FileSystem fs, final Path rootDir, final String logDir,
-      final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
-      final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
-    super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
-    this.minTolerableReplication = conf.getInt("hbase.regionserver.hlog.tolerable.lowreplication",
-      CommonFSUtils.getDefaultReplication(fs, this.walDir));
-    this.lowReplicationRollLimit = conf.getInt("hbase.regionserver.hlog.lowreplication.rolllimit",
-      5);
-    this.closeErrorsTolerated = conf.getInt("hbase.regionserver.logroll.errors.tolerated", 2);
-
+    final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
+    final boolean failIfWALExists, final String prefix, final String suffix, final ServiceLevel serviceLevel) throws IOException {
+    super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix, serviceLevel);
+    this.minTolerableReplication = conf.getInt(TOLERABLE_LOW_REPLICATION, CommonFSUtils.getDefaultReplication(fs, this.walDir));
+    this.lowReplicationRollLimit = conf.getInt(LOW_REPLICATION_ROLL_LIMIT, DEFAULT_LOW_REPLICATION_ROLL_LIMIT);
+    this.closeErrorsTolerated = conf.getInt(ROLL_ERRORS_TOLERATED, DEFAULT_ROLL_ERRORS_TOLERATED);
     // This is the 'writer' -- a single threaded executor. This single thread 'consumes' what is
     // put on the ring buffer.
     String hostingThreadName = Thread.currentThread().getName();
     // Using BlockingWaitStrategy. Stuff that is going on here takes so long it makes no sense
     // spinning as other strategies do.
     this.disruptor = new Disruptor<>(RingBufferTruck::new,
-        getPreallocatedEventCount(),
-        Threads.newDaemonThreadFactory(hostingThreadName + ".append"),
-        ProducerType.MULTI, new BlockingWaitStrategy());
+      getPreallocatedEventCount(),
+      Threads.newDaemonThreadFactory(hostingThreadName + ".append"),
+      ProducerType.MULTI, new BlockingWaitStrategy());
     // Advance the ring buffer sequence so that it starts from 1 instead of 0,
     // because SyncFuture.NOT_DONE = 0.
     this.disruptor.getRingBuffer().next();
-    int maxHandlersCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200);
-    this.ringBufferEventHandler = new RingBufferEventHandler(
-        conf.getInt("hbase.regionserver.hlog.syncer.count", 5), maxHandlersCount);
+    int syncerCount = conf.getInt(SYNCER_COUNT, DEFAULT_SYNCER_COUNT);
+    int maxBatchCount = conf.getInt(MAX_BATCH_COUNT, getDefaultMaxBatchCount(conf, serviceLevel));
+    this.ringBufferEventHandler = new RingBufferEventHandler(syncerCount, maxBatchCount);
     this.disruptor.setDefaultExceptionHandler(new RingBufferExceptionHandler());
     this.disruptor.handleEventsWith(new RingBufferEventHandler[] { this.ringBufferEventHandler });
     // Starting up threads in constructor is a no no; Interface should have an init call.
@@ -922,11 +942,11 @@ public class FSHLog extends AbstractFSWAL<Writer> {
      */
     private int syncRunnerIndex;
 
-    RingBufferEventHandler(final int syncRunnerCount, final int maxHandlersCount) {
-      this.syncFutures = new SyncFuture[maxHandlersCount];
+    RingBufferEventHandler(final int syncRunnerCount, final int maxBatchCount) {
+      this.syncFutures = new SyncFuture[maxBatchCount];
       this.syncRunners = new SyncRunner[syncRunnerCount];
       for (int i = 0; i < syncRunnerCount; i++) {
-        this.syncRunners[i] = new SyncRunner("sync." + i, maxHandlersCount);
+        this.syncRunners[i] = new SyncRunner("sync." + i, maxBatchCount);
       }
     }
 
