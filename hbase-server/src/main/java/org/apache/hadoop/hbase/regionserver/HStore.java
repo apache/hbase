@@ -2801,27 +2801,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     return currentParallelPutCount.get();
   }
 
-  public int getStoreRefCount() {
-    return this.storeEngine.getStoreFileManager().getStorefiles().stream()
-      .filter(sf -> sf.getReader() != null).filter(HStoreFile::isHFile)
-      .mapToInt(HStoreFile::getRefCount).sum();
-  }
-
-  /**
-   * @return get maximum ref count of storeFile among all compacted HStore Files for the HStore
-   */
-  public int getMaxCompactedStoreFileRefCount() {
-    OptionalInt maxCompactedStoreFileRefCount = this.storeEngine.getStoreFileManager()
-      .getCompactedfiles()
-      .stream()
-      .filter(sf -> sf.getReader() != null)
-      .filter(HStoreFile::isHFile)
-      .mapToInt(HStoreFile::getRefCount)
-      .max();
-    return maxCompactedStoreFileRefCount.isPresent()
-      ? maxCompactedStoreFileRefCount.getAsInt() : 0;
-  }
-
   void reportArchivedFilesForQuota(List<? extends StoreFile> archivedFiles, List<Long> fileSizes) {
     // Sanity check from the caller
     if (archivedFiles.size() != fileSizes.size()) {
