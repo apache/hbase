@@ -49,7 +49,8 @@ public class NamespaceGroupingStrategy implements RegionGroupingStrategy {
     this.providerId = providerId;
   }
 
-  @Override public WAL.ServiceLevel getServiceLevel() {
+  @Override
+  public WAL.ServiceLevel getServiceLevel() {
     return WAL.ServiceLevel.NAMESPACE;
   }
 }
