@@ -180,6 +180,28 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
   }
 
   @Test
+  public void testNamespaceConstraint2() throws Exception {
+    String nsName = TABLE_PREFIX + name.getMethodName();
+    String groupName = TABLE_PREFIX + name.getMethodName();
+    TableName tableName = TableName.valueOf(nsName, name.getMethodName());
+    addGroup(groupName, 1);
+
+    ADMIN.createNamespace(NamespaceDescriptor.create(nsName)
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName).build());
+
+    TEST_UTIL.createTable(tableName, "C");
+    TEST_UTIL.waitTableAvailable(tableName);
+    RSGroupInfo rsGroup = ADMIN.getRSGroup(tableName);
+    assertEquals(groupName, rsGroup.getName());
+
+    TEST_UTIL.deleteTable(tableName);
+    ADMIN.deleteNamespace(nsName);
+
+    ADMIN.moveServersToRSGroup(rsGroup.getServers(), RSGroupInfo.DEFAULT_GROUP);
+    ADMIN.removeRSGroup(groupName);
+  }
+
+  @Test
   public void testFailRemoveGroup() throws IOException, InterruptedException {
     int initNumGroups = ADMIN.listRSGroups().size();
     addGroup("bar", 3);
