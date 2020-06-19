@@ -57,28 +57,15 @@
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
 
-# This will set HBASE_HOME, etc.
-. "$bin"/hbase-config.sh
-
-cygwin=false
-case "`uname`" in
-CYGWIN*) cygwin=true;;
-esac
-
-# Detect if we are in hbase sources dir
-in_dev_env=false
-if [ -d "${HBASE_HOME}/target" ]; then
-  in_dev_env=true
-fi
-
 read -d '' options_string << EOF
 Options:
   --config DIR     Configuration direction to use. Default: ./conf
   --hosts HOSTS    Override the list in 'regionservers' file
   --auth-as-server Authenticate to ZooKeeper using servers configuration
+  --help or -h     Print this help message
 EOF
-# if no args specified, show usage
-if [ $# = 0 ]; then
+
+show_usage() {
   echo "Usage: hbase [<options>] <command> [<args>]"
   echo "$options_string"
   echo ""
@@ -108,6 +95,31 @@ if [ $# = 0 ]; then
   echo "  hbtop            Run the HBTop tool"
   echo "  version          Print the version"
   echo "  CLASSNAME        Run the class named CLASSNAME"
+}
+
+if [ "--help" = "$1" ] || [ "-h" = "$1" ]; then
+  show_usage
+  exit 0
+fi
+
+# This will set HBASE_HOME, etc.
+. "$bin"/hbase-config.sh
+
+cygwin=false
+case "`uname`" in
+CYGWIN*) cygwin=true;;
+esac
+
+# Detect if we are in hbase sources dir
+in_dev_env=false
+if [ -d "${HBASE_HOME}/target" ]; then
+  in_dev_env=true
+fi
+
+
+# if no args specified, show usage
+if [ $# = 0 ]; then
+  show_usage
   exit 1
 fi
 
