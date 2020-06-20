@@ -259,6 +259,7 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
       if (walFS.exists(wap.path)) {
         if (!walFS.rename(wap.path, dst)) {
           final String errorMsg = "Failed renaming " + wap.path + " to " + dst;
+          updateStatusWithMsg(errorMsg);
           throw new IOException(errorMsg);
         }
         final String msg = "Rename " + wap.path + " to " + dst;
