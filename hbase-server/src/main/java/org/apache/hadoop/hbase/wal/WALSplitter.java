@@ -355,22 +355,28 @@ public class WALSplitter {
           progress_failed = outputSink.finishWritingAndClose() == null;
         }
       } finally {
-        long processCost = EnvironmentEdgeManager.currentTime() - startTS;
-        // See if length got updated post lease recovery
-        String msg = "Processed " + editsCount + " edits across " +
-            outputSink.getNumberOfRecoveredRegions() + " regions cost " + processCost +
-            " ms; edits skipped=" + editsSkipped + "; WAL=" + logPath + ", size=" +
-            StringUtils.humanSize(logfile.getLen()) + ", length=" + logfile.getLen() +
-            ", corrupted=" + isCorrupted + ", progress failed=" + progress_failed;
-        LOG.info(msg);
-        status.markComplete(msg);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("WAL split completed for {} , Journal Log: {}", logPath,
-            status.prettyPrintJournal());
-        }
+        logCompletion(logfile, isCorrupted, logPath, progress_failed, editsCount, editsSkipped,
+          startTS);
       }
     }
     return !progress_failed;
+  }
+
+  private void logCompletion(FileStatus logfile, boolean isCorrupted, Path logPath,
+      boolean progress_failed, int editsCount, int editsSkipped, long startTS) {
+    long processCost = EnvironmentEdgeManager.currentTime() - startTS;
+    // See if length got updated post lease recovery
+    String msg = "Processed " + editsCount + " edits across " +
+        outputSink.getNumberOfRecoveredRegions() + " regions cost " + processCost +
+        " ms; edits skipped=" + editsSkipped + "; WAL=" + logPath + ", size=" +
+        StringUtils.humanSize(logfile.getLen()) + ", length=" + logfile.getLen() +
+        ", corrupted=" + isCorrupted + ", progress failed=" + progress_failed;
+    LOG.info(msg);
+    status.markComplete(msg);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("WAL split completed for {} , Journal Log: {}", logPath,
+        status.prettyPrintJournal());
+    }
   }
 
   private boolean isRegionDirPresentUnderRoot(TableName tableName, String regionName)

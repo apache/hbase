@@ -116,9 +116,10 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
         e);
     }
     if (wap.minLogSeqNum < dstMinLogSeqNum) {
-      final String errorMsg = "Found existing old edits file. It could be the result of a previous failed"
-        + " split attempt or we have duplicated wal entries. Deleting " + dst + ", length="
-        + walFS.getFileStatus(dst).getLen();
+      final String errorMsg =
+        "Found existing old edits file. It could be the result of a previous failed"
+          + " split attempt or we have duplicated wal entries. Deleting " + dst + ", length="
+          + walFS.getFileStatus(dst).getLen();
       LOG.warn(errorMsg);
       updateStatusWithMsg(errorMsg);
       if (!walFS.delete(dst, false)) {
@@ -128,8 +129,9 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
         throw new IOException("Failed deleting of old " + dst);
       }
     } else {
-      final String errorMsg = "Found existing old edits file and we have less entries. Deleting " + wap.path
-        + ", length=" + walFS.getFileStatus(wap.path).getLen();
+      final String errorMsg =
+        "Found existing old edits file and we have less entries. Deleting " + wap.path
+          + ", length=" + walFS.getFileStatus(wap.path).getLen();
       LOG.warn(errorMsg);
       updateStatusWithMsg(errorMsg);
       if (!walFS.delete(wap.path, false)) {
@@ -230,8 +232,9 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
       thrown.add(ioe);
       return null;
     }
-    final String updateLog = "Closed wap " + wap.path + " (wrote " + wap.editsWritten + " edits, skipped "
-      + wap.editsSkipped + " edits in " + (wap.nanosSpent / 1000 / 1000) + "ms";
+    final String updateLog =
+      "Closed wap " + wap.path + " (wrote " + wap.editsWritten + " edits, skipped "
+        + wap.editsSkipped + " edits in " + (wap.nanosSpent / 1000 / 1000) + "ms";
     if (LOG.isDebugEnabled()) {
       LOG.debug(updateLog);
     }
@@ -456,8 +459,8 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
     return wap;
   }
 
-  private WALSplitter.WriterAndPath logAndThrowWriterAppendFailure(WAL.Entry logEntry, IOException e)
-      throws IOException {
+  private WALSplitter.WriterAndPath logAndThrowWriterAppendFailure(WAL.Entry logEntry,
+      IOException e) throws IOException {
     e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
     final String errorMsg = "Failed to write log entry " + logEntry.toString() + " to log";
     LOG.error(HBaseMarkers.FATAL, errorMsg, e);
