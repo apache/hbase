@@ -2982,13 +2982,9 @@ public class MasterRpcServices extends RSRpcServices implements
       if (td == null) {
         resp = GetRSGroupInfoOfTableResponse.getDefaultInstance();
       } else {
-        RSGroupInfo rsGroupInfo = null;
-        if (td.getRegionServerGroup().isPresent()) {
-          rsGroupInfo = master.getRSGroupInfoManager().getRSGroup(td.getRegionServerGroup().get());
-        }
-        if (rsGroupInfo == null) {
-          rsGroupInfo = master.getRSGroupInfoManager().getRSGroup(RSGroupInfo.DEFAULT_GROUP);
-        }
+        RSGroupInfo rsGroupInfo =
+            RSGroupUtil.getRSGroupInfo(master, master.getRSGroupInfoManager(), tableName)
+                .orElse(master.getRSGroupInfoManager().getRSGroup(RSGroupInfo.DEFAULT_GROUP));
         resp = GetRSGroupInfoOfTableResponse.newBuilder()
           .setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(rsGroupInfo)).build();
       }
