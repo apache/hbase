@@ -116,19 +116,29 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
         e);
     }
     if (wap.minLogSeqNum < dstMinLogSeqNum) {
-      LOG.warn("Found existing old edits file. It could be the result of a previous failed"
+      final String errorMsg =
+        "Found existing old edits file. It could be the result of a previous failed"
           + " split attempt or we have duplicated wal entries. Deleting " + dst + ", length="
-          + walFS.getFileStatus(dst).getLen());
+          + walFS.getFileStatus(dst).getLen();
+      LOG.warn(errorMsg);
+      updateStatusWithMsg(errorMsg);
       if (!walFS.delete(dst, false)) {
-        LOG.warn("Failed deleting of old {}", dst);
+        final String msg = "Failed deleting of old " + dst;
+        LOG.warn(msg);
+        updateStatusWithMsg(msg);
         throw new IOException("Failed deleting of old " + dst);
       }
     } else {
-      LOG.warn("Found existing old edits file and we have less entries. Deleting " + wap.path
-          + ", length=" + walFS.getFileStatus(wap.path).getLen());
+      final String errorMsg =
+        "Found existing old edits file and we have less entries. Deleting " + wap.path
+          + ", length=" + walFS.getFileStatus(wap.path).getLen();
+      LOG.warn(errorMsg);
+      updateStatusWithMsg(errorMsg);
       if (!walFS.delete(wap.path, false)) {
-        LOG.warn("Failed deleting of {}", wap.path);
-        throw new IOException("Failed deleting of " + wap.path);
+        final String msg = "Failed deleting of " + wap.path;
+        LOG.warn(msg);
+        updateStatusWithMsg(msg);
+        throw new IOException(msg);
       }
     }
   }
@@ -216,19 +226,26 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
     try {
       wap.writer.close();
     } catch (IOException ioe) {
-      LOG.error("Could not close log at {}", wap.path, ioe);
+      final String errorMsg = "Could not close log at " + wap.path;
+      LOG.error(errorMsg, ioe);
+      updateStatusWithMsg(errorMsg);
       thrown.add(ioe);
       return null;
     }
+    final String updateLog =
+      "Closed wap " + wap.path + " (wrote " + wap.editsWritten + " edits, skipped "
+        + wap.editsSkipped + " edits in " + (wap.nanosSpent / 1000 / 1000) + "ms";
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Closed wap " + wap.path + " (wrote " + wap.editsWritten + " edits, skipped "
-          + wap.editsSkipped + " edits in " + (wap.nanosSpent / 1000 / 1000) + "ms");
+      LOG.debug(updateLog);
     }
+    updateStatusWithMsg(updateLog);
     if (wap.editsWritten == 0) {
       // just remove the empty recovered.edits file
       if (walFS.exists(wap.path) && !walFS.delete(wap.path, false)) {
-        LOG.warn("Failed deleting empty {}", wap.path);
-        throw new IOException("Failed deleting empty  " + wap.path);
+        final String errorMsg = "Failed deleting empty " + wap.path;
+        LOG.warn(errorMsg);
+        updateStatusWithMsg(errorMsg);
+        throw new IOException(errorMsg);
       }
       return null;
     }
@@ -244,9 +261,13 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
       // TestHLogSplit#testThreading is an example.
       if (walFS.exists(wap.path)) {
         if (!walFS.rename(wap.path, dst)) {
-          throw new IOException("Failed renaming " + wap.path + " to " + dst);
+          final String errorMsg = "Failed renaming " + wap.path + " to " + dst;
+          updateStatusWithMsg(errorMsg);
+          throw new IOException(errorMsg);
         }
-        LOG.info("Rename {} to {}", wap.path, dst);
+        final String msg = "Rename " + wap.path + " to " + dst;
+        LOG.info(msg);
+        updateStatusWithMsg(msg);
       }
     } catch (IOException ioe) {
       LOG.error("Could not rename {} to {}", wap.path, dst, ioe);
@@ -284,12 +305,16 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
           wap = (WALSplitter.WriterAndPath) tmpWAP;
           wap.writer.close();
         } catch (IOException ioe) {
-          LOG.error("Couldn't close log at {}", wap.path, ioe);
+          final String errorMsg = "Couldn't close log at " + wap.path;
+          LOG.error(errorMsg, ioe);
+          updateStatusWithMsg(errorMsg);
           thrown.add(ioe);
           continue;
         }
-        LOG.info("Closed log " + wap.path + " (wrote " + wap.editsWritten + " edits in "
-            + (wap.nanosSpent / 1000 / 1000) + "ms)");
+        final String msg = "Closed log " + wap.path + " (wrote " + wap.editsWritten + " edits in "
+          + (wap.nanosSpent / 1000 / 1000) + "ms)";
+        LOG.info(msg);
+        updateStatusWithMsg(msg);
       }
       writersClosed = true;
     }
@@ -338,15 +363,21 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
     }
     FileSystem walFs = FSUtils.getWALFileSystem(conf);
     if (walFs.exists(regionedits)) {
-      LOG.warn("Found old edits file. It could be the "
-          + "result of a previous failed split attempt. Deleting " + regionedits + ", length="
-          + walFs.getFileStatus(regionedits).getLen());
+      final String errorMsg = "Found old edits file. It could be the "
+        + "result of a previous failed split attempt. Deleting " + regionedits + ", length="
+        + walFs.getFileStatus(regionedits).getLen();
+      LOG.warn(errorMsg);
+      updateStatusWithMsg(errorMsg);
       if (!walFs.delete(regionedits, false)) {
-        LOG.warn("Failed delete of old {}", regionedits);
+        final String failureMsg = "Failed delete of old " + regionedits;
+        LOG.warn(failureMsg);
+        updateStatusWithMsg(failureMsg);
       }
     }
     WALProvider.Writer w = walSplitter.createWriter(regionedits);
-    LOG.debug("Creating writer path={}", regionedits);
+    final String msg = "Creating writer path=" + regionedits;
+    LOG.debug(msg);
+    updateStatusWithMsg(msg);
     return new WALSplitter.WriterAndPath(regionedits, w, entry.getKey().getSequenceId());
   }
 
@@ -397,10 +428,10 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
     WALSplitter.WriterAndPath wap = null;
 
     long startTime = System.nanoTime();
-    try {
-      int editsCount = 0;
+    int editsCount = 0;
 
-      for (WAL.Entry logEntry : entries) {
+    for (WAL.Entry logEntry : entries) {
+      try {
         if (wap == null) {
           wap = getWriterAndPath(logEntry, reusable);
           if (wap == null) {
@@ -418,16 +449,23 @@ public class LogRecoveredEditsOutputSink extends OutputSink {
         } else {
           wap.incrementSkippedEdits(1);
         }
+      } catch (IOException e) {
+        return logAndThrowWriterAppendFailure(logEntry, e);
       }
-      // Pass along summary statistics
-      wap.incrementEdits(editsCount);
-      wap.incrementNanoTime(System.nanoTime() - startTime);
-    } catch (IOException e) {
-      e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
-      LOG.error(HBaseMarkers.FATAL, "Got while writing log entry to log", e);
-      throw e;
     }
+    // Pass along summary statistics
+    wap.incrementEdits(editsCount);
+    wap.incrementNanoTime(System.nanoTime() - startTime);
     return wap;
+  }
+
+  private WALSplitter.WriterAndPath logAndThrowWriterAppendFailure(WAL.Entry logEntry,
+      IOException e) throws IOException {
+    e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
+    final String errorMsg = "Failed to write log entry " + logEntry.toString() + " to log";
+    LOG.error(HBaseMarkers.FATAL, errorMsg, e);
+    updateStatusWithMsg(errorMsg);
+    throw e;
   }
 
   @Override

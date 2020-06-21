@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -69,6 +70,8 @@ public abstract class OutputSink {
 
   protected List<Path> splits = null;
 
+  protected MonitoredTask status = null;
+
   public OutputSink(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
       int numWriters) {
     numThreads = numWriters;
@@ -78,6 +81,10 @@ public abstract class OutputSink {
 
   void setReporter(CancelableProgressable reporter) {
     this.reporter = reporter;
+  }
+
+  void setStatus(MonitoredTask status) {
+    this.status = status;
   }
 
   /**
@@ -157,7 +164,9 @@ public abstract class OutputSink {
       }
     }
     controller.checkForErrors();
-    LOG.info("{} split writers finished; closing.", this.writerThreads.size());
+    final String msg = this.writerThreads.size() + " split writer threads finished";
+    LOG.info(msg);
+    updateStatusWithMsg(msg);
     return (!progress_failed);
   }
 
@@ -192,6 +201,16 @@ public abstract class OutputSink {
    * @return Return true if this sink wants to accept this region-level WALEdit.
    */
   public abstract boolean keepRegionEvent(WAL.Entry entry);
+
+  /**
+   * Set status message in {@link MonitoredTask} instance that is set in this OutputSink
+   * @param msg message to update the status with
+   */
+  protected final void updateStatusWithMsg(String msg) {
+    if (status != null) {
+      status.setStatus(msg);
+    }
+  }
 
   public static class WriterThread extends Thread {
     private volatile boolean shouldStop = false;
