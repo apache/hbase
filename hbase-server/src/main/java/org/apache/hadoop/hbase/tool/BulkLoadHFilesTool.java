@@ -125,10 +125,6 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    */
   public static final String BULK_LOAD_HFILES_BY_FAMILY = "hbase.mapreduce.bulkload.by.family";
 
-  //HDFS DelegationToken is cached and should be renewed before token expiration
-  public static final String BULK_LOAD_RENEW_TOKEN_TIME_BUFFER
-    = "hbase.bulkload.renew.token.time.buffer";
-
   // We use a '.' prefix which is ignored when walking directory trees
   // above. It is invalid family name.
   static final String TMP_DIR = ".tmp";
@@ -146,7 +142,6 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
 
   private List<String> clusterIds = new ArrayList<>();
   private boolean replicate = true;
-  private final long retryAheadTime;
 
   public BulkLoadHFilesTool(Configuration conf) {
     // make a copy, just to be sure we're not overriding someone else's config
@@ -154,8 +149,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     // disable blockcache for tool invocation, see HBASE-10500
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
     userProvider = UserProvider.instantiate(conf);
-    retryAheadTime = conf.getLong(BULK_LOAD_RENEW_TOKEN_TIME_BUFFER, 60000L);
-    fsDelegationToken = new FsDelegationToken(userProvider, "renewer", retryAheadTime);
+    fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
     maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
     nrThreads = conf.getInt("hbase.loadincremental.threads.max",
