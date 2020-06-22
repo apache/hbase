@@ -57,22 +57,7 @@
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
 
-# This will set HBASE_HOME, etc.
-. "$bin"/hbase-config.sh
-
-cygwin=false
-case "`uname`" in
-CYGWIN*) cygwin=true;;
-esac
-
-# Detect if we are in hbase sources dir
-in_dev_env=false
-if [ -d "${HBASE_HOME}/target" ]; then
-  in_dev_env=true
-fi
-
-# if no args specified, show usage
-if [ $# = 0 ]; then
+show_usage() {
   echo "Usage: hbase [<options>] <command> [<args>]"
   echo "Options:"
   echo "  --config DIR    Configuration direction to use. Default: ./conf"
@@ -89,11 +74,11 @@ if [ $# = 0 ]; then
   echo "  hfile           Store file analyzer"
   echo "  zkcli           Run the ZooKeeper shell"
   echo "  upgrade         Upgrade hbase"
-  echo "  master          Run an HBase HMaster node" 
-  echo "  regionserver    Run an HBase HRegionServer node" 
+  echo "  master          Run an HBase HMaster node"
+  echo "  regionserver    Run an HBase HRegionServer node"
   echo "  zookeeper       Run a Zookeeper server"
-  echo "  rest            Run an HBase REST server" 
-  echo "  thrift          Run the HBase Thrift server" 
+  echo "  rest            Run an HBase REST server"
+  echo "  thrift          Run the HBase Thrift server"
   echo "  thrift2         Run the HBase Thrift2 server"
   echo "  clean           Run the HBase clean up script"
   echo "  classpath       Dump hbase CLASSPATH"
@@ -102,6 +87,30 @@ if [ $# = 0 ]; then
   echo "  ltt             Run LoadTestTool"
   echo "  version         Print the version"
   echo "  CLASSNAME       Run the class named CLASSNAME"
+}
+
+if [ "--help" = "$1" ] || [ "-h" = "$1" ]; then
+  show_usage
+  exit 0
+fi
+
+# This will set HBASE_HOME, etc.
+. "$bin"/hbase-config.sh
+
+cygwin=false
+case "`uname`" in
+CYGWIN*) cygwin=true;;
+esac
+
+# Detect if we are in hbase sources dir
+in_dev_env=false
+if [ -d "${HBASE_HOME}/target" ]; then
+  in_dev_env=true
+fi
+
+# if no args specified, show usage
+if [ $# = 0 ]; then
+  show_usage
   exit 1
 fi
 
