@@ -64,7 +64,7 @@ public class SnapshotDescription {
    * @param creationTime Creation time for Snapshot
    * @param version Snapshot Version
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
-   *   {@link SnapshotDescription(String, TableName, SnapshotType, String, long, int, Map)}
+   *   {@link #SnapshotDescription(String, TableName, SnapshotType, String, long, int, Map)}
    */
   @Deprecated
   public SnapshotDescription(String name, TableName table, SnapshotType type, String owner,
