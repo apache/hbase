@@ -92,7 +92,6 @@ public class MetricsTableAggregateSourceImpl extends BaseSourceImpl
   @Override
   public void getMetrics(MetricsCollector collector, boolean all) {
     MetricsRecordBuilder mrb = collector.addRecord(metricsName);
-
     if (tableSources != null) {
       for (MetricsTableSource tableMetricSource : tableSources.values()) {
         if (tableMetricSource instanceof MetricsTableSourceImpl) {
