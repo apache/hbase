@@ -59,6 +59,15 @@ if "%HBASE_BIN_PATH:~-1%" == "\" (
   set HBASE_BIN_PATH=%HBASE_BIN_PATH:~0,-1%
 )
 
+if "%1" == "--help" (
+  goto :print_usage
+  exit /B 0
+)
+if "%1" == "-h" (
+  goto :print_usage
+  exit /B 0
+)
+
 rem This will set HBASE_HOME, etc.
 set hbase-config-script=%HBASE_BIN_PATH%\hbase-config.cmd
 call "%hbase-config-script%" %*
