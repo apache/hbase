@@ -108,7 +108,6 @@ under the License.
         <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.13/hbase-1.4.13-src.tar.gz">src</a> (<a href="https://apache.org/dist/hbase/1.4.13/hbase-1.4.13-src.tar.gz.sha">sha</a> <a href="https://apache.org/dist/hbase/1.4.13/hbase-1.4.13-src.tar.gz.asc">asc</a>) <br />
         <a href="https://www.apache.org/dyn/closer.lua/hbase/1.4.13/hbase-1.4.13-bin.tar.gz">bin</a> (<a href="https://apache.org/dist/hbase/1.4.13/hbase-1.4.13-bin.tar.gz.sha">sha</a> <a href="https://apache.org/dist/hbase/1.4.13/hbase-1.4.13-bin.tar.gz.asc">asc</a>)
       </td>
-      <td><em>stable-1 release</em></td>
     </tr>
     <tr>
       <td style="test-align: left">
