@@ -81,12 +81,12 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  */
 @InterfaceAudience.Public
 public class RegionMover extends AbstractHBaseTool implements Closeable {
-  private static final String MOVE_RETRIES_MAX_KEY = "hbase.move.retries.max";
-  private static final String MOVE_WAIT_MAX_KEY = "hbase.move.wait.max";
-  static final String SERVERSTART_WAIT_MAX_KEY = "hbase.serverstart.wait.max";
-  private static final int DEFAULT_MOVE_RETRIES_MAX = 5;
-  private static final int DEFAULT_MOVE_WAIT_MAX = 60;
-  private static final int DEFAULT_SERVERSTART_WAIT_MAX = 180;
+  public static final String MOVE_RETRIES_MAX_KEY = "hbase.move.retries.max";
+  public static final String MOVE_WAIT_MAX_KEY = "hbase.move.wait.max";
+  public static final String SERVERSTART_WAIT_MAX_KEY = "hbase.serverstart.wait.max";
+  public static final int DEFAULT_MOVE_RETRIES_MAX = 5;
+  public static final int DEFAULT_MOVE_WAIT_MAX = 60;
+  public static final int DEFAULT_SERVERSTART_WAIT_MAX = 180;
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionMover.class);
 
