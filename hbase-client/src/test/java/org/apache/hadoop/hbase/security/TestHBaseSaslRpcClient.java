@@ -313,17 +313,16 @@ public class TestHBaseSaslRpcClient {
 
   @Test(expected = IOException.class)
    public void testFailedEvaluateResponse() throws IOException {
-    //prep mockin the SaslClient
-    SimpleSaslClientAuthenticationProvider mockProvider =
-      Mockito.mock(SimpleSaslClientAuthenticationProvider.class);
-    SaslClient mockClient = Mockito.mock(SaslClient.class);
-    Assert.assertNotNull(mockProvider);
-    Assert.assertNotNull(mockClient);
-    Mockito.when(mockProvider.createClient(Mockito.any(), Mockito.any(), Mockito.any(),
-      Mockito.any(), Mockito.anyBoolean(), Mockito.any())).thenReturn(mockClient);
-    HBaseSaslRpcClient rpcClient = new HBaseSaslRpcClient(HBaseConfiguration.create(),
-      mockProvider, createTokenMock(),
-      Mockito.mock(InetAddress.class), Mockito.mock(SecurityInfo.class), false);
+    //prep mocking the SaslClient
+    HBaseSaslRpcClient rpcClient = new HBaseSaslRpcClient(AuthMethod.DIGEST,
+        createTokenMockWithCredentials("principal", "password"), "principal", false) {
+      @Override
+      public SaslClient createDigestSaslClient(String[] mechanismNames,
+          String saslDefaultRealm, CallbackHandler saslClientCallbackHandler)
+          throws IOException {
+        return Mockito.mock(SaslClient.class);
+      }
+    };
 
     //simulate getting an error from a failed saslServer.evaluateResponse
     DataOutputBuffer errorBuffer = new DataOutputBuffer();
@@ -336,7 +335,7 @@ public class TestHBaseSaslRpcClient {
     DataOutputBuffer out = new DataOutputBuffer();
 
     //simulate that authentication exchange has completed quickly after sending the token
-    Mockito.when(mockClient.isComplete()).thenReturn(true);
+    Mockito.when(rpcClient.saslClient.isComplete()).thenReturn(true);
     rpcClient.saslConnect(in, out);
   }
 }
