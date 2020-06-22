@@ -57,6 +57,48 @@
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
 
+read -d '' options_string << EOF
+Options:
+  --config DIR     Configuration direction to use. Default: ./conf
+  --hosts HOSTS    Override the list in 'regionservers' file
+  --auth-as-server Authenticate to ZooKeeper using servers configuration
+EOF
+show_usage() {
+  echo "Usage: hbase [<options>] <command> [<args>]"
+  echo "$options_string"
+  echo ""
+  echo "Commands:"
+  echo "Some commands take arguments. Pass no args or -h for usage."
+  echo "  shell           Run the HBase shell"
+  echo "  hbck            Run the hbase 'fsck' tool"
+  echo "  snapshot        Tool for managing snapshots"
+  echo "  snapshotinfo    Tool for dumping snapshot information"
+  echo "  wal             Write-ahead-log analyzer"
+  echo "  hfile           Store file analyzer"
+  echo "  zkcli           Run the ZooKeeper shell"
+  echo "  upgrade         Upgrade hbase"
+  echo "  master          Run an HBase HMaster node"
+  echo "  regionserver    Run an HBase HRegionServer node"
+  echo "  zookeeper       Run a Zookeeper server"
+  echo "  rest            Run an HBase REST server"
+  echo "  thrift          Run the HBase Thrift server"
+  echo "  thrift2         Run the HBase Thrift2 server"
+  echo "  clean           Run the HBase clean up script"
+  echo "  classpath       Dump hbase CLASSPATH"
+  echo "  mapredcp        Dump CLASSPATH entries required by mapreduce"
+  echo "  pe              Run PerformanceEvaluation"
+  echo "  ltt             Run LoadTestTool"
+  echo "  canary          Run the Canary tool"
+  echo "  hbtop           Run the HBTop tool"
+  echo "  version         Print the version"
+  echo "  CLASSNAME       Run the class named CLASSNAME"
+}
+
+if [ "--help" = "$1" ] || [ "-h" = "$1" ]; then
+  show_usage
+  exit 0
+fi
+
 # This will set HBASE_HOME, etc.
 . "$bin"/hbase-config.sh
 
@@ -71,42 +113,9 @@ if [ -d "${HBASE_HOME}/target" ]; then
   in_dev_env=true
 fi
 
-read -d '' options_string << EOF
-Options:
-  --config DIR     Configuration direction to use. Default: ./conf
-  --hosts HOSTS    Override the list in 'regionservers' file
-  --auth-as-server Authenticate to ZooKeeper using servers configuration
-EOF
 # if no args specified, show usage
 if [ $# = 0 ]; then
-  echo "Usage: hbase [<options>] <command> [<args>]"
-  echo "$options_string"
-  echo ""
-  echo "Commands:"
-  echo "Some commands take arguments. Pass no args or -h for usage."
-  echo "  shell           Run the HBase shell"
-  echo "  hbck            Run the hbase 'fsck' tool"
-  echo "  snapshot        Tool for managing snapshots"
-  echo "  snapshotinfo    Tool for dumping snapshot information"
-  echo "  wal             Write-ahead-log analyzer"
-  echo "  hfile           Store file analyzer"
-  echo "  zkcli           Run the ZooKeeper shell"
-  echo "  upgrade         Upgrade hbase"
-  echo "  master          Run an HBase HMaster node" 
-  echo "  regionserver    Run an HBase HRegionServer node" 
-  echo "  zookeeper       Run a Zookeeper server"
-  echo "  rest            Run an HBase REST server" 
-  echo "  thrift          Run the HBase Thrift server" 
-  echo "  thrift2         Run the HBase Thrift2 server"
-  echo "  clean           Run the HBase clean up script"
-  echo "  classpath       Dump hbase CLASSPATH"
-  echo "  mapredcp        Dump CLASSPATH entries required by mapreduce"
-  echo "  pe              Run PerformanceEvaluation"
-  echo "  ltt             Run LoadTestTool"
-  echo "  canary          Run the Canary tool"
-  echo "  hbtop           Run the HBTop tool"
-  echo "  version         Print the version"
-  echo "  CLASSNAME       Run the class named CLASSNAME"
+  show_usage
   exit 1
 fi
 

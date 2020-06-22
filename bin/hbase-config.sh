@@ -84,6 +84,10 @@ do
       exit 1
     fi
     shift
+  elif [ "--help" = "$1" ] || [ "-h" = "$1" ]
+  then
+    echo "Error usage! You should use it like 'hbase --help' or 'hbase -h'";
+    exit 1
   else
     # Presume we are at end of options and break
     break
