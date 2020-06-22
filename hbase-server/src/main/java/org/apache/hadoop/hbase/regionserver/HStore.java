@@ -33,7 +33,6 @@ import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -342,7 +341,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       confPrintThreshold = 10;
     }
     this.parallelPutCountPrintThreshold = confPrintThreshold;
-
     LOG.info("Store={},  memstore type={}, storagePolicy={}, verifyBulkLoads={}, "
             + "parallelPutCountPrintThreshold={}, encoding={}, compression={}",
         getColumnFamilyName(), memstore.getClass().getSimpleName(), policyName, verifyBulkLoads,

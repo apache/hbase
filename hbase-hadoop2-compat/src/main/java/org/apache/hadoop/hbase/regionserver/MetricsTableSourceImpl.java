@@ -64,7 +64,6 @@ import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPL
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricHistogram;
@@ -79,7 +78,6 @@ import org.slf4j.LoggerFactory;
 public class MetricsTableSourceImpl implements MetricsTableSource {
 
   private static final String _COLUMNFAMILY = "_columnfamily_";
-
   private static final Logger LOG = LoggerFactory.getLogger(MetricsTableSourceImpl.class);
 
   private AtomicBoolean closed = new AtomicBoolean(false);
