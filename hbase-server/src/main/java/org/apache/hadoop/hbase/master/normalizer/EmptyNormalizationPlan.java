@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.master.normalizer;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Plan which signifies that no normalization is required,
@@ -46,33 +46,7 @@ public final class EmptyNormalizationPlan implements NormalizationPlan {
    */
   @Override
   public Future<Void> submit(Admin admin) {
-    return new Future<Void>() {
-
-      @Override
-      public boolean cancel(boolean mayInterruptIfRunning) {
-        return false;
-      }
-
-      @Override
-      public boolean isCancelled() {
-        return false;
-      }
-
-      @Override
-      public boolean isDone() {
-        return true;
-      }
-
-      @Override
-      public Void get() {
-        return null;
-      }
-
-      @Override
-      public Void get(long timeout, TimeUnit unit) {
-        return null;
-      }
-    };
+    return CompletableFuture.completedFuture(null);
   }
 
   @Override

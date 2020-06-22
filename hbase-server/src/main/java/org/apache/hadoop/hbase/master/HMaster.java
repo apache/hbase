@@ -461,7 +461,6 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private long splitPlanCount;
   private long mergePlanCount;
-  private long normalizationPlanFailureCount;
 
   /** jetty server for master to redirect requests to regionserver infoServer */
   private Server masterJettyServer;
@@ -473,6 +472,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
+
+  // Split/Merge Normalization plan executes asynchronously and the caller blocks on
+  // waiting max 5 sec for single plan to complete with success/failure.
+  private static final int NORMALIZATION_PLAN_WAIT_TIMEOUT = 5;
 
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302473L;
@@ -1936,6 +1939,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       Collections.shuffle(allEnabledTables);
 
       try (final Admin admin = asyncClusterConnection.toConnection().getAdmin()) {
+        int failedNormalizationPlans = 0;
         final List<Future<?>> submittedPlanList = new ArrayList<>();
         for (TableName table : allEnabledTables) {
           if (table.isSystemTable()) {
@@ -1974,12 +1978,15 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
         for (Future<?> submittedPlan : submittedPlanList) {
           try {
-            submittedPlan.get();
+            submittedPlan.get(NORMALIZATION_PLAN_WAIT_TIMEOUT, TimeUnit.SECONDS);
           } catch (Exception e) {
-            normalizationPlanFailureCount++;
+            failedNormalizationPlans++;
             LOG.error("Submitted normalization plan failed with error: ", e);
           }
         }
+        int totalNormalizationPlans = submittedPlanList.size();
+        LOG.info("Normalizer run was able to successfully execute {}/{} merge or split plans",
+          totalNormalizationPlans - failedNormalizationPlans, totalNormalizationPlans);
       }
     } finally {
       normalizationInProgressLock.unlock();
