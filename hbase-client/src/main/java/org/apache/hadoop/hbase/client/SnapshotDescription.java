@@ -39,7 +39,7 @@ public class SnapshotDescription {
   private final int version;
 
   public SnapshotDescription(String name) {
-    this(name, null);
+    this(name, (TableName) null);
   }
 
   /**
