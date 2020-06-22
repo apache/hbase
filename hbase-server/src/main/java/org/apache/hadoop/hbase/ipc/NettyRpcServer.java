@@ -68,7 +68,10 @@ public class NettyRpcServer extends RpcServer {
    */
   public static final String HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY =
     "hbase.netty.eventloop.rpcserver.thread.count";
+  public static final String HBASE_NETTY_EVENTLOOP_RPCSERVER_BOSSTHREADCOUNT_KEY =
+    "hbase.netty.eventloop.rpcserver.bossthread.count";
   private static final int EVENTLOOP_THREADCOUNT_DEFAULT = 0;
+  private static final int EVENTLOOP_BOSSTHREADCOUNT_DEFAULT = 1;
 
   private final InetSocketAddress bindAddress;
 
@@ -82,21 +85,28 @@ public class NettyRpcServer extends RpcServer {
       boolean reservoirEnabled) throws IOException {
     super(server, name, services, bindAddress, conf, scheduler, reservoirEnabled);
     this.bindAddress = bindAddress;
-    EventLoopGroup eventLoopGroup;
+    EventLoopGroup bossEventLoopGroup;
+    EventLoopGroup workerEventLoopGroup;
     Class<? extends ServerChannel> channelClass;
     if (server instanceof HRegionServer) {
       NettyEventLoopGroupConfig config = ((HRegionServer) server).getEventLoopGroupConfig();
-      eventLoopGroup = config.group();
+      workerEventLoopGroup = config.group();
+      bossEventLoopGroup = config.bossEventLoopGroup();
       channelClass = config.serverChannelClass();
     } else {
       int threadCount = server == null? EVENTLOOP_THREADCOUNT_DEFAULT:
         server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
           EVENTLOOP_THREADCOUNT_DEFAULT);
-      eventLoopGroup = new NioEventLoopGroup(threadCount,
-        new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
+      int bossThreadCount = server == null? EVENTLOOP_BOSSTHREADCOUNT_DEFAULT:
+        server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_BOSSTHREADCOUNT_KEY,
+          EVENTLOOP_BOSSTHREADCOUNT_DEFAULT);
+      workerEventLoopGroup = new NioEventLoopGroup(threadCount,
+        new DefaultThreadFactory("NettyRpcServer-worker", true, Thread.MAX_PRIORITY));
+      bossEventLoopGroup = new NioEventLoopGroup(bossThreadCount,
+        new DefaultThreadFactory("NettyRpcServer-boss", true, Thread.MAX_PRIORITY));
       channelClass = NioServerSocketChannel.class;
     }
-    ServerBootstrap bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
+    ServerBootstrap bootstrap = new ServerBootstrap().group(bossEventLoopGroup, workerEventLoopGroup).channel(channelClass)
         .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
         .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
         .childOption(ChannelOption.SO_REUSEADDR, true)

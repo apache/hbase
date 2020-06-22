@@ -36,7 +36,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class NettyEventLoopGroupConfig {
-  private final EventLoopGroup group;
+  private final EventLoopGroup workerEventLoopGroup;
+  private final EventLoopGroup bossEventLoopGroup;
 
   private final Class<? extends ServerChannel> serverChannelClass;
 
@@ -52,21 +53,30 @@ public class NettyEventLoopGroupConfig {
   public NettyEventLoopGroupConfig(Configuration conf, String threadPoolName) {
     boolean useEpoll = useEpoll(conf);
     int workerCount = conf.getInt("hbase.netty.worker.count", 0);
-    ThreadFactory eventLoopThreadFactory =
-        new DefaultThreadFactory(threadPoolName, true, Thread.MAX_PRIORITY);
+    int bossCount = conf.getInt("hbase.netty.boss.count", 1);
+    ThreadFactory workerEventLoopThreadFactory =
+        new DefaultThreadFactory(threadPoolName + "-worker", true, Thread.MAX_PRIORITY);
+    ThreadFactory bossEventLoopThreadFactory =
+      new DefaultThreadFactory(threadPoolName + "-boss", true, Thread.MAX_PRIORITY);
     if (useEpoll) {
-      group = new EpollEventLoopGroup(workerCount, eventLoopThreadFactory);
+      workerEventLoopGroup = new EpollEventLoopGroup(workerCount, workerEventLoopThreadFactory);
+      bossEventLoopGroup = new EpollEventLoopGroup(bossCount, bossEventLoopThreadFactory);
       serverChannelClass = EpollServerSocketChannel.class;
       clientChannelClass = EpollSocketChannel.class;
     } else {
-      group = new NioEventLoopGroup(workerCount, eventLoopThreadFactory);
+      workerEventLoopGroup = new NioEventLoopGroup(workerCount, workerEventLoopThreadFactory);
+      bossEventLoopGroup = new NioEventLoopGroup(bossCount, bossEventLoopThreadFactory);
       serverChannelClass = NioServerSocketChannel.class;
       clientChannelClass = NioSocketChannel.class;
     }
   }
 
   public EventLoopGroup group() {
-    return group;
+    return workerEventLoopGroup;
+  }
+
+  public EventLoopGroup bossEventLoopGroup() {
+    return bossEventLoopGroup;
   }
 
   public Class<? extends ServerChannel> serverChannelClass() {
