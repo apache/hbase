@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
@@ -58,6 +59,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long numReferenceFiles;
   private long maxFlushQueueSize;
   private long maxCompactionQueueSize;
+  private Map<String, Long> readsOnlyFromMemstore;
+  private Map<String, Long> mixedReadsOnStore;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
@@ -228,6 +231,16 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     return this.region.hashCode();
   }
 
+  @Override
+  public Map<String, Long> getMemstoreOnlyRowReadsCount() {
+    return readsOnlyFromMemstore;
+  }
+
+  @Override
+  public Map<String, Long> getMixedRowReadsCount() {
+    return mixedReadsOnStore;
+  }
+
   public class HRegionMetricsWrapperRunnable implements Runnable {
 
     @Override
@@ -274,6 +287,26 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           if (storeAvgStoreFileAge.isPresent()) {
             avgAgeNumerator += (long) storeAvgStoreFileAge.getAsDouble() * storeHFiles;
           }
+          if(mixedReadsOnStore == null) {
+            mixedReadsOnStore = new HashMap<String, Long>();
+          }
+          Long tempVal = mixedReadsOnStore.get(store.getColumnFamilyName());
+          if (tempVal == null) {
+            tempVal = 0L;
+          } else {
+            tempVal += store.getMixedRowReadsCount();
+          }
+          mixedReadsOnStore.put(store.getColumnFamilyName(), tempVal);
+          if (readsOnlyFromMemstore == null) {
+            readsOnlyFromMemstore = new HashMap<String, Long>();
+          }
+          tempVal = readsOnlyFromMemstore.get(store.getColumnFamilyName());
+          if (tempVal == null) {
+            tempVal = 0L;
+          } else {
+            tempVal += store.getMemstoreOnlyRowReadsCount();
+          }
+          readsOnlyFromMemstore.put(store.getColumnFamilyName(), tempVal);
         }
       }
 
