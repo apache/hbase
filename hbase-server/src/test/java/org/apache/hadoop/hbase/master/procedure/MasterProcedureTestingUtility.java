@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -243,10 +245,10 @@ public class MasterProcedureTestingUtility {
   private static int countMetaRegions(final HMaster master, final TableName tableName)
       throws IOException {
     final AtomicInteger actualRegCount = new AtomicInteger(0);
-    final MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+    final ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
       @Override
       public boolean visit(Result rowResult) throws IOException {
-        RegionLocations list = MetaTableAccessor.getRegionLocations(rowResult);
+        RegionLocations list = CatalogFamilyFormat.getRegionLocations(rowResult);
         if (list == null) {
           LOG.warn("No serialized RegionInfo in " + rowResult);
           return true;

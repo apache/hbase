@@ -31,6 +31,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -443,7 +444,7 @@ public class TestEndToEndSplitTransaction {
           break;
         }
 
-        region = MetaTableAccessor.getRegionInfo(result);
+        region = CatalogFamilyFormat.getRegionInfo(result);
         if (region.isSplitParent()) {
           log("found parent region: " + region.toString());
           PairOfSameType<RegionInfo> pair = MetaTableAccessor.getDaughterRegions(result);

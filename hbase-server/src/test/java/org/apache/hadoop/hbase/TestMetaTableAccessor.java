@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -38,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -82,33 +80,35 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 /**
  * Test {@link org.apache.hadoop.hbase.MetaTableAccessor}.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 @SuppressWarnings("deprecation")
 public class TestMetaTableAccessor {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetaTableAccessor.class);
+    HBaseClassTestRule.forClass(TestMetaTableAccessor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableAccessor.class);
-  private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static Connection connection;
   private Random random = new Random();
 
   @Rule
   public TestName name = new TestName();
 
-  @BeforeClass public static void beforeClass() throws Exception {
+  @BeforeClass
+  public static void beforeClass() throws Exception {
     UTIL.startMiniCluster(3);
 
     Configuration c = new Configuration(UTIL.getConfiguration());
     // Tests to 4 retries every 5 seconds. Make it try every 1 second so more
-    // responsive.  1 second is default as is ten retries.
+    // responsive. 1 second is default as is ten retries.
     c.setLong("hbase.client.pause", 1000);
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 10);
     connection = ConnectionFactory.createConnection(c);
   }
 
-  @AfterClass public static void afterClass() throws Exception {
+  @AfterClass
+  public static void afterClass() throws Exception {
     connection.close();
     UTIL.shutdownMiniCluster();
   }
@@ -125,9 +125,9 @@ public class TestMetaTableAccessor {
       List<RegionInfo> regions = admin.getRegions(tn);
       assertEquals(4, regions.size());
       admin.mergeRegionsAsync(regions.get(0).getRegionName(), regions.get(1).getRegionName(), false)
-          .get(60, TimeUnit.SECONDS);
+        .get(60, TimeUnit.SECONDS);
       admin.mergeRegionsAsync(regions.get(2).getRegionName(), regions.get(3).getRegionName(), false)
-          .get(60, TimeUnit.SECONDS);
+        .get(60, TimeUnit.SECONDS);
 
       List<RegionInfo> mergedRegions = admin.getRegions(tn);
       assertEquals(2, mergedRegions.size());
@@ -135,7 +135,7 @@ public class TestMetaTableAccessor {
       RegionInfo mergedRegion1 = mergedRegions.get(1);
 
       List<RegionInfo> mergeParents =
-          MetaTableAccessor.getMergeRegions(connection, mergedRegion0.getRegionName());
+        MetaTableAccessor.getMergeRegions(connection, mergedRegion0.getRegionName());
       assertTrue(mergeParents.contains(regions.get(0)));
       assertTrue(mergeParents.contains(regions.get(1)));
       mergeParents = MetaTableAccessor.getMergeRegions(connection, mergedRegion1.getRegionName());
@@ -160,17 +160,17 @@ public class TestMetaTableAccessor {
     Put put = new Put(Bytes.toBytes(this.name.getMethodName()));
     List<RegionInfo> ris = new ArrayList<>();
     int limit = 10;
-    byte [] previous = HConstants.EMPTY_START_ROW;
+    byte[] previous = HConstants.EMPTY_START_ROW;
     for (int i = 0; i < limit; i++) {
-      RegionInfo ri = RegionInfoBuilder.newBuilder(tn).
-          setStartKey(previous).setEndKey(Bytes.toBytes(i)).build();
+      RegionInfo ri =
+        RegionInfoBuilder.newBuilder(tn).setStartKey(previous).setEndKey(Bytes.toBytes(i)).build();
       ris.add(ri);
     }
     put = MetaTableAccessor.addMergeRegions(put, ris);
     List<Cell> cells = put.getFamilyCellMap().get(HConstants.CATALOG_FAMILY);
     String previousQualifier = null;
     assertEquals(limit, cells.size());
-    for (Cell cell: cells) {
+    for (Cell cell : cells) {
       LOG.info(cell.toString());
       String qualifier = Bytes.toString(cell.getQualifierArray());
       assertTrue(qualifier.startsWith(HConstants.MERGE_QUALIFIER_PREFIX_STR));
@@ -195,12 +195,11 @@ public class TestMetaTableAccessor {
   }
 
   /**
-   * Does {@link MetaTableAccessor#getRegion(Connection, byte[])} and a write
-   * against hbase:meta while its hosted server is restarted to prove our retrying
-   * works.
+   * Does {@link MetaTableAccessor#getRegion(Connection, byte[])} and a write against hbase:meta
+   * while its hosted server is restarted to prove our retrying works.
    */
-  @Test public void testRetrying()
-  throws IOException, InterruptedException {
+  @Test
+  public void testRetrying() throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     LOG.info("Started " + tableName);
     Table t = UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY);
@@ -209,8 +208,7 @@ public class TestMetaTableAccessor {
       regionCount = r.getStartKeys().length;
     }
     // Test it works getting a region from just made user table.
-    final List<RegionInfo> regions =
-      testGettingTableRegions(connection, tableName, regionCount);
+    final List<RegionInfo> regions = testGettingTableRegions(connection, tableName, regionCount);
     MetaTask reader = new MetaTask(connection, "reader") {
       @Override
       void metaTask() throws Throwable {
@@ -229,8 +227,8 @@ public class TestMetaTableAccessor {
     writer.start();
 
     // We're gonna check how it takes. If it takes too long, we will consider
-    //  it as a fail. We can't put that in the @Test tag as we want to close
-    //  the threads nicely
+    // it as a fail. We can't put that in the @Test tag as we want to close
+    // the threads nicely
     final long timeOut = 180000;
     long startTime = System.currentTimeMillis();
 
@@ -239,18 +237,17 @@ public class TestMetaTableAccessor {
       assertTrue(reader.isProgressing());
       assertTrue(writer.isProgressing());
 
-      // Kill server hosting meta -- twice  . See if our reader/writer ride over the
-      // meta moves.  They'll need to retry.
+      // Kill server hosting meta -- twice . See if our reader/writer ride over the
+      // meta moves. They'll need to retry.
       for (int i = 0; i < 2; i++) {
         LOG.info("Restart=" + i);
         UTIL.ensureSomeRegionServersAvailable(2);
         int index = -1;
         do {
           index = UTIL.getMiniHBaseCluster().getServerWithMeta();
-        } while (index == -1 &&
-          startTime + timeOut < System.currentTimeMillis());
+        } while (index == -1 && startTime + timeOut < System.currentTimeMillis());
 
-        if (index != -1){
+        if (index != -1) {
           UTIL.getMiniHBaseCluster().abortRegionServer(index);
           UTIL.getMiniHBaseCluster().waitOnRegionServer(index);
         }
@@ -288,8 +285,8 @@ public class TestMetaTableAccessor {
     @Override
     public void run() {
       try {
-        while(!this.stop) {
-          LOG.info("Before " + this.getName()+ ", count=" + this.count);
+        while (!this.stop) {
+          LOG.info("Before " + this.getName() + ", count=" + this.count);
           metaTask();
           this.count += 1;
           LOG.info("After " + this.getName() + ", count=" + this.count);
@@ -303,7 +300,7 @@ public class TestMetaTableAccessor {
 
     boolean isProgressing() throws InterruptedException {
       int currentCount = this.count;
-      while(currentCount == this.count) {
+      while (currentCount == this.count) {
         if (!isAlive()) return false;
         if (this.t != null) return false;
         Thread.sleep(10);
@@ -313,8 +310,7 @@ public class TestMetaTableAccessor {
 
     @Override
     public String toString() {
-      return "count=" + this.count + ", t=" +
-        (this.t == null? "null": this.t.toString());
+      return "count=" + this.count + ", t=" + (this.t == null ? "null" : this.t.toString());
     }
 
     abstract void metaTask() throws Throwable;
@@ -324,11 +320,11 @@ public class TestMetaTableAccessor {
   public void testGetRegionsFromMetaTable() throws IOException, InterruptedException {
     List<RegionInfo> regions = MetaTableLocator.getMetaRegions(UTIL.getZooKeeperWatcher());
     assertTrue(regions.size() >= 1);
-    assertTrue(
-        MetaTableLocator.getMetaRegionsAndLocations(UTIL.getZooKeeperWatcher()).size() >= 1);
+    assertTrue(MetaTableLocator.getMetaRegionsAndLocations(UTIL.getZooKeeperWatcher()).size() >= 1);
   }
 
-  @Test public void testTableExists() throws IOException {
+  @Test
+  public void testTableExists() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     assertFalse(MetaTableAccessor.tableExists(connection, tableName));
     UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
@@ -337,8 +333,7 @@ public class TestMetaTableAccessor {
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
     assertFalse(MetaTableAccessor.tableExists(connection, tableName));
-    assertTrue(MetaTableAccessor.tableExists(connection,
-        TableName.META_TABLE_NAME));
+    assertTrue(MetaTableAccessor.tableExists(connection, TableName.META_TABLE_NAME));
     UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     assertTrue(MetaTableAccessor.tableExists(connection, tableName));
     admin.disableTable(tableName);
@@ -346,7 +341,8 @@ public class TestMetaTableAccessor {
     assertFalse(MetaTableAccessor.tableExists(connection, tableName));
   }
 
-  @Test public void testGetRegion() throws IOException, InterruptedException {
+  @Test
+  public void testGetRegion() throws IOException, InterruptedException {
     final String name = this.name.getMethodName();
     LOG.info("Started " + name);
     // Test get on non-existent region.
@@ -357,20 +353,18 @@ public class TestMetaTableAccessor {
   }
 
   // Test for the optimization made in HBASE-3650
-  @Test public void testScanMetaForTable()
-  throws IOException, InterruptedException {
+  @Test
+  public void testScanMetaForTable() throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     LOG.info("Started " + tableName);
 
-    /** Create 2 tables
-     - testScanMetaForTable
-     - testScanMetaForTablf
-    **/
+    /**
+     * Create 2 tables - testScanMetaForTable - testScanMetaForTablf
+     **/
 
     UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     // name that is +1 greater than the first one (e+1=f)
-    TableName greaterName =
-        TableName.valueOf("testScanMetaForTablf");
+    TableName greaterName = TableName.valueOf("testScanMetaForTablf");
     UTIL.createTable(greaterName, HConstants.CATALOG_FAMILY);
 
     // Now make sure we only get the regions from 1 of the tables at a time
@@ -380,66 +374,20 @@ public class TestMetaTableAccessor {
   }
 
   private static List<RegionInfo> testGettingTableRegions(final Connection connection,
-      final TableName name, final int regionCount)
-  throws IOException, InterruptedException {
+    final TableName name, final int regionCount) throws IOException, InterruptedException {
     List<RegionInfo> regions = MetaTableAccessor.getTableRegions(connection, name);
     assertEquals(regionCount, regions.size());
     Pair<RegionInfo, ServerName> pair =
       MetaTableAccessor.getRegion(connection, regions.get(0).getRegionName());
-    assertEquals(regions.get(0).getEncodedName(),
-      pair.getFirst().getEncodedName());
+    assertEquals(regions.get(0).getEncodedName(), pair.getFirst().getEncodedName());
     return regions;
   }
 
-  private static void testGetRegion(final Connection connection,
-      final RegionInfo region)
-  throws IOException, InterruptedException {
+  private static void testGetRegion(final Connection connection, final RegionInfo region)
+    throws IOException, InterruptedException {
     Pair<RegionInfo, ServerName> pair =
       MetaTableAccessor.getRegion(connection, region.getRegionName());
-    assertEquals(region.getEncodedName(),
-      pair.getFirst().getEncodedName());
-  }
-
-  @Test
-  public void testParseReplicaIdFromServerColumn() {
-    String column1 = HConstants.SERVER_QUALIFIER_STR;
-    assertEquals(0,
-        MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column1)));
-    String column2 = column1 + MetaTableAccessor.META_REPLICA_ID_DELIMITER;
-    assertEquals(-1,
-        MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column2)));
-    String column3 = column2 + "00";
-    assertEquals(-1,
-        MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column3)));
-    String column4 = column3 + "2A";
-    assertEquals(42,
-        MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column4)));
-    String column5 = column4 + "2A";
-    assertEquals(-1,
-        MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column5)));
-    String column6 = HConstants.STARTCODE_QUALIFIER_STR;
-    assertEquals(-1,
-        MetaTableAccessor.parseReplicaIdFromServerColumn(Bytes.toBytes(column6)));
-  }
-
-  @Test
-  public void testMetaReaderGetColumnMethods() {
-    assertArrayEquals(HConstants.SERVER_QUALIFIER, MetaTableAccessor.getServerColumn(0));
-    assertArrayEquals(Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR
-      + MetaTableAccessor.META_REPLICA_ID_DELIMITER + "002A"),
-      MetaTableAccessor.getServerColumn(42));
-
-    assertArrayEquals(HConstants.STARTCODE_QUALIFIER,
-      MetaTableAccessor.getStartCodeColumn(0));
-    assertArrayEquals(Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR
-      + MetaTableAccessor.META_REPLICA_ID_DELIMITER + "002A"),
-      MetaTableAccessor.getStartCodeColumn(42));
-
-    assertArrayEquals(HConstants.SEQNUM_QUALIFIER,
-      MetaTableAccessor.getSeqNumColumn(0));
-    assertArrayEquals(Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR
-      + MetaTableAccessor.META_REPLICA_ID_DELIMITER + "002A"),
-      MetaTableAccessor.getSeqNumColumn(42));
+    assertEquals(region.getEncodedName(), pair.getFirst().getEncodedName());
   }
 
   @Test
@@ -450,26 +398,14 @@ public class TestMetaTableAccessor {
 
     long regionId = System.currentTimeMillis();
     RegionInfo primary = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
     RegionInfo replica1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(1)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(1).build();
     RegionInfo replica100 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(100)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(100).build();
 
     long seqNum0 = random.nextLong();
     long seqNum1 = random.nextLong();
@@ -502,31 +438,31 @@ public class TestMetaTableAccessor {
     }
   }
 
-  public static void assertMetaLocation(Table meta, byte[] row, ServerName serverName,
-      long seqNum, int replicaId, boolean checkSeqNum) throws IOException {
+  public static void assertMetaLocation(Table meta, byte[] row, ServerName serverName, long seqNum,
+    int replicaId, boolean checkSeqNum) throws IOException {
     Get get = new Get(row);
     Result result = meta.get(get);
     assertTrue(Bytes.equals(
-      result.getValue(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(replicaId)),
+      result.getValue(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerColumn(replicaId)),
       Bytes.toBytes(serverName.getAddress().toString())));
     assertTrue(Bytes.equals(
-      result.getValue(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(replicaId)),
+      result.getValue(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getStartCodeColumn(replicaId)),
       Bytes.toBytes(serverName.getStartcode())));
     if (checkSeqNum) {
       assertTrue(Bytes.equals(
-        result.getValue(HConstants.CATALOG_FAMILY, MetaTableAccessor.getSeqNumColumn(replicaId)),
+        result.getValue(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getSeqNumColumn(replicaId)),
         Bytes.toBytes(seqNum)));
     }
   }
 
   public static void assertEmptyMetaLocation(Table meta, byte[] row, int replicaId)
-      throws IOException {
+    throws IOException {
     Get get = new Get(row);
     Result result = meta.get(get);
     Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        MetaTableAccessor.getServerColumn(replicaId));
+      CatalogFamilyFormat.getServerColumn(replicaId));
     Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-      MetaTableAccessor.getStartCodeColumn(replicaId));
+      CatalogFamilyFormat.getStartCodeColumn(replicaId));
     assertNotNull(serverCell);
     assertNotNull(startCodeCell);
     assertEquals(0, serverCell.getValueLength());
@@ -537,8 +473,8 @@ public class TestMetaTableAccessor {
   public void testMetaLocationForRegionReplicasIsRemovedAtTableDeletion() throws IOException {
     long regionId = System.currentTimeMillis();
     RegionInfo primary = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-        .setRegionId(regionId).setReplicaId(0).build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
 
     Table meta = MetaTableAccessor.getMetaHTable(connection);
     try {
@@ -550,13 +486,13 @@ public class TestMetaTableAccessor {
       Result result = meta.get(get);
       for (int replicaId = 0; replicaId < 3; replicaId++) {
         Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getServerColumn(replicaId));
+          CatalogFamilyFormat.getServerColumn(replicaId));
         Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getStartCodeColumn(replicaId));
+          CatalogFamilyFormat.getStartCodeColumn(replicaId));
         Cell stateCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getRegionStateColumn(replicaId));
+          CatalogFamilyFormat.getRegionStateColumn(replicaId));
         Cell snCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getServerNameColumn(replicaId));
+          CatalogFamilyFormat.getServerNameColumn(replicaId));
         if (replicaId == 0) {
           assertNotNull(stateCell);
         } else {
@@ -575,12 +511,8 @@ public class TestMetaTableAccessor {
   public void testMetaLocationForRegionReplicasIsAddedAtTableCreation() throws IOException {
     long regionId = System.currentTimeMillis();
     RegionInfo primary = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
 
     Table meta = MetaTableAccessor.getMetaHTable(connection);
     try {
@@ -599,27 +531,15 @@ public class TestMetaTableAccessor {
     long regionId = System.currentTimeMillis();
     ServerName serverName0 = ServerName.valueOf("foo", 60010, random.nextLong());
     RegionInfo parent = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
 
     RegionInfo splitA = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(Bytes.toBytes("a"))
-        .setSplit(false)
-        .setRegionId(regionId + 1)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
+      .setRegionId(regionId + 1).setReplicaId(0).build();
     RegionInfo splitB = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(Bytes.toBytes("a"))
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId + 1)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(Bytes.toBytes("a")).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId + 1).setReplicaId(0).build();
 
     try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
       List<RegionInfo> regionInfos = Lists.newArrayList(parent);
@@ -640,41 +560,29 @@ public class TestMetaTableAccessor {
     ServerName serverName0 = ServerName.valueOf("foo", 60010, random.nextLong());
 
     RegionInfo parentA = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(Bytes.toBytes("a"))
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(Bytes.toBytes("a")).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
 
     RegionInfo parentB = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(Bytes.toBytes("a"))
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
     RegionInfo merged = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId + 1)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId + 1).setReplicaId(0).build();
 
     try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
       List<RegionInfo> regionInfos = Lists.newArrayList(parentA, parentB);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
       MetaTableAccessor.mergeRegions(connection, merged, getMapOfRegionsToSeqNum(parentA, parentB),
-          serverName0, 3);
+        serverName0, 3);
       assertEmptyMetaLocation(meta, merged.getRegionName(), 1);
       assertEmptyMetaLocation(meta, merged.getRegionName(), 2);
     }
   }
 
-  private Map<RegionInfo, Long> getMapOfRegionsToSeqNum(RegionInfo ... regions) {
+  private Map<RegionInfo, Long> getMapOfRegionsToSeqNum(RegionInfo... regions) {
     Map<RegionInfo, Long> mids = new HashMap<>(regions.length);
-    for (RegionInfo region: regions) {
+    for (RegionInfo region : regions) {
       mids.put(region, -1L);
     }
     return mids;
@@ -687,15 +595,14 @@ public class TestMetaTableAccessor {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[][] SPLIT_KEYS =
-        new byte[][] { Bytes.toBytes("region_a"), Bytes.toBytes("region_b") };
+      new byte[][] { Bytes.toBytes("region_a"), Bytes.toBytes("region_b") };
 
     UTIL.createTable(tableName, FAMILY, SPLIT_KEYS);
     Table table = connection.getTable(tableName);
     // Make sure all the regions are deployed
     UTIL.countRows(table);
 
-    MetaTableAccessor.Visitor visitor =
-        mock(MetaTableAccessor.Visitor.class);
+    ClientMetaTableAccessor.Visitor visitor = mock(ClientMetaTableAccessor.Visitor.class);
     doReturn(true).when(visitor).visit((Result) anyObject());
 
     // Scanning the entire table should give us three rows
@@ -731,12 +638,8 @@ public class TestMetaTableAccessor {
   public void testMastersSystemTimeIsUsedInUpdateLocations() throws IOException {
     long regionId = System.currentTimeMillis();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
 
     ServerName sn = ServerName.valueOf("bar", 0, 0);
     try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
@@ -749,11 +652,11 @@ public class TestMetaTableAccessor {
       Get get = new Get(regionInfo.getRegionName());
       Result result = meta.get(get);
       Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getServerColumn(0));
+        CatalogFamilyFormat.getServerColumn(0));
       Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        MetaTableAccessor.getStartCodeColumn(0));
+        CatalogFamilyFormat.getStartCodeColumn(0));
       Cell seqNumCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        MetaTableAccessor.getSeqNumColumn(0));
+        CatalogFamilyFormat.getSeqNumColumn(0));
       assertNotNull(serverCell);
       assertNotNull(startCodeCell);
       assertNotNull(seqNumCell);
@@ -771,27 +674,16 @@ public class TestMetaTableAccessor {
     long regionId = System.currentTimeMillis();
 
     RegionInfo regionInfoA = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(new byte[] {'a'})
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(new byte[] { 'a' }).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
 
     RegionInfo regionInfoB = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(new byte[] {'a'})
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(0)
-        .build();
-    RegionInfo mergedRegionInfo = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(new byte[] { 'a' }).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
+    RegionInfo mergedRegionInfo =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+        .setRegionId(regionId).setReplicaId(0).build();
 
     ServerName sn = ServerName.valueOf("bar", 0, 0);
     try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
@@ -801,7 +693,7 @@ public class TestMetaTableAccessor {
       // write the serverName column with a big current time, but set the masters time as even
       // bigger. When region merge deletes the rows for regionA and regionB, the serverName columns
       // should not be seen by the following get
-      long serverNameTime = EnvironmentEdgeManager.currentTime()   + 100000000;
+      long serverNameTime = EnvironmentEdgeManager.currentTime() + 100000000;
       long masterSystemTime = EnvironmentEdgeManager.currentTime() + 123456789;
 
       // write the serverName columns
@@ -811,7 +703,7 @@ public class TestMetaTableAccessor {
       Get get = new Get(mergedRegionInfo.getRegionName());
       Result result = meta.get(get);
       Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getServerColumn(0));
+        CatalogFamilyFormat.getServerColumn(0));
       assertNotNull(serverCell);
       assertEquals(serverNameTime, serverCell.getTimestamp());
 
@@ -821,19 +713,18 @@ public class TestMetaTableAccessor {
       try {
         // now merge the regions, effectively deleting the rows for region a and b.
         MetaTableAccessor.mergeRegions(connection, mergedRegionInfo,
-            getMapOfRegionsToSeqNum(regionInfoA, regionInfoB), sn, 1);
+          getMapOfRegionsToSeqNum(regionInfoA, regionInfoB), sn, 1);
       } finally {
         EnvironmentEdgeManager.reset();
       }
 
-
       result = meta.get(get);
       serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getServerColumn(0));
+        CatalogFamilyFormat.getServerColumn(0));
       Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        MetaTableAccessor.getStartCodeColumn(0));
+        CatalogFamilyFormat.getStartCodeColumn(0));
       Cell seqNumCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        MetaTableAccessor.getSeqNumColumn(0));
+        CatalogFamilyFormat.getSeqNumColumn(0));
       assertNull(serverCell);
       assertNull(startCodeCell);
       assertNull(seqNumCell);
@@ -880,7 +771,7 @@ public class TestMetaTableAccessor {
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Admin admin = connection.getAdmin();
-        RegionLocator rl = connection.getRegionLocator(tableName)) {
+      RegionLocator rl = connection.getRegionLocator(tableName)) {
 
       // create a table and prepare for a manual split
       UTIL.createTable(tableName, "cf1");
@@ -889,18 +780,11 @@ public class TestMetaTableAccessor {
       RegionInfo parent = loc.getRegion();
       long rid = 1000;
       byte[] splitKey = Bytes.toBytes("a");
-      RegionInfo splitA = RegionInfoBuilder.newBuilder(parent.getTable())
-          .setStartKey(parent.getStartKey())
-          .setEndKey(splitKey)
-          .setSplit(false)
-          .setRegionId(rid)
-          .build();
-      RegionInfo splitB = RegionInfoBuilder.newBuilder(parent.getTable())
-          .setStartKey(splitKey)
-          .setEndKey(parent.getEndKey())
-          .setSplit(false)
-          .setRegionId(rid)
-          .build();
+      RegionInfo splitA =
+        RegionInfoBuilder.newBuilder(parent.getTable()).setStartKey(parent.getStartKey())
+          .setEndKey(splitKey).setSplit(false).setRegionId(rid).build();
+      RegionInfo splitB = RegionInfoBuilder.newBuilder(parent.getTable()).setStartKey(splitKey)
+        .setEndKey(parent.getEndKey()).setSplit(false).setRegionId(rid).build();
 
       // find the meta server
       MiniHBaseCluster cluster = UTIL.getMiniHBaseCluster();
@@ -926,49 +810,36 @@ public class TestMetaTableAccessor {
     long regionId = System.currentTimeMillis();
     ServerName serverName0 = ServerName.valueOf("foo", 60010, random.nextLong());
     RegionInfo parent = RegionInfoBuilder.newBuilder(TableName.valueOf("table_foo"))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
     RegionInfo splitA = RegionInfoBuilder.newBuilder(TableName.valueOf("table_foo"))
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(Bytes.toBytes("a"))
-        .setSplit(false)
-        .setRegionId(regionId + 1)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
+      .setRegionId(regionId + 1).setReplicaId(0).build();
     RegionInfo splitB = RegionInfoBuilder.newBuilder(TableName.valueOf("table_foo"))
-        .setStartKey(Bytes.toBytes("a"))
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .setSplit(false)
-        .setRegionId(regionId + 1)
-        .setReplicaId(0)
-        .build();
+      .setStartKey(Bytes.toBytes("a")).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId + 1).setReplicaId(0).build();
 
     Table meta = MetaTableAccessor.getMetaHTable(connection);
     try {
       List<RegionInfo> regionInfos = Lists.newArrayList(parent);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
 
-      MetaTableAccessor.splitRegion(connection, parent, -1L, splitA, splitB,
-        serverName0, 3);
+      MetaTableAccessor.splitRegion(connection, parent, -1L, splitA, splitB, serverName0, 3);
       Get get1 = new Get(splitA.getRegionName());
       Result resultA = meta.get(get1);
       Cell serverCellA = resultA.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        MetaTableAccessor.getServerColumn(splitA.getReplicaId()));
+        CatalogFamilyFormat.getServerColumn(splitA.getReplicaId()));
       Cell startCodeCellA = resultA.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        MetaTableAccessor.getStartCodeColumn(splitA.getReplicaId()));
+        CatalogFamilyFormat.getStartCodeColumn(splitA.getReplicaId()));
       assertNull(serverCellA);
       assertNull(startCodeCellA);
 
       Get get2 = new Get(splitA.getRegionName());
       Result resultB = meta.get(get2);
       Cell serverCellB = resultB.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        MetaTableAccessor.getServerColumn(splitB.getReplicaId()));
+        CatalogFamilyFormat.getServerColumn(splitB.getReplicaId()));
       Cell startCodeCellB = resultB.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        MetaTableAccessor.getStartCodeColumn(splitB.getReplicaId()));
+        CatalogFamilyFormat.getStartCodeColumn(splitB.getReplicaId()));
       assertNull(serverCellB);
       assertNull(startCodeCellB);
     } finally {
@@ -984,8 +855,8 @@ public class TestMetaTableAccessor {
     UTIL.createTable(tableName, "cf");
     final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
-    final Result result = MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(),
-      encodedName);
+    final Result result =
+      MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(), encodedName);
     assertNotNull(result);
     assertTrue(result.advance());
     final String resultingRowKey = CellUtil.getCellKeyAsString(result.current());
@@ -996,9 +867,8 @@ public class TestMetaTableAccessor {
   @Test
   public void testScanByRegionEncodedNameNonExistingRegion() throws Exception {
     final String encodedName = "nonexistingregion";
-    final Result result = MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(),
-      encodedName);
+    final Result result =
+      MetaTableAccessor.scanByRegionEncodedName(UTIL.getConnection(), encodedName);
     assertNull(result);
   }
 }
-

@@ -22,10 +22,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -75,27 +76,28 @@ public class RegionStateStore {
   }
 
   public void visitMeta(final RegionStateVisitor visitor) throws IOException {
-    MetaTableAccessor.fullScanRegions(master.getConnection(), new MetaTableAccessor.Visitor() {
-      final boolean isDebugEnabled = LOG.isDebugEnabled();
+    MetaTableAccessor.fullScanRegions(master.getConnection(),
+      new ClientMetaTableAccessor.Visitor() {
+        final boolean isDebugEnabled = LOG.isDebugEnabled();
 
-      @Override
-      public boolean visit(final Result r) throws IOException {
-        if (r !=  null && !r.isEmpty()) {
-          long st = 0;
-          if (LOG.isTraceEnabled()) {
-            st = System.currentTimeMillis();
+        @Override
+        public boolean visit(final Result r) throws IOException {
+          if (r != null && !r.isEmpty()) {
+            long st = 0;
+            if (LOG.isTraceEnabled()) {
+              st = System.currentTimeMillis();
+            }
+            visitMetaEntry(visitor, r);
+            if (LOG.isTraceEnabled()) {
+              long et = System.currentTimeMillis();
+              LOG.trace("[T] LOAD META PERF " + StringUtils.humanTimeDiff(et - st));
+            }
+          } else if (isDebugEnabled) {
+            LOG.debug("NULL result from meta - ignoring but this is strange.");
           }
-          visitMetaEntry(visitor, r);
-          if (LOG.isTraceEnabled()) {
-            long et = System.currentTimeMillis();
-            LOG.trace("[T] LOAD META PERF " + StringUtils.humanTimeDiff(et - st));
-          }
-        } else if (isDebugEnabled) {
-          LOG.debug("NULL result from meta - ignoring but this is strange.");
+          return true;
         }
-        return true;
-      }
-    });
+      });
   }
 
   /**
@@ -117,7 +119,7 @@ public class RegionStateStore {
 
   private void visitMetaEntry(final RegionStateVisitor visitor, final Result result)
       throws IOException {
-    final RegionLocations rl = MetaTableAccessor.getRegionLocations(result);
+    final RegionLocations rl = CatalogFamilyFormat.getRegionLocations(result);
     if (rl == null) return;
 
     final HRegionLocation[] locations = rl.getRegionLocations();
@@ -176,7 +178,7 @@ public class RegionStateStore {
        long pid) throws IOException {
     long time = EnvironmentEdgeManager.currentTime();
     final int replicaId = regionInfo.getReplicaId();
-    final Put put = new Put(MetaTableAccessor.getMetaKeyForRegion(regionInfo), time);
+    final Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), time);
     MetaTableAccessor.addRegionInfo(put, regionInfo);
     final StringBuilder info =
       new StringBuilder("pid=").append(pid).append(" updating hbase:meta row=")
@@ -199,7 +201,7 @@ public class RegionStateStore {
       put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
           .setRow(put.getRow())
           .setFamily(HConstants.CATALOG_FAMILY)
-          .setQualifier(MetaTableAccessor.getServerNameColumn(replicaId))
+          .setQualifier(CatalogFamilyFormat.getServerNameColumn(replicaId))
           .setTimestamp(put.getTimestamp())
           .setType(Cell.Type.Put)
           .setValue(Bytes.toBytes(regionLocation.getServerName()))

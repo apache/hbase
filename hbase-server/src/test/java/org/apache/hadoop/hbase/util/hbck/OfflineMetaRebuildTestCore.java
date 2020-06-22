@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -238,7 +239,7 @@ public class OfflineMetaRebuildTestCore {
     List<Delete> dels = new ArrayList<>();
     for (Result r : scanner) {
       RegionInfo info =
-          MetaTableAccessor.getRegionInfo(r);
+          CatalogFamilyFormat.getRegionInfo(r);
       if(info != null && !info.getTable().getNamespaceAsString()
           .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
         Delete d = new Delete(r.getRow());

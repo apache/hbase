@@ -17,7 +17,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -113,10 +113,10 @@ public class TestHBaseFsckCleanReplicationBarriers {
     barrierScan.setCaching(100);
     barrierScan.addFamily(HConstants.REPLICATION_BARRIER_FAMILY);
     barrierScan
-        .withStartRow(
-          MetaTableAccessor.getTableStartRowForMeta(tableName, MetaTableAccessor.QueryType.REGION))
-        .withStopRow(
-          MetaTableAccessor.getTableStopRowForMeta(tableName, MetaTableAccessor.QueryType.REGION));
+      .withStartRow(ClientMetaTableAccessor.getTableStartRowForMeta(tableName,
+        ClientMetaTableAccessor.QueryType.REGION))
+      .withStopRow(ClientMetaTableAccessor.getTableStopRowForMeta(tableName,
+        ClientMetaTableAccessor.QueryType.REGION));
     Result result;
     try (ResultScanner scanner =
         MetaTableAccessor.getMetaHTable(UTIL.getConnection()).getScanner(barrierScan)) {
