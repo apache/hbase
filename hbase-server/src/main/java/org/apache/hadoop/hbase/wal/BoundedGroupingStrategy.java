@@ -70,8 +70,4 @@ public class BoundedGroupingStrategy implements RegionGroupingStrategy{
     }
   }
 
-  @Override
-  public WAL.ServiceLevel getServiceLevel() {
-    return WAL.ServiceLevel.GROUP;
-  }
 }

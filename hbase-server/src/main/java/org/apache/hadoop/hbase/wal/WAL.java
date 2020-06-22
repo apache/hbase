@@ -44,30 +44,6 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 public interface WAL extends Closeable, WALFileLengthProvider {
 
   /**
-   * determine the write range of wal
-   */
-  enum ServiceLevel {
-    // used by FSHLogProvider or AsyncFSWalProvider
-    REGION_SERVER(1),
-    // used by RegionGroupingProvider and NamespaceGroupingStrategy
-    NAMESPACE(2),
-    // used by RegionGroupingProvider and BoundedGroupingStrategy
-    GROUP(3),
-    // used by RegionGroupingProvider and IdentityGroupingStrategy
-    REGION(5);
-
-    private final int ratio;
-
-    ServiceLevel(int ratio) {
-      this.ratio = ratio;
-    }
-
-    public int getRatio() {
-      return ratio;
-    }
-  }
-
-  /**
    * Registers WALActionsListener
    */
   void registerWALActionsListener(final WALActionsListener listener);

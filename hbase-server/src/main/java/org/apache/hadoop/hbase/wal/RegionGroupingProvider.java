@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 // imports for classes still in regionserver.wal
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -72,7 +71,6 @@ public class RegionGroupingProvider implements WALProvider {
      */
     String group(final byte[] identifier, byte[] namespace);
     void init(Configuration config, String providerId);
-    WAL.ServiceLevel getServiceLevel();
   }
 
   /**
@@ -171,10 +169,9 @@ public class RegionGroupingProvider implements WALProvider {
   }
 
   private WALProvider createProvider(String group) throws IOException {
-    AbstractFSWALProvider<? extends AbstractFSWAL<?>> provider =
-      (AbstractFSWALProvider<? extends AbstractFSWAL<?>>) WALFactory.createProvider(providerClass);
+    WALProvider provider = WALFactory.createProvider(providerClass);
     provider.init(factory, conf,
-      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : group, strategy.getServiceLevel());
+      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : group);
     provider.addWALActionsListener(new MetricsWAL());
     return provider;
   }
@@ -268,9 +265,6 @@ public class RegionGroupingProvider implements WALProvider {
     @Override
     public String group(final byte[] identifier, final byte[] namespace) {
       return Bytes.toString(identifier);
-    }
-    @Override public WAL.ServiceLevel getServiceLevel() {
-      return WAL.ServiceLevel.REGION;
     }
   }
 
