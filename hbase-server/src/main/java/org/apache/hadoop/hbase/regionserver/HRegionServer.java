@@ -1775,9 +1775,11 @@ public class HRegionServer extends Thread implements
     @Override
     protected void chore() {
       for (Region r : this.instance.onlineRegions.values()) {
-        if (r == null) {
+        // Skip compaction if region is read only
+        if (r == null || r.isReadOnly()) {
           continue;
         }
+
         HRegion hr = (HRegion) r;
         for (HStore s : hr.stores.values()) {
           try {
@@ -2283,9 +2285,12 @@ public class HRegionServer extends Thread implements
     LOG.info("Post open deploy tasks for {}, pid={}, masterSystemTime={}",
       r.getRegionInfo().getRegionNameAsString(), openProcId, masterSystemTime);
     // Do checks to see if we need to compact (references or too many files)
-    for (HStore s : r.stores.values()) {
-      if (s.hasReferences() || s.needsCompaction()) {
-        this.compactSplitThread.requestSystemCompaction(r, s, "Opening Region");
+    // Skip compaction check if region is read only
+    if (!r.isReadOnly()) {
+      for (HStore s : r.stores.values()) {
+        if (s.hasReferences() || s.needsCompaction()) {
+          this.compactSplitThread.requestSystemCompaction(r, s, "Opening Region");
+        }
       }
     }
     long openSeqNum = r.getOpenSeqNum();

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaTestHelper;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -78,13 +80,14 @@ public class TestRegionReplicaSplit {
     Table table = HTU.createTable(builder.build(), new byte[][] { f }, getSplits(2),
       new Configuration(HTU.getConfiguration()));
     HTU.loadTable(HTU.getConnection().getTable(tableName), f);
+    HTU.flush(tableName);
     return table;
   }
 
   private static byte[][] getSplits(int numRegions) {
     RegionSplitter.UniformSplit split = new RegionSplitter.UniformSplit();
-    split.setFirstRow(Bytes.toBytes(0L));
-    split.setLastRow(Bytes.toBytes(Long.MAX_VALUE));
+    split.setFirstRow(Bytes.toBytes("a"));
+    split.setLastRow(Bytes.toBytes("z"));
     return split.split(numRegions);
   }
 
@@ -109,11 +112,16 @@ public class TestRegionReplicaSplit {
         }
       }
       // There are 6 regions before split, 9 regions after split.
-      HTU.getAdmin().split(table.getName(), Bytes.toBytes(1));
+      HTU.getAdmin().split(table.getName(), Bytes.toBytes("d"));
       int count = 0;
       while (true) {
         for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
           for (Region r : rs.getRegionServer().getRegions(table.getName())) {
+            // Make sure that every region has some data (even for split daughter regions).
+            if (RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())) {
+              assertTrue(r.getStore(f).hasReferences() ||
+                r.getStore(f).getStorefiles().size() > 0);
+            }
             count++;
           }
         }
