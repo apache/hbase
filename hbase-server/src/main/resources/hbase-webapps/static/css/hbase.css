@@ -44,7 +44,7 @@ section { margin-bottom: 3em; }
 /* striped tables styling */
 table.table-striped td {
     word-break: break-all;
-    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 /* sortable tables styling */
