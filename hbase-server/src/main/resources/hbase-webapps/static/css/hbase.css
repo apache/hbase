@@ -41,6 +41,12 @@ section { margin-bottom: 3em; }
 
 /* Region Server page styling */
 
+/* striped tables styling */
+table.table-striped td {
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
 /* sortable tables styling */
 table.tablesorter thead tr .header {
     background-image: url(bg.gif);
