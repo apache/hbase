@@ -314,7 +314,7 @@ public class TestRowCounter {
    *
    * @param args the command line arguments to be used for rowcounter job.
    * @param expectedCount the expected row count (result of map reduce job).
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   private void runCreateSubmittableJobWithArgs(String[] args, int expectedCount) throws Exception {
     Job job = RowCounter.createSubmittableJob(TEST_UTIL.getConfiguration(), args);
@@ -339,7 +339,7 @@ public class TestRowCounter {
    * Test a case when the column specified in command line arguments is
    * exclusive for few rows.
    *
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsExclusiveColumn() throws Exception {
@@ -353,7 +353,7 @@ public class TestRowCounter {
    * Test a case when the column specified in command line arguments is
    * one for which the qualifier contains colons.
    *
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsColumnWithColonInQualifier() throws Exception {
@@ -367,7 +367,7 @@ public class TestRowCounter {
    * Test a case when the column specified in command line arguments is not part
    * of first KV for a row.
    *
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsHiddenColumn() throws Exception {
@@ -382,7 +382,7 @@ public class TestRowCounter {
    * Test a case when the column specified in command line arguments is
    * exclusive for few rows and also a row range filter is specified
    *
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsColumnAndRowRange() throws Exception {
@@ -394,7 +394,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when a range is specified with single range of start-end keys
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsRowSingleRange() throws Exception {
@@ -406,7 +406,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when a range is specified with single range with end key only
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsRowSingleRangeUpperBound() throws Exception {
@@ -418,7 +418,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when a range is specified with two ranges where one range is with end key only
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsRowMultiRangeUpperBound() throws Exception {
@@ -430,7 +430,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when a range is specified with multiple ranges of start-end keys
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsRowMultiRange() throws Exception {
@@ -443,7 +443,7 @@ public class TestRowCounter {
   /**
    * Test a case when a range is specified with multiple ranges of start-end keys;
    * one range is filled, another two are not
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsRowMultiEmptyRange() throws Exception {
@@ -470,7 +470,7 @@ public class TestRowCounter {
   /**
    * Test a case when the timerange is specified with --starttime and --endtime options
    *
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsTimeRange() throws Exception {
