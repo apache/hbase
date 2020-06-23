@@ -144,7 +144,7 @@ public class RowCounter extends AbstractHBaseTool {
    * @param args  The command line parameters.
    * @return The newly created job.
    * @throws IOException When setting up the job fails.
-   * @deprecated as of release 2.3.0. Will be removed on 4.0.0. Please use main method instead.
+   * @deprecated please use main method instead.
    */
   @Deprecated
   public static Job createSubmittableJob(Configuration conf, String[] args)
