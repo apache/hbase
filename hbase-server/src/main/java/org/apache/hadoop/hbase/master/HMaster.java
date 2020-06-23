@@ -473,10 +473,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
 
-  // Split/Merge Normalization plan executes asynchronously and the caller blocks on
-  // waiting max 5 sec for single plan to complete with success/failure.
-  private static final int NORMALIZATION_PLAN_WAIT_TIMEOUT = 5;
-
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302473L;
     private final int regionServerInfoPort;
@@ -1934,59 +1930,51 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     try {
-      final List<TableName> allEnabledTables = new ArrayList<>(
-        tableStateManager.getTablesInStates(TableState.State.ENABLED));
+      final List<TableName> allEnabledTables =
+        new ArrayList<>(tableStateManager.getTablesInStates(TableState.State.ENABLED));
       Collections.shuffle(allEnabledTables);
 
-      try (final Admin admin = asyncClusterConnection.toConnection().getAdmin()) {
-        int failedNormalizationPlans = 0;
-        final List<Future<?>> submittedPlanList = new ArrayList<>();
-        for (TableName table : allEnabledTables) {
-          if (table.isSystemTable()) {
-            continue;
-          }
-          final TableDescriptor tblDesc = getTableDescriptors().get(table);
-          if (tblDesc != null && !tblDesc.isNormalizationEnabled()) {
-            LOG.debug("Skipping table {} because normalization is disabled in its"
-              + " table properties.", table);
-            continue;
-          }
+      final List<Long> submittedPlanProcIds = new ArrayList<>();
+      for (TableName table : allEnabledTables) {
+        if (table.isSystemTable()) {
+          continue;
+        }
+        final TableDescriptor tblDesc = getTableDescriptors().get(table);
+        if (tblDesc != null && !tblDesc.isNormalizationEnabled()) {
+          LOG.debug(
+            "Skipping table {} because normalization is disabled in its" + " table properties.",
+            table);
+          continue;
+        }
 
-          // make one last check that the cluster isn't shutting down before proceeding.
-          if (skipRegionManagementAction("region normalizer")) {
-            return false;
-          }
+        // make one last check that the cluster isn't shutting down before proceeding.
+        if (skipRegionManagementAction("region normalizer")) {
+          return false;
+        }
 
-          final List<NormalizationPlan> plans = normalizer.computePlansForTable(table);
-          if (CollectionUtils.isEmpty(plans)) {
-            LOG.debug("No normalization required for table {}.", table);
-            continue;
-          }
+        final List<NormalizationPlan> plans = normalizer.computePlansForTable(table);
+        if (CollectionUtils.isEmpty(plans)) {
+          LOG.debug("No normalization required for table {}.", table);
+          continue;
+        }
 
-          // as of this writing, `plan.submit()` is non-blocking and uses Async Admin APIs to
-          // submit task , so there's no artificial rate-
-          // limiting of merge/split requests due to this serial loop.
-          for (NormalizationPlan plan : plans) {
-            Future<Void> future = plan.submit(admin);
-            submittedPlanList.add(future);
-            if (plan.getType() == PlanType.SPLIT) {
-              splitPlanCount++;
-            } else if (plan.getType() == PlanType.MERGE) {
-              mergePlanCount++;
-            }
+        // as of this writing, `plan.submit()` is non-blocking and uses Async Admin APIs to
+        // submit task , so there's no artificial rate-
+        // limiting of merge/split requests due to this serial loop.
+        for (NormalizationPlan plan : plans) {
+          long procId = plan.submit(this);
+          submittedPlanProcIds.add(procId);
+          if (plan.getType() == PlanType.SPLIT) {
+            splitPlanCount++;
+          } else if (plan.getType() == PlanType.MERGE) {
+            mergePlanCount++;
           }
         }
-        for (Future<?> submittedPlan : submittedPlanList) {
-          try {
-            submittedPlan.get(NORMALIZATION_PLAN_WAIT_TIMEOUT, TimeUnit.SECONDS);
-          } catch (Exception e) {
-            failedNormalizationPlans++;
-            LOG.error("Submitted normalization plan failed with error: ", e);
-          }
+        int totalPlansSubmitted = submittedPlanProcIds.size();
+        if (totalPlansSubmitted > 0 && LOG.isDebugEnabled()) {
+          LOG.debug("Normalizer plans submitted. Total plans count: {} , procID list: {}",
+            totalPlansSubmitted, submittedPlanProcIds);
         }
-        int totalNormalizationPlans = submittedPlanList.size();
-        LOG.info("Normalizer run was able to successfully execute {}/{} merge or split plans",
-          totalNormalizationPlans - failedNormalizationPlans, totalNormalizationPlans);
       }
     } finally {
       normalizationInProgressLock.unlock();
@@ -2028,8 +2016,8 @@ public class HMaster extends HRegionServer implements MasterServices {
           " failed because merge switch is off");
     }
 
-    final String mergeRegionsStr = Arrays.stream(regionsToMerge).map(r -> r.getEncodedName()).
-      collect(Collectors.joining(", "));
+    final String mergeRegionsStr = Arrays.stream(regionsToMerge).map(RegionInfo::getEncodedName)
+      .collect(Collectors.joining(", "));
     return MasterProcedureUtil.submitProcedure(new NonceProcedureRunnable(this, ng, nonce) {
       @Override
       protected void run() throws IOException {

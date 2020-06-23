@@ -18,10 +18,9 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
+import java.io.IOException;
 
 /**
  * Plan which signifies that no normalization is required,
@@ -45,8 +44,8 @@ public final class EmptyNormalizationPlan implements NormalizationPlan {
    * No-op for empty plan.
    */
   @Override
-  public Future<Void> submit(Admin admin) {
-    return CompletableFuture.completedFuture(null);
+  public long submit(MasterServices masterServices) throws IOException {
+    return -1;
   }
 
   @Override

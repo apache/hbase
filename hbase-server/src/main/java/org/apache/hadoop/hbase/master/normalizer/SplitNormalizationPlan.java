@@ -20,9 +20,8 @@ package org.apache.hadoop.hbase.master.normalizer;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.Future;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,9 +45,8 @@ public class SplitNormalizationPlan implements NormalizationPlan {
    * {@inheritDoc}
    */
   @Override
-  public Future<Void> submit(final Admin admin) throws IOException {
-    LOG.info("Executing splitting normalization plan: " + this);
-    return admin.splitRegionAsync(regionInfo.getRegionName());
+  public long submit(MasterServices masterServices) throws IOException {
+    return masterServices.splitRegion(regionInfo, null, 0, 0);
   }
 
   @Override

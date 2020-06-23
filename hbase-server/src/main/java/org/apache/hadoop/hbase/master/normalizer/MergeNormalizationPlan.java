@@ -19,10 +19,9 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import java.io.IOException;
-import java.util.concurrent.Future;
 
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,15 +45,13 @@ public class MergeNormalizationPlan implements NormalizationPlan {
    * {@inheritDoc}
    */
   @Override
-  public Future<Void> submit(Admin admin) throws IOException {
+  public long submit(MasterServices masterServices) throws IOException {
     LOG.info("Executing merging normalization plan: " + this);
-    byte[][] regionsToMerge = new byte[2][];
-    regionsToMerge[0] = firstRegion.getEncodedNameAsBytes();
-    regionsToMerge[1] = secondRegion.getEncodedNameAsBytes();
     // Do not use force=true as corner cases can happen, non adjacent regions,
     // merge with a merged child region with no GC done yet, it is going to
     // cause all different issues.
-    return admin.mergeRegionsAsync(regionsToMerge, false);
+    return masterServices.mergeRegions(new RegionInfo[] { firstRegion, secondRegion },
+      false, 0, 0);
   }
 
   @Override
