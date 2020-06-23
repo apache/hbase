@@ -22,8 +22,12 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.junit.ClassRule;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.experimental.categories.Category;
 import static org.apache.hadoop.hbase.http.prometheus.PrometheusUtils.toPrometheusName;
 
+@Category({ SmallTests.class, MiscTests.class })
 public class TestPrometheusUtils {
 
   @ClassRule
