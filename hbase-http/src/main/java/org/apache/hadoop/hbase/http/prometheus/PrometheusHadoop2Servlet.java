@@ -86,7 +86,6 @@ public class PrometheusHadoop2Servlet extends HttpServlet {
 
   private void renderMetrics(Collection<MetricsRecord> metricRecords) {
     StringBuilder builder = new StringBuilder();
-    List<String> toRemove = new LinkedList<>();
     for (MetricsRecord metricsRecord : metricRecords) {
       for (AbstractMetric metrics : metricsRecord.metrics()) {
         if (metrics.type() == MetricType.COUNTER || metrics.type() == MetricType.GAUGE) {
