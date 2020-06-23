@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.log4j.Level;
@@ -307,5 +308,33 @@ public class TestHBaseSaslRpcClient {
   @SuppressWarnings("unchecked")
   private Token<? extends TokenIdentifier> createTokenMock() {
     return mock(Token.class);
+  }
+
+  @Test(expected = IOException.class)
+   public void testFailedEvaluateResponse() throws IOException {
+    //prep mocking the SaslClient
+    HBaseSaslRpcClient rpcClient = new HBaseSaslRpcClient(AuthMethod.DIGEST,
+        createTokenMockWithCredentials("principal", "password"), "principal", false) {
+      @Override
+      public SaslClient createDigestSaslClient(String[] mechanismNames,
+          String saslDefaultRealm, CallbackHandler saslClientCallbackHandler)
+          throws IOException {
+        return Mockito.mock(SaslClient.class);
+      }
+    };
+
+    //simulate getting an error from a failed saslServer.evaluateResponse
+    DataOutputBuffer errorBuffer = new DataOutputBuffer();
+    errorBuffer.writeInt(SaslStatus.ERROR.state);
+    WritableUtils.writeString(errorBuffer, IOException.class.getName());
+    WritableUtils.writeString(errorBuffer, "Invalid Token");
+
+    DataInputBuffer in = new DataInputBuffer();
+    in.reset(errorBuffer.getData(), 0, errorBuffer.getLength());
+    DataOutputBuffer out = new DataOutputBuffer();
+
+    //simulate that authentication exchange has completed quickly after sending the token
+    Mockito.when(rpcClient.saslClient.isComplete()).thenReturn(true);
+    rpcClient.saslConnect(in, out);
   }
 }
