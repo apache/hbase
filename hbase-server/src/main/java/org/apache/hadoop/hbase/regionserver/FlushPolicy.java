@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configured;
 import org.apache.yetus.audience.InterfaceAudience;
