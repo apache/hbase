@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -1234,6 +1235,16 @@ public final class HConstants {
     Collections.unmodifiableList(Arrays.asList(new String[] {
       HBCK_SIDELINEDIR_NAME, HBASE_TEMP_DIRECTORY, MIGRATION_NAME
     }));
+
+  /**
+   * Directories that are not HBase user table directories.
+   * @deprecated Since hbase-2.3.0; no replacement as not used any more (internally at least)
+   */
+  @Deprecated
+  public static final List<String> HBASE_NON_USER_TABLE_DIRS =
+    Collections.unmodifiableList(Arrays.asList((String[])ArrayUtils.addAll(
+      new String[] { TableName.META_TABLE_NAME.getNameAsString() },
+      HBASE_NON_TABLE_DIRS.toArray())));
 
   /** Health script related settings. */
   public static final String HEALTH_SCRIPT_LOC = "hbase.node.health.script.location";
