@@ -54,7 +54,7 @@ public class TestRowCounter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRowCounter.class);
+    HBaseClassTestRule.forClass(TestRowCounter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRowCounter.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -94,7 +94,7 @@ public class TestRowCounter {
   @Test
   public void testRowCounterNoColumn() throws Exception {
     String[] args = new String[] {
-        TABLE_NAME
+      TABLE_NAME
     };
     runRowCount(args, 10);
   }
@@ -108,7 +108,7 @@ public class TestRowCounter {
   @Test
   public void testRowCounterExclusiveColumn() throws Exception {
     String[] args = new String[] {
-        TABLE_NAME, COL_FAM + ":" + COL1
+      TABLE_NAME, COL_FAM + ":" + COL1
     };
     runRowCount(args, 8);
   }
@@ -122,7 +122,7 @@ public class TestRowCounter {
   @Test
   public void testRowCounterColumnWithColonInQualifier() throws Exception {
     String[] args = new String[] {
-        TABLE_NAME, COL_FAM + ":" + COMPOSITE_COLUMN
+      TABLE_NAME, COL_FAM + ":" + COMPOSITE_COLUMN
     };
     runRowCount(args, 8);
   }
@@ -136,7 +136,7 @@ public class TestRowCounter {
   @Test
   public void testRowCounterHiddenColumn() throws Exception {
     String[] args = new String[] {
-        TABLE_NAME, COL_FAM + ":" + COL2
+      TABLE_NAME, COL_FAM + ":" + COL2
     };
     runRowCount(args, 10);
   }
@@ -151,7 +151,7 @@ public class TestRowCounter {
   @Test
   public void testRowCounterColumnAndRowRange() throws Exception {
     String[] args = new String[] {
-            TABLE_NAME, "--range=\\x00rov,\\x00rox", COL_FAM + ":" + COL1
+      TABLE_NAME, "--range=\\x00rov,\\x00rox", COL_FAM + ":" + COL1
     };
     runRowCount(args, 8);
   }
@@ -163,7 +163,7 @@ public class TestRowCounter {
   @Test
   public void testRowCounterRowSingleRange() throws Exception {
     String[] args = new String[] {
-        TABLE_NAME, "--range=\\x00row1,\\x00row3"
+      TABLE_NAME, "--range=\\x00row1,\\x00row3"
     };
     runRowCount(args, 2);
   }
@@ -199,7 +199,7 @@ public class TestRowCounter {
   @Test
   public void testRowCounterRowMultiRange() throws Exception {
     String[] args = new String[] {
-        TABLE_NAME, "--range=\\x00row1,\\x00row3;\\x00row5,\\x00row8"
+      TABLE_NAME, "--range=\\x00row1,\\x00row3;\\x00row5,\\x00row8"
     };
     runRowCount(args, 5);
   }
@@ -212,7 +212,7 @@ public class TestRowCounter {
   @Test
   public void testRowCounterRowMultiEmptyRange() throws Exception {
     String[] args = new String[] {
-        TABLE_NAME, "--range=\\x00row1,\\x00row3;;"
+      TABLE_NAME, "--range=\\x00row1,\\x00row3;;"
     };
     runRowCount(args, 2);
   }
@@ -262,30 +262,30 @@ public class TestRowCounter {
     table.close();
 
     String[] args = new String[] {
-        TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
-        "--starttime=" + 0,
-        "--endtime=" + ts
+      TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
+      "--starttime=" + 0,
+      "--endtime=" + ts
     };
     runRowCount(args, 1);
 
     args = new String[] {
-        TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
-        "--starttime=" + 0,
-        "--endtime=" + (ts - 10)
+      TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
+      "--starttime=" + 0,
+      "--endtime=" + (ts - 10)
     };
     runRowCount(args, 1);
 
     args = new String[] {
-        TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
-        "--starttime=" + ts,
-        "--endtime=" + (ts + 1000)
+      TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
+      "--starttime=" + ts,
+      "--endtime=" + (ts + 1000)
     };
     runRowCount(args, 2);
 
     args = new String[] {
-        TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
-        "--starttime=" + (ts - 30 * 1000),
-        "--endtime=" + (ts + 30 * 1000),
+      TABLE_NAME_TS_RANGE, COL_FAM + ":" + COL1,
+      "--starttime=" + (ts - 30 * 1000),
+      "--endtime=" + (ts + 30 * 1000),
     };
     runRowCount(args, 3);
   }
@@ -314,7 +314,7 @@ public class TestRowCounter {
    *
    * @param args the command line arguments to be used for rowcounter job.
    * @param expectedCount the expected row count (result of map reduce job).
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   private void runCreateSubmittableJobWithArgs(String[] args, int expectedCount) throws Exception {
     Job job = RowCounter.createSubmittableJob(TEST_UTIL.getConfiguration(), args);
@@ -339,7 +339,7 @@ public class TestRowCounter {
    * Test a case when the column specified in command line arguments is
    * exclusive for few rows.
    *
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsExclusiveColumn() throws Exception {
@@ -353,7 +353,7 @@ public class TestRowCounter {
    * Test a case when the column specified in command line arguments is
    * one for which the qualifier contains colons.
    *
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsColumnWithColonInQualifier() throws Exception {
@@ -367,7 +367,7 @@ public class TestRowCounter {
    * Test a case when the column specified in command line arguments is not part
    * of first KV for a row.
    *
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsHiddenColumn() throws Exception {
@@ -382,7 +382,7 @@ public class TestRowCounter {
    * Test a case when the column specified in command line arguments is
    * exclusive for few rows and also a row range filter is specified
    *
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsColumnAndRowRange() throws Exception {
@@ -394,7 +394,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when a range is specified with single range of start-end keys
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsRowSingleRange() throws Exception {
@@ -406,7 +406,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when a range is specified with single range with end key only
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsRowSingleRangeUpperBound() throws Exception {
@@ -418,7 +418,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when a range is specified with two ranges where one range is with end key only
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsRowMultiRangeUpperBound() throws Exception {
@@ -430,7 +430,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when a range is specified with multiple ranges of start-end keys
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsRowMultiRange() throws Exception {
@@ -443,7 +443,7 @@ public class TestRowCounter {
   /**
    * Test a case when a range is specified with multiple ranges of start-end keys;
    * one range is filled, another two are not
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsRowMultiEmptyRange() throws Exception {
@@ -470,7 +470,7 @@ public class TestRowCounter {
   /**
    * Test a case when the timerange is specified with --starttime and --endtime options
    *
-   * @throws Exception
+   * @throws Exception in case of any unexpected error.
    */
   @Test
   public void testCreateSubmittableJobWithArgsTimeRange() throws Exception {
@@ -625,17 +625,17 @@ public class TestRowCounter {
 
   private void assertUsageContent(String usage) {
     assertTrue(usage.contains("usage: hbase rowcounter "
-        + "<tablename> [options] [<column1> <column2>...]"));
+      + "<tablename> [options] [<column1> <column2>...]"));
     assertTrue(usage.contains("Options:\n"));
     assertTrue(usage.contains("--starttime=<arg>       "
-        + "starting time filter to start counting rows from.\n"));
+      + "starting time filter to start counting rows from.\n"));
     assertTrue(usage.contains("--endtime=<arg>         "
-        + "end time filter limit, to only count rows up to this timestamp.\n"));
+      + "end time filter limit, to only count rows up to this timestamp.\n"));
     assertTrue(usage.contains("--range=<arg>           "
-        + "[startKey],[endKey][;[startKey],[endKey]...]]\n"));
+      + "[startKey],[endKey][;[startKey],[endKey]...]]\n"));
     assertTrue(usage.contains("--expectedCount=<arg>   expected number of rows to be count.\n"));
     assertTrue(usage.contains("For performance, "
-        + "consider the following configuration properties:\n"));
+      + "consider the following configuration properties:\n"));
     assertTrue(usage.contains("-Dhbase.client.scanner.caching=100\n"));
     assertTrue(usage.contains("-Dmapreduce.map.speculative=false\n"));
   }
