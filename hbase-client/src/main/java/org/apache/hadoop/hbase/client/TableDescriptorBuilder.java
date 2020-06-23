@@ -280,6 +280,8 @@ public class TableDescriptorBuilder {
   // TODO We used to set CacheDataInL1 for NS table. When we have BucketCache in file mode, now the
   // NS data goes to File mode BC only. Test how that affect the system. If too much, we have to
   // rethink about adding back the setCacheDataInL1 for NS table.
+  // Note: namespace schema is hard-coded. In hbase3, namespace goes away; it is integrated into
+  // hbase:meta.
   public static final TableDescriptor NAMESPACE_TABLEDESC
     = TableDescriptorBuilder.newBuilder(TableName.NAMESPACE_TABLE_NAME)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(NAMESPACE_FAMILY_INFO_BYTES)
