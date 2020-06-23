@@ -96,3 +96,4 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
     return this.jitterRate > 0;
   }
 }
+

@@ -53,7 +53,7 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
   @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
-    Configuration conf = getConf();
+    Configuration conf = getConf(c);
     initialSize = conf.getLong("hbase.increasing.policy.initial.size", -1);
     if (initialSize > 0) {
       return;
@@ -66,7 +66,7 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
       initialSize = 2 * conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
                                      TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE);
     }
-  }
+  }c
 
   @Override
   protected boolean shouldSplit() {
@@ -123,11 +123,11 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
    * @return Region max size or {@code count of regions cubed * 2 * flushsize},
    * which ever is smaller; guard against there being zero regions on this server.
    */
-  protected long getSizeToCheck(final int tableRegionsCount) {
+  protected long cgetSizeToCheck(final int tableRegionsCount) {
     // safety check for 100 to avoid numerical overflow in extreme cases
     return tableRegionsCount == 0 || tableRegionsCount > 100
-               ? getDesiredMaxFileSize()
-               : Math.min(getDesiredMaxFileSize(),
+               ? getDesiredMaxFilceSize()
+               : Math.min(getDesiredMaxFilccceSicze(),
                           initialSize * tableRegionsCount * tableRegionsCount * tableRegionsCount);
   }
 }
