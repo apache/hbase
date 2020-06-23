@@ -137,6 +137,103 @@ public class RowCounter extends AbstractHBaseTool {
     return job;
   }
 
+  /**
+   * Sets up the actual job.
+   *
+   * @param conf  The current configuration.
+   * @param args  The command line parameters.
+   * @return The newly created job.
+   * @throws IOException When setting up the job fails.
+   * @deprecated as of release 2.3.0. Will be removed on 4.0.0. Please use main method instead.
+   */
+  @Deprecated
+  public static Job createSubmittableJob(Configuration conf, String[] args)
+    throws IOException {
+    String tableName = args[0];
+    List<MultiRowRangeFilter.RowRange> rowRangeList = null;
+    long startTime = 0;
+    long endTime = 0;
+
+    StringBuilder sb = new StringBuilder();
+
+    final String rangeSwitch = "--range=";
+    final String startTimeArgKey = "--starttime=";
+    final String endTimeArgKey = "--endtime=";
+    final String expectedCountArg = "--expected-count=";
+
+    // First argument is table name, starting from second
+    for (int i = 1; i < args.length; i++) {
+      if (args[i].startsWith(rangeSwitch)) {
+        try {
+          rowRangeList = parseRowRangeParameter(
+            args[i].substring(args[1].indexOf(rangeSwitch)+rangeSwitch.length()));
+        } catch (IllegalArgumentException e) {
+          return null;
+        }
+        continue;
+      }
+      if (args[i].startsWith(startTimeArgKey)) {
+        startTime = Long.parseLong(args[i].substring(startTimeArgKey.length()));
+        continue;
+      }
+      if (args[i].startsWith(endTimeArgKey)) {
+        endTime = Long.parseLong(args[i].substring(endTimeArgKey.length()));
+        continue;
+      }
+      if (args[i].startsWith(expectedCountArg)) {
+        conf.setLong(EXPECTED_COUNT_KEY,
+          Long.parseLong(args[i].substring(expectedCountArg.length())));
+        continue;
+      }
+      // if no switch, assume column names
+      sb.append(args[i]);
+      sb.append(" ");
+    }
+    if (endTime < startTime) {
+      printUsage("--endtime=" + endTime + " needs to be greater than --starttime=" + startTime);
+      return null;
+    }
+
+    Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
+    job.setJarByClass(RowCounter.class);
+    Scan scan = new Scan();
+    scan.setCacheBlocks(false);
+    setScanFilter(scan, rowRangeList);
+    if (sb.length() > 0) {
+      for (String columnName : sb.toString().trim().split(" ")) {
+        String family = StringUtils.substringBefore(columnName, ":");
+        String qualifier = StringUtils.substringAfter(columnName, ":");
+
+        if (StringUtils.isBlank(qualifier)) {
+          scan.addFamily(Bytes.toBytes(family));
+        }
+        else {
+          scan.addColumn(Bytes.toBytes(family), Bytes.toBytes(qualifier));
+        }
+      }
+    }
+    scan.setTimeRange(startTime, endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime);
+    job.setOutputFormatClass(NullOutputFormat.class);
+    TableMapReduceUtil.initTableMapperJob(tableName, scan,
+      RowCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);
+    job.setNumReduceTasks(0);
+    return job;
+  }
+
+  /**
+   * Prints usage without error message.
+   * Note that we don't document --expected-count, because it's intended for test.
+   */
+  private static void printUsage(String errorMessage) {
+    System.err.println("ERROR: " + errorMessage);
+    System.err.println("Usage: hbase rowcounter [options] <tablename> "
+      + "[--starttime=<start> --endtime=<end>] "
+      + "[--range=[startKey],[endKey][;[startKey],[endKey]...]] [<column1> <column2>...]");
+    System.err.println("For performance consider the following options:\n"
+      + "-Dhbase.client.scanner.caching=100\n"
+      + "-Dmapreduce.map.speculative=false");
+  }
+
   private static List<MultiRowRangeFilter.RowRange> parseRowRangeParameter(String arg) {
     final List<String> rangesSplit = Splitter.on(";").splitToList(arg);
     final List<MultiRowRangeFilter.RowRange> rangeList = new ArrayList<>();
