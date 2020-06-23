@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.http;
+package org.apache.hadoop.hbase.http.prometheus;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.http.prom.PrometheusServlet;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Histogram;
 import org.apache.hadoop.hbase.metrics.Meter;
@@ -64,20 +63,23 @@ public class TestPrometheusServlet {
     //Counters
     Counter c1 = mr.counter("c1");
     c1.increment();
-    test(ps, "metric_group_c1 1\n");
+    test(ps, "c1", "metric_group_c1 1\n");
     mr.remove("c1");
 
     //Meters
     Meter m1 = mr.meter("m1");
     m1.mark(0);
-    test(ps, "metric_group_m1_count 0\n" + "metric_group_m1_mean_rate 0.0\n"
+    test(ps,
+      "m1",
+      "metric_group_m1_count 0\n" + "metric_group_m1_mean_rate 0.0\n"
       + "metric_group_m1_1min_rate 0.0\n" + "metric_group_m1_5min_rate 0.0\n"
       + "metric_group_m1_15min_rate 0.0\n");
     mr.remove("m1");
 
     //Timers (don't update the timer)
-    Timer t1 = mr.timer("t1");
+    mr.timer("t1");
     test(ps,
+      "t1",
       "metric_group_t1_count 0\n"
       + "metric_group_t1_mean_rate 0.0\n"
       + "metric_group_t1_1min_rate 0.0\n"
@@ -101,6 +103,7 @@ public class TestPrometheusServlet {
     Histogram h1 = mr.histogram("h1");
     h1.update(0);
     test(ps,
+      "h1",
       "metric_group_h1_num_ops 1\n"
       + "metric_group_h1_min 0\n"
       + "metric_group_h1_max 0\n"
@@ -117,31 +120,12 @@ public class TestPrometheusServlet {
 
   }
 
-  @Test
-  public void testStrings() {
-    testWithCounter(ps, "my.counter", "metric_group_my_counter 0\n");
-
-    testWithCounter(ps, "my-counter", "metric_group_my_counter 0\n");
-
-    testWithCounter(ps, "myCounter",  "metric_group_my_counter 0\n");
-
-    testWithCounter(ps, "my_Counter", "metric_group_my_counter 0\n");
-
-    testWithCounter(ps, "my__Counter","metric_group_my_counter 0\n");
-  }
-
-  private void testWithCounter(PrometheusServlet ps, String metricName, String expected) {
-    mr.counter(metricName);
-    test(ps, expected);
-    mr.remove(metricName);
-  }
-
-  private void test(PrometheusServlet ps, String expected) {
+  private void test(PrometheusServlet ps, String metricName, String expected) {
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(bos);
     ps.writeMetrics(MetricRegistries.global().getMetricRegistries(), pw);
     String out = bos.toString();
-    assert out.equals(expected) : String.format("Expected [%s] but result is [%s]", expected, out);
+    assert out.equals(expected) : String.format("Expected [%s] but result is [%s]. input was [%s]", expected, out, metricName);
   }
 
 }

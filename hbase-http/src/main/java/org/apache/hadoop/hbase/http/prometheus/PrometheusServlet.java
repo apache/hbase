@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.http.prom;
+package org.apache.hadoop.hbase.http.prometheus;
 
-import static org.apache.hadoop.hbase.http.prom.PrometheusUtils.toPrometheusName;
+import static org.apache.hadoop.hbase.http.prometheus.PrometheusUtils.toPrometheusName;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Snapshot;
 import org.apache.hadoop.hbase.metrics.Timer;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,30 +47,30 @@ import org.slf4j.LoggerFactory;
 public class PrometheusServlet extends HttpServlet {
 
   //Strings used to create metrics names.
-  String NUM_OPS_METRIC_NAME = "_num_ops";
-  String MIN_METRIC_NAME = "_min";
-  String MAX_METRIC_NAME = "_max";
-  String MEAN_METRIC_NAME = "_mean";
-  String MEDIAN_METRIC_NAME = "_median";
-  String TWENTY_FIFTH_PERCENTILE_METRIC_NAME = "_25th_percentile";
-  String SEVENTY_FIFTH_PERCENTILE_METRIC_NAME = "_75th_percentile";
-  String NINETIETH_PERCENTILE_METRIC_NAME = "_90th_percentile";
-  String NINETY_FIFTH_PERCENTILE_METRIC_NAME = "_95th_percentile";
-  String NINETY_EIGHTH_PERCENTILE_METRIC_NAME = "_98th_percentile";
-  String NINETY_NINETH_PERCENTILE_METRIC_NAME = "_99th_percentile";
-  String NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC_NAME = "_99.9th_percentile";
+  private final String NUM_OPS_METRIC_NAME = "_num_ops";
+  private final String MIN_METRIC_NAME = "_min";
+  private final String MAX_METRIC_NAME = "_max";
+  private final String MEAN_METRIC_NAME = "_mean";
+  private final String MEDIAN_METRIC_NAME = "_median";
+  private final String TWENTY_FIFTH_PERCENTILE_METRIC_NAME = "_25th_percentile";
+  private final String SEVENTY_FIFTH_PERCENTILE_METRIC_NAME = "_75th_percentile";
+  private final String NINETIETH_PERCENTILE_METRIC_NAME = "_90th_percentile";
+  private final String NINETY_FIFTH_PERCENTILE_METRIC_NAME = "_95th_percentile";
+  private final String NINETY_EIGHTH_PERCENTILE_METRIC_NAME = "_98th_percentile";
+  private final String NINETY_NINETH_PERCENTILE_METRIC_NAME = "_99th_percentile";
+  private final String NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC_NAME = "_99.9th_percentile";
 
-  Logger LOG = LoggerFactory.getLogger(PrometheusServlet.class);
+  private final Logger LOG = LoggerFactory.getLogger(PrometheusServlet.class);
 
-  @Override protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+  @Override
+  protected void doGet(HttpServletRequest req, HttpServletResponse resp)
     throws IOException {
-
     final PrintWriter op = resp.getWriter();
-
     writeMetrics(MetricRegistries.global().getMetricRegistries(), op);
   }
 
-  public void writeMetrics(Collection<MetricRegistry> metricRegistries, PrintWriter pw) {
+  @VisibleForTesting
+  void writeMetrics(Collection<MetricRegistry> metricRegistries, PrintWriter pw) {
     final List<Pair<String, Number>> metrics = new LinkedList<>();
     metricRegistries.forEach(mr -> snapshotAllMetrics(mr, metrics));
     metrics.forEach(p -> pw.append(p.getFirst()).append(" ").println(p.getSecond()));

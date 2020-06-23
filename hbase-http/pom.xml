@@ -165,6 +165,10 @@
       <artifactId>hbase-metrics</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <artifactId>hbase-hadoop-compat</artifactId>
+      <groupId>org.apache.hbase</groupId>
+    </dependency>
     <!-- resource bundle only needed at build time -->
     <dependency>
       <groupId>org.apache.hbase</groupId>

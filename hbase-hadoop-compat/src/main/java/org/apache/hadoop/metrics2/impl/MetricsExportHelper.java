@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,29 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.http.prom;
+package org.apache.hadoop.metrics2.impl;
 
-import org.apache.hadoop.hbase.http.HttpServer;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.yetus.audience.InterfaceAudience;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
 @InterfaceAudience.Private
-public class PrometheusHadoop2Servlet extends HttpServlet {
+public class MetricsExportHelper {
 
-  public PrometheusMetricsSink getPrometheusSink() {
-    return (PrometheusMetricsSink) getServletContext().getAttribute(HttpServer.PROMETHEUS_SINK);
+  public static Collection<MetricsRecord> export() {
+    MetricsSystemImpl instance = (MetricsSystemImpl) DefaultMetricsSystem.instance();
+    MetricsBuffer metricsBuffer = instance.sampleMetrics();
+    List<MetricsRecord> metrics = new LinkedList<>();
+    for (MetricsBuffer.Entry entry : metricsBuffer) {
+      entry.records().forEach(metrics::add);
+    }
+    return metrics;
   }
 
-  @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-    throws ServletException, IOException {
-    PrometheusMetricsSink sink = getPrometheusSink();
-    sink.writeMetrics(resp.getWriter());
-    resp.getWriter().flush();
-  }
 }

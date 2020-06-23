@@ -53,14 +53,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.http.conf.ConfServlet;
-import org.apache.hadoop.hbase.http.jmx.JMXJsonServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
-import org.apache.hadoop.hbase.http.prom.PrometheusHadoop2Servlet;
-import org.apache.hadoop.hbase.http.prom.PrometheusMetricsSink;
-import org.apache.hadoop.hbase.http.prom.PrometheusServlet;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -158,9 +153,14 @@ public class HttpServer implements FilterContainer {
   public static final String NO_CACHE_FILTER = "NoCacheFilter";
   public static final String APP_DIR = "webapps";
 
-  public static final String ENABLE_PROMETHEUS_SERVLETS_CONF_KEY = "hbase.http.enable.prometheus.servlets";
-  public static final boolean ENABLE_PROMETHEUS_SERVLETS_DEFAULT = false;
-  public static final String PROMETHEUS_SINK = "PROMETHEUS_SINK";
+  public static final String METRIC_SERVLETS_CONF_KEY = "hbase.http.metrics.servlets";
+  public static final String METRICS_SERVLETS_DEFAULT[] = { "jmx", "metrics"};
+  private static final Map<String, ServletConfig> METRIC_SERVLETS = new HashMap<String, ServletConfig>() {{
+    put("jmx", new ServletConfig("jmx", "/jmx", "org.apache.hadoop.hbase.http.jmx.JMXJsonServlet"));
+    put("metrics", new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet"));
+    put("prometheus", new ServletConfig("prometheus", "/prometheus", "org.apache.hadoop.hbase.http.prometheus.PrometheusServlet"));
+    put("prometheus-hadoop2", new ServletConfig("prometheus-hadoop2", "/prometheus-hadoop2", "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoop2Servlet"));
+  }};
 
   private final AccessControlList adminsAcl;
 
@@ -744,16 +744,7 @@ public class HttpServer implements FilterContainer {
     // set up default servlets
     addPrivilegedServlet("stacks", "/stacks", StackServlet.class);
     addPrivilegedServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
-    // Hadoop3 has moved completely to metrics2, and  dropped support for Metrics v1's
-    // MetricsServlet (see HADOOP-12504).  We'll using reflection to load if against hadoop2.
-    // Remove when we drop support for hbase on hadoop2.x.
-    try {
-      Class<?> clz = Class.forName("org.apache.hadoop.metrics.MetricsServlet");
-      addPrivilegedServlet("metrics", "/metrics", clz.asSubclass(HttpServlet.class));
-    } catch (Exception e) {
-      // do nothing
-    }
-    addPrivilegedServlet("jmx", "/jmx", JMXJsonServlet.class);
+
     // While we don't expect users to have sensitive information in their configuration, they
     // might. Give them an option to not expose the service configuration to all users.
     if (conf.getBoolean(HTTP_PRIVILEGED_CONF_KEY, HTTP_PRIVILEGED_CONF_DEFAULT)) {
@@ -778,14 +769,17 @@ public class HttpServer implements FilterContainer {
         "not specified. Disabling /prof endpoint.");
     }
 
-    if(conf.getBoolean(ENABLE_PROMETHEUS_SERVLETS_CONF_KEY, ENABLE_PROMETHEUS_SERVLETS_DEFAULT)) {
-      PrometheusMetricsSink prometheusMetricsSink = new PrometheusMetricsSink();
-      setAttribute(PROMETHEUS_SINK, prometheusMetricsSink);
-      DefaultMetricsSystem.instance()
-        .register("prometheus", "Hadoop metrics prometheus exporter", prometheusMetricsSink);
-
-      addPrivilegedServlet("prometheus", "/prom", PrometheusServlet.class);
-      addPrivilegedServlet("prometheus2", "/prom-old", PrometheusHadoop2Servlet.class);
+    /* register metrics servlets */
+    String enabledServlets[] = conf.getStrings(METRIC_SERVLETS_CONF_KEY, METRICS_SERVLETS_DEFAULT);
+    for (String enabledServlet : enabledServlets) {
+      try {
+        ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
+        Class<?> clz = Class.forName(servletConfig.getClazz());
+        addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(), clz.asSubclass(HttpServlet.class));
+      } catch (Exception e) {
+        /* shouldn't be fatal, so warn the user about it */
+        LOG.warn("Couldn't register the servlet " + enabledServlet, e);
+      }
     }
   }
 

@@ -1728,13 +1728,11 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-    <name>hbase.http.enable.prometheus.servlets</name>
-    <value>false</value>
+    <name>hbase.http.metrics.servlets</name>
+    <value>jmx,metrics</value>
     <description>
-      Enable prometheus servlets /prom and /prom-old for prometheus based monitoring.
-      /prom is based on native HBase metrics API and as of now all metrics are not exposed.
-      /prom-old is based on the hadoop2 metrics API and has all the metrics, this
-      will be dropped once all metrics are available via /prom.
+      Comma separated list of servlet names to enable for metrics collection. Supported
+      servlets are jmx, metrics, prometheus, prometheus-hadoop2
     </description>
   </property>
   <property>
