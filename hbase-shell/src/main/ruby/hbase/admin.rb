@@ -765,8 +765,8 @@ module Hbase
           v = String.new(value)
           v.strip!
           # TODO: We should not require user to config the coprocessor with our inner format.
-	  # This is a roundabout approach, but will be replaced shortly since
-	  # the setCoprocessorWithSpec method is marked for deprecation.
+          # This is a roundabout approach, but will be replaced shortly since
+          # the setCoprocessorWithSpec method is marked for deprecation.
           coprocessor_descriptors = tdb.build.setCoprocessorWithSpec(v).getCoprocessorDescriptors
           tdb.setCoprocessors(coprocessor_descriptors)
           valid_coproc_keys << key
