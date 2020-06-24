@@ -338,6 +338,19 @@ public class TransitRegionStateProcedure
     try {
       switch (state) {
         case REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE:
+          // Need to do some sanity check for replica region, if the region does not exist at
+          // master, do not try to assign the replica region, log error and return.
+          if (!RegionReplicaUtil.isDefaultReplica(regionNode.getRegionInfo())) {
+            RegionInfo defaultRI =
+              RegionReplicaUtil.getRegionInfoForDefaultReplica(regionNode.getRegionInfo());
+            if (env.getMasterServices().getAssignmentManager().getRegionStates().
+              getRegionStateNode(defaultRI) == null) {
+              LOG.error(
+                "Cannot assign replica region {} because its primary region {} does not exist.",
+                regionNode.getRegionInfo(), defaultRI);
+              return Flow.NO_MORE_STATE;
+            }
+          }
           queueAssign(env, regionNode);
           return Flow.HAS_MORE_STATE;
         case REGION_STATE_TRANSITION_OPEN:
