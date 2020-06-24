@@ -713,13 +713,13 @@ module Hbase
                 if tdb.build.getValue(key).nil?
                   raise ArgumentError, "Could not find attribute: #{key}"
                 end
-                tdb.setValue(key, nil)
+                tdb.removeValue(key)
               end
             else
               if tdb.build.getValue(name).nil?
                 raise ArgumentError, "Could not find attribute: #{name}"
               end
-              tdb.setValue(name, nil)
+              tdb.removeValue(name)
             end
             hasTableUpdate = true
           # Unset table configuration
@@ -730,13 +730,13 @@ module Hbase
                 if tdb.build.getValue(key).nil?
                   raise ArgumentError, "Could not find configuration: #{key}"
                 end
-                tdb.setValue(key, nil)
+                tdb.removeValue(key)
               end
             else
               if tdb.build.getValue(name).nil?
                 raise ArgumentError, "Could not find configuration: #{name}"
               end
-              tdb.setValue(name, nil)
+              tdb.removeValue(name)
             end
             hasTableUpdate = true
           # Unknown method
