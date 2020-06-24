@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.normalizer;
 
 import java.io.IOException;
 import java.util.Arrays;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -46,7 +47,7 @@ public class SplitNormalizationPlan implements NormalizationPlan {
    */
   @Override
   public long submit(MasterServices masterServices) throws IOException {
-    return masterServices.splitRegion(regionInfo, null, 0, 0);
+    return masterServices.splitRegion(regionInfo, null, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   @Override

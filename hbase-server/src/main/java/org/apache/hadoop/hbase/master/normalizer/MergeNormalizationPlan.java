@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.normalizer;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,8 +51,9 @@ public class MergeNormalizationPlan implements NormalizationPlan {
     // Do not use force=true as corner cases can happen, non adjacent regions,
     // merge with a merged child region with no GC done yet, it is going to
     // cause all different issues.
-    return masterServices.mergeRegions(new RegionInfo[] { firstRegion, secondRegion },
-      false, 0, 0);
+    return masterServices
+      .mergeRegions(new RegionInfo[] { firstRegion, secondRegion }, false, HConstants.NO_NONCE,
+        HConstants.NO_NONCE);
   }
 
   @Override
