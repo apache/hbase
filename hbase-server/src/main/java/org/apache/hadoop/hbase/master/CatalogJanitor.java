@@ -31,6 +31,8 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -537,7 +539,7 @@ public class CatalogJanitor extends ScheduledChore {
    * generate more report. Report is NOT ready until after this visitor has been
    * {@link #close()}'d.
    */
-  static class ReportMakingVisitor implements MetaTableAccessor.CloseableVisitor {
+  static class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
     private final MasterServices services;
     private volatile boolean closed;
 
@@ -615,10 +617,10 @@ public class CatalogJanitor extends ScheduledChore {
       // If locations is null, ensure the regioninfo is for sure empty before progressing.
       // If really empty, report as missing regioninfo!  Otherwise, can run server check
       // and get RegionInfo from locations.
-      RegionLocations locations = MetaTableAccessor.getRegionLocations(metaTableRow);
+      RegionLocations locations = CatalogFamilyFormat.getRegionLocations(metaTableRow);
       if (locations == null) {
-        ri = MetaTableAccessor.getRegionInfo(metaTableRow,
-            MetaTableAccessor.getRegionInfoColumn());
+        ri = CatalogFamilyFormat.getRegionInfo(metaTableRow,
+            HConstants.REGIONINFO_QUALIFIER);
       } else {
         ri = locations.getDefaultRegionLocation().getRegion();
         checkServer(locations);

@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -174,7 +175,7 @@ public class TestCatalogJanitorInMemoryStates {
         if (result == null) {
           break;
         }
-        region = MetaTableAccessor.getRegionInfo(result);
+        region = CatalogFamilyFormat.getRegionInfo(result);
         if (region.isSplitParent()) {
           LOG.debug(region.toString() + " IS a parent!");
           pair = MetaTableAccessor.getDaughterRegions(result);

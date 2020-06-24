@@ -24,7 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -145,8 +145,8 @@ public class TestCatalogJanitorCluster {
     List<RegionInfo> t1Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T1);
     RegionInfo t1Ri1 = t1Ris.get(1);
     Put pServer = new Put(t1Ri1.getRegionName());
-    pServer.addColumn(MetaTableAccessor.getCatalogFamily(),
-        MetaTableAccessor.getServerColumn(0), Bytes.toBytes("bad.server.example.org:1234"));
+    pServer.addColumn(HConstants.CATALOG_FAMILY,
+        CatalogFamilyFormat.getServerColumn(0), Bytes.toBytes("bad.server.example.org:1234"));
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(pServer));
     gc = janitor.scan();
     report = janitor.getLastReport();
@@ -157,8 +157,8 @@ public class TestCatalogJanitorCluster {
     // break if this happens.
     LOG.info("Make null info:server");
     Put emptyInfoServerPut = new Put(t1Ri1.getRegionName());
-    emptyInfoServerPut.addColumn(MetaTableAccessor.getCatalogFamily(),
-        MetaTableAccessor.getServerColumn(0), Bytes.toBytes(""));
+    emptyInfoServerPut.addColumn(HConstants.CATALOG_FAMILY,
+        CatalogFamilyFormat.getServerColumn(0), Bytes.toBytes(""));
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(emptyInfoServerPut));
     janitor.scan();
     report = janitor.getLastReport();
@@ -166,8 +166,8 @@ public class TestCatalogJanitorCluster {
     // Mke an empty regioninfo in t1.
     RegionInfo t1Ri2 = t1Ris.get(2);
     Put pEmptyRI = new Put(t1Ri2.getRegionName());
-    pEmptyRI.addColumn(MetaTableAccessor.getCatalogFamily(),
-        MetaTableAccessor.getRegionInfoColumn(), HConstants.EMPTY_BYTE_ARRAY);
+    pEmptyRI.addColumn(HConstants.CATALOG_FAMILY,
+        HConstants.REGIONINFO_QUALIFIER, HConstants.EMPTY_BYTE_ARRAY);
     MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(pEmptyRI));
     janitor.scan();
     report = janitor.getLastReport();

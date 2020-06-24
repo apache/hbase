@@ -2643,7 +2643,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     List<byte[]> rows = new ArrayList<>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
-      RegionInfo info = MetaTableAccessor.getRegionInfo(result);
+      RegionInfo info = CatalogFamilyFormat.getRegionInfo(result);
       if (info == null) {
         LOG.error("No region info for row " + Bytes.toString(result.getRow()));
         // TODO figure out what to do for this new hosed case.
@@ -3268,13 +3268,13 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   @Nullable
   public TableState findLastTableState(final TableName table) throws IOException {
     final AtomicReference<TableState> lastTableState = new AtomicReference<>(null);
-    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+    ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
         if (!Arrays.equals(r.getRow(), table.getName())) {
           return false;
         }
-        TableState state = MetaTableAccessor.getTableState(r);
+        TableState state = CatalogFamilyFormat.getTableState(r);
         if (state != null) {
           lastTableState.set(state);
         }
@@ -3282,7 +3282,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       }
     };
     MetaTableAccessor.scanMeta(asyncConnection.toConnection(), null, null,
-      MetaTableAccessor.QueryType.TABLE, Integer.MAX_VALUE, visitor);
+      ClientMetaTableAccessor.QueryType.TABLE, Integer.MAX_VALUE, visitor);
     return lastTableState.get();
   }
 

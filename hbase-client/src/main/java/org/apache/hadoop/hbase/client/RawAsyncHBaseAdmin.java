@@ -46,16 +46,15 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsAggregator;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -507,7 +506,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     if (TableName.isMetaTableName(tableName)) {
       return CompletableFuture.completedFuture(true);
     }
-    return AsyncMetaTableAccessor.tableExists(metaTable, tableName);
+    return ClientMetaTableAccessor.tableExists(metaTable, tableName);
   }
 
   @Override
@@ -722,10 +721,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return CompletableFuture.completedFuture(true);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
-      completeCheckTableState(future, tableState.isPresent()? tableState.get(): null, error,
-        TableState.State.ENABLED, tableName);
-    });
+    addListener(ClientMetaTableAccessor.getTableState(metaTable, tableName),
+      (tableState, error) -> {
+        completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
+          TableState.State.ENABLED, tableName);
+      });
     return future;
   }
 
@@ -735,10 +735,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return CompletableFuture.completedFuture(false);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
-      completeCheckTableState(future, tableState.isPresent()? tableState.get(): null, error,
-        TableState.State.DISABLED, tableName);
-    });
+    addListener(ClientMetaTableAccessor.getTableState(metaTable, tableName),
+      (tableState, error) -> {
+        completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
+          TableState.State.DISABLED, tableName);
+      });
     return future;
   }
 
@@ -762,7 +763,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.complete(false);
       } else {
         addListener(
-          AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName),
+          ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName),
           (locations, error1) -> {
             if (error1 != null) {
               future.completeExceptionally(error1);
@@ -887,7 +888,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .thenApply(locs -> Stream.of(locs.getRegionLocations()).map(HRegionLocation::getRegion)
           .collect(Collectors.toList()));
     } else {
-      return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName)
+      return ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName)
         .thenApply(
           locs -> locs.stream().map(HRegionLocation::getRegion).collect(Collectors.toList()));
     }
@@ -1123,7 +1124,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return future;
     } else {
       // For non-meta table, we fetch all locations by scanning hbase:meta table
-      return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName);
+      return ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName);
     }
   }
 
@@ -1333,11 +1334,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(new TableNotFoundException(tableName));
         return;
       }
-      addListener(
-        metaTable
-          .scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY)
-            .withStartRow(MetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REGION))
-            .withStopRow(MetaTableAccessor.getTableStopRowForMeta(tableName, QueryType.REGION))),
+      addListener(metaTable
+        .scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY)
+          .withStartRow(ClientMetaTableAccessor.getTableStartRowForMeta(tableName,
+            ClientMetaTableAccessor.QueryType.REGION))
+          .withStopRow(ClientMetaTableAccessor.getTableStopRowForMeta(tableName,
+            ClientMetaTableAccessor.QueryType.REGION))),
         (results, err2) -> {
           if (err2 != null) {
             future.completeExceptionally(err2);
@@ -1346,10 +1348,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           if (results != null && !results.isEmpty()) {
             List<CompletableFuture<Void>> splitFutures = new ArrayList<>();
             for (Result r : results) {
-              if (r.isEmpty() || MetaTableAccessor.getRegionInfo(r) == null) {
+              if (r.isEmpty() || CatalogFamilyFormat.getRegionInfo(r) == null) {
                 continue;
               }
-              RegionLocations rl = MetaTableAccessor.getRegionLocations(r);
+              RegionLocations rl = CatalogFamilyFormat.getRegionLocations(r);
               if (rl != null) {
                 for (HRegionLocation h : rl.getRegionLocations()) {
                   if (h != null && h.getServerName() != null) {
@@ -2377,12 +2379,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             .thenApply(locs -> Stream.of(locs.getRegionLocations())
               .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
         } else {
-          future = AsyncMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
+          future = ClientMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
             regionNameOrEncodedRegionName);
         }
       } else {
         RegionInfo regionInfo =
-          MetaTableAccessor.parseRegionInfoFromRegionName(regionNameOrEncodedRegionName);
+          CatalogFamilyFormat.parseRegionInfoFromRegionName(regionNameOrEncodedRegionName);
         if (regionInfo.isMetaRegion()) {
           future = connection.registry.getMetaRegionLocations()
             .thenApply(locs -> Stream.of(locs.getRegionLocations())
@@ -2390,7 +2392,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               .findFirst());
         } else {
           future =
-            AsyncMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
+            ClientMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
         }
       }
 

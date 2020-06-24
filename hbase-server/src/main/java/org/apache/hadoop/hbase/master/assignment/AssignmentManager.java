@@ -34,10 +34,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -1123,7 +1123,7 @@ public class AssignmentManager {
    */
   private void closeRegionSilently(ServerName sn, byte [] regionName) {
     try {
-      RegionInfo ri = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
+      RegionInfo ri = CatalogFamilyFormat.parseRegionInfoFromRegionName(regionName);
       // Pass -1 for timeout. Means do not wait.
       ServerManager.closeRegionSilentlyAndWait(this.master.getAsyncClusterConnection(), sn, ri, -1);
     } catch (Exception e) {
