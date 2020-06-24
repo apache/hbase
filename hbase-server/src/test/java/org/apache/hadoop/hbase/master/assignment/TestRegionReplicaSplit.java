@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.Assert.assertNotEquals;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaTestHelper;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -56,7 +58,6 @@ public class TestRegionReplicaSplit {
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaSplit.class);
 
   private static final int NB_SERVERS = 4;
-  private static Table table;
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
@@ -65,21 +66,19 @@ public class TestRegionReplicaSplit {
   public static void beforeClass() throws Exception {
     HTU.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", 3);
     HTU.startMiniCluster(NB_SERVERS);
-    final TableName tableName = TableName.valueOf(TestRegionReplicaSplit.class.getSimpleName());
-
-    // Create table then get the single region for our new table.
-    createTable(tableName);
   }
 
   @Rule
   public TestName name = new TestName();
 
-  private static void createTable(final TableName tableName) throws IOException {
+  private static Table createTableAndLoadData(final TableName tableName) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     builder.setRegionReplication(3);
     // create a table with 3 replication
-    table = HTU.createTable(builder.build(), new byte[][] { f }, getSplits(2),
+    Table table = HTU.createTable(builder.build(), new byte[][] { f }, getSplits(2),
       new Configuration(HTU.getConfiguration()));
+    HTU.loadTable(HTU.getConnection().getTable(tableName), f);
+    return table;
   }
 
   private static byte[][] getSplits(int numRegions) {
@@ -92,35 +91,74 @@ public class TestRegionReplicaSplit {
   @AfterClass
   public static void afterClass() throws Exception {
     HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
-    table.close();
     HTU.shutdownMiniCluster();
   }
 
   @Test
   public void testRegionReplicaSplitRegionAssignment() throws Exception {
-    HTU.loadNumericRows(table, f, 0, 3);
-    // split the table
-    List<RegionInfo> regions = new ArrayList<RegionInfo>();
-    for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
-      for (Region r : rs.getRegionServer().getRegions(table.getName())) {
-        regions.add(r.getRegionInfo());
-      }
-    }
-    // There are 6 regions before split, 9 regions after split.
-    HTU.getAdmin().split(table.getName(), Bytes.toBytes(1));
-    int count = 0;
-    while (true) {
+    TableName tn = TableName.valueOf(this.name.getMethodName());
+    Table table = null;
+    try {
+      table = createTableAndLoadData(tn);
+      HTU.loadNumericRows(table, f, 0, 3);
+      // split the table
+      List<RegionInfo> regions = new ArrayList<RegionInfo>();
       for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
         for (Region r : rs.getRegionServer().getRegions(table.getName())) {
-          count++;
+          regions.add(r.getRegionInfo());
         }
       }
-      if (count >= 9) {
-        break;
+      // There are 6 regions before split, 9 regions after split.
+      HTU.getAdmin().split(table.getName(), Bytes.toBytes(1));
+      int count = 0;
+      while (true) {
+        for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
+          for (Region r : rs.getRegionServer().getRegions(table.getName())) {
+            count++;
+          }
+        }
+        if (count >= 9) {
+          break;
+        }
+        count = 0;
       }
-      count = 0;
+      RegionReplicaTestHelper.assertReplicaDistributed(HTU, table);
+    } finally {
+      if (table != null) {
+        HTU.deleteTable(tn);
+      }
     }
+  }
 
-    RegionReplicaTestHelper.assertReplicaDistributed(HTU, table);
+  @Test
+  public void testAssignFakeReplicaRegion() throws Exception {
+    TableName tn = TableName.valueOf(this.name.getMethodName());
+    Table table = null;
+    try {
+      table = createTableAndLoadData(tn);
+      final RegionInfo fakeHri =
+        RegionInfoBuilder.newBuilder(table.getName()).setStartKey(Bytes.toBytes("a"))
+          .setEndKey(Bytes.toBytes("b")).setReplicaId(1)
+          .setRegionId(System.currentTimeMillis()).build();
+
+      // To test AssignProcedure can defend this case.
+      HTU.getMiniHBaseCluster().getMaster().getAssignmentManager().assign(fakeHri);
+      // Wait until all assigns are done.
+      HBaseTestingUtility.await(50, () -> {
+        return HTU.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getActiveProcIds()
+          .isEmpty();
+      });
+
+      // Make sure the region is not online.
+      for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
+        for (Region r : rs.getRegionServer().getRegions(table.getName())) {
+          assertNotEquals(r.getRegionInfo(), fakeHri);
+        }
+      }
+    } finally {
+      if (table != null) {
+        HTU.deleteTable(tn);
+      }
+    }
   }
 }
