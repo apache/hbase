@@ -589,9 +589,9 @@ public class AssignmentManager {
     }
   }
 
-  // TODO: Need an async version of this for hbck2.
-  public long assign(RegionInfo regionInfo, ServerName sn) throws IOException {
-    // TODO: should we use getRegionStateNode?
+  private TransitRegionStateProcedure createAssignProcedure(RegionInfo regionInfo, ServerName sn)
+    throws IOException {
+     // TODO: should we use getRegionStateNode?
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
     TransitRegionStateProcedure proc;
     regionNode.lock();
@@ -602,12 +602,40 @@ public class AssignmentManager {
     } finally {
       regionNode.unlock();
     }
+    return proc;
+  }
+
+  // TODO: Need an async version of this for hbck2.
+  public long assign(RegionInfo regionInfo, ServerName sn) throws IOException {
+    TransitRegionStateProcedure proc = createAssignProcedure(regionInfo, sn);
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
     return proc.getProcId();
   }
 
   public long assign(RegionInfo regionInfo) throws IOException {
     return assign(regionInfo, null);
+  }
+
+  /**
+   * Submits a procedure that assigns a region to a target server without waiting for it to finish
+   * @param regionInfo the region we would like to assign
+   * @param sn target server name
+   * @return
+   * @throws IOException
+   */
+  public Future<byte[]> assignAsync(RegionInfo regionInfo, ServerName sn) throws IOException {
+    TransitRegionStateProcedure proc = createAssignProcedure(regionInfo, sn);
+    return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(), proc);
+  }
+
+  /**
+   * Submits a procedure that assigns a region without waiting for it to finish
+   * @param regionInfo the region we would like to assign
+   * @return
+   * @throws IOException
+   */
+  public Future<byte[]> assignAsync(RegionInfo regionInfo) throws IOException {
+    return assignAsync(regionInfo, null);
   }
 
   public long unassign(RegionInfo regionInfo) throws IOException {

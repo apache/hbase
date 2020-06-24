@@ -23,12 +23,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -42,9 +44,12 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,6 +59,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -62,6 +68,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Tests the scenarios where replicas are enabled for the meta table
@@ -163,7 +171,7 @@ public class TestMetaWithReplicas {
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
-    ProtobufUtil.toServerName(data);
+    ProtobufUtil.parseServerNameFrom(data);
     for (int i = 1; i < 3; i++) {
       String secZnode = ZNodePaths.joinZNode(baseZNode,
           conf.get("zookeeper.znode.metaserver", "meta-region-server") + "-" + i);
@@ -171,7 +179,7 @@ public class TestMetaWithReplicas {
       assertTrue(str.equals(secZnode));
       // check that the data in the znode is parseable (this would also mean the znode exists)
       data = ZKUtil.getData(zkw, secZnode);
-      ProtobufUtil.toServerName(data);
+      ProtobufUtil.parseServerNameFrom(data);
     }
   }
 
@@ -198,7 +206,7 @@ public class TestMetaWithReplicas {
     String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
-    ServerName primary = ProtobufUtil.toServerName(data);
+    ServerName primary = ProtobufUtil.parseServerNameFrom(data);
     LOG.info("Primary=" + primary.toString());
 
     TableName TABLE = TableName.valueOf("testShutdownHandling");
@@ -304,7 +312,7 @@ public class TestMetaWithReplicas {
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
-    ServerName currentServer = ProtobufUtil.toServerName(data);
+    ServerName currentServer = ProtobufUtil.parseServerNameFrom(data);
     Collection<ServerName> liveServers = TEST_UTIL.getAdmin()
         .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet();
     ServerName moveToServer = null;
@@ -326,7 +334,7 @@ public class TestMetaWithReplicas {
     do {
       Thread.sleep(10);
       data = ZKUtil.getData(zkw, primaryMetaZnode);
-      currentServer = ProtobufUtil.toServerName(data);
+      currentServer = ProtobufUtil.parseServerNameFrom(data);
       i++;
     } while (!moveToServer.equals(currentServer) && i < max); //wait for 10 seconds overall
     assertNotEquals(max, i);
@@ -351,6 +359,69 @@ public class TestMetaWithReplicas {
         i++;
       } while ((hrl == null || hrl.getServerName().equals(oldServer)) && i < 3);
       assertNotEquals(3, i);
+    }
+  }
+
+  @Test
+  public void testFailedReplicaAssigment() throws InterruptedException, IOException {
+    //using our rigged master, to force a failed meta replica assignment
+    TEST_UTIL.getMiniHBaseCluster().getConfiguration().setClass(HConstants.MASTER_IMPL, BrokenMetaReplicaMaster.class, HMaster.class);
+    TEST_UTIL.getMiniHBaseCluster().stopMaster(0).join();
+    HMaster newMaster = TEST_UTIL.getMiniHBaseCluster().startMaster().getMaster();
+    //waiting for master to come up
+    TEST_UTIL.waitFor(30000, () -> newMaster.isInitialized());
+    TEST_UTIL.getMiniHBaseCluster().getConfiguration().unset(HConstants.MASTER_IMPL);
+
+
+    AssignmentManager am = newMaster.getAssignmentManager();
+    //showing one of the replicas got assigned
+    RegionInfo metaReplicaHri = RegionReplicaUtil.getRegionInfoForReplica(
+      RegionInfoBuilder.FIRST_META_REGIONINFO, 1);
+    RegionStateNode metaReplicaRegionNode = am.getRegionStates().getOrCreateRegionStateNode(metaReplicaHri);
+    Assert.assertNotNull(metaReplicaRegionNode.getRegionLocation());
+    //showing one of the replicas failed to be assigned
+    RegionInfo metaReplicaHri2 = RegionReplicaUtil.getRegionInfoForReplica(
+      RegionInfoBuilder.FIRST_META_REGIONINFO, 2);
+    RegionStateNode metaReplicaRegionNode2 = am.getRegionStates().getOrCreateRegionStateNode(metaReplicaHri2);
+    Assert.assertNull(metaReplicaRegionNode2.getRegionLocation());
+
+    //showing master is active and running
+    Assert.assertFalse(newMaster.isStopping());
+    Assert.assertFalse(newMaster.isStopped());
+    Assert.assertTrue(newMaster.isActiveMaster());
+  }
+
+  public static class BrokenTransitRegionStateProcedure extends TransitRegionStateProcedure {
+    protected BrokenTransitRegionStateProcedure() {
+      //super(env, hri, assignCandidate, forceNewPlan, type);
+      super(null, null, null, false,TransitionType.ASSIGN);
+    }
+  }
+
+  public static class BrokenMetaReplicaMaster extends HMaster{
+    public BrokenMetaReplicaMaster(final Configuration conf) throws IOException {
+      super(conf);
+    }
+
+    @Override
+    public AssignmentManager createAssignmentManager(MasterServices master) {
+      return new BrokenMasterMetaAssignmentManager(master);
+    }
+  }
+
+  public static class BrokenMasterMetaAssignmentManager extends AssignmentManager{
+    MasterServices master;
+    public BrokenMasterMetaAssignmentManager(final MasterServices master) {
+      super(master);
+      this.master = master;
+    }
+
+    public Future<byte[]> assignAsync(RegionInfo regionInfo, ServerName sn) throws IOException {
+      RegionStateNode regionNode = getRegionStates().getOrCreateRegionStateNode(regionInfo);
+      if (regionNode.getRegionInfo().getReplicaId() == 2) {
+        regionNode.setProcedure(new BrokenTransitRegionStateProcedure());
+      }
+      return super.assignAsync(regionInfo, sn);
     }
   }
 }
