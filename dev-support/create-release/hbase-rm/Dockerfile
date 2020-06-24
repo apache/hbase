@@ -27,17 +27,17 @@ FROM ubuntu:18.04
 # the most current package versions (instead of potentially using old versions cached by docker).
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
   && DEBIAN_FRONTEND=noninteractive apt-get -qq -y install --no-install-recommends \
-    curl=7.58.0-2ubuntu3.8 \
-    git=1:2.17.1-1ubuntu0.7 \
-    gnupg=2.2.4-1ubuntu1.2 \
-    libcurl4-openssl-dev=7.58.0-2ubuntu3.8 \
-    libxml2-dev=2.9.4+dfsg1-6.1ubuntu1.3 \
-    lsof=4.89+dfsg-0.1 \
-    maven=3.6.0-1~18.04.1 \
-    openjdk-8-jdk=8u252-b09-1~18.04 \
-    python-pip=9.0.1-2.3~ubuntu1.18.04.1 \
-    subversion=1.9.7-4ubuntu1 \
-    wget=1.19.4-1ubuntu2.2 \
+    curl='7.58.0-*' \
+    git='1:2.17.1-*' \
+    gnupg='2.2.4-*' \
+    libcurl4-openssl-dev='7.58.0-*' \
+    libxml2-dev='2.9.4+dfsg1-*' \
+    lsof='4.89+dfsg-*' \
+    maven='3.6.0-*' \
+    openjdk-8-jdk='8u252-b09-*' \
+    python-pip='9.0.1-*' \
+    subversion='1.9.7-*' \
+    wget='1.19.4-*' \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
   && update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java \
