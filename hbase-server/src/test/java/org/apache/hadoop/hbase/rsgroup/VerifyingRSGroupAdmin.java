@@ -822,6 +822,13 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     verify();
   }
 
+  @Override
+  public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    admin.updateRSGroupConfig(groupName, configuration);
+    verify();
+  }
+
   private void verify() throws IOException {
     Map<String, RSGroupInfo> groupMap = Maps.newHashMap();
     Set<RSGroupInfo> zList = Sets.newHashSet();

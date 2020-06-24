@@ -1117,6 +1117,9 @@ service MasterService {
 
   rpc RenameRSGroup(RenameRSGroupRequest)
     returns (RenameRSGroupResponse);
+
+  rpc UpdateRSGroupConfig(UpdateRSGroupConfigRequest)
+  returns (UpdateRSGroupConfigResponse);
 }
 
 // HBCK Service definitions.

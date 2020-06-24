@@ -918,4 +918,10 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void> renameRSGroup(String oldName, String newName) {
     return wrap(rawAdmin.renameRSGroup(oldName, newName));
   }
+
+  @Override
+  public CompletableFuture<Void>
+    updateRSGroupConfig(String groupName, Map<String, String> configuration) {
+    return wrap(rawAdmin.updateRSGroupConfig(groupName, configuration));
+  }
 }
