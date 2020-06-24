@@ -35,7 +35,7 @@ public interface NormalizationPlan {
 
   /**
    * Submits normalization plan on cluster (does actual splitting/merging work) and
-   * returns Future reference for caller.
+   * returns proc Id to caller.
    * @param masterServices instance of {@link MasterServices}
    * @return Proc Id for the submitted task
    * @throws IOException If plan submission to Admin fails
