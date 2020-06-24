@@ -41,6 +41,19 @@ if (( $# > 0 )); then
   error "Arguments can only be provided with option flags, invalid args: $*"
 fi
 
+function gpg_agent_help {
+  cat <<EOF
+Trying to sign a test file using your GPG setup failed.
+
+Please make sure you have a local gpg-agent running with access to your secret keys prior to
+starting a release build. If you are creating release artifacts on a remote machine please check
+that you have set up ssh forwarding to the gpg-agent extra socket.
+
+For help on how to do this please see the README file in the create-release directory.
+EOF
+  exit 1
+}
+
 # If running in docker, import and then cache keys.
 if [ "$RUNNING_IN_DOCKER" = "1" ]; then
   # when Docker Desktop for mac is running under load there is a delay before the mounted volume
@@ -57,7 +70,9 @@ if [ "$RUNNING_IN_DOCKER" = "1" ]; then
   GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
   echo "GPG Version: $("${GPG}" "${GPG_ARGS[@]}" --version)"
   # Inside docker, need to import the GPG key stored in the current directory.
-  $GPG "${GPG_ARGS[@]}" --import "$SELF/gpg.key.public"
+  if ! $GPG "${GPG_ARGS[@]}" --import "$SELF/gpg.key.public" ; then
+    gpg_agent_help
+  fi
 
   # We may need to adjust the path since JAVA_HOME may be overridden by the driver script.
   if [ -n "$JAVA_HOME" ]; then
@@ -77,9 +92,13 @@ GPG_TTY="$(tty)"
 export GPG_TTY
 echo "Testing gpg signing."
 echo "foo" > gpg_test.txt
-"${GPG}" "${GPG_ARGS[@]}" --detach --armor --sign gpg_test.txt
+if ! "${GPG}" "${GPG_ARGS[@]}" --detach --armor --sign gpg_test.txt ; then
+  gpg_agent_help
+fi
 # In --batch mode we have to be explicit about what we are verifying
-"${GPG}" "${GPG_ARGS[@]}" --verify gpg_test.txt.asc gpg_test.txt
+if ! "${GPG}" "${GPG_ARGS[@]}" --verify gpg_test.txt.asc gpg_test.txt ; then
+  gpg_agent_help
+fi
 
 if [[ -z "$RELEASE_STEP" ]]; then
   # If doing all stages, leave out 'publish-snapshot'

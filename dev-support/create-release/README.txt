@@ -17,6 +17,12 @@ anomalies are explained up in JIRA.
 
 See http://hbase.apache.org/book.html#maven.release
 
+Regardless of where your release build will run (locally, locally in docker, on a remote machine,
+etc) you will need a local gpg-agent with access to your secret keys. A quick way to tell gpg
+to clear out state and start a gpg-agent is via the following command phrase:
+
+$ gpgconf --kill all && gpg-connect-agent /bye
+
 Before starting an RC build, make sure your local gpg-agent has configs
 to properly handle your credentials, especially if you want to avoid
 typing the passphrase to your secret key.
@@ -66,6 +72,8 @@ $ sudo systemctl restart ssh
 # logout of the VM
 
 # Do these steps on your local machine.
+# make sure gpg-agent is running
+$ gpg-connect-agent /bye
 # Export your public key and copy it to the VM.
 # Assuming 'example.gce.host' maps to your VM's external IP (or use the IP)
 $ gpg --export example@apache.org > ~/gpg.example.apache.pub
