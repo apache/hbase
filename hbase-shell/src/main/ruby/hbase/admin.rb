@@ -444,7 +444,7 @@ module Hbase
         if arg.is_a?(String) || arg.key?(NAME)
           # If the arg is a string, default action is to add a column to the table.
           # If arg has a name, it must also be a column descriptor.
-          descriptor = hcd(arg, tdb)
+          descriptor = cfd(arg, tdb)
           # Warn if duplicate columns are added
           if tdb.build.hasColumnFamily(descriptor.getName)
             puts "Family '" + descriptor.getNameAsString + "' already exists, the old one will be replaced"
@@ -684,7 +684,7 @@ module Hbase
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
         method = arg.delete(METHOD)
         if method.nil? && arg.key?(NAME)
-          descriptor = hcd(arg, tdb)
+          descriptor = cfd(arg, tdb)
           column_name = descriptor.getNameAsString
 
           # If column already exist, then try to alter it. Create otherwise.
@@ -977,16 +977,15 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Return a new ColumnFamilyDescriptor made of passed args
-    def hcd(arg, tdb)
+    def cfd(arg, tdb)
       # String arg, single parameter constructor
-
       return ColumnFamilyDescriptorBuilder.of(arg) if arg.is_a?(String)
 
       raise(ArgumentError, "Column family #{arg} must have a name") unless name = arg.delete(NAME)
 
-      cfd = tdb.build.getColumnFamily(name.to_java_bytes)
-      unless cfd.nil?
-        cfdb = ColumnFamilyDescriptorBuilder.newBuilder(cfd)
+      descriptor = tdb.build.getColumnFamily(name.to_java_bytes)
+      unless descriptor.nil?
+        cfdb = ColumnFamilyDescriptorBuilder.newBuilder(descriptor)
       end
       # create it if it's a new family
       cfdb ||= ColumnFamilyDescriptorBuilder.newBuilder(name.to_java_bytes)
