@@ -20,11 +20,14 @@ package org.apache.hadoop.hbase.master.region;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -80,6 +83,10 @@ public final class MasterRegionFactory {
   public static final byte[] PROC_FAMILY = Bytes.toBytes("proc");
 
   private static final TableDescriptor TABLE_DESC = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+    .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
+      .setMaxVersions(HConstants.DEFAULT_HBASE_META_VERSIONS).setInMemory(true)
+      .setBlocksize(HConstants.DEFAULT_HBASE_META_BLOCK_SIZE).setBloomFilterType(BloomType.ROWCOL)
+      .setDataBlockEncoding(DataBlockEncoding.ROW_INDEX_V1).build())
     .setColumnFamily(ColumnFamilyDescriptorBuilder.of(PROC_FAMILY)).build();
 
   public static MasterRegion create(Server server) throws IOException {
@@ -100,7 +107,7 @@ public final class MasterRegionFactory {
     params.ringBufferSlotCount(conf.getInt(RING_BUFFER_SLOT_COUNT, DEFAULT_RING_BUFFER_SLOT_COUNT));
     long rollPeriodMs = conf.getLong(ROLL_PERIOD_MS_KEY, DEFAULT_ROLL_PERIOD_MS);
     params.rollPeriodMs(rollPeriodMs).archivedWalSuffix(ARCHIVED_WAL_SUFFIX)
-      .archivedHFileSuffix(ARCHIVED_HFILE_SUFFIX);
+      .archivedHFileSuffix(ARCHIVED_HFILE_SUFFIX).useMetaCellComparator(true);
     return MasterRegion.create(params);
   }
 }
