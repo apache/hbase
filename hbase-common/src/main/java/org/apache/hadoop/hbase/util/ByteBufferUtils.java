@@ -738,6 +738,28 @@ public final class ByteBufferUtils {
   }
 
   /**
+   * Find length of common prefix of two parts in the buffer
+   * @param buffer Where parts are located.
+   * @param offsetLeft Offset of the first part.
+   * @param offsetRight Offset of the second part.
+   * @param limit Maximal length of common prefix.
+   * @return Length of prefix.
+   */
+  @SuppressWarnings("unused")
+  public static int findCommonPrefix(ByteBuffer buffer, int offsetLeft,
+      int offsetRight, int limit) {
+    int prefix = 0;
+
+    for (; prefix < limit; ++prefix) {
+      if (buffer.get(offsetLeft + prefix) != buffer.get(offsetRight + prefix)) {
+        break;
+      }
+    }
+
+    return prefix;
+  }
+
+  /**
    * Find length of common prefix in two arrays.
    * @param left Array to be compared.
    * @param leftOffset Offset in left array.
