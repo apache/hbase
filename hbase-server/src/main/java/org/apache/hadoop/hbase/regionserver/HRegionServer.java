@@ -2056,8 +2056,7 @@ public class HRegionServer extends Thread implements
       // SplitLogWorker needs csm. If none, don't start this.
       this.splitLogWorker = new SplitLogWorker(sinkConf, this, this, walFactory);
       splitLogWorker.start();
-    } else {
-      LOG.warn("SplitLogWorker Service NOT started; CoordinatedStateManager is null");
+      LOG.debug("SplitLogWorker started");
     }
 
     // Memstore services.
@@ -2281,7 +2280,7 @@ public class HRegionServer extends Thread implements
     long openProcId = context.getOpenProcId();
     long masterSystemTime = context.getMasterSystemTime();
     rpcServices.checkOpen();
-    LOG.info("Post open deploy tasks for {}, openProcId={}, masterSystemTime={}",
+    LOG.info("Post open deploy tasks for {}, pid={}, masterSystemTime={}",
       r.getRegionInfo().getRegionNameAsString(), openProcId, masterSystemTime);
     // Do checks to see if we need to compact (references or too many files)
     for (HStore s : r.stores.values()) {

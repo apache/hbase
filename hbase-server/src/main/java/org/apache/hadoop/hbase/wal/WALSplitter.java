@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.master.SplitLogManager;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
@@ -88,7 +86,6 @@ public class WALSplitter {
   final Path rootDir;
   final FileSystem rootFS;
   final RegionServerServices rsServices;
-  final TableDescriptors tableDescriptors;
 
   // Major subcomponents of the split process.
   // These are separated into inner classes to make testing easier.
@@ -152,12 +149,6 @@ public class WALSplitter {
     this.sequenceIdChecker = idChecker;
     this.splitLogWorkerCoordination = splitLogWorkerCoordination;
     this.rsServices = rsServices;
-    if (rsServices != null) {
-      this.tableDescriptors = rsServices.getTableDescriptors();
-    } else {
-      this.tableDescriptors = new FSTableDescriptors(rootFS, rootDir, true, true);
-    }
-
     this.walFactory = factory;
     PipelineController controller = new PipelineController();
     this.tmpDirName =
