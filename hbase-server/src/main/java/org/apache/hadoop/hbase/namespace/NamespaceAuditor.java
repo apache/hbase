@@ -142,10 +142,6 @@ public class NamespaceAuditor {
 
   public void deleteNamespace(String namespace) throws IOException {
     stateManager.deleteNamespace(namespace);
-    Set<TableName> tableNameSet = getState(namespace).getTables();
-    for (TableName tableName: tableNameSet) {
-      removeFromNamespaceUsage(tableName);
-    }
   }
 
   public void removeFromNamespaceUsage(TableName tableName)

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
@@ -264,17 +265,33 @@ public class QuotaUtil extends QuotaTableUtil {
       final byte[] qualifier) throws IOException {
     Delete delete = new Delete(rowKey);
     if (qualifier != null) {
-      delete.addColumns(QUOTA_FAMILY_INFO, qualifier);
+      if (Arrays.equals(qualifier,QUOTA_QUALIFIER_POLICY)) {
+        delete.addColumns(QUOTA_FAMILY_USAGE, qualifier);
+      } else
+        delete.addColumns(QUOTA_FAMILY_INFO, qualifier);
     }
-    doDelete(connection, delete);
     if (isNamespaceRowKey(rowKey)) {
-      TableName[] tableArray = connection.getAdmin().listTableNamesByNamespace(getNamespaceFromRowKey(rowKey));
-      for (TableName tableName: tableArray) {
-        if (QuotaUtil.getTableQuota(connection, tableName) == null) {
-          deleteTableQuota(connection,tableName);
+      //Check namespace is not deleted before you get info about quota and list of tables in namespace
+      NamespaceDescriptor[] descs = connection.getAdmin().listNamespaceDescriptors();
+      String ns = getNamespaceFromRowKey(rowKey);
+      int index = 0;
+      while (index < descs.length) {
+        if (ns.equals(descs[index].getName())) {
+          Quotas namespaceQuota = getNamespaceQuota(connection,ns);
+          if (namespaceQuota != null && namespaceQuota.hasSpace()) {
+            TableName[] tableArray = connection.getAdmin().listTableNamesByNamespace(ns);
+            for (TableName tableName : tableArray) {
+              deleteQuotas(connection, getTableRowKey(tableName), QUOTA_QUALIFIER_POLICY);
+            }
+          }
+          //Exit the while loop by moving to last index
+          index = descs.length;
+        } else {
+          index++;
         }
       }
     }
+    doDelete(connection, delete);
   }
 
   public static Map<String, UserQuotaState> fetchUserQuotas(final Connection connection,
