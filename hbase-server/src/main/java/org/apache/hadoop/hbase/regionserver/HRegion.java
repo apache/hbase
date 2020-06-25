@@ -2354,7 +2354,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *
    * <p>This method may block for some time, so it should not be called from a
    * time-sensitive thread.
-   * @param force whether we want to force a flush of all stores
+   * @param flushAllStores whether we want to force a flush of all stores
    * @return FlushResult indicating whether the flush was successful or not and if
    * the region needs compacting
    *
@@ -2362,8 +2362,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * because a snapshot was not properly persisted.
    */
   // TODO HBASE-18905. We might have to expose a requestFlush API for CPs
-  public FlushResult flush(boolean force) throws IOException {
-    return flushcache(force, false, FlushLifeCycleTracker.DUMMY);
+  public FlushResult flush(boolean flushAllStores) throws IOException {
+    return flushcache(flushAllStores, false, FlushLifeCycleTracker.DUMMY);
   }
 
   public interface FlushResult {
@@ -2386,9 +2386,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean isCompactionNeeded();
   }
 
-  public FlushResultImpl flushcache(boolean forceFlushAllStores,boolean writeFlushRequestWalMarker,
+  public FlushResultImpl flushcache(boolean flushAllStores, boolean writeFlushRequestWalMarker,
     FlushLifeCycleTracker tracker) throws IOException {
-    return this.flushcache(forceFlushAllStores, null, writeFlushRequestWalMarker, tracker);
+    List families = null;
+    if (flushAllStores) {
+      families = new ArrayList();
+      families.addAll(this.getTableDescriptor().getColumnFamilyNames());
+    }
+    return this.flushcache(families, writeFlushRequestWalMarker, tracker);
   }
 
   /**
@@ -2404,7 +2409,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *
    * <p>This method may block for some time, so it should not be called from a
    * time-sensitive thread.
-   * @param forceFlushAllStores whether we want to flush all stores
    * @param families stores of region to flush.
    * @param writeFlushRequestWalMarker whether to write the flush request marker to WAL
    * @param tracker used to track the life cycle of this flush
@@ -2415,7 +2419,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * because a Snapshot was not properly persisted. The region is put in closing mode, and the
    * caller MUST abort after this.
    */
-  public FlushResultImpl flushcache(boolean forceFlushAllStores, List<byte[]> families,
+  public FlushResultImpl flushcache(List<byte[]> families,
       boolean writeFlushRequestWalMarker, FlushLifeCycleTracker tracker) throws IOException {
     // fail-fast instead of waiting on the lock
     if (this.closing.get()) {
@@ -2467,11 +2471,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // caused by logRoller, we should select stores which must be flushed
         // rather than could be flushed.
         Collection<HStore> specificStoresToFlush = null;
-        if (!forceFlushAllStores && families != null) {
+        if (families != null) {
           specificStoresToFlush = getSpecificStores(families);
         } else {
-          specificStoresToFlush =
-            forceFlushAllStores ? stores.values() : flushPolicy.selectStoresToFlush();
+          specificStoresToFlush = flushPolicy.selectStoresToFlush();
         }
         FlushResultImpl fs =
             internalFlushcache(specificStoresToFlush, status, writeFlushRequestWalMarker, tracker);
@@ -8990,7 +8993,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     if (shouldFlush) {
       // Make request outside of synchronize block; HBASE-818.
-      this.rsServices.getFlushRequester().requestFlush(this, false, tracker);
+      this.rsServices.getFlushRequester().requestFlush(this, tracker);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Flush requested on " + this.getRegionInfo().getEncodedName());
       }

@@ -60,8 +60,8 @@ public class LogRoller extends AbstractWALRoller<RegionServerServices> {
         encodedRegionName, r);
       return;
     }
-    // force flushing specified stores to clean old logs
-    requester.requestFlush(r, false, families, FlushLifeCycleTracker.DUMMY);
+    // flush specified stores to clean old logs
+    requester.requestFlush(r, families, FlushLifeCycleTracker.DUMMY);
   }
 
   @VisibleForTesting

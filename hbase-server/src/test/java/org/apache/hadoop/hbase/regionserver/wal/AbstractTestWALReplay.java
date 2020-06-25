@@ -1117,9 +1117,9 @@ public abstract class AbstractTestWALReplay {
     private HRegion r;
 
     @Override
-    public boolean requestFlush(HRegion region, boolean force, FlushLifeCycleTracker tracker) {
+    public boolean requestFlush(HRegion region, FlushLifeCycleTracker tracker) {
       try {
-        r.flush(force);
+        r.flush(false);
         return true;
       } catch (IOException e) {
         throw new RuntimeException("Exception flushing", e);
@@ -1127,13 +1127,13 @@ public abstract class AbstractTestWALReplay {
     }
 
     @Override
-    public boolean requestFlush(HRegion region, boolean forceFlushAllStores,
-        List<byte[]> families, FlushLifeCycleTracker tracker) {
+    public boolean requestFlush(HRegion region, List<byte[]> families,
+        FlushLifeCycleTracker tracker) {
       return true;
     }
 
     @Override
-    public boolean requestDelayedFlush(HRegion region, long when, boolean forceFlushAllStores) {
+    public boolean requestDelayedFlush(HRegion region, long when) {
       return true;
     }
 

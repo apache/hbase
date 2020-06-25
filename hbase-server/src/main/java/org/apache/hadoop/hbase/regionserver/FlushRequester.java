@@ -32,22 +32,18 @@ public interface FlushRequester {
    * Tell the listener the cache needs to be flushed.
    *
    * @param region the Region requesting the cache flush
-   * @param forceFlushAllStores whether we want to flush all stores. e.g., when request from log
-   *          rolling.
    * @return true if our region is added into the queue, false otherwise
    */
-  boolean requestFlush(HRegion region, boolean forceFlushAllStores, FlushLifeCycleTracker tracker);
+  boolean requestFlush(HRegion region, FlushLifeCycleTracker tracker);
 
   /**
    * Tell the listener the cache needs to be flushed.
    *
    * @param region the Region requesting the cache flush
-   * @param forceFlushAllStores whether we want to flush all stores. e.g., when request from log
-   *          rolling.
-   * @param families stores of region to flush, take effect only if forceFlushAllStores is false
+   * @param families stores of region to flush, if null then use flush policy
    * @return true if our region is added into the queue, false otherwise
    */
-  boolean requestFlush(HRegion region, boolean forceFlushAllStores, List<byte[]> families,
+  boolean requestFlush(HRegion region, List<byte[]> families,
     FlushLifeCycleTracker tracker);
 
   /**
@@ -55,11 +51,9 @@ public interface FlushRequester {
    *
    * @param region the Region requesting the cache flush
    * @param delay after how much time should the flush happen
-   * @param forceFlushAllStores whether we want to flush all stores. e.g., when request from log
-   *          rolling.
    * @return true if our region is added into the queue, false otherwise
    */
-  boolean requestDelayedFlush(HRegion region, long delay, boolean forceFlushAllStores);
+  boolean requestDelayedFlush(HRegion region, long delay);
 
   /**
    * Register a FlushRequestListener
