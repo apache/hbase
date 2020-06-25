@@ -204,7 +204,7 @@ public class Threads {
    * @param prefix The prefix of every created Thread's name
    * @return a {@link java.util.concurrent.ThreadFactory} that names threads
    */
-  private static ThreadFactory getNamedThreadFactory(final String prefix) {
+  public static ThreadFactory getNamedThreadFactory(final String prefix) {
     SecurityManager s = System.getSecurityManager();
     final ThreadGroup threadGroup = (s != null) ? s.getThreadGroup() : Thread.currentThread()
         .getThreadGroup();
