@@ -2463,6 +2463,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       try {
+        // The reason that we do not always use flushPolicy is, when the flush is
+        // caused by logRoller, we should select stores which must be flushed
+        // rather than could be flushed.
         Collection<HStore> specificStoresToFlush = null;
         if (!forceFlushAllStores && families != null) {
           specificStoresToFlush = getSpecificStores(families);
