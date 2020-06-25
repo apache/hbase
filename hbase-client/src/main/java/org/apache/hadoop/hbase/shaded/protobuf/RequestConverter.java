@@ -641,7 +641,9 @@ public final class RequestConverter {
     if (!multiRequestBuilder.hasNonceGroup() && hasNonce) {
       multiRequestBuilder.setNonceGroup(nonceGroup);
     }
-    multiRequestBuilder.addRegionAction(builder.build());
+    if (builder.getActionCount() > 0) {
+      multiRequestBuilder.addRegionAction(builder.build());
+    }
 
     // Process RowMutations here. We can not process it in the big loop above because
     // it will corrupt the sequence order maintained in cells.
@@ -810,7 +812,9 @@ public final class RequestConverter {
     if (!multiRequestBuilder.hasNonceGroup() && hasNonce) {
       multiRequestBuilder.setNonceGroup(nonceGroup);
     }
-    multiRequestBuilder.addRegionAction(builder.build());
+    if (builder.getActionCount() > 0) {
+      multiRequestBuilder.addRegionAction(builder.build());
+    }
 
     // Process RowMutations here. We can not process it in the big loop above because
     // it will corrupt the sequence order maintained in cells.
