@@ -156,6 +156,11 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
               }
 
               @Override
+              public long getSyncedLength() {
+                return writer.getSyncedLength();
+              }
+
+              @Override
               public CompletableFuture<Long> sync(boolean forceSync) {
                 CompletableFuture<Long> result = writer.sync(forceSync);
                 if (failedCount.incrementAndGet() < 1000) {

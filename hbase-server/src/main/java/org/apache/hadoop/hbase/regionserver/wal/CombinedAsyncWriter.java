@@ -50,6 +50,11 @@ public final class CombinedAsyncWriter implements AsyncWriter {
   }
 
   @Override
+  public long getSyncedLength() {
+    return writers.get(0).getSyncedLength();
+  }
+
+  @Override
   public void close() throws IOException {
     Exception error = null;
     for (AsyncWriter writer : writers) {

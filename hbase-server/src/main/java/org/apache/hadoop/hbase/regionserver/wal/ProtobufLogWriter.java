@@ -46,6 +46,10 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
 
   protected FSDataOutputStream output;
 
+  private volatile long syncedLength = 0;
+
+  private final Object syncedLengthMonitor = new Object();
+
   @Override
   public void append(Entry entry) throws IOException {
     entry.getKey().getBuilder(compressor).
@@ -85,6 +89,20 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
     } else {
       fsdos.hflush();
     }
+    this.updateSyncedLength(fsdos.getPos());
+  }
+
+  private void updateSyncedLength(long lengthToUse) {
+    synchronized (this.syncedLengthMonitor) {
+      if(lengthToUse > this.syncedLength) {
+        this.syncedLength = lengthToUse;
+      }
+    }
+  }
+
+  @Override
+  public long getSyncedLength() {
+      return this.syncedLength;
   }
 
   public FSDataOutputStream getStream() {

@@ -74,6 +74,10 @@ public interface WALProvider {
 
   interface WriterBase extends Closeable {
     long getLength();
+    /**
+     * @return byteSize success synced to underlying filesystem.
+     */
+    long getSyncedLength();
   }
 
   // Writers are used internally. Users outside of the WAL should be relying on the
