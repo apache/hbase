@@ -271,6 +271,15 @@ public final class HConstants {
   /** Configuration key for ZooKeeper session timeout */
   public static final String ZK_SESSION_TIMEOUT = "zookeeper.session.timeout";
 
+  /** Timeout for the ZK sync() call */
+  public static final String ZK_SYNC_BLOCKING_TIMEOUT_MS = "hbase.zookeeper.sync.timeout.millis";
+  // Choice of the default value is based on the following ZK recommendation (from docs). Keeping it
+  // lower lets the callers fail fast in case of any issues.
+  // "The clients view of the system is guaranteed to be up-to-date within a certain time bound.
+  // (On the order of tens of seconds.) Either system changes will be seen by a client within this
+  // bound, or the client will detect a service outage."
+  public static final long ZK_SYNC_BLOCKING_TIMEOUT_DEFAULT_MS = 30 * 1000;
+
   /** Default value for ZooKeeper session timeout */
   public static final int DEFAULT_ZK_SESSION_TIMEOUT = 90 * 1000;
 
