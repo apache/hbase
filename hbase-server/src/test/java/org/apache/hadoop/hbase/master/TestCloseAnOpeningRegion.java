@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -69,12 +70,13 @@ public class TestCloseAnOpeningRegion {
     }
 
     @Override
-    protected AssignmentManager createAssignmentManager(MasterServices master) {
-      return new AssignmentManager(master) {
+    protected AssignmentManager createAssignmentManager(MasterServices master,
+      MasterRegion masterRegion) {
+      return new AssignmentManager(master, masterRegion) {
 
         @Override
         public ReportRegionStateTransitionResponse reportRegionStateTransition(
-            ReportRegionStateTransitionRequest req) throws PleaseHoldException {
+          ReportRegionStateTransitionRequest req) throws PleaseHoldException {
           ReportRegionStateTransitionResponse resp = super.reportRegionStateTransition(req);
           TransitionCode code = req.getTransition(0).getTransitionCode();
           if (code == TransitionCode.OPENED && ARRIVE != null) {

@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -66,10 +67,14 @@ public class RegionStateStore {
 
   private final MasterServices master;
 
-  public RegionStateStore(final MasterServices master) {
+  private final MasterRegion masterRegion;
+
+  public RegionStateStore(MasterServices master, MasterRegion masterRegion) {
     this.master = master;
+    this.masterRegion = masterRegion;
   }
 
+  @FunctionalInterface
   public interface RegionStateVisitor {
     void visitRegionState(Result result, RegionInfo regionInfo, State state,
       ServerName regionLocation, ServerName lastHost, long openSeqNum);
@@ -117,7 +122,7 @@ public class RegionStateStore {
     }
   }
 
-  private void visitMetaEntry(final RegionStateVisitor visitor, final Result result)
+  public static void visitMetaEntry(final RegionStateVisitor visitor, final Result result)
       throws IOException {
     final RegionLocations rl = CatalogFamilyFormat.getRegionLocations(result);
     if (rl == null) return;
@@ -149,34 +154,14 @@ public class RegionStateStore {
   }
 
   void updateRegionLocation(RegionStateNode regionStateNode) throws IOException {
-    if (regionStateNode.getRegionInfo().isMetaRegion()) {
-      updateMetaLocation(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation(),
-        regionStateNode.getState());
-    } else {
-      long openSeqNum = regionStateNode.getState() == State.OPEN ? regionStateNode.getOpenSeqNum()
-        : HConstants.NO_SEQNUM;
-      updateUserRegionLocation(regionStateNode.getRegionInfo(), regionStateNode.getState(),
-        regionStateNode.getRegionLocation(), openSeqNum,
-        // The regionStateNode may have no procedure in a test scenario; allow for this.
-        regionStateNode.getProcedure() != null ? regionStateNode.getProcedure().getProcId()
-          : Procedure.NO_PROC_ID);
-    }
-  }
-
-  private void updateMetaLocation(RegionInfo regionInfo, ServerName serverName, State state)
-      throws IOException {
-    try {
-      MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
-        state);
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    }
-  }
-
-  private void updateUserRegionLocation(RegionInfo regionInfo, State state,
-      ServerName regionLocation, long openSeqNum,
-       long pid) throws IOException {
     long time = EnvironmentEdgeManager.currentTime();
+    long openSeqNum = regionStateNode.getState() == State.OPEN ? regionStateNode.getOpenSeqNum() :
+      HConstants.NO_SEQNUM;
+    RegionInfo regionInfo = regionStateNode.getRegionInfo();
+    State state = regionStateNode.getState();
+    ServerName regionLocation = regionStateNode.getRegionLocation();
+    TransitRegionStateProcedure rit = regionStateNode.getProcedure();
+    long pid = rit != null ? rit.getProcId() : Procedure.NO_PROC_ID;
     final int replicaId = regionInfo.getReplicaId();
     final Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), time);
     MetaTableAccessor.addRegionInfo(put, regionInfo);
@@ -218,12 +203,32 @@ public class RegionStateStore {
         .build());
     LOG.info(info.toString());
     updateRegionLocation(regionInfo, state, put);
+    if (regionInfo.isMetaRegion() && regionInfo.isFirst()) {
+      // mirror the meta location to zookeeper
+      mirrorMetaLocation(regionInfo, regionLocation, state);
+    }
+  }
+
+  public void mirrorMetaLocation(RegionInfo regionInfo, ServerName serverName, State state)
+      throws IOException {
+    try {
+      MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
+        state);
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    }
   }
 
   private void updateRegionLocation(RegionInfo regionInfo, State state, Put put)
-      throws IOException {
-    try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
-      table.put(put);
+    throws IOException {
+    try {
+      if (regionInfo.isMetaRegion()) {
+        masterRegion.update(r -> r.put(put));
+      } else {
+        try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
+          table.put(put);
+        }
+      }
     } catch (IOException e) {
       // TODO: Revist!!!! Means that if a server is loaded, then we will abort our host!
       // In tests we abort the Master!
@@ -328,7 +333,7 @@ public class RegionStateStore {
     }
   }
 
-  private static byte[] getStateColumn(int replicaId) {
+  public static byte[] getStateColumn(int replicaId) {
     return replicaId == 0
         ? HConstants.STATE_QUALIFIER
         : Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
