@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.AfterClass;
@@ -111,16 +112,18 @@ public class TestFailedMetaReplicaAssigment {
     }
 
     @Override
-    public AssignmentManager createAssignmentManager(MasterServices master) {
-      return new BrokenMasterMetaAssignmentManager(master);
+    public AssignmentManager createAssignmentManager(MasterServices master,
+      MasterRegion masterRegion) {
+      return new BrokenMasterMetaAssignmentManager(master, masterRegion);
     }
   }
 
   public static class BrokenMasterMetaAssignmentManager extends AssignmentManager {
     MasterServices master;
 
-    public BrokenMasterMetaAssignmentManager(final MasterServices master) {
-      super(master);
+    public BrokenMasterMetaAssignmentManager(final MasterServices master,
+      MasterRegion masterRegion) {
+      super(master, masterRegion);
       this.master = master;
     }
 
