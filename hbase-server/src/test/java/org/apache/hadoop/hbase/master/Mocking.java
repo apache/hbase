@@ -71,7 +71,7 @@ public class Mocking {
     String encoded = region.getEncodedName();
 
     String node = ZKAssign.getNodeName(zkw, encoded);
-    zkw.sync(node);
+    zkw.syncOrTimeout(node);
 
     // Read existing data of the node
     byte [] existingBytes = null;
