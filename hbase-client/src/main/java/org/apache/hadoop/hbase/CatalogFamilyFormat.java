@@ -27,6 +27,7 @@ import java.util.NavigableMap;
 import java.util.SortedMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -345,5 +347,20 @@ public class CatalogFamilyFormat {
     } catch (DeserializationException e) {
       throw new IOException(e);
     }
+  }
+
+  public static Delete removeRegionReplica(byte[] metaRow, int replicaIndexToDeleteFrom,
+    int numReplicasToRemove) {
+    int absoluteIndex = replicaIndexToDeleteFrom + numReplicasToRemove;
+    long now = EnvironmentEdgeManager.currentTime();
+    Delete deleteReplicaLocations = new Delete(metaRow);
+    for (int i = replicaIndexToDeleteFrom; i < absoluteIndex; i++) {
+      deleteReplicaLocations.addColumns(HConstants.CATALOG_FAMILY, getServerColumn(i), now);
+      deleteReplicaLocations.addColumns(HConstants.CATALOG_FAMILY, getSeqNumColumn(i), now);
+      deleteReplicaLocations.addColumns(HConstants.CATALOG_FAMILY, getStartCodeColumn(i), now);
+      deleteReplicaLocations.addColumns(HConstants.CATALOG_FAMILY, getServerNameColumn(i), now);
+      deleteReplicaLocations.addColumns(HConstants.CATALOG_FAMILY, getRegionStateColumn(i), now);
+    }
+    return deleteReplicaLocations;
   }
 }
