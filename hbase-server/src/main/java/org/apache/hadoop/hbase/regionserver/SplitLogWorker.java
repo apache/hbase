@@ -64,13 +64,14 @@ public class SplitLogWorker implements Runnable {
 
   Thread worker;
   // thread pool which executes recovery work
-  private SplitLogWorkerCoordination coordination;
-  private Configuration conf;
-  private RegionServerServices server;
+  private final SplitLogWorkerCoordination coordination;
+  private final Configuration conf;
+  private final RegionServerServices server;
 
   public SplitLogWorker(Server hserver, Configuration conf, RegionServerServices server,
       TaskExecutor splitTaskExecutor) {
     this.server = server;
+    // Unused.
     this.conf = conf;
     this.coordination = hserver.getCoordinatedStateManager().getSplitLogWorkerCoordination();
     coordination.init(server, conf, splitTaskExecutor, this);
@@ -81,6 +82,9 @@ public class SplitLogWorker implements Runnable {
     this(server, conf, server, (f, p) -> splitLog(f, p, conf, server, sequenceIdChecker, factory));
   }
 
+  /**
+   * @return Result either DONE, RESIGNED, or ERR.
+   */
   static Status splitLog(String filename, CancelableProgressable p, Configuration conf,
       RegionServerServices server, LastSequenceId sequenceIdChecker, WALFactory factory) {
     Path walDir;
@@ -124,6 +128,7 @@ public class SplitLogWorker implements Runnable {
       LOG.warn("Error splitting WAL {}", filename, e);
       return Status.ERR;
     }
+    LOG.debug("Done splitting WAL {}", filename);
     return Status.DONE;
   }
 
