@@ -70,7 +70,7 @@ public class DefaultStoreEngine extends StoreEngine<
     createStoreFlusher(conf, store);
     storeFileManager =
         new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
-            compactionPolicy.getConf());
+            compactionPolicy.getConf(), store.getRegionFileSystem(), store.getColumnFamilyName());
   }
 
   protected void createCompactor(Configuration conf, HStore store) throws IOException {

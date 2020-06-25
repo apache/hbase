@@ -46,7 +46,16 @@ public interface StoreFileManager {
    * Loads the initial store files into empty StoreFileManager.
    * @param storeFiles The files to load.
    */
-  void loadFiles(List<HStoreFile> storeFiles);
+  void loadFiles(List<HStoreFile> storeFiles) throws IOException;
+
+  /**
+   * Load store files that are available for opening to perform filter-based
+   * validation
+   *
+   * @return a list of {@link StoreFileInfo} for the requested store.
+   * @throws IOException
+   */
+  Collection<StoreFileInfo> loadInitialFiles() throws IOException;
 
   /**
    * Adds new files, either for from MemStore flush or bulk insert, into the structure.
