@@ -803,14 +803,35 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * <p>
    * Protected for testing.
    * @return empty list if success, list of items to retry on recoverable failure
+   * @deprecated as of release 2.3.0. Use {@link BulkLoadHFiles} instead.
    */
+  @Deprecated
   @VisibleForTesting
   protected List<LoadQueueItem> tryAtomicRegionLoad(final Connection conn,
-      final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis,
-      boolean copyFile) throws IOException {
-    List<LoadQueueItem> toRetry = new ArrayList<>();
+    final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis,
+    boolean copyFile) throws IOException {
     ClientServiceCallable<byte[]> serviceCallable =
-        buildClientServiceCallable(conn, tableName, first, lqis, copyFile);
+      buildClientServiceCallable(conn, tableName, first, lqis, copyFile);
+    return tryAtomicRegionLoad(serviceCallable, tableName, first, lqis);
+  }
+
+  /**
+   * Attempts to do an atomic load of many hfiles into a region. If it fails, it returns a list of
+   * hfiles that need to be retried. If it is successful it will return an empty list.
+   * <p>
+   * NOTE: To maintain row atomicity guarantees, region server callable should succeed atomically
+   * and fails atomically.
+   * <p>
+   * Protected for testing.
+   * @return empty list if success, list of items to retry on recoverable failure
+   * @deprecated as of release 2.3.0. Use {@link BulkLoadHFiles} instead.
+   */
+  @Deprecated
+  @VisibleForTesting
+  protected List<LoadQueueItem> tryAtomicRegionLoad(ClientServiceCallable<byte[]> serviceCallable,
+    final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis)
+    throws IOException {
+    List<LoadQueueItem> toRetry = new ArrayList<>();
     try {
       Configuration conf = getConf();
       byte[] region = RpcRetryingCallerFactory.instantiate(conf, null).<byte[]> newCaller()
