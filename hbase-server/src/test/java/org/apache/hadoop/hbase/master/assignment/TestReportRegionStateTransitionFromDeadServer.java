@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -82,8 +83,8 @@ public class TestReportRegionStateTransitionFromDeadServer {
 
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
-    public AssignmentManagerForTest(MasterServices master) {
-      super(master);
+    public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
+      super(master, masterRegion);
     }
 
     @Override
@@ -121,8 +122,9 @@ public class TestReportRegionStateTransitionFromDeadServer {
     }
 
     @Override
-    protected AssignmentManager createAssignmentManager(MasterServices master) {
-      return new AssignmentManagerForTest(master);
+    protected AssignmentManager createAssignmentManager(MasterServices master,
+      MasterRegion masterRegion) {
+      return new AssignmentManagerForTest(master, masterRegion);
     }
 
     @Override

@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -40,13 +39,13 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.ServerState;
 import org.apache.hadoop.hbase.master.assignment.ServerStateNode;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.zookeeper.KeeperException;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -178,15 +177,16 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     }
 
     @Override
-    protected AssignmentManager createAssignmentManager(MasterServices master) {
-      return new AssignmentManagerForTest(master);
+    protected AssignmentManager createAssignmentManager(MasterServices master,
+      MasterRegion masterRegion) {
+      return new AssignmentManagerForTest(master, masterRegion);
     }
   }
 
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
-    public AssignmentManagerForTest(MasterServices master) {
-      super(master);
+    public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
+      super(master, masterRegion);
     }
 
     @Override
