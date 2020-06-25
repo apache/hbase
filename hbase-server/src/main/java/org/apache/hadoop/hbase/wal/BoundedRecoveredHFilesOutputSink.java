@@ -34,8 +34,6 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -67,13 +65,10 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   // Need a counter to track the opening writers.
   private final AtomicInteger openingWritersNum = new AtomicInteger(0);
 
-  private final ConcurrentMap<TableName, TableDescriptor> tableDescCache;
-
   public BoundedRecoveredHFilesOutputSink(WALSplitter walSplitter,
     WALSplitter.PipelineController controller, EntryBuffers entryBuffers, int numWriters) {
     super(controller, entryBuffers, numWriters);
     this.walSplitter = walSplitter;
-    this.tableDescCache = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -191,6 +186,10 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     return false;
   }
 
+  /**
+   * @return Returns a base HFile without compressions or encodings; good enough for recovery
+   *   given hfile has metadata on how it was written.
+   */
   private StoreFileWriter createRecoveredHFileWriter(TableName tableName, String regionName,
       long seqId, String familyName, boolean isMetaTable) throws IOException {
     Path outputDir = WALSplitUtil.tryCreateRecoveredHFilesDir(walSplitter.rootFS, walSplitter.conf,
@@ -198,43 +197,11 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     StoreFileWriter.Builder writerBuilder =
         new StoreFileWriter.Builder(walSplitter.conf, CacheConfig.DISABLED, walSplitter.rootFS)
             .withOutputDir(outputDir);
-
-    TableDescriptor tableDesc =
-        tableDescCache.computeIfAbsent(tableName, t -> getTableDescriptor(t));
-    if (tableDesc == null) {
-      throw new IOException("Failed to get table descriptor for table " + tableName);
-    }
-    ColumnFamilyDescriptor cfd = tableDesc.getColumnFamily(Bytes.toBytesBinary(familyName));
-    HFileContext hFileContext = createFileContext(cfd, isMetaTable);
-    return writerBuilder.withFileContext(hFileContext).withBloomType(cfd.getBloomFilterType())
-        .build();
-  }
-
-  private HFileContext createFileContext(ColumnFamilyDescriptor cfd, boolean isMetaTable)
-      throws IOException {
-    return new HFileContextBuilder().withCompression(cfd.getCompressionType())
-        .withChecksumType(HStore.getChecksumType(walSplitter.conf))
-        .withBytesPerCheckSum(HStore.getBytesPerChecksum(walSplitter.conf))
-        .withBlockSize(cfd.getBlocksize()).withCompressTags(cfd.isCompressTags())
-        .withDataBlockEncoding(cfd.getDataBlockEncoding()).withCellComparator(
-          isMetaTable ? CellComparatorImpl.META_COMPARATOR : CellComparatorImpl.COMPARATOR)
-        .build();
-  }
-
-  private TableDescriptor getTableDescriptor(TableName tableName) {
-    if (walSplitter.rsServices != null) {
-      try {
-        return walSplitter.rsServices.getConnection().getAdmin().getDescriptor(tableName);
-      } catch (IOException e) {
-        LOG.warn("Failed to get table descriptor for {}", tableName, e);
-      }
-    }
-    LOG.info("Failed getting {} table descriptor from master; trying local", tableName);
-    try {
-      return walSplitter.tableDescriptors.get(tableName);
-    } catch (IOException e) {
-      LOG.warn("Failed to get table descriptor for {}", tableName, e);
-      return null;
-    }
+    HFileContext hFileContext = new HFileContextBuilder().
+      withChecksumType(HStore.getChecksumType(walSplitter.conf)).
+      withBytesPerCheckSum(HStore.getBytesPerChecksum(walSplitter.conf)).
+      withCellComparator(isMetaTable?
+        CellComparatorImpl.META_COMPARATOR: CellComparatorImpl.COMPARATOR).build();
+    return writerBuilder.withFileContext(hFileContext).build();
   }
 }
