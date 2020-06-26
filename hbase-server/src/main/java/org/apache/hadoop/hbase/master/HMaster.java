@@ -1946,8 +1946,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         final TableDescriptor tblDesc = getTableDescriptors().get(table);
         if (tblDesc != null && !tblDesc.isNormalizationEnabled()) {
           LOG.debug(
-            "Skipping table {} because normalization is disabled in its" + " table properties.",
-            table);
+            "Skipping table {} because normalization is disabled in its table properties.", table);
           continue;
         }
 
