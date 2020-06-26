@@ -51,6 +51,7 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.function.BooleanSupplier;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -4465,6 +4466,24 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
          rtdFamilies.iterator(); it.hasNext();) {
       assertEquals(0,
           ColumnFamilyDescriptor.COMPARATOR.compare(it.next(), it2.next()));
+    }
+  }
+
+  /**
+   * Await the successful return of {@code condition}, sleeping {@code sleepMillis} between
+   * invocations.
+   */
+  public static void await(final long sleepMillis, final BooleanSupplier condition)
+    throws InterruptedException {
+    try {
+      while (!condition.getAsBoolean()) {
+        Thread.sleep(sleepMillis);
+      }
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof AssertionError) {
+        throw (AssertionError) e.getCause();
+      }
+      throw e;
     }
   }
 }
