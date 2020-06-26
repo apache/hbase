@@ -98,7 +98,7 @@ module HBaseConstants
   FORMATTER_CLASS = 'FORMATTER_CLASS'.freeze
   POLICY = 'POLICY'.freeze
   REGIONSERVER = 'REGIONSERVER'.freeze
-  REPLICATION_SCOPE_BYTES = org.apache.hadoop.hbase.ColumnFamilyDescriptor::REPLICATION_SCOPE_BYTES
+  REPLICATION_SCOPE_BYTES = org.apache.hadoop.hbase.client.ColumnFamilyDescriptor::REPLICATION_SCOPE_BYTES
   FOREVER = org.apache.hadoop.hbase.HConstants::FOREVER
   IS_ROOT = 'IS_ROOT'.freeze
 
