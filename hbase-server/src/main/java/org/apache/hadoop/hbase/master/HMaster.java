@@ -1906,43 +1906,49 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     try {
-      final List<TableName> allEnabledTables = new ArrayList<>(
-        tableStateManager.getTablesInStates(TableState.State.ENABLED));
+      final List<TableName> allEnabledTables =
+        new ArrayList<>(tableStateManager.getTablesInStates(TableState.State.ENABLED));
       Collections.shuffle(allEnabledTables);
 
-      try (final Admin admin = clusterConnection.getAdmin()) {
-        for (TableName table : allEnabledTables) {
-          if (table.isSystemTable()) {
-            continue;
-          }
-          final TableDescriptor tblDesc = getTableDescriptors().get(table);
-          if (tblDesc != null && !tblDesc.isNormalizationEnabled()) {
-            LOG.debug("Skipping table {} because normalization is disabled in its"
-              + " table properties.", table);
-            continue;
-          }
+      final List<Long> submittedPlanProcIds = new ArrayList<>();
+      for (TableName table : allEnabledTables) {
+        if (table.isSystemTable()) {
+          continue;
+        }
+        final TableDescriptor tblDesc = getTableDescriptors().get(table);
+        if (tblDesc != null && !tblDesc.isNormalizationEnabled()) {
+          LOG.debug(
+            "Skipping table {} because normalization is disabled in its table properties.", table);
+          continue;
+        }
 
-          // make one last check that the cluster isn't shutting down before proceeding.
-          if (skipRegionManagementAction("region normalizer")) {
-            return false;
-          }
+        // make one last check that the cluster isn't shutting down before proceeding.
+        if (skipRegionManagementAction("region normalizer")) {
+          return false;
+        }
 
-          final List<NormalizationPlan> plans = normalizer.computePlansForTable(table);
-          if (CollectionUtils.isEmpty(plans)) {
-            LOG.debug("No normalization required for table {}.", table);
-            continue;
-          }
+        final List<NormalizationPlan> plans = normalizer.computePlansForTable(table);
+        if (CollectionUtils.isEmpty(plans)) {
+          LOG.debug("No normalization required for table {}.", table);
+          continue;
+        }
 
-          // as of this writing, `plan.execute()` is non-blocking, so there's no artificial rate-
-          // limiting of merge requests due to this serial loop.
-          for (NormalizationPlan plan : plans) {
-            plan.execute(admin);
-            if (plan.getType() == PlanType.SPLIT) {
-              splitPlanCount++;
-            } else if (plan.getType() == PlanType.MERGE) {
-              mergePlanCount++;
-            }
+        // as of this writing, `plan.submit()` is non-blocking and uses Async Admin APIs to
+        // submit task , so there's no artificial rate-
+        // limiting of merge/split requests due to this serial loop.
+        for (NormalizationPlan plan : plans) {
+          long procId = plan.submit(this);
+          submittedPlanProcIds.add(procId);
+          if (plan.getType() == PlanType.SPLIT) {
+            splitPlanCount++;
+          } else if (plan.getType() == PlanType.MERGE) {
+            mergePlanCount++;
           }
+        }
+        int totalPlansSubmitted = submittedPlanProcIds.size();
+        if (totalPlansSubmitted > 0 && LOG.isDebugEnabled()) {
+          LOG.debug("Normalizer plans submitted. Total plans count: {} , procID list: {}",
+            totalPlansSubmitted, submittedPlanProcIds);
         }
       }
     } finally {
@@ -1985,8 +1991,8 @@ public class HMaster extends HRegionServer implements MasterServices {
           " failed because merge switch is off");
     }
 
-    final String mergeRegionsStr = Arrays.stream(regionsToMerge).map(r -> r.getEncodedName()).
-      collect(Collectors.joining(", "));
+    final String mergeRegionsStr = Arrays.stream(regionsToMerge).map(RegionInfo::getEncodedName)
+      .collect(Collectors.joining(", "));
     return MasterProcedureUtil.submitProcedure(new NonceProcedureRunnable(this, ng, nonce) {
       @Override
       protected void run() throws IOException {
