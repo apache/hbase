@@ -74,8 +74,8 @@ public class SplitLogWorker implements Runnable {
 
   Thread worker;
   // thread pool which executes recovery work
-  private SplitLogWorkerCoordination coordination;
-  private RegionServerServices server;
+  private final SplitLogWorkerCoordination coordination;
+  private final RegionServerServices server;
 
   public SplitLogWorker(Server hserver, Configuration conf, RegionServerServices server,
       TaskExecutor splitTaskExecutor) {
@@ -152,7 +152,10 @@ public class SplitLogWorker implements Runnable {
     return true;
   }
 
-  static Status splitLog(String name, CancelableProgressable p, Configuration conf,
+  /**
+   * @return Result either DONE, RESIGNED, or ERR.
+   */
+  static Status splitLog(String filename, CancelableProgressable p, Configuration conf,
       RegionServerServices server, LastSequenceId sequenceIdChecker, WALFactory factory) {
     Path walDir;
     FileSystem fs;
@@ -164,11 +167,11 @@ public class SplitLogWorker implements Runnable {
       return Status.RESIGNED;
     }
     try {
-      if (!processSyncReplicationWAL(name, conf, server, fs, walDir)) {
+      if (!processSyncReplicationWAL(filename, conf, server, fs, walDir)) {
         return Status.DONE;
       }
     } catch (IOException e) {
-      LOG.warn("failed to process sync replication wal {}", name, e);
+      LOG.warn("failed to process sync replication wal {}", filename, e);
       return Status.RESIGNED;
     }
     // TODO have to correctly figure out when log splitting has been
@@ -178,31 +181,32 @@ public class SplitLogWorker implements Runnable {
       SplitLogWorkerCoordination splitLogWorkerCoordination =
           server.getCoordinatedStateManager() == null ? null
               : server.getCoordinatedStateManager().getSplitLogWorkerCoordination();
-      if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, name)), fs, conf, p,
+      if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)), fs, conf, p,
         sequenceIdChecker, splitLogWorkerCoordination, factory, server)) {
         return Status.PREEMPTED;
       }
     } catch (InterruptedIOException iioe) {
-      LOG.warn("Resigning, interrupted splitting WAL {}", name, iioe);
+      LOG.warn("Resigning, interrupted splitting WAL {}", filename, iioe);
       return Status.RESIGNED;
     } catch (IOException e) {
       if (e instanceof FileNotFoundException) {
         // A wal file may not exist anymore. Nothing can be recovered so move on
-        LOG.warn("Done, WAL {} does not exist anymore", name, e);
+        LOG.warn("Done, WAL {} does not exist anymore", filename, e);
         return Status.DONE;
       }
       Throwable cause = e.getCause();
       if (e instanceof RetriesExhaustedException && (cause instanceof NotServingRegionException
           || cause instanceof ConnectException || cause instanceof SocketTimeoutException)) {
-        LOG.warn("Resigning, can't connect to target regionserver splitting WAL {}", name, e);
+        LOG.warn("Resigning, can't connect to target regionserver splitting WAL {}", filename, e);
         return Status.RESIGNED;
       } else if (cause instanceof InterruptedException) {
-        LOG.warn("Resigning, interrupted splitting WAL {}", name, e);
+        LOG.warn("Resigning, interrupted splitting WAL {}", filename, e);
         return Status.RESIGNED;
       }
-      LOG.warn("Error splitting WAL {}", name, e);
+      LOG.warn("Error splitting WAL {}", filename, e);
       return Status.ERR;
     }
+    LOG.debug("Done splitting WAL {}", filename);
     return Status.DONE;
   }
 

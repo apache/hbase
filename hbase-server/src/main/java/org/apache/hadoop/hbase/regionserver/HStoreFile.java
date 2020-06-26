@@ -435,7 +435,7 @@ public class HStoreFile implements StoreFile {
     if (cfBloomType != BloomType.NONE) {
       initialReader.loadBloomfilter(BlockType.GENERAL_BLOOM_META);
       if (hfileBloomType != cfBloomType) {
-        LOG.info("HFile Bloom filter type for "
+        LOG.debug("HFile Bloom filter type for "
             + initialReader.getHFileReader().getName() + ": " + hfileBloomType
             + ", but " + cfBloomType + " specified in column family "
             + "configuration");
