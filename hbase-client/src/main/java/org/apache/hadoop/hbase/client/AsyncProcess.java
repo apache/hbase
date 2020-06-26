@@ -20,43 +20,12 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.common.annotations.VisibleForTesting;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.AsyncProcess.RowChecker.ReturnCode;
-import org.apache.hadoop.hbase.CallQueueTooBigException;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.RetryImmediatelyException;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.AsyncProcess.RowChecker.ReturnCode;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
@@ -66,6 +35,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.htrace.Trace;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This class  allows a continuous flow of requests. It's written to be compatible with a
@@ -655,7 +631,10 @@ class AsyncProcess {
       List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results,
       PayloadCarryingServerCallable callable, int operationTimeout, int rpcTimeout) {
     List<Action<Row>> actions = new ArrayList<Action<Row>>(rows.size());
-
+    for(int ii=0;ii<rows.size();ii++){
+      Mutation mutate = (Mutation)(rows.get(ii));
+      //System.out.println("in submitall "+mutate.getId());
+    }
     // The position will be used by the processBatch to match the object array returned.
     int posInList = -1;
     NonceGenerator ng = this.connection.getNonceGenerator();
@@ -821,6 +800,12 @@ class AsyncProcess {
 
       @Override
       public void run() {
+        /*for(Map.Entry<byte[],List<Action<Row>>> entry : multiAction.actions.entrySet()){
+          for(int ii=0;ii<entry.getValue().size();ii++){
+            Mutation m= (Mutation)(entry.getValue().get(ii).getAction()) ;
+            //System.out.println("in run "+m.getId());
+          }
+        }*/
         MultiResponse res = null;
         PayloadCarryingServerCallable callable = currentCallable;
         try {
@@ -1003,7 +988,10 @@ class AsyncProcess {
     private void groupAndSendMultiAction(List<Action<Row>> currentActions, int numAttempt) {
       Map<ServerName, MultiAction<Row>> actionsByServer =
           new HashMap<ServerName, MultiAction<Row>>();
-
+      /*for(int ii=0;ii<currentActions.size();ii++){
+        Mutation m=(Mutation)(currentActions.get(ii).getAction());
+        System.out.println("in group and send "+m.getId());}*/
+      //test passed
       boolean isReplica = false;
       List<Action<Row>> unknownReplicaActions = null;
       for (Action<Row> action : currentActions) {
@@ -1115,8 +1103,17 @@ class AsyncProcess {
       for (Map.Entry<ServerName, MultiAction<Row>> e : actionsByServer.entrySet()) {
         ServerName server = e.getKey();
         MultiAction<Row> multiAction = e.getValue();
+        /*for(Map.Entry<byte[],List<Action<Row>>> f : multiAction.actions.entrySet()){
+          List<Action<Row>> actions=f.getValue();
+          for(int ii=0;ii<actions.size();ii++){
+            Mutation m=(Mutation)(actions.get(ii).getAction());
+            System.out.println(m.getId()+" in asyncprocess.java  sendmultiaction");
+          }
+        }*/
+        //test passed
         Collection<? extends Runnable> runnables = getNewMultiActionRunnable(server, multiAction,
             numAttempt);
+        //System.out.println("created runnable in sendmultiaction");
         // make sure we correctly count the number of runnables before we try to reuse the send
         // thread, in case we had to split the request into different runnables because of backoff
         if (runnables.size() > actionsRemaining) {

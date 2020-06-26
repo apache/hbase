@@ -17,6 +17,9 @@
  */
 
 // This file contains protocol buffers that are used for Client service.
+
+
+syntax="proto2";
 package hbase.pb;
 
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
@@ -24,6 +27,7 @@ option java_outer_classname = "ClientProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
+
 
 import "HBase.proto";
 import "Filter.proto";
@@ -107,7 +111,7 @@ message Result {
   //  in the query.
   optional bool exists = 3;
 
-  // Whether or not the results are coming from possibly stale data 
+  // Whether or not the results are coming from possibly stale data
   optional bool stale = 4 [default = false];
 
   // Whether or not the entire result could be returned. Results will be split when
@@ -172,6 +176,8 @@ message MutationProto {
   optional int32 associated_cell_count = 8;
 
   optional uint64 nonce = 9;
+
+  optional string my_trace_id = 10;
 
   enum Durability {
     USE_DEFAULT  = 0;
@@ -493,23 +499,23 @@ message MultiResponse {
 
 service ClientService {
   rpc Get(GetRequest)
-    returns(GetResponse);
+      returns(GetResponse);
 
   rpc Mutate(MutateRequest)
-    returns(MutateResponse);
+      returns(MutateResponse);
 
   rpc Scan(ScanRequest)
-    returns(ScanResponse);
+      returns(ScanResponse);
 
   rpc BulkLoadHFile(BulkLoadHFileRequest)
-    returns(BulkLoadHFileResponse);
+      returns(BulkLoadHFileResponse);
 
   rpc ExecService(CoprocessorServiceRequest)
-    returns(CoprocessorServiceResponse);
-    
+      returns(CoprocessorServiceResponse);
+
   rpc ExecRegionServerService(CoprocessorServiceRequest)
-    returns(CoprocessorServiceResponse);
+      returns(CoprocessorServiceResponse);
 
   rpc Multi(MultiRequest)
-    returns(MultiResponse);
+      returns(MultiResponse);
 }

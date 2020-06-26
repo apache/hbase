@@ -17,20 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -41,8 +30,11 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ServiceException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Callable that handles the <code>multi</code> method call going against a single
@@ -86,6 +78,7 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
 
   @Override
   public MultiResponse call(int operationTimeout) throws IOException {
+    //System.out.println("in multiservercallable.java call");
     int remainingTime = tracker.getRemainingTime(operationTimeout);
     if (remainingTime <= 1) {
       // "1" is a special return value in RetryingTimeTracker, see its implementation.
@@ -123,6 +116,8 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
       int rowMutations = 0;
       for (Action<R> action : actions) {
         Row row = action.getAction();
+        Mutation mutation=(Mutation)(row);
+        //System.out.println("finally "+mutation.getId());
         // Row Mutations are a set of Puts and/or Deletes all to be applied atomically
         // on the one row. We do separate RegionAction for each RowMutations.
         // We maintain a map to keep track of this RegionAction and the original Action index.
@@ -160,6 +155,13 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
         multiRequestBuilder.addRegionAction(regionActionBuilder.build());
         regionActionIndex++;
       }
+      /*for(int jj=0;jj<multiRequestBuilder.getRegionActionList().size();jj++) {
+        for (int ii = 0; ii < multiRequestBuilder.getRegionActionList().get(jj).getActionList().size(); ii++) {
+          //System.out.println("multiservercallable.java get action list " + multiRequestBuilder.getRegionActionList().get(jj).getActionList().get(ii));
+          if(multiRequestBuilder.getRegionActionList().get(jj).getActionList().get(ii).getMutation().hasMyTraceId()){
+            System.out.println("multiservercallable.java get action list " + multiRequestBuilder.getRegionActionList().get(jj).getActionList().get(ii).getMutation().getMyTraceId());}
+        }
+      }*/
     }
 
     // Controller optionally carries cell data over the proxy/service boundary and also
