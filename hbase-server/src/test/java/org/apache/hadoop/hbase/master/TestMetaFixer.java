@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BooleanSupplier;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -114,7 +113,8 @@ public class TestMetaFixer {
 
     // wait for RITs to settle -- those are the fixed regions being assigned -- or until the
     // watchdog TestRule terminates the test.
-    await(50, () -> isNotEmpty(services.getAssignmentManager().getRegionsInTransition()));
+    HBaseTestingUtility.await(50,
+      () -> isNotEmpty(services.getAssignmentManager().getRegionsInTransition()));
 
     ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertEquals(originalCount, ris.size());
@@ -191,7 +191,7 @@ public class TestMetaFixer {
     MetaFixer fixer = new MetaFixer(services);
     fixer.fixOverlaps(report);
 
-    await(10, () -> {
+    HBaseTestingUtility. await(10, () -> {
       try {
         if (cj.scan() > 0) {
           // It submits GC once, then it will immediately kick off another GC to test if
@@ -215,7 +215,7 @@ public class TestMetaFixer {
     });
 
     // Wait until all GCs settled down
-    await(10, () -> {
+    HBaseTestingUtility.await(10, () -> {
       return services.getMasterProcedureExecutor().getActiveProcIds().isEmpty();
     });
 
@@ -258,7 +258,7 @@ public class TestMetaFixer {
       fixer.fixOverlaps(report);
       AssignmentManager am = services.getAssignmentManager();
 
-      await(200, () -> {
+      HBaseTestingUtility.await(200, () -> {
         try {
           cj.scan();
           final CatalogJanitor.Report postReport = cj.getLastReport();
@@ -291,7 +291,7 @@ public class TestMetaFixer {
       report = cj.getLastReport();
       fixer.fixOverlaps(report);
 
-      await(20, () -> {
+      HBaseTestingUtility.await(20, () -> {
         try {
           // Make sure it GC only once.
           return (cj.scan() > 0);
@@ -359,7 +359,7 @@ public class TestMetaFixer {
     fixer.fixOverlaps(report);
 
     // Wait until all procedures settled down
-    await(200, () -> {
+    HBaseTestingUtility.await(200, () -> {
       return services.getMasterProcedureExecutor().getActiveProcIds().isEmpty();
     });
 
@@ -371,7 +371,7 @@ public class TestMetaFixer {
     fixer.fixOverlaps(report);
 
     // Wait until all procedures settled down
-    await(200, () -> {
+    HBaseTestingUtility.await(200, () -> {
       return services.getMasterProcedureExecutor().getActiveProcIds().isEmpty();
     });
 
@@ -414,7 +414,7 @@ public class TestMetaFixer {
     assertEquals(1, MetaFixer.calculateMerges(10, report.getOverlaps()).size());
     MetaFixer fixer = new MetaFixer(services);
     fixer.fixOverlaps(report);
-    await(10, () -> {
+    HBaseTestingUtility.await(10, () -> {
       try {
         services.getCatalogJanitor().scan();
         final CatalogJanitor.Report postReport = services.getCatalogJanitor().getLastReport();
@@ -423,23 +423,5 @@ public class TestMetaFixer {
         throw new RuntimeException(e);
       }
     });
-  }
-
-  /**
-   * Await the successful return of {@code condition}, sleeping {@code sleepMillis} between
-   * invocations.
-   */
-  private static void await(final long sleepMillis, final BooleanSupplier condition)
-    throws InterruptedException {
-    try {
-      while (!condition.getAsBoolean()) {
-        Thread.sleep(sleepMillis);
-      }
-    } catch (RuntimeException e) {
-      if (e.getCause() instanceof AssertionError) {
-        throw (AssertionError) e.getCause();
-      }
-      throw e;
-    }
   }
 }
