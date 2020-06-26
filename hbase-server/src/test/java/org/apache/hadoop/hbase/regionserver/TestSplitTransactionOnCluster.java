@@ -1087,7 +1087,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue("not able to find a splittable region", region != null);
       String node = ZKAssign.getNodeName(regionServer.getZooKeeper(),
           region.getRegionInfo().getEncodedName());
-      regionServer.getZooKeeper().sync(node);
+      regionServer.getZooKeeper().syncOrTimeout(node);
       SplitTransactionImpl st = new SplitTransactionImpl(region, Bytes.toBytes("row2"));
       try {
         st.prepare();
@@ -1318,7 +1318,7 @@ public class TestSplitTransactionOnCluster {
       };
       String node = ZKAssign.getNodeName(regionServer.getZooKeeper(),
           region.getRegionInfo().getEncodedName());
-      regionServer.getZooKeeper().sync(node);
+      regionServer.getZooKeeper().syncOrTimeout(node);
       for (int i = 0; i < 100; i++) {
         // We expect the znode to be deleted by this time. Here the
         // znode could be in OPENED state and the

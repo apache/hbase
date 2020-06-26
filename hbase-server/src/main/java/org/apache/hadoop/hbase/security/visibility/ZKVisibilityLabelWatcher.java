@@ -109,7 +109,7 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
   public void nodeDataChanged(String path) {
     if (path.equals(labelZnode) || path.equals(userAuthsZnode)) {
       try {
-        watcher.sync(path);
+        watcher.syncOrTimeout(path);
         byte[] data = ZKUtil.getDataAndWatch(watcher, path);
         if (path.equals(labelZnode)) {
           refreshVisibilityLabelsCache(data);

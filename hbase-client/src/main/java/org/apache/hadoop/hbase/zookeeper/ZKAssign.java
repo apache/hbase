@@ -208,7 +208,7 @@ public class ZKAssign {
       region.getRegionName(), serverName, HConstants.EMPTY_BYTE_ARRAY);
     byte [] data = rt.toByteArray();
     String node = getNodeName(zkw, region.getEncodedName());
-    zkw.sync(node);
+    zkw.syncOrTimeout(node);
     int version = ZKUtil.checkExists(zkw, node);
     if (version == -1) {
       return ZKUtil.createAndWatch(zkw, node, data);
@@ -444,7 +444,7 @@ public class ZKAssign {
         "node " + encodedRegionName + " in expected state " + expectedState));
     }
     String node = getNodeName(zkw, encodedRegionName);
-    zkw.sync(node);
+    zkw.syncOrTimeout(node);
     Stat stat = new Stat();
     byte [] bytes = ZKUtil.getDataNoWatch(zkw, node, stat);
     if (bytes == null) {
@@ -645,7 +645,7 @@ public class ZKAssign {
     }
 
     String node = getNodeName(zkw, encoded);
-    zkw.sync(node);
+    zkw.syncOrTimeout(node);
 
     // Read existing data of the node
     Stat stat = new Stat();
@@ -727,7 +727,7 @@ public class ZKAssign {
                                           int expectedVersion) throws KeeperException {
 
     final String encoded = getNodeName(zkw, region.getEncodedName());
-    zkw.sync(encoded);
+    zkw.syncOrTimeout(encoded);
 
     // Read existing data of the node
     Stat stat = new Stat();
@@ -807,7 +807,7 @@ public class ZKAssign {
     }
 
     String node = getNodeName(zkw, encoded);
-    zkw.sync(node);
+    zkw.syncOrTimeout(node);
 
     // Read existing data of the node
     Stat stat = new Stat();
