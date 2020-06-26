@@ -66,8 +66,8 @@ public class TestFlushRegionEntry {
     HRegion r = mock(HRegion.class);
     doReturn(hri).when(r).getRegionInfo();
 
-    FlushRegionEntry entry = new FlushRegionEntry(r, true, FlushLifeCycleTracker.DUMMY);
-    FlushRegionEntry other = new FlushRegionEntry(r, true, FlushLifeCycleTracker.DUMMY);
+    FlushRegionEntry entry = new FlushRegionEntry(r, null, FlushLifeCycleTracker.DUMMY);
+    FlushRegionEntry other = new FlushRegionEntry(r, null, FlushLifeCycleTracker.DUMMY);
 
     assertEquals(entry.hashCode(), other.hashCode());
     assertEquals(entry, other);
