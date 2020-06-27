@@ -174,6 +174,46 @@ public class BalancerTestBase {
     }
   }
 
+  // This mock allows us to test the LocalityCostFunction
+  public class MockCluster extends BaseLoadBalancer.Cluster {
+
+    private int[][] localities = null;   // [region][server] = percent of blocks
+    private boolean firstRegionAsReplica;
+
+    public MockCluster(int[][] regions) {
+      this(regions, false);
+    }
+
+    public MockCluster(int[][] regions, final boolean firstRegionAsReplica) {
+      // regions[0] is an array where index = serverIndex an value = number of regions
+      super(mockClusterServers(regions[0], 1, firstRegionAsReplica), null,
+        null, null);
+
+      this.firstRegionAsReplica = firstRegionAsReplica;
+      localities = new int[regions.length - 1][];
+      for (int i = 1; i < regions.length; i++) {
+        int regionIndex = i - 1;
+        localities[regionIndex] = new int[regions[i].length - 1];
+        regionIndexToServerIndex[regionIndex] = regions[i][0];
+        for (int j = 1; j < regions[i].length; j++) {
+          int serverIndex = j - 1;
+          localities[regionIndex][serverIndex] = regions[i][j] > 100 ? regions[i][j] % 100 : regions[i][j];
+        }
+      }
+    }
+
+    @Override
+    float getLocalityOfRegion(int region, int server) {
+      // convert the locality percentage to a fraction
+      return localities[region][server] / 100.0f;
+    }
+
+    @Override
+    public int getRegionSizeMB(int region) {
+      return 1;
+    }
+  }
+
   /**
    * Invariant is that all servers have between floor(avg) and ceiling(avg)
    * number of regions.
@@ -382,13 +422,29 @@ public class BalancerTestBase {
   }
 
   protected TreeMap<ServerName, List<RegionInfo>> mockClusterServers(int[] mockCluster, int numTables) {
+    return mockClusterServers(mockCluster, numTables, false);
+  }
+
+  protected TreeMap<ServerName, List<RegionInfo>> mockClusterServers(int[] mockCluster,
+    int numTables, final boolean firstRegionAsReplica) {
     int numServers = mockCluster.length;
     TreeMap<ServerName, List<RegionInfo>> servers = new TreeMap<>();
     for (int i = 0; i < numServers; i++) {
       int numRegions = mockCluster[i];
-      ServerAndLoad sal = randomServer(0);
-      List<RegionInfo> regions = randomRegions(numRegions, numTables);
-      servers.put(sal.getServerName(), regions);
+      List<RegionInfo> regions = randomRegions(numRegions, numTables,
+        firstRegionAsReplica && (i == 0));
+
+      // When firstRegionAsReplica is true, there is a need to have server names in an order
+      // as they are added in treemap, works only when there are less than 10 servers.
+      if (firstRegionAsReplica) {
+        // TODO: if there is a need for more than 10 servers, change to another solution.
+        Assert.assertTrue(i < 10);
+        ServerName sn = ServerName.valueOf("serv" + i, 1, i);
+        servers.put(sn, regions);
+      } else {
+        ServerAndLoad sal = randomServer(0);
+        servers.put(sal.getServerName(), regions);
+      }
     }
     return servers;
   }
@@ -459,6 +515,11 @@ public class BalancerTestBase {
   }
 
   protected List<RegionInfo> randomRegions(int numRegions, int numTables) {
+    return randomRegions(numRegions, numTables, false);
+  }
+
+  protected List<RegionInfo> randomRegions(int numRegions, int numTables,
+    boolean firstRegionAsReplica) {
     List<RegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
     byte[] end = new byte[16];
@@ -473,13 +534,18 @@ public class BalancerTestBase {
       Bytes.putInt(start, 0, numRegions << 1);
       Bytes.putInt(end, 0, (numRegions << 1) + 1);
       TableName tableName =
-          TableName.valueOf("table" + (numTables > 0 ? rand.nextInt(numTables) : i));
-      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
-          .setStartKey(start)
-          .setEndKey(end)
-          .setSplit(false)
-          .setRegionId(regionId++)
-          .build();
+        TableName.valueOf("table" + (numTables > 0 ? rand.nextInt(numTables) : i));
+      RegionInfoBuilder builder = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(start)
+        .setEndKey(end)
+        .setSplit(false)
+        .setRegionId(regionId++);
+
+      if (firstRegionAsReplica && (i == 0)) {
+        builder.setReplicaId(1);
+      }
+
+      RegionInfo hri = builder.build();
       regions.add(hri);
     }
     return regions;
