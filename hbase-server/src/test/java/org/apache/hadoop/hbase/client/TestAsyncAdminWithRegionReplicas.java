@@ -54,10 +54,7 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
   public static void setUpBeforeClass() throws Exception {
     TestAsyncAdminBase.setUpBeforeClass();
     HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
-    try (ConnectionRegistry registry =
-      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration())) {
-      RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, registry);
-    }
+    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL);
   }
 
   private void testMoveNonDefaultReplica(TableName tableName)

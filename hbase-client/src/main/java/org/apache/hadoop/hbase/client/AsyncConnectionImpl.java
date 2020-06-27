@@ -86,11 +86,11 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   final AsyncConnectionConfiguration connConf;
 
-  private final User user;
+  final User user;
 
   final ConnectionRegistry registry;
 
-  private final int rpcTimeout;
+  final int rpcTimeout;
 
   protected final RpcClient rpcClient;
 

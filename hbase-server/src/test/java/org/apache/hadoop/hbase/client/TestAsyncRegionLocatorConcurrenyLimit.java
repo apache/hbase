@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
-import static org.apache.hadoop.hbase.client.AsyncNonMetaRegionLocator.MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE;
+import static org.apache.hadoop.hbase.client.AsyncRegionLocator.MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStartRow;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.REGION_COPROCESSOR_CONF_KEY;
@@ -57,11 +57,11 @@ import org.junit.experimental.categories.Category;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ MediumTests.class, ClientTests.class })
-public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
+public class TestAsyncRegionLocatorConcurrenyLimit {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncNonMetaRegionLocatorConcurrenyLimit.class);
+    HBaseClassTestRule.forClass(TestAsyncRegionLocatorConcurrenyLimit.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -71,7 +71,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
 
   private static AsyncConnectionImpl CONN;
 
-  private static AsyncNonMetaRegionLocator LOCATOR;
+  private static AsyncRegionLocator LOCATOR;
 
   private static byte[][] SPLIT_KEYS;
 
@@ -90,7 +90,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
 
     @Override
     public boolean preScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
-        InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
+      InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
       if (c.getEnvironment().getRegionInfo().isMetaRegion()) {
         int concurrency = CONCURRENCY.incrementAndGet();
         for (;;) {
@@ -109,7 +109,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
 
     @Override
     public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> c,
-        InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
+      InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
       if (c.getEnvironment().getRegionInfo().isMetaRegion()) {
         CONCURRENCY.decrementAndGet();
       }
@@ -125,10 +125,10 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
     ConnectionRegistry registry =
-        ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
       registry.getClusterId().get(), null, User.getCurrent());
-    LOCATOR = new AsyncNonMetaRegionLocator(CONN);
+    LOCATOR = new AsyncRegionLocator(CONN, AsyncConnectionImpl.RETRY_TIMER);
     SPLIT_KEYS = IntStream.range(1, 256).mapToObj(i -> Bytes.toBytes(String.format("%02x", i)))
       .toArray(byte[][]::new);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY, SPLIT_KEYS);
@@ -142,7 +142,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
   }
 
   private void assertLocs(List<CompletableFuture<RegionLocations>> futures)
-      throws InterruptedException, ExecutionException {
+    throws InterruptedException, ExecutionException {
     assertEquals(256, futures.size());
     for (int i = 0; i < futures.size(); i++) {
       HRegionLocation loc = futures.get(i).get().getDefaultRegionLocation();

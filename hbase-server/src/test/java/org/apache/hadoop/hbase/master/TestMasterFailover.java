@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -28,12 +29,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
-import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -163,55 +161,6 @@ public class TestMasterFailover {
       assertEquals(3, rss);
     } finally {
       // Stop the cluster
-      TEST_UTIL.shutdownMiniCluster();
-    }
-  }
-
-  /**
-   * Test meta in transition when master failover.
-   * This test used to manipulate region state up in zk. That is not allowed any more in hbase2
-   * so I removed that messing. That makes this test anemic.
-   */
-  @Test
-  public void testMetaInTransitionWhenMasterFailover() throws Exception {
-    // Start the cluster
-    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-    TEST_UTIL.startMiniCluster();
-    try {
-      SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-      LOG.info("Cluster started");
-
-      HMaster activeMaster = cluster.getMaster();
-      ServerName metaServerName = cluster.getServerHoldingMeta();
-      HRegionServer hrs = cluster.getRegionServer(metaServerName);
-
-      // Now kill master, meta should remain on rs, where we placed it before.
-      LOG.info("Aborting master");
-      activeMaster.abort("test-kill");
-      cluster.waitForMasterToStop(activeMaster.getServerName(), 30000);
-      LOG.info("Master has aborted");
-
-      // meta should remain where it was
-      RegionState metaState = MetaTableLocator.getMetaRegionState(hrs.getZooKeeper());
-      assertEquals("hbase:meta should be online on RS",
-          metaState.getServerName(), metaServerName);
-      assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
-
-      // Start up a new master
-      LOG.info("Starting up a new master");
-      activeMaster = cluster.startMaster().getMaster();
-      LOG.info("Waiting for master to be ready");
-      cluster.waitForActiveAndReadyMaster();
-      LOG.info("Master is ready");
-
-      // ensure meta is still deployed on RS
-      metaState = MetaTableLocator.getMetaRegionState(activeMaster.getZooKeeper());
-      assertEquals("hbase:meta should be online on RS",
-          metaState.getServerName(), metaServerName);
-      assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
-
-      // Done, shutdown the cluster
-    } finally {
       TEST_UTIL.shutdownMiniCluster();
     }
   }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -27,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * <li>{@link #AFTER} locate the region which contains the row after the given row.</li>
  * </ul>
  */
-@InterfaceAudience.Private
-enum RegionLocateType {
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+public enum RegionLocateType {
   BEFORE, CURRENT, AFTER
 }

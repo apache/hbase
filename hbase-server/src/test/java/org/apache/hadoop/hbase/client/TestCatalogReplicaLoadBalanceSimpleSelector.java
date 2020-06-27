@@ -23,10 +23,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
@@ -96,8 +99,9 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
       .createSelector(replicaSelectorClass, META_TABLE_NAME, CONN, () -> {
         int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
         try {
-          RegionLocations metaLocations = CONN.registry.getMetaRegionLocations().get
-            (CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+          List<HRegionLocation> metaLocations = CONN.getRegionLocator(TableName.META_TABLE_NAME)
+            .getRegionLocations(HConstants.EMPTY_START_ROW, true)
+            .get(CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
           numOfReplicas = metaLocations.size();
         } catch (Exception e) {
           LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
@@ -119,8 +123,9 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
         replicaSelectorClass, META_TABLE_NAME, CONN, () -> {
         int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
         try {
-          RegionLocations metaLocations = CONN.registry.getMetaRegionLocations().get(
-            CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+          List<HRegionLocation> metaLocations = CONN.getRegionLocator(TableName.META_TABLE_NAME)
+            .getRegionLocations(HConstants.EMPTY_START_ROW, true)
+            .get(CONN.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
           numOfReplicas = metaLocations.size();
         } catch (Exception e) {
           LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);

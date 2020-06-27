@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.util.concurrent.CompletableFuture;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -30,11 +29,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 interface ConnectionRegistry extends Closeable {
-
-  /**
-   * Get the location of meta region(s).
-   */
-  CompletableFuture<RegionLocations> getMetaRegionLocations();
 
   /**
    * Should only be called once.

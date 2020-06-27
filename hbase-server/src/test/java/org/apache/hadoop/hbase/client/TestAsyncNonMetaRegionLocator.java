@@ -78,12 +78,13 @@ public class TestAsyncNonMetaRegionLocator {
 
   private static byte[] FAMILY = Bytes.toBytes("cf");
   private static final int NB_SERVERS = 4;
+
   private static final int NUM_OF_META_REPLICA = NB_SERVERS - 1;
 
   private static byte[][] SPLIT_KEYS;
 
   private AsyncConnectionImpl conn;
-  private AsyncNonMetaRegionLocator locator;
+  private AsyncRegionLocator locator;
 
   @Parameter
   public CatalogReplicaMode metaReplicaMode;
@@ -124,7 +125,7 @@ public class TestAsyncNonMetaRegionLocator {
       ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     conn =
       new AsyncConnectionImpl(c, registry, registry.getClusterId().get(), null, User.getCurrent());
-    locator = new AsyncNonMetaRegionLocator(conn);
+    locator = new AsyncRegionLocator(conn, AsyncConnectionImpl.RETRY_TIMER);
   }
 
   @After

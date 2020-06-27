@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -30,11 +29,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 class DoNothingConnectionRegistry implements ConnectionRegistry {
 
   public DoNothingConnectionRegistry(Configuration conf) {
-  }
-
-  @Override
-  public CompletableFuture<RegionLocations> getMetaRegionLocations() {
-    return CompletableFuture.completedFuture(null);
   }
 
   @Override

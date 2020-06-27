@@ -23,6 +23,7 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +36,9 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -42,12 +46,22 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.LocateMetaRegionResponse;
 
 @Category({ ClientTests.class, MediumTests.class })
 public class TestAsyncRegionLocatorTracing {
@@ -60,14 +74,63 @@ public class TestAsyncRegionLocatorTracing {
 
   private AsyncConnectionImpl conn;
 
-  private RegionLocations locs;
+  private static RegionLocations locs;
 
   @Rule
   public OpenTelemetryRule traceRule = OpenTelemetryRule.create();
 
+  public static final class RpcClientForTest implements RpcClient {
+
+    public RpcClientForTest(Configuration configuration, String clusterId,
+      SocketAddress localAddress, MetricsConnection metrics) {
+    }
+
+    @Override
+    public BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User user, int rpcTimeout) {
+      throw new UnsupportedOperationException("should not be called");
+    }
+
+    @Override
+    public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout) {
+      return new RpcChannel() {
+
+        @Override
+        public void callMethod(MethodDescriptor method, RpcController controller, Message request,
+          Message responsePrototype, RpcCallback<Message> done) {
+          LocateMetaRegionResponse.Builder builder = LocateMetaRegionResponse.newBuilder();
+          for (HRegionLocation loc : locs) {
+            if (loc != null) {
+              builder.addMetaLocations(ProtobufUtil.toRegionLocation(loc));
+            }
+          }
+          done.run(builder.build());
+        }
+      };
+    }
+
+    @Override
+    public void cancelConnections(ServerName sn) {
+    }
+
+    @Override
+    public void close() {
+    }
+
+    @Override
+    public boolean hasCellBlockSupport() {
+      return false;
+    }
+  }
+
+  @BeforeClass
+  public static void setUpBeforeClass() {
+    CONF.setClass(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, RpcClientForTest.class,
+      RpcClient.class);
+  }
+
   @Before
   public void setUp() throws IOException {
-    RegionInfo metaRegionInfo = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
+    RegionInfo metaRegionInfo = RegionInfoBuilder.FIRST_META_REGIONINFO;
     locs = new RegionLocations(
       new HRegionLocation(metaRegionInfo,
         ServerName.valueOf("127.0.0.1", 12345, EnvironmentEdgeManager.currentTime())),
@@ -78,8 +141,9 @@ public class TestAsyncRegionLocatorTracing {
     conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF) {
 
       @Override
-      public CompletableFuture<RegionLocations> getMetaRegionLocations() {
-        return CompletableFuture.completedFuture(locs);
+      public CompletableFuture<ServerName> getActiveMaster() {
+        return CompletableFuture.completedFuture(
+          ServerName.valueOf("127.0.0.1", 12345, EnvironmentEdgeManager.currentTime()));
       }
     }, "test", null, UserProvider.instantiate(CONF).getCurrent());
   }
@@ -104,8 +168,7 @@ public class TestAsyncRegionLocatorTracing {
 
   @Test
   public void testClearCacheServerName() {
-    ServerName sn = ServerName.valueOf("127.0.0.1", 12345,
-      EnvironmentEdgeManager.currentTime());
+    ServerName sn = ServerName.valueOf("127.0.0.1", 12345, EnvironmentEdgeManager.currentTime());
     conn.getLocator().clearCache(sn);
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
     assertEquals(StatusCode.OK, span.getStatus().getStatusCode());

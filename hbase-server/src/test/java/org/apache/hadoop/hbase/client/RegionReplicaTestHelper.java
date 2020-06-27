@@ -43,8 +43,7 @@ public final class RegionReplicaTestHelper {
   }
 
   // waits for all replicas to have region location
-  static void waitUntilAllMetaReplicasAreReady(HBaseTestingUtil util,
-    ConnectionRegistry registry) throws IOException {
+  static void waitUntilAllMetaReplicasAreReady(HBaseTestingUtil util) throws IOException {
     Configuration conf = util.getConfiguration();
     int regionReplicaCount =
       util.getAdmin().getDescriptor(TableName.META_TABLE_NAME).getRegionReplication();
@@ -58,16 +57,20 @@ public final class RegionReplicaTestHelper {
         @Override
         public boolean evaluate() {
           try {
-            RegionLocations locs = registry.getMetaRegionLocations().get();
+            List<HRegionLocation> locs;
+            try (RegionLocator locator =
+              util.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+              locs = locator.getAllRegionLocations();
+            }
             if (locs.size() < regionReplicaCount) {
               return false;
             }
             for (int i = 0; i < regionReplicaCount; i++) {
-              HRegionLocation loc = locs.getRegionLocation(i);
+              HRegionLocation loc = locs.get(i);
               // Wait until the replica is served by a region server. There could be delay between
               // the replica being available to the connection and region server opening it.
               Optional<ServerName> rsCarryingReplica =
-                  getRSCarryingReplica(util, loc.getRegion().getTable(), i);
+                getRSCarryingReplica(util, loc.getRegion().getTable(), i);
               if (!rsCarryingReplica.isPresent()) {
                 return false;
               }
@@ -120,7 +123,7 @@ public final class RegionReplicaTestHelper {
 
   interface Locator {
     RegionLocations getRegionLocations(TableName tableName, int replicaId, boolean reload)
-        throws Exception;
+      throws Exception;
 
     void updateCachedLocationOnError(HRegionLocation loc, Throwable error) throws Exception;
   }

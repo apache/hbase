@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
@@ -100,8 +98,6 @@ public class TestMetaShutdownHandler {
       metaServerName =
         regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
     }
-    RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-    assertEquals("Wrong state for meta!", RegionState.State.OPEN, metaState.getState());
     assertNotEquals("Meta is on master!", metaServerName, master.getServerName());
     HRegionServer metaRegionServer = cluster.getRegionServer(metaServerName);
 
@@ -129,11 +125,9 @@ public class TestMetaShutdownHandler {
     assertTrue("Meta should be assigned",
       regionStates.isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO));
     // Now, make sure meta is registered in zk
-    metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-    assertEquals("Meta should not be in transition", RegionState.State.OPEN, metaState.getState());
-    assertEquals("Meta should be assigned", metaState.getServerName(),
-      regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO));
-    assertNotEquals("Meta should be assigned on a different server", metaState.getServerName(),
+    ServerName newMetaServerName =
+      regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    assertNotEquals("Meta should be assigned on a different server", newMetaServerName,
       metaServerName);
   }
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.client.RegionReplicaTestHelper.testLocator;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -44,24 +45,25 @@ public class TestAsyncMetaRegionLocator {
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private static ConnectionRegistry REGISTRY;
+  private static AsyncConnectionImpl CONN;
 
-  private static AsyncMetaRegionLocator LOCATOR;
+  private static AsyncRegionLocator LOCATOR;
 
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
     TEST_UTIL.waitUntilNoRegionsInTransition();
-    REGISTRY = ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
-    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
+    CONN = (AsyncConnectionImpl) ConnectionFactory
+      .createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
-    LOCATOR = new AsyncMetaRegionLocator(REGISTRY);
+    LOCATOR = new AsyncRegionLocator(CONN, AsyncConnectionImpl.RETRY_TIMER);
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    Closeables.close(REGISTRY, true);
+    Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -71,14 +73,15 @@ public class TestAsyncMetaRegionLocator {
 
       @Override
       public void updateCachedLocationOnError(HRegionLocation loc, Throwable error)
-          throws Exception {
+        throws Exception {
         LOCATOR.updateCachedLocationOnError(loc, error);
       }
 
       @Override
       public RegionLocations getRegionLocations(TableName tableName, int replicaId, boolean reload)
-          throws Exception {
-        return LOCATOR.getRegionLocations(replicaId, reload).get();
+        throws Exception {
+        return LOCATOR.getRegionLocations(tableName, EMPTY_START_ROW, replicaId,
+          RegionLocateType.CURRENT, reload).get();
       }
     });
   }

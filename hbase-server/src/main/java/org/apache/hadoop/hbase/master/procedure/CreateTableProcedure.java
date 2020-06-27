@@ -368,8 +368,6 @@ public class CreateTableProcedure
     final TableDescriptor tableDescriptor, final List<RegionInfo> regions) throws IOException {
     assert (regions != null && regions.size() > 0) : "expected at least 1 region, got " + regions;
 
-    ProcedureSyncWait.waitMetaRegions(env);
-
     // Add replicas if needed
     // we need to create regions with replicaIds starting from 1
     List<RegionInfo> newRegions =

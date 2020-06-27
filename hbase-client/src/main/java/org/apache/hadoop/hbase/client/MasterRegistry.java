@@ -266,7 +266,7 @@ public class MasterRegistry implements ConnectionRegistry {
     return new RegionLocations(regionLocations);
   }
 
-  @Override
+  // keep the method here just for testing compatibility
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     return tracedFuture(
       () -> this

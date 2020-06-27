@@ -210,7 +210,7 @@ public class TestReplicasClient {
 
     // No master
     LOG.info("Master is going to be stopped");
-    TestRegionServerNoMaster.stopMasterAndAssignMeta(HTU);
+    TestRegionServerNoMaster.stopMasterAndCacheMetaLocation(HTU);
     Configuration c = new Configuration(HTU.getConfiguration());
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     LOG.info("Master has stopped");
@@ -224,7 +224,9 @@ public class TestReplicasClient {
 
   @Before
   public void before() throws IOException {
-    HTU.getConnection().clearRegionLocationCache();
+    try (RegionLocator locator = HTU.getConnection().getRegionLocator(TABLE_NAME)) {
+      locator.clearRegionLocationCache();
+    }
     try {
       openRegion(hriPrimary);
     } catch (Exception ignored) {
@@ -246,7 +248,6 @@ public class TestReplicasClient {
       closeRegion(hriPrimary);
     } catch (Exception ignored) {
     }
-    HTU.getConnection().clearRegionLocationCache();
   }
 
   private HRegionServer getRS() {
@@ -325,16 +326,15 @@ public class TestReplicasClient {
     byte[] b1 = Bytes.toBytes("testLocations");
     openRegion(hriSecondary);
 
-    try (Connection conn = ConnectionFactory.createConnection(HTU.getConfiguration());
-        RegionLocator locator = conn.getRegionLocator(TABLE_NAME)) {
-      conn.clearRegionLocationCache();
+    try (RegionLocator locator = HTU.getConnection().getRegionLocator(TABLE_NAME)) {
+      locator.clearRegionLocationCache();
       List<HRegionLocation> rl = locator.getRegionLocations(b1, true);
       Assert.assertEquals(2, rl.size());
 
       rl = locator.getRegionLocations(b1, false);
       Assert.assertEquals(2, rl.size());
 
-      conn.clearRegionLocationCache();
+      locator.clearRegionLocationCache();
       rl = locator.getRegionLocations(b1, false);
       Assert.assertEquals(2, rl.size());
 
