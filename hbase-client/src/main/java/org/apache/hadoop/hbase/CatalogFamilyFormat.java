@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.HConstants.NINES;
+import static org.apache.hadoop.hbase.HConstants.ZEROES;
+import static org.apache.hadoop.hbase.client.RegionInfo.createRegionName;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,8 +34,11 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionLocateType;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -362,5 +369,28 @@ public class CatalogFamilyFormat {
       deleteReplicaLocations.addColumns(HConstants.CATALOG_FAMILY, getRegionStateColumn(i), now);
     }
     return deleteReplicaLocations;
+  }
+
+  private static byte[] buildRegionLocateStartRow(TableName tableName, byte[] row,
+    RegionLocateType locateType) {
+    if (locateType.equals(RegionLocateType.BEFORE)) {
+      if (Bytes.equals(row, HConstants.EMPTY_END_ROW)) {
+        byte[] binaryTableName = tableName.getName();
+        return Arrays.copyOf(binaryTableName, binaryTableName.length + 1);
+      } else {
+        return createRegionName(tableName, row, ZEROES, false);
+      }
+    } else {
+      return createRegionName(tableName, row, NINES, false);
+    }
+  }
+
+  public static Scan createRegionLocateScan(TableName tableName, byte[] row,
+    RegionLocateType locateType, int prefetchLimit) {
+    byte[] startRow = buildRegionLocateStartRow(tableName, row, locateType);
+    byte[] stopRow = RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
+    return new Scan().withStartRow(startRow).withStopRow(stopRow, true)
+      .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(prefetchLimit)
+      .setReadType(ReadType.PREAD);
   }
 }

@@ -793,8 +793,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       throw new IllegalArgumentException(MEMSTORE_FLUSH_PER_CHANGES + " can not exceed "
           + MAX_FLUSH_PER_CHANGES);
     }
-    this.rowLockWaitDuration = conf.getInt("hbase.rowlock.wait.duration",
-                    DEFAULT_ROWLOCK_WAIT_DURATION);
+    this.rowLockWaitDuration =
+      conf.getInt("hbase.rowlock.wait.duration", DEFAULT_ROWLOCK_WAIT_DURATION);
 
     this.isLoadingCfsOnDemandDefault = conf.getBoolean(LOAD_CFS_ON_DEMAND_CONFIG_KEY, true);
     this.htableDescriptor = htd;

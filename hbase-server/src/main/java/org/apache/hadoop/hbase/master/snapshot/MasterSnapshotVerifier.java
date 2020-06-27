@@ -21,8 +21,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -36,7 +39,6 @@ import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -159,7 +161,9 @@ public final class MasterSnapshotVerifier {
   private void verifyRegions(final SnapshotManifest manifest) throws IOException {
     List<RegionInfo> regions;
     if (TableName.META_TABLE_NAME.equals(tableName)) {
-      regions = MetaTableLocator.getMetaRegions(services.getZooKeeper());
+      regions = services.getAllMetaRegionLocations(false).stream()
+        .flatMap(locs -> Stream.of(locs.getRegionLocations())).filter(l -> l != null)
+        .map(HRegionLocation::getRegion).collect(Collectors.toList());
     } else {
       regions = MetaTableAccessor.getTableRegions(services.getConnection(), tableName);
     }

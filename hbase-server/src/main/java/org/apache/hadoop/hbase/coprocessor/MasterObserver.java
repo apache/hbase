@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionLocateType;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -1765,7 +1767,7 @@ public interface MasterObserver {
       throws IOException {
   }
 
-  /*
+  /**
    * Called before checking if user has permissions.
    * @param ctx the coprocessor instance's environment
    * @param userName the user name
@@ -1783,5 +1785,45 @@ public interface MasterObserver {
    */
   default void postHasUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
       String userName, List<Permission> permissions) throws IOException {
+  }
+
+  /**
+   * Called before locating meta region.
+   * @param ctx ctx the coprocessor instance's environment
+   * @param row the row key to locate
+   * @param locateType the direction of the locate operation
+   */
+  default void preLocateMetaRegion(ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] row,
+    RegionLocateType locateType) throws IOException {
+  }
+
+  /**
+   * Called after locating meta region.
+   * @param ctx ctx the coprocessor instance's environment
+   * @param row the row key to locate
+   * @param locateType the direction of the locate operation
+   * @param locs the locations of the given meta region, including meta replicas if any.
+   */
+  default void postLocateMetaRegion(ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] row,
+    RegionLocateType locateType, List<HRegionLocation> locs) throws IOException {
+  }
+
+  /**
+   * Called before getting all locations for meta regions.
+   * @param ctx ctx the coprocessor instance's environment
+   * @param excludeOfflinedSplitParents don't return split parents
+   */
+  default void preGetAllMetaRegionLocations(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    boolean excludeOfflinedSplitParents) {
+  }
+
+  /**
+   * Called after getting all locations for meta regions.
+   * @param ctx ctx the coprocessor instance's environment
+   * @param excludeOfflinedSplitParents don't return split parents
+   * @param locs the locations of all meta regions, including meta replicas if any.
+   */
+  default void postGetAllMetaRegionLocations(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    boolean excludeOfflinedSplitParents, List<HRegionLocation> locs) {
   }
 }

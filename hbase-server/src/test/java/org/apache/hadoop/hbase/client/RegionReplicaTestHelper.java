@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,11 +44,10 @@ public final class RegionReplicaTestHelper {
   }
 
   // waits for all replicas to have region location
-  static void waitUntilAllMetaReplicasAreReady(HBaseTestingUtility util,
-      ConnectionRegistry registry) {
+  static void waitUntilAllMetaReplicasAreReady(HBaseTestingUtility util) {
     Configuration conf = util.getConfiguration();
     int regionReplicaCount = util.getConfiguration().getInt(HConstants.META_REPLICAS_NUM,
-        HConstants.DEFAULT_META_REPLICA_NUM);
+      HConstants.DEFAULT_META_REPLICA_NUM);
     Waiter.waitFor(conf, conf.getLong("hbase.client.sync.wait.timeout.msec", 60000), 200, true,
       new ExplainingPredicate<IOException>() {
         @Override
@@ -58,16 +58,20 @@ public final class RegionReplicaTestHelper {
         @Override
         public boolean evaluate() {
           try {
-            RegionLocations locs = registry.getMetaRegionLocations().get();
+            List<HRegionLocation> locs;
+            try (RegionLocator locator =
+              util.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+              locs = locator.getAllRegionLocations();
+            }
             if (locs.size() < regionReplicaCount) {
               return false;
             }
             for (int i = 0; i < regionReplicaCount; i++) {
-              HRegionLocation loc = locs.getRegionLocation(i);
+              HRegionLocation loc = locs.get(i);
               // Wait until the replica is served by a region server. There could be delay between
               // the replica being available to the connection and region server opening it.
               Optional<ServerName> rsCarryingReplica =
-                  getRSCarryingReplica(util, loc.getRegion().getTable(), i);
+                getRSCarryingReplica(util, loc.getRegion().getTable(), i);
               if (!rsCarryingReplica.isPresent()) {
                 return false;
               }
@@ -82,7 +86,7 @@ public final class RegionReplicaTestHelper {
   }
 
   static Optional<ServerName> getRSCarryingReplica(HBaseTestingUtility util, TableName tableName,
-      int replicaId) {
+    int replicaId) {
     return util.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
       .filter(rs -> rs.getRegions(tableName).stream()
         .anyMatch(r -> r.getRegionInfo().getReplicaId() == replicaId))
@@ -93,7 +97,7 @@ public final class RegionReplicaTestHelper {
    * Return the new location.
    */
   static ServerName moveRegion(HBaseTestingUtility util, HRegionLocation currentLoc)
-      throws Exception {
+    throws Exception {
     ServerName serverName = currentLoc.getServerName();
     RegionInfo regionInfo = currentLoc.getRegion();
     TableName tableName = regionInfo.getTable();
@@ -120,13 +124,13 @@ public final class RegionReplicaTestHelper {
 
   interface Locator {
     RegionLocations getRegionLocations(TableName tableName, int replicaId, boolean reload)
-        throws Exception;
+      throws Exception;
 
     void updateCachedLocationOnError(HRegionLocation loc, Throwable error) throws Exception;
   }
 
   static void testLocator(HBaseTestingUtility util, TableName tableName, Locator locator)
-      throws Exception {
+    throws Exception {
     RegionLocations locs =
       locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, false);
     assertEquals(3, locs.size());

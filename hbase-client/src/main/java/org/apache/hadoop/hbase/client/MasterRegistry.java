@@ -243,7 +243,7 @@ public class MasterRegistry implements ConnectionRegistry {
     return new RegionLocations(regionLocations);
   }
 
-  @Override
+  // keep the method here just for testing compatibility
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     return this.<GetMetaRegionLocationsResponse> call((c, s, d) -> s.getMetaRegionLocations(c,
       GetMetaRegionLocationsRequest.getDefaultInstance(), d), r -> r.getMetaLocationsCount() != 0,

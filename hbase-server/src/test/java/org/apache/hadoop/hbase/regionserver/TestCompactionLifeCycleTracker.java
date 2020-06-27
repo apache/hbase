@@ -165,7 +165,7 @@ public class TestCompactionLifeCycleTracker {
                         .setValue(Bytes.toBytes(i))
                         .build()));
       }
-      UTIL.getAdmin().flush(NAME);
+      UTIL.flush(NAME);
       for (int i = 100; i < 200; i++) {
         byte[] row = Bytes.toBytes(i);
         table.put(new Put(row)
@@ -178,7 +178,7 @@ public class TestCompactionLifeCycleTracker {
                         .setValue(Bytes.toBytes(i))
                         .build()));
       }
-      UTIL.getAdmin().flush(NAME);
+      UTIL.flush(NAME);
     }
     region = UTIL.getHBaseCluster().getRegions(NAME).get(0);
     assertEquals(2, region.getStore(CF1).getStorefilesCount());

@@ -84,8 +84,7 @@ public class TestAsyncTableRSCrashPublish {
   public void test() throws IOException, ExecutionException, InterruptedException {
     Configuration conf = UTIL.getHBaseCluster().getMaster().getConfiguration();
     try (AsyncConnection connection = ConnectionFactory.createAsyncConnection(conf).get()) {
-      AsyncNonMetaRegionLocator locator =
-        ((AsyncConnectionImpl) connection).getLocator().getNonMetaRegionLocator();
+      AsyncRegionLocator locator = ((AsyncConnectionImpl) connection).getLocator();
       connection.getTable(TABLE_NAME).get(new Get(Bytes.toBytes(0))).join();
       ServerName serverName =
         locator.getRegionLocationInCache(TABLE_NAME, HConstants.EMPTY_START_ROW)

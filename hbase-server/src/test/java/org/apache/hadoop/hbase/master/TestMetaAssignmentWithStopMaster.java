@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
@@ -89,7 +90,20 @@ public class TestMetaAssignmentWithStopMaster {
         }
       }
 
-      ServerName newMetaServer = locator.getAllRegionLocations().get(0).getServerName();
+      ServerName newMetaServer;
+      startTime = System.currentTimeMillis();
+      for (;;) {
+        try {
+          newMetaServer = locator.getAllRegionLocations().get(0).getServerName();
+          break;
+        } catch (IOException e) {
+          LOG.warn("failed to get all locations, retry...", e);
+        }
+        Thread.sleep(3000);
+        if (System.currentTimeMillis() - startTime > WAIT_TIMEOUT) {
+          fail("Wait too long for getting the new meta location");
+        }
+      }
       assertTrue("The new meta server " + newMetaServer + " should be same with" +
         " the old meta server " + oldMetaServer, newMetaServer.equals(oldMetaServer));
     }

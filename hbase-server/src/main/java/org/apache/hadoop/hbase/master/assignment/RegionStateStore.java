@@ -166,8 +166,8 @@ public class RegionStateStore {
     final Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), time);
     MetaTableAccessor.addRegionInfo(put, regionInfo);
     final StringBuilder info =
-      new StringBuilder("pid=").append(pid).append(" updating hbase:meta row=")
-        .append(regionInfo.getEncodedName()).append(", regionState=").append(state);
+      new StringBuilder("pid=").append(pid).append(" updating catalog row=")
+        .append(regionInfo.getRegionNameAsString()).append(", regionState=").append(state);
     if (openSeqNum >= 0) {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
           "Open region should be on a server");
@@ -210,7 +210,7 @@ public class RegionStateStore {
   }
 
   public void mirrorMetaLocation(RegionInfo regionInfo, ServerName serverName, State state)
-      throws IOException {
+    throws IOException {
     try {
       MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
         state);

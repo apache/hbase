@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.findException;
 import static org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil.isMetaClearingException;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.commons.lang3.ObjectUtils;
@@ -29,6 +30,8 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 
 /**
  * Helper class for asynchronous region locator.
@@ -55,9 +58,9 @@ final class AsyncRegionLocatorHelper {
   }
 
   static void updateCachedLocationOnError(HRegionLocation loc, Throwable exception,
-      Function<HRegionLocation, HRegionLocation> cachedLocationSupplier,
-      Consumer<HRegionLocation> addToCache, Consumer<HRegionLocation> removeFromCache,
-      MetricsConnection metrics) {
+    Function<HRegionLocation, HRegionLocation> cachedLocationSupplier,
+    Consumer<HRegionLocation> addToCache, Consumer<HRegionLocation> removeFromCache,
+    Optional<MetricsConnection> metrics) {
     HRegionLocation oldLoc = cachedLocationSupplier.apply(loc);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Try updating {} , the old value is {}, error={}", loc, oldLoc,
@@ -85,9 +88,7 @@ final class AsyncRegionLocatorHelper {
       addToCache.accept(newLoc);
     } else {
       LOG.debug("Try removing {} from cache", loc);
-      if (metrics != null) {
-        metrics.incrCacheDroppingExceptions(exception);
-      }
+      metrics.ifPresent(m -> m.incrCacheDroppingExceptions(exception));
       removeFromCache.accept(loc);
     }
   }
@@ -145,5 +146,34 @@ final class AsyncRegionLocatorHelper {
     }
     HRegionLocation loc = locs.getRegionLocation(replicaId);
     return loc != null && loc.getServerName() != null;
+  }
+
+  static boolean isEqual(RegionLocations locs1, RegionLocations locs2) {
+    HRegionLocation[] locArr1 = locs1.getRegionLocations();
+    HRegionLocation[] locArr2 = locs2.getRegionLocations();
+    if (locArr1.length != locArr2.length) {
+      return false;
+    }
+    for (int i = 0; i < locArr1.length; i++) {
+      // do not need to compare region info
+      HRegionLocation loc1 = locArr1[i];
+      HRegionLocation loc2 = locArr2[i];
+      if (loc1 == null) {
+        if (loc2 != null) {
+          return false;
+        }
+      } else {
+        if (loc2 == null) {
+          return false;
+        }
+        if (loc1.getSeqNum() != loc2.getSeqNum()) {
+          return false;
+        }
+        if (!Objects.equal(loc1.getServerName(), loc2.getServerName())) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 }

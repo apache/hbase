@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -47,18 +48,19 @@ public class TestAsyncTableLocatePrefetch {
 
   private static byte[] FAMILY = Bytes.toBytes("cf");
 
-  private static AsyncConnection CONN;
+  private static AsyncConnectionImpl CONN;
 
-  private static AsyncNonMetaRegionLocator LOCATOR;
+  private static AsyncRegionLocator LOCATOR;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL.getConfiguration().setInt(AsyncNonMetaRegionLocator.LOCATE_PREFETCH_LIMIT, 100);
+    TEST_UTIL.getConfiguration().setInt(AsyncRegionLocator.LOCATE_PREFETCH_LIMIT, 100);
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
-    CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    LOCATOR = new AsyncNonMetaRegionLocator((AsyncConnectionImpl) CONN);
+    CONN = (AsyncConnectionImpl) ConnectionFactory
+      .createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    LOCATOR = new AsyncRegionLocator(CONN, AsyncConnectionImpl.RETRY_TIMER);
   }
 
   @AfterClass
@@ -70,7 +72,7 @@ public class TestAsyncTableLocatePrefetch {
   @Test
   public void test() throws InterruptedException, ExecutionException {
     assertNotNull(LOCATOR.getRegionLocations(TABLE_NAME, Bytes.toBytes("zzz"),
-      RegionReplicaUtil.DEFAULT_REPLICA_ID, RegionLocateType.CURRENT, false).get());
+      RegionLocateType.CURRENT, false, TimeUnit.MINUTES.toNanos(1)).get());
     // we finish the request before we adding the remaining results to cache so sleep a bit here
     Thread.sleep(1000);
     // confirm that the locations of all the regions have been cached.
