@@ -74,11 +74,13 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -91,7 +93,9 @@ import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionLocateType;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -221,7 +225,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
 import org.apache.hadoop.hbase.zookeeper.SnapshotCleanupTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -885,6 +888,27 @@ public class HMaster extends HRegionServer implements MasterServices {
     return new AssignmentManager(master, masterRegion);
   }
 
+  /**
+   * Load the meta region state from the meta region server ZNode.
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
+   * @param replicaId the ID of the replica
+   * @return regionstate
+   * @throws KeeperException if a ZooKeeper operation fails
+   */
+  private static RegionState getMetaRegionState(ZKWatcher zkw, int replicaId)
+    throws KeeperException {
+    RegionState regionState = null;
+    try {
+      byte[] data = ZKUtil.getData(zkw, zkw.getZNodePaths().getZNodeForReplica(replicaId));
+      regionState = ProtobufUtil.parseMetaRegionStateFrom(data, replicaId);
+    } catch (DeserializationException e) {
+      throw ZKUtil.convert(e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+    return regionState;
+  }
+
   private void tryMigrateRootTableFromZooKeeper() throws IOException, KeeperException {
     // try migrate data from zookeeper
     try (RegionScanner scanner =
@@ -906,7 +930,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     StringBuilder info = new StringBuilder("Migrating meta location:");
     for (String metaReplicaNode : metaReplicaNodes) {
       int replicaId = zooKeeper.getZNodePaths().getMetaReplicaIdFromZnode(metaReplicaNode);
-      RegionState state = MetaTableLocator.getMetaRegionState(zooKeeper, replicaId);
+      RegionState state = getMetaRegionState(zooKeeper, replicaId);
       info.append(" ").append(state);
       put.setTimestamp(state.getStamp());
       MetaTableAccessor.addRegionInfo(put, state.getRegion());
@@ -4001,5 +4025,86 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public RSGroupInfoManager getRSGroupInfoManager() {
     return rsGroupInfoManager;
+  }
+
+  public RegionLocations locateMeta(byte[] row, RegionLocateType locateType) throws IOException {
+    if (locateType == RegionLocateType.AFTER) {
+      // as we know the exact row after us, so we can just create the new row, and use the same
+      // algorithm to locate it.
+      row = Arrays.copyOf(row, row.length + 1);
+      locateType = RegionLocateType.CURRENT;
+    }
+    Scan scan =
+      CatalogFamilyFormat.createRegionLocateScan(TableName.META_TABLE_NAME, row, locateType, 1);
+    try (RegionScanner scanner = masterRegion.getScanner(scan)) {
+      boolean moreRows;
+      List<Cell> cells = new ArrayList<>();
+      do {
+        moreRows = scanner.next(cells);
+        if (cells.isEmpty()) {
+          continue;
+        }
+        Result result = Result.create(cells);
+        cells.clear();
+        RegionLocations locs = CatalogFamilyFormat.getRegionLocations(result);
+        if (locs == null || locs.getDefaultRegionLocation() == null) {
+          LOG.warn("No location found when locating meta region with row='{}', locateType={}",
+            Bytes.toStringBinary(row), locateType);
+          return null;
+        }
+        HRegionLocation loc = locs.getDefaultRegionLocation();
+        RegionInfo info = loc.getRegion();
+        if (info == null) {
+          LOG.warn("HRegionInfo is null when locating meta region with row='{}', locateType={}",
+            Bytes.toStringBinary(row), locateType);
+          return null;
+        }
+        if (info.isSplitParent()) {
+          continue;
+        }
+        return locs;
+      } while (moreRows);
+      LOG.warn("No location available when locating meta region with row='{}', locateType={}",
+        Bytes.toStringBinary(row), locateType);
+      return null;
+    }
+  }
+
+  public List<RegionLocations> getAllMetaRegionLocations(boolean excludeOfflinedSplitParents)
+    throws IOException {
+    Scan scan = new Scan().addFamily(HConstants.CATALOG_FAMILY);
+    List<RegionLocations> list = new ArrayList<>();
+    try (RegionScanner scanner = masterRegion.getScanner(scan)) {
+      boolean moreRows;
+      List<Cell> cells = new ArrayList<>();
+      do {
+        moreRows = scanner.next(cells);
+        if (cells.isEmpty()) {
+          continue;
+        }
+        Result result = Result.create(cells);
+        cells.clear();
+        RegionLocations locs = CatalogFamilyFormat.getRegionLocations(result);
+        if (locs == null) {
+          LOG.warn("No locations in {}", result);
+          continue;
+        }
+        HRegionLocation loc = locs.getRegionLocation();
+        if (loc == null) {
+          LOG.warn("No non null location in {}", result);
+          continue;
+        }
+        RegionInfo info = loc.getRegion();
+        if (info == null) {
+          LOG.warn("No serialized RegionInfo in {}", result);
+          continue;
+        }
+        if (excludeOfflinedSplitParents && info.isSplitParent()) {
+          continue;
+        }
+        list.add(locs);
+      } while (moreRows);
+    }
+    return list;
   }
 }

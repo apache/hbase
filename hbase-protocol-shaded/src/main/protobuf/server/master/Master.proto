@@ -1272,6 +1272,29 @@ message GetMetaRegionLocationsResponse {
   repeated RegionLocation meta_locations = 1;
 }
 
+enum RegionLocateType {
+  REGION_LOCATE_TYPE_BEFORE =1;
+  REGION_LOCATE_TYPE_CURRENT = 2;
+  REGION_LOCATE_TYPE_AFTER = 3;
+}
+
+message LocateMetaRegionRequest {
+  required bytes row = 1;
+  required RegionLocateType locateType = 2;
+}
+
+message LocateMetaRegionResponse {
+  repeated RegionLocation meta_locations = 1;
+}
+
+message GetAllMetaRegionLocationsRequest {
+  required bool exclude_offlined_split_parents = 1;
+}
+
+message GetAllMetaRegionLocationsResponse {
+  repeated RegionLocation meta_locations = 1;
+}
+
 /**
  * Implements all the RPCs needed by clients to look up cluster meta information needed for connection establishment.
  */
@@ -1290,4 +1313,16 @@ service ClientMetaService {
    * Get current meta replicas' region locations.
    */
   rpc GetMetaRegionLocations(GetMetaRegionLocationsRequest) returns(GetMetaRegionLocationsResponse);
+
+  /**
+   * Get meta region locations for a given row
+   */
+  rpc LocateMetaRegion(LocateMetaRegionRequest)
+    returns(LocateMetaRegionResponse);
+
+  /**
+   * Get all meta regions locations
+   */
+  rpc GetAllMetaRegionLocations(GetAllMetaRegionLocationsRequest)
+    returns(GetAllMetaRegionLocationsResponse);
 }

@@ -51,8 +51,8 @@ import org.junit.runners.Parameterized;
 
 /**
  * Class to test asynchronous region admin operations.
- * @see TestAsyncRegionAdminApi This test and it used to be joined it was taking longer than our
- * ten minute timeout so they were split.
+ * @see TestAsyncRegionAdminApi This test and it used to be joined it was taking longer than our ten
+ *      minute timeout so they were split.
  */
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
@@ -60,7 +60,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncRegionAdminApi2.class);
+    HBaseClassTestRule.forClass(TestAsyncRegionAdminApi2.class);
 
   @Test
   public void testGetRegionLocation() throws Exception {
@@ -79,13 +79,13 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
   @Test
   public void testSplitSwitch() throws Exception {
     createTableWithDefaultConf(tableName);
-    byte[][] families = {FAMILY};
+    byte[][] families = { FAMILY };
     final int rows = 10000;
     TestAsyncRegionAdminApi.loadData(tableName, families, rows);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
-        ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
+      ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName, true).get();
     int originalCount = regionLocations.size();
 
     initSplitMergeSwitch();
@@ -93,7 +93,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     try {
       admin.split(tableName, Bytes.toBytes(rows / 2)).join();
     } catch (Exception e) {
-      //Expected
+      // Expected
     }
     int count = admin.getRegions(tableName).get().size();
     assertTrue(originalCount == count);
@@ -111,12 +111,12 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
   // It was ignored in TestSplitOrMergeStatus, too
   public void testMergeSwitch() throws Exception {
     createTableWithDefaultConf(tableName);
-    byte[][] families = {FAMILY};
+    byte[][] families = { FAMILY };
     TestAsyncRegionAdminApi.loadData(tableName, families, 1000);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
-        ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
+      ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName, true).get();
     int originalCount = regionLocations.size();
 
     initSplitMergeSwitch();
@@ -126,7 +126,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
       Threads.sleep(100);
     }
     assertTrue("originalCount=" + originalCount + ", postSplitCount=" + postSplitCount,
-        originalCount != postSplitCount);
+      originalCount != postSplitCount);
 
     // Merge switch is off so merge should NOT succeed.
     assertTrue(admin.mergeSwitch(false).get());
@@ -156,12 +156,12 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
 
   @Test
   public void testMergeRegions() throws Exception {
-    byte[][] splitRows = new byte[][]{Bytes.toBytes("3"), Bytes.toBytes("6")};
+    byte[][] splitRows = new byte[][] { Bytes.toBytes("3"), Bytes.toBytes("6") };
     createTableWithDefaultConf(tableName, splitRows);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations = ClientMetaTableAccessor
-      .getTableHRegionLocations(metaTable, tableName).get();
+      .getTableHRegionLocations(metaTable, tableName, true).get();
     RegionInfo regionA;
     RegionInfo regionB;
     RegionInfo regionC;
@@ -175,7 +175,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
 
     regionLocations = ClientMetaTableAccessor
-      .getTableHRegionLocations(metaTable, tableName).get();
+      .getTableHRegionLocations(metaTable, tableName, true).get();
 
     assertEquals(2, regionLocations.size());
     for (HRegionLocation rl : regionLocations) {
@@ -195,11 +195,10 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
       Thread.sleep(200);
     }
     // merge with encoded name
-    admin.mergeRegions(regionC.getRegionName(), mergedChildRegion.getRegionName(),
-      false).get();
+    admin.mergeRegions(regionC.getRegionName(), mergedChildRegion.getRegionName(), false).get();
 
-    regionLocations = ClientMetaTableAccessor
-      .getTableHRegionLocations(metaTable, tableName).get();
+    regionLocations =
+      ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName, true).get();
     assertEquals(1, regionLocations.size());
   }
 
@@ -233,18 +232,18 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     splitTest(TableName.valueOf("testSplitTable"), 3000, false, null);
     splitTest(TableName.valueOf("testSplitTableWithSplitPoint"), 3000, false, Bytes.toBytes("3"));
     splitTest(TableName.valueOf("testSplitTableRegion"), 3000, true, null);
-    splitTest(TableName.valueOf("testSplitTableRegionWithSplitPoint2"), 3000, true, Bytes.toBytes("3"));
+    splitTest(TableName.valueOf("testSplitTableRegionWithSplitPoint2"), 3000, true,
+      Bytes.toBytes("3"));
   }
 
-  private void
-  splitTest(TableName tableName, int rowCount, boolean isSplitRegion, byte[] splitPoint)
-      throws Exception {
+  private void splitTest(TableName tableName, int rowCount, boolean isSplitRegion,
+    byte[] splitPoint) throws Exception {
     // create table
     createTableWithDefaultConf(tableName);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations = ClientMetaTableAccessor
-      .getTableHRegionLocations(metaTable, tableName).get();
+      .getTableHRegionLocations(metaTable, tableName, true).get();
     assertEquals(1, regionLocations.size());
 
     AsyncTable<?> table = ASYNC_CONN.getTable(tableName);
@@ -273,8 +272,8 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     int count = 0;
     for (int i = 0; i < 45; i++) {
       try {
-        regionLocations = ClientMetaTableAccessor
-          .getTableHRegionLocations(metaTable, tableName).get();
+        regionLocations =
+          ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName, true).get();
         count = regionLocations.size();
         if (count >= 2) {
           break;

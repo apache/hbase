@@ -746,8 +746,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Boolean> isTableAvailable(TableName tableName) {
     if (TableName.isMetaTableName(tableName)) {
-      return connection.registry.getMetaRegionLocations().thenApply(locs -> Stream
-        .of(locs.getRegionLocations()).allMatch(loc -> loc != null && loc.getServerName() != null));
+      return getTableHRegionLocations(tableName).thenApply(
+        locs -> locs.stream().allMatch(loc -> loc != null && loc.getServerName() != null));
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     addListener(isTableEnabled(tableName), (enabled, error) -> {
@@ -763,7 +763,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.complete(false);
       } else {
         addListener(
-          ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName),
+          ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName, true),
           (locations, error1) -> {
             if (error1 != null) {
               future.completeExceptionally(error1);
@@ -883,15 +883,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<List<RegionInfo>> getRegions(TableName tableName) {
-    if (tableName.equals(META_TABLE_NAME)) {
-      return connection.registry.getMetaRegionLocations()
-        .thenApply(locs -> Stream.of(locs.getRegionLocations()).map(HRegionLocation::getRegion)
-          .collect(Collectors.toList()));
-    } else {
-      return ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName)
-        .thenApply(
-          locs -> locs.stream().map(HRegionLocation::getRegion).collect(Collectors.toList()));
-    }
+    return getTableHRegionLocations(tableName).thenApply(
+      locs -> locs.stream().map(HRegionLocation::getRegion).collect(Collectors.toList()));
   }
   @Override
   public CompletableFuture<Void> flush(TableName tableName) {
@@ -1130,23 +1123,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
    * List all region locations for the specific table.
    */
   private CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(TableName tableName) {
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
-      CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
-      addListener(connection.registry.getMetaRegionLocations(), (metaRegions, err) -> {
-        if (err != null) {
-          future.completeExceptionally(err);
-        } else if (metaRegions == null || metaRegions.isEmpty() ||
-          metaRegions.getDefaultRegionLocation() == null) {
-          future.completeExceptionally(new IOException("meta region does not found"));
-        } else {
-          future.complete(Collections.singletonList(metaRegions.getDefaultRegionLocation()));
-        }
-      });
-      return future;
-    } else {
-      // For non-meta table, we fetch all locations by scanning hbase:meta table
-      return ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName);
-    }
+    return connection.getRegionLocator(tableName).getAllRegionLocations();
   }
 
   /**
@@ -2396,9 +2373,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         String encodedName = Bytes.toString(regionNameOrEncodedRegionName);
         if (encodedName.length() < RegionInfo.MD5_HEX_LENGTH) {
           // old format encodedName, should be meta region
-          future = connection.registry.getMetaRegionLocations()
-            .thenApply(locs -> Stream.of(locs.getRegionLocations())
-              .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
+          future = getTableHRegionLocations(META_TABLE_NAME).thenApply(locs -> locs.stream()
+            .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
         } else {
           future = ClientMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
             regionNameOrEncodedRegionName);
@@ -2407,10 +2383,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         RegionInfo regionInfo =
           CatalogFamilyFormat.parseRegionInfoFromRegionName(regionNameOrEncodedRegionName);
         if (regionInfo.isMetaRegion()) {
-          future = connection.registry.getMetaRegionLocations()
-            .thenApply(locs -> Stream.of(locs.getRegionLocations())
-              .filter(loc -> loc.getRegion().getReplicaId() == regionInfo.getReplicaId())
-              .findFirst());
+          future = getTableHRegionLocations(META_TABLE_NAME).thenApply(locs -> locs.stream()
+            .filter(loc -> loc.getRegion().getReplicaId() == regionInfo.getReplicaId())
+            .findFirst());
         } else {
           future =
             ClientMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);

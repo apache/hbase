@@ -62,10 +62,10 @@ public class AlwaysStandByHMaster extends HMaster {
             if (MasterAddressTracker.getMasterAddress(watcher) != null) {
               clusterHasActiveMaster.set(true);
             }
-            Threads.sleepWithoutInterrupt(100);
           } catch (IOException e) {
             // pass, we will get notified when some other active master creates the znode.
           }
+          Threads.sleepWithoutInterrupt(1000);
         } catch (KeeperException e) {
           master.abort("Received an unexpected KeeperException, aborting", e);
           return false;

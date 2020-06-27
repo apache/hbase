@@ -24,13 +24,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -44,7 +45,6 @@ import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -131,20 +131,16 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // Each region server will get its own online regions for the table.
     // We may still miss regions that need to be flushed.
     List<Pair<RegionInfo, ServerName>> regionsAndLocations;
-
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
-      regionsAndLocations = MetaTableLocator.getMetaRegionsAndLocations(
-        master.getZooKeeper());
-    } else {
-      regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
-        master.getConnection(), tableName, false);
+    try (RegionLocator locator =
+      master.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+      regionsAndLocations = locator.getAllRegionLocations().stream()
+        .map(loc -> Pair.newPair(loc.getRegion(), loc.getServerName()))
+        .collect(Collectors.toList());
     }
 
     Set<String> regionServers = new HashSet<>(regionsAndLocations.size());
     for (Pair<RegionInfo, ServerName> region : regionsAndLocations) {
       if (region != null && region.getFirst() != null && region.getSecond() != null) {
-        RegionInfo hri = region.getFirst();
-        if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) continue;
         regionServers.add(region.getSecond().toString());
       }
     }

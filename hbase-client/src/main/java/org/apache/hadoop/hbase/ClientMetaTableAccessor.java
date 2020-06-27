@@ -164,26 +164,27 @@ public final class ClientMetaTableAccessor {
 
   /**
    * Used to get all region locations for the specific table.
-   * @param metaTable
    * @param tableName table we're looking for, can be null for getting all regions
    * @return the list of region locations. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
   public static CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(
-    AsyncTable<AdvancedScanResultConsumer> metaTable, TableName tableName) {
+    AsyncTable<AdvancedScanResultConsumer> metaTable, TableName tableName,
+    boolean excludeOfflinedSplitParents) {
     CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
-    addListener(getTableRegionsAndLocations(metaTable, tableName, true), (locations, err) -> {
-      if (err != null) {
-        future.completeExceptionally(err);
-      } else if (locations == null || locations.isEmpty()) {
-        future.complete(Collections.emptyList());
-      } else {
-        List<HRegionLocation> regionLocations =
-          locations.stream().map(loc -> new HRegionLocation(loc.getFirst(), loc.getSecond()))
-            .collect(Collectors.toList());
-        future.complete(regionLocations);
-      }
-    });
+    addListener(getTableRegionsAndLocations(metaTable, tableName, excludeOfflinedSplitParents),
+      (locations, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else if (locations == null || locations.isEmpty()) {
+          future.complete(Collections.emptyList());
+        } else {
+          List<HRegionLocation> regionLocations =
+            locations.stream().map(loc -> new HRegionLocation(loc.getFirst(), loc.getSecond()))
+              .collect(Collectors.toList());
+          future.complete(regionLocations);
+        }
+      });
     return future;
   }
 

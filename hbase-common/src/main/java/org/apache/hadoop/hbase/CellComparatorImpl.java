@@ -325,7 +325,7 @@ public class CellComparatorImpl implements CellComparator {
       return ignoreSequenceid? diff: Longs.compare(b.getSequenceId(), a.getSequenceId());
     }
 
-    private static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+    public static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
         int rlength) {
       int leftDelimiter = Bytes.searchDelimiterIndex(left, loffset, llength, HConstants.DELIMITER);
       int rightDelimiter = Bytes
