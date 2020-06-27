@@ -1269,6 +1269,9 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Invoke region normalizer. Can NOT run for various reasons.  Check logs.
+   * This is a non-blocking invocation to region normalizer. If return value is true, it means
+   * the request was submitted successfully. We need to check logs for the details of which regions
+   * were split/merged.
    *
    * @return <code>true</code> if region normalizer ran, <code>false</code> otherwise.
    * @throws IOException if a remote or network exception occurs

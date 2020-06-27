@@ -130,15 +130,23 @@ public class TestSimpleRegionNormalizerOnCluster {
   public void testHonorsNormalizerTableSetting() throws Exception {
     final TableName tn1 = TableName.valueOf(name.getMethodName() + "1");
     final TableName tn2 = TableName.valueOf(name.getMethodName() + "2");
+    final TableName tn3 = TableName.valueOf(name.getMethodName() + "3");
 
     try {
-      final int tn1RegionCount = createTableBegsSplit(tn1, true);
-      final int tn2RegionCount = createTableBegsSplit(tn2, false);
+      final int tn1RegionCount = createTableBegsSplit(tn1, true, false);
+      final int tn2RegionCount = createTableBegsSplit(tn2, false, false);
+      final int tn3RegionCount = createTableBegsSplit(tn3, true, true);
 
       assertFalse(admin.normalizerSwitch(true));
       assertTrue(admin.normalize());
       waitForTableSplit(tn1, tn1RegionCount + 1);
 
+      // confirm that tn1 has (tn1RegionCount + 1) number of regions.
+      // tn2 has tn2RegionCount number of regions because normalizer has not been enabled on it.
+      // tn3 has tn3RegionCount number of regions because two plans are run:
+      //    1. split one region to two
+      //    2. merge two regions into one
+      // and hence, total number of regions for tn3 remains same
       assertEquals(
         tn1 + " should have split.",
         tn1RegionCount + 1,
@@ -147,9 +155,11 @@ public class TestSimpleRegionNormalizerOnCluster {
         tn2 + " should not have split.",
         tn2RegionCount,
         MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tn2));
+      waitForTableRegionCount(tn3, tn3RegionCount);
     } finally {
       dropIfExists(tn1);
       dropIfExists(tn2);
+      dropIfExists(tn3);
     }
   }
 
@@ -170,7 +180,7 @@ public class TestSimpleRegionNormalizerOnCluster {
         ? buildTableNameForQuotaTest(name.getMethodName())
         : TableName.valueOf(name.getMethodName());
 
-      final int currentRegionCount = createTableBegsSplit(tableName, true);
+      final int currentRegionCount = createTableBegsSplit(tableName, true, false);
       final long existingSkippedSplitCount = master.getRegionNormalizer()
         .getSkippedCount(PlanType.SPLIT);
       assertFalse(admin.normalizerSwitch(true));
@@ -200,7 +210,7 @@ public class TestSimpleRegionNormalizerOnCluster {
       final int currentRegionCount = createTableBegsMerge(tableName);
       assertFalse(admin.normalizerSwitch(true));
       assertTrue(admin.normalize());
-      waitforTableMerge(tableName, currentRegionCount - 1);
+      waitForTableMerge(tableName, currentRegionCount - 1);
       assertEquals(
         tableName + " should have merged.",
         currentRegionCount - 1,
@@ -233,8 +243,24 @@ public class TestSimpleRegionNormalizerOnCluster {
     });
   }
 
+  private static void waitForTableRegionCount(final TableName tableName,
+      final int targetRegionCount) throws IOException {
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5), new ExplainingPredicate<IOException>() {
+      @Override
+      public String explainFailure() {
+        return "expected " + targetRegionCount + " number of regions for table " + tableName;
+      }
+      @Override
+      public boolean evaluate() throws IOException {
+        final int currentRegionCount =
+          MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName);
+        return currentRegionCount == targetRegionCount;
+      }
+    });
+  }
+
   private static void waitForTableSplit(final TableName tableName, final int targetRegionCount)
-    throws IOException {
+      throws IOException {
     TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5), new ExplainingPredicate<IOException>() {
       @Override public String explainFailure() {
         return "expected normalizer to split region.";
@@ -247,8 +273,8 @@ public class TestSimpleRegionNormalizerOnCluster {
     });
   }
 
-  private static void waitforTableMerge(final TableName tableName, final int targetRegionCount)
-    throws IOException {
+  private static void waitForTableMerge(final TableName tableName, final int targetRegionCount)
+      throws IOException {
     TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5), new ExplainingPredicate<IOException>() {
       @Override public String explainFailure() {
         return "expected normalizer to merge regions.";
@@ -319,14 +345,16 @@ public class TestSimpleRegionNormalizerOnCluster {
    *   <li>split threshold: 2.4 * 2 = 4.8</li>
    * </ul>
    */
-  private static int createTableBegsSplit(final TableName tableName, final boolean balancerEnabled)
+  private static int createTableBegsSplit(final TableName tableName,
+      final boolean normalizerEnabled, final boolean isMergeEnabled)
     throws IOException {
     final List<HRegion> generatedRegions = generateTestData(tableName, 1, 1, 2, 3, 5);
     assertEquals(5, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
     admin.flush(tableName);
 
     final TableDescriptor td = TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName))
-      .setNormalizationEnabled(balancerEnabled)
+      .setNormalizationEnabled(normalizerEnabled)
+      .setMergeEnabled(isMergeEnabled)
       .build();
     admin.modifyTable(td);
 
