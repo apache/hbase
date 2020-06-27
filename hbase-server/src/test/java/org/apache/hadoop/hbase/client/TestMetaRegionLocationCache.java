@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -46,11 +46,13 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class, MasterTests.class })
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
+@Category({ SmallTests.class, MasterTests.class })
 public class TestMetaRegionLocationCache {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetaRegionLocationCache.class);
+    HBaseClassTestRule.forClass(TestMetaRegionLocationCache.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static ConnectionRegistry REGISTRY;
@@ -60,19 +62,19 @@ public class TestMetaRegionLocationCache {
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TEST_UTIL.startMiniCluster(3);
     REGISTRY = ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
-    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
+    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }
 
   @AfterClass
   public static void cleanUp() throws Exception {
-    IOUtils.closeQuietly(REGISTRY);
+    Closeables.close(REGISTRY, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
   private List<HRegionLocation> getCurrentMetaLocations(ZKWatcher zk) throws Exception {
     List<HRegionLocation> result = new ArrayList<>();
-    for (String znode: zk.getMetaReplicaNodes()) {
+    for (String znode : zk.getMetaReplicaNodes()) {
       String path = ZNodePaths.joinZNode(zk.getZNodePaths().baseZNode, znode);
       int replicaId = zk.getZNodePaths().getMetaReplicaIdFromPath(path);
       RegionState state = MetaTableLocator.getMetaRegionState(zk, replicaId);
@@ -92,7 +94,7 @@ public class TestMetaRegionLocationCache {
       }
     }
     List<HRegionLocation> metaHRLs =
-        master.getMetaRegionLocationCache().getMetaRegionLocations().get();
+      master.getMetaRegionLocationCache().getMetaRegionLocations().get();
     assertFalse(metaHRLs.isEmpty());
     ZKWatcher zk = master.getZooKeeper();
     List<String> metaZnodes = zk.getMetaReplicaNodes();
@@ -103,11 +105,13 @@ public class TestMetaRegionLocationCache {
     assertEquals(actualHRLs, metaHRLs);
   }
 
-  @Test public void testInitialMetaLocations() throws Exception {
+  @Test
+  public void testInitialMetaLocations() throws Exception {
     verifyCachedMetaLocations(TEST_UTIL.getMiniHBaseCluster().getMaster());
   }
 
-  @Test public void testStandByMetaLocations() throws Exception {
+  @Test
+  public void testStandByMetaLocations() throws Exception {
     HMaster standBy = TEST_UTIL.getMiniHBaseCluster().startMaster().getMaster();
     verifyCachedMetaLocations(standBy);
   }
@@ -115,16 +119,17 @@ public class TestMetaRegionLocationCache {
   /*
    * Shuffles the meta region replicas around the cluster and makes sure the cache is not stale.
    */
-  @Test public void testMetaLocationsChange() throws Exception {
+  @Test
+  public void testMetaLocationsChange() throws Exception {
     List<HRegionLocation> currentMetaLocs =
-        getCurrentMetaLocations(TEST_UTIL.getMiniHBaseCluster().getMaster().getZooKeeper());
+      getCurrentMetaLocations(TEST_UTIL.getMiniHBaseCluster().getMaster().getZooKeeper());
     // Move these replicas to random servers.
-    for (HRegionLocation location: currentMetaLocs) {
+    for (HRegionLocation location : currentMetaLocs) {
       RegionReplicaTestHelper.moveRegion(TEST_UTIL, location);
     }
-    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
-    for (JVMClusterUtil.MasterThread masterThread:
-        TEST_UTIL.getMiniHBaseCluster().getMasterThreads()) {
+    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL);
+    for (JVMClusterUtil.MasterThread masterThread : TEST_UTIL.getMiniHBaseCluster()
+      .getMasterThreads()) {
       verifyCachedMetaLocations(masterThread.getMaster());
     }
   }
@@ -133,7 +138,8 @@ public class TestMetaRegionLocationCache {
    * Tests MetaRegionLocationCache's init procedure to make sure that it correctly watches the base
    * znode for notifications.
    */
-  @Test public void testMetaRegionLocationCache() throws Exception {
+  @Test
+  public void testMetaRegionLocationCache() throws Exception {
     final String parentZnodeName = "/randomznodename";
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parentZnodeName);
@@ -143,7 +149,8 @@ public class TestMetaRegionLocationCache {
       // some ZK activity in the background.
       MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(conf);
       ctx.addThread(new MultithreadedTestUtil.RepeatingTestThread(ctx) {
-        @Override public void doAnAction() throws Exception {
+        @Override
+        public void doAnAction() throws Exception {
           final String testZnode = parentZnodeName + "/child";
           ZKUtil.createNodeIfNotExistsAndWatch(zkWatcher, testZnode, testZnode.getBytes());
           ZKUtil.deleteNode(zkWatcher, testZnode);
@@ -163,8 +170,8 @@ public class TestMetaRegionLocationCache {
         // Wait until the meta cache is populated.
         int iters = 0;
         while (iters++ < 10) {
-          if (metaCache.getMetaRegionLocations().isPresent()
-            && metaCache.getMetaRegionLocations().get().size() == 3) {
+          if (metaCache.getMetaRegionLocations().isPresent() &&
+            metaCache.getMetaRegionLocations().get().size() == 3) {
             break;
           }
           Thread.sleep(1000);

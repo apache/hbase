@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -35,10 +34,9 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -90,15 +88,24 @@ public class TestRegionServerNoMaster {
     }
     regionName = hri.getRegionName();
 
-    stopMasterAndAssignMeta(HTU);
+    stopMasterAndCacheMetaLocation(HTU);
   }
 
-  public static void stopMasterAndAssignMeta(HBaseTestingUtility HTU)
-      throws IOException, InterruptedException {
+  public static void stopMasterAndCacheMetaLocation(HBaseTestingUtility HTU)
+    throws IOException, InterruptedException {
+    // cache meta location, so we will not go to master to lookup meta region location
+    for (JVMClusterUtil.RegionServerThread t : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
+      try (RegionLocator locator =
+        t.getRegionServer().getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+        locator.getAllRegionLocations();
+      }
+    }
+    try (RegionLocator locator = HTU.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+      locator.getAllRegionLocations();
+    }
     // Stop master
     HMaster master = HTU.getHBaseCluster().getMaster();
     Thread masterThread = HTU.getHBaseCluster().getMasterThread();
-    ServerName masterAddr = master.getServerName();
     master.stopMaster();
 
     LOG.info("Waiting until master thread exits");
@@ -107,27 +114,6 @@ public class TestRegionServerNoMaster {
     }
 
     HRegionServer.TEST_SKIP_REPORTING_TRANSITION = true;
-    // Master is down, so is the meta. We need to assign it somewhere
-    // so that regions can be assigned during the mocking phase.
-    HRegionServer hrs = HTU.getHBaseCluster()
-      .getLiveRegionServerThreads().get(0).getRegionServer();
-    ZKWatcher zkw = hrs.getZooKeeper();
-    ServerName sn = MetaTableLocator.getMetaRegionLocation(zkw);
-    if (sn != null && !masterAddr.equals(sn)) {
-      return;
-    }
-
-    ProtobufUtil.openRegion(null, hrs.getRSRpcServices(),
-      hrs.getServerName(), RegionInfoBuilder.FIRST_META_REGIONINFO);
-    while (true) {
-      sn = MetaTableLocator.getMetaRegionLocation(zkw);
-      if (sn != null && sn.equals(hrs.getServerName())
-          && hrs.getOnlineRegions().containsKey(
-            RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName())) {
-        break;
-      }
-      Thread.sleep(100);
-    }
   }
 
   /** Flush the given region in the mini cluster. Since no master, we cannot use HBaseAdmin.flush() */

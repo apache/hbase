@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
@@ -54,7 +55,7 @@ import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionLocateType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
@@ -75,7 +76,6 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.janitor.MetaFixer;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -124,7 +124,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -209,6 +208,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaReq
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetAllMetaRegionLocationsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetAllMetaRegionLocationsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
@@ -267,6 +268,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableD
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.LocateMetaRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.LocateMetaRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
@@ -407,10 +410,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
-public class MasterRpcServices extends RSRpcServices implements
-    MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
-    LockService.BlockingInterface, HbckService.BlockingInterface,
-    ClientMetaService.BlockingInterface {
+public class MasterRpcServices extends RSRpcServices implements MasterService.BlockingInterface,
+  RegionServerStatusService.BlockingInterface, LockService.BlockingInterface,
+  HbckService.BlockingInterface, ClientMetaService.BlockingInterface {
 
   private static final Logger LOG = LoggerFactory.getLogger(MasterRpcServices.class.getName());
   private static final Logger AUDITLOG =
@@ -545,18 +547,17 @@ public class MasterRpcServices extends RSRpcServices implements
   @Override
   protected List<BlockingServiceAndInterface> getServices() {
     List<BlockingServiceAndInterface> bssi = new ArrayList<>(5);
-    bssi.add(new BlockingServiceAndInterface(
-        MasterService.newReflectiveBlockingService(this),
-        MasterService.BlockingInterface.class));
-    bssi.add(new BlockingServiceAndInterface(
-        RegionServerStatusService.newReflectiveBlockingService(this),
+    bssi.add(new BlockingServiceAndInterface(MasterService.newReflectiveBlockingService(this),
+      MasterService.BlockingInterface.class));
+    bssi.add(
+      new BlockingServiceAndInterface(RegionServerStatusService.newReflectiveBlockingService(this),
         RegionServerStatusService.BlockingInterface.class));
     bssi.add(new BlockingServiceAndInterface(LockService.newReflectiveBlockingService(this),
-        LockService.BlockingInterface.class));
+      LockService.BlockingInterface.class));
     bssi.add(new BlockingServiceAndInterface(HbckService.newReflectiveBlockingService(this),
-        HbckService.BlockingInterface.class));
+      HbckService.BlockingInterface.class));
     bssi.add(new BlockingServiceAndInterface(ClientMetaService.newReflectiveBlockingService(this),
-        ClientMetaService.BlockingInterface.class));
+      ClientMetaService.BlockingInterface.class));
     bssi.addAll(super.getServices());
     return bssi;
   }
@@ -1707,39 +1708,31 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
-  public UnassignRegionResponse unassignRegion(RpcController controller,
-      UnassignRegionRequest req) throws ServiceException {
+  public UnassignRegionResponse unassignRegion(RpcController controller, UnassignRegionRequest req)
+    throws ServiceException {
     try {
-      final byte [] regionName = req.getRegion().getValue().toByteArray();
+      final byte[] regionName = req.getRegion().getValue().toByteArray();
       RegionSpecifierType type = req.getRegion().getType();
       UnassignRegionResponse urr = UnassignRegionResponse.newBuilder().build();
 
       master.checkInitialized();
       if (type != RegionSpecifierType.REGION_NAME) {
-        LOG.warn("unassignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
-          + " actual: " + type);
+        LOG.warn("unassignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME +
+          " actual: " + type);
       }
-      Pair<RegionInfo, ServerName> pair =
-        MetaTableAccessor.getRegion(master.getConnection(), regionName);
-      if (Bytes.equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName(), regionName)) {
-        pair = new Pair<>(RegionInfoBuilder.FIRST_META_REGIONINFO,
-          MetaTableLocator.getMetaRegionLocation(master.getZooKeeper()));
+      final RegionInfo regionInfo = master.getAssignmentManager().getRegionInfo(regionName);
+      if (regionInfo == null) {
+        throw new UnknownRegionException(Bytes.toStringBinary(regionName));
       }
-      if (pair == null) {
-        throw new UnknownRegionException(Bytes.toString(regionName));
-      }
-
-      RegionInfo hri = pair.getFirst();
       if (master.cpHost != null) {
-        master.cpHost.preUnassign(hri);
+        master.cpHost.preUnassign(regionInfo);
       }
-      LOG.debug(master.getClientIdAuditPrefix() + " unassign " + hri.getRegionNameAsString()
+      LOG.debug(master.getClientIdAuditPrefix() + " unassign " + regionInfo.getRegionNameAsString()
           + " in current location if it is online");
-      master.getAssignmentManager().unassign(hri);
+      master.getAssignmentManager().unassign(regionInfo);
       if (master.cpHost != null) {
-        master.cpHost.postUnassign(hri);
+        master.cpHost.postUnassign(regionInfo);
       }
-
       return urr;
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -3375,4 +3368,66 @@ public class MasterRpcServices extends RSRpcServices implements
       .addAllBalancerDecision(balancerDecisions).build();
   }
 
+  @Override
+  public LocateMetaRegionResponse locateMetaRegion(RpcController controller,
+    LocateMetaRegionRequest request) throws ServiceException {
+    byte[] row = request.getRow().toByteArray();
+    RegionLocateType locateType = ProtobufUtil.toRegionLocateType(request.getLocateType());
+    try {
+      master.checkServiceStarted();
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preLocateMetaRegion(row, locateType);
+      }
+      RegionLocations locs = master.locateMeta(row, locateType);
+      List<HRegionLocation> list = new ArrayList<>();
+      LocateMetaRegionResponse.Builder builder = LocateMetaRegionResponse.newBuilder();
+      if (locs != null) {
+        for (HRegionLocation loc : locs) {
+          if (loc != null) {
+            builder.addMetaLocations(ProtobufUtil.toRegionLocation(loc));
+            list.add(loc);
+          }
+        }
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postLocateMetaRegion(row, locateType, list);
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetAllMetaRegionLocationsResponse getAllMetaRegionLocations(RpcController controller,
+    GetAllMetaRegionLocationsRequest request) throws ServiceException {
+    boolean excludeOfflinedSplitParents = request.getExcludeOfflinedSplitParents();
+    try {
+      master.checkServiceStarted();
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preGetAllMetaRegionLocations(excludeOfflinedSplitParents);
+      }
+      List<RegionLocations> locs = master.getAllMetaRegionLocations(excludeOfflinedSplitParents);
+      List<HRegionLocation> list = new ArrayList<>();
+      GetAllMetaRegionLocationsResponse.Builder builder =
+        GetAllMetaRegionLocationsResponse.newBuilder();
+      if (locs != null) {
+        for (RegionLocations ls : locs) {
+          for (HRegionLocation loc : ls) {
+            if (loc != null) {
+              builder.addMetaLocations(ProtobufUtil.toRegionLocation(loc));
+              list.add(loc);
+            }
+          }
+        }
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postGetAllMetaRegionLocations(excludeOfflinedSplitParents,
+          list);
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
 }
