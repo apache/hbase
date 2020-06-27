@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
@@ -570,4 +572,12 @@ public interface MasterServices extends Server {
    */
   boolean normalizeRegions(
     final NormalizeTableFilterParams ntfp, final boolean isHighPriority) throws IOException;
+
+  /**
+   * Get locations for all meta regions.
+   * @param excludeOfflinedSplitParents don't return split parents
+   * @return The locations of all the meta regions
+   */
+  List<RegionLocations> getAllMetaRegionLocations(boolean excludeOfflinedSplitParents)
+    throws IOException;
 }

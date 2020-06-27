@@ -26,7 +26,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -220,18 +218,6 @@ public final class ProcedureSyncWait {
     } while (EnvironmentEdgeManager.currentTime() < done && env.isRunning());
 
     throw new TimeoutIOException("Timed out while waiting on " + purpose);
-  }
-
-  protected static void waitMetaRegions(final MasterProcedureEnv env) throws IOException {
-    int timeout = env.getMasterConfiguration().getInt("hbase.client.catalog.timeout", 10000);
-    try {
-      if (MetaTableLocator.waitMetaRegionLocation(env.getMasterServices().getZooKeeper(),
-        timeout) == null) {
-        throw new NotAllMetaRegionsOnlineException();
-      }
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-    }
   }
 
   protected static void waitRegionInTransition(final MasterProcedureEnv env,

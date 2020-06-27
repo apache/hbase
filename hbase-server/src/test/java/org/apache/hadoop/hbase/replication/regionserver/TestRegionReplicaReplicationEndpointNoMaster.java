@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -55,7 +54,6 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint.ReplicateContext;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -133,8 +131,12 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // mock a secondary region info to open
     hriSecondary = RegionReplicaUtil.getRegionInfoForReplica(hriPrimary, 1);
 
+    // cache the location for meta regions
+    try (RegionLocator locator = HTU.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+      locator.getAllRegionLocations();
+    }
     // No master
-    TestRegionServerNoMaster.stopMasterAndAssignMeta(HTU);
+    TestRegionServerNoMaster.stopMasterAndCacheMetaLocation(HTU);
     rs0 = HTU.getMiniHBaseCluster().getRegionServer(0);
     rs1 = HTU.getMiniHBaseCluster().getRegionServer(1);
   }
@@ -186,11 +188,9 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     HTU.loadNumericRows(table, f, 0, 1000);
 
     Assert.assertEquals(1000, entries.size());
-    try (AsyncClusterConnection conn = ClusterConnectionFactory
-      .createAsyncClusterConnection(HTU.getConfiguration(), null, User.getCurrent())) {
-      // replay the edits to the secondary using replay callable
-      replicateUsingCallable(conn, entries);
-    }
+    AsyncClusterConnection conn = HTU.getAsyncConnection();
+    // replay the edits to the secondary using replay callable
+    replicateUsingCallable(conn, entries);
 
     Region region = rs0.getRegion(hriSecondary.getEncodedName());
     HTU.verifyNumericRows(region, f, 0, 1000);
@@ -216,36 +216,34 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   public void testReplayCallableWithRegionMove() throws Exception {
     // tests replaying the edits to a secondary region replica using the Callable directly while
     // the region is moved to another location.It tests handling of RME.
-    try (AsyncClusterConnection conn = ClusterConnectionFactory
-      .createAsyncClusterConnection(HTU.getConfiguration(), null, User.getCurrent())) {
-      openRegion(HTU, rs0, hriSecondary);
-      // load some data to primary
-      HTU.loadNumericRows(table, f, 0, 1000);
+    AsyncClusterConnection conn = HTU.getAsyncConnection();
+    openRegion(HTU, rs0, hriSecondary);
+    // load some data to primary
+    HTU.loadNumericRows(table, f, 0, 1000);
 
-      Assert.assertEquals(1000, entries.size());
+    Assert.assertEquals(1000, entries.size());
 
-      // replay the edits to the secondary using replay callable
-      replicateUsingCallable(conn, entries);
+    // replay the edits to the secondary using replay callable
+    replicateUsingCallable(conn, entries);
 
-      Region region = rs0.getRegion(hriSecondary.getEncodedName());
-      HTU.verifyNumericRows(region, f, 0, 1000);
+    Region region = rs0.getRegion(hriSecondary.getEncodedName());
+    HTU.verifyNumericRows(region, f, 0, 1000);
 
-      HTU.loadNumericRows(table, f, 1000, 2000); // load some more data to primary
+    HTU.loadNumericRows(table, f, 1000, 2000); // load some more data to primary
 
-      // move the secondary region from RS0 to RS1
-      closeRegion(HTU, rs0, hriSecondary);
-      openRegion(HTU, rs1, hriSecondary);
+    // move the secondary region from RS0 to RS1
+    closeRegion(HTU, rs0, hriSecondary);
+    openRegion(HTU, rs1, hriSecondary);
 
-      // replicate the new data
-      replicateUsingCallable(conn, entries);
+    // replicate the new data
+    replicateUsingCallable(conn, entries);
 
-      region = rs1.getRegion(hriSecondary.getEncodedName());
-      // verify the new data. old data may or may not be there
-      HTU.verifyNumericRows(region, f, 1000, 2000);
+    region = rs1.getRegion(hriSecondary.getEncodedName());
+    // verify the new data. old data may or may not be there
+    HTU.verifyNumericRows(region, f, 1000, 2000);
 
-      HTU.deleteNumericRows(table, f, 0, 2000);
-      closeRegion(HTU, rs1, hriSecondary);
-    }
+    HTU.deleteNumericRows(table, f, 0, 2000);
+    closeRegion(HTU, rs1, hriSecondary);
   }
 
   @Test
