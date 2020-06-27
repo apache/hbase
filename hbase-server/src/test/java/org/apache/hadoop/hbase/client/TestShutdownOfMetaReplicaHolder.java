@@ -57,7 +57,7 @@ public class TestShutdownOfMetaReplicaHolder extends MetaWithReplicasTestBase {
       LOG.debug("Waiting for the replica {} to come up", hrl.getRegion());
       TEST_UTIL.waitFor(30000, () -> {
         HRegionLocation loc = locator.getRegionLocations(HConstants.EMPTY_START_ROW, true).get(1);
-        return !loc.getServerName().equals(oldServer);
+        return loc != null && !loc.getServerName().equals(oldServer);
       });
       LOG.debug("Replica {} is online on {}, old server is {}", hrl.getRegion(),
         locator.getRegionLocations(HConstants.EMPTY_START_ROW, true).get(1).getServerName(),
