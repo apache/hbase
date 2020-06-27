@@ -71,7 +71,7 @@ public class MetaCellComparator extends CellComparatorImpl {
     return ignoreSequenceid ? diff : Longs.compare(b.getSequenceId(), a.getSequenceId());
   }
 
-  private static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+  public static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
       int rlength) {
     int leftDelimiter = Bytes.searchDelimiterIndex(left, loffset, llength, HConstants.DELIMITER);
     int rightDelimiter = Bytes.searchDelimiterIndex(right, roffset, rlength, HConstants.DELIMITER);
