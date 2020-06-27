@@ -32,10 +32,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor.QueryType;
+import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -52,18 +54,16 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SubstringComparator;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
-import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -71,7 +71,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -1031,50 +1030,48 @@ public final class MetaTableAccessor {
    */
   public static void mergeRegions(Connection connection, RegionInfo mergedRegion,
     Map<RegionInfo, Long> parentSeqNum, ServerName sn, int regionReplication) throws IOException {
-    try (Table meta = getMetaHTable(connection)) {
-      long time = HConstants.LATEST_TIMESTAMP;
-      List<Mutation> mutations = new ArrayList<>();
-      List<RegionInfo> replicationParents = new ArrayList<>();
-      for (Map.Entry<RegionInfo, Long> e : parentSeqNum.entrySet()) {
-        RegionInfo ri = e.getKey();
-        long seqNum = e.getValue();
-        // Deletes for merging regions
-        mutations.add(makeDeleteFromRegionInfo(ri, time));
-        if (seqNum > 0) {
-          mutations.add(makePutForReplicationBarrier(ri, seqNum, time));
-          replicationParents.add(ri);
-        }
+    long time = HConstants.LATEST_TIMESTAMP;
+    List<Mutation> mutations = new ArrayList<>();
+    List<RegionInfo> replicationParents = new ArrayList<>();
+    for (Map.Entry<RegionInfo, Long> e : parentSeqNum.entrySet()) {
+      RegionInfo ri = e.getKey();
+      long seqNum = e.getValue();
+      // Deletes for merging regions
+      mutations.add(makeDeleteFromRegionInfo(ri, time));
+      if (seqNum > 0) {
+        mutations.add(makePutForReplicationBarrier(ri, seqNum, time));
+        replicationParents.add(ri);
       }
-      // Put for parent
-      Put putOfMerged = makePutFromRegionInfo(mergedRegion, time);
-      putOfMerged = addMergeRegions(putOfMerged, parentSeqNum.keySet());
-      // Set initial state to CLOSED.
-      // NOTE: If initial state is not set to CLOSED then merged region gets added with the
-      // default OFFLINE state. If Master gets restarted after this step, start up sequence of
-      // master tries to assign this offline region. This is followed by re-assignments of the
-      // merged region from resumed {@link MergeTableRegionsProcedure}
-      addRegionStateToPut(putOfMerged, RegionState.State.CLOSED);
-      mutations.add(putOfMerged);
-      // The merged is a new region, openSeqNum = 1 is fine. ServerName may be null
-      // if crash after merge happened but before we got to here.. means in-memory
-      // locations of offlined merged, now-closed, regions is lost. Should be ok. We
-      // assign the merged region later.
-      if (sn != null) {
-        addLocation(putOfMerged, sn, 1, mergedRegion.getReplicaId());
-      }
-
-      // Add empty locations for region replicas of the merged region so that number of replicas
-      // can be cached whenever the primary region is looked up from meta
-      for (int i = 1; i < regionReplication; i++) {
-        addEmptyLocation(putOfMerged, i);
-      }
-      // add parent reference for serial replication
-      if (!replicationParents.isEmpty()) {
-        addReplicationParent(putOfMerged, replicationParents);
-      }
-      byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString() + HConstants.DELIMITER);
-      multiMutate(meta, tableRow, mutations);
     }
+    // Put for parent
+    Put putOfMerged = makePutFromRegionInfo(mergedRegion, time);
+    putOfMerged = addMergeRegions(putOfMerged, parentSeqNum.keySet());
+    // Set initial state to CLOSED.
+    // NOTE: If initial state is not set to CLOSED then merged region gets added with the
+    // default OFFLINE state. If Master gets restarted after this step, start up sequence of
+    // master tries to assign this offline region. This is followed by re-assignments of the
+    // merged region from resumed {@link MergeTableRegionsProcedure}
+    addRegionStateToPut(putOfMerged, RegionState.State.CLOSED);
+    mutations.add(putOfMerged);
+    // The merged is a new region, openSeqNum = 1 is fine. ServerName may be null
+    // if crash after merge happened but before we got to here.. means in-memory
+    // locations of offlined merged, now-closed, regions is lost. Should be ok. We
+    // assign the merged region later.
+    if (sn != null) {
+      addLocation(putOfMerged, sn, 1, mergedRegion.getReplicaId());
+    }
+
+    // Add empty locations for region replicas of the merged region so that number of replicas
+    // can be cached whenever the primary region is looked up from meta
+    for (int i = 1; i < regionReplication; i++) {
+      addEmptyLocation(putOfMerged, i);
+    }
+    // add parent reference for serial replication
+    if (!replicationParents.isEmpty()) {
+      addReplicationParent(putOfMerged, replicationParents);
+    }
+    byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString() + HConstants.DELIMITER);
+    multiMutate(connection, tableRow, mutations);
   }
 
   /**
@@ -1091,42 +1088,40 @@ public final class MetaTableAccessor {
    */
   public static void splitRegion(Connection connection, RegionInfo parent, long parentOpenSeqNum,
     RegionInfo splitA, RegionInfo splitB, ServerName sn, int regionReplication) throws IOException {
-    try (Table meta = getMetaHTable(connection)) {
-      long time = EnvironmentEdgeManager.currentTime();
-      // Put for parent
-      Put putParent = makePutFromRegionInfo(
-        RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
-      addDaughtersToPut(putParent, splitA, splitB);
+    long time = EnvironmentEdgeManager.currentTime();
+    // Put for parent
+    Put putParent = makePutFromRegionInfo(
+      RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
+    addDaughtersToPut(putParent, splitA, splitB);
 
-      // Puts for daughters
-      Put putA = makePutFromRegionInfo(splitA, time);
-      Put putB = makePutFromRegionInfo(splitB, time);
-      if (parentOpenSeqNum > 0) {
-        addReplicationBarrier(putParent, parentOpenSeqNum);
-        addReplicationParent(putA, Collections.singletonList(parent));
-        addReplicationParent(putB, Collections.singletonList(parent));
-      }
-      // Set initial state to CLOSED
-      // NOTE: If initial state is not set to CLOSED then daughter regions get added with the
-      // default OFFLINE state. If Master gets restarted after this step, start up sequence of
-      // master tries to assign these offline regions. This is followed by re-assignments of the
-      // daughter regions from resumed {@link SplitTableRegionProcedure}
-      addRegionStateToPut(putA, RegionState.State.CLOSED);
-      addRegionStateToPut(putB, RegionState.State.CLOSED);
-
-      addSequenceNum(putA, 1, splitA.getReplicaId()); // new regions, openSeqNum = 1 is fine.
-      addSequenceNum(putB, 1, splitB.getReplicaId());
-
-      // Add empty locations for region replicas of daughters so that number of replicas can be
-      // cached whenever the primary region is looked up from meta
-      for (int i = 1; i < regionReplication; i++) {
-        addEmptyLocation(putA, i);
-        addEmptyLocation(putB, i);
-      }
-
-      byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
-      multiMutate(meta, tableRow, putParent, putA, putB);
+    // Puts for daughters
+    Put putA = makePutFromRegionInfo(splitA, time);
+    Put putB = makePutFromRegionInfo(splitB, time);
+    if (parentOpenSeqNum > 0) {
+      addReplicationBarrier(putParent, parentOpenSeqNum);
+      addReplicationParent(putA, Collections.singletonList(parent));
+      addReplicationParent(putB, Collections.singletonList(parent));
     }
+    // Set initial state to CLOSED
+    // NOTE: If initial state is not set to CLOSED then daughter regions get added with the
+    // default OFFLINE state. If Master gets restarted after this step, start up sequence of
+    // master tries to assign these offline regions. This is followed by re-assignments of the
+    // daughter regions from resumed {@link SplitTableRegionProcedure}
+    addRegionStateToPut(putA, RegionState.State.CLOSED);
+    addRegionStateToPut(putB, RegionState.State.CLOSED);
+
+    addSequenceNum(putA, 1, splitA.getReplicaId()); // new regions, openSeqNum = 1 is fine.
+    addSequenceNum(putB, 1, splitB.getReplicaId());
+
+    // Add empty locations for region replicas of daughters so that number of replicas can be
+    // cached whenever the primary region is looked up from meta
+    for (int i = 1; i < regionReplication; i++) {
+      addEmptyLocation(putA, i);
+      addEmptyLocation(putB, i);
+    }
+
+    byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
+    multiMutate(connection, tableRow, Arrays.asList(putParent, putA, putB));
   }
 
   /**
@@ -1163,56 +1158,34 @@ public final class MetaTableAccessor {
     deleteFromMetaTable(connection, delete);
     LOG.info("Deleted table " + table + " state from META");
   }
-
-  private static void multiMutate(Table table, byte[] row, Mutation... mutations)
-    throws IOException {
-    multiMutate(table, row, Arrays.asList(mutations));
-  }
-
   /**
    * Performs an atomic multi-mutate operation against the given table. Used by the likes of merge
    * and split as these want to make atomic mutations across multiple rows.
    * @throws IOException even if we encounter a RuntimeException, we'll still wrap it in an IOE.
    */
-  @VisibleForTesting
-  static void multiMutate(final Table table, byte[] row, final List<Mutation> mutations)
+  private static void multiMutate(Connection conn, byte[] row, List<Mutation> mutations)
     throws IOException {
     debugLogMutations(mutations);
-    Batch.Call<MultiRowMutationService, MutateRowsResponse> callable = instance -> {
-      MutateRowsRequest.Builder builder = MutateRowsRequest.newBuilder();
-      for (Mutation mutation : mutations) {
-        if (mutation instanceof Put) {
-          builder.addMutationRequest(
-            ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.PUT, mutation));
-        } else if (mutation instanceof Delete) {
-          builder.addMutationRequest(
-            ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.DELETE, mutation));
-        } else {
-          throw new DoNotRetryIOException(
-            "multi in MetaEditor doesn't support " + mutation.getClass().getName());
-        }
+    MutateRowsRequest.Builder builder = MutateRowsRequest.newBuilder();
+    for (Mutation mutation : mutations) {
+      if (mutation instanceof Put) {
+        builder.addMutationRequest(
+          ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.PUT, mutation));
+      } else if (mutation instanceof Delete) {
+        builder.addMutationRequest(
+          ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.DELETE, mutation));
+      } else {
+        throw new DoNotRetryIOException(
+          "multi in MetaEditor doesn't support " + mutation.getClass().getName());
       }
-      ServerRpcController controller = new ServerRpcController();
-      CoprocessorRpcUtils.BlockingRpcCallback<MutateRowsResponse> rpcCallback =
-        new CoprocessorRpcUtils.BlockingRpcCallback<>();
-      instance.mutateRows(controller, builder.build(), rpcCallback);
-      MutateRowsResponse resp = rpcCallback.get();
-      if (controller.failedOnException()) {
-        throw controller.getFailedOn();
-      }
-      return resp;
-    };
-    try {
-      table.coprocessorService(MultiRowMutationService.class, row, row, callable);
-    } catch (Throwable e) {
-      // Throw if an IOE else wrap in an IOE EVEN IF IT IS a RuntimeException (e.g.
-      // a RejectedExecutionException because the hosting exception is shutting down.
-      // This is old behavior worth reexamining. Procedures doing merge or split
-      // currently don't handle RuntimeExceptions coming up out of meta table edits.
-      // Would have to work on this at least. See HBASE-23904.
-      Throwables.throwIfInstanceOf(e, IOException.class);
-      throw new IOException(e);
     }
+    MutateRowsRequest request = builder.build();
+    AsyncTable<?> table = conn.toAsyncConnection().getTable(TableName.META_TABLE_NAME);
+    CompletableFuture<MutateRowsResponse> future =
+      table.<MultiRowMutationService, MutateRowsResponse> coprocessorService(
+        MultiRowMutationService::newStub,
+        (stub, controller, done) -> stub.mutateRows(controller, request, done), row);
+    FutureUtils.get(future);
   }
 
   /**
