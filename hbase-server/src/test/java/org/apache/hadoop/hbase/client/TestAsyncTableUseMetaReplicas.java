@@ -92,9 +92,7 @@ public class TestAsyncTableUseMetaReplicas {
       FailPrimaryMetaScanCp.class.getName());
     UTIL.startMiniCluster(3);
     HBaseTestingUtility.setReplicas(UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
-    try (ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf)) {
-      RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(UTIL, registry);
-    }
+    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(UTIL);
     try (Table table = UTIL.createTable(TABLE_NAME, FAMILY)) {
       table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE));
     }

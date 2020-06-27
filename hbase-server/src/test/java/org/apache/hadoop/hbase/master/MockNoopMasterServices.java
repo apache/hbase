@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -513,5 +514,10 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public boolean normalizeRegions(NormalizeTableFilterParams ntfp, boolean isHighPriority) {
     return false;
+  }
+
+  public List<RegionLocations> getAllMetaRegionLocations(boolean excludeOfflinedSplitParents)
+    throws IOException {
+    return null;
   }
 }

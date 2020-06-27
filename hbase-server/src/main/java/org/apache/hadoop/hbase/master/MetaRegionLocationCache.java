@@ -39,11 +39,14 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
- * A cache of meta region location metadata. Registers a listener on ZK to track changes to the
- * meta table znodes. Clients are expected to retry if the meta information is stale. This class
- * is thread-safe (a single instance of this class can be shared by multiple threads without race
+ * A cache of meta region location metadata. Registers a listener on ZK to track changes to the meta
+ * table znodes. Clients are expected to retry if the meta information is stale. This class is
+ * thread-safe (a single instance of this class can be shared by multiple threads without race
  * conditions).
+ * @deprecated Now we store meta location in the local store at master side so we should get the
+ *             meta location from active master instead of zk, keep it here only for compatibility.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class MetaRegionLocationCache extends ZKListener {
 
