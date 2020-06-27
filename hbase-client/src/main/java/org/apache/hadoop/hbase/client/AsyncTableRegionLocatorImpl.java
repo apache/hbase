@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -54,12 +53,7 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
 
   @Override
   public CompletableFuture<List<HRegionLocation>> getAllRegionLocations() {
-    if (TableName.isMetaTableName(tableName)) {
-      return conn.registry.getMetaRegionLocations()
-        .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
-    }
-    return ClientMetaTableAccessor
-      .getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME), tableName);
+    return conn.getLocator().getAllRegionLocations(tableName, true);
   }
 
   @Override
