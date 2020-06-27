@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
 import java.util.List;
@@ -53,11 +53,7 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TestAsyncAdminBase.setUpBeforeClass();
-    try (ConnectionRegistry registry =
-             ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration())) {
-      RegionReplicaTestHelper
-        .waitUntilAllMetaReplicasAreReady(TEST_UTIL, registry);
-    }
+    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL);
   }
 
   private void testMoveNonDefaultReplica(TableName tableName)

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.client.RegionReplicaTestHelper.testLocator;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -35,6 +35,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncMetaRegionLocator {
 
@@ -44,24 +46,25 @@ public class TestAsyncMetaRegionLocator {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static ConnectionRegistry REGISTRY;
+  private static AsyncConnectionImpl CONN;
 
-  private static AsyncMetaRegionLocator LOCATOR;
+  private static AsyncRegionLocator LOCATOR;
 
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.waitUntilNoRegionsInTransition();
-    REGISTRY = ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
-    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
+    CONN = (AsyncConnectionImpl) ConnectionFactory
+      .createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
-    LOCATOR = new AsyncMetaRegionLocator(REGISTRY);
+    LOCATOR = new AsyncRegionLocator(CONN, AsyncConnectionImpl.RETRY_TIMER);
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    IOUtils.closeQuietly(REGISTRY);
+    Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -71,14 +74,15 @@ public class TestAsyncMetaRegionLocator {
 
       @Override
       public void updateCachedLocationOnError(HRegionLocation loc, Throwable error)
-          throws Exception {
+        throws Exception {
         LOCATOR.updateCachedLocationOnError(loc, error);
       }
 
       @Override
       public RegionLocations getRegionLocations(TableName tableName, int replicaId, boolean reload)
-          throws Exception {
-        return LOCATOR.getRegionLocations(replicaId, reload).get();
+        throws Exception {
+        return LOCATOR.getRegionLocations(tableName, EMPTY_START_ROW, replicaId,
+          RegionLocateType.CURRENT, reload).get();
       }
     });
   }

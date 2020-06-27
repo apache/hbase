@@ -118,6 +118,10 @@ public class TestMetaWithReplicasShutdownHandling extends MetaWithReplicasTestBa
           Thread.sleep(
             conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 30000) * 3);
         }
+        // cache the location for all the meta regions.
+        try (RegionLocator locator = c.getRegionLocator(TableName.META_TABLE_NAME)) {
+          locator.getAllRegionLocations();
+        }
         // Ensure all metas are not on same hbase:meta replica=0 server!
 
         master = util.getHBaseClusterInterface().getClusterMetrics().getMasterName();
@@ -131,7 +135,6 @@ public class TestMetaWithReplicasShutdownHandling extends MetaWithReplicasTestBa
           util.getHBaseClusterInterface().killRegionServer(primary);
           util.getHBaseClusterInterface().waitForRegionServerToStop(primary, 60000);
         }
-        c.clearRegionLocationCache();
       }
       LOG.info("Running GETs");
       try (Table htable = c.getTable(TABLE)) {
@@ -150,15 +153,15 @@ public class TestMetaWithReplicasShutdownHandling extends MetaWithReplicasTestBa
         util.getHBaseClusterInterface().startRegionServer(primary.getHostname(), 0);
         util.getHBaseClusterInterface().waitForActiveAndReadyMaster();
         LOG.info("Master active!");
-        c.clearRegionLocationCache();
       }
     }
     conf.setBoolean(HConstants.USE_META_REPLICAS, false);
     LOG.info("Running GETs no replicas");
-    try (Connection c = ConnectionFactory.createConnection(conf);
-      Table htable = c.getTable(TABLE)) {
-      Result r = htable.get(new Get(row));
-      assertArrayEquals(row, r.getRow());
+    try (Connection c = ConnectionFactory.createConnection(conf)) {
+      try (Table htable = c.getTable(TABLE)) {
+        Result r = htable.get(new Get(row));
+        assertArrayEquals(r.getRow(), row);
+      }
     }
   }
 }

@@ -129,7 +129,7 @@ public class TestHBaseFsckEncryption {
       table.close();
     }
     // Flush it
-    TEST_UTIL.getAdmin().flush(tableDescriptor.getTableName());
+    TEST_UTIL.flush(tableDescriptor.getTableName());
 
     // Verify we have encrypted store files on disk
     final List<Path> paths = findStorefilePaths(tableDescriptor.getTableName());
