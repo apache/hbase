@@ -112,7 +112,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   private static final int DEFAULT_ROLL_ERRORS_TOLERATED = 2;
   private static final String SYNCER_COUNT = "hbase.regionserver.hlog.syncer.count";
   private static final int DEFAULT_SYNCER_COUNT = 5;
-  private static final String MAX_BATCH_COUNT = "hbase.regionserver.hlog.max.batch.count";
+  private static final String MAX_BATCH_COUNT = "hbase.regionserver.wal.sync.batch.count";
   private static final int DEFAULT_MAX_BATCH_COUNT = 200;
 
   /**
