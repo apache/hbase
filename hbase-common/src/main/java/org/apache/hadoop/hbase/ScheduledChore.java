@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase;
 
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -169,11 +169,11 @@ public abstract class ScheduledChore implements Runnable {
     updateTimeTrackingBeforeRun();
     if (missedStartTime() && isScheduled()) {
       onChoreMissedStartTime();
-      if (LOG.isInfoEnabled()) LOG.info("Chore: " + getName() + " missed its start time");
+      LOG.info("Chore: {} missed its start time", getName());
     } else if (stopper.isStopped() || !isScheduled()) {
       cancel(false);
       cleanup();
-      if (LOG.isInfoEnabled()) LOG.info("Chore: " + getName() + " was stopped");
+      LOG.info("Chore: {} was stopped", getName());
     } else {
       try {
         // TODO: Histogram metrics per chore name.
@@ -193,7 +193,7 @@ public abstract class ScheduledChore implements Runnable {
             TimeUnit.NANOSECONDS.toMillis(end - start));
         }
       } catch (Throwable t) {
-        if (LOG.isErrorEnabled()) LOG.error("Caught error", t);
+        LOG.error("Caught error", t);
         if (this.stopper.isStopped()) {
           cancel(false);
           cleanup();
