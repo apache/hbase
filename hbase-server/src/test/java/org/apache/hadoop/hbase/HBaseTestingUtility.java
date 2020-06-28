@@ -662,10 +662,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
 
     // Error level to skip some warnings specific to the minicluster. See HBASE-4709
-    org.apache.log4j.Logger.getLogger(org.apache.hadoop.metrics2.util.MBeans.class).
-        setLevel(org.apache.log4j.Level.ERROR);
-    org.apache.log4j.Logger.getLogger(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class).
-        setLevel(org.apache.log4j.Level.ERROR);
+    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
+    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
+      "ERROR");
 
     TraceUtil.initTracer(conf);
 
@@ -689,6 +688,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public MiniDFSCluster startMiniDFSClusterForTestWAL(int namenodePort) throws IOException {
     createDirsAndSetProperties();
+    // Error level to skip some warnings specific to the minicluster. See HBASE-4709
+    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
+    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
+      "ERROR");
     dfsCluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null,
         null, null, null);
     return dfsCluster;
@@ -1142,16 +1145,15 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Starts up mini hbase cluster.
-   * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
-   * This is useful when doing stepped startup of clusters.
+   * Starts up mini hbase cluster. Usually you won't want this. You'll usually want
+   * {@link #startMiniCluster()}. This is useful when doing stepped startup of clusters.
    * @return Reference to the hbase mini hbase cluster.
    * @see #startMiniCluster(StartMiniClusterOption)
    * @see #shutdownMiniHBaseCluster()
    */
   public MiniHBaseCluster startMiniHBaseCluster(StartMiniClusterOption option)
-      throws IOException, InterruptedException {
-    // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
+    throws IOException, InterruptedException {
+    // Now do the mini hbase cluster. Set the hbase.rootdir in config.
     createRootDir(option.isCreateRootDir());
     if (option.isCreateWALDir()) {
       createWALRootDir();
@@ -1169,22 +1171,26 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, option.getNumRegionServers());
     }
 
+    // Avoid log flooded with chore execution time, see HBASE-24646 for more details.
+    Log4jUtils.setLogLevel(org.apache.hadoop.hbase.ScheduledChore.class.getName(), "INFO");
+
     Configuration c = new Configuration(this.conf);
     TraceUtil.initTracer(c);
-    this.hbaseCluster =
-        new MiniHBaseCluster(c, option.getNumMasters(), option.getNumAlwaysStandByMasters(),
-            option.getNumRegionServers(), option.getRsPorts(), option.getMasterClass(),
-            option.getRsClass());
+    this.hbaseCluster = new MiniHBaseCluster(c, option.getNumMasters(),
+      option.getNumAlwaysStandByMasters(), option.getNumRegionServers(), option.getRsPorts(),
+      option.getMasterClass(), option.getRsClass());
     // Populate the master address configuration from mini cluster configuration.
     conf.set(HConstants.MASTER_ADDRS_KEY, MasterRegistry.getMasterAddr(c));
     // Don't leave here till we've done a successful scan of the hbase:meta
-    Table t = getConnection().getTable(TableName.META_TABLE_NAME);
-    ResultScanner s = t.getScanner(new Scan());
-    while (s.next() != null) {
-      continue;
+    try (Table t = getConnection().getTable(TableName.META_TABLE_NAME);
+      ResultScanner s = t.getScanner(new Scan())) {
+      for (;;) {
+        if (s.next() == null) {
+          break;
+        }
+      }
     }
-    s.close();
-    t.close();
+
 
     getAdmin(); // create immediately the hbaseAdmin
     LOG.info("Minicluster is up; activeMaster={}", getHBaseCluster().getMaster());
