@@ -300,13 +300,14 @@ class TableOverAsyncTable implements Table {
   }
 
   @Override
-  public boolean checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+  public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
     return FutureUtils.get(table.checkAndMutate(checkAndMutate));
   }
 
   @Override
-  public boolean[] checkAndMutate(List<CheckAndMutate> checkAndMutates) throws IOException {
-    return Booleans.toArray(FutureUtils.get(table.checkAndMutateAll(checkAndMutates)));
+  public List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
+    throws IOException {
+    return FutureUtils.get(table.checkAndMutateAll(checkAndMutates));
   }
 
   @Override

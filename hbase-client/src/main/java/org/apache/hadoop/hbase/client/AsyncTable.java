@@ -367,7 +367,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * @param checkAndMutate The CheckAndMutate object.
    * @return A {@link CompletableFuture}s that represent the result for the CheckAndMutate.
    */
-  CompletableFuture<Boolean> checkAndMutate(CheckAndMutate checkAndMutate);
+  CompletableFuture<CheckAndMutateResult> checkAndMutate(CheckAndMutate checkAndMutate);
 
   /**
    * Batch version of checkAndMutate. The specified CheckAndMutates are batched only in the sense
@@ -378,15 +378,16 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * @return A list of {@link CompletableFuture}s that represent the result for each
    *   CheckAndMutate.
    */
-  List<CompletableFuture<Boolean>> checkAndMutate(List<CheckAndMutate> checkAndMutates);
+  List<CompletableFuture<CheckAndMutateResult>> checkAndMutate(
+    List<CheckAndMutate> checkAndMutates);
 
   /**
    * A simple version of batch checkAndMutate. It will fail if there are any failures.
    *
    * @param checkAndMutates The list of rows to apply.
-   * @return A {@link CompletableFuture} that wrapper the result boolean list.
+   * @return A {@link CompletableFuture} that wrapper the result list.
    */
-  default CompletableFuture<List<Boolean>> checkAndMutateAll(
+  default CompletableFuture<List<CheckAndMutateResult>> checkAndMutateAll(
     List<CheckAndMutate> checkAndMutates) {
     return allOf(checkAndMutate(checkAndMutates));
   }
