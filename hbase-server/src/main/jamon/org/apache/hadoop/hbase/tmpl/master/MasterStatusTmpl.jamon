@@ -453,8 +453,20 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     return $.tablesorter.formatFloat( s.replace(/,/g,'') );
                 }, type: "numeric"
             });
+            $.tablesorter.addParser(
+            {
+                id: "dateTime",
+                is: function (s) {
+                    return /^([a-zA-Z]{3}\s){2}\d{2}\s\d{2}:\d{2}:\d{2}\s[a-zA-Z]{3}\s\d{4}$/.test(s);
+                }, format: function (s) {
+                    var split = s.split(" ");
+                    var time = Date.parse(split[1] + " " + split[2] + " " + split[3] + " " + split[5]);
+                    return $.tablesorter.formatFloat(time);
+                }, type: "numeric"
+            });
             $("#baseStatsTable").tablesorter({
                 headers: {
+                    1: {sorter: 'dateTime'},
                     4: {sorter: 'separator'},
                     5: {sorter: 'separator'}
                 }
