@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
@@ -118,7 +119,22 @@ public class TestMasterNoCluster {
         return false;
       }
     });
-    ZKUtil.deleteNodeRecursively(zkw, zkw.getZNodePaths().baseZNode);
+    // Before fails sometimes so retry.
+    try {
+      TESTUTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+        @Override public boolean evaluate() throws Exception {
+          try {
+            ZKUtil.deleteNodeRecursively(zkw, zkw.getZNodePaths().baseZNode);
+            return true;
+          } catch (KeeperException.NotEmptyException e) {
+            LOG.info("Failed delete, retrying", e);
+          }
+          return false;
+        }
+      });
+    } catch (Exception e) {
+      LOG.info("Failed zk clear", e);
+    }
     zkw.close();
   }
 
