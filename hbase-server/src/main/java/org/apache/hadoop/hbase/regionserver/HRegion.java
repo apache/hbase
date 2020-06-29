@@ -8345,10 +8345,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
-      56 * ClassSize.REFERENCE +
+      55 * ClassSize.REFERENCE +
       3 * Bytes.SIZEOF_INT +
       14 * Bytes.SIZEOF_LONG +
-      3 * Bytes.SIZEOF_BOOLEAN);
+      2 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:
   // 1 x HashMap - coprocessorServiceHandlers
