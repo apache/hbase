@@ -894,10 +894,10 @@ public class HTable implements HTableInterface, RegionLocator {
   @Override
   public void batch(final List<? extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
-    for(int ii=0;ii<actions.size();ii++){
+    /*for(int ii=0;ii<actions.size();ii++){
       Mutation mutate = (Mutation)(actions.get(ii));
       //System.out.println("in batch "+mutate.getId());
-    }
+    }*/
     AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, actions, null, results);
     ars.waitUntilDone();
     if (ars.hasError()) {

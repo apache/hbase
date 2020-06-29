@@ -116,7 +116,7 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
       int rowMutations = 0;
       for (Action<R> action : actions) {
         Row row = action.getAction();
-        Mutation mutation=(Mutation)(row);
+        //Mutation mutation=(Mutation)(row);
         //System.out.println("finally "+mutation.getId());
         // Row Mutations are a set of Puts and/or Deletes all to be applied atomically
         // on the one row. We do separate RegionAction for each RowMutations.

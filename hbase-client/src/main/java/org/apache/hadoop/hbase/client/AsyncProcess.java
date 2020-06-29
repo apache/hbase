@@ -631,10 +631,10 @@ class AsyncProcess {
       List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results,
       PayloadCarryingServerCallable callable, int operationTimeout, int rpcTimeout) {
     List<Action<Row>> actions = new ArrayList<Action<Row>>(rows.size());
-    for(int ii=0;ii<rows.size();ii++){
+    /*for(int ii=0;ii<rows.size();ii++){
       Mutation mutate = (Mutation)(rows.get(ii));
       //System.out.println("in submitall "+mutate.getId());
-    }
+    }*/
     // The position will be used by the processBatch to match the object array returned.
     int posInList = -1;
     NonceGenerator ng = this.connection.getNonceGenerator();
