@@ -620,7 +620,7 @@ class MemStoreFlusher implements FlushRequester {
       FlushResult flushResult = region.flushcache(families, false, tracker);
       boolean shouldCompact = flushResult.isCompactionNeeded();
       // We just want to check the size
-      boolean shouldSplit = region.checkSplit() != null;
+      boolean shouldSplit = region.checkSplit().isPresent();
       if (shouldSplit) {
         this.server.compactSplitThread.requestSplit(region);
       } else if (shouldCompact) {
