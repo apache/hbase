@@ -74,7 +74,8 @@ public abstract class RegionSplitPolicy extends Configured {
    * @return {@code true} if the specified region can be split.
    */
   protected boolean canSplit() {
-    return !region.getRegionInfo().isMetaRegion() && region.isAvailable() && !region.hasReferences();
+    return !region.getRegionInfo().isMetaRegion() && region.isAvailable() &&
+      !region.hasReferences();
   }
 
   /**
