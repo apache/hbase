@@ -874,9 +874,6 @@ public class TestHStore {
   public void testSplitWithEmptyColFam() throws IOException {
     init(this.name.getMethodName());
     assertFalse(store.getSplitPoint().isPresent());
-    store.getHRegion().forceSplit(null);
-    assertFalse(store.getSplitPoint().isPresent());
-    store.getHRegion().clearSplit();
   }
 
   @Test

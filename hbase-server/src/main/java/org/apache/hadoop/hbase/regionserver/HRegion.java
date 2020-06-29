@@ -691,8 +691,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   // Stop updates lock
   private final ReentrantReadWriteLock updatesLock = new ReentrantReadWriteLock();
-  private boolean splitRequest;
-  private byte[] explicitSplitPoint = null;
 
   private final MultiVersionConcurrencyControl mvcc;
 
@@ -1463,7 +1461,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public boolean isSplittable() {
-    return isAvailable() && !hasReferences();
+    return splitPolicy.canSplit();
   }
 
   @Override
@@ -1962,7 +1960,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * @return split policy for this region.
    */
-  public RegionSplitPolicy getSplitPolicy() {
+  @VisibleForTesting
+  RegionSplitPolicy getSplitPolicy() {
     return this.splitPolicy;
   }
 
@@ -8346,9 +8345,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
-      ClassSize.ARRAY +
-      55 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
-      (15 * Bytes.SIZEOF_LONG) +
+      56 * ClassSize.REFERENCE +
+      3 * Bytes.SIZEOF_INT +
+      14 * Bytes.SIZEOF_LONG +
       3 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:
@@ -8483,51 +8482,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return responseBuilder.build();
   }
 
-  boolean shouldForceSplit() {
-    return this.splitRequest;
-  }
-
-  byte[] getExplicitSplitPoint() {
-    return this.explicitSplitPoint;
-  }
-
-  void forceSplit(byte[] sp) {
-    // This HRegion will go away after the forced split is successful
-    // But if a forced split fails, we need to clear forced split.
-    this.splitRequest = true;
-    if (sp != null) {
-      this.explicitSplitPoint = sp;
-    }
-  }
-
-  void clearSplit() {
-    this.splitRequest = false;
-    this.explicitSplitPoint = null;
+  public Optional<byte[]> checkSplit() {
+    return checkSplit(false);
   }
 
   /**
-   * Return the splitpoint. null indicates the region isn't splittable
-   * If the splitpoint isn't explicitly specified, it will go over the stores
-   * to find the best splitpoint. Currently the criteria of best splitpoint
-   * is based on the size of the store.
+   * Return the split point. An empty result indicates the region isn't splittable.
    */
-  public byte[] checkSplit() {
+  public Optional<byte[]> checkSplit(boolean force) {
     // Can't split META
     if (this.getRegionInfo().isMetaRegion() ||
-        TableName.NAMESPACE_TABLE_NAME.equals(this.getRegionInfo().getTable())) {
-      if (shouldForceSplit()) {
-        LOG.warn("Cannot split meta region in HBase 0.20 and above");
-      }
-      return null;
+      TableName.NAMESPACE_TABLE_NAME.equals(this.getRegionInfo().getTable())) {
+      return Optional.empty();
     }
 
     // Can't split a region that is closing.
     if (this.isClosing()) {
-      return null;
+      return Optional.empty();
     }
 
-    if (!splitPolicy.shouldSplit()) {
-      return null;
+    if (!force && !splitPolicy.shouldSplit()) {
+      return Optional.empty();
     }
 
     byte[] ret = splitPolicy.getSplitPoint();
@@ -8537,10 +8512,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         checkRow(ret, "calculated split");
       } catch (IOException e) {
         LOG.error("Ignoring invalid split for region {}", this, e);
-        return null;
+        return Optional.empty();
       }
+      return Optional.of(ret);
+    } else {
+      return Optional.empty();
     }
-    return ret;
   }
 
   /**

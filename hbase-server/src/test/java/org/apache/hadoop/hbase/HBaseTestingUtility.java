@@ -3247,9 +3247,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     unassignRegion(hrl.getRegionInfo().getRegionName());
   }
 
-  /*
+  /**
    * Retrieves a splittable region randomly from tableName
-   *
    * @param tableName name of table
    * @param maxAttempts maximum number of attempts, unlimited for value of -1
    * @return the HRegion chosen, null if none was found within limit of maxAttempts
@@ -3272,15 +3271,14 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       if (regCount > 0) {
         idx = random.nextInt(regCount);
         // if we have just tried this region, there is no need to try again
-        if (attempted.contains(idx))
+        if (attempted.contains(idx)) {
           continue;
-        try {
-          regions.get(idx).checkSplit();
-          return regions.get(idx);
-        } catch (Exception ex) {
-          LOG.warn("Caught exception", ex);
-          attempted.add(idx);
         }
+        HRegion region = regions.get(idx);
+        if (region.checkSplit().isPresent()) {
+          return region;
+        }
+        attempted.add(idx);
       }
       attempts++;
     } while (maxAttempts == -1 || attempts < maxAttempts);

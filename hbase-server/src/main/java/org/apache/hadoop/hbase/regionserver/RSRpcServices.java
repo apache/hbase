@@ -1833,35 +1833,30 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetRegionInfoResponse getRegionInfo(final RpcController controller,
-      final GetRegionInfoRequest request) throws ServiceException {
+    final GetRegionInfoRequest request) throws ServiceException {
     try {
       checkOpen();
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       RegionInfo info = region.getRegionInfo();
-      byte[] bestSplitRow = null;
-      boolean shouldSplit = true;
+      byte[] bestSplitRow;
       if (request.hasBestSplitRow() && request.getBestSplitRow()) {
-        HRegion r = region;
-        region.startRegionOperation(Operation.SPLIT_REGION);
-        r.forceSplit(null);
-        // Even after setting force split if split policy says no to split then we should not split.
-        shouldSplit = region.getSplitPolicy().shouldSplit() && !info.isMetaRegion();
-        bestSplitRow = r.checkSplit();
+        bestSplitRow = region.checkSplit(true).orElse(null);
         // when all table data are in memstore, bestSplitRow = null
         // try to flush region first
-        if(bestSplitRow == null) {
-          r.flush(true);
-          bestSplitRow = r.checkSplit();
+        if (bestSplitRow == null) {
+          region.flush(true);
+          bestSplitRow = region.checkSplit(true).orElse(null);
         }
-        r.clearSplit();
+      } else {
+        bestSplitRow = null;
       }
       GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
       builder.setRegionInfo(ProtobufUtil.toRegionInfo(info));
       if (request.hasCompactionState() && request.getCompactionState()) {
         builder.setCompactionState(ProtobufUtil.createCompactionState(region.getCompactionState()));
       }
-      builder.setSplittable(region.isSplittable() && shouldSplit);
+      builder.setSplittable(region.isSplittable());
       builder.setMergeable(region.isMergeable());
       if (request.hasBestSplitRow() && request.getBestSplitRow() && bestSplitRow != null) {
         builder.setBestSplitRow(UnsafeByteOperations.unsafeWrap(bestSplitRow));
