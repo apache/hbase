@@ -25,22 +25,26 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Type;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import javax.management.QueryExp;
+import com.google.common.reflect.TypeToken;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 /**
  * Test {@link JSONBean}.
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestJSONBean {
   private MBeanServer getMockMBeanServer() throws Exception {
     MBeanServer mbeanServer = mock(MBeanServer.class);
@@ -100,9 +104,10 @@ public class TestJSONBean {
       jsonWriter.write(getMockMBeanServer(), null, null, false);
     }
 
-    ObjectMapper mapper = new ObjectMapper();
-    assertEquals(mapper.readTree(getExpectedJSON()), mapper.readTree(stringWriter.toString()));
+    final Gson GSON = GsonUtil.createGson().create();
+    Type typeOfHashMap = new TypeToken<Map<String, Object>>() {}.getType();
+    Map<String, Object> expectedJson = GSON.fromJson(getExpectedJSON(), typeOfHashMap);
+    Map<String, Object> actualJson = GSON.fromJson(stringWriter.toString(), typeOfHashMap);
+    assertEquals(expectedJson, actualJson);
   }
 }
-
-
