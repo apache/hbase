@@ -66,6 +66,11 @@ public final class HConstants {
   public static final String RECOVERED_HFILES_DIR = "recovered.hfiles";
 
   /**
+   * Date Tiered Compaction tmp dir prefix name if use storage policy
+   */
+  public static final String STORAGE_POLICY_PREFIX = "storage_policy_";
+
+  /**
    * The first four bytes of Hadoop RPC connections
    */
   public static final byte[] RPC_HEADER = new byte[] { 'H', 'B', 'a', 's' };

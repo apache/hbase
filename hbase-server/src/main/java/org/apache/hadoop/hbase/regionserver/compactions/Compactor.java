@@ -268,7 +268,15 @@ public abstract class Compactor<T extends CellSink> {
     // See HBASE-8166, HBASE-12600, and HBASE-13389.
     return store
       .createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true, fd.maxMVCCReadpoint > 0,
-        fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize);
+        fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize,
+        HConstants.EMPTY_STRING);
+  }
+
+  protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind,
+      String fileStoragePolicy) throws IOException {
+    return store
+      .createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true, fd.maxMVCCReadpoint > 0,
+        fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize, fileStoragePolicy);
   }
 
   private ScanInfo preCompactScannerOpen(CompactionRequestImpl request, ScanType scanType,

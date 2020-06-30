@@ -43,6 +43,10 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
 
   public interface WriterFactory {
     public StoreFileWriter createWriter() throws IOException;
+    default StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
+        throws IOException {
+      return createWriter();
+    };
   }
 
   /**
