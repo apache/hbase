@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
@@ -236,10 +235,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     am = master.getAssignmentManager();
 
     // Assign meta
-    rsDispatcher.setMockRsExecutor(new HangThenRSRestartExecutor());
-    am.assign(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    assertEquals(true, am.isMetaAssigned());
-
+    setUpMeta(new HangThenRSRestartExecutor());
     // set it back as default, see setUpMeta()
     am.wakeMetaLoadedEvent();
   }

@@ -205,7 +205,8 @@ public class TestAsyncTableGetMultiThreaded {
           .map(t -> t.getRegionServer().getServerName()).filter(s -> !s.equals(metaServer))
           .findAny().get();
       LOG.info("====== Moving meta from {} to {} ======", metaServer, newMetaServer);
-      admin.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(), newMetaServer);
+      RegionInfo meta = admin.getRegions(TableName.META_TABLE_NAME).get(0);
+      admin.move(meta.getEncodedNameAsBytes(), newMetaServer);
       LOG.info("====== Move meta done ======");
       Thread.sleep(5000);
     }

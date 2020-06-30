@@ -176,7 +176,8 @@ public class TestMaster {
     HMaster m = cluster.getMaster();
     try {
       m.setInitialized(false); // fake it, set back later
-      RegionInfo meta = RegionInfoBuilder.FIRST_META_REGIONINFO;
+      RegionInfo meta = m.getAssignmentManager().getRegionStates()
+        .getRegionsOfTable(TableName.META_TABLE_NAME).get(0);
       m.move(meta.getEncodedNameAsBytes(), null);
       fail("Region should not be moved since master is not initialized");
     } catch (IOException ioe) {

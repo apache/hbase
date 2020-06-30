@@ -2715,19 +2715,10 @@ public class HBaseFsck extends Configured implements Closeable {
       zkw.getZNodePaths().getZNodeForReplica(hi.getMetaEntry().getRegionInfo().getReplicaId()));
   }
 
-  private void assignMetaReplica(int replicaId)
-      throws IOException, KeeperException, InterruptedException {
-    errors.reportError(ERROR_CODE.NO_META_REGION, "hbase:meta, replicaId " +
-        replicaId +" is not found on any region.");
-    if (shouldFixAssignments()) {
-      errors.print("Trying to fix a problem with hbase:meta..");
-      setShouldRerun();
-      // try to fix it (treat it as unassigned region)
-      RegionInfo h = RegionReplicaUtil.getRegionInfoForReplica(
-          RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId);
-      HBaseFsckRepair.fixUnassigned(admin, h);
-      HBaseFsckRepair.waitUntilAssigned(admin, h);
-    }
+  private void assignMetaReplica(int replicaId) {
+    errors.reportError(ERROR_CODE.NO_META_REGION,
+      "hbase:meta, replicaId " + replicaId + " is not found on any region.");
+    throw new UnsupportedOperationException("fix meta region is not allowed");
   }
 
   /**

@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.After;
@@ -80,10 +81,11 @@ public class TestMetaTableAccessorNoCluster {
     assertTrue(hri == null);
     // OK, give it what it expects
     kvs.clear();
+    RegionInfo metaRegionInfo = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f, HConstants.REGIONINFO_QUALIFIER,
-      RegionInfo.toByteArray(RegionInfoBuilder.FIRST_META_REGIONINFO)));
+      RegionInfo.toByteArray(metaRegionInfo)));
     hri = CatalogFamilyFormat.getRegionInfo(Result.create(kvs));
     assertNotNull(hri);
-    assertTrue(RegionInfo.COMPARATOR.compare(hri, RegionInfoBuilder.FIRST_META_REGIONINFO) == 0);
+    assertTrue(RegionInfo.COMPARATOR.compare(hri, metaRegionInfo) == 0);
   }
 }

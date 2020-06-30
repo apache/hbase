@@ -301,6 +301,19 @@ public class DistributedHBaseCluster extends HBaseCluster {
   }
 
   @Override
+  public ServerName getServerHoldingMeta() throws IOException {
+    HRegionLocation regionLoc = null;
+    try (RegionLocator locator = connection.getRegionLocator(TableName.META_TABLE_NAME)) {
+      regionLoc = locator.getRegionLocation(HConstants.EMPTY_START_ROW, true);
+    }
+    if (regionLoc == null) {
+      LOG.warn("Cannot find region server holding first meta region");
+      return null;
+    }
+    return regionLoc.getServerName();
+  }
+
+  @Override
   public ServerName getServerHoldingRegion(TableName tn, byte[] regionName) throws IOException {
     byte[] startKey = RegionInfo.getStartKey(regionName);
     HRegionLocation regionLoc = null;

@@ -90,8 +90,8 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocateType;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -921,13 +921,16 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
     }
     // start migrating
-    byte[] row = CatalogFamilyFormat.getMetaKeyForRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    Put put = new Put(row);
+    Put put = null;
     List<String> metaReplicaNodes = zooKeeper.getMetaReplicaNodes();
     StringBuilder info = new StringBuilder("Migrating meta location:");
     for (String metaReplicaNode : metaReplicaNodes) {
       int replicaId = zooKeeper.getZNodePaths().getMetaReplicaIdFromZnode(metaReplicaNode);
       RegionState state = getMetaRegionState(zooKeeper, replicaId);
+      if (put == null) {
+        byte[] row = CatalogFamilyFormat.getMetaKeyForRegion(state.getRegion());
+        put = new Put(row);
+      }
       info.append(" ").append(state);
       put.setTimestamp(state.getStamp());
       MetaTableAccessor.addRegionInfo(put, state.getRegion());
@@ -939,9 +942,10 @@ public class HMaster extends HRegionServer implements MasterServices {
         .setQualifier(RegionStateStore.getStateColumn(replicaId)).setTimestamp(put.getTimestamp())
         .setType(Cell.Type.Put).setValue(Bytes.toBytes(state.getState().name())).build());
     }
-    if (!put.isEmpty()) {
+    if (put != null) {
       LOG.info(info.toString());
-      masterRegion.update(r -> r.put(put));
+      final Put p = put;
+      masterRegion.update(r -> r.put(p));
     } else {
       LOG.info("No meta location avaiable on zookeeper, skip migrating...");
     }
@@ -1123,11 +1127,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Checking if meta needs initializing.
     status.setStatus("Initializing meta table if this is a new deploy");
     InitMetaProcedure initMetaProc = null;
-    // Print out state of hbase:meta on startup; helps debugging.
-    RegionState rs = this.assignmentManager.getRegionStates().
-        getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    LOG.info("hbase:meta {}", rs);
-    if (rs != null && rs.isOffline()) {
+    if (!this.assignmentManager.getRegionStates().hasTableRegionStates(TableName.META_TABLE_NAME)) {
       Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
         .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
       initMetaProc = optProc.orElseGet(() -> {
@@ -1306,11 +1306,14 @@ public class HMaster extends HRegionServer implements MasterServices {
   /**
    * Check hbase:meta is up and ready for reading. For use during Master startup only.
    * @return True if meta is UP and online and startup can progress. Otherwise, meta is not online
-   *   and we will hold here until operator intervention.
+   *         and we will hold here until operator intervention.
    */
   @VisibleForTesting
-  public boolean waitForMetaOnline() {
-    return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
+  public boolean waitForMetaOnline() throws InterruptedException {
+    Optional<RegionInfo> firstMetaRegion =
+      this.assignmentManager.getRegionStates().getRegionsOfTable(TableName.META_TABLE_NAME).stream()
+        .filter(RegionInfo::isFirst).filter(RegionReplicaUtil::isDefaultReplica).findFirst();
+    return firstMetaRegion.isPresent() ? isRegionOnline(firstMetaRegion.get()) : false;
   }
 
   /**

@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -64,16 +65,18 @@ public class MetaWithReplicasTestBase {
     TEST_UTIL.startMiniCluster(option);
     AssignmentManager am = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     Set<ServerName> sns = new HashSet<ServerName>();
+    RegionInfo metaRegionInfo;
     ServerName hbaseMetaServerName;
     try (RegionLocator locator =
       TEST_UTIL.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
-      hbaseMetaServerName = locator.getRegionLocation(HConstants.EMPTY_START_ROW).getServerName();
+      HRegionLocation loc = locator.getRegionLocation(HConstants.EMPTY_START_ROW);
+      metaRegionInfo = loc.getRegion();
+      hbaseMetaServerName = loc.getServerName();
     }
     LOG.info("HBASE:META DEPLOY: on " + hbaseMetaServerName);
     sns.add(hbaseMetaServerName);
     for (int replicaId = 1; replicaId < 3; replicaId++) {
-      RegionInfo h = RegionReplicaUtil
-        .getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId);
+      RegionInfo h = RegionReplicaUtil.getRegionInfoForReplica(metaRegionInfo, replicaId);
       AssignmentTestingUtil.waitForAssignment(am, h);
       ServerName sn = am.getRegionStates().getRegionServerOfRegion(h);
       assertNotNull(sn);
@@ -97,8 +100,7 @@ public class MetaWithReplicasTestBase {
       ServerName metaServerName =
         TEST_UTIL.getHBaseCluster().getRegionServer(metaServerIndex).getServerName();
       assertNotEquals(destinationServerName, metaServerName);
-      TEST_UTIL.getAdmin().move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-        destinationServerName);
+      TEST_UTIL.getAdmin().move(metaRegionInfo.getEncodedNameAsBytes(), destinationServerName);
     }
     // Disable the balancer
     LoadBalancerTracker l =

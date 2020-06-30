@@ -26,6 +26,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -71,6 +72,12 @@ public class ServerStateNode implements Comparable<ServerStateNode> {
 
   public List<RegionInfo> getRegionInfoList() {
     return regions.stream().map(RegionStateNode::getRegionInfo).collect(Collectors.toList());
+  }
+
+  public List<RegionInfo> getDefaultMetaRegionInfoList() {
+    System.err.println("================" + regions);
+    return regions.stream().map(RegionStateNode::getRegionInfo).filter(RegionInfo::isMetaRegion)
+      .filter(RegionReplicaUtil::isDefaultReplica).collect(Collectors.toList());
   }
 
   public List<RegionInfo> getSystemRegionInfoList() {

@@ -22,12 +22,10 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -173,7 +171,9 @@ public class ServerCrashProcedure
           }
           break;
         case SERVER_CRASH_ASSIGN_META:
-          assignRegions(env, Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO));
+          // notice that, here we will only assign the primary meta regions, secondary meta replicas
+          // will be assigned below
+          assignRegions(env, env.getAssignmentManager().getDefaultMetaRegionsOnServer(serverName));
           setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
           break;
         case SERVER_CRASH_GET_REGIONS:
@@ -249,7 +249,7 @@ public class ServerCrashProcedure
   /**
    * @return List of Regions on crashed server.
    */
-  List<RegionInfo> getRegionsOnCrashedServer(MasterProcedureEnv env) {
+  protected List<RegionInfo> getRegionsOnCrashedServer(MasterProcedureEnv env) {
     return env.getMasterServices().getAssignmentManager().getRegionsOnServer(serverName);
   }
 

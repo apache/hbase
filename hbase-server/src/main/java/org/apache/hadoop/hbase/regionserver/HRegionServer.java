@@ -91,7 +91,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
@@ -1172,7 +1172,8 @@ public class HRegionServer extends Thread implements
   }
 
   private boolean containsMetaTableRegions() {
-    return onlineRegions.containsKey(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
+    return onlineRegions.values().stream().map(Region::getRegionInfo)
+      .anyMatch(ri -> ri.isMetaRegion() && RegionReplicaUtil.isDefaultReplica(ri));
   }
 
   private boolean areAllUserRegionsOffline() {

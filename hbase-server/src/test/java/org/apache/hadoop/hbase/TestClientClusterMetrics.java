@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -389,11 +387,12 @@ public class TestClientClusterMetrics {
 
   private RegionMetrics getMetaMetrics() throws IOException {
     for (ServerMetrics serverMetrics : ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-        .getLiveServerMetrics().values()) {
-      RegionMetrics metaMetrics = serverMetrics.getRegionMetrics()
-          .get(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
-      if (metaMetrics != null) {
-        return metaMetrics;
+      .getLiveServerMetrics().values()) {
+      for (RegionMetrics metrics : serverMetrics.getRegionMetrics().values()) {
+        if (CatalogFamilyFormat.parseRegionInfoFromRegionName(metrics.getRegionName())
+          .isMetaRegion()) {
+          return metrics;
+        }
       }
     }
     Assert.fail("Should have find meta metrics");

@@ -28,8 +28,9 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -70,13 +71,10 @@ public class TestMetaShutdownHandler {
   }
 
   /**
-   * This test will test the expire handling of a meta-carrying
-   * region server.
-   * After HBaseMiniCluster is up, we will delete the ephemeral
-   * node of the meta-carrying region server, which will trigger
-   * the expire of this region server on the master.
-   * On the other hand, we will slow down the abort process on
-   * the region server so that it is still up during the master SSH.
+   * This test will test the expire handling of a meta-carrying region server. After
+   * HBaseMiniCluster is up, we will delete the ephemeral node of the meta-carrying region server,
+   * which will trigger the expire of this region server on the master. On the other hand, we will
+   * slow down the abort process on the region server so that it is still up during the master SSH.
    * We will check that the master SSH is still successfully done.
    */
   @Test
@@ -84,26 +82,24 @@ public class TestMetaShutdownHandler {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-    ServerName metaServerName =
-      regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    RegionInfo firstMetaRegion = regionStates.getRegionsOfTable(TableName.META_TABLE_NAME).get(0);
+    ServerName metaServerName = regionStates.getRegionServerOfRegion(firstMetaRegion);
     if (master.getServerName().equals(metaServerName) || metaServerName == null ||
       !metaServerName.equals(cluster.getServerHoldingMeta())) {
       // Move meta off master
       metaServerName =
         cluster.getLiveRegionServerThreads().get(0).getRegionServer().getServerName();
-      master.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+      master.move(firstMetaRegion.getEncodedNameAsBytes(),
         Bytes.toBytes(metaServerName.getServerName()));
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-      metaServerName =
-        regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
+      metaServerName = regionStates.getRegionServerOfRegion(firstMetaRegion);
     }
     assertNotEquals("Meta is on master!", metaServerName, master.getServerName());
 
     // Delete the ephemeral node of the meta-carrying region server.
     // This is trigger the expire of this region server on the master.
-    String rsEphemeralNodePath =
-        ZNodePaths.joinZNode(master.getZooKeeper().getZNodePaths().rsZNode,
-                metaServerName.toString());
+    String rsEphemeralNodePath = ZNodePaths.joinZNode(master.getZooKeeper().getZNodePaths().rsZNode,
+      metaServerName.toString());
     ZKUtil.deleteNode(master.getZooKeeper(), rsEphemeralNodePath);
     LOG.info("Deleted the znode for the RegionServer hosting hbase:meta; waiting on SSH");
     // Wait for SSH to finish
@@ -112,18 +108,16 @@ public class TestMetaShutdownHandler {
     TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return !serverManager.isServerOnline(priorMetaServerName)
-            && !serverManager.areDeadServersInProgress();
+        return !serverManager.isServerOnline(priorMetaServerName) &&
+          !serverManager.areDeadServersInProgress();
       }
     });
     LOG.info("Past wait on RIT");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     // Now, make sure meta is assigned
-    assertTrue("Meta should be assigned",
-      regionStates.isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO));
+    assertTrue("Meta should be assigned", regionStates.isRegionOnline(firstMetaRegion));
     // Now, make sure meta is registered in zk
-    ServerName newMetaServerName =
-      regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    ServerName newMetaServerName = regionStates.getRegionServerOfRegion(firstMetaRegion);
     assertNotEquals("Meta should be assigned on a different server", newMetaServerName,
       metaServerName);
   }

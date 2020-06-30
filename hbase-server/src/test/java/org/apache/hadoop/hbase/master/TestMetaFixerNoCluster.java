@@ -53,7 +53,7 @@ public class TestMetaFixerNoCluster {
   private static byte [] B = Bytes.toBytes("b");
   private static byte [] C = Bytes.toBytes("c");
   private static byte [] D = Bytes.toBytes("d");
-  private static RegionInfo ALL = RegionInfoBuilder.FIRST_META_REGIONINFO;
+  private static RegionInfo ALL = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
   private static RegionInfo _ARI = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
       setEndKey(A).build();
   private static RegionInfo _BRI = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).

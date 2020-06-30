@@ -82,7 +82,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLoadStats;
 import org.apache.hadoop.hbase.client.RegionLocateType;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -3155,8 +3154,8 @@ public final class ProtobufUtil {
     if (serverName == null) {
       state = RegionState.State.OFFLINE;
     }
-    return new RegionState(RegionReplicaUtil.getRegionInfoForReplica(
-        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), state, serverName);
+    return new RegionState(RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setRegionId(1)
+      .setReplicaId(replicaId).build(), state, serverName);
   }
 
   /**
@@ -3272,9 +3271,6 @@ public final class ProtobufUtil {
     long regionId = proto.getRegionId();
     int defaultReplicaId = org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
     int replicaId = proto.hasReplicaId()? proto.getReplicaId(): defaultReplicaId;
-    if (tableName.equals(TableName.META_TABLE_NAME) && replicaId == defaultReplicaId) {
-      return RegionInfoBuilder.FIRST_META_REGIONINFO;
-    }
     byte[] startKey = null;
     byte[] endKey = null;
     if (proto.hasStartKey()) {

@@ -738,7 +738,7 @@ public class TestAdmin2 extends TestAdminBase {
     testGetWithRegionName(sn, ri, ri.getEncodedNameAsBytes());
     testGetWithRegionName(sn, ri, ri.getRegionName());
     // Try querying meta encoded name.
-    ri = RegionInfoBuilder.FIRST_META_REGIONINFO;
+    ri = ADMIN.getRegions(TableName.META_TABLE_NAME).get(0);
     testGetWithRegionName(sn, ri, ri.getEncodedNameAsBytes());
     testGetWithRegionName(sn, ri, ri.getRegionName());
   }

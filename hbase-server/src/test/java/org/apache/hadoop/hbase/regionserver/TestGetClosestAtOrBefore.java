@@ -94,8 +94,8 @@ public class TestGetClosestAtOrBefore {
     FSTableDescriptors.tryUpdateMetaTableDescriptor(UTIL.getConfiguration());
     TableDescriptor td = tds.get(TableName.META_TABLE_NAME);
     td = TableDescriptorBuilder.newBuilder(td).setMemStoreFlushSize(64 * 1024 * 1024).build();
-    HRegion mr = HBaseTestingUtility.createRegionAndWAL(RegionInfoBuilder.FIRST_META_REGIONINFO,
-      rootdir, conf, td);
+    HRegion mr = HBaseTestingUtility.createRegionAndWAL(
+      RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build(), rootdir, conf, td);
     try {
       // Write rows for three tables 'A', 'B', and 'C'.
       for (char c = 'A'; c < 'D'; c++) {

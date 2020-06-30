@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -158,9 +157,8 @@ public class TestLogRollingNoCluster {
       this.log.info(getName() +" started");
       final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
       try {
-        TableDescriptors tds = new FSTableDescriptors(TEST_UTIL.getConfiguration());
         FSTableDescriptors.tryUpdateMetaTableDescriptor(TEST_UTIL.getConfiguration());
-        TableDescriptor htd = tds.get(TableName.META_TABLE_NAME);
+        RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
         for (int i = 0; i < this.count; i++) {
           long now = System.currentTimeMillis();
           // Roll every ten edits
@@ -170,7 +168,6 @@ public class TestLogRollingNoCluster {
           WALEdit edit = new WALEdit();
           byte[] bytes = Bytes.toBytes(i);
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
-          RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
           NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
           for(byte[] fam: this.metaTableDescriptor.getColumnFamilyNames()) {
             scopes.put(fam, 0);
@@ -198,8 +195,4 @@ public class TestLogRollingNoCluster {
       }
     }
   }
-
-  //@org.junit.Rule
-  //public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-  //  new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

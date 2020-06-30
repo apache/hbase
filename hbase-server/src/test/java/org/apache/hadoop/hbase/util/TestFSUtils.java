@@ -28,7 +28,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -42,6 +41,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -230,8 +230,8 @@ public class TestFSUtils {
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
     assertTrue(CommonFSUtils.isExists(fs, versionFile));
     assertTrue(CommonFSUtils.delete(fs, versionFile, true));
-    Path metaRegionDir =
-        FSUtils.getRegionDirFromRootDir(rootdir, RegionInfoBuilder.FIRST_META_REGIONINFO);
+    Path metaRegionDir = FSUtils.getRegionDirFromRootDir(rootdir,
+      RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build());
     FsPermission defaultPerms = CommonFSUtils.getFilePermissions(fs, this.conf,
         HConstants.DATA_FILE_UMASK_KEY);
     CommonFSUtils.create(fs, metaRegionDir, defaultPerms, false);
@@ -295,7 +295,7 @@ public class TestFSUtils {
     assertEquals(new FsPermission("700"), filePerm);
 
     // then that the correct file is created
-    Path p = new Path("target" + File.separator + htu.getRandomUUID().toString());
+    Path p = new Path("target" + File.separator + HBaseTestingUtility.getRandomUUID().toString());
     try {
       FSDataOutputStream out = FSUtils.create(conf, fs, p, filePerm, null);
       out.close();
@@ -314,7 +314,7 @@ public class TestFSUtils {
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
     FsPermission perms = CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // then that the correct file is created
-    String file = htu.getRandomUUID().toString();
+    String file = HBaseTestingUtility.getRandomUUID().toString();
     Path p = new Path(htu.getDataTestDir(), "temptarget" + File.separator + file);
     Path p1 = new Path(htu.getDataTestDir(), "temppath" + File.separator + file);
     try {
@@ -355,7 +355,7 @@ public class TestFSUtils {
     FileSystem fs = FileSystem.get(conf);
     Path testDir = htu.getDataTestDirOnTestFS("testArchiveFile");
 
-    String file = htu.getRandomUUID().toString();
+    String file = HBaseTestingUtility.getRandomUUID().toString();
     Path p = new Path(testDir, file);
 
     FSDataOutputStream out = fs.create(p);
@@ -369,7 +369,7 @@ public class TestFSUtils {
     mockEnv.setValue(expect);
     EnvironmentEdgeManager.injectEdge(mockEnv);
     try {
-      String dstFile = htu.getRandomUUID().toString();
+      String dstFile = HBaseTestingUtility.getRandomUUID().toString();
       Path dst = new Path(testDir , dstFile);
 
       assertTrue(CommonFSUtils.renameAndSetModifyTime(fs, p, dst));
@@ -451,7 +451,7 @@ public class TestFSUtils {
           conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
       CommonFSUtils.setStoragePolicy(fs, testDir, storagePolicy);
 
-      String file =htu.getRandomUUID().toString();
+      String file = HBaseTestingUtility.getRandomUUID().toString();
       Path p = new Path(testDir, file);
       WriteDataToHDFS(fs, p, 4096);
       HFileSystem hfs = new HFileSystem(fs);

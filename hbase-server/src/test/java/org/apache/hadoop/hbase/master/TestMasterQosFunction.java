@@ -67,7 +67,7 @@ public class TestMasterQosFunction extends QosTestHelper {
   public void testRegionInTransition() throws IOException {
     // Check ReportRegionInTransition
     HBaseProtos.RegionInfo meta_ri =
-      ProtobufUtil.toRegionInfo(RegionInfoBuilder.FIRST_META_REGIONINFO);
+      ProtobufUtil.toRegionInfo(RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build());
     HBaseProtos.RegionInfo normal_ri =
       ProtobufUtil.toRegionInfo(RegionInfoBuilder.newBuilder(TableName.valueOf("test:table"))
         .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build());

@@ -68,7 +68,7 @@ public class TestReadAndWriteRegionInfoFile {
 
   @Test
   public void testReadAndWriteRegionInfoFile() throws IOException, InterruptedException {
-    RegionInfo ri = RegionInfoBuilder.FIRST_META_REGIONINFO;
+    RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
     // Create a region. That'll write the .regioninfo file.
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(FS, ROOT_DIR);
     FSTableDescriptors.tryUpdateMetaTableDescriptor(CONF, FS, ROOT_DIR, null);

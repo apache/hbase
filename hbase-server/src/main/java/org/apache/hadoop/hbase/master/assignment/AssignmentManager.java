@@ -45,8 +45,6 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -153,7 +151,6 @@ public class AssignmentManager {
       "hbase.metrics.rit.stuck.warning.threshold";
   private static final int DEFAULT_RIT_STUCK_WARNING_THRESHOLD = 60 * 1000;
 
-  private final ProcedureEvent<?> metaAssignEvent = new ProcedureEvent<>("meta assign");
   private final ProcedureEvent<?> metaLoadEvent = new ProcedureEvent<>("meta load");
 
   private final MetricsAssignmentManager metrics;
@@ -256,10 +253,6 @@ public class AssignmentManager {
             if (regionLocation != null) {
               regionStates.addRegionToServer(regionNode);
             }
-            if (RegionReplicaUtil.isDefaultReplica(regionInfo)) {
-              setMetaAssigned(regionInfo, state == State.OPEN);
-            }
-
             if (regionInfo.isFirst()) {
               // for compatibility, mirror the meta region state to zookeeper
               try {
@@ -271,10 +264,6 @@ public class AssignmentManager {
             }
           }, result);
       } while (moreRows);
-      if (!regionStates.hasTableRegionStates(TableName.META_TABLE_NAME)) {
-        // no meta regions yet, create the region node for the first meta region
-        regionStates.createRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
-      }
     }
   }
 
@@ -340,9 +329,6 @@ public class AssignmentManager {
     // Update meta events (for testing)
     if (hasProcExecutor) {
       metaLoadEvent.suspend();
-      for (RegionInfo hri: getMetaRegionSet()) {
-        setMetaAssigned(hri, false);
-      }
     }
   }
 
@@ -404,6 +390,14 @@ public class AssignmentManager {
     return serverInfo.getRegionInfoList();
   }
 
+  public List<RegionInfo> getDefaultMetaRegionsOnServer(ServerName serverName) {
+    ServerStateNode serverInfo = regionStates.getServerNode(serverName);
+    if (serverInfo == null) {
+      return Collections.emptyList();
+    }
+    return serverInfo.getDefaultMetaRegionInfoList();
+  }
+
   public RegionStateStore getRegionStateStore() {
     return regionStateStore;
   }
@@ -433,89 +427,17 @@ public class AssignmentManager {
   // ============================================================================================
   //  META Helpers
   // ============================================================================================
-  private boolean isMetaRegion(final RegionInfo regionInfo) {
-    return regionInfo.isMetaRegion();
-  }
-
-  public boolean isMetaRegion(final byte[] regionName) {
-    return getMetaRegionFromName(regionName) != null;
-  }
-
-  public RegionInfo getMetaRegionFromName(final byte[] regionName) {
-    for (RegionInfo hri: getMetaRegionSet()) {
-      if (Bytes.equals(hri.getRegionName(), regionName)) {
-        return hri;
-      }
-    }
-    return null;
-  }
-
-  public boolean isCarryingMeta(final ServerName serverName) {
-    // TODO: handle multiple meta
-    return isCarryingRegion(serverName, RegionInfoBuilder.FIRST_META_REGIONINFO);
-  }
-
-  private boolean isCarryingRegion(final ServerName serverName, final RegionInfo regionInfo) {
-    // TODO: check for state?
-    final RegionStateNode node = regionStates.getRegionStateNode(regionInfo);
-    return(node != null && serverName.equals(node.getRegionLocation()));
-  }
-
-  private RegionInfo getMetaForRegion(final RegionInfo regionInfo) {
-    //if (regionInfo.isMetaRegion()) return regionInfo;
-    // TODO: handle multiple meta. if the region provided is not meta lookup
-    // which meta the region belongs to.
-    return RegionInfoBuilder.FIRST_META_REGIONINFO;
-  }
-
-  // TODO: handle multiple meta.
-  private static final Set<RegionInfo> META_REGION_SET =
-      Collections.singleton(RegionInfoBuilder.FIRST_META_REGIONINFO);
-  public Set<RegionInfo> getMetaRegionSet() {
-    return META_REGION_SET;
+  public boolean isCarryingMeta(ServerName serverName) {
+    return regionStates.getTableRegionStateNodes(TableName.META_TABLE_NAME).stream()
+      .map(RegionStateNode::getRegionLocation).anyMatch(serverName::equals);
   }
 
   // ============================================================================================
   //  META Event(s) helpers
   // ============================================================================================
-  /**
-   * Notice that, this only means the meta region is available on a RS, but the AM may still be
-   * loading the region states from meta, so usually you need to check {@link #isMetaLoaded()} first
-   * before checking this method, unless you can make sure that your piece of code can only be
-   * executed after AM builds the region states.
-   * @see #isMetaLoaded()
-   */
-  public boolean isMetaAssigned() {
-    return metaAssignEvent.isReady();
-  }
-
   public boolean isMetaRegionInTransition() {
-    return !isMetaAssigned();
-  }
-
-  /**
-   * Notice that this event does not mean the AM has already finished region state rebuilding. See
-   * the comment of {@link #isMetaAssigned()} for more details.
-   * @see #isMetaAssigned()
-   */
-  public boolean waitMetaAssigned(Procedure<?> proc, RegionInfo regionInfo) {
-    return getMetaAssignEvent(getMetaForRegion(regionInfo)).suspendIfNotReady(proc);
-  }
-
-  private void setMetaAssigned(RegionInfo metaRegionInfo, boolean assigned) {
-    assert isMetaRegion(metaRegionInfo) : "unexpected non-meta region " + metaRegionInfo;
-    ProcedureEvent<?> metaAssignEvent = getMetaAssignEvent(metaRegionInfo);
-    if (assigned) {
-      metaAssignEvent.wake(getProcedureScheduler());
-    } else {
-      metaAssignEvent.suspend();
-    }
-  }
-
-  private ProcedureEvent<?> getMetaAssignEvent(RegionInfo metaRegionInfo) {
-    assert isMetaRegion(metaRegionInfo) : "unexpected non-meta region " + metaRegionInfo;
-    // TODO: handle multiple meta.
-    return metaAssignEvent;
+    return regionStates.getRegionsInTransition().stream().map(RegionStateNode::getRegionInfo)
+      .anyMatch(RegionInfo::isMetaRegion);
   }
 
   /**
@@ -1576,7 +1498,7 @@ public class AssignmentManager {
     if (!isRunning()) {
       throw new PleaseHoldException("AssignmentManager not running");
     }
-    boolean meta = isMetaRegion(hri);
+    boolean meta = hri.isMetaRegion();
     boolean metaLoaded = isMetaLoaded();
     if (!meta && !metaLoaded) {
       throw new PleaseHoldException(
@@ -1809,12 +1731,6 @@ public class AssignmentManager {
   // should be called under the RegionStateNode lock
   void regionClosing(RegionStateNode regionNode) throws IOException {
     transitStateAndUpdate(regionNode, State.CLOSING, STATES_EXPECTED_ON_CLOSING);
-
-    RegionInfo hri = regionNode.getRegionInfo();
-    // Set meta has not initialized early. so people trying to create/edit tables will wait
-    if (isMetaRegion(hri)) {
-      setMetaAssigned(hri, false);
-    }
     regionStates.addRegionToServer(regionNode);
     // update the operation count metrics
     metrics.incrementOperationCounter();
@@ -1870,14 +1786,6 @@ public class AssignmentManager {
 
   void persistToMeta(RegionStateNode regionNode) throws IOException {
     regionStateStore.updateRegionLocation(regionNode);
-    RegionInfo regionInfo = regionNode.getRegionInfo();
-    if (isMetaRegion(regionInfo) && regionNode.getState() == State.OPEN) {
-      // Usually we'd set a table ENABLED at this stage but hbase:meta is ALWAYs enabled, it
-      // can't be disabled -- so skip the RPC (besides... enabled is managed by TableStateManager
-      // which is backed by hbase:meta... Avoid setting ENABLED to avoid having to update state
-      // on table that contains state.
-      setMetaAssigned(regionInfo, true);
-    }
   }
 
   // ============================================================================================

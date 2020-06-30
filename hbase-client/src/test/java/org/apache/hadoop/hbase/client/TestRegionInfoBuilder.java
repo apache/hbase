@@ -82,10 +82,10 @@ public class TestRegionInfoBuilder {
 
   @Test
   public void testPb() throws DeserializationException {
-    RegionInfo ri = RegionInfoBuilder.FIRST_META_REGIONINFO;
+    RegionInfo ri = RegionInfoBuilder.newBuilder(name.getTableName()).build();
     byte[] bytes = RegionInfo.toByteArray(ri);
     RegionInfo pbri = RegionInfo.parseFrom(bytes);
-    assertTrue(RegionInfo.COMPARATOR.compare(ri, pbri) == 0);
+    assertEquals(0, RegionInfo.COMPARATOR.compare(ri, pbri));
   }
 
   @Test
@@ -148,7 +148,7 @@ public class TestRegionInfoBuilder {
 
   @Test
   public void testMetaTables() {
-    assertTrue(RegionInfoBuilder.FIRST_META_REGIONINFO.isMetaRegion());
+    assertTrue(RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build().isMetaRegion());
   }
 
   @Test

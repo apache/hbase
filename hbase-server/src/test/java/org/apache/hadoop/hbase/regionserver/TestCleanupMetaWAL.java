@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -64,8 +64,8 @@ public class TestCleanupMetaWAL {
     TEST_UTIL.createTable(TableName.valueOf("test"), "cf");
     HRegionServer serverWithMeta = TEST_UTIL.getMiniHBaseCluster()
         .getRegionServer(TEST_UTIL.getMiniHBaseCluster().getServerWithMeta());
-    TEST_UTIL.getAdmin()
-        .move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes());
+    RegionInfo metaInfo = TEST_UTIL.getAdmin().getRegions(TableName.META_TABLE_NAME).get(0);
+    TEST_UTIL.getAdmin().move(metaInfo.getEncodedNameAsBytes());
     LOG.info("KILL");
     TEST_UTIL.getMiniHBaseCluster().killRegionServer(serverWithMeta.getServerName());
     LOG.info("WAIT");

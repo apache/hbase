@@ -22,15 +22,20 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestHRegionLocation {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestHRegionLocation.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -43,17 +48,18 @@ public class TestHRegionLocation {
   @Test
   public void testHashAndEqualsCode() {
     ServerName hsa1 = ServerName.valueOf("localhost", 1234, -1L);
-    HRegionLocation hrl1 = new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, hsa1);
-    HRegionLocation hrl2 = new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, hsa1);
+    RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
+    HRegionLocation hrl1 = new HRegionLocation(ri, hsa1);
+    HRegionLocation hrl2 = new HRegionLocation(ri, hsa1);
     assertEquals(hrl1.hashCode(), hrl2.hashCode());
     assertTrue(hrl1.equals(hrl2));
-    HRegionLocation hrl3 = new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, hsa1);
+    HRegionLocation hrl3 = new HRegionLocation(ri, hsa1);
     assertNotSame(hrl1, hrl3);
     // They are equal because they have same location even though they are
     // carrying different regions or timestamp.
     assertTrue(hrl1.equals(hrl3));
     ServerName hsa2 = ServerName.valueOf("localhost", 12345, -1L);
-    HRegionLocation hrl4 = new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, hsa2);
+    HRegionLocation hrl4 = new HRegionLocation(ri, hsa2);
     // These have same HRI but different locations so should be different.
     assertFalse(hrl3.equals(hrl4));
     HRegionLocation hrl5 =
@@ -64,17 +70,19 @@ public class TestHRegionLocation {
   @Test
   public void testToString() {
     ServerName hsa1 = ServerName.valueOf("localhost", 1234, -1L);
-    HRegionLocation hrl1 = new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, hsa1);
-    System.out.println(hrl1.toString());
+    RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
+    HRegionLocation hrl1 = new HRegionLocation(ri, hsa1);
+    LOG.info(hrl1.toString());
   }
 
   @SuppressWarnings("SelfComparison")
   @Test
   public void testCompareTo() {
+    RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
     ServerName hsa1 = ServerName.valueOf("localhost", 1234, -1L);
-    HRegionLocation hsl1 = new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, hsa1);
+    HRegionLocation hsl1 = new HRegionLocation(ri, hsa1);
     ServerName hsa2 = ServerName.valueOf("localhost", 1235, -1L);
-    HRegionLocation hsl2 = new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, hsa2);
+    HRegionLocation hsl2 = new HRegionLocation(ri, hsa2);
     assertEquals(0, hsl1.compareTo(hsl1));
     assertEquals(0, hsl2.compareTo(hsl2));
     int compare1 = hsl1.compareTo(hsl2);

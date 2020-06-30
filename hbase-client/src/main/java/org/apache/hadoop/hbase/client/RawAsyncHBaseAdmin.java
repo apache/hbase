@@ -2402,13 +2402,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return failedFuture(new IllegalArgumentException("Passed region name can't be null"));
     }
 
-    if (Bytes.equals(regionNameOrEncodedRegionName,
-      RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName()) ||
-      Bytes.equals(regionNameOrEncodedRegionName,
-        RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes())) {
-      return CompletableFuture.completedFuture(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    }
-
     CompletableFuture<RegionInfo> future = new CompletableFuture<>();
     addListener(getRegionLocation(regionNameOrEncodedRegionName), (location, err) -> {
       if (err != null) {

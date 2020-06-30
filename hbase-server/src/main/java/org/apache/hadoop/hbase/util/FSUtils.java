@@ -69,7 +69,6 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -405,7 +404,7 @@ public final class FSUtils {
     String version = getVersion(fs, rootdir);
     String msg;
     if (version == null) {
-      if (!metaRegionExists(fs, rootdir)) {
+      if (!metaTableExists(fs, rootdir)) {
         // rootDir is empty (no version file and no root region)
         // just create new version file (HBASE-1195)
         setVersion(fs, rootdir, wait, retries);
@@ -706,14 +705,14 @@ public final class FSUtils {
   }
 
   /**
-   * Checks if meta region exists
+   * Checks if meta table exists
    * @param fs file system
    * @param rootDir root directory of HBase installation
    * @return true if exists
    */
-  public static boolean metaRegionExists(FileSystem fs, Path rootDir) throws IOException {
-    Path metaRegionDir = getRegionDirFromRootDir(rootDir, RegionInfoBuilder.FIRST_META_REGIONINFO);
-    return fs.exists(metaRegionDir);
+  private static boolean metaTableExists(FileSystem fs, Path rootDir) throws IOException {
+    Path metaTableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
+    return fs.exists(metaTableDir);
   }
 
   /**

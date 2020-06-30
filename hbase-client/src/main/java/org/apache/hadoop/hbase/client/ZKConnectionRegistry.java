@@ -18,9 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
-import static org.apache.hadoop.hbase.client.RegionInfoBuilder.FIRST_META_REGIONINFO;
-import static org.apache.hadoop.hbase.client.RegionReplicaUtil.getRegionInfoForDefaultReplica;
-import static org.apache.hadoop.hbase.client.RegionReplicaUtil.getRegionInfoForReplica;
 import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMagic;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
@@ -35,6 +32,7 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.util.Pair;
@@ -161,7 +159,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
             LOG.warn("Meta region is in state " + stateAndServerName.getFirst());
           }
           locs[DEFAULT_REPLICA_ID] = new HRegionLocation(
-            getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO), stateAndServerName.getSecond());
+            RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setRegionId(1).build(),
+            stateAndServerName.getSecond());
           tryComplete(remaining, locs, future);
         });
       } else {
@@ -183,8 +182,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
               locs[replicaId] = null;
             } else {
               locs[replicaId] =
-                new HRegionLocation(getRegionInfoForReplica(FIRST_META_REGIONINFO, replicaId),
-                  stateAndServerName.getSecond());
+                new HRegionLocation(RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME)
+                  .setRegionId(1).setReplicaId(replicaId).build(), stateAndServerName.getSecond());
             }
           }
           tryComplete(remaining, locs, future);

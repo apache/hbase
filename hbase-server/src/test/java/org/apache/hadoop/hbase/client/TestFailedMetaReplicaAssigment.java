@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -74,9 +75,9 @@ public class TestFailedMetaReplicaAssigment {
     TEST_UTIL.waitFor(30000, () -> master.isInitialized());
 
     AssignmentManager am = master.getAssignmentManager();
+    RegionInfo metaHri = am.getRegionStates().getRegionsOfTable(TableName.META_TABLE_NAME).get(0);
     // showing one of the replicas got assigned
-    RegionInfo metaReplicaHri =
-      RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, 1);
+    RegionInfo metaReplicaHri = RegionReplicaUtil.getRegionInfoForReplica(metaHri, 1);
     // we use assignAsync so we need to wait a bit
     TEST_UTIL.waitFor(30000, () -> {
       RegionStateNode metaReplicaRegionNode =
@@ -84,8 +85,7 @@ public class TestFailedMetaReplicaAssigment {
       return metaReplicaRegionNode.getRegionLocation() != null;
     });
     // showing one of the replicas failed to be assigned
-    RegionInfo metaReplicaHri2 =
-      RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, 2);
+    RegionInfo metaReplicaHri2 = RegionReplicaUtil.getRegionInfoForReplica(metaHri, 2);
     RegionStateNode metaReplicaRegionNode2 =
       am.getRegionStates().getOrCreateRegionStateNode(metaReplicaHri2);
     // wait for several seconds to make sure that it is not assigned
