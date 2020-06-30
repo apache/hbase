@@ -375,6 +375,21 @@ public class RegionLoad implements RegionMetrics {
     return metrics.getDataLocalityForSsd();
   }
 
+  @Override
+  public long getBlocksLocalWeight() {
+    return metrics.getBlocksLocalWeight();
+  }
+
+  @Override
+  public long getBlocksLocalWithSsdWeight() {
+    return metrics.getBlocksLocalWithSsdWeight();
+  }
+
+  @Override
+  public long getBlocksTotalWeight() {
+    return metrics.getBlocksTotalWeight();
+  }
+
   /**
    * @see java.lang.Object#toString()
    */

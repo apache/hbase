@@ -492,6 +492,21 @@ public class TestRegionsRecoveryChore {
       public float getDataLocalityForSsd() {
         return 0;
       }
+
+      @Override
+      public long getBlocksLocalWeight() {
+        return 0;
+      }
+
+      @Override
+      public long getBlocksLocalWithSsdWeight() {
+        return 0;
+      }
+
+      @Override
+      public long getBlocksTotalWeight() {
+        return 0;
+      }
     };
     return regionMetrics;
   }

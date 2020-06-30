@@ -1708,6 +1708,9 @@ public class HRegionServer extends Thread implements
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();
     float dataLocality = hdfsBd.getBlockLocalityIndex(serverName.getHostname());
     float dataLocalityForSsd = hdfsBd.getBlockLocalityIndexForSsd(serverName.getHostname());
+    long blocksTotalWeight = hdfsBd.getUniqueBlocksTotalWeight();
+    long blocksLocalWeight = hdfsBd.getBlocksLocalWeight(serverName.getHostname());
+    long blocksLocalWithSsdWeight = hdfsBd.getBlocksLocalWithSsdWeight(serverName.getHostname());
     if (regionLoadBldr == null) {
       regionLoadBldr = RegionLoad.newBuilder();
     }
@@ -1735,6 +1738,9 @@ public class HRegionServer extends Thread implements
       .setCurrentCompactedKVs(currentCompactedKVs)
       .setDataLocality(dataLocality)
       .setDataLocalityForSsd(dataLocalityForSsd)
+      .setBlocksLocalWeight(blocksLocalWeight)
+      .setBlocksLocalWithSsdWeight(blocksLocalWithSsdWeight)
+      .setBlocksTotalWeight(blocksTotalWeight)
       .setLastMajorCompactionTs(r.getOldestHfileTs(true));
     r.setCompleteSequenceId(regionLoadBldr);
 
