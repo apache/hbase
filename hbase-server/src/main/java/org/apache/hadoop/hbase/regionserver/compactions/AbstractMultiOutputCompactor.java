@@ -53,6 +53,12 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
       public StoreFileWriter createWriter() throws IOException {
         return createTmpWriter(fd, shouldDropBehind);
       }
+
+      @Override
+      public StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
+          throws IOException {
+        return createTmpWriter(fd, shouldDropBehind, fileStoragePolicy);
+      }
     };
     // Prepare multi-writer, and perform the compaction using scanner and writer.
     // It is ok here if storeScanner is null.
