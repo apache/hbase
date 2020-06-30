@@ -228,7 +228,7 @@ public class HDFSBlocksDistribution {
    * Implementations 'visit' hostAndWeight.
    */
   public interface Visitor {
-    float visit(final HostAndWeight hostAndWeight);
+    long visit(final HostAndWeight hostAndWeight);
   }
 
   /**
@@ -236,8 +236,8 @@ public class HDFSBlocksDistribution {
    * @return the locality index of the given host
    */
   public float getBlockLocalityIndex(String host) {
-    return getBlockLocalityIndexInternal(host,
-      e -> (float) e.weight / (float) uniqueBlocksTotalWeight);
+    return (float) getBlocksLocalityWeightInternal(host, e -> e.weight)
+      / (float) uniqueBlocksTotalWeight;
   }
 
   /**
@@ -245,16 +245,32 @@ public class HDFSBlocksDistribution {
    * @return the locality index with ssd of the given host
    */
   public float getBlockLocalityIndexForSsd(String host) {
-    return getBlockLocalityIndexInternal(host,
-      e -> (float) e.weightForSsd / (float) uniqueBlocksTotalWeight);
+    return (float) getBlocksLocalityWeightInternal(host, e -> e.weightForSsd)
+      / (float) uniqueBlocksTotalWeight;
+  }
+
+  /**
+   * @param host the host name
+   * @return the blocks local weight of the given host
+   */
+  public long getBlocksLocalWeight(String host) {
+    return getBlocksLocalityWeightInternal(host, e -> e.weight);
+  }
+
+  /**
+   * @param host the host name
+   * @return the blocks local with ssd weight of the given host
+   */
+  public long getBlocksLocalWithSsdWeight(String host) {
+    return getBlocksLocalityWeightInternal(host, e -> e.weightForSsd);
   }
 
   /**
    * @param host the host name
    * @return the locality index of the given host
    */
-  private float getBlockLocalityIndexInternal(String host, Visitor visitor) {
-    float localityIndex = 0;
+  private long getBlocksLocalityWeightInternal(String host, Visitor visitor) {
+    long localityIndex = 0;
     HostAndWeight hostAndWeight = this.hostAndWeights.get(host);
     if (hostAndWeight != null && uniqueBlocksTotalWeight != 0) {
       localityIndex = visitor.visit(hostAndWeight);
