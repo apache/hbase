@@ -160,21 +160,21 @@ public class TestRegionSplitPolicy {
       SteppingAllStoresSizeSplitPolicy.class.getName());
     // Now make it so the mock region has a RegionServerService that will
     // return 'online regions'.
-    RegionServerServices rss = Mockito.mock(RegionServerServices.class);
+    RegionServerServices rss = mock(RegionServerServices.class);
     final List<HRegion> regions = new ArrayList<>();
-    Mockito.doReturn(regions).when(rss).getRegions(TABLENAME);
-    Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
+    doReturn(regions).when(rss).getRegions(TABLENAME);
+    when(mockRegion.getRegionServerServices()).thenReturn(rss);
 
     SteppingAllStoresSizeSplitPolicy policy =
       (SteppingAllStoresSizeSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
     regions.add(mockRegion);
 
-    HStore mockStore1 = Mockito.mock(HStore.class);
-    Mockito.doReturn(100L).when(mockStore1).getSize();
-    HStore mockStore2 = Mockito.mock(HStore.class);
-    Mockito.doReturn(924L).when(mockStore2).getSize();
-    HStore mockStore3 = Mockito.mock(HStore.class);
-    Mockito.doReturn(925L).when(mockStore3).getSize();
+    HStore mockStore1 = mock(HStore.class);
+    doReturn(100L).when(mockStore1).getSize();
+    HStore mockStore2 = mock(HStore.class);
+    doReturn(924L).when(mockStore2).getSize();
+    HStore mockStore3 = mock(HStore.class);
+    doReturn(925L).when(mockStore3).getSize();
 
     // test sum of store's size not greater than sizeToCheck
     stores.add(mockStore1);
