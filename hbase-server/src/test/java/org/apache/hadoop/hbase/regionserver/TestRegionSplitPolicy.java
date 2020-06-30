@@ -165,6 +165,8 @@ public class TestRegionSplitPolicy {
     doReturn(regions).when(rss).getRegions(TABLENAME);
     when(mockRegion.getRegionServerServices()).thenReturn(rss);
 
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLENAME).build();
+    doReturn(td).when(mockRegion).getTableDescriptor();
     SteppingAllStoresSizeSplitPolicy policy =
       (SteppingAllStoresSizeSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
     regions.add(mockRegion);
