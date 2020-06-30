@@ -81,7 +81,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -149,9 +148,11 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
   private static final String OPT_LOAD = "load";
   private static final String OPT_CHECK = "check";
+  private static final String OPT_USE_DISTRIBUTED_BULKLOAD = "useDistributedBulkload";
 
   private boolean load = false;
   private boolean check = false;
+  private boolean useDistributedBulkload = false;
 
   public static class SlowMeCoproScanOperations extends BaseRegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(2000);
@@ -210,17 +211,24 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
   @Test
   public void testBulkLoad() throws Exception {
-    runLoad();
+    runLoad(false);
     installSlowingCoproc();
     runCheckWithRetry();
   }
 
-  public void runLoad() throws Exception {
+  @Test
+  public void testDistributedBulkload() throws Exception {
+    runLoad(true);
+    installSlowingCoproc();
+    runCheckWithRetry();
+  }
+
+  public void runLoad(boolean useDistributedBulkload) throws Exception {
     setupTable();
     int numImportRounds = getConf().getInt(NUM_IMPORT_ROUNDS_KEY, NUM_IMPORT_ROUNDS);
     LOG.info("Running load with numIterations:" + numImportRounds);
     for (int i = 0; i < numImportRounds; i++) {
-      runLinkedListMRJob(i);
+      runLinkedListMRJob(i, useDistributedBulkload);
     }
   }
 
@@ -249,7 +257,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     HBaseTestingUtility.setReplicas(util.getHBaseAdmin(), t, replicaCount);
   }
 
-  private void runLinkedListMRJob(int iteration) throws Exception {
+  private void runLinkedListMRJob(int iteration, boolean useDistributedBulkload) throws Exception {
     String jobName =  IntegrationTestBulkLoad.class.getSimpleName() + " - " +
         EnvironmentEdgeManager.currentTime();
     Configuration conf = new Configuration(util.getConfiguration());
@@ -296,10 +304,15 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       assertEquals(true, job.waitForCompletion(true));
 
       // Create a new loader.
-      LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
+      if (useDistributedBulkload) {
+        LoadIncrementalHFilesJob loader = new LoadIncrementalHFilesJob();
+        loader.run(p.toString(), table.getName().getNameAsString(), conf);
+      } else {
+        // Load the HFiles in.
+        LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
+        loader.doBulkLoad(p, admin, table, regionLocator);
+      }
 
-      // Load the HFiles in.
-      loader.doBulkLoad(p, admin, table, regionLocator);
     }
 
     // Delete the files.
@@ -760,6 +773,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     super.addOptions();
     super.addOptNoArg(OPT_CHECK, "Run check only");
     super.addOptNoArg(OPT_LOAD, "Run load only");
+    super.addOptNoArg(OPT_USE_DISTRIBUTED_BULKLOAD, "Use the distributed version of bulkload");
   }
 
   @Override
@@ -767,12 +781,13 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     super.processOptions(cmd);
     check = cmd.hasOption(OPT_CHECK);
     load = cmd.hasOption(OPT_LOAD);
+    useDistributedBulkload = cmd.hasOption(OPT_USE_DISTRIBUTED_BULKLOAD);
   }
 
   @Override
   public int runTestFromCommandLine() throws Exception {
     if (load) {
-      runLoad();
+      runLoad(useDistributedBulkload);
     } else if (check) {
       installSlowingCoproc();
       runCheckWithRetry();

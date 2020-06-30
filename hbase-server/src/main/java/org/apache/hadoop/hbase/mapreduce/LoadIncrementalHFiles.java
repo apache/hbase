@@ -233,8 +233,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       TFamily family = visitor.bulkFamily(familyName);
 
       FileStatus[] hfileStatuses = fs.listStatus(familyDir);
+
       for (FileStatus hfileStatus : hfileStatuses) {
-        if (!fs.isFile(hfileStatus.getPath())) {
+        if (!hfileStatus.isFile()) {
           LOG.warn("Skipping non-file " + hfileStatus);
           continue;
         }
@@ -265,7 +266,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
             LOG.warn("the file " + hfile + " was removed");
             continue;
           }
-	}
+        }
 
         visitor.bulkHFile(family, hfileStatus);
       }
@@ -393,34 +394,41 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       throw new TableNotFoundException("Table " + table.getName() + " is not currently available.");
     }
 
-    ExecutorService pool = createExecutorService();
-
     // LQI queue does not need to be threadsafe -- all operations on this queue
     // happen in this thread
     Deque<LoadQueueItem> queue = new LinkedList<LoadQueueItem>();
-    try {
-      /*
+
+    /*
        * Checking hfile format is a time-consuming operation, we should have an option to skip
        * this step when bulkloading millions of HFiles. See HBASE-13985.
        */
-      boolean validateHFile = getConf().getBoolean("hbase.loadincremental.validate.hfile", true);
-      if(!validateHFile) {
-	LOG.warn("You are skipping HFiles validation, it might cause some data loss if files " +
-	    "are not correct. If you fail to read data from your table after using this " +
-	    "option, consider removing the files and bulkload again without this option. " +
-	    "See HBASE-13985");
-      }
-      prepareHFileQueue(hfofDir, table, queue, validateHFile);
+    boolean validateHFile = getConf().getBoolean("hbase.loadincremental.validate.hfile", true);
+    if(!validateHFile) {
+      LOG.warn("You are skipping HFiles validation, it might cause some data loss if files " +
+          "are not correct. If you fail to read data from your table after using this " +
+          "option, consider removing the files and bulkload again without this option. " +
+          "See HBASE-13985");
+    }
+    prepareHFileQueue(hfofDir, table, queue, validateHFile);
 
-      int count = 0;
+    if (queue.isEmpty()) {
+      LOG.warn("Bulk load operation did not find any files to load in " +
+          "directory " + hfofDir.toUri() + ".  Does it contain files in " +
+          "subdirectories that correspond to column family names?");
+      return;
+    }
 
-      if (queue.isEmpty()) {
-        LOG.warn("Bulk load operation did not find any files to load in " +
-            "directory " + hfofDir.toUri() + ".  Does it contain files in " +
-            "subdirectories that correspond to column family names?");
-        return;
-      }
+    doBulkloadFromQueue(queue, table, regionLocator, admin.getConnection());
+  }
 
+  public void doBulkloadFromQueue(Deque<LoadQueueItem> queue, Table table, RegionLocator regionLocator,
+      Connection connection) throws IOException {
+
+    ExecutorService pool = createExecutorService();
+
+    int count = 0;
+
+    try {
       //If using secure bulk load, get source delegation token, and
       //prepare staging directory and token
       // fs is the source filesystem
@@ -456,7 +464,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
             + " hfiles to one family of one region");
         }
 
-        bulkLoadPhase(table, admin.getConnection(), pool, queue, regionGroups);
+        bulkLoadPhase(table, connection, pool, queue, regionGroups);
 
         // NOTE: The next iteration's split / group could happen in parallel to
         // atomic bulkloads assuming that there are splits and no merges, and
