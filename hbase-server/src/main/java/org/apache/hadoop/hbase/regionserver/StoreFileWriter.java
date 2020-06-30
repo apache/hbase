@@ -62,6 +62,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+import org.apache.hbase.thirdparty.com.google.common.collect.SetMultimap;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
@@ -420,6 +422,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     private HFileContext fileContext;
     private boolean shouldDropCacheBehind;
     private Supplier<Collection<HStoreFile>> compactedFilesSupplier = () -> Collections.emptySet();
+    private String fileStoragePolicy;
 
     public Builder(Configuration conf, CacheConfig cacheConf,
         FileSystem fs) {
@@ -501,6 +504,11 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       return this;
     }
 
+    public Builder withFileStoragePolicy(String fileStoragePolicy) {
+      this.fileStoragePolicy = fileStoragePolicy;
+      return this;
+    }
+
     /**
      * Create a store file writer. Client is responsible for closing file when
      * done. If metadata, add BEFORE closing using
@@ -530,6 +538,20 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       CommonFSUtils.setStoragePolicy(this.fs, dir, policyName);
 
       if (filePath == null) {
+        // The stored file and related blocks will used the directory based StoragePolicy.
+        // Because HDFS DistributedFileSystem does not support create files with storage policy
+        // before version 3.3.0 (See HDFS-13209). Use child dir here is to make stored files
+        // satisfy the specific storage policy when writing. So as to avoid later data movement.
+        // We don't want to change whole temp dir to 'fileStoragePolicy'.
+        if (!Strings.isNullOrEmpty(fileStoragePolicy)) {
+          dir = new Path(dir, HConstants.STORAGE_POLICY_PREFIX + fileStoragePolicy);
+          if (!fs.exists(dir)) {
+            HRegionFileSystem.mkdirs(fs, conf, dir);
+            LOG.info(
+              "Create tmp dir " + dir.toString() + " with storage policy: " + fileStoragePolicy);
+          }
+          CommonFSUtils.setStoragePolicy(this.fs, dir, fileStoragePolicy);
+        }
         filePath = getUniqueFile(fs, dir);
         if (!BloomFilterFactory.isGeneralBloomEnabled(conf)) {
           bloomType = BloomType.NONE;
