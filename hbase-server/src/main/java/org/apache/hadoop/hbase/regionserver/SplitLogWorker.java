@@ -66,7 +66,10 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * the absence of a global lock there is a unavoidable race here - a worker might have just finished
  * its task when it is stripped of its ownership. Here we rely on the idempotency of the log
  * splitting task for correctness
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *   distributed WAL splitter, see SplitWALRemoteProcedure
  */
+@Deprecated
 @InterfaceAudience.Private
 public class SplitLogWorker implements Runnable {
 
@@ -181,8 +184,8 @@ public class SplitLogWorker implements Runnable {
       SplitLogWorkerCoordination splitLogWorkerCoordination =
           server.getCoordinatedStateManager() == null ? null
               : server.getCoordinatedStateManager().getSplitLogWorkerCoordination();
-      if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)), fs, conf, p,
-        sequenceIdChecker, splitLogWorkerCoordination, factory, server)) {
+      if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)), fs, conf,
+        p, sequenceIdChecker, splitLogWorkerCoordination, factory, server)) {
         return Status.PREEMPTED;
       }
     } catch (InterruptedIOException iioe) {

@@ -77,7 +77,7 @@ public class TestCleanupMetaWAL {
     Path walPath = new Path(fs.getWALRootDir(), HConstants.HREGION_LOGDIR_NAME);
     for (FileStatus status : CommonFSUtils.listStatus(fs.getFileSystem(), walPath)) {
       if (status.getPath().toString().contains(SPLITTING_EXT)) {
-        fail("Should not have splitting wal dir here:" + status);
+        fail("Splitting WAL dir should have been cleaned up: " + status);
       }
     }
   }
