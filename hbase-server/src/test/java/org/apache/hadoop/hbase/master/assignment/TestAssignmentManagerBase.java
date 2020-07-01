@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
-import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -140,8 +139,6 @@ public abstract class TestAssignmentManagerBase {
 
   protected void setupConfiguration(Configuration conf) throws Exception {
     CommonFSUtils.setRootDir(conf, util.getDataTestDir());
-    conf.setBoolean(WALProcedureStore.USE_HSYNC_CONF_KEY, false);
-    conf.setInt(WALProcedureStore.SYNC_WAIT_MSEC_CONF_KEY, 10);
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, PROC_NTHREADS);
     conf.setInt(RSProcedureDispatcher.RS_RPC_STARTUP_WAIT_TIME_CONF_KEY, 1000);
     conf.setInt(AssignmentManager.ASSIGN_MAX_ATTEMPTS, getAssignMaxAttempts());
@@ -167,12 +164,12 @@ public abstract class TestAssignmentManagerBase {
     reopenProcMetrics = am.getAssignmentManagerMetrics().getReopenProcMetrics();
     openProcMetrics = am.getAssignmentManagerMetrics().getOpenProcMetrics();
     closeProcMetrics = am.getAssignmentManagerMetrics().getCloseProcMetrics();
-    setUpMeta();
+    setUpMeta(new GoodRsExecutor());
   }
 
-  protected void setUpMeta() throws Exception {
-    rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
-    am.assign(RegionInfoBuilder.FIRST_META_REGIONINFO);
+  protected final void setUpMeta(MockRSExecutor mockRsExec) throws Exception {
+    rsDispatcher.setMockRsExecutor(mockRsExec);
+    am.assign(RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setRegionId(1).build());
     am.wakeMetaLoadedEvent();
   }
 

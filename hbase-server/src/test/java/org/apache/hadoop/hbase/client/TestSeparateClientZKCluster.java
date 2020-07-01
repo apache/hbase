@@ -172,7 +172,8 @@ public class TestSeparateClientZKCluster {
           break;
         }
       }
-      admin.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(), destServerName);
+      RegionInfo metaRegion = admin.getRegions(TableName.META_TABLE_NAME).get(0);
+      admin.move(metaRegion.getEncodedNameAsBytes(), destServerName);
       LOG.debug("Finished moving meta");
       // invalidate client cache
       RegionInfo region = locator.getRegionLocation(row).getRegion();
@@ -210,6 +211,7 @@ public class TestSeparateClientZKCluster {
       Put put = new Put(row);
       put.addColumn(family, qualifier, value);
       table.put(put);
+      RegionInfo metaRegion = admin.getRegions(TableName.META_TABLE_NAME).get(0);
       // invalid connection cache
       conn.clearRegionLocationCache();
       // stop client zk cluster
@@ -225,7 +227,7 @@ public class TestSeparateClientZKCluster {
       }
       // wait for meta region online
       AssignmentTestingUtil.waitForAssignment(cluster.getMaster().getAssignmentManager(),
-        RegionInfoBuilder.FIRST_META_REGIONINFO);
+        metaRegion);
       // wait some long time to make sure we will retry sync data to client ZK until data set
       Thread.sleep(10000);
       clientZkCluster.startup(clientZkDir);
