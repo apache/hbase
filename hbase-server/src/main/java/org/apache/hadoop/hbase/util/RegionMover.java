@@ -98,6 +98,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   private String hostname;
   private String filename;
   private String excludeFile;
+  private String designatedFile;
   private int port;
   private Connection conn;
   private Admin admin;
@@ -106,6 +107,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     this.hostname = builder.hostname;
     this.filename = builder.filename;
     this.excludeFile = builder.excludeFile;
+    this.designatedFile = builder.designatedFile;
     this.maxthreads = builder.maxthreads;
     this.ack = builder.ack;
     this.port = builder.port;
@@ -127,7 +129,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   /**
    * Builder for Region mover. Use the {@link #build()} method to create RegionMover object. Has
    * {@link #filename(String)}, {@link #excludeFile(String)}, {@link #maxthreads(int)},
-   * {@link #ack(boolean)}, {@link #timeout(int)} methods to set the corresponding options
+   * {@link #ack(boolean)}, {@link #timeout(int)}, {@link #designatedFile(String)} methods to set
+   * the corresponding options.
    */
   public static class RegionMoverBuilder {
     private boolean ack = true;
@@ -136,6 +139,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     private String hostname;
     private String filename;
     private String excludeFile = null;
+    private String designatedFile = null;
     private String defaultDir = System.getProperty("java.io.tmpdir");
     @VisibleForTesting
     final int port;
@@ -199,6 +203,18 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
      */
     public RegionMoverBuilder excludeFile(String excludefile) {
       this.excludeFile = excludefile;
+      return this;
+    }
+
+    /**
+     * Set the designated file. Designated file contains hostnames where region moves. Designated
+     * file should have 'host:port' per line. Port is mandatory here as we can have many RS running
+     * on a single host.
+     * @param designatedFile The designated file
+     * @return RegionMoverBuilder object
+     */
+    public RegionMoverBuilder designatedFile(String designatedFile) {
+      this.designatedFile = designatedFile;
       return this;
     }
 
@@ -410,7 +426,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
    * Unload regions from given {@link #hostname} using ack/noAck mode and {@link #maxthreads}.In
    * noAck mode we do not make sure that region is successfully online on the target region
    * server,hence it is best effort.We do not unload regions to hostnames given in
-   * {@link #excludeFile}.
+   * {@link #excludeFile}. If designatedFile is present with some contents, we will unload regions
+   * to hostnames provided in {@link #designatedFile}
    * @return true if unloading succeeded, false otherwise
    */
   public boolean unload() throws InterruptedException, ExecutionException, TimeoutException {
@@ -430,8 +447,11 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
           LOG.debug("List of region servers: {}", regionServers);
           return false;
         }
+        // Remove RS not present in the designated file
+        includeExcludeRegionServers(designatedFile, regionServers, true);
+
         // Remove RS present in the exclude file
-        stripExcludes(regionServers);
+        includeExcludeRegionServers(excludeFile, regionServers, false);
 
         // Remove decommissioned RS
         Set<ServerName> decommissionedRS = new HashSet<>(admin.listDecommissionedRegionServers());
@@ -630,41 +650,52 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   /**
-   * @return List of servers from the exclude file in format 'hostname:port'.
+   * @param filename The file should have 'host:port' per line
+   * @return List of servers from the file in format 'hostname:port'.
    */
-  private List<String> readExcludes(String excludeFile) throws IOException {
-    List<String> excludeServers = new ArrayList<>();
-    if (excludeFile == null) {
-      return excludeServers;
-    } else {
+  private List<String> readServersFromFile(String filename) throws IOException {
+    List<String> servers = new ArrayList<>();
+    if (filename != null) {
       try {
-        Files.readAllLines(Paths.get(excludeFile)).stream().map(String::trim)
-            .filter(((Predicate<String>) String::isEmpty).negate()).map(String::toLowerCase)
-            .forEach(excludeServers::add);
+        Files.readAllLines(Paths.get(filename)).stream().map(String::trim)
+          .filter(((Predicate<String>) String::isEmpty).negate()).map(String::toLowerCase)
+          .forEach(servers::add);
       } catch (IOException e) {
-        LOG.warn("Exception while reading excludes file, continuing anyways", e);
+        LOG.error("Exception while reading servers from file,", e);
+        throw e;
       }
-      return excludeServers;
     }
+    return servers;
   }
 
   /**
-   * Excludes the servername whose hostname and port portion matches the list given in exclude file
+   * Designates or excludes the servername whose hostname and port portion matches the list given
+   * in the file.
+   * Example:<br>
+   * If you want to designated RSs, suppose designatedFile has RS1, regionServers has RS1, RS2 and
+   * RS3. When we call includeExcludeRegionServers(designatedFile, regionServers, true), RS2 and
+   * RS3 are removed from regionServers list so that regions can move to only RS1.
+   * If you want to exclude RSs, suppose excludeFile has RS1, regionServers has RS1, RS2 and RS3.
+   * When we call includeExcludeRegionServers(excludeFile, servers, false), RS1 is removed from
+   * regionServers list so that regions can move to only RS2 and RS3.
    */
-  private void stripExcludes(List<ServerName> regionServers) throws IOException {
-    if (excludeFile != null) {
-      List<String> excludes = readExcludes(excludeFile);
+  private void includeExcludeRegionServers(String fileName, List<ServerName> regionServers,
+      boolean isInclude) throws IOException {
+    if (fileName != null) {
+      List<String> servers = readServersFromFile(fileName);
+      if (servers.isEmpty()) {
+        LOG.warn("No servers provided in the file: {}." + fileName);
+        return;
+      }
       Iterator<ServerName> i = regionServers.iterator();
       while (i.hasNext()) {
         String rs = i.next().getServerName();
         String rsPort = rs.split(ServerName.SERVERNAME_SEPARATOR)[0].toLowerCase() + ":" + rs
-            .split(ServerName.SERVERNAME_SEPARATOR)[1];
-        if (excludes.contains(rsPort)) {
+          .split(ServerName.SERVERNAME_SEPARATOR)[1];
+        if (isInclude != servers.contains(rsPort)) {
           i.remove();
         }
       }
-      LOG.info("Valid Region server targets are:" + regionServers.toString());
-      LOG.info("Excluded Servers are" + excludes.toString());
     }
   }
 
@@ -750,6 +781,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     this.addOptWithArg("x", "excludefile",
         "File with <hostname:port> per line to exclude as unload targets; default excludes only "
             + "target host; useful for rack decommisioning.");
+    this.addOptWithArg("d","designatedfile","File with <hostname:port> per line as unload targets;"
+            + "default is all online hosts");
     this.addOptWithArg("f", "filename",
         "File to save regions list into unloading, or read from loading; "
             + "default /tmp/<usernamehostname:port>");
@@ -777,6 +810,9 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     }
     if (cmd.hasOption('x')) {
       rmbuilder.excludeFile(cmd.getOptionValue('x'));
+    }
+    if (cmd.hasOption('d')) {
+      rmbuilder.designatedFile(cmd.getOptionValue('d'));
     }
     if (cmd.hasOption('t')) {
       rmbuilder.timeout(Integer.parseInt(cmd.getOptionValue('t')));
