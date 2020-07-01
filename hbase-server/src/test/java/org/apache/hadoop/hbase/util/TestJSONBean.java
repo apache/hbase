@@ -37,9 +37,9 @@ import javax.management.ObjectName;
 import javax.management.QueryExp;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 /**
  * Test {@link JSONBean}.
