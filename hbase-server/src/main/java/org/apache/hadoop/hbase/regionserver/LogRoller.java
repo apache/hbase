@@ -22,7 +22,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -61,7 +60,7 @@ public class LogRoller extends HasThread implements Closeable {
   private final long rollPeriod;
   private final int threadWakeFrequency;
   // The interval to check low replication on hlog's pipeline
-  private long checkLowReplicationInterval;
+  private final long checkLowReplicationInterval;
 
   private volatile boolean running = true;
 
@@ -146,10 +145,9 @@ public class LogRoller extends HasThread implements Closeable {
   @Override
   public void run() {
     while (running) {
-      boolean periodic = false;
       long now = System.currentTimeMillis();
       checkLowReplication(now);
-      periodic = (now - this.lastRollTime) > this.rollPeriod;
+      boolean periodic = (now - this.lastRollTime) > this.rollPeriod;
       if (periodic) {
         // Time for periodic roll, fall through
         LOG.debug("WAL roll period {} ms elapsed", this.rollPeriod);
@@ -173,15 +171,16 @@ public class LogRoller extends HasThread implements Closeable {
       }
       try {
         this.lastRollTime = System.currentTimeMillis();
-        for (Iterator<Entry<WAL, Boolean>> iter = walNeedsRoll.entrySet().iterator(); iter
-            .hasNext();) {
-          Entry<WAL, Boolean> entry = iter.next();
+        for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
+          if (!periodic && !entry.getValue()) {
+            continue;
+          }
           WAL wal = entry.getKey();
           // reset the flag in front to avoid missing roll request before we return from rollWriter.
-          walNeedsRoll.put(wal, Boolean.FALSE);
+          entry.setValue(Boolean.FALSE);
           // Force the roll if the logroll.period is elapsed or if a roll was requested.
           // The returned value is an array of actual region names.
-          byte[][] regionsToFlush = wal.rollWriter(periodic || entry.getValue().booleanValue());
+          byte[][] regionsToFlush = wal.rollWriter(true);
           if (regionsToFlush != null) {
             for (byte[] r : regionsToFlush) {
               scheduleFlush(Bytes.toString(r));
@@ -227,7 +226,7 @@ public class LogRoller extends HasThread implements Closeable {
    */
   @VisibleForTesting
   public boolean walRollFinished() {
-    return walNeedsRoll.values().stream().allMatch(needRoll -> !needRoll);
+    return walNeedsRoll.values().stream().noneMatch(needRoll -> needRoll);
   }
 
   @Override
