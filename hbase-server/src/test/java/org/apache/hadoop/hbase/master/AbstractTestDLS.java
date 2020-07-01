@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_wait_for_zk_delet
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,7 +50,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
@@ -77,6 +77,7 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -205,7 +206,7 @@ public abstract class AbstractTestDLS {
       LOG.info("Current Open Regions After Master Node Starts Up:" +
           HBaseTestingUtility.getAllOnlineRegions(cluster).size());
 
-      assertEquals(numLogLines, TEST_UTIL.countRows(ht));
+      assertEquals(numLogLines, HBaseTestingUtility.countRows(ht));
     }
   }
 
@@ -241,7 +242,7 @@ public abstract class AbstractTestDLS {
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       int rows;
       try {
-        rows = TEST_UTIL.countRows(table);
+        rows = HBaseTestingUtility.countRows(table);
       } catch (Exception e) {
         Threads.printThreadInfo(System.out, "Thread dump before fail");
         throw e;
@@ -413,9 +414,7 @@ public abstract class AbstractTestDLS {
 
   public void makeWAL(HRegionServer hrs, List<RegionInfo> regions, int numEdits, int editSize,
       boolean cleanShutdown) throws IOException {
-    // remove root and meta region
-    regions.remove(RegionInfoBuilder.FIRST_META_REGIONINFO);
-
+    // remove meta and system regions
     for (Iterator<RegionInfo> iter = regions.iterator(); iter.hasNext();) {
       RegionInfo regionInfo = iter.next();
       if (regionInfo.getTable().isSystemTable()) {
