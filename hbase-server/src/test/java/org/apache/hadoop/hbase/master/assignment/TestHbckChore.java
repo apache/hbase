@@ -64,8 +64,9 @@ public class TestHbckChore extends TestAssignmentManagerBase {
 
   @Test
   public void testForMeta() {
-    byte[] metaRegionNameAsBytes = RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName();
-    String metaRegionName = RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionNameAsString();
+    RegionInfo meta = am.getRegionStates().getRegionsOfTable(TableName.META_TABLE_NAME).get(0);
+    byte[] metaRegionNameAsBytes = meta.getRegionName();
+    String metaRegionName = meta.getRegionNameAsString();
     List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
     assertEquals(NSERVERS, serverNames.size());
 

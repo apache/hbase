@@ -37,18 +37,6 @@ public class RegionInfoBuilder {
   //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
   public static final String NO_HASH = null;
 
-  /**
-   * RegionInfo for first meta region
-   * You cannot use this builder to make an instance of the {@link #FIRST_META_REGIONINFO}.
-   * Just refer to this instance. Also, while the instance is actually a MutableRI, its type is
-   * just RI so the mutable methods are not available (unless you go casting); it appears
-   * as immutable (I tried adding Immutable type but it just makes a mess).
-   */
-  // TODO: How come Meta regions still do not have encoded region names? Fix.
-  // hbase:meta,,1.1588230740 should be the hbase:meta first region name.
-  public static final RegionInfo FIRST_META_REGIONINFO =
-    new MutableRegionInfo(1L, TableName.META_TABLE_NAME, RegionInfo.DEFAULT_REPLICA_ID);
-
   private final TableName tableName;
   private byte[] startKey = HConstants.EMPTY_START_ROW;
   private byte[] endKey = HConstants.EMPTY_END_ROW;
@@ -194,15 +182,6 @@ public class RegionInfoBuilder {
       return regionId;
     }
 
-    /**
-     * Private constructor used constructing MutableRegionInfo for the
-     * first meta regions
-     */
-    private MutableRegionInfo(long regionId, TableName tableName, int replicaId) {
-      this(tableName, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId,
-        replicaId, false);
-    }
-
     MutableRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey,
       final boolean split, final long regionId, final int replicaId, boolean offLine) {
       this.tableName = checkTableName(tableName);
@@ -320,7 +299,7 @@ public class RegionInfoBuilder {
     /** @return true if this region is a meta region */
     @Override
     public boolean isMetaRegion() {
-       return tableName.equals(FIRST_META_REGIONINFO.getTable());
+      return TableName.isMetaTableName(tableName);
     }
 
     /**

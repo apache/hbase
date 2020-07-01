@@ -154,13 +154,8 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   public void testBulkAssignment() throws Exception {
     List<ServerName> tmp = getListOfServerNames(randomServers(5, 0));
     List<RegionInfo> hris = randomRegions(20);
-    hris.add(RegionInfoBuilder.FIRST_META_REGIONINFO);
     tmp.add(master);
     Map<ServerName, List<RegionInfo>> plans = loadBalancer.roundRobinAssignment(hris, tmp);
-    if (LoadBalancer.isTablesOnMaster(loadBalancer.getConf())) {
-      assertTrue(plans.get(master).contains(RegionInfoBuilder.FIRST_META_REGIONINFO));
-      assertEquals(1, plans.get(master).size());
-    }
     int totalRegion = 0;
     for (List<RegionInfo> regions: plans.values()) {
       totalRegion += regions.size();

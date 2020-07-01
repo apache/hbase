@@ -951,9 +951,9 @@ public class TestDefaultMemStore {
     WALFactory wFactory = new WALFactory(conf, "1234");
     TableDescriptors tds = new FSTableDescriptors(conf);
     FSTableDescriptors.tryUpdateMetaTableDescriptor(conf);
-    HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir,
-        conf, tds.get(TableName.META_TABLE_NAME),
-        wFactory.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO));
+    RegionInfo metaRegionInfo = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
+    HRegion meta = HRegion.createHRegion(metaRegionInfo, testDir, conf,
+      tds.get(TableName.META_TABLE_NAME), wFactory.getWAL(metaRegionInfo));
     // parameterized tests add [#] suffix get rid of [ and ].
     TableDescriptor desc = TableDescriptorBuilder
         .newBuilder(TableName.valueOf(name.getMethodName().replaceAll("[\\[\\]]", "_")))
