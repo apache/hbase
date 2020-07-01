@@ -181,6 +181,85 @@ public class TestRegionMover {
   }
 
   @Test
+  public void testDesignatedFile() throws Exception{
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    File designatedFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(),
+      "designated_file");
+    HRegionServer designatedServer = cluster.getRegionServer(0);
+    try(FileWriter fos = new FileWriter(designatedFile)) {
+      String designatedHostname = designatedServer.getServerName().getHostname();
+      int designatedServerPort = designatedServer.getServerName().getPort();
+      String excludeServerName = designatedHostname + ":" + designatedServerPort;
+      fos.write(excludeServerName);
+    }
+    int regionsInDesignatedServer = designatedServer.getNumberOfOnlineRegions();
+    HRegionServer regionServer = cluster.getRegionServer(1);
+    String rsName = regionServer.getServerName().getHostname();
+    int port = regionServer.getServerName().getPort();
+    String rs = rsName + ":" + port;
+    int regionsInRegionServer = regionServer.getNumberOfOnlineRegions();
+    RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration())
+      .designatedFile(designatedFile.getCanonicalPath());
+    try (RegionMover rm = rmBuilder.build()) {
+      LOG.debug("Unloading {} regions", rs);
+      rm.unload();
+      assertEquals(0, regionServer.getNumberOfOnlineRegions());
+      assertEquals(regionsInDesignatedServer + regionsInRegionServer,
+        designatedServer.getNumberOfOnlineRegions());
+      LOG.debug("Before:{} After:{}", regionsInDesignatedServer,
+        designatedServer.getNumberOfOnlineRegions());
+    }
+  }
+
+  @Test
+  public void testExcludeAndDesignated() throws Exception{
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    // create designated file
+    File designatedFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(),
+      "designated_file");
+    HRegionServer designatedServer = cluster.getRegionServer(0);
+    try(FileWriter fos = new FileWriter(designatedFile)) {
+      String designatedHostname = designatedServer.getServerName().getHostname();
+      int designatedServerPort = designatedServer.getServerName().getPort();
+      String excludeServerName = designatedHostname + ":" + designatedServerPort;
+      fos.write(excludeServerName);
+    }
+    int regionsInDesignatedServer = designatedServer.getNumberOfOnlineRegions();
+    // create exclude file
+    File excludeFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(), "exclude_file");
+    HRegionServer excludeServer = cluster.getRegionServer(1);
+    try(FileWriter fos = new FileWriter(excludeFile)) {
+      String excludeHostname = excludeServer.getServerName().getHostname();
+      int excludeServerPort = excludeServer.getServerName().getPort();
+      String excludeServerName = excludeHostname + ":" + excludeServerPort;
+      fos.write(excludeServerName);
+    }
+    int regionsInExcludeServer = excludeServer.getNumberOfOnlineRegions();
+
+    HRegionServer targetRegionServer = cluster.getRegionServer(2);
+    String rsName = targetRegionServer.getServerName().getHostname();
+    int port = targetRegionServer.getServerName().getPort();
+    String rs = rsName + ":" + port;
+    int regionsInTargetRegionServer = targetRegionServer.getNumberOfOnlineRegions();
+
+    RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs, TEST_UTIL.getConfiguration())
+      .designatedFile(designatedFile.getCanonicalPath())
+      .excludeFile(excludeFile.getCanonicalPath());
+    try (RegionMover rm = rmBuilder.build()) {
+      LOG.debug("Unloading {}", rs);
+      rm.unload();
+      assertEquals(0, targetRegionServer.getNumberOfOnlineRegions());
+      assertEquals(regionsInDesignatedServer + regionsInTargetRegionServer,
+        designatedServer.getNumberOfOnlineRegions());
+      LOG.debug("DesignatedServer Before:{} After:{}", regionsInDesignatedServer,
+        designatedServer.getNumberOfOnlineRegions());
+      assertEquals(regionsInExcludeServer, excludeServer.getNumberOfOnlineRegions());
+      LOG.debug("ExcludeServer Before:{} After:{}", regionsInExcludeServer,
+        excludeServer.getNumberOfOnlineRegions());
+    }
+  }
+
+  @Test
   public void testRegionServerPort() {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer regionServer = cluster.getRegionServer(0);
