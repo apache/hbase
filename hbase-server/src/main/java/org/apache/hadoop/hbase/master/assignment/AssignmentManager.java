@@ -620,7 +620,7 @@ public class AssignmentManager {
    * Submits a procedure that assigns a region to a target server without waiting for it to finish
    * @param regionInfo the region we would like to assign
    * @param sn target server name
-   * @return
+   * @return submitProcedure
    * @throws IOException
    */
   public Future<byte[]> assignAsync(RegionInfo regionInfo, ServerName sn) throws IOException {
@@ -631,7 +631,7 @@ public class AssignmentManager {
   /**
    * Submits a procedure that assigns a region without waiting for it to finish
    * @param regionInfo the region we would like to assign
-   * @return
+   * @return submitProcedure
    * @throws IOException
    */
   public Future<byte[]> assignAsync(RegionInfo regionInfo) throws IOException {
