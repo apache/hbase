@@ -87,7 +87,7 @@
    * its region server.
    * @return an anchor tag if one can be built, {@code null} otherwise.
    */
-  private static String buildRegionServerLink(final ServerName serverName, final int rsInfoPort,
+  private static String buildRegionLink(final ServerName serverName, final int rsInfoPort,
     final RegionInfo regionInfo, final RegionState.State regionState) {
     if (serverName == null || regionInfo == null) { return null; }
 
@@ -101,6 +101,45 @@
       + "?name=" + regionInfo.getEncodedName();
     return "<a href=\"" + URI + "\">" + serverName.getServerName() + "</a>";
   }
+
+  /**
+   * Render an <td> tag contents server name which the given region deploys.
+   * Links to the server rs-status page.
+   * <td class="undeployed-region">not deployed</td> instead if can not find the deploy message.
+   * @return an <td> tag contents server name links to server rs-status page.
+   */
+  private static String buildRegionDeployedServerTag(RegionInfo regionInfo, HMaster master,
+    Map<RegionInfo, ServerName> regionsToServer) {
+    ServerName serverName = regionsToServer.get(regionInfo);
+
+    if (serverName == null) {
+      return "<td class=\"undeployed-region\">not deployed</td>";
+    }
+
+    String hostName = serverName.getHostname();
+    String hostNameEncoded = URLEncoder.encode(hostName);
+    // This port might be wrong if RS actually ended up using something else.
+    int serverInfoPort = master.getRegionServerInfoPort(serverName);
+    String urlRegionServer = "//" + hostNameEncoded + ":" + serverInfoPort + "/rs-status";
+
+    return "<td><a href=\"" + urlRegionServer + "\">" + StringEscapeUtils.escapeHtml4(hostName)
+      + ":" + serverInfoPort + "</a></td>";
+  }
+
+  /**
+   * @return an <p> tag guide user to see all region messages.
+   */
+  private static String moreRegionsToRender(int numRegionsRendered, int numRegions, String fqtn) {
+    if (numRegions > numRegionsRendered) {
+      String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn) + "&numRegions=all";
+
+      return "This table has <b>" + numRegions
+        + "</b> regions in total, in order to improve the page load time, only <b>"
+        + numRegionsRendered + "</b> regions are displayed here, <a href=\""
+        + allRegionsUrl + "\">click here</a> to see all regions.</p>";
+    }
+    return "";
+  }
 %>
 <%
   final String ZEROMB = "0 MB";
@@ -108,8 +147,7 @@
   Configuration conf = master.getConfiguration();
   String fqtn = request.getParameter("name");
   final String escaped_fqtn = StringEscapeUtils.escapeHtml4(fqtn);
-  Table table;
-  boolean withReplica = false;
+  Table table = master.getConnection().getTable(TableName.valueOf(fqtn));
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = !InfoServer.canUserModifyUI(request, getServletContext(), conf);
   int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
@@ -160,31 +198,50 @@
   <jsp:param name="pageTitle" value="${pageTitle}"/>
 </jsp:include>
 
-<%
-if (fqtn != null && master.isInitialized()) {
-  try {
-  table = master.getConnection().getTable(TableName.valueOf(fqtn));
-  if (table.getDescriptor().getRegionReplication() > 1) {
-    withReplica = true;
-  }
-  if ( !readOnly && action != null ) {
-%>
-<div class="container-fluid content">
-        <div class="row inner_header">
-            <div class="page-header">
-                <h1>Table action request accepted</h1>
-            </div>
+<% // handle the case for fqtn is null or master is not initialized with error message + redirect
+  if (fqtn == null || ! master.isInitialized()) { %>
+    <div class="container-fluid content">
+      <div class="row inner_header">
+        <div class="page-header">
+          <h1>Table not ready</h1>
         </div>
-<p><hr><p>
-<%
-    if (action.equals("split")) {
+      </div>
+      <p><hr><p>
+      <jsp:include page="redirect.jsp" />
+    </div>
+<%  return;
+  } %>
+
+<% // unknow table
+  if (! admin.tableExists(TableName.valueOf(fqtn)).get()) { %>
+    <div class="container-fluid content">
+      <div class="row inner_header">
+        <div class="page-header">
+          <h1>Table not found</h1>
+        </div>
+      </div>
+      <p><hr><p>
+      <jsp:include page="redirect.jsp" />
+    </div>
+<%  return;
+  } %>
+
+<% // table split/compact/merge actions
+  if ( !readOnly && action != null ) { %>
+    <div class="container-fluid content">
+      <div class="row inner_header">
+        <div class="page-header">
+          <h1>Table action request accepted</h1>
+        </div>
+      </div>
+      <p><hr><p>
+<%  if (action.equals("split")) {
       if (key != null && key.length() > 0) {
         admin.split(TableName.valueOf(fqtn), Bytes.toBytes(key));
       } else {
         admin.split(TableName.valueOf(fqtn));
       }
-
-    %> Split request accepted. <%
+%>    Split request accepted. <%
     } else if (action.equals("compact")) {
       if (key != null && key.length() > 0) {
         List<RegionInfo> regions = admin.getRegions(TableName.valueOf(fqtn)).get();
@@ -198,45 +255,39 @@ if (fqtn != null && master.isInitialized()) {
       } else {
         admin.compact(TableName.valueOf(fqtn));
       }
-    %> Compact request accepted. <%
+%>    Compact request accepted. <%
     } else if (action.equals("merge")) {
-        if (left != null && left.length() > 0 && right != null && right.length() > 0) {
-            admin.mergeRegions(Bytes.toBytesBinary(left), Bytes.toBytesBinary(right), false);
-        }
-        %> Merge request accepted. <%
-    }
-%>
-<jsp:include page="redirect.jsp" />
-</div>
-<%
-  } else {
-%>
-<div class="container-fluid content">
-    <div class="row inner_header">
-        <div class="page-header">
-            <h1>Table <small><%= escaped_fqtn %></small></h1>
-        </div>
+      if (left != null && left.length() > 0 && right != null && right.length() > 0) {
+        admin.mergeRegions(Bytes.toBytesBinary(left), Bytes.toBytesBinary(right), false);
+      }
+%>    Merge request accepted. <%
+    } %>
+    <jsp:include page="redirect.jsp" />
     </div>
-    <div class="row">
-<%
-  if(fqtn.equals(TableName.META_TABLE_NAME.getNameAsString())) {
-%>
+<%  return;
+  } %>
+
+<div class="container-fluid content">
+<div class="row inner_header">
+  <div class="page-header">
+    <h1>Table <small><%= escaped_fqtn %></small></h1>
+  </div>
+</div>
+
+<div class="row">
+<% //Meta table.
+  if(fqtn.equals(TableName.META_TABLE_NAME.getNameAsString())) { %>
 <h2>Table Regions</h2>
 <div class="tabbable">
   <ul class="nav nav-pills">
-    <li class="active">
-      <a href="#metaTab_baseStats" data-toggle="tab">Base Stats</a>
-    </li>
-    <li class="">
-      <a href="#metaTab_localityStats" data-toggle="tab">Localities</a>
-    </li>
-    <li class="">
-      <a href="#metaTab_compactStats" data-toggle="tab">Compactions</a>
-    </li>
+    <li class="active"><a href="#metaTab_baseStats" data-toggle="tab">Base Stats</a></li>
+    <li class=""><a href="#metaTab_localityStats" data-toggle="tab">Localities</a></li>
+    <li class=""><a href="#metaTab_compactStats" data-toggle="tab">Compactions</a></li>
   </ul>
+
   <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
     <div class="tab-pane active" id="metaTab_baseStats">
-      <table id="tableRegionTable" class="tablesorter table table-striped">
+      <table id="metaTableBaseStatsTable" class="tablesorter table table-striped">
         <thead>
           <tr>
             <th>Name</th>
@@ -248,13 +299,7 @@ if (fqtn != null && master.isInitialized()) {
             <th>MemSize</th>
             <th>Start Key</th>
             <th>End Key</th>
-            <%
-              if (withReplica) {
-            %>
             <th>ReplicaID</th>
-            <%
-              }
-            %>
           </tr>
         </thead>
         <tbody>
@@ -305,13 +350,7 @@ if (fqtn != null && master.isInitialized()) {
             <td><%= memSize%></td>
             <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
             <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
-        <%
-              if (withReplica) {
-        %>
             <td><%= meta.getReplicaId() %></td>
-        <%
-              }
-        %>
           </tr>
         <%  } %>
         <%} %>
@@ -319,7 +358,7 @@ if (fqtn != null && master.isInitialized()) {
       </table>
     </div>
     <div class="tab-pane" id="metaTab_localityStats">
-       <table id="tableRegionTable" class="tablesorter table table-striped">
+       <table id="metaTableLocalityStatsTable" class="tablesorter table table-striped">
          <thead>
            <tr>
              <th>Name</th>
@@ -421,6 +460,7 @@ if (fqtn != null && master.isInitialized()) {
     </div>
   </div>
 </div>
+
 <h2 id="meta-entries">Meta Entries</h2>
 <%
   if (!metaBrowser.getErrorMessages().isEmpty()) {
@@ -512,7 +552,7 @@ if (fqtn != null && master.isInitialized()) {
       <td title="endKey"><%= endKeyDisplay %></td>
       <td title="replicaId"><%= replicaIdDisplay %></td>
       <td title="regionState"><%= regionStateDisplay %></td>
-      <td title="<%= serverColumnName + "," + startCodeColumnName %>"><%= buildRegionServerLink(serverName, rsPort, regionInfo, regionState) %></td>
+      <td title="<%= serverColumnName + "," + startCodeColumnName %>"><%= buildRegionLink(serverName, rsPort, regionInfo, regionState) %></td>
       <td title="<%= seqNumColumnName %>"><%= seqNum %></td>
       <td title="<%= serverNameColumnName %>"><%= targetServerName %></td>
       <td><%= mergeRegionNames %></td>
@@ -581,6 +621,7 @@ if (fqtn != null && master.isInitialized()) {
   </div>
 </div>
 <%} else {
+  //Common tables
   RegionStates states = master.getAssignmentManager().getRegionStates();
   Map<RegionState.State, List<RegionInfo>> regionStates = states.getRegionByStateOfTable(table.getName());
   Map<String, RegionState.State> stateMap = new HashMap<>();
@@ -590,7 +631,9 @@ if (fqtn != null && master.isInitialized()) {
     }
   }
   RegionLocator r = master.getConnection().getRegionLocator(table.getName());
-  try { %>
+
+  try {
+%>
 <h2>Table Attributes</h2>
 <table class="table table-striped">
   <tr>
@@ -820,19 +863,13 @@ if (fqtn != null && master.isInitialized()) {
 <h2>Table Regions</h2>
 <div class="tabbable">
   <ul class="nav nav-pills">
-    <li class="active">
-      <a href="#tab_baseStats" data-toggle="tab">Base Stats</a>
-    </li>
-    <li class="">
-      <a href="#tab_localityStats" data-toggle="tab">Localities</a>
-    </li>
-    <li class="">
-      <a href="#tab_compactStats" data-toggle="tab">Compactions</a>
-    </li>
+    <li class="active"><a href="#tab_baseStats" data-toggle="tab">Base Stats</a></li>
+    <li class=""><a href="#tab_localityStats" data-toggle="tab">Localities</a></li>
+    <li class=""><a href="#tab_compactStats" data-toggle="tab">Compactions</a></li>
   </ul>
   <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
     <div class="tab-pane active" id="tab_baseStats">
-      <table id="regionServerDetailsTable" class="tablesorter table table-striped">
+      <table id="tableBaseStatsTable" class="tablesorter table table-striped">
         <thead>
           <tr>
             <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
@@ -845,13 +882,7 @@ if (fqtn != null && master.isInitialized()) {
             <th>Start Key</th>
             <th>End Key</th>
             <th>Region State</th>
-            <%
-              if (withReplica) {
-            %>
             <th>ReplicaID</th>
-            <%
-              }
-            %>
           </tr>
         </thead>
         <tbody>
@@ -867,7 +898,6 @@ if (fqtn != null && master.isInitialized()) {
             RegionInfo regionInfo = hriEntry.getKey();
             ServerName addr = regionsToServer.get(regionInfo);
             RegionMetrics load = hriEntry.getValue();
-            String urlRegionServer = null;
             String readReq = "N/A";
             String writeReq = "N/A";
             String regionSize = ZEROMB;
@@ -894,14 +924,11 @@ if (fqtn != null && master.isInitialized()) {
 
             if (addr != null) {
               ServerMetrics sl = master.getServerManager().getLoad(addr);
-              // This port might be wrong if RS actually ended up using something else.
-              urlRegionServer =
-                "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
               if(sl != null) {
                 Integer i = regDistribution.get(addr);
                 if (null == i) i = Integer.valueOf(0);
                 regDistribution.put(addr, i + 1);
-                if (withReplica && RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
+                if (RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
                   i = primaryRegDistribution.get(addr);
                   if (null == i) i = Integer.valueOf(0);
                   primaryRegDistribution.put(addr, i+1);
@@ -913,19 +940,7 @@ if (fqtn != null && master.isInitialized()) {
         %>
         <tr>
           <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
-          <%
-          if (urlRegionServer != null) {
-          %>
-          <td>
-             <a href="<%= urlRegionServer %>"><%= addr == null? "-": StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
-          </td>
-          <%
-          } else {
-          %>
-          <td class="undeployed-region">not deployed</td>
-          <%
-          }
-          %>
+          <%= buildRegionDeployedServerTag(regionInfo, master, regionsToServer) %>
           <td><%= readReq%></td>
           <td><%= writeReq%></td>
           <td><%= regionSize%></td>
@@ -934,28 +949,16 @@ if (fqtn != null && master.isInitialized()) {
           <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey()))%></td>
           <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey()))%></td>
           <td><%= state%></td>
-          <%
-          if (withReplica) {
-          %>
           <td><%= regionInfo.getReplicaId() %></td>
-          <%
-          }
-          %>
         </tr>
         <% } %>
         <% } %>
         </tbody>
       </table>
-      <% if (numRegions > numRegionsRendered) {
-           String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn,"UTF-8") + "&numRegions=all";
-      %>
-      <p>This table has <b><%= numRegions %></b> regions in total, in order to improve the page load time,
-        only <b><%= numRegionsRendered %></b> regions are displayed here, <a href="<%= allRegionsUrl %>">click
-        here</a> to see all regions.</p>
-      <% } %>
+      <%= moreRegionsToRender(numRegionsRendered, numRegions, fqtn) %>
     </div>
     <div class="tab-pane" id="tab_localityStats">
-      <table id="regionServerDetailsTable" class="tablesorter table table-striped">
+      <table id="tableLocalityStatsTable" class="tablesorter table table-striped">
         <thead>
           <tr>
             <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
@@ -971,7 +974,6 @@ if (fqtn != null && master.isInitialized()) {
             RegionInfo regionInfo = hriEntry.getKey();
             ServerName addr = regionsToServer.get(regionInfo);
             RegionMetrics load = hriEntry.getValue();
-            String urlRegionServer = null;
             float locality = 0.0f;
             float localityForSsd = 0.0f;
             String state = "N/A";
@@ -980,30 +982,12 @@ if (fqtn != null && master.isInitialized()) {
               localityForSsd = load.getDataLocalityForSsd();
             }
 
-            if (addr != null) {
-              // This port might be wrong if RS actually ended up using something else.
-              urlRegionServer =
-                "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
-            }
-
             if (numRegionsRendered < numRegionsToRender) {
               numRegionsRendered++;
         %>
         <tr>
           <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
-          <%
-          if (urlRegionServer != null) {
-          %>
-          <td>
-             <a href="<%= urlRegionServer %>"><%= addr == null? "-": StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
-          </td>
-          <%
-          } else {
-          %>
-          <td class="undeployed-region">not deployed</td>
-          <%
-          }
-          %>
+          <%= buildRegionDeployedServerTag(regionInfo, master, regionsToServer) %>
           <td><%= locality%></td>
           <td><%= localityForSsd%></td>
         </tr>
@@ -1011,6 +995,7 @@ if (fqtn != null && master.isInitialized()) {
         <% } %>
         </tbody>
       </table>
+      <%= moreRegionsToRender(numRegionsRendered, numRegions, fqtn) %>
     </div>
     <div class="tab-pane" id="tab_compactStats">
       <table id="tableCompactStatsTable" class="tablesorter table table-striped">
@@ -1031,7 +1016,6 @@ if (fqtn != null && master.isInitialized()) {
             RegionInfo regionInfo = hriEntry.getKey();
             ServerName addr = regionsToServer.get(regionInfo);
             RegionMetrics load = hriEntry.getValue();
-            String urlRegionServer = null;
             long compactingCells = 0;
             long compactedCells = 0;
             String compactionProgress = "";
@@ -1044,30 +1028,12 @@ if (fqtn != null && master.isInitialized()) {
               }
             }
 
-            if (addr != null) {
-              // This port might be wrong if RS actually ended up using something else.
-              urlRegionServer =
-                "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
-            }
-
             if (numRegionsRendered < numRegionsToRender) {
               numRegionsRendered++;
         %>
         <tr>
           <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
-          <%
-          if (urlRegionServer != null) {
-          %>
-          <td>
-            <a href="<%= urlRegionServer %>"><%= addr == null? "-": StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
-          </td>
-          <%
-          } else {
-          %>
-          <td class="undeployed-region">not deployed</td>
-          <%
-          }
-          %>
+          <%= buildRegionDeployedServerTag(regionInfo, master, regionsToServer) %>
           <td><%= String.format("%,1d", compactingCells)%></td>
           <td><%= String.format("%,1d", compactedCells)%></td>
           <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
@@ -1077,48 +1043,36 @@ if (fqtn != null && master.isInitialized()) {
         <% } %>
         </tbody>
       </table>
-      <% if (numRegions > numRegionsRendered) {
-           String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn,"UTF-8") + "&numRegions=all";
-      %>
-      <p>This table has <b><%= numRegions %></b> regions in total, in order to improve the page load time,
-        only <b><%= numRegionsRendered %></b> regions are displayed here, <a href="<%= allRegionsUrl %>">click
-        here</a> to see all regions.</p>
-      <% } %>
+      <%= moreRegionsToRender(numRegionsRendered, numRegions, fqtn) %>
     </div>
   </div>
 </div>
+
 <h2>Regions by Region Server</h2>
-<%
-if (withReplica) {
-%>
-<table id="regionServerTable" class="tablesorter table table-striped"><thead><tr><th>Region Server</th><th>Region Count</th><th>Primary Region Count</th></tr></thead>
-<%
-} else {
-%>
-<table id="regionServerTable" class="tablesorter table table-striped"><thead><tr><th>Region Server</th><th>Region Count</th></tr></thead>
-<tbody>
-<%
-}
-%>
-<%
-  for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
-     ServerName addr = rdEntry.getKey();
-     String url = "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
-%>
-<tr>
-  <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a></td>
-  <td><%= rdEntry.getValue()%></td>
-<%
-if (withReplica) {
-%>
-  <td><%= primaryRegDistribution.get(addr)%></td>
-<%
-}
-%>
-</tr>
-<% } %>
-</tbody>
+<table id="regionServerTable" class="tablesorter table table-striped">
+  <thead>
+    <tr>
+      <th>Region Server</th><th>Region Count</th><th>Primary Region Count</th>
+    </tr>
+  </thead>
+
+  <tbody>
+  <%
+    for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
+      ServerName addr = rdEntry.getKey();
+      String url = "//" + URLEncoder.encode(addr.getHostname()) + ":"
+        + master.getRegionServerInfoPort(addr) + "/rs-status";
+  %>
+      <tr>
+        <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname().toString())
+          + ":" + master.getRegionServerInfoPort(addr) %></a></td>
+        <td><%= rdEntry.getValue()%></td>
+        <td><%= primaryRegDistribution.get(addr) == null ? 0 : primaryRegDistribution.get(addr)%></td>
+      </tr>
+  <% } %>
+  </tbody>
 </table>
+
 <% }
 } catch(Exception ex) {
   for(StackTraceElement element : ex.getStackTrace()) {
@@ -1218,41 +1172,6 @@ Actions:
 <% } %>
 </div>
 </div>
-<% }
-  } catch(TableNotFoundException e) { %>
-  <div class="container-fluid content">
-    <div class="row inner_header">
-      <div class="page-header">
-        <h1>Table not found</h1>
-       </div>
-    </div>
-    <p><hr><p>
-    <p>Go <a href="javascript:history.back()">Back</a>
-  </div> <%
-  } catch(IllegalArgumentException e) { %>
-  <div class="container-fluid content">
-    <div class="row inner_header">
-      <div class="page-header">
-        <h1>Table qualifier must not be empty</h1>
-      </div>
-    </div>
-    <p><hr><p>
-    <p>Go <a href="javascript:history.back()">Back</a>
-  </div> <%
-  }
-}
-  else { // handle the case for fqtn is null or master is not initialized with error message + redirect
-%>
-<div class="container-fluid content">
-    <div class="row inner_header">
-        <div class="page-header">
-            <h1>Table not ready</h1>
-        </div>
-    </div>
-<p><hr><p>
-<jsp:include page="redirect.jsp" />
-</div>
-<% } %>
 
 <jsp:include page="footer.jsp" />
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
@@ -1300,7 +1219,7 @@ $(document).ready(function()
                 1: {sorter: 'separator'}
             }
         });
-        $("#regionServerDetailsTable").tablesorter({
+        $("#tableBaseStatsTable").tablesorter({
             headers: {
                 2: {sorter: 'separator'},
                 3: {sorter: 'separator'},
@@ -1309,13 +1228,25 @@ $(document).ready(function()
                 6: {sorter: 'filesize'}
             }
         });
-        $("#tableRegionTable").tablesorter({
+        $("#metaTableBaseStatsTable").tablesorter({
             headers: {
                 2: {sorter: 'separator'},
                 3: {sorter: 'separator'},
                 4: {sorter: 'filesize'},
                 5: {sorter: 'separator'},
                 6: {sorter: 'filesize'}
+            }
+        });
+        $("#tableLocalityStatsTable").tablesorter({
+            headers: {
+                2: {sorter: 'separator'},
+                3: {sorter: 'separator'}
+            }
+        });
+        $("#metaTableLocalityStatsTable").tablesorter({
+            headers: {
+                2: {sorter: 'separator'},
+                3: {sorter: 'separator'}
             }
         });
         $("#tableCompactStatsTable").tablesorter({
