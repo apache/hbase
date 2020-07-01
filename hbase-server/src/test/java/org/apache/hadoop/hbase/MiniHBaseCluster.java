@@ -26,7 +26,8 @@ import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
@@ -827,7 +828,20 @@ public class MiniHBaseCluster extends HBaseCluster {
    * of HRS carrying regionName. Returns -1 if none found.
    */
   public int getServerWithMeta() {
-    return getServerWith(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
+    int index = 0;
+    for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
+      HRegionServer hrs = rst.getRegionServer();
+      if (!hrs.isStopped()) {
+        for (Region region : hrs.getRegions(TableName.META_TABLE_NAME)) {
+          RegionInfo ri = region.getRegionInfo();
+          if (ri.isFirst() && RegionReplicaUtil.isDefaultReplica(ri)) {
+            return index;
+          }
+        }
+      }
+      index++;
+    }
+    return -1;
   }
 
   /**
@@ -852,8 +866,24 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   @Override
+  public ServerName getServerHoldingMeta() throws IOException {
+    for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
+      HRegionServer hrs = rst.getRegionServer();
+      if (!hrs.isStopped()) {
+        for (Region region : hrs.getRegions(TableName.META_TABLE_NAME)) {
+          RegionInfo ri = region.getRegionInfo();
+          if (ri.isFirst() && RegionReplicaUtil.isDefaultReplica(ri)) {
+            return hrs.getServerName();
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  @Override
   public ServerName getServerHoldingRegion(final TableName tn, byte[] regionName)
-  throws IOException {
+    throws IOException {
     // Assume there is only one master thread which is the active master.
     // If there are multiple master threads, the backup master threads
     // should hold some regions. Please refer to #countServedRegions

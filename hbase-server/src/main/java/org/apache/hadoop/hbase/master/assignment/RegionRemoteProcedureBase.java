@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.FailedRemoteDispatchException;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -148,13 +149,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
 
   @Override
   protected boolean waitInitialized(MasterProcedureEnv env) {
-    if (TableName.isMetaTableName(getTableName())) {
-      return false;
-    }
-    // First we need meta to be loaded, and second, if meta is not online then we will likely to
-    // fail when updating meta so we wait until it is assigned.
-    AssignmentManager am = env.getAssignmentManager();
-    return am.waitMetaLoaded(this) || am.waitMetaAssigned(this, region);
+    return MasterProcedureUtil.waitInitialized(this, env, getTableName());
   }
 
   @Override

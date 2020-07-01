@@ -21,7 +21,6 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
@@ -29,6 +28,7 @@ import org.apache.hadoop.hbase.master.MetricsAssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
@@ -166,13 +166,7 @@ public class TransitRegionStateProcedure
 
   @Override
   protected boolean waitInitialized(MasterProcedureEnv env) {
-    if (TableName.isMetaTableName(getTableName())) {
-      return false;
-    }
-    // First we need meta to be loaded, and second, if meta is not online then we will likely to
-    // fail when updating meta so we wait until it is assigned.
-    AssignmentManager am = env.getAssignmentManager();
-    return am.waitMetaLoaded(this) || am.waitMetaAssigned(this, getRegion());
+    return MasterProcedureUtil.waitInitialized(this, env, getTableName());
   }
 
   private void queueAssign(MasterProcedureEnv env, RegionStateNode regionNode)
