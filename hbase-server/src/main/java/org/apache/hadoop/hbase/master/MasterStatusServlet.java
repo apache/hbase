@@ -26,8 +26,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionLocateType;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -79,9 +82,13 @@ public class MasterStatusServlet extends HttpServlet {
     tmpl.render(response.getWriter(), master);
   }
 
-  private ServerName getMetaLocationOrNull(HMaster master) {
-    return master.getAssignmentManager().getRegionStates()
-      .getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO).getServerName();
+  private ServerName getMetaLocationOrNull(HMaster master) throws IOException {
+    RegionLocations locs = master.locateMeta(HConstants.EMPTY_START_ROW, RegionLocateType.CURRENT);
+    if (locs == null) {
+      return null;
+    }
+    HRegionLocation loc = locs.getDefaultRegionLocation();
+    return loc != null ? loc.getServerName() : null;
   }
 
   private Map<String, Integer> getFragmentationInfo(
