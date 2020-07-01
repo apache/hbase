@@ -58,6 +58,9 @@ public class TestPriorityRpc {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestPriorityRpc.class);
 
+  private static final RegionInfo FIRST_META_REGIONINFO =
+    RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
+
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static HRegionServer RS = null;
@@ -87,8 +90,7 @@ public class TestPriorityRpc {
     GetRequest.Builder getRequestBuilder = GetRequest.newBuilder();
     RegionSpecifier.Builder regionSpecifierBuilder = RegionSpecifier.newBuilder();
     regionSpecifierBuilder.setType(RegionSpecifierType.REGION_NAME);
-    ByteString name = UnsafeByteOperations.unsafeWrap(
-        RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
+    ByteString name = UnsafeByteOperations.unsafeWrap(FIRST_META_REGIONINFO.getRegionName());
     regionSpecifierBuilder.setValue(name);
     RegionSpecifier regionSpecifier = regionSpecifierBuilder.build();
     getRequestBuilder.setRegion(regionSpecifier);
@@ -104,8 +106,7 @@ public class TestPriorityRpc {
     RegionInfo mockRegionInfo = Mockito.mock(RegionInfo.class);
     Mockito.when(mockRpc.getRegion(Mockito.any())).thenReturn(mockRegion);
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
-    Mockito.when(mockRegionInfo.getTable())
-        .thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
+    Mockito.when(mockRegionInfo.getTable()).thenReturn(FIRST_META_REGIONINFO.getTable());
     // Presume type.
     ((AnnotationReadingPriorityFunction)PRIORITY).setRegionServer(mockRS);
     assertEquals(
@@ -159,8 +160,7 @@ public class TestPriorityRpc {
     Mockito.when(mockRegionScanner.getRegionInfo()).thenReturn(mockRegionInfo);
     Mockito.when(mockRpc.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
-    Mockito.when(mockRegionInfo.getTable())
-        .thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO.getTable());
+    Mockito.when(mockRegionInfo.getTable()).thenReturn(FIRST_META_REGIONINFO.getTable());
 
     // Presume type.
     ((AnnotationReadingPriorityFunction)PRIORITY).setRegionServer(mockRS);

@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
@@ -56,6 +57,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMetaState> {
 
   private static final Logger LOG = LoggerFactory.getLogger(InitMetaProcedure.class);
+
+  /**
+   * Used to create meta table when bootstraping a new hbase cluster.
+   * <p/>
+   * Setting region id to 1 is for keeping compatible with old clients.
+   */
+  private static final RegionInfo BOOTSTRAP_META_REGIONINFO =
+    RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setRegionId(1).build();
 
   private CountDownLatch latch = new CountDownLatch(1);
 
@@ -85,7 +94,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     TableDescriptor metaDescriptor =
       FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(conf, fs, rootDir);
     HRegion
-      .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
+      .createHRegion(BOOTSTRAP_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
       .close();
     return metaDescriptor;
   }
@@ -106,7 +115,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
         case INIT_META_ASSIGN_META:
           LOG.info("Going to assign meta");
           addChildProcedure(env.getAssignmentManager()
-            .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
+            .createAssignProcedures(Arrays.asList(BOOTSTRAP_META_REGIONINFO)));
           setNextState(InitMetaState.INIT_META_CREATE_NAMESPACES);
           return Flow.HAS_MORE_STATE;
         case INIT_META_CREATE_NAMESPACES:
