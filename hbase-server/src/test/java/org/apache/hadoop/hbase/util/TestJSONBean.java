@@ -104,10 +104,10 @@ public class TestJSONBean {
       jsonWriter.write(getMockMBeanServer(), null, null, false);
     }
 
-    final Gson GSON = GsonUtil.createGson().create();
+    final Gson gson = GsonUtil.createGson().create();
     Type typeOfHashMap = new TypeToken<Map<String, Object>>() {}.getType();
-    Map<String, Object> expectedJson = GSON.fromJson(getExpectedJSON(), typeOfHashMap);
-    Map<String, Object> actualJson = GSON.fromJson(stringWriter.toString(), typeOfHashMap);
+    Map<String, Object> expectedJson = gson.fromJson(getExpectedJSON(), typeOfHashMap);
+    Map<String, Object> actualJson = gson.fromJson(stringWriter.toString(), typeOfHashMap);
     assertEquals(expectedJson, actualJson);
   }
 }
