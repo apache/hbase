@@ -41,9 +41,13 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * Every region only has one recovered edits file PER split WAL (if we split
  * multiple WALs during a log-splitting session, on open, a Region may
  * have multiple recovered.edits files to replay -- one per split WAL).
- * @see BoundedRecoveredEditsOutputSink which is like this class but imposes upper bound on
- *   the number of writers active at one time (makes for better throughput).
+ * @see BoundedRecoveredHFilesOutputSink which is like this class but imposes upper bound on
+ *   the number of writers active at one time (makes for better throughput) and writes hfiles
+ *   rather than recovered.edits files.
+ * @deprecated since 2.4.0 and 3.0.0 to be removed in 4.0.0; replaced by
+ *   BoundedRecoveredHFilesOutputSink
  */
+@Deprecated
 @InterfaceAudience.Private
 class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   private static final Logger LOG = LoggerFactory.getLogger(RecoveredEditsOutputSink.class);

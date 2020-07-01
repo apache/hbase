@@ -39,7 +39,13 @@ import org.slf4j.LoggerFactory;
  * Class that manages the output streams from the log splitting process.
  * Every region may have many recovered edits file. But the opening writers is bounded.
  * Bounded means the output streams will be no more than the size of threadpool.
+ * @see BoundedRecoveredHFilesOutputSink which is like this class but imposes upper bound on
+ *   the number of writers active at one time (makes for better throughput) and writes hfiles
+ *   rather than recovered.edits files.
+ * @deprecated since 2.4.0 and 3.0.0 to be removed in 4.0.0; replaced by
+ *   BoundedRecoveredHFilesOutputSink
  */
+@Deprecated
 @InterfaceAudience.Private
 class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   private static final Logger LOG =

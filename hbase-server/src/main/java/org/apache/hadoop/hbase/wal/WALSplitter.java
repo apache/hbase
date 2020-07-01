@@ -120,7 +120,7 @@ public class WALSplitter {
    * Split WAL directly to hfiles instead of into intermediary 'recovered.edits' files.
    */
   public static final String WAL_SPLIT_TO_HFILE = "hbase.wal.split.to.hfile";
-  public static final boolean DEFAULT_WAL_SPLIT_TO_HFILE = false;
+  public static final boolean DEFAULT_WAL_SPLIT_TO_HFILE = true;
 
   /**
    * True if we are to run with bounded amount of writers rather than let the count blossom.

@@ -41,6 +41,14 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
+/*
+ * @see BoundedRecoveredHFilesOutputSink which supercedes this class imposing upper bound on
+ *   the number of writers active at one time (makes for better throughput) and writes hfiles
+ *   rather than recovered.edits files.
+ * @deprecated since 2.4.0 and 3.0.0 to be removed in 4.0.0; replaced by
+ *   BoundedRecoveredHFilesOutputSink
+ */
+@Deprecated
 @InterfaceAudience.Private
 abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
   private static final Logger LOG = LoggerFactory.getLogger(RecoveredEditsOutputSink.class);
