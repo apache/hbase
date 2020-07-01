@@ -123,13 +123,12 @@ public class TestMinorCompaction {
   public void testMinorCompactionWithDeleteColumn2() throws Exception {
     Delete dc = new Delete(secondRowBytes);
     dc.addColumn(fam2, col2);
-    /* compactionThreshold is 3. The table has 4 versions: 0, 1, 2, and 3.
-     * we only delete the latest version. One might expect to see only
-     * versions 1 and 2. HBase differs, and gives us 0, 1 and 2.
-     * This is okay as well. Since there was no compaction done before the
-     * delete, version 0 seems to stay on.
+    /* compactionThreshold is 3. We had inserte a total of 4 versions (0, 1, 2, and 3),
+     * but family is configured for 3 versions only, thus first one (0) was already overridden
+     * when we added the fourth (3). Then after deleting the most recent (3), there should be only
+     * 2 versions (1, 2).
      */
-    testMinorCompactionWithDelete(dc, 3);
+    testMinorCompactionWithDelete(dc, 2);
   }
 
   @Test
