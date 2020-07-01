@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
@@ -2429,6 +2430,12 @@ public class MasterRpcServices extends RSRpcServices implements
   @Override
   public ReportProcedureDoneResponse reportProcedureDone(RpcController controller,
       ReportProcedureDoneRequest request) throws ServiceException {
+    // Check Masters is up and ready for duty before progressing. Remote side will keep trying.
+    try {
+      this.master.checkServiceStarted();
+    } catch (ServerNotRunningYetException snrye) {
+      throw new ServiceException(snrye);
+    }
     request.getResultList().forEach(result -> {
       if (result.getStatus() == RemoteProcedureResult.Status.SUCCESS) {
         master.remoteProcedureCompleted(result.getProcId());

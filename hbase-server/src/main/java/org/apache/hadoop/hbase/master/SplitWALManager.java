@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,35 +16,36 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
-
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.NON_META_FILTER;
-
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.SplitWALProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -78,15 +79,17 @@ public class SplitWALManager {
   private final Path rootDir;
   private final FileSystem fs;
   private final Configuration conf;
+  private final Path walArchiveDir;
 
-  public SplitWALManager(MasterServices master) {
+  public SplitWALManager(MasterServices master) throws IOException {
     this.master = master;
     this.conf = master.getConfiguration();
     this.splitWorkerAssigner = new SplitWorkerAssigner(this.master,
         conf.getInt(HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER));
     this.rootDir = master.getMasterFileSystem().getWALRootDir();
+    // TODO: This should be the WAL FS, not the Master FS?
     this.fs = master.getMasterFileSystem().getFileSystem();
-
+    this.walArchiveDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
   }
 
   public List<Procedure> splitWALs(ServerName crashedServer, boolean splitMeta)
@@ -117,14 +120,24 @@ public class SplitWALManager {
     return logDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
   }
 
-  public void deleteSplitWAL(String wal) throws IOException {
-    fs.delete(new Path(wal), false);
+  /**
+   * Archive processed WAL
+   */
+  public void archive(String wal) throws IOException {
+    WALSplitUtil.moveWAL(this.fs, new Path(wal), this.walArchiveDir);
   }
 
   public void deleteWALDir(ServerName serverName) throws IOException {
     Path splitDir = getWALSplitDir(serverName);
-    if (!fs.delete(splitDir, false)) {
-      LOG.warn("Failed delete {}", splitDir);
+    try {
+      if (!fs.delete(splitDir, false)) {
+        LOG.warn("Failed delete {}, contains {}", splitDir, fs.listFiles(splitDir, true));
+      }
+    } catch (PathIsNotEmptyDirectoryException e) {
+      FileStatus [] files = CommonFSUtils.listStatus(fs, splitDir);
+      LOG.warn("PathIsNotEmptyDirectoryException {}",
+        Arrays.stream(files).map(f -> f.getPath()).collect(Collectors.toList()));
+      throw e;
     }
   }
 
@@ -197,7 +210,11 @@ public class SplitWALManager {
       this.maxSplitTasks = maxSplitTasks;
       this.master = master;
       this.event = new ProcedureEvent<>("split-WAL-worker-assigning");
-      this.master.getServerManager().registerListener(this);
+      // ServerManager might be null in a test context where we are mocking; allow for this
+      ServerManager sm = this.master.getServerManager();
+      if (sm != null) {
+        sm.registerListener(this);
+      }
     }
 
     public synchronized Optional<ServerName> acquire() {
