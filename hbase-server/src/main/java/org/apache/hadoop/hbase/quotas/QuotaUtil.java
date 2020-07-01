@@ -265,6 +265,7 @@ public class QuotaUtil extends QuotaTableUtil {
       final byte[] qualifier) throws IOException {
     Delete delete = new Delete(rowKey);
     if (qualifier != null) {
+      //Check if delete qualifier is for persisted space quota snapshot usage column family
       if (Arrays.equals(qualifier,QUOTA_QUALIFIER_POLICY)) {
         delete.addColumns(QUOTA_FAMILY_USAGE, qualifier);
       } else

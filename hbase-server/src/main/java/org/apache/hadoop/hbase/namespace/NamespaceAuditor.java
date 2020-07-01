@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.namespace;
 
 import java.io.IOException;
-import java.util.Set;
 
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
