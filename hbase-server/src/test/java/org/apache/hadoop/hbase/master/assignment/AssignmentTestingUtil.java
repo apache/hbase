@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Set;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -115,16 +117,16 @@ public final class AssignmentTestingUtil {
 
   public static boolean isServerHoldingMeta(final HBaseTestingUtil util,
       final ServerName serverName) throws Exception {
-    for (RegionInfo hri: getMetaRegions(util)) {
-      if (serverName.equals(getServerHoldingRegion(util, hri))) {
-        return true;
-      }
+    HRegionServer server = util.getMiniHBaseCluster().getRegionServer(serverName);
+    if (server == null) {
+      return false;
     }
-    return false;
+    return !server.getRegions(TableName.META_TABLE_NAME).isEmpty();
   }
 
   public static Set<RegionInfo> getMetaRegions(final HBaseTestingUtil util) {
-    return getMaster(util).getAssignmentManager().getMetaRegionSet();
+    return new HashSet<>(getMaster(util).getAssignmentManager().getRegionStates()
+      .getTableRegionsInfo(TableName.META_TABLE_NAME));
   }
 
   private static HMaster getMaster(final HBaseTestingUtil util) {

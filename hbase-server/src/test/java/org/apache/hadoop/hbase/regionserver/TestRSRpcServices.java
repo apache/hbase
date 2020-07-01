@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Optional;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -63,7 +64,8 @@ public class TestRSRpcServices {
     String userNameTest = RSRpcServices.getUserName();
     assertEquals("test", userNameTest);
     HRegion region = Mockito.mock(HRegion.class);
-    Mockito.when(region.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    Mockito.when(region.getRegionInfo())
+      .thenReturn(RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build());
     RSRpcServices.RegionScannerHolder rsh = new RSRpcServices.RegionScannerHolder(null, region,
       null, null, false, false, clientIpAndPort,
       userNameTest);

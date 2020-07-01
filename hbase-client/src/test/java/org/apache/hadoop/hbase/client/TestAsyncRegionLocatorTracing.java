@@ -130,7 +130,7 @@ public class TestAsyncRegionLocatorTracing {
 
   @Before
   public void setUp() throws IOException {
-    RegionInfo metaRegionInfo = RegionInfoBuilder.FIRST_META_REGIONINFO;
+    RegionInfo metaRegionInfo = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
     locs = new RegionLocations(
       new HRegionLocation(metaRegionInfo,
         ServerName.valueOf("127.0.0.1", 12345, EnvironmentEdgeManager.currentTime())),

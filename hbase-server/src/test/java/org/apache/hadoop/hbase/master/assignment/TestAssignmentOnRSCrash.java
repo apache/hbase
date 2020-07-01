@@ -41,8 +41,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestAssignmentOnRSCrash {
@@ -50,8 +48,6 @@ public class TestAssignmentOnRSCrash {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAssignmentOnRSCrash.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentOnRSCrash.class);
 
   private static final TableName TEST_TABLE = TableName.valueOf("testb");
   private static final String FAMILY_STR = "f";

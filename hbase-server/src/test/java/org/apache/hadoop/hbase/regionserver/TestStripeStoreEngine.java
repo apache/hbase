@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
@@ -119,7 +120,8 @@ public class TestStripeStoreEngine {
 
   private static TestStoreEngine createEngine(Configuration conf) throws Exception {
     HStore store = mock(HStore.class);
-    when(store.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    when(store.getRegionInfo())
+      .thenReturn(RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build());
     CellComparatorImpl kvComparator = mock(CellComparatorImpl.class);
     return (TestStoreEngine) StoreEngine.create(store, conf, kvComparator);
   }

@@ -51,7 +51,7 @@ public class TestRegionInfoStaticInitialization {
     // RegionInfoBuilder.
     final Supplier<RegionInfo> retrieveUNDEFINED = () -> RegionInfo.UNDEFINED;
     final Supplier<RegionInfo> retrieveMetaRegionInfo =
-      () -> RegionInfoBuilder.FIRST_META_REGIONINFO;
+      () -> RegionInfoBuilder.UNDEFINED;
 
     // The test runs multiple threads that reference these mutually dependent symbols. In order to
     // express this bug, these threads need to access these symbols at roughly the same time, so

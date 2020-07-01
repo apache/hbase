@@ -30,6 +30,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
@@ -106,13 +108,12 @@ public class TestIPCUtil {
       if (exception instanceof TimeoutException) {
         assertThat(IPCUtil.wrapException(addr, null, exception), instanceOf(TimeoutIOException.class));
       } else {
-        IOException ioe = IPCUtil.wrapException(addr, RegionInfoBuilder.FIRST_META_REGIONINFO,
-          exception);
+        RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
+        IOException ioe = IPCUtil.wrapException(addr, ri, exception);
         // Assert that the exception contains the Region name if supplied. HBASE-25735.
         // Not all exceptions get the region stuffed into it.
         if (ioe.getMessage() != null) {
-          assertTrue(ioe.getMessage().
-            contains(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionNameAsString()));
+          assertTrue(ioe.getMessage().contains(ri.getRegionNameAsString()));
         }
         assertThat(ioe, instanceOf(exception.getClass()));
       }

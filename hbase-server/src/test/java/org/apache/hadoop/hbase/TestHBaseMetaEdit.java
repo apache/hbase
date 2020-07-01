@@ -27,7 +27,6 @@ import java.util.Collections;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -116,11 +115,12 @@ public class TestHBaseMetaEdit {
     String encoding = descriptor.getColumnFamily(HConstants.CATALOG_FAMILY).getConfiguration().
         get(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING);
     assertEquals(encoding, DataBlockEncoding.ROW_INDEX_V1.toString());
-    Region r = UTIL.getHBaseCluster().getRegionServer(0).
-        getRegion(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
+    Region r =
+      UTIL.getHBaseCluster().getRegionServer(0).getRegions(TableName.META_TABLE_NAME).get(0);
     assertEquals(oldVersions + 1,
-        r.getStore(HConstants.CATALOG_FAMILY).getColumnFamilyDescriptor().getMaxVersions());
-    encoding = r.getStore(HConstants.CATALOG_FAMILY).getColumnFamilyDescriptor().
+      r.getStore(HConstants.CATALOG_FAMILY).getColumnFamilyDescriptor().getMaxVersions());
+    encoding = r.getStore(HConstants.CATALOG_FAMILY).getColumnFamilyDescriptor()
+      .
         getConfigurationValue(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING);
     assertEquals(encoding, DataBlockEncoding.ROW_INDEX_V1.toString());
     assertTrue(r.getStore(extraColumnFamilyName) != null);

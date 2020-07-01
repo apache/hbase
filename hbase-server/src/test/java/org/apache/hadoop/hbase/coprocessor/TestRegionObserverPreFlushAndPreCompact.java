@@ -24,6 +24,7 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -109,7 +110,7 @@ public class TestRegionObserverPreFlushAndPreCompact {
     // Make up an HRegion instance. Use the hbase:meta first region as our RegionInfo. Use
     // hbase:meta table name for building the TableDescriptor our mock returns when asked schema
     // down inside RegionCoprocessorHost. Pass in mocked RegionServerServices too.
-    RegionInfo ri = RegionInfoBuilder.FIRST_META_REGIONINFO;
+    RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
     HRegion mockedHRegion = Mockito.mock(HRegion.class);
     Mockito.when(mockedHRegion.getRegionInfo()).thenReturn(ri);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(ri.getTable()).build();

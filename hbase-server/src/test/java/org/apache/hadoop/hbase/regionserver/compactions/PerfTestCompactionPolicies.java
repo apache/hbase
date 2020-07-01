@@ -29,6 +29,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -206,7 +207,8 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
     HStore s = mock(HStore.class);
     when(s.getStoreFileTtl()).thenReturn(Long.MAX_VALUE);
     when(s.getBlockingFileCount()).thenReturn(7L);
-    when(s.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    when(s.getRegionInfo())
+      .thenReturn(RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build());
     return s;
   }
 

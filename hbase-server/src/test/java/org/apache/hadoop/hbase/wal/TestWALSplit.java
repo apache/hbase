@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -91,10 +92,12 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
@@ -135,6 +138,8 @@ public class TestWALSplit {
   private static String ROBBER;
   private static String ZOMBIE;
   private static String [] GROUP = new String [] {"supergroup"};
+  private static RegionInfo FIRST_META_REGIONINFO =
+    RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build();
 
   static enum Corruptions {
     INSERT_GARBAGE_ON_FIRST_LINE,
@@ -371,7 +376,7 @@ public class TestWALSplit {
   public void testRecoveredEditsPathForMeta() throws IOException {
     Path p = createRecoveredEditsPathForRegion();
     String parentOfParent = p.getParent().getParent().getName();
-    assertEquals(parentOfParent, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
+    assertEquals(parentOfParent, FIRST_META_REGIONINFO.getEncodedName());
   }
 
   /**
@@ -383,18 +388,18 @@ public class TestWALSplit {
     Path p = createRecoveredEditsPathForRegion();
     Path tdir = CommonFSUtils.getTableDir(HBASEDIR, TableName.META_TABLE_NAME);
     Path regiondir = new Path(tdir,
-      RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
+      FIRST_META_REGIONINFO.getEncodedName());
     fs.mkdirs(regiondir);
     Path parent = WALSplitUtil.getRegionDirRecoveredEditsDir(regiondir);
     assertEquals(HConstants.RECOVERED_EDITS_DIR, parent.getName());
     fs.createNewFile(parent); // create a recovered.edits file
     String parentOfParent = p.getParent().getParent().getName();
-    assertEquals(parentOfParent, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
+    assertEquals(parentOfParent, FIRST_META_REGIONINFO.getEncodedName());
     WALFactory.createRecoveredEditsWriter(fs, p, conf).close();
   }
 
   private Path createRecoveredEditsPathForRegion() throws IOException {
-    byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
+    byte[] encoded = FIRST_META_REGIONINFO.getEncodedNameAsBytes();
     long now = EnvironmentEdgeManager.currentTime();
     Entry entry = new Entry(
         new WALKeyImpl(encoded, TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
@@ -408,10 +413,10 @@ public class TestWALSplit {
   @Test
   public void testHasRecoveredEdits() throws IOException {
     Path p = createRecoveredEditsPathForRegion();
-    assertFalse(WALSplitUtil.hasRecoveredEdits(conf, RegionInfoBuilder.FIRST_META_REGIONINFO));
+    assertFalse(WALSplitUtil.hasRecoveredEdits(conf, FIRST_META_REGIONINFO));
     String renamedEdit = p.getName().split("-")[0];
     fs.createNewFile(new Path(p.getParent(), renamedEdit));
-    assertTrue(WALSplitUtil.hasRecoveredEdits(conf, RegionInfoBuilder.FIRST_META_REGIONINFO));
+    assertTrue(WALSplitUtil.hasRecoveredEdits(conf, FIRST_META_REGIONINFO));
   }
 
   private void useDifferentDFSClient() throws IOException {

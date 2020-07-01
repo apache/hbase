@@ -312,7 +312,7 @@
           // NOTE: Presumes meta with one or more replicas
           for (int j = 0; j < numMetaReplicas; j++) {
             RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                                    RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+              RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build(), j);
             RegionState regionState = master.getAssignmentManager().getRegionStates().getRegionState(meta);
             // If a metaLocation is null, All of its info would be empty here to be displayed.
             ServerName metaLocation = regionState != null ? regionState.getServerName() : null;
@@ -380,7 +380,7 @@
            // NOTE: Presumes meta with one or more replicas
            for (int j = 0; j < numMetaReplicas; j++) {
              RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                                     RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+               RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build(), j);
              RegionState regionState = master.getAssignmentManager().getRegionStates().getRegionState(meta);
              // If a metaLocation is null, All of its info would be empty here to be displayed.
              ServerName metaLocation = regionState != null ? regionState.getServerName() : null;
@@ -431,9 +431,8 @@
           // NOTE: Presumes meta with one or more replicas
           for (int j = 0; j < numMetaReplicas; j++) {
             RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                                    RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+              RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build(), j);
             RegionState regionState = master.getAssignmentManager().getRegionStates().getRegionState(meta);
-            // If a metaLocation is null, All of its info would be empty here to be displayed.
             ServerName metaLocation = regionState != null ? regionState.getServerName() : null;
             for (int i = 0; i < 1; i++) {
               //If metaLocation is null, default value below would be displayed in UI.

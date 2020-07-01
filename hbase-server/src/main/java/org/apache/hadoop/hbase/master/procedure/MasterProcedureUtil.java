@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureException;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -240,5 +241,15 @@ public final class MasterProcedureUtil {
   public static Optional<String> getNamespaceGroup(NamespaceDescriptor namespaceDesc) {
     return Optional
       .ofNullable(namespaceDesc.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP));
+  }
+
+  public static boolean waitInitialized(Procedure<MasterProcedureEnv> proc, MasterProcedureEnv env,
+    TableName tableName) {
+    if (TableName.isMetaTableName(tableName)) {
+      return false;
+    }
+    // we need meta to be loaded
+    AssignmentManager am = env.getAssignmentManager();
+    return am.waitMetaLoaded(proc);
   }
 }

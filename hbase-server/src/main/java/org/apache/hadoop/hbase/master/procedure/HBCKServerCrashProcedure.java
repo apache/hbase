@@ -84,7 +84,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
   @Override
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH_EXCEPTION",
     justification="FindBugs seems confused on ps in below.")
-  List<RegionInfo> getRegionsOnCrashedServer(MasterProcedureEnv env) {
+  protected List<RegionInfo> getRegionsOnCrashedServer(MasterProcedureEnv env) {
     // Super will return an immutable list (empty if nothing on this server).
     List<RegionInfo> ris = super.getRegionsOnCrashedServer(env);
     if (!ris.isEmpty()) {
