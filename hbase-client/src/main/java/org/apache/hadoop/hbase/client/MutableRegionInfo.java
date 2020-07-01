@@ -108,14 +108,6 @@ class MutableRegionInfo implements RegionInfo {
     return regionId;
   }
 
-  /**
-   * Package private constructor used constructing MutableRegionInfo for the first meta regions
-   */
-  MutableRegionInfo(long regionId, TableName tableName, int replicaId) {
-    this(tableName, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId,
-      replicaId, false);
-  }
-
   MutableRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey,
       final boolean split, final long regionId, final int replicaId, boolean offLine) {
     this.tableName = checkTableName(tableName);

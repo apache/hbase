@@ -431,10 +431,11 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public GetRegionInfoResponse getRegionInfo(RpcController controller,
-      GetRegionInfoRequest request) throws ServiceException {
+  public GetRegionInfoResponse getRegionInfo(RpcController controller, GetRegionInfoRequest request)
+    throws ServiceException {
     GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
-    builder.setRegionInfo(ProtobufUtil.toRegionInfo(RegionInfoBuilder.FIRST_META_REGIONINFO));
+    builder.setRegionInfo(ProtobufUtil.toRegionInfo(
+      RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setRegionId(1).build()));
     return builder.build();
   }
 
