@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.master.MetricsAssignmentManager;
@@ -200,13 +201,21 @@ public class TransitRegionStateProcedure
     }
   }
 
-  private void openRegion(MasterProcedureEnv env, RegionStateNode regionNode) throws IOException {
+  private void openRegion(MasterProcedureEnv env, RegionStateNode regionNode)
+    throws IOException, ProcedureSuspendedException {
     ServerName loc = regionNode.getRegionLocation();
     if (loc == null) {
       LOG.warn("No location specified for {}, jump back to state {} to get one", getRegion(),
         RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
       setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE);
       return;
+    }
+    final boolean isMeta = regionNode.getRegionInfo().isMetaRegion();
+    final boolean isMetaAvailable = env.getMasterServices()
+      .isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    if (!isMeta && !isMetaAvailable) {
+      // meta is not assigned yet, so yield
+      throw new ProcedureSuspendedException();
     }
     env.getAssignmentManager().regionOpening(regionNode);
     addChildProcedure(new OpenRegionProcedure(this, getRegion(), loc));

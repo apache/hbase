@@ -1206,32 +1206,29 @@ public class HMaster extends HRegionServer implements MasterServices {
    *   and we will hold here until operator intervention.
    */
   @VisibleForTesting
-  public boolean waitForMetaOnline() throws InterruptedException {
-    return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
+  public boolean waitForMetaOnline() {
+    return waitForRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
   }
 
   /**
-   * @return True if region is online and scannable else false if an error or shutdown (Otherwise
-   *   we just block in here holding up all forward-progess).
+   * Blocks the current thread until {@link #isRegionOnline(RegionInfo)} returns {@code true} for
+   * {@code ri} OR until the master is {@link #isStopped()}. This method does not honor interrupts.
    */
-  private boolean isRegionOnline(RegionInfo ri) throws InterruptedException {
+  private boolean waitForRegionOnline(RegionInfo ri) {
     RetryCounter rc = null;
     while (!isStopped()) {
-      RegionState rs = this.assignmentManager.getRegionStates().getRegionState(ri);
-      if (rs.isOpened()) {
-        if (this.getServerManager().isServerOnline(rs.getServerName())) {
-          return true;
-        }
+      if (isRegionOnline(ri)) {
+        return true;
       }
       // Region is not OPEN.
       Optional<Procedure<MasterProcedureEnv>> optProc = this.procedureExecutor.getProcedures().
-          stream().filter(p -> p instanceof ServerCrashProcedure).findAny();
+        stream().filter(p -> p instanceof ServerCrashProcedure).findAny();
       // TODO: Add a page to refguide on how to do repair. Have this log message point to it.
       // Page will talk about loss of edits, how to schedule at least the meta WAL recovery, and
       // then how to assign including how to break region lock if one held.
       LOG.warn("{} is NOT online; state={}; ServerCrashProcedures={}. Master startup cannot " +
           "progress, in holding-pattern until region onlined.",
-          ri.getRegionNameAsString(), rs, optProc.isPresent());
+        ri.getRegionNameAsString(), rs, optProc.isPresent());
       // Check once-a-minute.
       if (rc == null) {
         rc = new RetryCounterFactory(1000).create();
@@ -1257,7 +1254,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     // Else there are namespace regions up in meta. Ensure they are assigned before we go on.
     for (RegionInfo ri: ris) {
-      isRegionOnline(ri);
+      waitForRegionOnline(ri);
     }
     return true;
   }

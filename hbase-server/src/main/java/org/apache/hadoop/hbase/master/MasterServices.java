@@ -524,4 +524,13 @@ public interface MasterServices extends Server {
    * Run the ReplicationBarrierChore.
    */
   void runReplicationBarrierCleaner();
+
+  /**
+   * Return {@code true} if {@code ri} is expected to be online and scannable, {@code false}
+   * otherwise.
+   */
+  default boolean isRegionOnline(RegionInfo ri) {
+    final RegionState rs = getAssignmentManager().getRegionStates().getRegionState(ri);
+    return rs.isOpened() && getServerManager().isServerOnline(rs.getServerName());
+  }
 }
