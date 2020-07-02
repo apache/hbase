@@ -70,31 +70,19 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
 
   @Override
   protected boolean shouldSplit() {
-    boolean foundABigStore = false;
+    // If any of the stores is unable to split (eg they contain reference files)
+    // then don't split
+    for (HStore store : region.getStores()) {
+      if (!store.canSplit()) {
+        return false;
+      }
+    }
     // Get count of regions that have the same common table as this.region
     int tableRegionsCount = getCountOfCommonTableRegions();
     // Get size to check
     long sizeToCheck = getSizeToCheck(tableRegionsCount);
-
-    for (HStore store : region.getStores()) {
-      // If any of the stores is unable to split (eg they contain reference files)
-      // then don't split
-      if (!store.canSplit()) {
-        return false;
-      }
-
-      // Mark if any store is big enough
-      long size = store.getSize();
-      if (size > sizeToCheck) {
-        LOG.debug("ShouldSplit because " + store.getColumnFamilyName() +
-          " size=" + StringUtils.humanSize(size) +
-          ", sizeToCheck=" + StringUtils.humanSize(sizeToCheck) +
-          ", regionsWithCommonTable=" + tableRegionsCount);
-        foundABigStore = true;
-      }
-    }
-
-    return foundABigStore;
+    String extraLogStr = ", regionsWithCommonTable=" + tableRegionsCount;
+    return isExceedSize(sizeToCheck, extraLogStr);
   }
 
   /**
@@ -129,4 +117,5 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
                : Math.min(getDesiredMaxFileSize(),
                           initialSize * tableRegionsCount * tableRegionsCount * tableRegionsCount);
   }
+
 }
