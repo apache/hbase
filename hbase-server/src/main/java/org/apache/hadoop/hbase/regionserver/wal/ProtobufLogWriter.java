@@ -49,7 +49,7 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
 
   protected FSDataOutputStream output;
 
-  private AtomicLong syncedLength = new AtomicLong(0);
+  private final AtomicLong syncedLength = new AtomicLong(0);
 
   @Override
   public void append(Entry entry) throws IOException {
