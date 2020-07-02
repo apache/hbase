@@ -334,7 +334,7 @@ public class JSONBean {
       } else if(value instanceof Number) {
         Number n = (Number)value;
         double doubleValue = n.doubleValue();
-        if (Double.isNaN(doubleValue) || Double.isInfinite(doubleValue)) {
+        if (!Double.isNaN(doubleValue) && !Double.isInfinite(doubleValue)) {
           writer.value(n);
         } else {
           writer.value(n.toString());
