@@ -20,6 +20,9 @@ DRY_RUN=${DRY_RUN:-1} #default to dry run
 DEBUG=${DEBUG:-0}
 GPG=${GPG:-gpg}
 GPG_ARGS=(--no-autostart --batch)
+if [ -n "${GPG_KEY}" ]; then
+  GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
+fi
 # Maven Profiles for publishing snapshots and release to Maven Central and Dist
 PUBLISH_PROFILES=("-P" "apache-release,release")
 
@@ -256,6 +259,7 @@ EOF
     echo "Exiting."
     exit 1
   fi
+  GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
 
   if ! is_dry_run; then
     if [ -z "$ASF_PASSWORD" ]; then

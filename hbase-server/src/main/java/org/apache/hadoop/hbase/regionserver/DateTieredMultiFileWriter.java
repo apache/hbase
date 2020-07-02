@@ -38,15 +38,20 @@ public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
 
   private final boolean needEmptyFile;
 
+  private final Map<Long, String> lowerBoundariesPolicies;
+
   /**
+   * @param lowerBoundariesPolicies each window to storage policy map.
    * @param needEmptyFile whether need to create an empty store file if we haven't written out
    *          anything.
    */
-  public DateTieredMultiFileWriter(List<Long> lowerBoundaries, boolean needEmptyFile) {
+  public DateTieredMultiFileWriter(List<Long> lowerBoundaries,
+      Map<Long, String> lowerBoundariesPolicies, boolean needEmptyFile) {
     for (Long lowerBoundary : lowerBoundaries) {
       lowerBoundary2Writer.put(lowerBoundary, null);
     }
     this.needEmptyFile = needEmptyFile;
+    this.lowerBoundariesPolicies = lowerBoundariesPolicies;
   }
 
   @Override
@@ -54,7 +59,12 @@ public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
     Map.Entry<Long, StoreFileWriter> entry = lowerBoundary2Writer.floorEntry(cell.getTimestamp());
     StoreFileWriter writer = entry.getValue();
     if (writer == null) {
-      writer = writerFactory.createWriter();
+      String lowerBoundaryStoragePolicy = lowerBoundariesPolicies.get(entry.getKey());
+      if (lowerBoundaryStoragePolicy != null) {
+        writer = writerFactory.createWriterWithStoragePolicy(lowerBoundaryStoragePolicy);
+      } else {
+        writer = writerFactory.createWriter();
+      }
       lowerBoundary2Writer.put(entry.getKey(), writer);
     }
     writer.append(cell);

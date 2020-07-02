@@ -808,6 +808,27 @@ module Hbase
       assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
     end
 
+
+    define_test "alter should raise error trying to remove nonexistent attributes" do
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+
+      key_1 = "TestAttr1"
+      key_2 = "TestAttr2"
+      assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+
+      # first, try removing just one nonexistent attribute
+      assert_raise(ArgumentError) do
+        command(:alter, @test_name, 'METHOD' => 'table_att_unset', 'NAME' => key_1)
+      end
+
+      # second, try removing multiple nonexistent attributes
+      assert_raise(ArgumentError) do
+        command(:alter, @test_name, 'METHOD' => 'table_att_unset', 'NAME' => [ key_1, key_2 ])
+      end
+    end
+
     define_test "alter should be able to remove a table configuration" do
       drop_test_table(@test_name)
       create_test_table(@test_name)
@@ -836,6 +857,26 @@ module Hbase
       command(:alter, @test_name, 'METHOD' => 'table_conf_unset', 'NAME' => [ key_1, key_2 ])
       assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
       assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+    end
+
+    define_test "alter should raise error trying to remove nonexistent configurations" do
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+
+      key_1 = "TestConf1"
+      key_2 = "TestConf2"
+      assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+
+      # first, try removing just one nonexistent configuration
+      assert_raise(ArgumentError) do
+        command(:alter, @test_name, 'METHOD' => 'table_conf_unset', 'NAME' => key_1)
+      end
+
+      # second, try removing multiple nonexistent configurations
+      assert_raise(ArgumentError) do
+        command(:alter, @test_name, 'METHOD' => 'table_conf_unset', 'NAME' => [ key_1, key_2 ])
+      end
     end
 
     define_test "get_table should get a real table" do

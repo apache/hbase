@@ -39,7 +39,7 @@ module HBaseConstants
   NAME = org.apache.hadoop.hbase.HConstants::NAME
   VERSIONS = org.apache.hadoop.hbase.HConstants::VERSIONS
   IN_MEMORY = org.apache.hadoop.hbase.HConstants::IN_MEMORY
-  IN_MEMORY_COMPACTION = org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY_COMPACTION
+  IN_MEMORY_COMPACTION = org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder::IN_MEMORY_COMPACTION
   METADATA = org.apache.hadoop.hbase.HConstants::METADATA
   STOPROW = 'STOPROW'.freeze
   STARTROW = 'STARTROW'.freeze
@@ -98,6 +98,9 @@ module HBaseConstants
   FORMATTER_CLASS = 'FORMATTER_CLASS'.freeze
   POLICY = 'POLICY'.freeze
   REGIONSERVER = 'REGIONSERVER'.freeze
+  REPLICATION_SCOPE_BYTES = org.apache.hadoop.hbase.client.ColumnFamilyDescriptor::REPLICATION_SCOPE_BYTES
+  FOREVER = org.apache.hadoop.hbase.HConstants::FOREVER
+  IS_ROOT = 'IS_ROOT'.freeze
 
   # Load constants from hbase java API
   def self.promote_constants(constants)
@@ -109,8 +112,8 @@ module HBaseConstants
     end
   end
 
-  promote_constants(org.apache.hadoop.hbase.HColumnDescriptor.constants)
-  promote_constants(org.apache.hadoop.hbase.HTableDescriptor.constants)
+  promote_constants(org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.constants)
+  promote_constants(org.apache.hadoop.hbase.client.TableDescriptorBuilder.constants)
 end
 
 # Include classes definition

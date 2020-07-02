@@ -167,12 +167,15 @@ public class SplitTableRegionProcedure
     return daughterTwoRI;
   }
 
+  private boolean hasBestSplitRow() {
+    return bestSplitRow != null && bestSplitRow.length > 0;
+  }
+
   /**
    * Check whether the region is splittable
    * @param env MasterProcedureEnv
    * @param regionToSplit parent Region to be split
    * @param splitRow if splitRow is not specified, will first try to get bestSplitRow from RS
-   * @throws IOException
    */
   private void checkSplittable(final MasterProcedureEnv env,
       final RegionInfo regionToSplit, final byte[] splitRow) throws IOException {
@@ -187,19 +190,20 @@ public class SplitTableRegionProcedure
     boolean splittable = false;
     if (node != null) {
       try {
-        if (bestSplitRow == null || bestSplitRow.length == 0) {
-          LOG
-            .info("splitKey isn't explicitly specified, will try to find a best split key from RS");
-        }
-        // Always set bestSplitRow request as true here,
-        // need to call Region#checkSplit to check it splittable or not
-        GetRegionInfoResponse response = AssignmentManagerUtil.getRegionInfoResponse(env,
-          node.getRegionLocation(), node.getRegionInfo(), true);
-        if(bestSplitRow == null || bestSplitRow.length == 0) {
-          bestSplitRow = response.hasBestSplitRow() ? response.getBestSplitRow().toByteArray() : null;
+        GetRegionInfoResponse response;
+        if (!hasBestSplitRow()) {
+          LOG.info(
+            "{} splitKey isn't explicitly specified, will try to find a best split key from RS {}",
+            node.getRegionInfo().getRegionNameAsString(), node.getRegionLocation());
+          response = AssignmentManagerUtil.getRegionInfoResponse(env, node.getRegionLocation(),
+            node.getRegionInfo(), true);
+          bestSplitRow =
+            response.hasBestSplitRow() ? response.getBestSplitRow().toByteArray() : null;
+        } else {
+          response = AssignmentManagerUtil.getRegionInfoResponse(env, node.getRegionLocation(),
+            node.getRegionInfo(), false);
         }
         splittable = response.hasSplittable() && response.getSplittable();
-
         if (LOG.isDebugEnabled()) {
           LOG.debug("Splittable=" + splittable + " " + node.toShortString());
         }

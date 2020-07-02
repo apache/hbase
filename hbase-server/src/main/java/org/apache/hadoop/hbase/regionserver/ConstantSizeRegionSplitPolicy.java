@@ -68,7 +68,6 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
 
   @Override
   protected boolean shouldSplit() {
-    boolean force = region.shouldForceSplit();
     boolean foundABigStore = false;
 
     for (HStore store : region.getStores()) {
@@ -84,7 +83,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
       }
     }
 
-    return foundABigStore || force;
+    return foundABigStore;
   }
 
   long getDesiredMaxFileSize() {

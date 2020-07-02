@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,33 +40,29 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
- * ByteBuffAllocator is used for allocating/freeing the ByteBuffers from/to NIO ByteBuffer pool, and
- * it provide high-level interfaces for upstream. when allocating desired memory size, it will
- * return {@link ByteBuff}, if we are sure that those ByteBuffers have reached the end of life
- * cycle, we must do the {@link ByteBuff#release()} to return back the buffers to the pool,
- * otherwise ByteBuffers leak will happen, and the NIO ByteBuffer pool may be exhausted. there's
- * possible that the desired memory size is large than ByteBufferPool has, we'll downgrade to
- * allocate ByteBuffers from heap which meaning the GC pressure may increase again. Of course, an
- * better way is increasing the ByteBufferPool size if we detected this case. <br/>
+ * ByteBuffAllocator is a nio ByteBuffer pool.
+ * It returns {@link ByteBuff}s which are wrappers of offheap {@link ByteBuffer} usually. If we are
+ * sure that the returned ByteBuffs have reached the end of their life cycle, we must call
+ * {@link ByteBuff#release()} to return buffers to the pool otherwise the pool will leak. If the
+ * desired memory size is larger than what the ByteBufferPool has available, we'll downgrade to
+ * allocate ByteBuffers from the heap. Increase the ByteBufferPool size if detect this case.<br/>
  * <br/>
- * On the other hand, for better memory utilization, we have set an lower bound named
- * minSizeForReservoirUse in this allocator, and if the desired size is less than
- * minSizeForReservoirUse, the allocator will just allocate the ByteBuffer from heap and let the JVM
- * free its memory, because it's too wasting to allocate a single fixed-size ByteBuffer for some
- * small objects. <br/>
+ * For better memory/pool utilization, there is a lower bound named
+ * <code>minSizeForReservoirUse</code> in this allocator, and if the desired size is less than
+ * <code>minSizeForReservoirUse</code>, the allocator will just allocate the ByteBuffer from heap
+ * and let the JVM manage memory, because it better to not waste pool slots allocating a single
+ * fixed-size ByteBuffer for a small object.<br/>
  * <br/>
- * We recommend to use this class to allocate/free {@link ByteBuff} in the RPC layer or the entire
- * read/write path, because it hide the details of memory management and its APIs are more friendly
- * to the upper layer.
+ * This pool can be used anywhere it makes sense managing memory. Currently used at least by RPC.
  */
 @InterfaceAudience.Private
 public class ByteBuffAllocator {
 
   private static final Logger LOG = LoggerFactory.getLogger(ByteBuffAllocator.class);
 
-  // The on-heap allocator is mostly used for testing, but also some non-test usage, such as
-  // scanning snapshot, we won't have an RpcServer to initialize the allocator, so just use the
-  // default heap allocator, it will just allocate ByteBuffers from heap but wrapped by an ByteBuff.
+  // The on-heap allocator is mostly used for testing but also has some non-test usage such as
+  // for scanning snapshot. This implementation will just allocate ByteBuffers from heap but
+  // wrapped by ByteBuff.
   public static final ByteBuffAllocator HEAP = ByteBuffAllocator.createOnHeap();
 
   public static final String ALLOCATOR_POOL_ENABLED_KEY = "hbase.server.allocator.pool.enabled";

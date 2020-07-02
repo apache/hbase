@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDes
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -1148,7 +1149,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     boolean isCompaction, boolean includeMVCCReadpoint, boolean includesTag,
     boolean shouldDropBehind) throws IOException {
     return createWriterInTmp(maxKeyCount, compression, isCompaction, includeMVCCReadpoint,
-      includesTag, shouldDropBehind, -1);
+      includesTag, shouldDropBehind, -1, HConstants.EMPTY_STRING);
   }
 
   /**
@@ -1162,7 +1163,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   // compaction
   public StoreFileWriter createWriterInTmp(long maxKeyCount, Compression.Algorithm compression,
       boolean isCompaction, boolean includeMVCCReadpoint, boolean includesTag,
-      boolean shouldDropBehind, long totalCompactedFilesSize) throws IOException {
+      boolean shouldDropBehind, long totalCompactedFilesSize, String fileStoragePolicy)
+        throws IOException {
     // creating new cache config for each new writer
     final CacheConfig writerCacheConf = new CacheConfig(cacheConf);
     if (isCompaction) {
@@ -1219,7 +1221,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
             .withFavoredNodes(favoredNodes)
             .withFileContext(hFileContext)
             .withShouldDropCacheBehind(shouldDropBehind)
-            .withCompactedFilesSupplier(this::getCompactedFiles);
+            .withCompactedFilesSupplier(this::getCompactedFiles)
+            .withFileStoragePolicy(fileStoragePolicy);
     return builder.build();
   }
 
@@ -1540,6 +1543,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       Collection<HStoreFile> filesToCompact, User user, long compactionStartTime,
       List<Path> newFiles) throws IOException {
     // Do the steps necessary to complete the compaction.
+    setStoragePolicyFromFileName(newFiles);
     List<HStoreFile> sfs = moveCompactedFilesIntoPlace(cr, newFiles, user);
     writeCompactionWalRecord(filesToCompact, sfs);
     replaceStoreFiles(filesToCompact, sfs);
@@ -1567,6 +1571,18 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
     logCompactionEndMessage(cr, sfs, now, compactionStartTime);
     return sfs;
+  }
+
+  // Set correct storage policy from the file name of DTCP.
+  // Rename file will not change the storage policy.
+  private void setStoragePolicyFromFileName(List<Path> newFiles) throws IOException {
+    String prefix = HConstants.STORAGE_POLICY_PREFIX;
+    for (Path newFile : newFiles) {
+      if (newFile.getParent().getName().startsWith(prefix)) {
+        CommonFSUtils.setStoragePolicy(fs.getFileSystem(), newFile,
+            newFile.getParent().getName().substring(prefix.length()));
+      }
+    }
   }
 
   private List<HStoreFile> moveCompactedFilesIntoPlace(CompactionRequestImpl cr,

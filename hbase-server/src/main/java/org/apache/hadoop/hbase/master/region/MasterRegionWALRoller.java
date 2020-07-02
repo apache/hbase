@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.region;
 import static org.apache.hadoop.hbase.HConstants.HREGION_OLDLOGDIR_NAME;
 
 import java.io.IOException;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,8 +40,8 @@ import org.slf4j.LoggerFactory;
  * roller logic by our own.
  * <p/>
  * We can reuse most of the code for normal wal roller, the only difference is that there is only
- * one region, so in {@link #scheduleFlush(String)} method we can just schedule flush for the master
- * local region.
+ * one region, so in {@link #scheduleFlush(String, List)} method we can just schedule flush
+ * for the master local region.
  */
 @InterfaceAudience.Private
 public final class MasterRegionWALRoller extends AbstractWALRoller<Abortable> {
@@ -79,7 +80,7 @@ public final class MasterRegionWALRoller extends AbstractWALRoller<Abortable> {
   }
 
   @Override
-  protected void scheduleFlush(String encodedRegionName) {
+  protected void scheduleFlush(String encodedRegionName, List<byte[]> families) {
     MasterRegionFlusherAndCompactor flusher = this.flusherAndCompactor;
     if (flusher != null) {
       flusher.requestFlush();
