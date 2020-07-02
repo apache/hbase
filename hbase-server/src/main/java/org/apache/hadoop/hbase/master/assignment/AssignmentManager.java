@@ -621,7 +621,7 @@ public class AssignmentManager {
    * @param regionInfo the region we would like to assign
    * @param sn target server name
    * @return submitProcedure
-   * @throws IOException
+   * @throws IOException if preTransitCheck fails
    */
   public Future<byte[]> assignAsync(RegionInfo regionInfo, ServerName sn) throws IOException {
     TransitRegionStateProcedure proc = createAssignProcedure(regionInfo, sn);
@@ -632,7 +632,7 @@ public class AssignmentManager {
    * Submits a procedure that assigns a region without waiting for it to finish
    * @param regionInfo the region we would like to assign
    * @return submitProcedure
-   * @throws IOException
+   * @throws IOException if preTransitCheck fails
    */
   public Future<byte[]> assignAsync(RegionInfo regionInfo) throws IOException {
     return assignAsync(regionInfo, null);
