@@ -894,6 +894,17 @@ Time to sleep in between searches for work (in milliseconds).
 `10737418240`
 
 
+[[hbase.hregion.split.overallfiles]]
+*`hbase.hregion.split.overallfiles`*::
++
+.Description
+
+    If we should sum overall region files size when check to split.
++
+.Default
+`false`
+
+
 [[hbase.hregion.majorcompaction]]
 *`hbase.hregion.majorcompaction`*::
 +
