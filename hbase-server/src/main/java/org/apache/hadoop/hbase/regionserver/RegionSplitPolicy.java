@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -69,6 +70,15 @@ public abstract class RegionSplitPolicy extends Configured {
    * @return true if the specified region should be split.
    */
   protected abstract boolean shouldSplit();
+
+  /**
+   * @return {@code true} if the specified region can be split.
+   */
+  protected boolean canSplit() {
+    return !region.getRegionInfo().isMetaRegion() && region.isAvailable() &&
+      !TableName.NAMESPACE_TABLE_NAME.equals(region.getRegionInfo().getTable()) &&
+      region.getStores().stream().allMatch(HStore::canSplit);
+  }
 
   /**
    * @return the key at which the region should be split, or null
