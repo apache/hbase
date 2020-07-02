@@ -20,7 +20,7 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.3.0 - Unreleased (as of 2020-06-29)
+## Release 2.3.0 - Unreleased (as of 2020-07-02)
 
 
 
@@ -56,7 +56,9 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24562](https://issues.apache.org/jira/browse/HBASE-24562) | Stabilize master startup with meta replicas enabled |  Major | meta, read replicas |
 | [HBASE-24221](https://issues.apache.org/jira/browse/HBASE-24221) | Support bulkLoadHFile by family |  Major | HFile |
+| [HBASE-24603](https://issues.apache.org/jira/browse/HBASE-24603) | Zookeeper sync() call is async |  Critical | master, regionserver |
 | [HBASE-24205](https://issues.apache.org/jira/browse/HBASE-24205) | Create metric to know the number of reads that happens from memstore |  Major | metrics |
 | [HBASE-24605](https://issues.apache.org/jira/browse/HBASE-24605) | Break long region names in the web UI |  Minor | UI |
 | [HBASE-15161](https://issues.apache.org/jira/browse/HBASE-15161) | Umbrella: Miscellaneous improvements from production usage |  Major | . |
@@ -335,6 +337,9 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24657](https://issues.apache.org/jira/browse/HBASE-24657) | JsonBean representation of metrics at /jmx endpoint now quotes all numbers |  Minor | metrics |
+| [HBASE-24656](https://issues.apache.org/jira/browse/HBASE-24656) | [Flakey Tests] branch-2 TestMasterNoCluster.testStopDuringStart |  Major | . |
+| [HBASE-24552](https://issues.apache.org/jira/browse/HBASE-24552) | Replica region needs to check if primary region directory exists at file system  in TransitRegionStateProcedure |  Major | read replicas |
 | [HBASE-24117](https://issues.apache.org/jira/browse/HBASE-24117) | Shutdown AssignmentManager before ProcedureExecutor may cause SCP to accidentally skip assigning a region |  Critical | proc-v2 |
 | [HBASE-24588](https://issues.apache.org/jira/browse/HBASE-24588) | Normalizer plan execution is not consistent between plan types |  Major | master, Normalizer |
 | [HBASE-24616](https://issues.apache.org/jira/browse/HBASE-24616) | Remove BoundedRecoveredHFilesOutputSink  dependency on a TableDescriptor |  Major | HFile, MTTR |
@@ -391,6 +396,7 @@
 | [HBASE-24316](https://issues.apache.org/jira/browse/HBASE-24316) | GCMulitpleMergedRegionsProcedure  is not idempotent |  Major | proc-v2 |
 | [HBASE-24336](https://issues.apache.org/jira/browse/HBASE-24336) | [Metrics] FSDataInputStream's localBytesRead is wrong |  Minor | metrics |
 | [HBASE-24307](https://issues.apache.org/jira/browse/HBASE-24307) | [Flakey Tests] krb server for secure thrift tests throws BindException |  Major | . |
+| [HBASE-24322](https://issues.apache.org/jira/browse/HBASE-24322) | UnsafeAvailChecker should also check that required methods are available |  Minor | . |
 | [HBASE-24314](https://issues.apache.org/jira/browse/HBASE-24314) | Some classes still use log4j logger directly |  Blocker | logging |
 | [HBASE-24246](https://issues.apache.org/jira/browse/HBASE-24246) | Miscellaneous hbck2 fixMeta bulk merge fixes: better logging around merges/overlap-fixing, 'HBCK Report' overlap listing, and configuration |  Major | . |
 | [HBASE-24288](https://issues.apache.org/jira/browse/HBASE-24288) | Allow admin user to create table and do bulkLoad |  Major | acl |
@@ -844,6 +850,7 @@
 | [HBASE-24144](https://issues.apache.org/jira/browse/HBASE-24144) | Update docs from master |  Major | documentation |
 | [HBASE-22504](https://issues.apache.org/jira/browse/HBASE-22504) | Optimize the MultiByteBuff#get(ByteBuffer, offset, len) |  Major | BucketCache |
 | [HBASE-24630](https://issues.apache.org/jira/browse/HBASE-24630) | Purge dev javadoc from client bin tarball |  Major | build |
+| [HBASE-24574](https://issues.apache.org/jira/browse/HBASE-24574) | Procedure V2 - Distributed WAL Splitting =\> LOGGING |  Major | wal |
 | [HBASE-24577](https://issues.apache.org/jira/browse/HBASE-24577) | Doc WALSplitter classes |  Trivial | wal |
 | [HBASE-24505](https://issues.apache.org/jira/browse/HBASE-24505) | Reimplement Hbck.setRegionStateInMeta |  Blocker | hbck2 |
 | [HBASE-24309](https://issues.apache.org/jira/browse/HBASE-24309) | Avoid introducing log4j and slf4j-log4j dependencies for modules other than hbase-assembly |  Major | logging, pom |
@@ -1070,6 +1077,7 @@
 | [HBASE-24217](https://issues.apache.org/jira/browse/HBASE-24217) | Add hadoop 3.2.x support |  Major | . |
 | [HBASE-21745](https://issues.apache.org/jira/browse/HBASE-21745) | Make HBCK2 be able to fix issues other than region assignment |  Critical | hbase-operator-tools, hbck2 |
 | [HBASE-22833](https://issues.apache.org/jira/browse/HBASE-22833) | MultiRowRangeFilter should provide a method for creating a filter which is functionally equivalent to multiple prefix filters |  Minor | Client |
+| [HBASE-24646](https://issues.apache.org/jira/browse/HBASE-24646) | Set the log level for ScheduledChore to INFO in HBTU |  Major | test |
 | [HBASE-24631](https://issues.apache.org/jira/browse/HBASE-24631) | Loosen Dockerfile pinned package versions of the "debian-revision" |  Major | build |
 | [HBASE-23055](https://issues.apache.org/jira/browse/HBASE-23055) | Alter hbase:meta |  Major | meta |
 | [HBASE-24611](https://issues.apache.org/jira/browse/HBASE-24611) | Bring back old constructor of SnapshotDescription |  Major | . |
