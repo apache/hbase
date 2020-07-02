@@ -91,27 +91,6 @@ function fcreate_secure {
   chmod 600 "$FPATH"
 }
 
-function check_for_tag {
-  curl -s --head --fail "$ASF_GITHUB_REPO/releases/tag/$1" > /dev/null
-}
-
-function wait_for_tag {
-  # Confirm the tag synchronizes to github.  This can take a couple minutes,
-  # but usually it just takes a few seconds.
-  local max_propagation_time=300
-  local prop_delay=30
-  while ! check_for_tag "$1"; do
-    if (( max_propagation_time <= 0 )); then
-      echo "ERROR: Taking more than 5 minutes to propagate Release Tag $1 to github mirror." >&2
-      echo "Please wait and resume other create-release steps when $1 is available in github." >&2
-      exit 1
-    fi
-    echo "Waiting up to $max_propagation_time seconds for tag to propagate to github mirror..."
-    sleep $prop_delay
-    max_propagation_time=$((max_propagation_time - prop_delay))
-  done
-}
-
 # API compare version.
 function get_api_diff_version {
   local version="$1"
@@ -191,7 +170,7 @@ function get_release_info {
   if [ "$REV" != 0 ]; then
     local PREV_REL_REV=$((REV - 1))
     PREV_REL_TAG="rel/${SHORT_VERSION}.${PREV_REL_REV}"
-    if check_for_tag "$PREV_REL_TAG"; then
+    if git ls-remote --tags "$ASF_REPO" "$PREV_REL_TAG" | grep -q "refs/tags/${PREV_REL_TAG}$" ; then
       RC_COUNT=0
       REV=$((REV + 1))
       NEXT_VERSION="${SHORT_VERSION}.${REV}-SNAPSHOT"
@@ -217,7 +196,7 @@ function get_release_info {
 
   # Check if the RC already exists, and if re-creating the RC, skip tag creation.
   SKIP_TAG=0
-  if check_for_tag "$RELEASE_TAG"; then
+  if git ls-remote --tags "$ASF_REPO" "$RELEASE_TAG" | grep -q "refs/tags/${RELEASE_TAG}$" ; then
     read -r -p "$RELEASE_TAG already exists. Continue anyway [y/n]? " ANSWER
     if [ "$ANSWER" != "y" ]; then
       echo "Exiting."
