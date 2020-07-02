@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * @see KeyPrefixRegionSplitPolicy
  */
 @InterfaceAudience.Private
-public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
+public class DelimitedKeyPrefixRegionSplitPolicy extends SteppingSplitPolicy {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(DelimitedKeyPrefixRegionSplitPolicy.class);

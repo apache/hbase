@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * I.e. rows can be co-located in a region by their prefix.
  */
 @InterfaceAudience.Private
-public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
+public class KeyPrefixRegionSplitPolicy extends SteppingSplitPolicy {
   private static final Logger LOG = LoggerFactory
       .getLogger(KeyPrefixRegionSplitPolicy.class);
   @Deprecated
