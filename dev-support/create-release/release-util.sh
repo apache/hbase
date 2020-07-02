@@ -240,7 +240,7 @@ function get_release_info {
       [ -z "${GPG_KEY_ID}" ] ; then
     GPG_KEY_ID=$("${GPG}" "${GPG_ARGS[@]}" --keyid-format 0xshort --list-public-key "${GPG_KEY}" | head -n 1 | grep -o "0x[0-9A-F]*" || true)
   fi
-  read -r -p "We think the key '${GPG_KEY}' corresponds to the key id '${GPG_KEY_ID}'. Is this correct [y/n? " ANSWER
+  read -r -p "We think the key '${GPG_KEY}' corresponds to the key id '${GPG_KEY_ID}'. Is this correct [y/n]? " ANSWER
   if [ "$ANSWER" = "y" ]; then
     GPG_KEY="${GPG_KEY_ID}"
   fi
