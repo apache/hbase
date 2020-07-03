@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL;
 import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -75,7 +76,6 @@ public interface WALProvider {
   interface WriterBase extends Closeable {
     long getLength();
     /**
-     * <pre>
      * NOTE: We add this method for {@link WALFileLengthProvider} used for replication, considering the
      * case if we use {@link AsyncFSWAL},we write to 3 DNs concurrently,according to the visibility
      * guarantee of HDFS, the data will be available immediately when arriving at DN since all the DNs
@@ -86,7 +86,6 @@ public interface WALProvider {
      * and replication thread could only read writing WAL file limited by this length.
      * see also HBASE-14004 and this document for more details:
      * https://docs.google.com/document/d/11AyWtGhItQs6vsLRIx32PwTxmBY3libXwGXI25obVEY/edit#
-     * </pre>
      * @return byteSize successfully synced to underlying filesystem.
      */
     long getSyncedLength();
