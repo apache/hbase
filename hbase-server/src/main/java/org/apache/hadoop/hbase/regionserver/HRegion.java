@@ -3194,27 +3194,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  void updateDeleteLatestVersionTimestamp(Cell cell, Get get, int count, int maxVersions,
+  private void updateDeleteLatestVersionTimestamp(Cell cell, Get get, int count, int maxVersions,
       byte[] byteNow, List<Cell> deleteCells) throws IOException {
-    List<Cell> result = new ArrayList<>();
-    result.addAll(deleteCells);
+    List<Cell> result = new ArrayList<>(deleteCells);
     Scan scan = new Scan(get);
     scan.setRaw(true);
     this.getScanner(scan).next(result);
-    result.sort((cell1, cell2) -> {
-      if(cell1.getTimestamp()>cell2.getTimestamp()){
-        return -1;
-      } else if(cell1.getTimestamp()<cell2.getTimestamp()){
-        return 1;
-      } else {
-        if(CellUtil.isDelete(cell1)){
-          return -1;
-        } else if (CellUtil.isDelete(cell2)){
-          return 1;
-        }
-      }
-      return 0;
-    });
     List<Cell> cells = new ArrayList<>();
     if (result.size() < count) {
       // Nothing to delete
@@ -3224,6 +3209,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } else if (result.size() > count) {
       int currentVersion = 0;
       long latestCellTS = Long.MAX_VALUE;
+      result.sort((cell1, cell2) -> {
+        if(cell1.getTimestamp()>cell2.getTimestamp()){
+          return -1;
+        } else if(cell1.getTimestamp()<cell2.getTimestamp()){
+          return 1;
+        } else {
+          if(CellUtil.isDelete(cell1)){
+            return -1;
+          } else if (CellUtil.isDelete(cell2)){
+            return 1;
+          }
+        }
+        return 0;
+      });
       for(Cell getCell : result){
         if(!(CellUtil.matchingFamily(getCell, cell) && CellUtil.matchingQualifier(getCell, cell))){
           continue;
