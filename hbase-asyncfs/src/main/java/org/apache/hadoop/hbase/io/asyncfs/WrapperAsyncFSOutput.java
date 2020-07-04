@@ -95,7 +95,7 @@ public class WrapperAsyncFSOutput implements AsyncFSOutput {
       }
       long pos = out.getPos();
       if(pos > this.syncedLength) {
-          this.syncedLength = pos;
+        this.syncedLength = pos;
       }
       future.complete(pos);
     } catch (IOException e) {
@@ -133,6 +133,6 @@ public class WrapperAsyncFSOutput implements AsyncFSOutput {
 
   @Override
   public long getSyncedLength() {
-      return this.syncedLength;
+    return this.syncedLength;
   }
 }

@@ -95,7 +95,7 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   public long getSyncedLength() {
-      return this.syncedLength.get();
+    return this.syncedLength.get();
   }
 
   public FSDataOutputStream getStream() {

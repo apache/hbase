@@ -61,7 +61,7 @@ class DualAsyncFSWALForTest extends DualAsyncFSWAL {
 
     @Override
     public long getSyncedLength() {
-        return this.localWriter.getSyncedLength();
+      return this.localWriter.getSyncedLength();
     }
 
     @Override

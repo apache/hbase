@@ -234,6 +234,6 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   public long getSyncedLength() {
-      return this.output.getSyncedLength();
+    return this.output.getSyncedLength();
   }
 }
