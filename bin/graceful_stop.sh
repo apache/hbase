@@ -22,7 +22,8 @@
 # Turn off the balancer before running this script.
 function usage {
   echo "Usage: graceful_stop.sh [--config <conf-dir>] [-e] [--restart [--reload]] [--thrift] \
-[--rest]  [-nob |--nobalancer ] [-d |--designatedfile] [-x |--excludefile] <hostname>"
+[--rest] [-n |--noack] [--maxthreads <number of threads>] [--movetimeout <timeout in seconds>] \
+[-nob |--nobalancer] [-d |--designatedfile <file path>] [-x |--excludefile <file path>] <hostname>"
   echo " thrift         If we should stop/start thrift before/after the hbase stop/start"
   echo " rest           If we should stop/start rest before/after the hbase stop/start"
   echo " restart        If we should restart after graceful stop"
@@ -34,10 +35,10 @@ moving regions"
 exit with error. Default value is INT_MAX."
   echo " hostname       Hostname of server we are to stop"
   echo " e|failfast     Set -e so exit immediately if any command exits with non-zero status"
-  echo " nob| nobalancer Do not manage balancer states. This is only used as optimization in \
+  echo " nob|nobalancer Do not manage balancer states. This is only used as optimization in \
 rolling_restart.sh to avoid multiple calls to hbase shell"
-  echo " d|designatedfile Designated file with <hostname:port> per line as unload targets"
-  echo " x|excludefile Exclude file should have <hostname:port> per line. We do not unload \
+  echo " d|designatedfile xx Designated file with <hostname:port> per line as unload targets"
+  echo " x|excludefile xx Exclude file should have <hostname:port> per line. We do not unload \
 regions to hostnames given in exclude file"
   exit 1
 }
