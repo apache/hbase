@@ -1385,13 +1385,19 @@ Here is its usage:
 
 ----
 $ ./bin/graceful_stop.sh
-Usage: graceful_stop.sh [--config &conf-dir>] [--restart] [--reload] [--thrift] [--rest] &hostname>
- thrift      If we should stop/start thrift before/after the hbase stop/start
- rest        If we should stop/start rest before/after the hbase stop/start
- restart     If we should restart after graceful stop
- reload      Move offloaded regions back on to the stopped server
- debug       Move offloaded regions back on to the stopped server
- hostname    Hostname of server we are to stop
+Usage: graceful_stop.sh [--config <conf-dir>] [-e] [--restart [--reload]] [--thrift] [--rest] [-n |--noack] [--maxthreads <number of threads>] [--movetimeout <timeout in seconds>] [-nob |--nobalancer] [-d |--designatedfile <file path>] [-x |--excludefile <file path>] <hostname>
+ thrift         If we should stop/start thrift before/after the hbase stop/start
+ rest           If we should stop/start rest before/after the hbase stop/start
+ restart        If we should restart after graceful stop
+ reload         Move offloaded regions back on to the restarted server
+ n|noack        Enable noAck mode in RegionMover. This is a best effort mode for moving regions
+ maxthreads xx  Limit the number of threads used by the region mover. Default value is 1.
+ movetimeout xx Timeout for moving regions. If regions are not moved by the timeout value,exit with error. Default value is INT_MAX.
+ hostname       Hostname of server we are to stop
+ e|failfast     Set -e so exit immediately if any command exits with non-zero status
+ nob|nobalancer Do not manage balancer states. This is only used as optimization in rolling_restart.sh to avoid multiple calls to hbase shell
+ d|designatedfile xx Designated file with <hostname:port> per line as unload targets
+ x|excludefile xx Exclude file should have <hostname:port> per line. We do not unload regions to hostnames given in exclude file
 ----
 
 To decommission a loaded RegionServer, run the following: +$
