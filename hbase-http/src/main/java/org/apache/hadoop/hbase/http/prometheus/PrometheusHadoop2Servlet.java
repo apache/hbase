@@ -21,10 +21,9 @@ package org.apache.hadoop.hbase.http.prometheus;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -34,22 +33,13 @@ import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.MetricsExportHelper;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
 public class PrometheusHadoop2Servlet extends HttpServlet {
 
-  private Logger LOG = LoggerFactory.getLogger(PrometheusHadoop2Servlet.class);
-
-  /**
-   * These 2 structures will make sure that there is only one thread which
-   * reads the metricRecords and produces a string which can be directly consumed
-   * to write on socket / any writer.
-   */
-  private final AtomicInteger amIProducer = new AtomicInteger(0);
-  private final Object waitingRoom = new Object();
+  /* don't let multiple threads produce the metrics at the same time */
+  ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
   /* reference to generated metrics buffer */
   private final AtomicReference<String> pMetricsBuffer = new AtomicReference<>();
@@ -62,23 +52,16 @@ public class PrometheusHadoop2Servlet extends HttpServlet {
 
   @VisibleForTesting
   void writeMetrics(Writer writer) throws IOException {
-    if (amIProducer.compareAndSet(0, 1)) {
+    if (rwLock.writeLock().tryLock()) {
       try {
         renderMetrics(MetricsExportHelper.export());
       } finally {
-        amIProducer.set(0);
-        synchronized (waitingRoom) {
-          waitingRoom.notifyAll();
-        }
+        rwLock.writeLock().unlock();
       }
     } else {
-      synchronized (waitingRoom) {
-        try {
-          waitingRoom.wait(5000L);
-        } catch (InterruptedException e) {
-          LOG.error("Interrupted while waiting for metric collection", e);
-        }
-      }
+      rwLock.readLock().lock();
+      //nothing
+      rwLock.readLock().unlock();
     }
     writer.write(pMetricsBuffer.get());
     writer.flush();
@@ -91,7 +74,8 @@ public class PrometheusHadoop2Servlet extends HttpServlet {
         if (metrics.type() == MetricType.COUNTER || metrics.type() == MetricType.GAUGE) {
 
           String key = PrometheusUtils.toPrometheusName(metricsRecord.name(), metrics.name());
-          builder.append("# TYPE ").append(key).append(" ").append(metrics.type().toString().toLowerCase()).append("\n").append(key).append("{");
+          builder.append("# TYPE ").append(key).append(" ")
+            .append(metrics.type().toString().toLowerCase()).append("\n").append(key).append("{");
 
           /* add tags */
           String sep = "";
