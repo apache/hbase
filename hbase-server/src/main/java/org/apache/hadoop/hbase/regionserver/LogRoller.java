@@ -65,7 +65,7 @@ public class LogRoller extends HasThread {
   private final long rollperiod;
   private final int threadWakeFrequency;
   // The interval to check low replication on hlog's pipeline
-  private long checkLowReplicationInterval;
+  private final long checkLowReplicationInterval;
 
   public void addWAL(final WAL wal) {
     if (null == walNeedsRoll.putIfAbsent(wal, Boolean.FALSE)) {
@@ -167,12 +167,14 @@ public class LogRoller extends HasThread {
       try {
         this.lastrolltime = now;
         for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
+          if (!periodic && !entry.getValue()) {
+            continue;
+          }
           final WAL wal = entry.getKey();
           // Force the roll if the logroll.period is elapsed or if a roll was requested.
           // The returned value is an array of actual region names.
-          final byte [][] regionsToFlush = wal.rollWriter(periodic ||
-              entry.getValue().booleanValue());
-          walNeedsRoll.put(wal, Boolean.FALSE);
+          final byte [][] regionsToFlush = wal.rollWriter(true);
+          entry.setValue(Boolean.FALSE);
           if (regionsToFlush != null) {
             for (byte [] r: regionsToFlush) scheduleFlush(r);
           }
