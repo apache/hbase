@@ -20,7 +20,7 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.3.0 - Unreleased (as of 2020-07-02)
+## Release 2.3.0 - Unreleased (as of 2020-07-06)
 
 
 
@@ -337,6 +337,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24546](https://issues.apache.org/jira/browse/HBASE-24546) | CloneSnapshotProcedure unlimited retry |  Major | snapshots |
 | [HBASE-24657](https://issues.apache.org/jira/browse/HBASE-24657) | JsonBean representation of metrics at /jmx endpoint now quotes all numbers |  Minor | metrics |
 | [HBASE-24656](https://issues.apache.org/jira/browse/HBASE-24656) | [Flakey Tests] branch-2 TestMasterNoCluster.testStopDuringStart |  Major | . |
 | [HBASE-24552](https://issues.apache.org/jira/browse/HBASE-24552) | Replica region needs to check if primary region directory exists at file system  in TransitRegionStateProcedure |  Major | read replicas |
@@ -1077,6 +1078,7 @@
 | [HBASE-24217](https://issues.apache.org/jira/browse/HBASE-24217) | Add hadoop 3.2.x support |  Major | . |
 | [HBASE-21745](https://issues.apache.org/jira/browse/HBASE-21745) | Make HBCK2 be able to fix issues other than region assignment |  Critical | hbase-operator-tools, hbck2 |
 | [HBASE-22833](https://issues.apache.org/jira/browse/HBASE-22833) | MultiRowRangeFilter should provide a method for creating a filter which is functionally equivalent to multiple prefix filters |  Minor | Client |
+| [HBASE-24635](https://issues.apache.org/jira/browse/HBASE-24635) | Split TestMetaWithReplicas |  Major | test |
 | [HBASE-24646](https://issues.apache.org/jira/browse/HBASE-24646) | Set the log level for ScheduledChore to INFO in HBTU |  Major | test |
 | [HBASE-24631](https://issues.apache.org/jira/browse/HBASE-24631) | Loosen Dockerfile pinned package versions of the "debian-revision" |  Major | build |
 | [HBASE-23055](https://issues.apache.org/jira/browse/HBASE-23055) | Alter hbase:meta |  Major | meta |
