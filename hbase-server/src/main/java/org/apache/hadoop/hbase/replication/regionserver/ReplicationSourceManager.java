@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
@@ -169,6 +170,8 @@ public class ReplicationSourceManager implements ReplicationListener {
   // Maximum number of retries before taking bold actions when deleting remote wal files for sync
   // replication peer.
   private final int maxRetriesMultiplier;
+
+  private final Map<String, MetricsSource> sourceMetrics = new HashMap<>();
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
@@ -348,6 +351,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, queueId);
 
     MetricsSource metrics = new MetricsSource(queueId);
+    sourceMetrics.put(queueId, metrics);
     // init replication source
     src.init(conf, fs, this, queueStorage, replicationPeer, server, queueId, clusterId,
       walFileLengthProvider, metrics);
@@ -1120,7 +1124,49 @@ public class ReplicationSourceManager implements ReplicationListener {
   public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
       throws IOException {
     for (ReplicationSourceInterface source : this.sources.values()) {
-      throwIOExceptionWhenFail(() -> source.addHFileRefs(tableName, family, pairs));
+      throwIOExceptionWhenFail(() -> addHFileRefs(source.getPeerId(), tableName, family, pairs));
+    }
+  }
+
+  /**
+   * Add hfile names to the queue to be replicated.
+   * @param peerId the replication peer id
+   * @param tableName Name of the table these files belongs to
+   * @param family Name of the family these files belong to
+   * @param pairs list of pairs of { HFile location in staging dir, HFile path in region dir which
+   *          will be added in the queue for replication}
+   * @throws ReplicationException If failed to add hfile references
+   */
+  private void addHFileRefs(String peerId, TableName tableName, byte[] family,
+    List<Pair<Path, Path>> pairs) throws ReplicationException {
+    // Only the normal replication source update here, its peerId is equals to queueId.
+    MetricsSource metrics = sourceMetrics.get(peerId);
+    ReplicationPeer replicationPeer = replicationPeers.getPeer(peerId);
+    Set<String> namespaces = replicationPeer.getNamespaces();
+    Map<TableName, List<String>> tableCFMap = replicationPeer.getTableCFs();
+    if (tableCFMap != null) { // All peers with TableCFs
+      List<String> tableCfs = tableCFMap.get(tableName);
+      if (tableCFMap.containsKey(tableName)
+        && (tableCfs == null || tableCfs.contains(Bytes.toString(family)))) {
+        this.queueStorage.addHFileRefs(peerId, pairs);
+        metrics.incrSizeOfHFileRefsQueue(pairs.size());
+      } else {
+        LOG.debug("HFiles will not be replicated belonging to the table {} family {} to peer id {}",
+          tableName, Bytes.toString(family), peerId);
+      }
+    } else if (namespaces != null) { // Only for set NAMESPACES peers
+      if (namespaces.contains(tableName.getNamespaceAsString())) {
+        this.queueStorage.addHFileRefs(peerId, pairs);
+        metrics.incrSizeOfHFileRefsQueue(pairs.size());
+      } else {
+        LOG.debug("HFiles will not be replicated belonging to the table {} family {} to peer id {}",
+          tableName, Bytes.toString(family), peerId);
+      }
+    } else {
+      // user has explicitly not defined any table cfs for replication, means replicate all the
+      // data
+      this.queueStorage.addHFileRefs(peerId, pairs);
+      metrics.incrSizeOfHFileRefsQueue(pairs.size());
     }
   }
 
