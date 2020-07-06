@@ -168,7 +168,7 @@ public class AssignRegionHandler extends EventHandler {
       long openProcId, TableDescriptor tableDesc, long masterSystemTime) {
     EventType eventType;
     if (regionInfo.isMetaRegion()) {
-      eventType = EventType.M_RS_CLOSE_META;
+      eventType = EventType.M_RS_OPEN_META;
     } else if (regionInfo.getTable().isSystemTable() ||
       (tableDesc != null && tableDesc.getPriority() >= HConstants.ADMIN_QOS)) {
       eventType = EventType.M_RS_OPEN_PRIORITY_REGION;
