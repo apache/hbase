@@ -458,6 +458,11 @@ public class CloneSnapshotProcedure
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
     final Path tempTableDir = CommonFSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
+    if (CommonFSUtils.isExists(mfs.getFileSystem(), tempTableDir)) {
+      // if the region dirs exist, will cause exception and unlimited retry (see HBASE-24546)
+      LOG.warn("temp table dir already exists on disk: {}, will be deleted.", tempTableDir);
+      CommonFSUtils.deleteDirectory(mfs.getFileSystem(), tempTableDir);
+    }
     ((FSTableDescriptors) (env.getMasterServices().getTableDescriptors()))
       .createTableDescriptorForTableDirectory(tempTableDir,
         TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);
