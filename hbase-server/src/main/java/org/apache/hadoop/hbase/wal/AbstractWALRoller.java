@@ -65,7 +65,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
   private final long rollPeriod;
   private final int threadWakeFrequency;
   // The interval to check low replication on hlog's pipeline
-  private long checkLowReplicationInterval;
+  private final long checkLowReplicationInterval;
 
   private volatile boolean running = true;
 
@@ -148,10 +148,9 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
   @Override
   public void run() {
     while (running) {
-      boolean periodic = false;
       long now = System.currentTimeMillis();
       checkLowReplication(now);
-      periodic = (now - this.lastRollTime) > this.rollPeriod;
+      boolean periodic = (now - this.lastRollTime) > this.rollPeriod;
       if (periodic) {
         // Time for periodic roll, fall through
         LOG.debug("WAL roll period {} ms elapsed", this.rollPeriod);
@@ -178,14 +177,17 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
         for (Iterator<Entry<WAL, Boolean>> iter = walNeedsRoll.entrySet().iterator(); iter
           .hasNext();) {
           Entry<WAL, Boolean> entry = iter.next();
+          if (!periodic && !entry.getValue()) {
+            continue;
+          }
           WAL wal = entry.getKey();
           // reset the flag in front to avoid missing roll request before we return from rollWriter.
-          walNeedsRoll.put(wal, Boolean.FALSE);
+          entry.setValue(Boolean.FALSE);
           Map<byte[], List<byte[]>> regionsToFlush = null;
           try {
             // Force the roll if the logroll.period is elapsed or if a roll was requested.
             // The returned value is an collection of actual region and family names.
-            regionsToFlush = wal.rollWriter(periodic || entry.getValue().booleanValue());
+            regionsToFlush = wal.rollWriter(true);
           } catch (WALClosedException e) {
             LOG.warn("WAL has been closed. Skipping rolling of writer and just remove it", e);
             iter.remove();
@@ -232,7 +234,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    * @return true if all WAL roll finished
    */
   public boolean walRollFinished() {
-    return walNeedsRoll.values().stream().allMatch(needRoll -> !needRoll) && isWaiting();
+    return walNeedsRoll.values().stream().noneMatch(needRoll -> needRoll) && isWaiting();
   }
 
   /**
