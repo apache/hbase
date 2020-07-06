@@ -457,9 +457,8 @@ public class CloneSnapshotProcedure
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
     final Path tempTableDir = FSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
-    // if table dir exist, RestoreSnapshotHelper.restoreHdfsRegions will be remove it,
-    // this will cause exception and unlimited retry (see HBASE-24546)
     if (FSUtils.isExists(mfs.getFileSystem(), tempTableDir)) {
+      // if the region dirs exist, will cause exception and unlimited retry (see HBASE-24546)
       LOG.warn("temp table dir already exists on disk: {}, will be deleted.", tempTableDir);
       FSUtils.deleteDirectory(mfs.getFileSystem(), tempTableDir);
     }
