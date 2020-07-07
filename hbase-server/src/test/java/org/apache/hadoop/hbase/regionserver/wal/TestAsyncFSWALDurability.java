@@ -110,11 +110,6 @@ class CustomAsyncFSWAL extends AsyncFSWAL {
       }
 
       @Override
-      public long getSyncedLength() {
-        return writer.getSyncedLength();
-      }
-
-      @Override
       public CompletableFuture<Long> sync(boolean forceSync) {
         writerSyncFlag = forceSync;
         return writer.sync(forceSync);
