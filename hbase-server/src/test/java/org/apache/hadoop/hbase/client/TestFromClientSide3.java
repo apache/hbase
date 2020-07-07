@@ -516,11 +516,11 @@ public class TestFromClientSide3 {
       Object[] results = new Object[actions.size()];
       table.batch(actions, results);
 
-      assertTrue(((Result) results[0]).getExists());
+      assertTrue(((CheckAndMutateResult) results[0]).isSuccess());
       assertEquals("b",
         Bytes.toString(((Result) results[1]).getValue(FAMILY, Bytes.toBytes("B"))));
       assertTrue(((Result) results[2]).getExists());
-      assertFalse(((Result) results[3]).getExists());
+      assertFalse(((CheckAndMutateResult) results[3]).isSuccess());
       assertTrue(((Result) results[4]).isEmpty());
 
       Result result = table.get(new Get(row1));

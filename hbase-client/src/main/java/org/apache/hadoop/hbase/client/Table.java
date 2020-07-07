@@ -617,11 +617,11 @@ public interface Table extends Closeable {
    * it performs the specified action.
    *
    * @param checkAndMutate The CheckAndMutate object.
-   * @return boolean that represents the result for the CheckAndMutate.
+   * @return A CheckAndMutateResult object that represents the result for the CheckAndMutate.
    * @throws IOException if a remote or network exception occurs.
    */
-  default boolean checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
-    return checkAndMutate(Collections.singletonList(checkAndMutate))[0];
+  default CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+    return checkAndMutate(Collections.singletonList(checkAndMutate)).get(0);
   }
 
   /**
@@ -630,10 +630,12 @@ public interface Table extends Closeable {
    * atomically (and thus, each may fail independently of others).
    *
    * @param checkAndMutates The list of CheckAndMutate.
-   * @return A array of boolean that represents the result for each CheckAndMutate.
+   * @return A list of CheckAndMutateResult objects that represents the result for each
+   *   CheckAndMutate.
    * @throws IOException if a remote or network exception occurs.
    */
-  default boolean[] checkAndMutate(List<CheckAndMutate> checkAndMutates) throws IOException {
+  default List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
+    throws IOException {
     throw new NotImplementedException("Add an implementation!");
   }
 

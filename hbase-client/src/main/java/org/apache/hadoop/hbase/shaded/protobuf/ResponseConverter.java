@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.SingleResponse;
@@ -156,29 +157,55 @@ public final class ResponseConverter {
         // This RegionAction is from a RowMutations/CheckAndMutate in a batch.
         // If there is an exception from the server, the exception is set at
         // the RegionActionResult level, which has been handled above.
-        responseValue = actionResult.getProcessed() ?
+        if (actions.hasCondition()) {
+          Result result = null;
+          if (actionResult.getResultOrExceptionCount() > 0) {
+            ResultOrException roe = actionResult.getResultOrException(0);
+            if (roe.hasResult()) {
+              Result r = ProtobufUtil.toResult(roe.getResult(), cells);
+              if (!r.isEmpty()) {
+                result = r;
+              }
+            }
+          }
+          responseValue = new CheckAndMutateResult(actionResult.getProcessed(), result);
+        } else {
+          responseValue = actionResult.getProcessed() ?
             ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
             ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
+        }
         results.add(regionName, index, responseValue);
         continue;
       }
 
-      for (ResultOrException roe : actionResult.getResultOrExceptionList()) {
-        if (roe.hasException()) {
-          responseValue = ProtobufUtil.toException(roe.getException());
-        } else if (roe.hasResult()) {
-          responseValue = ProtobufUtil.toResult(roe.getResult(), cells);
-        } else if (roe.hasServiceResult()) {
-          responseValue = roe.getServiceResult();
-        } else {
-          // Sometimes, the response is just "it was processed". Generally, this occurs for things
-          // like mutateRows where either we get back 'processed' (or not) and optionally some
-          // statistics about the regions we touched.
-          responseValue = actionResult.getProcessed() ?
-                          ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
-                          ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
+      if (actions.hasCondition()) {
+        for (ResultOrException roe : actionResult.getResultOrExceptionList()) {
+          Result result = null;
+          Result r = ProtobufUtil.toResult(roe.getResult(), cells);
+          if (!r.isEmpty()) {
+            result = r;
+          }
+          responseValue = new CheckAndMutateResult(actionResult.getProcessed(), result);
+          results.add(regionName, roe.getIndex(), responseValue);
         }
-        results.add(regionName, roe.getIndex(), responseValue);
+      } else {
+        for (ResultOrException roe : actionResult.getResultOrExceptionList()) {
+          if (roe.hasException()) {
+            responseValue = ProtobufUtil.toException(roe.getException());
+          } else if (roe.hasResult()) {
+            responseValue = ProtobufUtil.toResult(roe.getResult(), cells);
+          } else if (roe.hasServiceResult()) {
+            responseValue = roe.getServiceResult();
+          } else {
+            // Sometimes, the response is just "it was processed". Generally, this occurs for things
+            // like mutateRows where either we get back 'processed' (or not) and optionally some
+            // statistics about the regions we touched.
+            responseValue = actionResult.getProcessed() ?
+              ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
+              ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
+          }
+          results.add(regionName, roe.getIndex(), responseValue);
+        }
       }
     }
 
@@ -190,6 +217,21 @@ public final class ResponseConverter {
     }
 
     return results;
+  }
+
+  /**
+   * Create a CheckAndMutateResult object from a protocol buffer MutateResponse
+   *
+   * @return a CheckAndMutateResult object
+   */
+  public static CheckAndMutateResult getCheckAndMutateResult(
+    ClientProtos.MutateResponse mutateResponse) {
+    boolean success = mutateResponse.getProcessed();
+    Result result = null;
+    if (mutateResponse.hasResult()) {
+      result = ProtobufUtil.toResult(mutateResponse.getResult());
+    }
+    return new CheckAndMutateResult(success, result);
   }
 
   /**
