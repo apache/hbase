@@ -367,11 +367,11 @@ public class TestAsyncTableBatch {
     List<Row> actions = Arrays.asList(checkAndMutate1, get, mutations, checkAndMutate2, put);
     List<Object> results = table.batchAll(actions).get();
 
-    assertTrue(((Result) results.get(0)).getExists());
+    assertTrue(((CheckAndMutateResult) results.get(0)).isSuccess());
     assertEquals("b",
       Bytes.toString(((Result) results.get(1)).getValue(FAMILY, Bytes.toBytes("B"))));
     assertTrue(((Result) results.get(2)).getExists());
-    assertFalse(((Result) results.get(3)).getExists());
+    assertFalse(((CheckAndMutateResult) results.get(3)).isSuccess());
     assertTrue(((Result) results.get(4)).isEmpty());
 
     Result result = table.get(new Get(row1)).get();
