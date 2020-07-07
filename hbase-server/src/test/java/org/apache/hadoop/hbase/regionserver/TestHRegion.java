@@ -1251,11 +1251,6 @@ public class TestHRegion {
           public long getLength() {
             return w.getLength();
           }
-
-          @Override
-          public long getSyncedLength() {
-            return w.getSyncedLength();
-          }
         };
       }
     }
