@@ -1001,20 +1001,24 @@ public final class RequestConverter {
    * @return a protocol buffer FlushRegionRequest
    */
   public static FlushRegionRequest buildFlushRegionRequest(final byte[] regionName) {
-    return buildFlushRegionRequest(regionName, false);
+    return buildFlushRegionRequest(regionName, null, false);
   }
 
   /**
    * Create a protocol buffer FlushRegionRequest for a given region name
    * @param regionName the name of the region to get info
+   * @param columnFamily column family within a region
    * @return a protocol buffer FlushRegionRequest
    */
   public static FlushRegionRequest buildFlushRegionRequest(final byte[] regionName,
-      boolean writeFlushWALMarker) {
+    byte[] columnFamily, boolean writeFlushWALMarker) {
     FlushRegionRequest.Builder builder = FlushRegionRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
     builder.setWriteFlushWalMarker(writeFlushWALMarker);
+    if (columnFamily != null) {
+      builder.setFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+    }
     return builder.build();
   }
 

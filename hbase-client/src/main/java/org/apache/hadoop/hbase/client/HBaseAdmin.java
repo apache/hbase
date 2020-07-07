@@ -1161,6 +1161,11 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void flushRegion(final byte[] regionName) throws IOException {
+    flushRegion(regionName, null);
+  }
+
+  @Override
+  public void flushRegion(final byte[] regionName, byte[] columnFamily) throws IOException {
     Pair<RegionInfo, ServerName> regionServerPair = getRegion(regionName);
     if (regionServerPair == null) {
       throw new IllegalArgumentException("Unknown regionname: " + Bytes.toStringBinary(regionName));
@@ -1170,16 +1175,17 @@ public class HBaseAdmin implements Admin {
     }
     final RegionInfo regionInfo = regionServerPair.getFirst();
     ServerName serverName = regionServerPair.getSecond();
-    flush(this.connection.getAdmin(serverName), regionInfo);
+    flush(this.connection.getAdmin(serverName), regionInfo, columnFamily);
   }
 
-  private void flush(AdminService.BlockingInterface admin, final RegionInfo info)
+  private void flush(AdminService.BlockingInterface admin, final RegionInfo info,
+      byte[] columnFamily)
     throws IOException {
     ProtobufUtil.call(() -> {
       // TODO: There is no timeout on this controller. Set one!
       HBaseRpcController controller = rpcControllerFactory.newController();
       FlushRegionRequest request =
-        RequestConverter.buildFlushRegionRequest(info.getRegionName());
+        RequestConverter.buildFlushRegionRequest(info.getRegionName(), columnFamily, false);
       admin.flushRegion(controller, request);
       return null;
     });
@@ -1188,7 +1194,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public void flushRegionServer(ServerName serverName) throws IOException {
     for (RegionInfo region : getRegions(serverName)) {
-      flush(this.connection.getAdmin(serverName), region);
+      flush(this.connection.getAdmin(serverName), region, null);
     }
   }
 

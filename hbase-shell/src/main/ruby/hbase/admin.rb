@@ -53,8 +53,14 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region or region server flush
-    def flush(name)
-      @admin.flushRegion(name.to_java_bytes)
+    def flush(name, family = nil)
+      family_bytes = nil
+      family_bytes = family.to_java_bytes unless family.nil?
+      if family_bytes.nil?
+        @admin.flushRegion(name.to_java_bytes)
+      else
+        @admin.flushRegion(name.to_java_bytes, family_bytes)
+      end
     rescue java.lang.IllegalArgumentException
       # Unknown region. Try table.
       begin

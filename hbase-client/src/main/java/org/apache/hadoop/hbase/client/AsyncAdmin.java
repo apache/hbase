@@ -313,6 +313,14 @@ public interface AsyncAdmin {
   CompletableFuture<Void> flushRegion(byte[] regionName);
 
   /**
+   * Flush a column family within a region.
+   * @param regionName region to flush
+   * @param columnFamily column family within a region. If not present, flush the region's all
+   *          column families.
+   */
+  CompletableFuture<Void> flushRegion(byte[] regionName, byte[] columnFamily);
+
+  /**
    * Flush all region on the region server.
    * @param serverName server to flush
    */

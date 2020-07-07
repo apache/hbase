@@ -891,6 +891,15 @@ public interface Admin extends Abortable, Closeable {
   void flushRegion(byte[] regionName) throws IOException;
 
   /**
+   * Flush a column family within a region. Synchronous operation.
+   *
+   * @param regionName region to flush
+   * @param columnFamily column family within a region
+   * @throws IOException if a remote or network exception occurs
+   */
+  void flushRegion(byte[] regionName, byte[] columnFamily) throws IOException;
+
+  /**
    * Flush all regions on the region server. Synchronous operation.
    * @param serverName the region server name to flush
    * @throws IOException if a remote or network exception occurs

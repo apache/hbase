@@ -637,6 +637,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public void flushRegion(byte[] regionName, byte[] columnFamily) {
+    throw new NotImplementedException("flushRegion not supported in ThriftAdmin");
+  }
+
+  @Override
   public void flushRegionServer(ServerName serverName) {
     throw new NotImplementedException("flushRegionServer not supported in ThriftAdmin");
 

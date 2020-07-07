@@ -924,6 +924,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> flushRegion(byte[] regionName) {
+    return flushRegion(regionName, null);
+  }
+
+  @Override
+  public CompletableFuture<Void> flushRegion(byte[] regionName, byte[] columnFamily) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(getRegionLocation(regionName), (location, err) -> {
       if (err != null) {
@@ -936,7 +941,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           .completeExceptionally(new NoServerForRegionException(Bytes.toStringBinary(regionName)));
         return;
       }
-      addListener(flush(serverName, location.getRegion()), (ret, err2) -> {
+      addListener(flush(serverName, location.getRegion(), columnFamily), (ret, err2) -> {
         if (err2 != null) {
           future.completeExceptionally(err2);
         } else {
@@ -947,14 +952,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
-  private CompletableFuture<Void> flush(final ServerName serverName, final RegionInfo regionInfo) {
+  private CompletableFuture<Void> flush(final ServerName serverName, final RegionInfo regionInfo,
+      byte[] columnFamily) {
     return this.<Void> newAdminCaller()
             .serverName(serverName)
             .action(
               (controller, stub) -> this.<FlushRegionRequest, FlushRegionResponse, Void> adminCall(
                 controller, stub, RequestConverter.buildFlushRegionRequest(regionInfo
-                  .getRegionName()), (s, c, req, done) -> s.flushRegion(c, req, done),
-                resp -> null))
+                  .getRegionName(), columnFamily, false),
+                (s, c, req, done) -> s.flushRegion(c, req, done), resp -> null))
             .call();
   }
 
@@ -968,7 +974,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
       List<CompletableFuture<Void>> compactFutures = new ArrayList<>();
       if (hRegionInfos != null) {
-        hRegionInfos.forEach(region -> compactFutures.add(flush(sn, region)));
+        hRegionInfos.forEach(region -> compactFutures.add(flush(sn, region, null)));
       }
       addListener(CompletableFuture.allOf(
         compactFutures.toArray(new CompletableFuture<?>[compactFutures.size()])), (ret, err2) -> {
