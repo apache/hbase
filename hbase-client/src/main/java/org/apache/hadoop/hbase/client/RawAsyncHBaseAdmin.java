@@ -958,7 +958,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           .completeExceptionally(new NoServerForRegionException(Bytes.toStringBinary(regionName)));
         return;
       }
-      addListener(flush(serverName, location.getRegion(), columnFamily, writeFlushWALMarker), (ret, err2) -> {
+      addListener(flush(serverName, location.getRegion(), columnFamily,
+        writeFlushWALMarker), (ret, err2) -> {
         if (err2 != null) {
           future.completeExceptionally(err2);
         } else {
@@ -974,7 +975,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return this.<FlushRegionResponse> newAdminCaller().serverName(serverName)
       .action((controller, stub) -> this
         .<FlushRegionRequest, FlushRegionResponse, FlushRegionResponse> adminCall(controller, stub,
-          RequestConverter.buildFlushRegionRequest(regionInfo.getRegionName(), columnFamily, writeFlushWALMarker),
+          RequestConverter.buildFlushRegionRequest(regionInfo.getRegionName(),
+            columnFamily, writeFlushWALMarker),
           (s, c, req, done) -> s.flushRegion(c, req, done), resp -> resp))
       .call();
   }
@@ -989,8 +991,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
       List<CompletableFuture<Void>> compactFutures = new ArrayList<>();
       if (hRegionInfos != null) {
-        hRegionInfos.forEach(region -> compactFutures.add(flush(sn, region, null, false).thenAccept(r -> {
-        })));
+        hRegionInfos.forEach(
+          region -> compactFutures.add(
+            flush(sn, region, null, false).thenAccept(r -> {})
+          )
+        );
       }
       addListener(CompletableFuture.allOf(
         compactFutures.toArray(new CompletableFuture<?>[compactFutures.size()])), (ret, err2) -> {
