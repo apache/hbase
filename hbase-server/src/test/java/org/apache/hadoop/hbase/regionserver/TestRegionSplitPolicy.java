@@ -181,13 +181,13 @@ public class TestRegionSplitPolicy {
     // test sum of store's size not greater than sizeToCheck
     stores.add(mockStore1);
     stores.add(mockStore2);
-    assertFalse(policy.isExceedSize(1024, ""));
+    assertFalse(policy.isExceedSize(1024));
     stores.clear();
 
     // test sum of store's size greater than sizeToCheck
     stores.add(mockStore1);
     stores.add(mockStore3);
-    assertTrue(policy.isExceedSize(1024, ""));
+    assertTrue(policy.isExceedSize(1024));
   }
 
   @Test
