@@ -76,14 +76,10 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
 
   @Override
   protected boolean shouldSplit() {
-    // If any of the stores is unable to split (eg they contain reference files)
-    // then don't split
-    for (HStore store : region.getStores()) {
-      if (!store.canSplit()) {
-        return false;
-      }
+    if (!canSplit()) {
+      return false;
     }
-    return isExceedSize(desiredMaxFileSize, "");
+    return isExceedSize(desiredMaxFileSize);
   }
 
   long getDesiredMaxFileSize() {
@@ -98,7 +94,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   /**
    * @return true if region size exceed the sizeToCheck
    */
-  protected boolean isExceedSize(long sizeToCheck, String extraLogStr) {
+  protected boolean isExceedSize(long sizeToCheck) {
     if (overallHregionFiles) {
       long sumSize = 0;
       for (HStore store : region.getStores()) {
@@ -107,7 +103,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
       if (sumSize > sizeToCheck) {
         LOG.debug("ShouldSplit because region size is big enough "
             + "size={}, sizeToCheck={}{}", StringUtils.humanSize(sumSize),
-          StringUtils.humanSize(sizeToCheck), extraLogStr);
+          StringUtils.humanSize(sizeToCheck));
         return true;
       }
     } else {
@@ -116,7 +112,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
         if (size > sizeToCheck) {
           LOG.debug("ShouldSplit because {} size={}, sizeToCheck={}{}",
             store.getColumnFamilyName(), StringUtils.humanSize(size),
-            StringUtils.humanSize(sizeToCheck), extraLogStr);
+            StringUtils.humanSize(sizeToCheck));
           return true;
         }
       }
