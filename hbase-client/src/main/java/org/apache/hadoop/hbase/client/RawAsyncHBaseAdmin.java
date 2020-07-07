@@ -958,14 +958,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           .completeExceptionally(new NoServerForRegionException(Bytes.toStringBinary(regionName)));
         return;
       }
-      addListener(flush(serverName, location.getRegion(), columnFamily,
-        writeFlushWALMarker), (ret, err2) -> {
-        if (err2 != null) {
-          future.completeExceptionally(err2);
-        } else {
-          future.complete(ret);
-        }
-      });
+      addListener(
+        flush(serverName, location.getRegion(), columnFamily, writeFlushWALMarker),
+        (ret, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          } else {
+            future.complete(ret);
+          }});
     });
     return future;
   }
