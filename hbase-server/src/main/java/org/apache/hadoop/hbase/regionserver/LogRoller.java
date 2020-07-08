@@ -172,6 +172,7 @@ public class LogRoller extends HasThread implements Closeable {
       try {
         this.lastRollTime = System.currentTimeMillis();
         for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
+          // when use multiwal and a wal request roll, prevent other wals together roll.
           if (!periodic && !entry.getValue()) {
             continue;
           }
