@@ -85,7 +85,7 @@ public class TestLogRoller {
     Iterator<Map.Entry<MyFSHLog, Path>> iterator = wals.entrySet().iterator();
     Map.Entry<MyFSHLog, Path> entry = iterator.next();
     entry.getKey().requestLogRoll();
-    while (entry.getKey().isRolling()) {
+    while (!roller.walRollFinished() || entry.getKey().isRolling()) {
       TimeUnit.MILLISECONDS.sleep(100);
     }
     // current file name of first wal is changed
