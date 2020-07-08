@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
@@ -1050,7 +1051,30 @@ public class ReplicationSourceManager {
   public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
       throws IOException {
     for (ReplicationSourceInterface source : this.sources.values()) {
-      throwIOExceptionWhenFail(() -> source.addHFileRefs(tableName, family, pairs));
+      throwIOExceptionWhenFail(() -> addHFileRefs(source, tableName, family, pairs));
+    }
+  }
+
+  /**
+   * Add hfile names to the queue to be replicated.
+   * @param source the replication peer source
+   * @param tableName Name of the table these files belongs to
+   * @param family Name of the family these files belong to
+   * @param pairs list of pairs of { HFile location in staging dir, HFile path in region dir which
+   *          will be added in the queue for replication}
+   * @throws ReplicationException If failed to add hfile references
+   */
+  private void addHFileRefs(ReplicationSourceInterface source, TableName tableName, byte[] family,
+    List<Pair<Path, Path>> pairs) throws ReplicationException {
+    String peerId = source.getPeerId();
+    // Only the normal replication source update here, its peerId is equals to queueId.
+    ReplicationPeer replicationPeer = replicationPeers.getPeer(peerId);
+    if (replicationPeer.getPeerConfig().needToReplicate(tableName, family)) {
+      this.queueStorage.addHFileRefs(peerId, pairs);
+      source.getSourceMetrics().incrSizeOfHFileRefsQueue(pairs.size());
+    } else {
+      LOG.debug("HFiles will not be replicated belonging to the table {} family {} to peer id {}",
+        tableName, Bytes.toString(family), peerId);
     }
   }
 
