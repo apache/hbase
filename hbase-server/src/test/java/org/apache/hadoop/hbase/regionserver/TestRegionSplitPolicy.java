@@ -65,6 +65,7 @@ public class TestRegionSplitPolicy {
     RegionInfo hri = RegionInfoBuilder.newBuilder(TABLENAME).build();
     mockRegion = mock(HRegion.class);
     doReturn(hri).when(mockRegion).getRegionInfo();
+    doReturn(true).when(mockRegion).isAvailable();
     stores = new ArrayList<>();
     doReturn(stores).when(mockRegion).getStores();
   }
