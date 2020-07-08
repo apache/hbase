@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -367,10 +368,10 @@ public class TestCheckAndMutate {
 
       // put the same row again with C column deleted
       RowMutations rm = makeRowMutationsWithColumnCDeleted();
-      boolean res = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      CheckAndMutateResult res = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
         .build(rm));
-      assertTrue(res);
+      assertTrue(res.isSuccess());
 
       // get row back and assert the values
       getOneRowAndAssertAllButCExist(table);
@@ -401,45 +402,45 @@ public class TestCheckAndMutate {
       getOneRowAndAssertAllExist(table);
 
       // Put with success
-      boolean ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new SingleColumnValueFilter(FAMILY,
           Bytes.toBytes("A"), CompareOperator.EQUAL, Bytes.toBytes("a")))
         .build(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))));
-      assertTrue(ok);
+      assertTrue(result.isSuccess());
 
-      Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
-      assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+      Result r = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
+      assertEquals("d", Bytes.toString(r.getValue(FAMILY, Bytes.toBytes("D"))));
 
       // Put with failure
-      ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
         CompareOperator.EQUAL, Bytes.toBytes("b")))
         .build(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e"))));
-      assertFalse(ok);
+      assertFalse(result.isSuccess());
 
       assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("E"))));
 
       // Delete with success
-      ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
           CompareOperator.EQUAL, Bytes.toBytes("a")))
         .build(new Delete(ROWKEY).addColumns(FAMILY, Bytes.toBytes("D"))));
-      assertTrue(ok);
+      assertTrue(result.isSuccess());
 
       assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"))));
 
       // Mutate with success
-      ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"),
           CompareOperator.EQUAL, Bytes.toBytes("b")))
         .build(new RowMutations(ROWKEY)
           .add((Mutation) new Put(ROWKEY)
             .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
           .add((Mutation) new Delete(ROWKEY).addColumns(FAMILY, Bytes.toBytes("A")))));
-      assertTrue(ok);
+      assertTrue(result.isSuccess());
 
-      result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
-      assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+      r = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
+      assertEquals("d", Bytes.toString(r.getValue(FAMILY, Bytes.toBytes("D"))));
 
       assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A"))));
     }
@@ -454,44 +455,44 @@ public class TestCheckAndMutate {
       getOneRowAndAssertAllExist(table);
 
       // Put with success
-      boolean ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new FilterList(
           new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
             Bytes.toBytes("a")),
           new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
             Bytes.toBytes("b"))))
         .build(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))));
-      assertTrue(ok);
+      assertTrue(result.isSuccess());
 
-      Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
-      assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+      Result r = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
+      assertEquals("d", Bytes.toString(r.getValue(FAMILY, Bytes.toBytes("D"))));
 
       // Put with failure
-      ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new FilterList(
           new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
             Bytes.toBytes("a")),
           new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
             Bytes.toBytes("c"))))
         .build(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e"))));
-      assertFalse(ok);
+      assertFalse(result.isSuccess());
 
       assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("E"))));
 
       // Delete with success
-      ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new FilterList(
             new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
               Bytes.toBytes("a")),
             new SingleColumnValueFilter(FAMILY, Bytes.toBytes("B"), CompareOperator.EQUAL,
               Bytes.toBytes("b"))))
         .build(new Delete(ROWKEY).addColumns(FAMILY, Bytes.toBytes("D"))));
-      assertTrue(ok);
+      assertTrue(result.isSuccess());
 
       assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D"))));
 
       // Mutate with success
-      ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new FilterList(
           new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
             Bytes.toBytes("a")),
@@ -501,10 +502,10 @@ public class TestCheckAndMutate {
           .add((Mutation) new Put(ROWKEY)
             .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
           .add((Mutation) new Delete(ROWKEY).addColumns(FAMILY, Bytes.toBytes("A")))));
-      assertTrue(ok);
+      assertTrue(result.isSuccess());
 
-      result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
-      assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+      r = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("D")));
+      assertEquals("d", Bytes.toString(r.getValue(FAMILY, Bytes.toBytes("D"))));
 
       assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A"))));
     }
@@ -517,25 +518,25 @@ public class TestCheckAndMutate {
       table.put(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A"), 100, Bytes.toBytes("a")));
 
       // Put with success
-      boolean ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new FilterList(
           new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
           new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
           new TimestampsFilter(Collections.singletonList(100L))))
         .build(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))));
-      assertTrue(ok);
+      assertTrue(result.isSuccess());
 
-      Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("B")));
-      assertEquals("b", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));
+      Result r = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("B")));
+      assertEquals("b", Bytes.toString(r.getValue(FAMILY, Bytes.toBytes("B"))));
 
       // Put with failure
-      ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new FilterList(
           new FamilyFilter(CompareOperator.EQUAL, new BinaryComparator(FAMILY)),
           new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("A"))),
           new TimestampsFilter(Collections.singletonList(101L))))
         .build(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"))));
-      assertFalse(ok);
+      assertFalse(result.isSuccess());
 
       assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C"))));
     }
@@ -548,23 +549,23 @@ public class TestCheckAndMutate {
       table.put(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A"), 100, Bytes.toBytes("a")));
 
       // Put with success
-      boolean ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new SingleColumnValueFilter(FAMILY,
           Bytes.toBytes("A"), CompareOperator.EQUAL, Bytes.toBytes("a")))
         .timeRange(TimeRange.between(0, 101))
         .build(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))));
-      assertTrue(ok);
+      assertTrue(result.isSuccess());
 
-      Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("B")));
-      assertEquals("b", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));
+      Result r = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("B")));
+      assertEquals("b", Bytes.toString(r.getValue(FAMILY, Bytes.toBytes("B"))));
 
       // Put with failure
-      ok = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
+      result = table.checkAndMutate(CheckAndMutate.newBuilder(ROWKEY)
         .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"),
           CompareOperator.EQUAL, Bytes.toBytes("a")))
         .timeRange(TimeRange.between(0, 100))
         .build(new Put(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"))));
-      assertFalse(ok);
+      assertFalse(result.isSuccess());
 
       assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C"))));
     }
@@ -596,10 +597,11 @@ public class TestCheckAndMutate {
         .ifEquals(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("a"))
         .build(new Put(ROWKEY2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("f")));
 
-      boolean[] results = table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
+      List<CheckAndMutateResult> results =
+        table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
 
-      assertTrue(results[0]);
-      assertFalse(results[1]);
+      assertTrue(results.get(0).isSuccess());
+      assertFalse(results.get(1).isSuccess());
 
       Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A")));
       assertEquals("e", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("A"))));
@@ -618,8 +620,8 @@ public class TestCheckAndMutate {
 
       results = table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
 
-      assertTrue(results[0]);
-      assertFalse(results[1]);
+      assertTrue(results.get(0).isSuccess());
+      assertFalse(results.get(1).isSuccess());
 
       assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A"))));
 
@@ -643,8 +645,8 @@ public class TestCheckAndMutate {
 
       results = table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
 
-      assertTrue(results[0]);
-      assertFalse(results[1]);
+      assertTrue(results.get(0).isSuccess());
+      assertFalse(results.get(1).isSuccess());
 
       result = table.get(new Get(ROWKEY3));
       assertEquals("f", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("F"))));
@@ -674,10 +676,11 @@ public class TestCheckAndMutate {
         .ifNotExists(FAMILY, Bytes.toBytes("B"))
         .build(new Put(ROWKEY2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("f")));
 
-      boolean[] results = table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
+      List<CheckAndMutateResult> results =
+        table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
 
-      assertTrue(results[0]);
-      assertFalse(results[1]);
+      assertTrue(results.get(0).isSuccess());
+      assertFalse(results.get(1).isSuccess());
 
       Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A")));
       assertEquals("e", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("A"))));
@@ -696,8 +699,8 @@ public class TestCheckAndMutate {
 
       results = table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
 
-      assertTrue(results[0]);
-      assertFalse(results[1]);
+      assertTrue(results.get(0).isSuccess());
+      assertFalse(results.get(1).isSuccess());
 
       result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("A")));
       assertEquals("a", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("A"))));
@@ -718,8 +721,8 @@ public class TestCheckAndMutate {
 
       results = table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
 
-      assertTrue(results[0]);
-      assertFalse(results[1]);
+      assertTrue(results.get(0).isSuccess());
+      assertFalse(results.get(1).isSuccess());
 
       result = table.get(new Get(ROWKEY3).addColumn(FAMILY, Bytes.toBytes("C")));
       assertEquals("e", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("C"))));
@@ -759,10 +762,11 @@ public class TestCheckAndMutate {
             Bytes.toBytes("b"))))
         .build(new Put(ROWKEY2).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("h")));
 
-      boolean[] results = table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
+      List<CheckAndMutateResult> results =
+        table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
 
-      assertTrue(results[0]);
-      assertFalse(results[1]);
+      assertTrue(results.get(0).isSuccess());
+      assertFalse(results.get(1).isSuccess());
 
       Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C")));
       assertEquals("g", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("C"))));
@@ -789,8 +793,8 @@ public class TestCheckAndMutate {
 
       results = table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
 
-      assertTrue(results[0]);
-      assertFalse(results[1]);
+      assertTrue(results.get(0).isSuccess());
+      assertFalse(results.get(1).isSuccess());
 
       assertFalse(table.exists(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C"))));
 
@@ -822,8 +826,8 @@ public class TestCheckAndMutate {
 
       results = table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
 
-      assertTrue(results[0]);
-      assertFalse(results[1]);
+      assertTrue(results.get(0).isSuccess());
+      assertFalse(results.get(1).isSuccess());
 
       result = table.get(new Get(ROWKEY));
       assertNull(result.getValue(FAMILY, Bytes.toBytes("A")));
@@ -864,10 +868,11 @@ public class TestCheckAndMutate {
         .timeRange(TimeRange.between(0, 100))
         .build(new Put(ROWKEY2).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("h")));
 
-      boolean[] results = table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
+      List<CheckAndMutateResult> results =
+        table.checkAndMutate(Arrays.asList(checkAndMutate1, checkAndMutate2));
 
-      assertTrue(results[0]);
-      assertFalse(results[1]);
+      assertTrue(results.get(0).isSuccess());
+      assertFalse(results.get(1).isSuccess());
 
       Result result = table.get(new Get(ROWKEY).addColumn(FAMILY, Bytes.toBytes("C")));
       assertEquals("g", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("C"))));

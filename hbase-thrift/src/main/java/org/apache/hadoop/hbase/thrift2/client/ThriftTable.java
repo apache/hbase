@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -436,12 +437,12 @@ public class ThriftTable implements Table {
   }
 
   @Override
-  public boolean checkAndMutate(CheckAndMutate checkAndMutate) {
+  public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) {
     throw new NotImplementedException("Implement later");
   }
 
   @Override
-  public boolean[] checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+  public List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates) {
     throw new NotImplementedException("Implement later");
   }
 
