@@ -34,11 +34,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -936,6 +938,73 @@ public class TestKeepDeletes {
     region.compact(true);
     // all delete marker gone
     assertEquals(0, countDeleteMarkers(region));
+
+    HBaseTestingUtility.closeRegionAndWAL(region);
+  }
+
+  /**
+   * No more than max versions should be retained. For a CF with max versions 1,
+   * scans/get should not yield any results after a delete.
+   *
+   * @throws IOException if test faces any issues while creating/cleaning up necessary region.
+   */
+  @Test
+  public void testDeleteConsistentWithOneVersion() throws IOException {
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 1,
+        HConstants.FOREVER, KeepDeletedCells.TRUE);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
+
+    long ts = EnvironmentEdgeManager.currentTime();
+    Put p = new Put(T1, ts);
+    p.addColumn(c0, c0, T1);
+    region.put(p);
+
+    p = new Put(T1, ts+1);
+    p.addColumn(c0, c0, T2);
+    region.put(p);
+
+    checkGet(region, T1, c0, c0, ts+2, T2);
+
+    Delete delete = new Delete(T1);
+    delete.addColumn(c0, c0, HConstants.LATEST_TIMESTAMP);
+    region.delete(delete);
+
+    Get get = new Get(T1);
+    Result result = region.get(get);
+
+    assertTrue("Get should not return any results.", result.isEmpty());
+
+    HBaseTestingUtility.closeRegionAndWAL(region);
+  }
+
+  /**
+   * No more than max versions should be retained. For a CF with max versions 2,
+   * scans/get should yield second version after delete.
+   *
+   * @throws IOException if test faces any issues while creating/cleaning up necessary region.
+   */
+  @Test
+  public void testDeleteConsistentWithTwoVersions() throws Exception {
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 2,
+        HConstants.FOREVER, KeepDeletedCells.TRUE);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
+
+    long ts = EnvironmentEdgeManager.currentTime();
+    Put p = new Put(T1, ts);
+    p.addColumn(c0, c0, T1);
+    region.put(p);
+
+    p = new Put(T1, ts+1);
+    p.addColumn(c0, c0, T2);
+    region.put(p);
+
+    checkGet(region, T1, c0, c0, ts+2, T2, T1);
+
+    Delete delete = new Delete(T1);
+    delete.addColumn(c0, c0, HConstants.LATEST_TIMESTAMP);
+    region.delete(delete);
+
+    checkGet(region, T1, c0, c0, ts+2, T1);
 
     HBaseTestingUtility.closeRegionAndWAL(region);
   }

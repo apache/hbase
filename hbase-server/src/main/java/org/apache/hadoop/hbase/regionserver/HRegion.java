@@ -3092,6 +3092,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       List<Cell> cells = e.getValue();
       assert cells instanceof RandomAccess;
 
+      List<Cell> deleteCells = new ArrayList<>();
       Map<byte[], Integer> kvCount = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       int listSize = cells.size();
       for (int i=0; i < listSize; i++) {
@@ -3111,37 +3112,87 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           count = kvCount.get(qual);
 
           Get get = new Get(CellUtil.cloneRow(cell));
-          get.setMaxVersions(count);
-          get.addColumn(family, qual);
+          get.readVersions(Integer.MAX_VALUE);
           if (coprocessorHost != null) {
             if (!coprocessorHost.prePrepareTimeStampForDeleteVersion(mutation, cell,
                 byteNow, get)) {
-              updateDeleteLatestVersionTimestamp(cell, get, count, byteNow);
+              updateDeleteLatestVersionTimestamp(cell, get, count,
+                  this.htableDescriptor.getColumnFamily(family).getMaxVersions(),
+                    byteNow, deleteCells);
+
             }
           } else {
-            updateDeleteLatestVersionTimestamp(cell, get, count, byteNow);
+            updateDeleteLatestVersionTimestamp(cell, get, count,
+                this.htableDescriptor.getColumnFamily(family).getMaxVersions(),
+                  byteNow, deleteCells);
           }
         } else {
           PrivateCellUtil.updateLatestStamp(cell, byteNow);
+          deleteCells.add(cell);
         }
       }
+      e.setValue(deleteCells);
     }
   }
 
-  void updateDeleteLatestVersionTimestamp(Cell cell, Get get, int count, byte[] byteNow)
-      throws IOException {
-    List<Cell> result = get(get, false);
-
+  private void updateDeleteLatestVersionTimestamp(Cell cell, Get get, int count, int maxVersions,
+      byte[] byteNow, List<Cell> deleteCells) throws IOException {
+    List<Cell> result = new ArrayList<>(deleteCells);
+    Scan scan = new Scan(get);
+    scan.setRaw(true);
+    this.getScanner(scan).next(result);
+    List<Cell> cells = new ArrayList<>();
     if (result.size() < count) {
       // Nothing to delete
       PrivateCellUtil.updateLatestStamp(cell, byteNow);
-      return;
+      cells.add(cell);
+      deleteCells.addAll(cells);
+    } else if (result.size() > count) {
+      int currentVersion = 0;
+      long latestCellTS = Long.MAX_VALUE;
+      result.sort((cell1, cell2) -> {
+        if(cell1.getTimestamp()>cell2.getTimestamp()){
+          return -1;
+        } else if(cell1.getTimestamp()<cell2.getTimestamp()){
+          return 1;
+        } else {
+          if(CellUtil.isDelete(cell1)){
+            return -1;
+          } else if (CellUtil.isDelete(cell2)){
+            return 1;
+          }
+        }
+        return 0;
+      });
+      for(Cell getCell : result){
+        if(!(CellUtil.matchingFamily(getCell, cell) && CellUtil.matchingQualifier(getCell, cell))){
+          continue;
+        }
+        if(!PrivateCellUtil.isDeleteType(getCell) && getCell.getTimestamp()!=latestCellTS){
+          if (currentVersion >= maxVersions) {
+            Cell tempCell = null;
+            try {
+              tempCell = PrivateCellUtil.deepClone(cell);
+            } catch (CloneNotSupportedException e) {
+              throw new IOException(e);
+            }
+            PrivateCellUtil.setTimestamp(tempCell, getCell.getTimestamp());
+            cells.add(tempCell);
+          } else if (currentVersion == 0) {
+            PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
+            cells.add(cell);
+          }
+          currentVersion++;
+        }
+        latestCellTS = getCell.getTimestamp();
+      }
+
+    } else {
+      Cell getCell = result.get(0);
+      PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
+      cells.add(cell);
     }
-    if (result.size() > count) {
-      throw new RuntimeException("Unexpected size: " + result.size());
-    }
-    Cell getCell = result.get(count - 1);
-    PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
+    deleteCells.addAll(cells);
   }
 
   @Override
