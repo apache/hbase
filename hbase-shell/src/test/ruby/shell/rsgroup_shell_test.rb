@@ -142,5 +142,19 @@ module Hbase
       assert_equal(1, @rsgroup_admin.getRSGroupInfo(new_rs_group_name).getTables.count)
       assert_equal(table_name, @rsgroup_admin.getRSGroupInfo(new_rs_group_name).getTables.iterator.next.toString)
     end
+
+    define_test 'Test alter rsgroup configuration' do
+      group_name = 'grp1'
+      @shell.command('add_rsgroup', group_name)
+      assert_not_nil(@rsgroup_admin.getRSGroupInfo(group_name))
+
+      @hbase.rsgroup_admin.alter_rsgroup_config(group_name, {'METHOD' => 'set', 'a' => 'a'})
+      assert_equal(1, @rsgroup_admin.getRSGroupInfo(group_name).getConfiguration.size)
+      @hbase.rsgroup_admin.alter_rsgroup_config(group_name, {'METHOD' => 'unset', 'NAME' => 'a'})
+      assert_equal(0, @rsgroup_admin.getRSGroupInfo(group_name).getConfiguration.size)
+
+      @shell.command('remove_rsgroup', group_name)
+      assert_nil(@rsgroup_admin.getRSGroupInfo(group_name))
+    end
   end
 end

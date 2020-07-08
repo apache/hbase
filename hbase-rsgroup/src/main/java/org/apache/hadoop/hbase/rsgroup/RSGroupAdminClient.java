@@ -22,6 +22,7 @@ import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.TableName;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.AddRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.BalanceRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdmi
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -245,6 +248,23 @@ public class RSGroupAdminClient implements RSGroupAdmin {
       .setNewRsgroupName(newName).build();
     try {
       stub.renameRSGroup(null, request);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    UpdateRSGroupConfigRequest.Builder builder = UpdateRSGroupConfigRequest.newBuilder()
+        .setGroupName(groupName);
+    if (configuration != null) {
+      configuration.entrySet().forEach(e ->
+          builder.addConfiguration(NameStringPair.newBuilder().setName(e.getKey())
+              .setValue(e.getValue()).build()));
+    }
+    try {
+      stub.updateRSGroupConfig(null, builder.build());
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }

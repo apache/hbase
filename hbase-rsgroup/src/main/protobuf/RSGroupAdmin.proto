@@ -131,6 +131,14 @@ message RenameRSGroupRequest {
 message RenameRSGroupResponse {
 }
 
+message UpdateRSGroupConfigRequest {
+  required string group_name = 1;
+  repeated NameStringPair configuration = 2;
+}
+
+message UpdateRSGroupConfigResponse {
+}
+
 service RSGroupAdminService {
   rpc GetRSGroupInfo(GetRSGroupInfoRequest)
     returns (GetRSGroupInfoResponse);
@@ -167,4 +175,7 @@ service RSGroupAdminService {
 
   rpc RenameRSGroup(RenameRSGroupRequest)
     returns (RenameRSGroupResponse);
+
+  rpc UpdateRSGroupConfig(UpdateRSGroupConfigRequest)
+    returns (UpdateRSGroupConfigResponse);
 }

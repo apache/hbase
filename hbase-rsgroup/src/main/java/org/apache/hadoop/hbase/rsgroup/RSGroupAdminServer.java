@@ -532,6 +532,14 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
   }
 
+  @Override
+  public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    synchronized (rsGroupInfoManager) {
+      rsGroupInfoManager.updateRSGroupConfig(groupName, configuration);
+    }
+  }
+
   private Map<String, RegionState> rsGroupGetRegionsInTransition(String groupName)
       throws IOException {
     Map<String, RegionState> rit = Maps.newTreeMap();
