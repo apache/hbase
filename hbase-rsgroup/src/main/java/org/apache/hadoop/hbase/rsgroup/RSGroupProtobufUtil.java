@@ -20,11 +20,13 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,14 +37,16 @@ final class RSGroupProtobufUtil {
   }
 
   static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
-    RSGroupInfo RSGroupInfo = new RSGroupInfo(proto.getName());
+    RSGroupInfo rsGroupInfo = new RSGroupInfo(proto.getName());
     for(HBaseProtos.ServerName el: proto.getServersList()) {
-      RSGroupInfo.addServer(Address.fromParts(el.getHostName(), el.getPort()));
+      rsGroupInfo.addServer(Address.fromParts(el.getHostName(), el.getPort()));
     }
     for(TableProtos.TableName pTableName: proto.getTablesList()) {
-      RSGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
+      rsGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
     }
-    return RSGroupInfo;
+    proto.getConfigurationList().forEach(pair ->
+        rsGroupInfo.setConfiguration(pair.getName(), pair.getValue()));
+    return rsGroupInfo;
   }
 
   static RSGroupProtos.RSGroupInfo toProtoGroupInfo(RSGroupInfo pojo) {
@@ -57,8 +61,11 @@ final class RSGroupProtobufUtil {
           .setPort(el.getPort())
           .build());
     }
+    List<NameStringPair> configuration = pojo.getConfiguration().entrySet()
+        .stream().map(entry -> NameStringPair.newBuilder()
+            .setName(entry.getKey()).setValue(entry.getValue()).build())
+        .collect(Collectors.toList());
     return RSGroupProtos.RSGroupInfo.newBuilder().setName(pojo.getName())
-        .addAllServers(hostports)
-        .addAllTables(tables).build();
+        .addAllServers(hostports).addAllTables(tables).addAllConfiguration(configuration).build();
   }
 }

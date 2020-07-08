@@ -185,5 +185,42 @@ module Hbase
     def rename_rsgroup(oldname, newname)
       @admin.renameRSGroup(oldname, newname)
     end
+
+    #----------------------------------------------------------------------------------------------
+    # modify a rsgroup configuration
+    def alter_rsgroup_config(rsgroup_name, *args)
+      # Fail if table name is not a string
+      raise(ArgumentError, 'RSGroup name must be of type String') unless rsgroup_name.is_a?(String)
+
+      group = @admin.getRSGroupInfo(rsgroup_name)
+
+      raise(ArgumentError, 'RSGroup does not exist') unless group
+
+      configuration = java.util.HashMap.new
+      configuration.putAll(group.getConfiguration)
+
+      # Flatten params array
+      args = args.flatten.compact
+
+      # Start defining the table
+      args.each do |arg|
+        unless arg.is_a?(Hash)
+          raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash type")
+        end
+        method = arg[METHOD]
+        if method == 'unset'
+          configuration.remove(arg[NAME])
+        elsif method == 'set'
+          arg.delete(METHOD)
+          for k, v in arg
+            v = v.to_s unless v.nil?
+            configuration.put(k, v)
+          end
+        else
+          raise(ArgumentError, "Unknown method #{method}")
+        end
+      end
+      @admin.updateRSGroupConfig(rsgroup_name, configuration)
+    end
   end
 end
