@@ -1741,15 +1741,15 @@ public class TestFromClientSide extends FromClientSideBase {
       get.addColumn(FAMILIES[0], QUALIFIER);
       get.readVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1], ts[2], ts[3] },
-        new byte[][] { VALUES[1], VALUES[2], VALUES[3] }, 0, 2);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] {  ts[2], ts[3] },
+        new byte[][] {  VALUES[2], VALUES[3] }, 0, 1);
 
       scan = new Scan().withStartRow(ROW);
       scan.addColumn(FAMILIES[0], QUALIFIER);
       scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
-      assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1], ts[2], ts[3] },
-        new byte[][] { VALUES[1], VALUES[2], VALUES[3] }, 0, 2);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] {  ts[2], ts[3] },
+        new byte[][] {  VALUES[2], VALUES[3] }, 0, 1);
 
       // Test for HBASE-1847
       delete = new Delete(ROW);
@@ -1776,8 +1776,8 @@ public class TestFromClientSide extends FromClientSideBase {
       get.addFamily(FAMILIES[0]);
       get.readVersions(Integer.MAX_VALUE);
       result = ht.get(get);
-      assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1], ts[2], ts[3] },
-        new byte[][] { VALUES[1], VALUES[2], VALUES[3] }, 0, 2);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] {  ts[2], ts[3] },
+        new byte[][] {  VALUES[2], VALUES[3] }, 0, 1);
 
       // The Scanner returns the previous values, the expected-naive-unexpected behavior
 
@@ -1785,8 +1785,8 @@ public class TestFromClientSide extends FromClientSideBase {
       scan.addFamily(FAMILIES[0]);
       scan.readVersions(Integer.MAX_VALUE);
       result = getSingleScanResult(ht, scan);
-      assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] { ts[1], ts[2], ts[3] },
-        new byte[][] { VALUES[1], VALUES[2], VALUES[3] }, 0, 2);
+      assertNResult(result, ROW, FAMILIES[0], QUALIFIER, new long[] {  ts[2], ts[3] },
+        new byte[][] {  VALUES[2], VALUES[3] }, 0, 1);
 
       // Test deleting an entire family from one row but not the other various ways
 
