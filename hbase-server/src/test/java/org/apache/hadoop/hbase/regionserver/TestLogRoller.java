@@ -40,52 +40,56 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
-@Category({RegionServerTests.class, MediumTests.class})
-public class TestLogRoller {
+@Category({ RegionServerTests.class, MediumTests.class }) public class TestLogRoller {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestLogRoller.class);
+  @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestLogRoller.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final List<MyFSHLog> WALS = new ArrayList<>();
   private static Configuration CONF;
+  private static LogRoller ROLLER;
   private static Path ROOT_DIR;
   private static FileSystem FS;
 
-  @Before
-  public void setup() throws IOException {
+  @Before public void setup() throws IOException {
     CONF = TEST_UTIL.getConfiguration();
     ROOT_DIR = TEST_UTIL.getRandomDir();
     FS = FileSystem.get(CONF);
+    // create LogRoller
+    RegionServerServices services = Mockito.mock(RegionServerServices.class);
+    Mockito.when(services.getConfiguration()).thenReturn(CONF);
+    ROLLER = new LogRoller(services);
+    ROLLER.start();
   }
 
-  @After
-  public void tearDown() throws Exception {
+  @After public void tearDown() throws IOException {
+    ROLLER.close();
+    for (MyFSHLog wal : WALS) {
+      wal.close();
+    }
     FS.close();
   }
 
   /**
    * when use multiwal and a wal request roll, whether other wals roll together.
    */
-  @Test
-  public void testWalRequestRollWithMultiWal() throws Exception {
-    // create LogRoller and add multiple wal
-    RegionServerServices services = Mockito.mock(RegionServerServices.class);
-    Mockito.when(services.getConfiguration()).thenReturn(CONF);
-    LogRoller roller = new LogRoller(services);
-    roller.start();
-    Map<MyFSHLog, Path>  wals = new HashMap<>();
+  @Test public void testWalRequestRollWithMultiWal() throws Exception {
+    // add multiple wal
+    Map<MyFSHLog, Path> wals = new HashMap<>();
     for (int i = 1; i <= 3; i++) {
-      MyFSHLog wal = new MyFSHLog(FS, ROOT_DIR, "WALs",
-          "archiveWALs", CONF, null, true, "wal-test", "." + i);
+      MyFSHLog wal =
+          new MyFSHLog(FS, ROOT_DIR, "WALs", "archiveWALs", CONF, null, true, "wal-test", "." + i);
       wal.init();
-      roller.addWAL(wal);
       wals.put(wal, wal.getCurrentFileName());
+      ROLLER.addWAL(wal);
     }
+    WALS.addAll(wals.keySet());
     // first wal request roll
     Iterator<Map.Entry<MyFSHLog, Path>> iterator = wals.entrySet().iterator();
     Map.Entry<MyFSHLog, Path> entry = iterator.next();
     entry.getKey().requestLogRoll();
-    while (!roller.walRollFinished() || entry.getKey().isRolling()) {
+    while (!ROLLER.walRollFinished() || entry.getKey().isRolling()) {
       TimeUnit.MILLISECONDS.sleep(100);
     }
     // current file name of first wal is changed
@@ -98,9 +102,10 @@ public class TestLogRoller {
   }
 
   private static class MyFSHLog extends FSHLog {
-    MyFSHLog(final FileSystem fs, final Path rootDir, final String logDir,
-        final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
-        final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
+    MyFSHLog(final FileSystem fs, final Path rootDir, final String logDir, final String archiveDir,
+        final Configuration conf, final List<WALActionsListener> listeners,
+        final boolean failIfWALExists, final String prefix, final String suffix)
+        throws IOException {
       super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
     }
 
