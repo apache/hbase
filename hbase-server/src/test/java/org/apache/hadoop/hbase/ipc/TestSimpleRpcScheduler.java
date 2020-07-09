@@ -55,8 +55,10 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -79,6 +81,9 @@ public class TestSimpleRpcScheduler {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSimpleRpcScheduler.class);
+
+  @Rule
+  public TestName testName = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSimpleRpcScheduler.class);
 
@@ -563,7 +568,7 @@ public class TestSimpleRpcScheduler {
 
   @Test
   public void testFastPathBalancedQueueRpcExecutorWithQueueLength0() throws Exception {
-    String name = "testFastPathBalancedQueueRpcExecutorWithQueueLength0";
+    String name = testName.getMethodName();
     int handlerCount = 1;
     String callQueueType = RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE;
     int maxQueueLength = 0;
