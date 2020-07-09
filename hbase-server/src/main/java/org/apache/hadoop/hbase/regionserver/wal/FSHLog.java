@@ -548,7 +548,6 @@ public class FSHLog implements WAL {
     this.lowReplicationRollLimit =
       conf.getInt("hbase.regionserver.hlog.lowreplication.rolllimit", 5);
     this.closeErrorsTolerated = conf.getInt("hbase.regionserver.logroll.errors.tolerated", 0);
-    int maxHandlersCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200);
 
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) +
       ", rollsize=" + StringUtils.byteDesc(this.logrollsize) +
@@ -590,9 +589,10 @@ public class FSHLog implements WAL {
     // Advance the ring buffer sequence so that it starts from 1 instead of 0,
     // because SyncFuture.NOT_DONE = 0.
     this.disruptor.getRingBuffer().next();
-    this.ringBufferEventHandler =
-      new RingBufferEventHandler(conf.getInt("hbase.regionserver.hlog.syncer.count", 5),
-        maxHandlersCount);
+    int syncerCount = conf.getInt("hbase.regionserver.hlog.syncer.count", 5);
+    int maxBatchCount = conf.getInt("hbase.regionserver.wal.sync.batch.count",
+        conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200));
+    this.ringBufferEventHandler = new RingBufferEventHandler(syncerCount, maxBatchCount);
     this.disruptor.handleExceptionsWith(new RingBufferExceptionHandler());
     this.disruptor.handleEventsWith(new RingBufferEventHandler [] {this.ringBufferEventHandler});
     this.cachedSyncFutures = new ThreadLocal<SyncFuture>() {
@@ -1873,11 +1873,11 @@ public class FSHLog implements WAL {
      */
     private int syncRunnerIndex;
 
-    RingBufferEventHandler(final int syncRunnerCount, final int maxHandlersCount) {
-      this.syncFutures = new SyncFuture[maxHandlersCount];
+    RingBufferEventHandler(final int syncRunnerCount, final int maxBatchCount) {
+      this.syncFutures = new SyncFuture[maxBatchCount];
       this.syncRunners = new SyncRunner[syncRunnerCount];
       for (int i = 0; i < syncRunnerCount; i++) {
-        this.syncRunners[i] = new SyncRunner("sync." + i, maxHandlersCount);
+        this.syncRunners[i] = new SyncRunner("sync." + i, maxBatchCount);
       }
     }
 
