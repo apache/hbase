@@ -32,6 +32,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -450,6 +451,16 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       }
     }
     return getRSGroup(RSGroupInfo.DEFAULT_GROUP);
+  }
+
+  @Override
+  public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
+    new HashSet<>(rsGroupInfo.getConfiguration().keySet())
+        .forEach(rsGroupInfo::removeConfiguration);
+    configuration.forEach(rsGroupInfo::setConfiguration);
+    flushConfig();
   }
 
   List<RSGroupInfo> retrieveGroupListFromGroupTable() throws IOException {

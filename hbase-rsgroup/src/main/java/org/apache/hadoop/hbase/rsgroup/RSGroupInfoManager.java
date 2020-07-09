@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -139,4 +140,12 @@ public interface RSGroupInfoManager {
    * @return {@link RSGroupInfo} which table should belong to
    */
   RSGroupInfo determineRSGroupInfoForTable(TableName tableName) throws IOException;
+
+  /**
+   * Update RSGroup configuration
+   * @param groupName the group name
+   * @param configuration new configuration of the group name to be set
+   * @throws IOException if a remote or network exception occurs
+   */
+  void updateRSGroupConfig(String groupName, Map<String, String> configuration) throws IOException;
 }

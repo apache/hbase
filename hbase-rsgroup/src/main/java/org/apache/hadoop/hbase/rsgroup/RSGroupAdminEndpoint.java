@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -81,6 +82,8 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServe
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigResponse;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -90,6 +93,8 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 // TODO: Encapsulate MasterObserver functions into separate subclass.
@@ -419,6 +424,29 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
         groupAdminServer.renameRSGroup(oldRSGroup, newRSGroup);
         if (master.getMasterCoprocessorHost() != null) {
           master.getMasterCoprocessorHost().postRenameRSGroup(oldRSGroup, newRSGroup);
+        }
+      } catch (IOException e) {
+        CoprocessorRpcUtils.setControllerException(controller, e);
+      }
+      done.run(builder.build());
+    }
+
+    @Override
+    public void updateRSGroupConfig(RpcController controller, UpdateRSGroupConfigRequest request,
+                                    RpcCallback<UpdateRSGroupConfigResponse> done) {
+      UpdateRSGroupConfigResponse.Builder builder = UpdateRSGroupConfigResponse.newBuilder();
+      String groupName = request.getGroupName();
+      Map<String, String> configuration = Maps.newHashMap();
+      request.getConfigurationList().forEach(p -> configuration.put(p.getName(), p.getValue()));
+      LOG.info("{} update rsgroup {} configuration {}", master.getClientIdAuditPrefix(), groupName,
+          configuration);
+      try {
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().preUpdateRSGroupConfig(groupName, configuration);
+        }
+        groupAdminServer.updateRSGroupConfig(groupName, configuration);
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().postUpdateRSGroupConfig(groupName, configuration);
         }
       } catch (IOException e) {
         CoprocessorRpcUtils.setControllerException(controller, e);
