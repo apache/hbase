@@ -236,8 +236,12 @@ public class HDFSBlocksDistribution {
    * @return the locality index of the given host
    */
   public float getBlockLocalityIndex(String host) {
-    return (float) getBlocksLocalityWeightInternal(host, HostAndWeight::getWeight)
-      / (float) uniqueBlocksTotalWeight;
+    if (uniqueBlocksTotalWeight == 0) {
+      return 0.0f;
+    } else {
+      return (float) getBlocksLocalityWeightInternal(host, HostAndWeight::getWeight)
+        / (float) uniqueBlocksTotalWeight;
+    }
   }
 
   /**
@@ -245,8 +249,12 @@ public class HDFSBlocksDistribution {
    * @return the locality index with ssd of the given host
    */
   public float getBlockLocalityIndexForSsd(String host) {
-    return (float) getBlocksLocalityWeightInternal(host, HostAndWeight::getWeightForSsd)
-      / (float) uniqueBlocksTotalWeight;
+    if (uniqueBlocksTotalWeight == 0) {
+      return 0.0f;
+    } else {
+      return (float) getBlocksLocalityWeightInternal(host, HostAndWeight::getWeightForSsd)
+        / (float) uniqueBlocksTotalWeight;
+    }
   }
 
   /**
