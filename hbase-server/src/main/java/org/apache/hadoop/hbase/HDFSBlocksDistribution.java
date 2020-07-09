@@ -51,7 +51,7 @@ public class HDFSBlocksDistribution {
    */
   public static class HostAndWeight {
 
-    private String host;
+    private final String host;
     private long weight;
     private long weightForSsd;
 
@@ -236,7 +236,7 @@ public class HDFSBlocksDistribution {
    * @return the locality index of the given host
    */
   public float getBlockLocalityIndex(String host) {
-    return (float) getBlocksLocalityWeightInternal(host, e -> e.weight)
+    return (float) getBlocksLocalityWeightInternal(host, HostAndWeight::getWeight)
       / (float) uniqueBlocksTotalWeight;
   }
 
@@ -245,7 +245,7 @@ public class HDFSBlocksDistribution {
    * @return the locality index with ssd of the given host
    */
   public float getBlockLocalityIndexForSsd(String host) {
-    return (float) getBlocksLocalityWeightInternal(host, e -> e.weightForSsd)
+    return (float) getBlocksLocalityWeightInternal(host, HostAndWeight::getWeightForSsd)
       / (float) uniqueBlocksTotalWeight;
   }
 
@@ -254,7 +254,7 @@ public class HDFSBlocksDistribution {
    * @return the blocks local weight of the given host
    */
   public long getBlocksLocalWeight(String host) {
-    return getBlocksLocalityWeightInternal(host, e -> e.weight);
+    return getBlocksLocalityWeightInternal(host, HostAndWeight::getWeight);
   }
 
   /**
@@ -262,7 +262,7 @@ public class HDFSBlocksDistribution {
    * @return the blocks local with ssd weight of the given host
    */
   public long getBlocksLocalWithSsdWeight(String host) {
-    return getBlocksLocalityWeightInternal(host, e -> e.weightForSsd);
+    return getBlocksLocalityWeightInternal(host, HostAndWeight::getWeightForSsd);
   }
 
   /**
