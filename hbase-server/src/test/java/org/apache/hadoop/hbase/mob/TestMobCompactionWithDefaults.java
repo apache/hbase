@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -132,7 +133,8 @@ public class TestMobCompactionWithDefaults {
   public void setUp() throws Exception {
     tableDescriptor = HTU.createModifyableTableDescriptor(test.getMethodName());
     admin = HTU.getAdmin();
-    cleanerChore = new MobFileCleanerChore();
+    HMaster master = HTU.getMiniHBaseCluster().getMaster();
+    cleanerChore = new MobFileCleanerChore(master);
     familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
     familyDescriptor.setMobEnabled(true);
     familyDescriptor.setMobThreshold(mobLen);

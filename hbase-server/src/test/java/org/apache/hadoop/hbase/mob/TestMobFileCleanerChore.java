@@ -38,9 +38,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapred.Master;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -97,7 +99,8 @@ public class TestMobFileCleanerChore {
 
     HTU.startMiniCluster();
     admin = HTU.getAdmin();
-    chore = new MobFileCleanerChore();
+    HMaster master = HTU.getMiniHBaseCluster().getMaster();
+    chore = new MobFileCleanerChore(master);
     familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
     familyDescriptor.setMobEnabled(true);
     familyDescriptor.setMobThreshold(mobLen);

@@ -46,6 +46,16 @@ import org.slf4j.LoggerFactory;
 public class ExpiredMobFileCleaner extends Configured implements Tool {
 
   private static final Logger LOG = LoggerFactory.getLogger(ExpiredMobFileCleaner.class);
+
+  private Connection connection;
+  private boolean isSharedConnection = false;
+
+  public ExpiredMobFileCleaner(Connection connection) {
+    this.connection = connection;
+    isSharedConnection = true;
+  }
+
+  public ExpiredMobFileCleaner() {}
   /**
    * Cleans the MOB files when they're expired and their min versions are 0.
    * If the latest timestamp of Cells in a MOB file is older than the TTL in the column family,
@@ -94,7 +104,11 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
     String tableName = args[0];
     String familyName = args[1];
     TableName tn = TableName.valueOf(tableName);
-    Connection connection = ConnectionFactory.createConnection(getConf());
+    // This method may be called in two ways: from a Chore or as a tool.
+    // We should pass in the connection if called from a Chore.
+    if (connection == null) {
+      connection = ConnectionFactory.createConnection(getConf());
+    }
     Admin admin = connection.getAdmin();
     try {
       TableDescriptor htd = admin.getDescriptor(tn);
@@ -111,7 +125,9 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
     } finally {
       admin.close();
       try {
-        connection.close();
+        if (!isSharedConnection) {
+          connection.close();
+        }
       } catch (IOException e) {
         LOG.error("Failed to close the connection.", e);
       }
