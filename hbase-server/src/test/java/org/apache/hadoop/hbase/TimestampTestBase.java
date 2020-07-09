@@ -70,22 +70,20 @@ public class TimestampTestBase {
     // If I delete w/o specifying a timestamp, this means I'm deleting the latest.
     delete(table);
     // Verify that I get back T2 through T1 -- that the latest version has been deleted.
-    // Since there were originally 4 puts before the delete, T0 is gone now,
-    // so after deleting latest, there should be only T2 and T1
-    assertVersions(table, new long [] {T2, T1});
+    assertVersions(table, new long [] {T2, T1, T0});
 
     // Flush everything out to disk and then retry
     flusher.flushcache();
-    assertVersions(table, new long [] {T2, T1});
+    assertVersions(table, new long [] {T2, T1, T0});
 
     // Now add, back a latest so I can test remove other than the latest.
     put(table);
     assertVersions(table, new long [] {HConstants.LATEST_TIMESTAMP, T2, T1});
     delete(table, T2);
-    assertVersions(table, new long [] {HConstants.LATEST_TIMESTAMP, T1});
+    assertVersions(table, new long [] {HConstants.LATEST_TIMESTAMP, T1, T0});
     // Flush everything out to disk and then retry
     flusher.flushcache();
-    assertVersions(table, new long [] {HConstants.LATEST_TIMESTAMP, T1});
+    assertVersions(table, new long [] {HConstants.LATEST_TIMESTAMP, T1, T0});
 
     // Now try deleting all from T2 back inclusive (We first need to add T2
     // back into the mix and to make things a little interesting, delete and then readd T1.
