@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,9 @@
  */
 
 package org.apache.hadoop.hbase.regionserver;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,11 +41,11 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+@Category({ RegionServerTests.class, MediumTests.class })
+public class TestLogRoller {
 
-@Category({ RegionServerTests.class, MediumTests.class }) public class TestLogRoller {
-
-  @ClassRule public static final HBaseClassTestRule CLASS_RULE =
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestLogRoller.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -52,7 +55,8 @@ import static org.junit.Assert.*;
   private static Path ROOT_DIR;
   private static FileSystem FS;
 
-  @Before public void setup() throws IOException {
+  @Before
+  public void setup() throws IOException {
     CONF = TEST_UTIL.getConfiguration();
     ROOT_DIR = TEST_UTIL.getRandomDir();
     FS = FileSystem.get(CONF);
@@ -63,7 +67,8 @@ import static org.junit.Assert.*;
     ROLLER.start();
   }
 
-  @After public void tearDown() throws IOException {
+  @After
+  public void tearDown() throws IOException {
     ROLLER.close();
     for (MyFSHLog wal : WALS) {
       wal.close();
@@ -74,12 +79,13 @@ import static org.junit.Assert.*;
   /**
    * when use multiwal and a wal request roll, whether other wals roll together.
    */
-  @Test public void testWalRequestRollWithMultiWal() throws Exception {
+  @Test
+  public void testWalRequestRollWithMultiWal() throws Exception {
     // add multiple wal
     Map<MyFSHLog, Path> wals = new HashMap<>();
     for (int i = 1; i <= 3; i++) {
-      MyFSHLog wal =
-          new MyFSHLog(FS, ROOT_DIR, "WALs", "archiveWALs", CONF, null, true, "wal-test", "." + i);
+      MyFSHLog wal = new MyFSHLog(FS, ROOT_DIR, "WALs", "archiveWALs", CONF,
+          null, true, "wal-test", "." + i);
       wal.init();
       wals.put(wal, wal.getCurrentFileName());
       ROLLER.addWAL(wal);
