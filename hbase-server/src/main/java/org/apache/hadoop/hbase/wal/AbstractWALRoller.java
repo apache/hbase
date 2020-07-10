@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.wal;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.ConnectException;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -58,9 +57,8 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
 
   protected static final String WAL_ROLL_PERIOD_KEY = "hbase.regionserver.logroll.period";
 
-  protected final ConcurrentMap<WAL, Boolean> walNeedsRoll = new ConcurrentHashMap<>();
+  protected final ConcurrentMap<WAL, RollController> walNeedsRoll = new ConcurrentHashMap<>();
   protected final T abortable;
-  private volatile long lastRollTime = System.currentTimeMillis();
   // Period to roll log.
   private final long rollPeriod;
   private final int threadWakeFrequency;
@@ -76,13 +74,14 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     }
     // this is to avoid race between addWAL and requestRollAll.
     synchronized (this) {
-      if (walNeedsRoll.putIfAbsent(wal, Boolean.FALSE) == null) {
+      if (walNeedsRoll.putIfAbsent(wal, new RollController()) == null) {
         wal.registerWALActionsListener(new WALActionsListener() {
           @Override
           public void logRollRequested(WALActionsListener.RollRequestReason reason) {
             // TODO logs will contend with each other here, replace with e.g. DelayedQueue
             synchronized (AbstractWALRoller.this) {
-              walNeedsRoll.put(wal, Boolean.TRUE);
+              RollController controller = walNeedsRoll.computeIfAbsent(wal, rc -> new RollController());
+              controller.requestRoll();
               AbstractWALRoller.this.notifyAll();
             }
           }
@@ -93,9 +92,8 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
 
   public void requestRollAll() {
     synchronized (this) {
-      List<WAL> wals = new ArrayList<WAL>(walNeedsRoll.keySet());
-      for (WAL wal : wals) {
-        walNeedsRoll.put(wal, Boolean.TRUE);
+      for (RollController controller : walNeedsRoll.values()) {
+        controller.requestRoll();
       }
       notifyAll();
     }
@@ -115,9 +113,9 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    */
   private void checkLowReplication(long now) {
     try {
-      for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
+      for (Entry<WAL, RollController> entry : walNeedsRoll.entrySet()) {
         WAL wal = entry.getKey();
-        boolean needRollAlready = entry.getValue();
+        boolean needRollAlready = entry.getValue().isRequestRoll;
         if (needRollAlready || !(wal instanceof AbstractFSWAL)) {
           continue;
         }
@@ -150,13 +148,12 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     while (running) {
       long now = System.currentTimeMillis();
       checkLowReplication(now);
-      boolean periodic = (now - this.lastRollTime) > this.rollPeriod;
-      if (periodic) {
+      if (walNeedsRoll.values().stream().anyMatch(rc -> rc.isPeriodRoll(now))) {
         // Time for periodic roll, fall through
         LOG.debug("WAL roll period {} ms elapsed", this.rollPeriod);
       } else {
         synchronized (this) {
-          if (walNeedsRoll.values().stream().anyMatch(Boolean::booleanValue)) {
+          if (walNeedsRoll.values().stream().anyMatch(rc -> rc.isRequestRoll)) {
             // WAL roll requested, fall through
             LOG.debug("WAL roll requested");
           } else {
@@ -173,16 +170,16 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
         }
       }
       try {
-        this.lastRollTime = System.currentTimeMillis();
-        for (Iterator<Entry<WAL, Boolean>> iter = walNeedsRoll.entrySet().iterator(); iter
-          .hasNext();) {
-          Entry<WAL, Boolean> entry = iter.next();
-          if (!periodic && !entry.getValue()) {
+        for (Iterator<Entry<WAL, RollController>> iter = walNeedsRoll.entrySet().iterator();
+             iter.hasNext();) {
+          Entry<WAL, RollController> entry = iter.next();
+          RollController controller = entry.getValue();
+          if (!controller.isRequestRoll && !controller.isPeriodRoll(now)) {
             continue;
           }
           WAL wal = entry.getKey();
           // reset the flag in front to avoid missing roll request before we return from rollWriter.
-          entry.setValue(Boolean.FALSE);
+          controller.finishRoll();
           Map<byte[], List<byte[]>> regionsToFlush = null;
           try {
             // Force the roll if the logroll.period is elapsed or if a roll was requested.
@@ -234,7 +231,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    * @return true if all WAL roll finished
    */
   public boolean walRollFinished() {
-    return walNeedsRoll.values().stream().noneMatch(needRoll -> needRoll) && isWaiting();
+    return walNeedsRoll.values().stream().noneMatch(rc -> rc.isRequestRoll) && isWaiting();
   }
 
   /**
@@ -250,5 +247,36 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
   public void close() {
     running = false;
     interrupt();
+  }
+
+  /**
+   * Independently control the roll of each wal. When use multiwal,
+   * can avoid all wal roll together. see HBASE-24665 for detail
+   */
+  protected class RollController {
+    boolean isRequestRoll;
+    long lastRollTime;
+
+    RollController() {
+      this.isRequestRoll = false;
+      this.lastRollTime = System.currentTimeMillis();
+    }
+
+    void requestRoll() {
+      this.isRequestRoll = true;
+    }
+
+    void finishRoll() {
+      this.isRequestRoll = false;
+      this.lastRollTime = System.currentTimeMillis();
+    }
+
+    public boolean isRequestRoll() {
+      return isRequestRoll;
+    }
+
+    boolean isPeriodRoll(long now) {
+      return (now - lastRollTime) > rollPeriod;
+    }
   }
 }

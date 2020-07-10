@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -66,6 +67,10 @@ public class LogRoller extends AbstractWALRoller<RegionServerServices> {
 
   @VisibleForTesting
   Map<WAL, Boolean> getWalNeedsRoll() {
-    return this.walNeedsRoll;
+    Map<WAL, Boolean> walNeedsRoll = new HashMap<>();
+    for (Map.Entry<WAL, RollController> entry : this.walNeedsRoll.entrySet()) {
+      walNeedsRoll.put(entry.getKey(), entry.getValue().isRequestRoll());
+    }
+    return walNeedsRoll;
   }
 }
