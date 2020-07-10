@@ -59,6 +59,7 @@ org.apache.hadoop.hbase.tool.CanaryTool;
 org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.util.CommonFSUtils;
 org.apache.hadoop.hbase.util.JvmVersion;
+org.apache.hadoop.hbase.util.PrettyPrinter;
 org.apache.hadoop.util.StringUtils;
 </%import>
 
@@ -664,6 +665,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <th>Snapshot Name</th>
         <th>Table</th>
         <th>Creation Time</th>
+        <th>Owner</th>
+        <th>TTL</th>
     </tr>
     <%for SnapshotDescription snapshotDesc : snapshots%>
     <%java>
@@ -674,6 +677,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <td><a href="table.jsp?name=<% snapshotTable.getNameAsString() %>"><% snapshotTable.getNameAsString() %></a>
         </td>
         <td><% new Date(snapshotDesc.getCreationTime()) %></td>
+        <td><% snapshotDesc.getOwner() %></td>
+
+        <td>
+          <% snapshotDesc.getTtl() == 0 ? "FOREVER": PrettyPrinter.format(String.valueOf(snapshotDesc.getTtl()), PrettyPrinter.Unit.TIME_INTERVAL) %>
+        </td>
     </tr>
     </%for>
     <p><% snapshots.size() %> snapshot(s) in set. [<a href="/snapshotsStats.jsp">Snapshot Storefile stats</a>]</p>
