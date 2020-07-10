@@ -74,8 +74,16 @@ public class HistogramImpl implements Histogram {
     return this.histogram.getMax();
   }
 
+  public long getMin() {
+    return this.histogram.getMin();
+  }
+
   @Override
   public Snapshot snapshot() {
     return histogram.snapshotAndReset();
+  }
+
+  public long[] getQuantiles(double[] quantiles) {
+    return histogram.getQuantiles(quantiles);
   }
 }
