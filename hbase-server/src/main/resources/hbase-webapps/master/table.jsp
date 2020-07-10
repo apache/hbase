@@ -808,9 +808,14 @@
   long totalMemSize = 0;
   long totalCompactingCells = 0;
   long totalCompactedCells = 0;
+  long totalBlocksTotalWeight = 0;
+  long totalBlocksLocalWeight = 0;
+  long totalBlocksLocalWithSsdWeight = 0;
   String totalCompactionProgress = "";
   String totalMemSizeStr = ZEROMB;
   String totalSizeStr = ZEROMB;
+  String totalLocality = "";
+  String totalLocalityForSsd = "";
   Map<ServerName, Integer> regDistribution = new TreeMap<>();
   Map<ServerName, Integer> primaryRegDistribution = new TreeMap<>();
   List<HRegionLocation> regions = r.getAllRegionLocations();
@@ -835,6 +840,9 @@
           totalStoreFileSizeMB += regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
           totalCompactingCells += regionMetrics.getCompactingCellCount();
           totalCompactedCells += regionMetrics.getCompactedCellCount();
+          totalBlocksTotalWeight += regionMetrics.getBlocksTotalWeight();
+          totalBlocksLocalWeight += regionMetrics.getBlocksLocalWeight();
+          totalBlocksLocalWithSsdWeight += regionMetrics.getBlocksLocalWithSsdWeight();
         } else {
           RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
           regionsToLoad.put(regionInfo, load0);
@@ -858,7 +866,12 @@
     totalCompactionProgress = String.format("%.2f", 100 *
       ((float) totalCompactedCells / totalCompactingCells)) + "%";
   }
-
+  if (totalBlocksTotalWeight > 0) {
+    totalLocality = String.format("%.1f",
+      ((float) totalBlocksLocalWeight / totalBlocksTotalWeight));
+    totalLocalityForSsd = String.format("%.1f",
+      ((float) totalBlocksLocalWithSsdWeight / totalBlocksTotalWeight));
+  }
   if(regions != null && regions.size() > 0) { %>
 <h2>Table Regions</h2>
 <div class="tabbable">
@@ -963,8 +976,8 @@
           <tr>
             <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
             <th>Region Server</th>
-            <th>Locality</th>
-            <th>LocalityForSsd</th>
+            <th>Locality<br>(<%= totalLocality %>)</th>
+            <th>LocalityForSsd<br>(<%= totalLocalityForSsd %>)</th>
           </tr>
         </thead>
         <tbody>
