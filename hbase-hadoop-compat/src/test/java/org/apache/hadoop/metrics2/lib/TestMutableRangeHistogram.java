@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.metrics2.impl;
+package org.apache.hadoop.metrics2.lib;
 
 import static org.junit.Assert.assertEquals;
 
@@ -24,13 +24,13 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.metrics2.AbstractMetric;
-import org.apache.hadoop.metrics2.lib.MutableSizeHistogram;
+import org.apache.hadoop.metrics2.MetricsRecord;
+import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 @Category({ MetricsTests.class, SmallTests.class })
@@ -62,10 +62,10 @@ public class TestMutableRangeHistogram {
     histogram.add(ranges[len - 2] * 2);
     histogram.add(ranges[len - 1] * 2);
     histogram.snapshot(collector.addRecord(RECORD_NAME), true);
-    Collection<MetricsRecordImpl> records = collector.getRecords();
-    assertEquals(records.size(), 1);
-    MetricsRecordImpl record = records.iterator().next();
-    assertEquals(record.name(), RECORD_NAME);
+    List<? extends MetricsRecord> records = collector.getRecords();
+    assertEquals(1, records.size());
+    MetricsRecord record = records.iterator().next();
+    assertEquals(RECORD_NAME, record.name());
 
     // get size range metrics
     String histogramMetricPrefix = SIZE_HISTOGRAM_NAME + "_" + histogram.getRangeType();
