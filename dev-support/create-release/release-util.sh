@@ -490,7 +490,7 @@ function update_releasenotes {
         "/^## Release ${jira_fix_version}/,/^## Release/ {//!d; /^## Release ${jira_fix_version}/d;}" \
         "${project_dir}/CHANGES.md" || true
   fi
-  if [ -f "${project_dir}/RELEASENODES.md" ]; then
+  if [ -f "${project_dir}/RELEASENOTES.md" ]; then
     sed -i -e \
         "/^# ${jira_project}  ${jira_fix_version} Release Notes/,/^# ${jira_project}/{//!d; /^# ${jira_project}  ${jira_fix_version} Release Notes/d;}" \
         "${project_dir}/RELEASENOTES.md" || true
