@@ -926,8 +926,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> flushRegion(byte[] regionName) {
-    return flushRegionInternal(regionName, false).thenAccept(r -> {
+    return flushRegionInternal(regionName, null, false).thenAccept(r -> {
     });
+  }
+
+  @Override
+  public CompletableFuture<Void> flushRegion(byte[] regionName, byte[] columnFamily) {
+    Preconditions.checkNotNull(columnFamily, "columnFamily is null."
+      + "If you don't specify a columnFamily, use flushRegion(regionName) instead");
+    return flushRegionInternal(regionName, columnFamily, false)
+      .thenAccept(r -> {});
   }
 
   /**
@@ -937,7 +945,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
    * API.
    */
   CompletableFuture<FlushRegionResponse> flushRegionInternal(byte[] regionName,
-      boolean writeFlushWALMarker) {
+    byte[] columnFamily, boolean writeFlushWALMarker) {
     CompletableFuture<FlushRegionResponse> future = new CompletableFuture<>();
     addListener(getRegionLocation(regionName), (location, err) -> {
       if (err != null) {
@@ -950,23 +958,25 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           .completeExceptionally(new NoServerForRegionException(Bytes.toStringBinary(regionName)));
         return;
       }
-      addListener(flush(serverName, location.getRegion(), writeFlushWALMarker), (ret, err2) -> {
-        if (err2 != null) {
-          future.completeExceptionally(err2);
-        } else {
-          future.complete(ret);
-        }
-      });
+      addListener(
+        flush(serverName, location.getRegion(), columnFamily, writeFlushWALMarker),
+        (ret, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          } else {
+            future.complete(ret);
+          }});
     });
     return future;
   }
 
   private CompletableFuture<FlushRegionResponse> flush(ServerName serverName, RegionInfo regionInfo,
-      boolean writeFlushWALMarker) {
+    byte[] columnFamily, boolean writeFlushWALMarker) {
     return this.<FlushRegionResponse> newAdminCaller().serverName(serverName)
       .action((controller, stub) -> this
         .<FlushRegionRequest, FlushRegionResponse, FlushRegionResponse> adminCall(controller, stub,
-          RequestConverter.buildFlushRegionRequest(regionInfo.getRegionName(), writeFlushWALMarker),
+          RequestConverter.buildFlushRegionRequest(regionInfo.getRegionName(),
+            columnFamily, writeFlushWALMarker),
           (s, c, req, done) -> s.flushRegion(c, req, done), resp -> resp))
       .call();
   }
@@ -981,8 +991,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
       List<CompletableFuture<Void>> compactFutures = new ArrayList<>();
       if (hRegionInfos != null) {
-        hRegionInfos.forEach(region -> compactFutures.add(flush(sn, region, false).thenAccept(r -> {
-        })));
+        hRegionInfos.forEach(
+          region -> compactFutures.add(
+            flush(sn, region, null, false).thenAccept(r -> {})
+          )
+        );
       }
       addListener(CompletableFuture.allOf(
         compactFutures.toArray(new CompletableFuture<?>[compactFutures.size()])), (ret, err2) -> {
