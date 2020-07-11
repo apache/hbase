@@ -231,4 +231,9 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   protected OutputStream getOutputStreamForCellEncoder() {
     return asyncOutputWrapper;
   }
+
+  @Override
+  public long getSyncedLength() {
+    return this.output.getSyncedLength();
+  }
 }
