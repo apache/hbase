@@ -158,6 +158,15 @@ message RegionLoad {
 
   /** The current data locality for ssd for region in the regionserver */
   optional float data_locality_for_ssd = 23;
+
+  /** The current blocks local weight for region in the regionserver */
+  optional uint64 blocks_local_weight = 24;
+
+  /** The current blocks local weight with ssd for region in the regionserver */
+  optional uint64 blocks_local_with_ssd_weight = 25;
+
+  /** The current blocks total weight for region in the regionserver */
+  optional uint64 blocks_total_weight = 26;
 }
 
 message UserLoad {
