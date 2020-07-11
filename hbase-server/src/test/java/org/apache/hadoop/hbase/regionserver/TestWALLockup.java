@@ -190,6 +190,11 @@ public class TestWALLockup {
         public long getLength() {
           return w.getLength();
         }
+
+        @Override
+        public long getSyncedLength() {
+          return w.getSyncedLength();
+        }
       };
     }
   }
@@ -373,6 +378,11 @@ public class TestWALLockup {
           @Override
           public long getLength() {
             return w.getLength();
+          }
+
+          @Override
+          public long getSyncedLength() {
+            return w.getSyncedLength();
           }
         };
       }

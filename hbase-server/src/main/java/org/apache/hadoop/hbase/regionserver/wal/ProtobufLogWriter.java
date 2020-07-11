@@ -19,11 +19,14 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.util.AtomicUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
@@ -45,6 +48,8 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
   private static final Logger LOG = LoggerFactory.getLogger(ProtobufLogWriter.class);
 
   protected FSDataOutputStream output;
+
+  private final AtomicLong syncedLength = new AtomicLong(0);
 
   @Override
   public void append(Entry entry) throws IOException {
@@ -85,6 +90,12 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
     } else {
       fsdos.hflush();
     }
+    AtomicUtils.updateMax(this.syncedLength, fsdos.getPos());
+  }
+
+  @Override
+  public long getSyncedLength() {
+    return this.syncedLength.get();
   }
 
   public FSDataOutputStream getStream() {
