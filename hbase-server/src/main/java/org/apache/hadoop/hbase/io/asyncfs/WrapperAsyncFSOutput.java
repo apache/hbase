@@ -45,6 +45,8 @@ public class WrapperAsyncFSOutput implements AsyncFSOutput {
 
   private final ExecutorService executor;
 
+  private volatile long syncedLength = 0;
+
   public WrapperAsyncFSOutput(Path file, FSDataOutputStream out) {
     this.out = out;
     this.executor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(true)
@@ -91,7 +93,11 @@ public class WrapperAsyncFSOutput implements AsyncFSOutput {
           out.hflush();
         }
       }
-      future.complete(out.getPos());
+      long pos = out.getPos();
+      if(pos > this.syncedLength) {
+        this.syncedLength = pos;
+      }
+      future.complete(pos);
     } catch (IOException e) {
       future.completeExceptionally(e);
       return;
@@ -123,5 +129,10 @@ public class WrapperAsyncFSOutput implements AsyncFSOutput {
   @Override
   public boolean isBroken() {
     return false;
+  }
+
+  @Override
+  public long getSyncedLength() {
+    return this.syncedLength;
   }
 }

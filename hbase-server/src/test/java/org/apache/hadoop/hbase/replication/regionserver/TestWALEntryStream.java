@@ -413,9 +413,7 @@ public class TestWALEntryStream {
     batch = reader.take();
     assertEquals(walPath, batch.getLastWalPath());
     assertEquals(5, batch.getNbEntries());
-    // Actually this should be true but we haven't handled this yet since for a normal queue the
-    // last one is always open... Not a big deal for now.
-    assertFalse(batch.isEndOfFile());
+    assertTrue(batch.isEndOfFile());
 
     assertSame(WALEntryBatch.NO_MORE_DATA, reader.take());
   }
