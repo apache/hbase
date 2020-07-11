@@ -51,7 +51,7 @@ public class HDFSBlocksDistribution {
    */
   public static class HostAndWeight {
 
-    private String host;
+    private final String host;
     private long weight;
     private long weightForSsd;
 
@@ -228,7 +228,7 @@ public class HDFSBlocksDistribution {
    * Implementations 'visit' hostAndWeight.
    */
   public interface Visitor {
-    float visit(final HostAndWeight hostAndWeight);
+    long visit(final HostAndWeight hostAndWeight);
   }
 
   /**
@@ -236,8 +236,12 @@ public class HDFSBlocksDistribution {
    * @return the locality index of the given host
    */
   public float getBlockLocalityIndex(String host) {
-    return getBlockLocalityIndexInternal(host,
-      e -> (float) e.weight / (float) uniqueBlocksTotalWeight);
+    if (uniqueBlocksTotalWeight == 0) {
+      return 0.0f;
+    } else {
+      return (float) getBlocksLocalityWeightInternal(host, HostAndWeight::getWeight)
+        / (float) uniqueBlocksTotalWeight;
+    }
   }
 
   /**
@@ -245,16 +249,36 @@ public class HDFSBlocksDistribution {
    * @return the locality index with ssd of the given host
    */
   public float getBlockLocalityIndexForSsd(String host) {
-    return getBlockLocalityIndexInternal(host,
-      e -> (float) e.weightForSsd / (float) uniqueBlocksTotalWeight);
+    if (uniqueBlocksTotalWeight == 0) {
+      return 0.0f;
+    } else {
+      return (float) getBlocksLocalityWeightInternal(host, HostAndWeight::getWeightForSsd)
+        / (float) uniqueBlocksTotalWeight;
+    }
+  }
+
+  /**
+   * @param host the host name
+   * @return the blocks local weight of the given host
+   */
+  public long getBlocksLocalWeight(String host) {
+    return getBlocksLocalityWeightInternal(host, HostAndWeight::getWeight);
+  }
+
+  /**
+   * @param host the host name
+   * @return the blocks local with ssd weight of the given host
+   */
+  public long getBlocksLocalWithSsdWeight(String host) {
+    return getBlocksLocalityWeightInternal(host, HostAndWeight::getWeightForSsd);
   }
 
   /**
    * @param host the host name
    * @return the locality index of the given host
    */
-  private float getBlockLocalityIndexInternal(String host, Visitor visitor) {
-    float localityIndex = 0;
+  private long getBlocksLocalityWeightInternal(String host, Visitor visitor) {
+    long localityIndex = 0;
     HostAndWeight hostAndWeight = this.hostAndWeights.get(host);
     if (hostAndWeight != null && uniqueBlocksTotalWeight != 0) {
       localityIndex = visitor.visit(hostAndWeight);

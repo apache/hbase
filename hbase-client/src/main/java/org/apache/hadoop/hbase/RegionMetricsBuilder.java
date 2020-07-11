@@ -53,6 +53,11 @@ public final class RegionMetricsBuilder {
         .setDataLocality(regionLoadPB.hasDataLocality() ? regionLoadPB.getDataLocality() : 0.0f)
         .setDataLocalityForSsd(regionLoadPB.hasDataLocalityForSsd() ?
           regionLoadPB.getDataLocalityForSsd() : 0.0f)
+        .setBlocksLocalWeight(regionLoadPB.hasBlocksLocalWeight() ?
+          regionLoadPB.getBlocksLocalWeight() : 0)
+        .setBlocksLocalWithSsdWeight(regionLoadPB.hasBlocksLocalWithSsdWeight() ?
+          regionLoadPB.getBlocksLocalWithSsdWeight() : 0)
+        .setBlocksTotalWeight(regionLoadPB.getBlocksTotalWeight())
         .setFilteredReadRequestCount(regionLoadPB.getFilteredReadRequestsCount())
         .setStoreFileUncompressedDataIndexSize(new Size(regionLoadPB.getTotalStaticIndexSizeKB(),
           Size.Unit.KILOBYTE))
@@ -148,6 +153,9 @@ public final class RegionMetricsBuilder {
   private float dataLocality;
   private long lastMajorCompactionTimestamp;
   private float dataLocalityForSsd;
+  private long blocksLocalWeight;
+  private long blocksLocalWithSsdWeight;
+  private long blocksTotalWeight;
   private RegionMetricsBuilder(byte[] name) {
     this.name = name;
   }
@@ -236,7 +244,18 @@ public final class RegionMetricsBuilder {
     this.dataLocalityForSsd = value;
     return this;
   }
-
+  public RegionMetricsBuilder setBlocksLocalWeight(long value) {
+    this.blocksLocalWeight = value;
+    return this;
+  }
+  public RegionMetricsBuilder setBlocksLocalWithSsdWeight(long value) {
+    this.blocksLocalWithSsdWeight = value;
+    return this;
+  }
+  public RegionMetricsBuilder setBlocksTotalWeight(long value) {
+    this.blocksTotalWeight = value;
+    return this;
+  }
   public RegionMetrics build() {
     return new RegionMetricsImpl(name,
         storeCount,
@@ -259,7 +278,10 @@ public final class RegionMetricsBuilder {
         storeSequenceIds,
         dataLocality,
         lastMajorCompactionTimestamp,
-        dataLocalityForSsd);
+        dataLocalityForSsd,
+        blocksLocalWeight,
+        blocksLocalWithSsdWeight,
+        blocksTotalWeight);
   }
 
   private static class RegionMetricsImpl implements RegionMetrics {
@@ -285,6 +307,9 @@ public final class RegionMetricsBuilder {
     private final float dataLocality;
     private final long lastMajorCompactionTimestamp;
     private final float dataLocalityForSsd;
+    private final long blocksLocalWeight;
+    private final long blocksLocalWithSsdWeight;
+    private final long blocksTotalWeight;
     RegionMetricsImpl(byte[] name,
         int storeCount,
         int storeFileCount,
@@ -306,7 +331,10 @@ public final class RegionMetricsBuilder {
         Map<byte[], Long> storeSequenceIds,
         float dataLocality,
         long lastMajorCompactionTimestamp,
-        float dataLocalityForSsd) {
+        float dataLocalityForSsd,
+        long blocksLocalWeight,
+        long blocksLocalWithSsdWeight,
+        long blocksTotalWeight) {
       this.name = Preconditions.checkNotNull(name);
       this.storeCount = storeCount;
       this.storeFileCount = storeFileCount;
@@ -329,6 +357,9 @@ public final class RegionMetricsBuilder {
       this.dataLocality = dataLocality;
       this.lastMajorCompactionTimestamp = lastMajorCompactionTimestamp;
       this.dataLocalityForSsd = dataLocalityForSsd;
+      this.blocksLocalWeight = blocksLocalWeight;
+      this.blocksLocalWithSsdWeight = blocksLocalWithSsdWeight;
+      this.blocksTotalWeight = blocksTotalWeight;
     }
 
     @Override
@@ -442,6 +473,21 @@ public final class RegionMetricsBuilder {
     }
 
     @Override
+    public long getBlocksLocalWeight() {
+      return blocksLocalWeight;
+    }
+
+    @Override
+    public long getBlocksLocalWithSsdWeight() {
+      return blocksLocalWithSsdWeight;
+    }
+
+    @Override
+    public long getBlocksTotalWeight() {
+      return blocksTotalWeight;
+    }
+
+    @Override
     public String toString() {
       StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "storeCount",
           this.getStoreCount());
@@ -492,6 +538,12 @@ public final class RegionMetricsBuilder {
           this.getDataLocality());
       Strings.appendKeyValue(sb, "dataLocalityForSsd",
           this.getDataLocalityForSsd());
+      Strings.appendKeyValue(sb, "blocksLocalWeight",
+        blocksLocalWeight);
+      Strings.appendKeyValue(sb, "blocksLocalWithSsdWeight",
+        blocksLocalWithSsdWeight);
+      Strings.appendKeyValue(sb, "blocksTotalWeight",
+        blocksTotalWeight);
       return sb.toString();
     }
   }
