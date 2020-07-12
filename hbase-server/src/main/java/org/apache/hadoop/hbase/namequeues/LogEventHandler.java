@@ -17,24 +17,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver.slowlog;
+package org.apache.hadoop.hbase.namequeues;
 
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.RingBuffer;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.ipc.RpcCall;
-import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,64 +50,83 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 
 /**
- * Event Handler run by disruptor ringbuffer consumer
+ * Event Handler run by disruptor ringbuffer consumer.
+ * Although this is generic implementation for namedQueue, it can have individual queue specific
+ * logic.
  */
 @InterfaceAudience.Private
 class LogEventHandler implements EventHandler<RingBufferEnvelope> {
 
   private static final Logger LOG = LoggerFactory.getLogger(LogEventHandler.class);
 
-  private static final String SYS_TABLE_QUEUE_SIZE =
-    "hbase.regionserver.slowlog.systable.queue.size";
-  private static final int DEFAULT_SYS_TABLE_QUEUE_SIZE = 1000;
-  private static final int SYSTABLE_PUT_BATCH_SIZE = 100;
+  private static final String SLOW_LOG_RING_BUFFER_SIZE =
+    "hbase.regionserver.slowlog.ringbuffer.size";
 
-  private final Queue<SlowLogPayload> queueForRingBuffer;
-  private final Queue<SlowLogPayload> queueForSysTable;
+  // Map that binds namedQueues.
+  // If NamedQueue of specific type is enabled, corresponding Queue will be used to
+  // insert and retrieve records.
+  // Individual queue sizes should be determined based on their individual configs.
+  private final Map<NamedQueuePayload.NamedQueueEvent, Queue> namedQueues = new HashMap<>();
+
   private final boolean isSlowLogTableEnabled;
+  private final SlowLogPersistentService slowLogPersistentService;
 
-  private Configuration configuration;
+  LogEventHandler(final Configuration conf) {
+    // Initialize SlowLog Queue
+    int slowLogQueueSize = conf.getInt(SLOW_LOG_RING_BUFFER_SIZE,
+      HConstants.DEFAULT_SLOW_LOG_RING_BUFFER_SIZE);
+    EvictingQueue<SlowLogPayload> evictingQueue = EvictingQueue.create(slowLogQueueSize);
 
-  private static final ReentrantLock LOCK = new ReentrantLock();
+    // Add slowLog queue in the namedQueue map
+    Queue<SlowLogPayload> slowLogQueue = Queues.synchronizedQueue(evictingQueue);
+    namedQueues.put(NamedQueuePayload.NamedQueueEvent.SLOW_LOG, slowLogQueue);
 
-  LogEventHandler(int eventCount, boolean isSlowLogTableEnabled, Configuration conf) {
-    this.configuration = conf;
-    EvictingQueue<SlowLogPayload> evictingQueue = EvictingQueue.create(eventCount);
-    queueForRingBuffer = Queues.synchronizedQueue(evictingQueue);
-    this.isSlowLogTableEnabled = isSlowLogTableEnabled;
+    this.isSlowLogTableEnabled = conf.getBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY,
+      HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY);
     if (isSlowLogTableEnabled) {
-      int sysTableQueueSize = conf.getInt(SYS_TABLE_QUEUE_SIZE, DEFAULT_SYS_TABLE_QUEUE_SIZE);
-      EvictingQueue<SlowLogPayload> evictingQueueForTable =
-        EvictingQueue.create(sysTableQueueSize);
-      queueForSysTable = Queues.synchronizedQueue(evictingQueueForTable);
+      slowLogPersistentService = new SlowLogPersistentService(conf);
     } else {
-      queueForSysTable = null;
+      slowLogPersistentService = null;
     }
   }
 
   /**
-   * Called when a publisher has published an event to the {@link RingBuffer}
+   * Called when a publisher has published an event to the {@link RingBuffer}.
+   * This is generic consumer of disruptor ringbuffer and for each new namedQueue that we
+   * add, we should also provide specific consumer logic here.
    *
    * @param event published to the {@link RingBuffer}
    * @param sequence of the event being processed
    * @param endOfBatch flag to indicate if this is the last event in a batch from
    *   the {@link RingBuffer}
-   * @throws Exception if the EventHandler would like the exception handled further up the chain
    */
   @Override
-  public void onEvent(RingBufferEnvelope event, long sequence, boolean endOfBatch)
-      throws Exception {
-    final RpcLogDetails rpcCallDetails = event.getPayload();
-    final RpcCall rpcCall = rpcCallDetails.getRpcCall();
-    final String clientAddress = rpcCallDetails.getClientAddress();
-    final long responseSize = rpcCallDetails.getResponseSize();
-    final String className = rpcCallDetails.getClassName();
-    final SlowLogPayload.Type type = getLogType(rpcCallDetails);
+  public void onEvent(RingBufferEnvelope event, long sequence, boolean endOfBatch) {
+    final NamedQueuePayload namedQueuePayload = event.getPayload();
+    // consume ringbuffer payload based on event type
+    if (NamedQueuePayload.NamedQueueEvent.SLOW_LOG
+        .equals(namedQueuePayload.getNamedQueueEvent())) {
+      consumeSlowLogEvent((RpcLogDetails) namedQueuePayload);
+    }
+  }
+
+  /**
+   * This implementation is specific to slowLog event. This consumes slowLog event from
+   * disruptor and inserts records to EvictingQueue.
+   *
+   * @param rpcLogDetails Input for slow/largeLog events
+   */
+  private void consumeSlowLogEvent(RpcLogDetails rpcLogDetails) {
+    final RpcCall rpcCall = rpcLogDetails.getRpcCall();
+    final String clientAddress = rpcLogDetails.getClientAddress();
+    final long responseSize = rpcLogDetails.getResponseSize();
+    final String className = rpcLogDetails.getClassName();
+    final SlowLogPayload.Type type = getLogType(rpcLogDetails);
     if (type == null) {
       return;
     }
     Descriptors.MethodDescriptor methodDescriptor = rpcCall.getMethod();
-    Message param = rpcCallDetails.getParam();
+    Message param = rpcLogDetails.getParam();
     long receiveTime = rpcCall.getReceiveTime();
     long startTime = rpcCall.getStartTime();
     long endTime = System.currentTimeMillis();
@@ -153,10 +172,10 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
       .setType(type)
       .setUserName(userName)
       .build();
-    queueForRingBuffer.add(slowLogPayload);
+    namedQueues.get(NamedQueuePayload.NamedQueueEvent.SLOW_LOG).add(slowLogPayload);
     if (isSlowLogTableEnabled) {
       if (!slowLogPayload.getRegionName().startsWith("hbase:slowlog")) {
-        queueForSysTable.add(slowLogPayload);
+        slowLogPersistentService.addToQueueForSysTable(slowLogPayload);
       }
     }
   }
@@ -183,13 +202,12 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
   /**
    * Cleans up slow log payloads
    *
+   * @param namedQueueEvent type of queue to clear
    * @return true if slow log payloads are cleaned up, false otherwise
    */
-  boolean clearSlowLogs() {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Received request to clean up online slowlog buffer..");
-    }
-    queueForRingBuffer.clear();
+  boolean clearNamedQueue(NamedQueuePayload.NamedQueueEvent namedQueueEvent) {
+    LOG.debug("Received request to clean up online slowlog buffer..");
+    namedQueues.get(namedQueueEvent).clear();
     return true;
   }
 
@@ -200,8 +218,10 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
    * @return list of slow log payloads
    */
   List<SlowLogPayload> getSlowLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
+    Queue<SlowLogPayload> slowLogQueue =
+      namedQueues.get(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
     List<SlowLogPayload> slowLogPayloadList =
-      Arrays.stream(queueForRingBuffer.toArray(new SlowLogPayload[0]))
+      Arrays.stream(slowLogQueue.toArray(new SlowLogPayload[0]))
         .filter(e -> e.getType() == SlowLogPayload.Type.ALL
           || e.getType() == SlowLogPayload.Type.SLOW_LOG)
         .collect(Collectors.toList());
@@ -219,8 +239,10 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
    * @return list of large log payloads
    */
   List<SlowLogPayload> getLargeLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
+    Queue<SlowLogPayload> largeLogQueue =
+      namedQueues.get(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
     List<SlowLogPayload> slowLogPayloadList =
-      Arrays.stream(queueForRingBuffer.toArray(new SlowLogPayload[0]))
+      Arrays.stream(largeLogQueue.toArray(new SlowLogPayload[0]))
         .filter(e -> e.getType() == SlowLogPayload.Type.ALL
           || e.getType() == SlowLogPayload.Type.LARGE_LOG)
         .collect(Collectors.toList());
@@ -232,34 +254,12 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
   }
 
   /**
-   * Poll from queueForSysTable and insert 100 records in hbase:slowlog table in single batch
+   * Add all slowLog events to system table. This is only for slowLog event's persistence on
+   * system table.
    */
-  void addAllLogsToSysTable() {
-    if (queueForSysTable == null) {
-      // hbase.regionserver.slowlog.systable.enabled is turned off. Exiting.
-      return;
-    }
-    if (LOCK.isLocked()) {
-      return;
-    }
-    LOCK.lock();
-    try {
-      List<SlowLogPayload> slowLogPayloads = new ArrayList<>();
-      int i = 0;
-      while (!queueForSysTable.isEmpty()) {
-        slowLogPayloads.add(queueForSysTable.poll());
-        i++;
-        if (i == SYSTABLE_PUT_BATCH_SIZE) {
-          SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.configuration);
-          slowLogPayloads.clear();
-          i = 0;
-        }
-      }
-      if (slowLogPayloads.size() > 0) {
-        SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.configuration);
-      }
-    } finally {
-      LOCK.unlock();
+  void addAllSlowLogsToSysTable() {
+    if (slowLogPersistentService != null) {
+      slowLogPersistentService.addAllLogsToSysTable();
     }
   }
 

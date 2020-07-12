@@ -17,19 +17,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver.slowlog;
+package org.apache.hadoop.hbase.namequeues;
 
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -40,64 +37,46 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 
 /**
- * Online Slow/Large Log Provider Service that keeps slow/large RPC logs in the ring buffer.
- * The service uses LMAX Disruptor to save slow records which are then consumed by
+ * NamedQueue recorder that maintains various named queues.
+ * The service uses LMAX Disruptor to save queue records which are then consumed by
  * a queue and based on the ring buffer size, the available records are then fetched
  * from the queue in thread-safe manner.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class SlowLogRecorder {
+public class NamedQueueRecorder {
 
   private final Disruptor<RingBufferEnvelope> disruptor;
   private final LogEventHandler logEventHandler;
-  private final int eventCount;
-  private final boolean isOnlineLogProviderEnabled;
-
-  private static final String SLOW_LOG_RING_BUFFER_SIZE =
-    "hbase.regionserver.slowlog.ringbuffer.size";
 
   /**
    * Initialize disruptor with configurable ringbuffer size
    */
-  public SlowLogRecorder(Configuration conf) {
-    isOnlineLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
-      HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
-
-    if (!isOnlineLogProviderEnabled) {
-      this.disruptor = null;
-      this.logEventHandler = null;
-      this.eventCount = 0;
-      return;
-    }
-
-    this.eventCount = conf.getInt(SLOW_LOG_RING_BUFFER_SIZE,
-      HConstants.DEFAULT_SLOW_LOG_RING_BUFFER_SIZE);
+  public NamedQueueRecorder(Configuration conf) {
 
     // This is the 'writer' -- a single threaded executor. This single thread consumes what is
     // put on the ringbuffer.
     final String hostingThreadName = Thread.currentThread().getName();
 
+    int eventCount = conf.getInt("hbase.namedqueue.ringbuffer.size", 1024);
+
     // disruptor initialization with BlockingWaitStrategy
     this.disruptor = new Disruptor<>(RingBufferEnvelope::new,
-      getEventCount(),
+      getEventCount(eventCount),
       Threads.newDaemonThreadFactory(hostingThreadName + ".slowlog.append"),
       ProducerType.MULTI,
       new BlockingWaitStrategy());
     this.disruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler());
 
     // initialize ringbuffer event handler
-    final boolean isSlowLogTableEnabled = conf.getBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY,
-      HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY);
-    this.logEventHandler = new LogEventHandler(this.eventCount, isSlowLogTableEnabled, conf);
+    this.logEventHandler = new LogEventHandler(conf);
     this.disruptor.handleEventsWith(new LogEventHandler[]{this.logEventHandler});
     this.disruptor.start();
   }
 
   // must be power of 2 for disruptor ringbuffer
-  private int getEventCount() {
-    Preconditions.checkArgument(eventCount >= 0,
-      SLOW_LOG_RING_BUFFER_SIZE + " must be > 0");
+  private int getEventCount(int eventCount) {
+    Preconditions.checkArgument(eventCount >= 0, "hbase.namedqueue.ringbuffer.size must be > 0");
     int floor = Integer.highestOneBit(eventCount);
     if (floor == eventCount) {
       return floor;
@@ -116,8 +95,7 @@ public class SlowLogRecorder {
    * @return online slow logs from ringbuffer
    */
   public List<SlowLogPayload> getSlowLogPayloads(AdminProtos.SlowLogResponseRequest request) {
-    return isOnlineLogProviderEnabled ? this.logEventHandler.getSlowLogPayloads(request)
-      : Collections.emptyList();
+    return this.logEventHandler.getSlowLogPayloads(request);
   }
 
   /**
@@ -127,49 +105,47 @@ public class SlowLogRecorder {
    * @return online large logs from ringbuffer
    */
   public List<SlowLogPayload> getLargeLogPayloads(AdminProtos.SlowLogResponseRequest request) {
-    return isOnlineLogProviderEnabled ? this.logEventHandler.getLargeLogPayloads(request)
-      : Collections.emptyList();
+    return this.logEventHandler.getLargeLogPayloads(request);
   }
 
   /**
-   * clears slow log payloads from ringbuffer
+   * clears queue records from ringbuffer
    *
+   * @param namedQueueEvent type of queue to clear
    * @return true if slow log payloads are cleaned up or
    *   hbase.regionserver.slowlog.buffer.enabled is not set to true, false if failed to
    *   clean up slow logs
    */
-  public boolean clearSlowLogPayloads() {
-    if (!isOnlineLogProviderEnabled) {
-      return true;
-    }
-    return this.logEventHandler.clearSlowLogs();
+  public boolean clearNamedQueue(NamedQueuePayload.NamedQueueEvent namedQueueEvent) {
+    return this.logEventHandler.clearNamedQueue(namedQueueEvent);
   }
 
   /**
-   * Add slow log rpcCall details to ringbuffer
+   * Add various NamedQueue records to ringbuffer. Based on the type of the event (e.g slowLog),
+   * consumer of disruptor ringbuffer will have specific logic.
+   * This method is producer of disruptor ringbuffer which is initialized in NamedQueueRecorder
+   * constructor.
    *
-   * @param rpcLogDetails all details of rpc call that would be useful for ring buffer
-   *   consumers
+   * @param namedQueuePayload namedQueue payload sent by client of ring buffer
+   *   service
    */
-  public void addSlowLogPayload(RpcLogDetails rpcLogDetails) {
-    if (!isOnlineLogProviderEnabled) {
-      return;
-    }
+  public void addRecord(NamedQueuePayload namedQueuePayload) {
     RingBuffer<RingBufferEnvelope> ringBuffer = this.disruptor.getRingBuffer();
     long seqId = ringBuffer.next();
     try {
-      ringBuffer.get(seqId).load(rpcLogDetails);
+      ringBuffer.get(seqId).load(namedQueuePayload);
     } finally {
       ringBuffer.publish(seqId);
     }
   }
 
   /**
-   * Poll from queueForSysTable and insert 100 records in hbase:slowlog table in single batch
+   * Add all slowLog events to system table. This is only for slowLog event's persistence on
+   * system table.
    */
   public void addAllLogsToSysTable() {
     if (this.logEventHandler != null) {
-      this.logEventHandler.addAllLogsToSysTable();
+      this.logEventHandler.addAllSlowLogsToSysTable();
     }
   }
 

@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
+import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.quotas.ActivePolicyEnforcement;
@@ -129,7 +130,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.UnassignRegionHandler;
-import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.RejectReplicationRequestStateChecker;
 import org.apache.hadoop.hbase.replication.regionserver.RejectRequestsFromClientStateChecker;
@@ -1305,7 +1306,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     rpcServer = createRpcServer(rs, rpcSchedulerFactory, bindAddress, name);
     rpcServer.setRsRpcServices(this);
     if (!(rs instanceof HMaster)) {
-      rpcServer.setSlowLogRecorder(rs.getSlowLogRecorder());
+      rpcServer.setNamedQueueRecorder(rs.getNamedQueueRecorder());
     }
     scannerLeaseTimeoutPeriod = conf.getInt(
       HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
@@ -4071,11 +4072,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public SlowLogResponses getSlowLogResponses(final RpcController controller,
     final SlowLogResponseRequest request) {
-    final SlowLogRecorder slowLogRecorder =
-      this.regionServer.getSlowLogRecorder();
+    final NamedQueueRecorder namedQueueRecorder =
+      this.regionServer.getNamedQueueRecorder();
     final List<SlowLogPayload> slowLogPayloads;
-    slowLogPayloads = slowLogRecorder != null
-      ? slowLogRecorder.getSlowLogPayloads(request)
+    slowLogPayloads = namedQueueRecorder != null
+      ? namedQueueRecorder.getSlowLogPayloads(request)
       : Collections.emptyList();
     SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
       .addAllSlowLogPayloads(slowLogPayloads)
@@ -4087,11 +4088,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public SlowLogResponses getLargeLogResponses(final RpcController controller,
       final SlowLogResponseRequest request) {
-    final SlowLogRecorder slowLogRecorder =
-      this.regionServer.getSlowLogRecorder();
+    final NamedQueueRecorder namedQueueRecorder =
+      this.regionServer.getNamedQueueRecorder();
     final List<SlowLogPayload> slowLogPayloads;
-    slowLogPayloads = slowLogRecorder != null
-      ? slowLogRecorder.getLargeLogPayloads(request)
+    slowLogPayloads = namedQueueRecorder != null
+      ? namedQueueRecorder.getLargeLogPayloads(request)
       : Collections.emptyList();
     SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
       .addAllSlowLogPayloads(slowLogPayloads)
@@ -4103,10 +4104,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public ClearSlowLogResponses clearSlowLogsResponses(final RpcController controller,
     final ClearSlowLogResponseRequest request) {
-    final SlowLogRecorder slowLogRecorder =
-      this.regionServer.getSlowLogRecorder();
-    boolean slowLogsCleaned = Optional.ofNullable(slowLogRecorder)
-      .map(SlowLogRecorder::clearSlowLogPayloads).orElse(false);
+    final NamedQueueRecorder namedQueueRecorder =
+      this.regionServer.getNamedQueueRecorder();
+    boolean slowLogsCleaned = Optional.ofNullable(namedQueueRecorder)
+      .map(queueRecorder ->
+        queueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG))
+      .orElse(false);
     ClearSlowLogResponses clearSlowLogResponses = ClearSlowLogResponses.newBuilder()
       .setIsCleaned(slowLogsCleaned)
       .build();
