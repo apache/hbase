@@ -37,13 +37,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class HFileContext implements HeapSize, Cloneable {
-  public static final int FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT +
-      // Algorithm, checksumType, encoding, Encryption.Context, hfileName reference,
-      5 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
-      // usesHBaseChecksum, includesMvcc, includesTags and compressTags
-      4 * Bytes.SIZEOF_BOOLEAN + Bytes.SIZEOF_LONG +
-      //byte[] headers for column family and table name
-      2 * ClassSize.ARRAY + 2 * ClassSize.REFERENCE);
+  public static final long FIXED_OVERHEAD = ClassSize.estimateBase(HFileContext.class, false);
 
   private static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
 

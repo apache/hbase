@@ -37,7 +37,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -440,7 +439,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
     map.put(cacheKey, cb);
     long val = elements.incrementAndGet();
     if (buf.getBlockType().isData()) {
-       dataBlockElements.increment();
+      dataBlockElements.increment();
     }
     if (LOG.isTraceEnabled()) {
       long size = map.size();
@@ -497,7 +496,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       heapsize *= -1;
     }
     if (bt != null && bt.isData()) {
-       dataBlockSize.add(heapsize);
+      dataBlockSize.add(heapsize);
     }
     return size.addAndGet(heapsize);
   }
@@ -583,8 +582,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
     int numEvicted = 0;
     for (BlockCacheKey key : map.keySet()) {
       if (key.getHfileName().equals(hfileName)) {
-        if (evictBlock(key))
+        if (evictBlock(key)) {
           ++numEvicted;
+        }
       }
     }
     if (victimHandler != null) {
@@ -657,7 +657,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
   void evict() {
 
     // Ensure only one eviction at a time
-    if(!evictionLock.tryLock()) return;
+    if (!evictionLock.tryLock()) {
+      return;
+    }
 
     try {
       evictionInProgress = true;
@@ -670,7 +672,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
           StringUtils.byteDesc(currentSize));
       }
 
-      if (bytesToFree <= 0) return;
+      if (bytesToFree <= 0) {
+        return;
+      }
 
       // Instantiate priority buckets
       BlockBucket bucketSingle = new BlockBucket("single", bytesToFree, blockSize, singleSize());
@@ -945,7 +949,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
           }
         }
         LruBlockCache cache = this.cache.get();
-        if (cache == null) break;
+        if (cache == null) {
+          break;
+        }
         cache.evict();
       }
     }
@@ -1022,10 +1028,8 @@ public class LruBlockCache implements FirstLevelBlockCache {
     return this.stats;
   }
 
-  public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
-      (4 * Bytes.SIZEOF_LONG) + (11 * ClassSize.REFERENCE) +
-      (6 * Bytes.SIZEOF_FLOAT) + (2 * Bytes.SIZEOF_BOOLEAN)
-      + ClassSize.OBJECT);
+  public final static long CACHE_FIXED_OVERHEAD =
+      ClassSize.estimateBase(LruBlockCache.class, false);
 
   @Override
   public long heapSize() {
@@ -1093,9 +1097,13 @@ public class LruBlockCache implements FirstLevelBlockCache {
           @Override
           public int compareTo(CachedBlock other) {
             int diff = this.getFilename().compareTo(other.getFilename());
-            if (diff != 0) return diff;
+            if (diff != 0) {
+              return diff;
+            }
             diff = Long.compare(this.getOffset(), other.getOffset());
-            if (diff != 0) return diff;
+            if (diff != 0) {
+              return diff;
+            }
             if (other.getCachedTime() < 0 || this.getCachedTime() < 0) {
               throw new IllegalStateException(this.getCachedTime() + ", " + other.getCachedTime());
             }

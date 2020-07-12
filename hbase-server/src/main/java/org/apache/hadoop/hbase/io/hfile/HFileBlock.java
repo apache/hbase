@@ -113,14 +113,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class HFileBlock implements Cacheable {
   private static final Logger LOG = LoggerFactory.getLogger(HFileBlock.class);
-  public static final int FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT +
-     // BlockType, ByteBuff, MemoryType, HFileContext, ByteBuffAllocator
-      5 * ClassSize.REFERENCE +
-      // On-disk size, uncompressed size, and next block's on-disk size
-      // bytePerChecksum and onDiskDataSize
-      4 * Bytes.SIZEOF_INT +
-      // This and previous block offset
-      2 * Bytes.SIZEOF_LONG);
+  public static final long FIXED_OVERHEAD = ClassSize.estimateBase(HFileBlock.class, false);
 
   // Block Header fields.
 

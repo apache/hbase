@@ -2566,9 +2566,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return this.cacheConf;
   }
 
-  public static final long FIXED_OVERHEAD =
-      ClassSize.align(ClassSize.OBJECT + (29 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG)
-              + (6 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
+  public static final long FIXED_OVERHEAD = ClassSize.estimateBase(HStore.class, false);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK

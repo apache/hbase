@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
 /**
@@ -42,7 +41,8 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
     this(hfileName, offset, true, BlockType.DATA);
   }
 
-  public BlockCacheKey(String hfileName, long offset, boolean isPrimaryReplica, BlockType blockType) {
+  public BlockCacheKey(String hfileName, long offset, boolean isPrimaryReplica,
+      BlockType blockType) {
     this.isPrimaryReplicaBlock = isPrimaryReplica;
     this.hfileName = hfileName;
     this.offset = offset;
@@ -71,12 +71,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
     return this.hfileName + '_' + this.offset;
   }
 
-  public static final long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT +
-      Bytes.SIZEOF_BOOLEAN +
-      ClassSize.REFERENCE + // this.hfileName
-      ClassSize.REFERENCE + // this.blockType
-      Bytes.SIZEOF_LONG);    // this.offset
+  public static final long FIXED_OVERHEAD = ClassSize.estimateBase(BlockCacheKey.class, false);
 
   /**
    * Strings have two bytes per character due to default Java Unicode encoding
