@@ -768,7 +768,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @return True if this is last Region in Table
    */
   default boolean isLast() {
-    return Bytes.equals(getEndKey(), HConstants.EMPTY_START_ROW);
+    return Bytes.equals(getEndKey(), HConstants.EMPTY_END_ROW);
   }
 
   /**
