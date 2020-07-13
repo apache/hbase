@@ -979,6 +979,8 @@ public final class HConstants {
   /*
    * cluster replication constants.
    */
+  public static final String REPLICATION_OFFLOAD_ENABLE_KEY = "hbase.replication.offload.enabled";
+  public static final boolean REPLICATION_OFFLOAD_ENABLE_DEFAULT = false;
   public static final String
       REPLICATION_SOURCE_SERVICE_CLASSNAME = "hbase.replication.source.service";
   public static final String
