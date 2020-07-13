@@ -245,11 +245,15 @@ module Hbase
     end
 
     define_test 'switch rpc throttle' do
-      output = capture_stdout { command(:disable_rpc_throttle) }
+      result = nil
+      output = capture_stdout { result = command(:disable_rpc_throttle) }
       assert(output.include?('Previous rpc throttle state : true'))
+      assert(result == true)
 
-      output = capture_stdout { command(:enable_rpc_throttle) }
+      result = nil
+      output = capture_stdout { result = command(:enable_rpc_throttle) }
       assert(output.include?('Previous rpc throttle state : false'))
+      assert(result == false)
     end
 
     define_test 'can set and remove region server quota' do
@@ -275,11 +279,17 @@ module Hbase
 
     define_test 'switch exceed throttle quota' do
       command(:set_quota, TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => '1CU/sec')
-      output = capture_stdout { command(:enable_exceed_throttle_quota) }
-      assert(output.include?('Previous exceed throttle quota enabled : false'))
 
-      output = capture_stdout { command(:disable_exceed_throttle_quota) }
+      result = nil
+      output = capture_stdout { result = command(:enable_exceed_throttle_quota) }
+      assert(output.include?('Previous exceed throttle quota enabled : false'))
+      assert(result == false)
+
+      result = nil
+      output = capture_stdout { result = command(:disable_exceed_throttle_quota) }
       assert(output.include?('Previous exceed throttle quota enabled : true'))
+      assert(result == true)
+
       command(:set_quota, TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => NONE)
     end
 
