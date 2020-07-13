@@ -39,10 +39,12 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Put;
@@ -59,8 +61,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -73,6 +78,9 @@ import com.google.protobuf.Message;
 @Category(SmallTests.class)
 public class TestSimpleRpcScheduler {
   private static final Log LOG = LogFactory.getLog(TestSimpleRpcScheduler.class);
+
+  @Rule
+  public TestName testName = new TestName();
 
   private final RpcScheduler.Context CONTEXT = new RpcScheduler.Context() {
     @Override
@@ -473,6 +481,25 @@ public class TestSimpleRpcScheduler {
     } finally {
       scheduler.stop();
     }
+  }
+
+  @Test
+  public void testFastPathBalancedQueueRpcExecutorWithQueueLength0() throws Exception {
+    String name = testName.getMethodName();
+    int handlerCount = 1;
+    String callQueueType = RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE;
+    int maxQueueLength = 0;
+    PriorityFunction priority = mock(PriorityFunction.class);
+    Configuration conf = HBaseConfiguration.create();
+    Abortable abortable = mock(Abortable.class);
+    FastPathBalancedQueueRpcExecutor executor =
+      Mockito.spy(new FastPathBalancedQueueRpcExecutor(name,
+      handlerCount, callQueueType, maxQueueLength, priority, conf, abortable));
+    CallRunner task = mock(CallRunner.class);
+    assertFalse(executor.dispatch(task));
+    //make sure we never internally get a handler, which would skip the queue validation
+    Mockito.verify(executor, Mockito.never()).getHandler(Mockito.anyString(), Mockito.anyDouble(),
+      (BlockingQueue<CallRunner>) Mockito.any(), (AtomicInteger) Mockito.any());
   }
 
   // Get mocked call that has the CallRunner sleep for a while so that the fast
