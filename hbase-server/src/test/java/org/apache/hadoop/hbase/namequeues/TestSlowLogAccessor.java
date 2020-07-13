@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.namequeues;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
@@ -33,8 +34,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
+import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -93,6 +97,16 @@ public class TestSlowLogAccessor {
     this.namedQueueRecorder = (NamedQueueRecorder) slowLogRecorder.get(hRegionServer);
   }
 
+  private List<TooSlowLog.SlowLogPayload> getSlowLogPayloads(
+      AdminProtos.SlowLogResponseRequest request) {
+    NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
+    namedQueueGetRequest.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    namedQueueGetRequest.setSlowLogResponseRequest(request);
+    NamedQueueGetResponse namedQueueGetResponse =
+      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+    return namedQueueGetResponse.getSlowLogPayloads();
+  }
+
   @Test
   public void testSlowLogRecords() throws Exception {
 
@@ -100,7 +114,7 @@ public class TestSlowLogAccessor {
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
 
     namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
-    Assert.assertEquals(namedQueueRecorder.getSlowLogPayloads(request).size(), 0);
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
 
     int i = 0;
 
@@ -134,7 +148,7 @@ public class TestSlowLogAccessor {
     }
 
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY
-      .waitFor(3000, () -> namedQueueRecorder.getSlowLogPayloads(request).size() == 14));
+      .waitFor(3000, () -> getSlowLogPayloads(request).size() == 14));
 
     Assert.assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getTableCount(connection) == 14));
@@ -173,7 +187,7 @@ public class TestSlowLogAccessor {
     namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(500000).build();
-    Assert.assertEquals(namedQueueRecorder.getSlowLogPayloads(request).size(), 0);
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
 
     for (int j = 0; j < 100; j++) {
       CompletableFuture.runAsync(() -> {
@@ -189,7 +203,7 @@ public class TestSlowLogAccessor {
     }
 
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(7000, () -> {
-      int count = namedQueueRecorder.getSlowLogPayloads(request).size();
+      int count = getSlowLogPayloads(request).size();
       LOG.debug("RingBuffer records count: {}", count);
       return count > 2000;
     }));

@@ -24,17 +24,14 @@ import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 
-import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
+import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 
 /**
  * NamedQueue recorder that maintains various named queues.
@@ -49,10 +46,13 @@ public class NamedQueueRecorder {
   private final Disruptor<RingBufferEnvelope> disruptor;
   private final LogEventHandler logEventHandler;
 
+  private static NamedQueueRecorder namedQueueRecorder;
+  private static final Object LOCK = new Object();
+
   /**
    * Initialize disruptor with configurable ringbuffer size
    */
-  public NamedQueueRecorder(Configuration conf) {
+  private NamedQueueRecorder(Configuration conf) {
 
     // This is the 'writer' -- a single threaded executor. This single thread consumes what is
     // put on the ringbuffer.
@@ -74,6 +74,18 @@ public class NamedQueueRecorder {
     this.disruptor.start();
   }
 
+  public static NamedQueueRecorder getInstance(Configuration conf) {
+    if (namedQueueRecorder != null) {
+      return namedQueueRecorder;
+    }
+    synchronized (LOCK) {
+      if (namedQueueRecorder == null) {
+        namedQueueRecorder = new NamedQueueRecorder(conf);
+      }
+    }
+    return namedQueueRecorder;
+  }
+
   // must be power of 2 for disruptor ringbuffer
   private int getEventCount(int eventCount) {
     Preconditions.checkArgument(eventCount >= 0, "hbase.namedqueue.ringbuffer.size must be > 0");
@@ -89,23 +101,13 @@ public class NamedQueueRecorder {
   }
 
   /**
-   * Retrieve online slow logs from ringbuffer
+   * Retrieve in memory queue records from ringbuffer
    *
-   * @param request slow log request parameters
-   * @return online slow logs from ringbuffer
+   * @param request namedQueue request with event type
+   * @return queue records from ringbuffer after filter (if applied)
    */
-  public List<SlowLogPayload> getSlowLogPayloads(AdminProtos.SlowLogResponseRequest request) {
-    return this.logEventHandler.getSlowLogPayloads(request);
-  }
-
-  /**
-   * Retrieve online large logs from ringbuffer
-   *
-   * @param request large log request parameters
-   * @return online large logs from ringbuffer
-   */
-  public List<SlowLogPayload> getLargeLogPayloads(AdminProtos.SlowLogResponseRequest request) {
-    return this.logEventHandler.getLargeLogPayloads(request);
+  public NamedQueueGetResponse getNamedQueueRecords(NamedQueueGetRequest request) {
+    return this.logEventHandler.getNamedQueueRecords(request);
   }
 
   /**
@@ -145,7 +147,7 @@ public class NamedQueueRecorder {
    */
   public void addAllLogsToSysTable() {
     if (this.logEventHandler != null) {
-      this.logEventHandler.addAllSlowLogsToSysTable();
+      this.logEventHandler.persistAll(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
     }
   }
 

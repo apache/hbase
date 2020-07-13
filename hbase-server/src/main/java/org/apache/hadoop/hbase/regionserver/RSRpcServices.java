@@ -110,6 +110,8 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
+import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
+import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.quotas.ActivePolicyEnforcement;
@@ -4074,14 +4076,28 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     final SlowLogResponseRequest request) {
     final NamedQueueRecorder namedQueueRecorder =
       this.regionServer.getNamedQueueRecorder();
-    final List<SlowLogPayload> slowLogPayloads;
-    slowLogPayloads = namedQueueRecorder != null
-      ? namedQueueRecorder.getSlowLogPayloads(request)
-      : Collections.emptyList();
+    final List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request, namedQueueRecorder);
     SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
       .addAllSlowLogPayloads(slowLogPayloads)
       .build();
     return slowLogResponses;
+  }
+
+  private List<SlowLogPayload> getSlowLogPayloads(SlowLogResponseRequest request,
+      NamedQueueRecorder namedQueueRecorder) {
+    if (namedQueueRecorder == null) {
+      return Collections.emptyList();
+    }
+    List<SlowLogPayload> slowLogPayloads;
+    NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
+    namedQueueGetRequest.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    namedQueueGetRequest.setSlowLogResponseRequest(request);
+    NamedQueueGetResponse namedQueueGetResponse =
+      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+    slowLogPayloads = namedQueueGetResponse != null ?
+      namedQueueGetResponse.getSlowLogPayloads() :
+      Collections.emptyList();
+    return slowLogPayloads;
   }
 
   @Override
@@ -4090,10 +4106,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final SlowLogResponseRequest request) {
     final NamedQueueRecorder namedQueueRecorder =
       this.regionServer.getNamedQueueRecorder();
-    final List<SlowLogPayload> slowLogPayloads;
-    slowLogPayloads = namedQueueRecorder != null
-      ? namedQueueRecorder.getLargeLogPayloads(request)
-      : Collections.emptyList();
+    final List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request, namedQueueRecorder);
     SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
       .addAllSlowLogPayloads(slowLogPayloads)
       .build();

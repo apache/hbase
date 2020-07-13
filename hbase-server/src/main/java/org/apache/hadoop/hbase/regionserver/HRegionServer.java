@@ -599,7 +599,7 @@ public class HRegionServer extends Thread implements
           HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
           HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
         if (isOnlineLogProviderEnabled) {
-          this.namedQueueRecorder = new NamedQueueRecorder(this.conf);
+          this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
         }
       }
       rpcServices = createRpcServices();
