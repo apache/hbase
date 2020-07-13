@@ -237,7 +237,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
     AsyncFSOutput outputToUse = this.output;
     if(outputToUse == null) {
      /**
-      * When this method is called and output is null,it means the caller
+      * When this method is called and output is null, it means the caller
       * may incorrectly call this method because some synchronizing errors or other,
       * so we should explicitly throw exception to indicate this illegal state.
       */
