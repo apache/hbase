@@ -39,6 +39,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 @Category({RegionServerTests.class, MediumTests.class})
@@ -121,11 +122,16 @@ public class TestLogRoller {
     }
 
     // request roll
-    Map.Entry<FSHLog, Path> rollWal = wals.entrySet().iterator().next();
-    rollWal.getKey().requestLogRoll();
+    Iterator<Map.Entry<FSHLog, Path>> it = wals.entrySet().iterator();
+    Map.Entry<FSHLog, Path> walEntry = it.next();
+    walEntry.getKey().requestLogRoll();
     Thread.sleep(5000);
-    assertNotEquals(rollWal.getValue(), rollWal.getKey().getCurrentFileName());
-    wals.put(rollWal.getKey(), rollWal.getKey().getCurrentFileName());
+    assertNotEquals(walEntry.getValue(), walEntry.getKey().getCurrentFileName());
+    walEntry.setValue(walEntry.getKey().getCurrentFileName());
+    while (it.hasNext()) {
+      walEntry = it.next();
+      assertEquals(walEntry.getValue(), walEntry.getKey().getCurrentFileName());
+    }
 
     // period roll
     Thread.sleep(logRollPeriod + 5000);

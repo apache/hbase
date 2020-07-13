@@ -57,7 +57,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
 
   protected static final String WAL_ROLL_PERIOD_KEY = "hbase.regionserver.logroll.period";
 
-  protected final ConcurrentMap<WAL, RollController> walNeedsRoll = new ConcurrentHashMap<>();
+  protected final ConcurrentMap<WAL, RollController> wals = new ConcurrentHashMap<>();
   protected final T abortable;
   // Period to roll log.
   private final long rollPeriod;
@@ -69,18 +69,18 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
 
   public void addWAL(WAL wal) {
     // check without lock first
-    if (walNeedsRoll.containsKey(wal)) {
+    if (wals.containsKey(wal)) {
       return;
     }
     // this is to avoid race between addWAL and requestRollAll.
     synchronized (this) {
-      if (walNeedsRoll.putIfAbsent(wal, new RollController()) == null) {
+      if (wals.putIfAbsent(wal, new RollController(wal)) == null) {
         wal.registerWALActionsListener(new WALActionsListener() {
           @Override
           public void logRollRequested(WALActionsListener.RollRequestReason reason) {
             // TODO logs will contend with each other here, replace with e.g. DelayedQueue
             synchronized (AbstractWALRoller.this) {
-              RollController controller = walNeedsRoll.computeIfAbsent(wal, rc -> new RollController());
+              RollController controller = wals.computeIfAbsent(wal, rc -> new RollController(wal));
               controller.requestRoll();
               AbstractWALRoller.this.notifyAll();
             }
@@ -92,7 +92,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
 
   public void requestRollAll() {
     synchronized (this) {
-      for (RollController controller : walNeedsRoll.values()) {
+      for (RollController controller : wals.values()) {
         controller.requestRoll();
       }
       notifyAll();
@@ -113,9 +113,9 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    */
   private void checkLowReplication(long now) {
     try {
-      for (Entry<WAL, RollController> entry : walNeedsRoll.entrySet()) {
+      for (Entry<WAL, RollController> entry : wals.entrySet()) {
         WAL wal = entry.getKey();
-        boolean needRollAlready = entry.getValue().isRequestRoll;
+        boolean needRollAlready = entry.getValue().isRollRequested();
         if (needRollAlready || !(wal instanceof AbstractFSWAL)) {
           continue;
         }
@@ -131,7 +131,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     // This is because AsyncFSWAL replies on us for rolling a new writer to make progress, and if we
     // failed, AsyncFSWAL may be stuck, so we need to close it to let the upper layer know that it
     // is already broken.
-    for (WAL wal : walNeedsRoll.keySet()) {
+    for (WAL wal : wals.keySet()) {
       // shutdown rather than close here since we are going to abort the RS and the wals need to be
       // split when recovery
       try {
@@ -148,43 +148,39 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     while (running) {
       long now = System.currentTimeMillis();
       checkLowReplication(now);
-      if (walNeedsRoll.values().stream().anyMatch(rc -> rc.isPeriodRoll(now))) {
-        // Time for periodic roll, fall through
-        LOG.debug("WAL roll period {} ms elapsed", this.rollPeriod);
-      } else {
-        synchronized (this) {
-          if (walNeedsRoll.values().stream().anyMatch(rc -> rc.isRequestRoll)) {
-            // WAL roll requested, fall through
-            LOG.debug("WAL roll requested");
-          } else {
-            try {
-              wait(this.threadWakeFrequency);
-            } catch (InterruptedException e) {
-              // restore the interrupt state
-              Thread.currentThread().interrupt();
-            }
-            // goto the beginning to check whether again whether we should fall through to roll
-            // several WALs, and also check whether we should quit.
-            continue;
+      synchronized (this) {
+        if (wals.values().stream().noneMatch(rc -> rc.needsRoll(now))) {
+          try {
+            wait(this.threadWakeFrequency);
+          } catch (InterruptedException e) {
+            // restore the interrupt state
+            Thread.currentThread().interrupt();
           }
+          // goto the beginning to check whether again whether we should fall through to roll
+          // several WALs, and also check whether we should quit.
+          continue;
         }
       }
       try {
-        for (Iterator<Entry<WAL, RollController>> iter = walNeedsRoll.entrySet().iterator();
+        for (Iterator<Entry<WAL, RollController>> iter = wals.entrySet().iterator();
              iter.hasNext();) {
           Entry<WAL, RollController> entry = iter.next();
+          WAL wal = entry.getKey();
           RollController controller = entry.getValue();
-          if (!controller.isRequestRoll && !controller.isPeriodRoll(now)) {
+          if (controller.isRollRequested()) {
+            // WAL roll requested, fall through
+            LOG.debug("WAL {} roll requested", wal);
+          } else if (controller.needsPeriodicRoll(now)){
+            // Time for periodic roll, fall through
+            LOG.debug("WAL {} roll period {} ms elapsed", wal, this.rollPeriod);
+          } else {
             continue;
           }
-          WAL wal = entry.getKey();
-          // reset the flag in front to avoid missing roll request before we return from rollWriter.
-          controller.finishRoll();
           Map<byte[], List<byte[]>> regionsToFlush = null;
           try {
             // Force the roll if the logroll.period is elapsed or if a roll was requested.
             // The returned value is an collection of actual region and family names.
-            regionsToFlush = wal.rollWriter(true);
+            regionsToFlush = controller.rollWal(now);
           } catch (WALClosedException e) {
             LOG.warn("WAL has been closed. Skipping rolling of writer and just remove it", e);
             iter.remove();
@@ -231,7 +227,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    * @return true if all WAL roll finished
    */
   public boolean walRollFinished() {
-    return walNeedsRoll.values().stream().noneMatch(rc -> rc.isRequestRoll) && isWaiting();
+    return wals.values().stream().noneMatch(RollController::isRollRequested) && isWaiting();
   }
 
   /**
@@ -254,29 +250,36 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    * can avoid all wal roll together. see HBASE-24665 for detail
    */
   protected class RollController {
-    boolean isRequestRoll;
-    long lastRollTime;
+    private final WAL wal;
+    private boolean isRequestRoll;
+    private long lastRollTime;
 
-    RollController() {
+    RollController(WAL wal) {
+      this.wal = wal;
       this.isRequestRoll = false;
       this.lastRollTime = System.currentTimeMillis();
     }
 
-    void requestRoll() {
+    public synchronized void requestRoll() {
       this.isRequestRoll = true;
     }
 
-    void finishRoll() {
+    public synchronized Map<byte[], List<byte[]>> rollWal(long lastRollTime) throws IOException {
       this.isRequestRoll = false;
-      this.lastRollTime = System.currentTimeMillis();
+      this.lastRollTime = lastRollTime;
+      return wal.rollWriter(true);
     }
 
-    public boolean isRequestRoll() {
+    public boolean isRollRequested() {
       return isRequestRoll;
     }
 
-    boolean isPeriodRoll(long now) {
+    public boolean needsPeriodicRoll(long now) {
       return (now - lastRollTime) > rollPeriod;
+    }
+
+    public boolean needsRoll(long now) {
+      return isRequestRoll || needsPeriodicRoll(now);
     }
   }
 }
