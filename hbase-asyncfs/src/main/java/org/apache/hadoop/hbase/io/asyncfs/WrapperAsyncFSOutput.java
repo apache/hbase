@@ -94,9 +94,11 @@ public class WrapperAsyncFSOutput implements AsyncFSOutput {
         }
       }
       long pos = out.getPos();
-      if(pos > this.syncedLength) {
-        this.syncedLength = pos;
-      }
+      /**
+       * This flush0 method could only be called by single thread, so here we could
+       * safely overwrite without any synchronization.
+       */
+      this.syncedLength = pos;
       future.complete(pos);
     } catch (IOException e) {
       future.completeExceptionally(e);
