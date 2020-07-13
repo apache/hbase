@@ -47,7 +47,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
 
   private long desiredMaxFileSize;
   private double jitterRate;
-  protected boolean overallHregionFiles;
+  protected boolean overallHRegionFiles;
 
   @Override
   protected void configureForRegion(HRegion region) {
@@ -61,7 +61,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
       this.desiredMaxFileSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
         HConstants.DEFAULT_MAX_FILE_SIZE);
     }
-    this.overallHregionFiles = conf.getBoolean(HConstants.OVERALL_HREGION_FILES,
+    this.overallHRegionFiles = conf.getBoolean(HConstants.OVERALL_HREGION_FILES,
       HConstants.DEFAULT_OVERALL_HREGION_FILES);
     double jitter = conf.getDouble("hbase.hregion.max.filesize.jitter", 0.25D);
     this.jitterRate = (RANDOM.nextFloat() - 0.5D) * jitter;
@@ -94,8 +94,8 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   /**
    * @return true if region size exceed the sizeToCheck
    */
-  protected boolean isExceedSize(long sizeToCheck) {
-    if (overallHregionFiles) {
+  protected final boolean isExceedSize(long sizeToCheck) {
+    if (overallHRegionFiles) {
       long sumSize = 0;
       for (HStore store : region.getStores()) {
         sumSize += store.getSize();
