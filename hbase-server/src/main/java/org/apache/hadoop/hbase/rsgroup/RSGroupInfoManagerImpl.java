@@ -1227,9 +1227,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       throw new ConstraintException(RSGroupInfo.DEFAULT_GROUP + " can't be rename");
     }
     checkGroupName(newName);
-
+    //getRSGroupInfo validates old RSGroup existence.
     RSGroupInfo oldRSG = getRSGroupInfo(oldName);
     Map<String, RSGroupInfo> rsGroupMap = holder.groupName2Group;
+    if (rsGroupMap.get(newName) != null) {
+      throw new ConstraintException("Group already exists: " + newName);
+    }
+
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.remove(oldRSG.getName());
     RSGroupInfo newRSG = new RSGroupInfo(newName, oldRSG.getServers());
