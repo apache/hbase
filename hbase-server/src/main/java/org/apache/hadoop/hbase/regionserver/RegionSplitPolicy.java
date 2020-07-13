@@ -75,7 +75,7 @@ public abstract class RegionSplitPolicy extends Configured {
    */
   protected boolean canSplit() {
     return !region.getRegionInfo().isMetaRegion() && region.isAvailable() &&
-      !region.hasReferences();
+      region.getStores().stream().allMatch(HStore::canSplit);
   }
 
   /**
