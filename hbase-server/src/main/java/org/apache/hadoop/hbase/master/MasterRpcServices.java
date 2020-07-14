@@ -255,6 +255,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamesp
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListReplicationSinkServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListReplicationSinkServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
@@ -3315,6 +3317,27 @@ public class MasterRpcServices extends RSRpcServices implements
       master.getRSGroupInfoManager().updateRSGroupConfig(groupName, configuration);
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postUpdateRSGroupConfig(groupName, configuration);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public ListReplicationSinkServersResponse listReplicationSinkServers(
+    RpcController controller, ListReplicationSinkServersRequest request)
+    throws ServiceException {
+    ListReplicationSinkServersResponse.Builder builder =
+      ListReplicationSinkServersResponse.newBuilder();
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preListReplicationSinkServers();
+      }
+      builder.addAllServerName(master.listReplicationSinkServers().stream()
+        .map(ProtobufUtil::toServerName).collect(Collectors.toList()));
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postListReplicationSinkServers();
       }
     } catch (IOException e) {
       throw new ServiceException(e);
