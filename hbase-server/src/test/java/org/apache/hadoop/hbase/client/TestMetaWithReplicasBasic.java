@@ -20,15 +20,17 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -80,6 +82,27 @@ public class TestMetaWithReplicasBasic extends MetaWithReplicasTestBase {
     }
   }
 
+  @Test
+  public void testReplicaCleanup() throws Exception {
+    ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+    List<String> metaReplicaZnodes = zkw.getMetaReplicaNodes();
+    assertEquals(3, metaReplicaZnodes.size());
+
+    final HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    master.stop("Restarting");
+    TEST_UTIL.waitFor(30000, () -> master.isStopped());
+    TEST_UTIL.getMiniHBaseCluster().getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 1);
+
+    JVMClusterUtil.MasterThread newMasterThread = TEST_UTIL.getMiniHBaseCluster().startMaster();
+    final HMaster newMaster = newMasterThread.getMaster();
+
+    //wait until new master finished meta replica assignment logic
+    TEST_UTIL.waitFor(30000, () -> newMaster.getMasterQuotaManager() != null);
+    zkw = TEST_UTIL.getZooKeeperWatcher();
+    metaReplicaZnodes = zkw.getMetaReplicaNodes();
+    assertEquals(1, metaReplicaZnodes.size());
+
+  }
   @Test
   public void testAccessingUnknownTables() throws Exception {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
