@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -708,8 +709,13 @@ public class ServerManager {
           ProtobufUtil.getRegionInfo(controller, rs, region.getRegionName());
         if (rsRegion == null) return;
       } catch (IOException ioe) {
-        if (ioe instanceof NotServingRegionException) // no need to retry again
+        if (ioe instanceof NotServingRegionException ||
+          (ioe instanceof RemoteWithExtrasException &&
+            ((RemoteWithExtrasException)ioe).unwrapRemoteException()
+              instanceof NotServingRegionException)) {
+          // no need to retry again
           return;
+        }
         LOG.warn("Exception when retrieving regioninfo from: "
           + region.getRegionNameAsString(), ioe);
       }
