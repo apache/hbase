@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.hbase.http.prometheus;
 
+import static org.apache.hadoop.hbase.http.prometheus.PrometheusUtils.toPrometheusName;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Collection;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -38,12 +36,6 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 @InterfaceAudience.Private
 public class PrometheusHadoop2Servlet extends HttpServlet {
 
-  /* don't let multiple threads produce the metrics at the same time */
-  ReadWriteLock rwLock = new ReentrantReadWriteLock();
-
-  /* reference to generated metrics buffer */
-  private final AtomicReference<String> pMetricsBuffer = new AtomicReference<>();
-
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
     throws IOException {
@@ -52,48 +44,31 @@ public class PrometheusHadoop2Servlet extends HttpServlet {
 
   @VisibleForTesting
   void writeMetrics(Writer writer) throws IOException {
-    if (rwLock.writeLock().tryLock()) {
-      try {
-        renderMetrics(MetricsExportHelper.export());
-      } finally {
-        rwLock.writeLock().unlock();
-      }
-    } else {
-      rwLock.readLock().lock();
-      //nothing
-      rwLock.readLock().unlock();
-    }
-    writer.write(pMetricsBuffer.get());
-    writer.flush();
-  }
-
-  private void renderMetrics(Collection<MetricsRecord> metricRecords) {
-    StringBuilder builder = new StringBuilder();
+    Collection<MetricsRecord> metricRecords = MetricsExportHelper.export();
     for (MetricsRecord metricsRecord : metricRecords) {
       for (AbstractMetric metrics : metricsRecord.metrics()) {
         if (metrics.type() == MetricType.COUNTER || metrics.type() == MetricType.GAUGE) {
 
-          String key = PrometheusUtils.toPrometheusName(metricsRecord.name(), metrics.name());
-          builder.append("# TYPE ").append(key).append(" ")
-            .append(metrics.type().toString().toLowerCase()).append("\n").append(key).append("{");
+          String key = toPrometheusName(metricsRecord.name(), metrics.name());
+          writer.append("# TYPE ").append(key).append(" ")
+            .append(metrics.type().toString().toLowerCase()).append("\n")
+            .append(key).append("{");
 
           /* add tags */
           String sep = "";
           for (MetricsTag tag : metricsRecord.tags()) {
             String tagName = tag.name().toLowerCase();
-
-            //ignore specific tag which includes sub-hierarchy
-            if (!tagName.equals("numopenconnectionsperuser")) {
-              builder.append(sep).append(tagName).append("=\"").append(tag.value()).append("\"");
-              sep = ",";
-            }
+            writer.append(sep).append(tagName)
+              .append("=\"")
+              .append(tag.value()).append("\"");
+            sep = ",";
           }
-          builder.append("} ");
-          builder.append(metrics.value().toString()).append('\n');
+          writer.append("} ");
+          writer.append(metrics.value().toString()).append('\n');
         }
       }
     }
-    pMetricsBuffer.set(builder.toString());
+    writer.flush();
   }
 
 }
