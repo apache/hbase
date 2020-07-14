@@ -1230,7 +1230,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     //getRSGroupInfo validates old RSGroup existence.
     RSGroupInfo oldRSG = getRSGroupInfo(oldName);
     Map<String, RSGroupInfo> rsGroupMap = holder.groupName2Group;
-    if (rsGroupMap.get(newName) != null) {
+    if (rsGroupMap.containsKey(newName)) {
       throw new ConstraintException("Group already exists: " + newName);
     }
 
