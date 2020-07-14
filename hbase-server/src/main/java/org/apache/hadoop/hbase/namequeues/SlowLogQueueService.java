@@ -98,6 +98,10 @@ class SlowLogQueueService implements NamedQueueService {
     if (!isOnlineLogProviderEnabled) {
       return;
     }
+    if (!(namedQueuePayload instanceof RpcLogDetails)) {
+      LOG.warn("SlowLogQueueService: NamedQueuePayload is not of type RpcLogDetails.");
+      return;
+    }
     final RpcLogDetails rpcLogDetails = (RpcLogDetails) namedQueuePayload;
     final RpcCall rpcCall = rpcLogDetails.getRpcCall();
     final String clientAddress = rpcLogDetails.getClientAddress();

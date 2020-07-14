@@ -47,6 +47,7 @@ public class NamedQueueRecorder {
   private final LogEventHandler logEventHandler;
 
   private static NamedQueueRecorder namedQueueRecorder;
+  private static boolean isInit = false;
   private static final Object LOCK = new Object();
 
   /**
@@ -79,8 +80,9 @@ public class NamedQueueRecorder {
       return namedQueueRecorder;
     }
     synchronized (LOCK) {
-      if (namedQueueRecorder == null) {
+      if (!isInit) {
         namedQueueRecorder = new NamedQueueRecorder(conf);
+        isInit = true;
       }
     }
     return namedQueueRecorder;
