@@ -114,7 +114,7 @@ ENV FINDBUGS_HOME /opt/findbugs
 ####
 # Install pylint
 ####
-RUN pip install pylint==1.9.2
+RUN pip install pylint<2.0.0
 
 ####
 # Install dateutil.parser
