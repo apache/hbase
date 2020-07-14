@@ -43,15 +43,15 @@ public interface ReplicationSourceInterface {
 
   /**
    * Initializer for the source
-   * @param conf the configuration to use
-   * @param fs the file system to use
-   * @param manager the manager to use
+   *
+   * @param conf   the configuration to use
+   * @param fs     the file system to use
    * @param server the server for this region server
    */
-  void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-      String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-      MetricsSource metrics) throws IOException;
+  void init(Configuration conf, FileSystem fs, Path walDir, ReplicationSourceManager manager,
+    ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
+    String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
+    MetricsSource metrics) throws IOException;
 
   /**
    * Add a log to the list of logs to replicate
@@ -148,11 +148,6 @@ public interface ReplicationSourceInterface {
   ReplicationEndpoint getReplicationEndpoint();
 
   /**
-   * @return the replication source manager
-   */
-  ReplicationSourceManager getSourceManager();
-
-  /**
    * @return the wal file length provider
    */
   WALFileLengthProvider getWALFileLengthProvider();
@@ -192,4 +187,18 @@ public interface ReplicationSourceInterface {
   default boolean isRecovered() {
     return false;
   }
+
+  /**
+   * Set the current position of WAL to {@link ReplicationQueueStorage}
+   * @param entryBatch a batch of WAL entries to replicate
+   */
+  void setWALPosition(WALEntryBatch entryBatch);
+
+  /**
+   * Cleans a WAL and all older WALs from replication queue. Called when we are sure that a WAL is
+   * closed and has no more entries.
+   * @param walName the name of WAL
+   * @param inclusive whether we should also remove the given WAL
+   */
+  void cleanOldWALs(String walName, boolean inclusive);
 }

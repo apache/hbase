@@ -25,7 +25,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -74,9 +73,6 @@ class ReplicationSourceWALReader extends Thread {
   //Indicates whether this particular worker is running
   private boolean isReaderRunning = true;
 
-  private AtomicLong totalBufferUsed;
-  private long totalBufferQuota;
-
   /**
    * Creates a reader worker for a given WAL queue. Reads WAL entries off a given queue, batches the
    * entries, and puts them on a batch queue.
@@ -102,8 +98,6 @@ class ReplicationSourceWALReader extends Thread {
     // memory used will be batchSizeCapacity * (nb.batches + 1)
     // the +1 is for the current thread reading before placing onto the queue
     int batchCount = conf.getInt("replication.source.nb.batches", 1);
-    this.totalBufferUsed = source.getSourceManager().getTotalBufferUsed();
-    this.totalBufferQuota = source.getSourceManager().getTotalBufferLimit();
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
     this.maxRetriesMultiplier =
@@ -273,9 +267,10 @@ class ReplicationSourceWALReader extends Thread {
   //returns false if we've already exceeded the global quota
   private boolean checkQuota() {
     // try not to go over total quota
-    if (totalBufferUsed.get() > totalBufferQuota) {
+    if (source.manager.getTotalBufferUsed().get() > source.manager.getTotalBufferLimit()) {
       LOG.warn("peer={}, can't read more edits from WAL as buffer usage {}B exceeds limit {}B",
-          this.source.getPeerId(), totalBufferUsed.get(), totalBufferQuota);
+        this.source.getPeerId(), source.manager.getTotalBufferUsed().get(),
+        source.manager.getTotalBufferLimit());
       Threads.sleep(sleepForRetries);
       return false;
     }
@@ -404,10 +399,10 @@ class ReplicationSourceWALReader extends Thread {
    * @return true if we should clear buffer and push all
    */
   private boolean acquireBufferQuota(long size) {
-    long newBufferUsed = totalBufferUsed.addAndGet(size);
+    long newBufferUsed = source.manager.getTotalBufferUsed().addAndGet(size);
     // Record the new buffer usage
-    this.source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
-    return newBufferUsed >= totalBufferQuota;
+    source.manager.getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
+    return newBufferUsed >= source.manager.getTotalBufferLimit();
   }
 
   /**
