@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,7 +40,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import java.util.List;
 
 @Category({ MiscTests.class, MediumTests.class })
 public class TestMetaWithReplicasBasic extends MetaWithReplicasTestBase {
@@ -87,7 +86,7 @@ public class TestMetaWithReplicasBasic extends MetaWithReplicasTestBase {
   public void testReplicaCleanup() throws Exception {
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     List<String> metaReplicaZnodes = zkw.getMetaReplicaNodes();
-    assertEquals(metaReplicaZnodes.size(), 3);
+    assertEquals(3, metaReplicaZnodes.size());
 
     final HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     master.stop("Restarting");
@@ -101,7 +100,7 @@ public class TestMetaWithReplicasBasic extends MetaWithReplicasTestBase {
     TEST_UTIL.waitFor(30000, () -> newMaster.getMasterQuotaManager() != null);
     zkw = TEST_UTIL.getZooKeeperWatcher();
     metaReplicaZnodes = zkw.getMetaReplicaNodes();
-    assertEquals(metaReplicaZnodes.size(), 1);
+    assertEquals(1, metaReplicaZnodes.size());
 
   }
   @Test
