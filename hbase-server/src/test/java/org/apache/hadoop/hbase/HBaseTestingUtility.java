@@ -1601,6 +1601,19 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
+   * Create a table with multiple regions.
+   * @param tableName
+   * @param replicaCount replica count.
+   * @param families
+   * @return A Table instance for the created table.
+   * @throws IOException
+   */
+  public Table createMultiRegionTable(TableName tableName, int replicaCount, byte[][] families)
+    throws IOException {
+    return createTable(tableName, families, KEYS_FOR_HBA_CREATE_TABLE, replicaCount);
+  }
+
+  /**
    * Create a table.
    * @param tableName
    * @param families
