@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
@@ -115,7 +116,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     try {
       for (Entry<WAL, RollController> entry : wals.entrySet()) {
         WAL wal = entry.getKey();
-        boolean needRollAlready = entry.getValue().isRollRequested();
+        boolean needRollAlready = entry.getValue().needsRoll(now);
         if (needRollAlready || !(wal instanceof AbstractFSWAL)) {
           continue;
         }
@@ -167,28 +168,30 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
           Entry<WAL, RollController> entry = iter.next();
           WAL wal = entry.getKey();
           RollController controller = entry.getValue();
+          boolean isRequestRoll;
           if (controller.isRollRequested()) {
             // WAL roll requested, fall through
             LOG.debug("WAL {} roll requested", wal);
+            isRequestRoll = true;
           } else if (controller.needsPeriodicRoll(now)){
             // Time for periodic roll, fall through
             LOG.debug("WAL {} roll period {} ms elapsed", wal, this.rollPeriod);
+            isRequestRoll = false;
           } else {
             continue;
           }
-          Map<byte[], List<byte[]>> regionsToFlush = null;
           try {
             // Force the roll if the logroll.period is elapsed or if a roll was requested.
             // The returned value is an collection of actual region and family names.
-            regionsToFlush = controller.rollWal(now);
+            Map<byte[], List<byte[]>> regionsToFlush = controller.rollWal(now, isRequestRoll);
+            if (regionsToFlush != null) {
+              for (Map.Entry<byte[], List<byte[]>> r : regionsToFlush.entrySet()) {
+                scheduleFlush(Bytes.toString(r.getKey()), r.getValue());
+              }
+            }
           } catch (WALClosedException e) {
             LOG.warn("WAL has been closed. Skipping rolling of writer and just remove it", e);
             iter.remove();
-          }
-          if (regionsToFlush != null) {
-            for (Map.Entry<byte[], List<byte[]>> r : regionsToFlush.entrySet()) {
-              scheduleFlush(Bytes.toString(r.getKey()), r.getValue());
-            }
           }
           afterRoll(wal);
         }
@@ -251,35 +254,38 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    */
   protected class RollController {
     private final WAL wal;
-    private boolean isRequestRoll;
+    // avoid missing roll request before we return from rollWriter
+    private final AtomicInteger rollRequestCounter;
     private long lastRollTime;
 
     RollController(WAL wal) {
       this.wal = wal;
-      this.isRequestRoll = false;
+      this.rollRequestCounter = new AtomicInteger(0);
       this.lastRollTime = System.currentTimeMillis();
     }
 
-    public synchronized void requestRoll() {
-      this.isRequestRoll = true;
+    public void requestRoll() {
+      this.rollRequestCounter.incrementAndGet();
     }
 
-    public synchronized Map<byte[], List<byte[]>> rollWal(long lastRollTime) throws IOException {
-      this.isRequestRoll = false;
-      this.lastRollTime = lastRollTime;
+    public Map<byte[], List<byte[]>> rollWal(long now, boolean isRequestRoll) throws IOException {
+      if (isRequestRoll) {
+        this.rollRequestCounter.decrementAndGet();
+      }
+      this.lastRollTime = now;
       return wal.rollWriter(true);
     }
 
     public boolean isRollRequested() {
-      return isRequestRoll;
+      return rollRequestCounter.get() > 0;
     }
 
     public boolean needsPeriodicRoll(long now) {
-      return (now - lastRollTime) > rollPeriod;
+      return (now - this.lastRollTime) > rollPeriod;
     }
 
     public boolean needsRoll(long now) {
-      return isRequestRoll || needsPeriodicRoll(now);
+      return isRollRequested() || needsPeriodicRoll(now);
     }
   }
 }
