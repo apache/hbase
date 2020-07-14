@@ -643,7 +643,7 @@ public final class HConstants {
   /**
    * Last row in a table.
    */
-  public static final byte [] EMPTY_END_ROW = EMPTY_START_ROW;
+  public static final byte [] EMPTY_END_ROW = EMPTY_BYTE_ARRAY;
 
   /**
     * Used by scanners and others when they're trying to detect the end of a
