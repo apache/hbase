@@ -83,10 +83,9 @@ public class TestMetaFixer {
     services.getAssignmentManager().getRegionStates().deleteRegion(ri);
   }
 
-  @Test
-  public void testPlugsHoles() throws Exception {
-    TableName tn = TableName.valueOf(this.name.getMethodName());
-    TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
+  private void testPlugsHolesWithReadReplicaInternal(final TableName tn, final int replicaCount)
+    throws Exception {
+    TEST_UTIL.createMultiRegionTable(tn, replicaCount, new byte[][] { HConstants.CATALOG_FAMILY });
     List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     MasterServices services = TEST_UTIL.getHBaseCluster().getMaster();
     int initialSize = services.getAssignmentManager().getRegionStates().getRegionStates().size();
@@ -94,12 +93,14 @@ public class TestMetaFixer {
     CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
     assertTrue(report.isEmpty());
     int originalCount = ris.size();
-    // Remove first, last and middle region. See if hole gets plugged. Table has 26 regions.
-    deleteRegion(services, ris.get(ris.size() -1));
-    deleteRegion(services, ris.get(3));
-    deleteRegion(services, ris.get(0));
-    assertEquals(initialSize - 3,
-        services.getAssignmentManager().getRegionStates().getRegionStates().size());
+    // Remove first, last and middle region. See if hole gets plugged. Table has 26 * replicaCount regions.
+    for (int i = 0; i < replicaCount; i ++) {
+      deleteRegion(services, ris.get(3 * replicaCount + i));
+      deleteRegion(services, ris.get(i));
+      deleteRegion(services, ris.get(ris.size() - 1 - i));
+    }
+    assertEquals(initialSize - 3 * replicaCount,
+      services.getAssignmentManager().getRegionStates().getRegionStates().size());
     services.getCatalogJanitor().scan();
     report = services.getCatalogJanitor().getLastReport();
     assertEquals(report.toString(), 3, report.getHoles().size());
@@ -109,15 +110,27 @@ public class TestMetaFixer {
     report = services.getCatalogJanitor().getLastReport();
     assertTrue(report.toString(), report.isEmpty());
     assertEquals(initialSize,
-        services.getAssignmentManager().getRegionStates().getRegionStates().size());
+      services.getAssignmentManager().getRegionStates().getRegionStates().size());
 
     // wait for RITs to settle -- those are the fixed regions being assigned -- or until the
     // watchdog TestRule terminates the test.
     HBaseTestingUtility.await(50,
-      () -> isNotEmpty(services.getAssignmentManager().getRegionsInTransition()));
+      () -> services.getMasterProcedureExecutor().getActiveProcIds().size() == 0);
 
     ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertEquals(originalCount, ris.size());
+  }
+
+  @Test
+  public void testPlugsHoles() throws Exception {
+    TableName tn = TableName.valueOf(this.name.getMethodName());
+    testPlugsHolesWithReadReplicaInternal(tn, 1);
+  }
+
+  @Test
+  public void testPlugsHolesWithReadReplica() throws Exception {
+    TableName tn = TableName.valueOf(this.name.getMethodName());
+    testPlugsHolesWithReadReplicaInternal(tn, 3);
   }
 
   /**

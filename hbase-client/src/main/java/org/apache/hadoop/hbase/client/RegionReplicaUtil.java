@@ -147,14 +147,13 @@ public class RegionReplicaUtil {
   /**
    * Create any replicas for the regions (the default replicas that was already created is passed to
    * the method)
-   * @param tableDescriptor descriptor to use
    * @param regions existing regions
    * @param oldReplicaCount existing replica count
    * @param newReplicaCount updated replica count due to modify table
    * @return the combined list of default and non-default replicas
    */
-  public static List<RegionInfo> addReplicas(final TableDescriptor tableDescriptor,
-      final List<RegionInfo> regions, int oldReplicaCount, int newReplicaCount) {
+  public static List<RegionInfo> addReplicas(final List<RegionInfo> regions, int oldReplicaCount,
+    int newReplicaCount) {
     if ((newReplicaCount - 1) <= 0) {
       return regions;
     }

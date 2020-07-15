@@ -32,10 +32,13 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -174,22 +177,35 @@ class MetaFixer {
   private static List<RegionInfo> createMetaEntries(final MasterServices masterServices,
     final List<RegionInfo> newRegionInfos) {
 
-    final List<Either<RegionInfo, IOException>> addMetaEntriesResults = newRegionInfos.stream()
-      .map(regionInfo -> {
+    final List<Either<List<RegionInfo>, IOException>> addMetaEntriesResults = newRegionInfos.
+      stream().map(regionInfo -> {
         try {
-          MetaTableAccessor.addRegionToMeta(masterServices.getConnection(), regionInfo);
-          masterServices.getAssignmentManager()
-            .getRegionStates()
-            .updateRegionState(regionInfo, RegionState.State.CLOSED);
-          return Either.<RegionInfo, IOException>ofLeft(regionInfo);
+          TableDescriptor td = masterServices.getTableDescriptors().get(regionInfo.getTable());
+
+          // Add replicas if needed
+          // we need to create regions with replicaIds starting from 1
+          List<RegionInfo> newRegions = RegionReplicaUtil.addReplicas(
+            Collections.singletonList(regionInfo), 1, td.getRegionReplication());
+
+          // Add regions to META
+          MetaTableAccessor.addRegionsToMeta(masterServices.getConnection(), newRegions,
+            td.getRegionReplication());
+
+          // Setup replication for region replicas if needed
+          if (td.getRegionReplication() > 1) {
+            ServerRegionReplicaUtil.setupRegionReplicaReplication(
+              masterServices.getConfiguration());
+          }
+          return Either.<List<RegionInfo>, IOException>ofLeft(newRegions);
         } catch (IOException e) {
-          return Either.<RegionInfo, IOException>ofRight(e);
+          return Either.<List<RegionInfo>, IOException>ofRight(e);
         }
       })
       .collect(Collectors.toList());
     final List<RegionInfo> createMetaEntriesSuccesses = addMetaEntriesResults.stream()
       .filter(Either::hasLeft)
       .map(Either::getLeft)
+      .flatMap(List::stream)
       .collect(Collectors.toList());
     final List<IOException> createMetaEntriesFailures = addMetaEntriesResults.stream()
       .filter(Either::hasRight)

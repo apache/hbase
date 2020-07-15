@@ -144,7 +144,7 @@ public class EnableTableProcedure
             LOG.info("Number of replicas has increased. Assigning new region replicas." +
                 "The previous replica count was {}. The current replica count is {}.",
                 (currentMaxReplica + 1), configuredReplicaCount);
-            regionsOfTable = RegionReplicaUtil.addReplicas(tableDescriptor, regionsOfTable,
+            regionsOfTable = RegionReplicaUtil.addReplicas(regionsOfTable,
               currentMaxReplica + 1, configuredReplicaCount);
           }
           // Assign all the table regions. (including region replicas if added).

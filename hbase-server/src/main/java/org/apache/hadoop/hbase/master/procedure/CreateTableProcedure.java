@@ -349,7 +349,7 @@ public class CreateTableProcedure
 
     // Add replicas if needed
     // we need to create regions with replicaIds starting from 1
-    List<RegionInfo> newRegions = RegionReplicaUtil.addReplicas(tableDescriptor, regions, 1,
+    List<RegionInfo> newRegions = RegionReplicaUtil.addReplicas(regions, 1,
       tableDescriptor.getRegionReplication());
 
     // Add regions to META
