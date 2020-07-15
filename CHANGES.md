@@ -20,6 +20,97 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.2.6 - Unreleased (as of 2020-07-15)
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-24562](https://issues.apache.org/jira/browse/HBASE-24562) | Stabilize master startup with meta replicas enabled |  Major | meta, read replicas |
+| [HBASE-24603](https://issues.apache.org/jira/browse/HBASE-24603) | Zookeeper sync() call is async |  Critical | master, regionserver |
+| [HBASE-24205](https://issues.apache.org/jira/browse/HBASE-24205) | Create metric to know the number of reads that happens from memstore |  Major | metrics |
+| [HBASE-24605](https://issues.apache.org/jira/browse/HBASE-24605) | Break long region names in the web UI |  Minor | UI |
+| [HBASE-24102](https://issues.apache.org/jira/browse/HBASE-24102) | RegionMover should exclude draining/decommissioning nodes from target RSs |  Major | . |
+| [HBASE-24592](https://issues.apache.org/jira/browse/HBASE-24592) | [brnach-2.2] Upgrade junit to 4.13 |  Major | . |
+| [HBASE-24478](https://issues.apache.org/jira/browse/HBASE-24478) | The regionInfo parameter for MasterProcedureScheduler#waitRegions and MasterProcedureScheduler#wakeRegions should be plural |  Minor | proc-v2 |
+| [HBASE-24524](https://issues.apache.org/jira/browse/HBASE-24524) | SyncTable logging improvements |  Minor | . |
+| [HBASE-24483](https://issues.apache.org/jira/browse/HBASE-24483) | Add repeated prefix logging for MultipleColumnPrefixFilter |  Minor | Filters |
+| [HBASE-24504](https://issues.apache.org/jira/browse/HBASE-24504) | refactor call setupCluster/tearDownCluster in TestTableSnapshotInputFormat |  Minor | mapreduce, test |
+| [HBASE-24412](https://issues.apache.org/jira/browse/HBASE-24412) | Canary support check only one column family per RegionTask |  Major | canary |
+| [HBASE-24467](https://issues.apache.org/jira/browse/HBASE-24467) | Backport HBASE-23963: Split TestFromClientSide; it takes too long to complete timing out |  Major | . |
+| [HBASE-24455](https://issues.apache.org/jira/browse/HBASE-24455) | Correct the doc of "On the number of column families" |  Minor | documentation |
+| [HBASE-24470](https://issues.apache.org/jira/browse/HBASE-24470) | Add store file info when log meessages in HStore. |  Minor | logging, regionserver |
+| [HBASE-24416](https://issues.apache.org/jira/browse/HBASE-24416) | RegionNormalizer spliting region should not be limited by hbase.normalizer.min.region.count |  Major | . |
+| [HBASE-24428](https://issues.apache.org/jira/browse/HBASE-24428) | Priority compaction for recently split daughter regions |  Major | Compaction |
+| [HBASE-24371](https://issues.apache.org/jira/browse/HBASE-24371) | Add more details when print CompactionConfiguration info |  Minor | regionserver |
+| [HBASE-24427](https://issues.apache.org/jira/browse/HBASE-24427) | HStore.add log format error |  Minor | . |
+| [HBASE-24387](https://issues.apache.org/jira/browse/HBASE-24387) | TableSnapshotInputFormatImpl support row limit on each InputSplit |  Major | mapreduce |
+| [HBASE-24578](https://issues.apache.org/jira/browse/HBASE-24578) | [WAL] Add a parameter to config RingBufferEventHandler's SyncFuture count | Major | wal |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-24720](https://issues.apache.org/jira/browse/HBASE-24720) | Meta replicas not cleaned when disabled |  Minor | read replicas |
+| [HBASE-24693](https://issues.apache.org/jira/browse/HBASE-24693) | regioninfo#isLast() has a logic error |  Minor | . |
+| [HBASE-24625](https://issues.apache.org/jira/browse/HBASE-24625) | AsyncFSWAL.getLogFileSizeIfBeingWritten does not return the expected synced file length. |  Critical | Replication, wal |
+| [HBASE-24593](https://issues.apache.org/jira/browse/HBASE-24593) | [branch-2.2] Fix the maven compilation failure for nightly build |  Major | . |
+| [HBASE-24546](https://issues.apache.org/jira/browse/HBASE-24546) | CloneSnapshotProcedure unlimited retry |  Major | snapshots |
+| [HBASE-24657](https://issues.apache.org/jira/browse/HBASE-24657) | JsonBean representation of metrics at /jmx endpoint now quotes all numbers |  Minor | metrics |
+| [HBASE-24117](https://issues.apache.org/jira/browse/HBASE-24117) | Shutdown AssignmentManager before ProcedureExecutor may cause SCP to accidentally skip assigning a region |  Critical | proc-v2 |
+| [HBASE-24600](https://issues.apache.org/jira/browse/HBASE-24600) | Empty RegionAction added to MultiRequest in case of RowMutations/CheckAndMutate batch |  Major | . |
+| [HBASE-24446](https://issues.apache.org/jira/browse/HBASE-24446) | Use EnvironmentEdgeManager to compute clock skew in Master |  Minor | . |
+| [HBASE-24579](https://issues.apache.org/jira/browse/HBASE-24579) | Failed SASL authentication does not result in an exception on client side |  Major | rpc |
+| [HBASE-24550](https://issues.apache.org/jira/browse/HBASE-24550) | Passing '-h' or '--help' to bin/hbase doesn't do as expected |  Trivial | Operability, shell |
+| [HBASE-24516](https://issues.apache.org/jira/browse/HBASE-24516) | Parameter copyFiles should be passed in SecureBulkLoadClient |  Minor | Replication |
+| [HBASE-24517](https://issues.apache.org/jira/browse/HBASE-24517) | AssignmentManager.start should add meta region to ServerStateNode |  Critical | amv2 |
+| [HBASE-24189](https://issues.apache.org/jira/browse/HBASE-24189) | WALSplit recreates region dirs for deleted table with recovered edits data |  Major | regionserver, wal |
+| [HBASE-23195](https://issues.apache.org/jira/browse/HBASE-23195) | FSDataInputStreamWrapper unbuffer can NOT invoke the classes that NOT implements CanUnbuffer but its parents class implements CanUnbuffer |  Critical | io |
+| [HBASE-24529](https://issues.apache.org/jira/browse/HBASE-24529) | hbase.rs.evictblocksonclose is not honored when removing compacted files and closing the storefiles |  Major | . |
+| [HBASE-24532](https://issues.apache.org/jira/browse/HBASE-24532) | Execute region plans with throttle should return succeeded plans |  Major | . |
+| [HBASE-24511](https://issues.apache.org/jira/browse/HBASE-24511) | Ability to configure timeout between RPC retry to RS from master |  Major | . |
+| [HBASE-24444](https://issues.apache.org/jira/browse/HBASE-24444) | Should shutdown mini cluster after class in TestMetaAssignmentWithStopMaster |  Minor | test |
+| [HBASE-24515](https://issues.apache.org/jira/browse/HBASE-24515) | batch Increment/Append fails when retrying the RPC |  Major | . |
+| [HBASE-24506](https://issues.apache.org/jira/browse/HBASE-24506) | async client deadlock |  Blocker | asyncclient |
+| [HBASE-24513](https://issues.apache.org/jira/browse/HBASE-24513) | The default readRpcTimeout and writeRpcTimeout is incorrectly calculated in AsyncConnectionConfiguration |  Critical | asyncclient, Client |
+| [HBASE-24499](https://issues.apache.org/jira/browse/HBASE-24499) | Use a client property for SaslConnection MAX\_ATTEMPTS (currently hardcoded to 5) |  Minor | Client, security |
+| [HBASE-24280](https://issues.apache.org/jira/browse/HBASE-24280) | Hadoop2 and Hadoop3 profiles being activated simultaneously causing test failures |  Major | . |
+| [HBASE-24454](https://issues.apache.org/jira/browse/HBASE-24454) | BucketCache disabled instantly before error duration toleration is reached due to timing issue |  Major | BucketCache |
+| [HBASE-24379](https://issues.apache.org/jira/browse/HBASE-24379) | CatalogJanitor misreports region holes when there are actually over laps. |  Major | master |
+| [HBASE-24426](https://issues.apache.org/jira/browse/HBASE-24426) | Missing regionName while logging warning in HBCKServerCrashProcedure |  Minor | . |
+| [HBASE-24401](https://issues.apache.org/jira/browse/HBASE-24401) | Cell size limit check on append should consider 0 or less value to disable the check |  Major | . |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-21905](https://issues.apache.org/jira/browse/HBASE-21905) | TestFIFOCompactionPolicy is flaky |  Major | test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-24630](https://issues.apache.org/jira/browse/HBASE-24630) | Purge dev javadoc from client bin tarball |  Major | build |
+| [HBASE-24598](https://issues.apache.org/jira/browse/HBASE-24598) | Port HBASE-24380 (Improve WAL splitting log lines to enable sessionization) to branch-2.2 |  Major | logging, Operability, wal |
+| [HBASE-24347](https://issues.apache.org/jira/browse/HBASE-24347) | Hadoop2&Hadoop3 profiles are both active when pre-commit PR builds run |  Major | build |
+| [HBASE-24432](https://issues.apache.org/jira/browse/HBASE-24432) | Set version as 2.2.6-SNAPSHOT in branch-2.2 |  Major | . |
+| [HBASE-23771](https://issues.apache.org/jira/browse/HBASE-23771) | [Flakey Tests] Test TestSplitTransactionOnCluster Again |  Major | . |
+| [HBASE-24022](https://issues.apache.org/jira/browse/HBASE-24022) | Set version as 2.2.5-SNAPSHOT in branch-2.2 |  Major | . |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-24635](https://issues.apache.org/jira/browse/HBASE-24635) | Split TestMetaWithReplicas |  Major | test |
+| [HBASE-24367](https://issues.apache.org/jira/browse/HBASE-24367) | ScheduledChore log elapsed timespan in a human-friendly format |  Minor | master, regionserver |
+| [HBASE-24500](https://issues.apache.org/jira/browse/HBASE-24500) | The behavior of RegionInfoBuilder.newBuilder(RegionInfo) is strange |  Blocker | Client, read replicas |
+
+
+
 ## Release 2.2.5 - Unreleased (as of 2020-05-21)
 
 ### IMPROVEMENTS:
