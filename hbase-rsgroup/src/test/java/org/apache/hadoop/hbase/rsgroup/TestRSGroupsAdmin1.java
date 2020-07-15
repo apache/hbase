@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -539,5 +540,46 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     assertEquals(newgroup.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb1).getName());
     assertTrue(newgroup.containsTable(tb1));
     assertEquals(normal.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb2).getName());
+  }
+
+  @Test
+  public void testRenameRSGroupConstraints() throws Exception {
+    // Add RSGroup, and assign 2 servers and a table to it.
+    String oldGroupName = "oldGroup";
+    RSGroupInfo oldGroup = addGroup(oldGroupName, 2);
+    oldGroup = rsGroupAdmin.getRSGroupInfo(oldGroup.getName());
+    assertNotNull(oldGroup);
+    assertEquals(2, oldGroup.getServers().size());
+
+    //Add another RSGroup
+    String anotherRSGroupName = "anotherRSGroup";
+    RSGroupInfo anotherGroup = addGroup(anotherRSGroupName, 1);
+    anotherGroup = rsGroupAdmin.getRSGroupInfo(anotherGroup.getName());
+    assertNotNull(anotherGroup);
+    assertEquals(1, anotherGroup.getServers().size());
+
+    //Rename to existing group
+    try {
+      rsGroupAdmin.renameRSGroup(oldGroup.getName(), anotherRSGroupName);
+      fail("ConstraintException was expected.");
+    } catch (ConstraintException e) {
+      assertTrue(e.getMessage().contains("Group already exists"));
+    }
+
+    //Rename default RSGroup
+    try {
+      rsGroupAdmin.renameRSGroup(RSGroupInfo.DEFAULT_GROUP, "newRSGroup2");
+      fail("ConstraintException was expected.");
+    } catch (ConstraintException e) {
+      //Do nothing
+    }
+
+    //Rename to default RSGroup
+    try {
+      rsGroupAdmin.renameRSGroup(oldGroup.getName(), RSGroupInfo.DEFAULT_GROUP);
+      fail("ConstraintException was expected.");
+    } catch (ConstraintException e) {
+      assertTrue(e.getMessage().contains("Group already exists"));
+    }
   }
 }
