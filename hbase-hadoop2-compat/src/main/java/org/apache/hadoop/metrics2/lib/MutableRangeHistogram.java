@@ -66,7 +66,7 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
 
     final long[] ranges = getRanges();
     final String rangeType = getRangeType();
-    for (int i = 0; i < ranges.length - 1; i++) {
+    for (int i = 0; i < ranges.length; i++) {
       long val = snapshot.getCountAtOrBelow(ranges[i]);
       if (val - cumNum > 0) {
         metricsRecordBuilder.addCounter(
@@ -79,7 +79,7 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
     long val = snapshot.getCount();
     if (val - cumNum > 0) {
       metricsRecordBuilder.addCounter(
-          Interns.info(name + "_" + rangeType + "_" + ranges[ranges.length - 1] + "-inf", desc),
+          Interns.info(name + "_" + rangeType + "_" + priorRange + "-inf", desc),
           val - cumNum);
     }
   }  
