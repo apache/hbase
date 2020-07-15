@@ -54,10 +54,10 @@ if ! [ -x "$(command -v openssl)" ]; then
   if ! [ -x "$(command -v gpg)" ]; then
     srcChecksum="Unknown"
   else
-    srcChecksum=$(find hbase-*/src/main/ | grep -e "\.java" -e "\.proto" | LC_ALL=C sort xargs gpg --print-md sha512 | gpg --print-md sha512 | tr '\n' ' ' | sed 's/[[:space:]]*//g')
+    srcChecksum=$(find hbase-*/src/main/ | grep -e "\.java" -e "\.proto" | LC_ALL=C sort | xargs gpg --print-md sha512 | gpg --print-md sha512 | tr '\n' ' ' | sed 's/[[:space:]]*//g')
   fi
 else
-  srcChecksum=$(find hbase-*/src/main/ | grep -e "\.java" -e "\.proto" | LC_ALL=C sort xargs openssl dgst -sha512 | openssl dgst -sha512 | sed 's/^.* //')
+  srcChecksum=$(find hbase-*/src/main/ | grep -e "\.java" -e "\.proto" | LC_ALL=C sort | xargs openssl dgst -sha512 | openssl dgst -sha512 | sed 's/^.* //')
 fi
 popd
 
