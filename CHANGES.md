@@ -20,12 +20,14 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.2.6 - Unreleased (as of 2020-07-15)
+## Release 2.2.6 - Unreleased (as of 2020-07-16)
+
 
 ### IMPROVEMENTS:
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24467](https://issues.apache.org/jira/browse/HBASE-24467) | Backport HBASE-23963: Split TestFromClientSide; it takes too long to complete timing out |  Major | . |
 | [HBASE-24562](https://issues.apache.org/jira/browse/HBASE-24562) | Stabilize master startup with meta replicas enabled |  Major | meta, read replicas |
 | [HBASE-24603](https://issues.apache.org/jira/browse/HBASE-24603) | Zookeeper sync() call is async |  Critical | master, regionserver |
 | [HBASE-24205](https://issues.apache.org/jira/browse/HBASE-24205) | Create metric to know the number of reads that happens from memstore |  Major | metrics |
@@ -37,7 +39,6 @@
 | [HBASE-24483](https://issues.apache.org/jira/browse/HBASE-24483) | Add repeated prefix logging for MultipleColumnPrefixFilter |  Minor | Filters |
 | [HBASE-24504](https://issues.apache.org/jira/browse/HBASE-24504) | refactor call setupCluster/tearDownCluster in TestTableSnapshotInputFormat |  Minor | mapreduce, test |
 | [HBASE-24412](https://issues.apache.org/jira/browse/HBASE-24412) | Canary support check only one column family per RegionTask |  Major | canary |
-| [HBASE-24467](https://issues.apache.org/jira/browse/HBASE-24467) | Backport HBASE-23963: Split TestFromClientSide; it takes too long to complete timing out |  Major | . |
 | [HBASE-24455](https://issues.apache.org/jira/browse/HBASE-24455) | Correct the doc of "On the number of column families" |  Minor | documentation |
 | [HBASE-24470](https://issues.apache.org/jira/browse/HBASE-24470) | Add store file info when log meessages in HStore. |  Minor | logging, regionserver |
 | [HBASE-24416](https://issues.apache.org/jira/browse/HBASE-24416) | RegionNormalizer spliting region should not be limited by hbase.normalizer.min.region.count |  Major | . |
@@ -52,6 +53,8 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24721](https://issues.apache.org/jira/browse/HBASE-24721) | rename\_rsgroup overwriting the existing rsgroup. |  Major | . |
+| [HBASE-24615](https://issues.apache.org/jira/browse/HBASE-24615) | MutableRangeHistogram#updateSnapshotRangeMetrics doesn't calculate the distribution for last bucket. |  Major | metrics |
 | [HBASE-24720](https://issues.apache.org/jira/browse/HBASE-24720) | Meta replicas not cleaned when disabled |  Minor | read replicas |
 | [HBASE-24693](https://issues.apache.org/jira/browse/HBASE-24693) | regioninfo#isLast() has a logic error |  Minor | . |
 | [HBASE-24625](https://issues.apache.org/jira/browse/HBASE-24625) | AsyncFSWAL.getLogFileSizeIfBeingWritten does not return the expected synced file length. |  Critical | Replication, wal |
@@ -93,6 +96,8 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24690](https://issues.apache.org/jira/browse/HBASE-24690) | Set version to 2.2.6 in branch-2.2 for first RC of 2.2.6 |  Major | . |
+| [HBASE-24689](https://issues.apache.org/jira/browse/HBASE-24689) | Generate CHANGES.md and RELEASENOTES.md for 2.2.6 |  Major | . |
 | [HBASE-24630](https://issues.apache.org/jira/browse/HBASE-24630) | Purge dev javadoc from client bin tarball |  Major | build |
 | [HBASE-24598](https://issues.apache.org/jira/browse/HBASE-24598) | Port HBASE-24380 (Improve WAL splitting log lines to enable sessionization) to branch-2.2 |  Major | logging, Operability, wal |
 | [HBASE-24347](https://issues.apache.org/jira/browse/HBASE-24347) | Hadoop2&Hadoop3 profiles are both active when pre-commit PR builds run |  Major | build |
