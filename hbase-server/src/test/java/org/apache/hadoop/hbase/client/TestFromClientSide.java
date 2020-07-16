@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -314,9 +313,9 @@ public class TestFromClientSide extends FromClientSideBase {
     try (Table ht = TEST_UTIL.createTable(tableName, FAMILIES)) {
       String value = "this is the value";
       String value2 = "this is some other value";
-      String keyPrefix1 = HBaseCommonTestingUtility.getRandomUUID().toString();
-      String keyPrefix2 = HBaseCommonTestingUtility.getRandomUUID().toString();
-      String keyPrefix3 = HBaseCommonTestingUtility.getRandomUUID().toString();
+      String keyPrefix1 = TEST_UTIL.getRandomUUID().toString();
+      String keyPrefix2 = TEST_UTIL.getRandomUUID().toString();
+      String keyPrefix3 = TEST_UTIL.getRandomUUID().toString();
       putRows(ht, 3, value, keyPrefix1);
       putRows(ht, 3, value, keyPrefix2);
       putRows(ht, 3, value, keyPrefix3);

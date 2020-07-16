@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -152,7 +151,7 @@ class FromClientSideBase {
   protected void putRows(Table ht, int numRows, String value, String key)
     throws IOException {
     for (int i = 0; i < numRows; i++) {
-      String row = key + "_" + HBaseCommonTestingUtility.getRandomUUID().toString();
+      String row = key + "_" + TEST_UTIL.getRandomUUID().toString();
       System.out.println(String.format("Saving row: %s, with value %s", row,
         value));
       Put put = new Put(Bytes.toBytes(row));
