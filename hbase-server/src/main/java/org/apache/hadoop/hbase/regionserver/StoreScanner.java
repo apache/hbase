@@ -173,7 +173,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
      // the seek operation. However, we also look the row-column Bloom filter
      // for multi-row (non-"get") scans because this is not done in
      // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
-     this.useRowColBloom = numCol > 1 || (!get && numCol == 1);
+     this.useRowColBloom = (numCol > 1 || (!get && numCol == 1))
+         && (store == null || store.getFamily().getBloomFilterType() == BloomType.ROWCOL);
 
      this.maxRowSize = scanInfo.getTableMaxRowSize();
      this.scanUsePread = scan.isSmall()? true: scanInfo.isUsePread();
@@ -844,7 +845,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // We need this check because it may happen that the new scanner that we get
     // during heap.next() is requiring reseek due of fake KV previously generated for
     // ROWCOL bloom filter optimization. See HBASE-19863 for more details
-    if (nextCell != null && matcher.compareKeyForNextColumn(nextCell, cell) < 0) {
+    if (useRowColBloom && nextCell != null && matcher.compareKeyForNextColumn(nextCell, cell) < 0) {
       return false;
     }
     return true;
