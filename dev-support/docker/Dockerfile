@@ -113,11 +113,6 @@ RUN mkdir -p /opt/findbugs && \
 ENV FINDBUGS_HOME /opt/findbugs
 
 ####
-# Install pylint
-####
-# RUN pip install pylint==1.9.5
-
-####
 # Install dateutil.parser
 ####
 RUN pip install python-dateutil
