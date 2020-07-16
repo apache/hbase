@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,22 +37,21 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -88,9 +90,6 @@ import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This class manages the procedure of taking and restoring snapshots. There is only one
@@ -624,16 +623,26 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     AssignmentManager assignmentMgr = master.getAssignmentManager();
     if (assignmentMgr.getTableStateManager().isTableState(snapshotTable,
         ZooKeeperProtos.Table.State.ENABLED)) {
-      LOG.debug("Table enabled, starting distributed snapshot.");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Table enabled, starting distributed snapshot for "
+            + ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
       snapshotEnabledTable(snapshot);
-      LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
     }
     // For disabled table, snapshot is created by the master
     else if (assignmentMgr.getTableStateManager().isTableState(snapshotTable,
         ZooKeeperProtos.Table.State.DISABLED)) {
-      LOG.debug("Table is disabled, running snapshot entirely on master.");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Table is disabled, running snapshot entirely on master "
+            + ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
       snapshotDisabledTable(snapshot);
-      LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
     } else {
       LOG.error("Can't snapshot table '" + snapshot.getTable()
           + "', isn't open or closed, we don't know what to do!");

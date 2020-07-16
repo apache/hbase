@@ -24,18 +24,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
@@ -134,6 +133,8 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     // update the running tasks
     this.status = TaskMonitor.get().createStatus(
       "Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable);
+    this.snapshotManifest.setMonitoredTask(status);
+    this.status.enableStatusJournal(true);
   }
 
   private HTableDescriptor loadTableDescriptor()
@@ -242,6 +243,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
         }
       } catch (IOException e) {
         LOG.error("Couldn't delete snapshot working directory:" + workingDir);
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Table snapshot journal : \n" + status.prettyPrintJournal());
       }
       releaseTableLock();
     }
