@@ -144,12 +144,12 @@ public class NamedQueueRecorder {
   }
 
   /**
-   * Add all slowLog events to system table. This is only for slowLog event's persistence on
-   * system table.
+   * Add all in memory queue records to system table. The implementors can use system table
+   * or direct HDFS file or ZK as persistence system.
    */
-  public void addAllLogsToSysTable() {
+  public void persistAll(NamedQueuePayload.NamedQueueEvent namedQueueEvent) {
     if (this.logEventHandler != null) {
-      this.logEventHandler.persistAll(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+      this.logEventHandler.persistAll(namedQueueEvent);
     }
   }
 

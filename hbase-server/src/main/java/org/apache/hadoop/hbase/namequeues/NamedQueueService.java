@@ -31,6 +31,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface NamedQueueService {
 
   /**
+   * Retrieve event type for NamedQueueService implementation.
+   *
+   * @return {@link NamedQueuePayload.NamedQueueEvent}
+   */
+  NamedQueuePayload.NamedQueueEvent getEvent();
+
+  /**
    * This implementation is generic for consuming records from LMAX
    * disruptor and inserts records to EvictingQueue which is maintained by each
    * ringbuffer provider.

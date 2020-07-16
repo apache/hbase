@@ -50,7 +50,7 @@ public class SlowLogPersistentService {
 
   private final Configuration configuration;
 
-  SlowLogPersistentService(final Configuration configuration) {
+  public SlowLogPersistentService(final Configuration configuration) {
     this.configuration = configuration;
     int sysTableQueueSize =
       configuration.getInt(SYS_TABLE_QUEUE_SIZE, DEFAULT_SYS_TABLE_QUEUE_SIZE);
@@ -59,14 +59,14 @@ public class SlowLogPersistentService {
     queueForSysTable = Queues.synchronizedQueue(evictingQueueForTable);
   }
 
-  void addToQueueForSysTable(TooSlowLog.SlowLogPayload slowLogPayload) {
+  public void addToQueueForSysTable(TooSlowLog.SlowLogPayload slowLogPayload) {
     queueForSysTable.add(slowLogPayload);
   }
 
   /**
    * Poll from queueForSysTable and insert 100 records in hbase:slowlog table in single batch
    */
-  void addAllLogsToSysTable() {
+  public void addAllLogsToSysTable() {
     if (queueForSysTable == null) {
       LOG.trace("hbase.regionserver.slowlog.systable.enabled is turned off. Exiting.");
       return;

@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.namequeues;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.RingBuffer;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,6 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Event Handler run by disruptor ringbuffer consumer.
@@ -38,6 +41,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class LogEventHandler implements EventHandler<RingBufferEnvelope> {
 
+  private static final Logger LOG = LoggerFactory.getLogger(LogEventHandler.class);
+
   // Map that binds namedQueues to corresponding queue service implementation.
   // If NamedQueue of specific type is enabled, corresponding service will be used to
   // insert and retrieve records.
@@ -46,10 +51,34 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
   private final Map<NamedQueuePayload.NamedQueueEvent, NamedQueueService> namedQueueServices =
     new HashMap<>();
 
+  private static final String NAMED_QUEUE_PROVIDER_CLASSES = "hbase.namedqueue.provider.classes";
+
   LogEventHandler(final Configuration conf) {
-    // add all service mappings here
-    namedQueueServices
-      .put(NamedQueuePayload.NamedQueueEvent.SLOW_LOG, new SlowLogQueueService(conf));
+    for (String implName : conf.getStringCollection(NAMED_QUEUE_PROVIDER_CLASSES)) {
+      Class<?> clz;
+      try {
+        clz = Class.forName(implName);
+      } catch (ClassNotFoundException e) {
+        LOG.warn("Failed to find NamedQueueService implementor class {}", implName, e);
+        continue;
+      }
+
+      if (!NamedQueueService.class.isAssignableFrom(clz)) {
+        LOG.warn("Class {} is not implementor of NamedQueueService.", clz);
+        continue;
+      }
+
+      // add all service mappings here
+      try {
+        NamedQueueService namedQueueService =
+          (NamedQueueService) clz.getConstructor(Configuration.class).newInstance(conf);
+        namedQueueServices.put(namedQueueService.getEvent(), namedQueueService);
+      } catch (InstantiationException | IllegalAccessException | NoSuchMethodException
+          | InvocationTargetException e) {
+        LOG.warn("Unable to instantiate/add NamedQueueService implementor {} to service map.",
+          clz);
+      }
+    }
   }
 
   /**

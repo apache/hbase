@@ -17,13 +17,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.namequeues;
+package org.apache.hadoop.hbase.namequeues.impl;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.namequeues.LogHandlerUtils;
+import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
+import org.apache.hadoop.hbase.namequeues.NamedQueueService;
+import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
+import org.apache.hadoop.hbase.namequeues.SlowLogPersistentService;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -47,7 +52,7 @@ import java.util.stream.Collectors;
  * In-memory Queue service provider for Slow/LargeLog events
  */
 @InterfaceAudience.Private
-class SlowLogQueueService implements NamedQueueService {
+public class SlowLogQueueService implements NamedQueueService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SlowLogQueueService.class);
 
@@ -59,7 +64,7 @@ class SlowLogQueueService implements NamedQueueService {
   private final SlowLogPersistentService slowLogPersistentService;
   private final Queue<TooSlowLog.SlowLogPayload> slowLogQueue;
 
-  SlowLogQueueService(Configuration conf) {
+  public SlowLogQueueService(Configuration conf) {
     this.isOnlineLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
       HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
 
@@ -85,6 +90,11 @@ class SlowLogQueueService implements NamedQueueService {
     } else {
       slowLogPersistentService = null;
     }
+  }
+
+  @Override
+  public NamedQueuePayload.NamedQueueEvent getEvent() {
+    return NamedQueuePayload.NamedQueueEvent.SLOW_LOG;
   }
 
   /**

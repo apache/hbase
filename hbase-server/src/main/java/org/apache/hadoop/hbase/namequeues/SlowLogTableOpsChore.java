@@ -54,7 +54,7 @@ public class SlowLogTableOpsChore extends ScheduledChore {
     if (LOG.isTraceEnabled()) {
       LOG.trace("SlowLog Table Ops Chore is starting up.");
     }
-    namedQueueRecorder.addAllLogsToSysTable();
+    namedQueueRecorder.persistAll(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
     if (LOG.isTraceEnabled()) {
       LOG.trace("SlowLog Table Ops Chore is closing.");
     }
