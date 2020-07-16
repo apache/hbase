@@ -60,6 +60,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     python \
     python2.7 \
     python-pip \
+    pylint \
     rsync \
     snappy \
     xz-utils \
@@ -110,11 +111,6 @@ RUN mkdir -p /opt/findbugs && \
          -o /opt/findbugs.tar.gz && \
     tar xzf /opt/findbugs.tar.gz --strip-components 1 -C /opt/findbugs
 ENV FINDBUGS_HOME /opt/findbugs
-
-####
-# Install pylint
-####
-RUN pip install pylint==1.9.2
 
 ####
 # Install dateutil.parser
