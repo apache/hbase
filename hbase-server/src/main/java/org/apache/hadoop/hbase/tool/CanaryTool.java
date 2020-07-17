@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase.tool;
 
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT;
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_ZNODE_PARENT;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.BindException;
@@ -50,7 +48,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -102,7 +99,6 @@ import org.apache.zookeeper.client.ConnectStringParser;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -127,15 +123,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class CanaryTool implements Tool, Canary {
   public static final String HBASE_CANARY_INFO_PORT = "hbase.canary.info.port";
-
-  public static final int DEFAULT_CANARY_INFOPORT = 16050;
-
   public static final String HBASE_CANARY_INFO_BINDADDRESS = "hbase.canary.info.bindAddress";
 
-  private InfoServer infoServer;
-
   private void putUpWebUI() throws IOException {
-    int port = conf.getInt(HBASE_CANARY_INFO_PORT, DEFAULT_CANARY_INFOPORT);
+    int port = conf.getInt(HBASE_CANARY_INFO_PORT, -1);
     // -1 is for disabling info server
     if (port < 0) {
       return;
@@ -147,7 +138,7 @@ public class CanaryTool implements Tool, Canary {
     } else {
       String addr = conf.get(HBASE_CANARY_INFO_BINDADDRESS, "0.0.0.0");
       try {
-        infoServer = new InfoServer("canary", addr, port, false, conf);
+        InfoServer infoServer = new InfoServer("canary", addr, port, false, conf);
         infoServer.addUnprivilegedServlet("canary", "/canary-status", CanaryStatusServlet.class);
         infoServer.setAttribute("sink", this.sink);
         infoServer.start();
@@ -1114,6 +1105,8 @@ public class CanaryTool implements Tool, Canary {
     System.err.println(" -D<configProperty>=<value> to assign or override configuration params");
     System.err.println(" -Dhbase.canary.read.raw.enabled=<true/false> Set to enable/disable " +
         "raw scan; default=false");
+    System.err.println(" -Dhbase.canary.info.port=PORT_NUMBER  Set for a Canary UI; " +
+      "default=-1 (None)");
     System.err.println("");
     System.err.println("Canary runs in one of three modes: region (default), regionserver, or " +
         "zookeeper.");
