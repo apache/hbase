@@ -283,6 +283,19 @@ public class SpaceQuotaHelperForTests {
   }
 
   /**
+   * Verifies that table usage snapshot exists for the table
+   */
+  void verifyTableUsageSnapshotForSpaceQuotaExist(TableName tn) throws Exception {
+    boolean sawUsageSnapshot = false;
+    try (Table quotaTable = testUtil.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      Scan s = QuotaTableUtil.makeQuotaSnapshotScanForTable(tn);
+      ResultScanner rs = quotaTable.getScanner(s);
+      sawUsageSnapshot = (rs.next() != null);
+    }
+    assertTrue("Expected to succeed in getting table usage snapshots for space quota", sawUsageSnapshot);
+  }
+
+  /**
    * Sets the given quota (policy & limit) on the passed table.
    */
   void setQuotaLimit(final TableName tn, SpaceViolationPolicy policy, long sizeInMBs)
@@ -454,7 +467,13 @@ public class SpaceQuotaHelperForTests {
   }
 
   NamespaceDescriptor createNamespace() throws Exception {
-    NamespaceDescriptor nd = NamespaceDescriptor.create("ns" + counter.getAndIncrement()).build();
+    return createNamespace(null);
+  }
+
+  NamespaceDescriptor createNamespace(String namespace) throws Exception {
+    if (namespace == null || namespace.trim().isEmpty())
+      namespace = "ns" + counter.getAndIncrement();
+    NamespaceDescriptor nd = NamespaceDescriptor.create(namespace).build();
     testUtil.getAdmin().createNamespace(nd);
     return nd;
   }

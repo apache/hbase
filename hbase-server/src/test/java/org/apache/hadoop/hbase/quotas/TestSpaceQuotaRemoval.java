@@ -141,6 +141,41 @@ public class TestSpaceQuotaRemoval {
   }
 
   @Test
+  public void testDeleteTableUsageSnapshotsForNamespace() throws Exception {
+    Put put = new Put(Bytes.toBytes("to_reject"));
+    put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
+
+    SpaceViolationPolicy policy = SpaceViolationPolicy.NO_INSERTS;
+
+    //Create a namespace
+    String ns1 = "nsnew";
+    NamespaceDescriptor nsd = helper.createNamespace(ns1);
+
+    //Create 2nd namespace with name similar to ns1
+    String ns2 = ns1 + "test";
+    NamespaceDescriptor nsd2 = helper.createNamespace(ns2);
+
+    // Do puts until we violate space policy on table tn1 in namesapce ns1
+    final TableName tn1 = helper.writeUntilViolationAndVerifyViolationInNamespace(ns1, policy, put);
+
+    // Do puts until we violate space policy on table tn2 in namespace ns2
+    final TableName tn2 = helper.writeUntilViolationAndVerifyViolationInNamespace(ns2, policy, put);
+
+    // Now, remove the quota from namespace ns1 which will remove table usage snapshots for ns1
+    helper.removeQuotaFromNamespace(ns1);
+
+    // Verify that table usage snapshot for table tn2 in namespace ns2 exist
+    helper.verifyTableUsageSnapshotForSpaceQuotaExist(tn2);
+
+    // Put a new row on tn2: should violate as space quota exists on namespace ns2
+    helper.verifyViolation(policy, tn2, put);
+
+    // Put a new row on tn1: should not violate as quota settings removed from namespace ns1
+    helper.verifyNoViolation(tn1, put);
+  }
+
+  @Test
   public void testSetNamespaceSizeQuotaAndThenRemove() throws Exception {
     Put put = new Put(Bytes.toBytes("to_reject"));
     put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),

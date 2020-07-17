@@ -637,7 +637,7 @@ public class QuotaTableUtil {
     throws IOException {
     Scan s = new Scan();
     //Get rows for all tables in namespace
-    s.setRowPrefixFilter(Bytes.toBytes("t." + namespace));
+    s.setRowPrefixFilter(Bytes.add(QUOTA_TABLE_ROW_KEY_PREFIX, Bytes.toBytes(namespace + TableName.NAMESPACE_DELIM)));
     //Scan for table usage column (u:p) in quota table
     s.addColumn(QUOTA_FAMILY_USAGE,QUOTA_QUALIFIER_POLICY);
     //Scan for table quota column (q:s) if table has a space quota defined
