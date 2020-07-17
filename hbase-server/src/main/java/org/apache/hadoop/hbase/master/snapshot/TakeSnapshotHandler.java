@@ -121,7 +121,6 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     this.snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
     this.workingDirFs = this.workingDir.getFileSystem(this.conf);
     this.monitor = new ForeignExceptionDispatcher(snapshot.getName());
-    this.snapshotManifest = SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor);
 
     this.tableLockManager = master.getTableLockManager();
     this.tableLock = this.tableLockManager.writeLock(
@@ -133,8 +132,10 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     // update the running tasks
     this.status = TaskMonitor.get().createStatus(
       "Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable);
-    this.snapshotManifest.setMonitoredTask(status);
     this.status.enableStatusJournal(true);
+
+    this.snapshotManifest =
+        SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor, status);
   }
 
   private HTableDescriptor loadTableDescriptor()

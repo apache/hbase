@@ -81,7 +81,7 @@ public final class SnapshotManifest {
   private final FileSystem rootFs;
   private final FileSystem workingDirFs;
   private int manifestSizeLimit;
-  protected MonitoredTask statusTask;
+  private final MonitoredTask statusTask;
 
   /**
    *
@@ -95,12 +95,13 @@ public final class SnapshotManifest {
    */
   private SnapshotManifest(final Configuration conf, final FileSystem rootFs,
       final Path workingDir, final SnapshotDescription desc,
-      final ForeignExceptionSnare monitor) throws IOException {
+      final ForeignExceptionSnare monitor, final MonitoredTask statusTask) throws IOException {
     this.monitor = monitor;
     this.desc = desc;
     this.workingDir = workingDir;
     this.conf = conf;
     this.rootFs = rootFs;
+    this.statusTask = statusTask;
     this.workingDirFs = this.workingDir.getFileSystem(this.conf);
     this.manifestSizeLimit = conf.getInt(SNAPSHOT_MANIFEST_SIZE_LIMIT_CONF_KEY, 64 * 1024 * 1024);
   }
@@ -121,8 +122,14 @@ public final class SnapshotManifest {
   public static SnapshotManifest create(final Configuration conf, final FileSystem fs,
       final Path workingDir, final SnapshotDescription desc,
       final ForeignExceptionSnare monitor) throws IOException {
-    return new SnapshotManifest(conf, fs, workingDir, desc, monitor);
+    return create(conf, fs, workingDir, desc, monitor, null);
 
+  }
+
+  public static SnapshotManifest create(final Configuration conf, final FileSystem fs,
+      final Path workingDir, final SnapshotDescription desc, final ForeignExceptionSnare monitor,
+      final MonitoredTask statusTask) throws IOException {
+    return new SnapshotManifest(conf, fs, workingDir, desc, monitor, statusTask);
   }
 
   /**
@@ -136,7 +143,7 @@ public final class SnapshotManifest {
    */
   public static SnapshotManifest open(final Configuration conf, final FileSystem fs,
       final Path workingDir, final SnapshotDescription desc) throws IOException {
-    SnapshotManifest manifest = new SnapshotManifest(conf, fs, workingDir, desc, null);
+    SnapshotManifest manifest = new SnapshotManifest(conf, fs, workingDir, desc, null, null);
     manifest.load();
     return manifest;
   }
@@ -341,13 +348,6 @@ public final class SnapshotManifest {
       default:
         throw new CorruptedSnapshotException("Invalid Snapshot version: "+ desc.getVersion(), desc);
     }
-  }
-
-  /**
-   * Sets the status task for monitoring all the subtasks for Snapshot operation
-   */
-  public void setMonitoredTask(MonitoredTask statusTask) {
-    this.statusTask = statusTask;
   }
 
   /**
