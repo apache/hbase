@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -169,9 +171,9 @@ public abstract class AbstractTestFSWAL {
   }
 
   protected void addEdits(WAL log, RegionInfo hri, TableDescriptor htd, int times,
-      MultiVersionConcurrencyControl mvcc, NavigableMap<byte[], Integer> scopes)
+      MultiVersionConcurrencyControl mvcc, NavigableMap<byte[], Integer> scopes, String cf)
       throws IOException {
-    final byte[] row = Bytes.toBytes("row");
+    final byte[] row = Bytes.toBytes(cf);
     for (int i = 0; i < times; i++) {
       long timestamp = System.currentTimeMillis();
       WALEdit cols = new WALEdit();
@@ -253,8 +255,8 @@ public abstract class AbstractTestFSWAL {
    * regions which should be flushed in order to archive the oldest wal file.
    * <p>
    * This method tests this behavior by inserting edits and rolling the wal enough times to reach
-   * the max number of logs threshold. It checks whether we get the "right regions" for flush on
-   * rolling the wal.
+   * the max number of logs threshold. It checks whether we get the "right regions and stores" for
+   * flush on rolling the wal.
    * @throws Exception
    */
   @Test
@@ -264,12 +266,23 @@ public abstract class AbstractTestFSWAL {
     conf1.setInt("hbase.regionserver.maxlogs", 1);
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(conf1), DIR.toString(),
       HConstants.HREGION_OLDLOGDIR_NAME, conf1, null, true, null, null);
+    String cf1 = "cf1";
+    String cf2 = "cf2";
+    String cf3 = "cf3";
     TableDescriptor t1 = TableDescriptorBuilder.newBuilder(TableName.valueOf("t1"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf1)).build();
     TableDescriptor t2 = TableDescriptorBuilder.newBuilder(TableName.valueOf("t2"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf1)).build();
     RegionInfo hri1 = RegionInfoBuilder.newBuilder(t1.getTableName()).build();
     RegionInfo hri2 = RegionInfoBuilder.newBuilder(t2.getTableName()).build();
+
+    List<ColumnFamilyDescriptor> cfs = new ArrayList();
+    cfs.add(ColumnFamilyDescriptorBuilder.of(cf1));
+    cfs.add(ColumnFamilyDescriptorBuilder.of(cf2));
+    TableDescriptor t3 = TableDescriptorBuilder.newBuilder(TableName.valueOf("t3"))
+      .setColumnFamilies(cfs).build();
+    RegionInfo hri3 = RegionInfoBuilder.newBuilder(t3.getTableName()).build();
+
     // add edits and roll the wal
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     NavigableMap<byte[], Integer> scopes1 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -280,26 +293,30 @@ public abstract class AbstractTestFSWAL {
     for (byte[] fam : t2.getColumnFamilyNames()) {
       scopes2.put(fam, 0);
     }
+    NavigableMap<byte[], Integer> scopes3 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    for (byte[] fam : t3.getColumnFamilyNames()) {
+      scopes3.put(fam, 0);
+    }
     try {
-      addEdits(wal, hri1, t1, 2, mvcc, scopes1);
+      addEdits(wal, hri1, t1, 2, mvcc, scopes1, cf1);
       wal.rollWriter();
       // add some more edits and roll the wal. This would reach the log number threshold
-      addEdits(wal, hri1, t1, 2, mvcc, scopes1);
+      addEdits(wal, hri1, t1, 2, mvcc, scopes1, cf1);
       wal.rollWriter();
       // with above rollWriter call, the max logs limit is reached.
       assertTrue(wal.getNumRolledLogFiles() == 2);
 
       // get the regions to flush; since there is only one region in the oldest wal, it should
       // return only one region.
-      byte[][] regionsToFlush = wal.findRegionsToForceFlush();
-      assertEquals(1, regionsToFlush.length);
-      assertEquals(hri1.getEncodedNameAsBytes(), regionsToFlush[0]);
+      Map<byte[], List<byte[]>> regionsToFlush = wal.findRegionsToForceFlush();
+      assertEquals(1, regionsToFlush.size());
+      assertEquals(hri1.getEncodedNameAsBytes(), (byte[])regionsToFlush.keySet().toArray()[0]);
       // insert edits in second region
-      addEdits(wal, hri2, t2, 2, mvcc, scopes2);
+      addEdits(wal, hri2, t2, 2, mvcc, scopes2, cf1);
       // get the regions to flush, it should still read region1.
       regionsToFlush = wal.findRegionsToForceFlush();
-      assertEquals(1, regionsToFlush.length);
-      assertEquals(hri1.getEncodedNameAsBytes(), regionsToFlush[0]);
+      assertEquals(1, regionsToFlush.size());
+      assertEquals(hri1.getEncodedNameAsBytes(), (byte[])regionsToFlush.keySet().toArray()[0]);
       // flush region 1, and roll the wal file. Only last wal which has entries for region1 should
       // remain.
       flushRegion(wal, hri1.getEncodedNameAsBytes(), t1.getColumnFamilyNames());
@@ -312,29 +329,50 @@ public abstract class AbstractTestFSWAL {
       // no wal should remain now.
       assertEquals(0, wal.getNumRolledLogFiles());
       // add edits both to region 1 and region 2, and roll.
-      addEdits(wal, hri1, t1, 2, mvcc, scopes1);
-      addEdits(wal, hri2, t2, 2, mvcc, scopes2);
+      addEdits(wal, hri1, t1, 2, mvcc, scopes1, cf1);
+      addEdits(wal, hri2, t2, 2, mvcc, scopes2, cf1);
       wal.rollWriter();
       // add edits and roll the writer, to reach the max logs limit.
       assertEquals(1, wal.getNumRolledLogFiles());
-      addEdits(wal, hri1, t1, 2, mvcc, scopes1);
+      addEdits(wal, hri1, t1, 2, mvcc, scopes1, cf1);
       wal.rollWriter();
       // it should return two regions to flush, as the oldest wal file has entries
       // for both regions.
       regionsToFlush = wal.findRegionsToForceFlush();
-      assertEquals(2, regionsToFlush.length);
+      assertEquals(2, regionsToFlush.size());
       // flush both regions
       flushRegion(wal, hri1.getEncodedNameAsBytes(), t1.getColumnFamilyNames());
       flushRegion(wal, hri2.getEncodedNameAsBytes(), t2.getColumnFamilyNames());
       wal.rollWriter(true);
       assertEquals(0, wal.getNumRolledLogFiles());
       // Add an edit to region1, and roll the wal.
-      addEdits(wal, hri1, t1, 2, mvcc, scopes1);
+      addEdits(wal, hri1, t1, 2, mvcc, scopes1, cf1);
       // tests partial flush: roll on a partial flush, and ensure that wal is not archived.
       wal.startCacheFlush(hri1.getEncodedNameAsBytes(), t1.getColumnFamilyNames());
       wal.rollWriter();
       wal.completeCacheFlush(hri1.getEncodedNameAsBytes());
       assertEquals(1, wal.getNumRolledLogFiles());
+
+      // clear test data
+      flushRegion(wal, hri1.getEncodedNameAsBytes(), t1.getColumnFamilyNames());
+      wal.rollWriter(true);
+      // add edits for three familes
+      addEdits(wal, hri3, t3, 2, mvcc, scopes3, cf1);
+      addEdits(wal, hri3, t3, 2, mvcc, scopes3, cf2);
+      addEdits(wal, hri3, t3, 2, mvcc, scopes3, cf3);
+      wal.rollWriter();
+      addEdits(wal, hri3, t3, 2, mvcc, scopes3, cf1);
+      wal.rollWriter();
+      assertEquals(2, wal.getNumRolledLogFiles());
+      // flush one family before archive oldest wal
+      Set<byte[]> flushedFamilyNames = new HashSet<>();
+      flushedFamilyNames.add(Bytes.toBytes(cf1));
+      flushRegion(wal, hri3.getEncodedNameAsBytes(), flushedFamilyNames);
+      regionsToFlush = wal.findRegionsToForceFlush();
+      // then only two family need to be flushed when archive oldest wal
+      assertEquals(1, regionsToFlush.size());
+      assertEquals(hri3.getEncodedNameAsBytes(), (byte[])regionsToFlush.keySet().toArray()[0]);
+      assertEquals(2, regionsToFlush.get(hri3.getEncodedNameAsBytes()).size());
     } finally {
       if (wal != null) {
         wal.close();

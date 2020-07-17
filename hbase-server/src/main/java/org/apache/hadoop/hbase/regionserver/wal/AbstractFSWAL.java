@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -527,7 +528,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public byte[][] rollWriter() throws FailedLogCloseException, IOException {
+  public Map<byte[], List<byte[]>> rollWriter() throws FailedLogCloseException, IOException {
     return rollWriter(false);
   }
 
@@ -622,10 +623,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * If the number of un-archived WAL files ('live' WALs) is greater than maximum allowed,
    * check the first (oldest) WAL, and return those regions which should be flushed so that
    * it can be let-go/'archived'.
-   * @return regions (encodedRegionNames) to flush in order to archive oldest WAL file.
+   * @return stores of regions (encodedRegionNames) to flush in order to archive oldest WAL file.
    */
-  byte[][] findRegionsToForceFlush() throws IOException {
-    byte[][] regions = null;
+  Map<byte[], List<byte[]>> findRegionsToForceFlush() throws IOException {
+    Map<byte[], List<byte[]>> regions = null;
     int logCount = getNumRolledLogFiles();
     if (logCount > this.maxLogs && logCount > 0) {
       Map.Entry<Path, WalProps> firstWALEntry = this.walFile2Props.firstEntry();
@@ -633,15 +634,20 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         this.sequenceIdAccounting.findLower(firstWALEntry.getValue().encodedName2HighestSequenceId);
     }
     if (regions != null) {
-      StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < regions.length; i++) {
-        if (i > 0) {
-          sb.append(", ");
+      List<String> listForPrint = new ArrayList();
+      for (Map.Entry<byte[], List<byte[]>> r : regions.entrySet()) {
+        StringBuilder families = new StringBuilder();
+        for (int i = 0; i < r.getValue().size(); i++) {
+          if (i > 0) {
+            families.append(",");
+          }
+          families.append(Bytes.toString(r.getValue().get(i)));
         }
-        sb.append(Bytes.toStringBinary(regions[i]));
+        listForPrint.add(Bytes.toStringBinary(r.getKey()) + "[" + families.toString() + "]");
       }
       LOG.info("Too many WALs; count=" + logCount + ", max=" + this.maxLogs +
-        "; forcing flush of " + regions.length + " regions(s): " + sb.toString());
+        "; forcing (partial) flush of " + regions.size() + " region(s): " +
+        StringUtils.join(",", listForPrint));
     }
     return regions;
   }
@@ -778,14 +784,14 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException {
+  public Map<byte[], List<byte[]>> rollWriter(boolean force) throws IOException {
     rollWriterLock.lock();
     try {
       // Return if nothing to flush.
       if (!force && this.writer != null && this.numEntries.get() <= 0) {
         return null;
       }
-      byte[][] regionsToFlush = null;
+      Map<byte[], List<byte[]>> regionsToFlush = null;
       if (this.closed) {
         LOG.debug("WAL closed. Skipping rolling of writer");
         return regionsToFlush;

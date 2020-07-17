@@ -124,7 +124,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
       MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
       for (int i = 0; i < 10; i++) {
-        addEdits(log, hri, htd, 1, mvcc, scopes);
+        addEdits(log, hri, htd, 1, mvcc, scopes, "row");
       }
     } finally {
       log.close();

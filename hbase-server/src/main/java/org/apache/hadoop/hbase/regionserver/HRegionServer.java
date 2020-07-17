@@ -1857,7 +1857,7 @@ public class HRegionServer extends Thread implements
             //Throttle the flushes by putting a delay. If we don't throttle, and there
             //is a balanced write-load on the regions in a table, we might end up
             //overwhelming the filesystem with too many flushes at once.
-            if (requester.requestDelayedFlush(r, randomDelay, false)) {
+            if (requester.requestDelayedFlush(r, randomDelay)) {
               LOG.info("{} requesting flush of {} because {} after random delay {} ms",
                   getName(), r.getRegionInfo().getRegionNameAsString(),  whyFlush.toString(),
                   randomDelay);
