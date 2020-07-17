@@ -31,7 +31,7 @@ Examples:
       end
 
       def command
-        prev_state = quotas_admin.switch_rpc_throttle(true) ? 'true' : 'false'
+        prev_state = !!quotas_admin.switch_rpc_throttle(true)
         formatter.row(["Previous rpc throttle state : #{prev_state}"])
         prev_state
       end

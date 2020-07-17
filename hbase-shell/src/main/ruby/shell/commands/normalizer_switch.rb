@@ -32,7 +32,9 @@ EOF
       end
 
       def command(enableDisable)
-        formatter.row([admin.normalizer_switch(enableDisable) ? 'true' : 'false'])
+        previous_state = !!admin.normalizer_switch(enableDisable)
+        formatter.row([previous_state.to_s])
+        previous_state
       end
     end
   end
