@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 
 /**
  * Split size is the number of regions that are on this server that all are
@@ -70,31 +69,18 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
 
   @Override
   protected boolean shouldSplit() {
-    boolean foundABigStore = false;
+    if (!canSplit()) {
+      return false;
+    }
     // Get count of regions that have the same common table as this.region
     int tableRegionsCount = getCountOfCommonTableRegions();
     // Get size to check
     long sizeToCheck = getSizeToCheck(tableRegionsCount);
-
-    for (HStore store : region.getStores()) {
-      // If any of the stores is unable to split (eg they contain reference files)
-      // then don't split
-      if (!store.canSplit()) {
-        return false;
-      }
-
-      // Mark if any store is big enough
-      long size = store.getSize();
-      if (size > sizeToCheck) {
-        LOG.debug("ShouldSplit because " + store.getColumnFamilyName() +
-          " size=" + StringUtils.humanSize(size) +
-          ", sizeToCheck=" + StringUtils.humanSize(sizeToCheck) +
-          ", regionsWithCommonTable=" + tableRegionsCount);
-        foundABigStore = true;
-      }
+    boolean shouldSplit = isExceedSize(sizeToCheck);
+    if (shouldSplit) {
+      LOG.debug("regionsWithCommonTable={}", tableRegionsCount);
     }
-
-    return foundABigStore;
+    return shouldSplit;
   }
 
   /**
@@ -129,4 +115,5 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
                : Math.min(getDesiredMaxFileSize(),
                           initialSize * tableRegionsCount * tableRegionsCount * tableRegionsCount);
   }
+
 }

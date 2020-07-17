@@ -755,6 +755,11 @@ possible configurations would overwhelm and obscure the important.
     value, the region is split in two.</description>
   </property>
   <property>
+    <name>hbase.hregion.split.overallfiles</name>
+    <value>false</value>
+    <description>If we should sum overall region files size when check to split.</description>
+  </property>
+  <property>
     <name>hbase.hregion.majorcompaction</name>
     <value>604800000</value>
     <description>Time between major compactions, expressed in milliseconds. Set to 0 to disable
