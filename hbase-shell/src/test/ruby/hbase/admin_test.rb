@@ -104,8 +104,10 @@ module Hbase
     end
 
     define_test 'clear_deadservers should show exact row(s) count' do
-      output = capture_stdout { command(:clear_deadservers, 'test.server.com,16020,1574583397867') }
+      deadservers = []
+      output = capture_stdout { deadservers = command(:clear_deadservers, 'test.server.com,16020,1574583397867') }
       assert(output.include?('1 row(s)'))
+      assert(deadservers[0] == 'test.server.com,16020,1574583397867')
     end
 
     #-------------------------------------------------------------------------------
@@ -181,6 +183,19 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
+    define_test "balance should work" do
+      command(:balance_switch, true)
+      output = capture_stdout { command(:balancer_enabled) }
+      assert(output.include?('true'))
+
+      did_balancer_run = command(:balancer)
+      assert(did_balancer_run == true)
+      output = capture_stdout { command(:balancer, 'force') }
+      assert(output.include?('true'))
+    end
+
+    #-------------------------------------------------------------------------------
+
     define_test "create should fail with non-string table names" do
       assert_raise(ArgumentError) do
         command(:create, 123, 'xxx')
@@ -190,13 +205,182 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test 'snapshot auto cleanup should work' do
-      command(:snapshot_cleanup_switch, true)
-      output = capture_stdout { command(:snapshot_cleanup_enabled) }
-      assert(output.include?('true'))
-
+      result = nil
       command(:snapshot_cleanup_switch, false)
-      output = capture_stdout { command(:snapshot_cleanup_enabled) }
+
+      # enable snapshot cleanup and check that the previous state is returned
+      output = capture_stdout { result = command(:snapshot_cleanup_switch, true) }
       assert(output.include?('false'))
+      assert(result == false)
+
+      # check that snapshot_cleanup_enabled returns the current state
+      output = capture_stdout { result = command(:snapshot_cleanup_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # disable snapshot cleanup and check that the previous state is returned
+      output = capture_stdout { result = command(:snapshot_cleanup_switch, false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that snapshot_cleanup_enabled returns the current state
+      output = capture_stdout { result = command(:snapshot_cleanup_enabled) }
+      assert(output.include?('false'))
+      assert(result == false)
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'balancer switch should work' do
+      result = nil
+      command(:balance_switch, false)
+
+      # enable balancer and check that the previous state is returned
+      output = capture_stdout { result = command(:balance_switch, true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # check that balancer_enabled returns the current state
+      output = capture_stdout { result = command(:balancer_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # disable balancer and check that the previous state is returned
+      output = capture_stdout { result = command(:balance_switch, false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that balancer_enabled returns the current state
+      output = capture_stdout { result = command(:balancer_enabled) }
+      assert(output.include?('false'))
+      assert(result == false)
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'normalizer switch should work' do
+      result = nil
+      command(:normalizer_switch, false)
+
+      # enable normalizer and check that the previous state is returned
+      output = capture_stdout { result = command(:normalizer_switch, true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # check that normalizer_enabled returns the current state
+      output = capture_stdout { result = command(:normalizer_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # disable normalizer and check that the previous state is returned
+      output = capture_stdout { result = command(:normalizer_switch, false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that normalizer_enabled returns the current state
+      output = capture_stdout { result = command(:normalizer_enabled) }
+      assert(output.include?('false'))
+      assert(result == false)
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'catalogjanitor switch should work' do
+      result = nil
+      command(:catalogjanitor_switch, false)
+
+      # enable catalogjanitor and check that the previous state is returned
+      output = capture_stdout { result = command(:catalogjanitor_switch, true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # check that catalogjanitor_enabled returns the current state
+      output = capture_stdout { result = command(:catalogjanitor_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # disable catalogjanitor and check that the previous state is returned
+      output = capture_stdout { result = command(:catalogjanitor_switch, false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that catalogjanitor_enabled returns the current state
+      output = capture_stdout { result = command(:catalogjanitor_enabled) }
+      assert(output.include?('false'))
+      assert(result == false)
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'cleaner_chore switch should work' do
+      result = nil
+      command(:cleaner_chore_switch, false)
+
+      # enable cleaner_chore and check that the previous state is returned
+      output = capture_stdout { result = command(:cleaner_chore_switch, true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # check that cleaner_chore_enabled returns the current state
+      output = capture_stdout { result = command(:cleaner_chore_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # disable cleaner_chore and check that the previous state is returned
+      output = capture_stdout { result = command(:cleaner_chore_switch, false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that cleaner_chore_enabled returns the current state
+      output = capture_stdout { result = command(:cleaner_chore_enabled) }
+      assert(output.include?('false'))
+      assert(result == false)
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'splitormerge switch should work' do
+      # Author's note: All the other feature switches in hbase-shell only toggle one feature. This command operates on
+      # both the "SPLIT" and "MERGE", so you will note that both code paths need coverage.
+      result = nil
+      command(:splitormerge_switch, 'SPLIT', false)
+      command(:splitormerge_switch, 'MERGE', true)
+
+      # flip switch and check that the previous state is returned
+      output = capture_stdout { result = command(:splitormerge_switch, 'SPLIT', true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      output = capture_stdout { result = command(:splitormerge_switch, 'MERGE', false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that splitormerge_enabled returns the current state
+      output = capture_stdout { result = command(:splitormerge_enabled, 'SPLIT') }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      output = capture_stdout { result = command(:splitormerge_enabled, 'MERGE') }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # flip switch and check that the previous state is returned
+      output = capture_stdout { result = command(:splitormerge_switch, 'SPLIT', false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      output = capture_stdout { result = command(:splitormerge_switch, 'MERGE', true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # check that splitormerge_enabled returns the current state
+      output = capture_stdout { result = command(:splitormerge_enabled, 'SPLIT') }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      output = capture_stdout { result = command(:splitormerge_enabled, 'MERGE') }
+      assert(output.include?('true'))
+      assert(result == true)
     end
 
     #-------------------------------------------------------------------------------
@@ -451,7 +635,11 @@ module Hbase
       admin.disable_all(@regex)
       assert(command(:is_disabled, @t1))
       assert(command(:is_disabled, @t2))
+      assert(!command(:is_enabled, @t1))
+      assert(!command(:is_enabled, @t2))
       admin.enable_all(@regex)
+      assert(!command(:is_disabled, @t1))
+      assert(!command(:is_disabled, @t2))
       assert(command(:is_enabled, @t1))
       assert(command(:is_enabled, @t2))
       admin.disable_all(@regex)
