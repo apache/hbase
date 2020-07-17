@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver.slowlog;
+package org.apache.hadoop.hbase.namequeues;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * RpcCall details that would be passed on to ring buffer of slow log responses
  */
 @InterfaceAudience.Private
-public class RpcLogDetails {
+public class RpcLogDetails extends NamedQueuePayload {
 
   private final RpcCall rpcCall;
   private final Message param;
@@ -40,6 +40,7 @@ public class RpcLogDetails {
 
   public RpcLogDetails(RpcCall rpcCall, Message param, String clientAddress, long responseSize,
       String className, boolean isSlowLog, boolean isLargeLog) {
+    super(NamedQueueEvent.SLOW_LOG);
     this.rpcCall = rpcCall;
     this.param = param;
     this.clientAddress = clientAddress;

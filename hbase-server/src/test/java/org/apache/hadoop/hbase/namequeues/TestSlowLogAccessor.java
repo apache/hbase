@@ -17,10 +17,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver.slowlog;
+package org.apache.hadoop.hbase.namequeues;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
@@ -33,8 +34,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
+import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -59,11 +63,11 @@ public class TestSlowLogAccessor {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSlowLogAccessor.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestSlowLogRecorder.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestNamedQueueRecorder.class);
 
   private static final HBaseTestingUtility HBASE_TESTING_UTILITY = new HBaseTestingUtility();
 
-  private SlowLogRecorder slowLogRecorder;
+  private NamedQueueRecorder namedQueueRecorder;
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -88,9 +92,19 @@ public class TestSlowLogAccessor {
   @Before
   public void setUp() throws Exception {
     HRegionServer hRegionServer = HBASE_TESTING_UTILITY.getMiniHBaseCluster().getRegionServer(0);
-    Field slowLogRecorder = HRegionServer.class.getDeclaredField("slowLogRecorder");
+    Field slowLogRecorder = HRegionServer.class.getDeclaredField("namedQueueRecorder");
     slowLogRecorder.setAccessible(true);
-    this.slowLogRecorder = (SlowLogRecorder) slowLogRecorder.get(hRegionServer);
+    this.namedQueueRecorder = (NamedQueueRecorder) slowLogRecorder.get(hRegionServer);
+  }
+
+  private List<TooSlowLog.SlowLogPayload> getSlowLogPayloads(
+      AdminProtos.SlowLogResponseRequest request) {
+    NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
+    namedQueueGetRequest.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    namedQueueGetRequest.setSlowLogResponseRequest(request);
+    NamedQueueGetResponse namedQueueGetResponse =
+      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+    return namedQueueGetResponse.getSlowLogPayloads();
   }
 
   @Test
@@ -99,42 +113,42 @@ public class TestSlowLogAccessor {
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
 
-    slowLogRecorder.clearSlowLogPayloads();
-    Assert.assertEquals(slowLogRecorder.getSlowLogPayloads(request).size(), 0);
+    namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
 
     int i = 0;
 
     Connection connection = waitForSlowLogTableCreation();
     // add 5 records initially
     for (; i < 5; i++) {
-      RpcLogDetails rpcLogDetails = TestSlowLogRecorder
+      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder
         .getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
-      slowLogRecorder.addSlowLogPayload(rpcLogDetails);
+      namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
     // add 2 more records
     for (; i < 7; i++) {
-      RpcLogDetails rpcLogDetails = TestSlowLogRecorder
+      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder
         .getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
-      slowLogRecorder.addSlowLogPayload(rpcLogDetails);
+      namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
     // add 3 more records
     for (; i < 10; i++) {
-      RpcLogDetails rpcLogDetails = TestSlowLogRecorder
+      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder
         .getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
-      slowLogRecorder.addSlowLogPayload(rpcLogDetails);
+      namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
     // add 4 more records
     for (; i < 14; i++) {
-      RpcLogDetails rpcLogDetails = TestSlowLogRecorder
+      RpcLogDetails rpcLogDetails = TestNamedQueueRecorder
         .getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
-      slowLogRecorder.addSlowLogPayload(rpcLogDetails);
+      namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY
-      .waitFor(3000, () -> slowLogRecorder.getSlowLogPayloads(request).size() == 14));
+      .waitFor(3000, () -> getSlowLogPayloads(request).size() == 14));
 
     Assert.assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getTableCount(connection) == 14));
@@ -170,10 +184,10 @@ public class TestSlowLogAccessor {
   public void testHigherSlowLogs() throws Exception {
     Connection connection = waitForSlowLogTableCreation();
 
-    slowLogRecorder.clearSlowLogPayloads();
+    namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(500000).build();
-    Assert.assertEquals(slowLogRecorder.getSlowLogPayloads(request).size(), 0);
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
 
     for (int j = 0; j < 100; j++) {
       CompletableFuture.runAsync(() -> {
@@ -181,15 +195,15 @@ public class TestSlowLogAccessor {
           if (i == 300) {
             Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
           }
-          RpcLogDetails rpcLogDetails = TestSlowLogRecorder
+          RpcLogDetails rpcLogDetails = TestNamedQueueRecorder
             .getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
-          slowLogRecorder.addSlowLogPayload(rpcLogDetails);
+          namedQueueRecorder.addRecord(rpcLogDetails);
         }
       });
     }
 
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(7000, () -> {
-      int count = slowLogRecorder.getSlowLogPayloads(request).size();
+      int count = getSlowLogPayloads(request).size();
       LOG.debug("RingBuffer records count: {}", count);
       return count > 2000;
     }));
