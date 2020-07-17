@@ -18,15 +18,13 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
@@ -258,7 +256,7 @@ class MonitoredTaskImpl implements MonitoredTask {
     if (journal == null) {
       journal = new ArrayList<StatusJournalEntry>();
     }
-    if (includeCurrentStatus) {
+    if (includeCurrentStatus && status != null) {
       journal.add(new StatusJournalEntryImpl(status, statusTime));
     }
   }
