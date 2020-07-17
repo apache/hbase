@@ -2322,7 +2322,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *
    * <p>This method may block for some time, so it should not be called from a
    * time-sensitive thread.
-   * @param force whether we want to force a flush of all stores
+   * @param flushAllStores whether we want to force a flush of all stores
    * @return FlushResult indicating whether the flush was successful or not and if
    * the region needs compacting
    *
@@ -2330,8 +2330,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * because a snapshot was not properly persisted.
    */
   // TODO HBASE-18905. We might have to expose a requestFlush API for CPs
-  public FlushResult flush(boolean force) throws IOException {
-    return flushcache(force, false, FlushLifeCycleTracker.DUMMY);
+  public FlushResult flush(boolean flushAllStores) throws IOException {
+    return flushcache(flushAllStores, false, FlushLifeCycleTracker.DUMMY);
   }
 
   public interface FlushResult {
@@ -2354,6 +2354,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean isCompactionNeeded();
   }
 
+  public FlushResultImpl flushcache(boolean flushAllStores, boolean writeFlushRequestWalMarker,
+    FlushLifeCycleTracker tracker) throws IOException {
+    List families = null;
+    if (flushAllStores) {
+      families = new ArrayList();
+      families.addAll(this.getTableDescriptor().getColumnFamilyNames());
+    }
+    return this.flushcache(families, writeFlushRequestWalMarker, tracker);
+  }
+
   /**
    * Flush the cache.
    *
@@ -2367,7 +2377,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *
    * <p>This method may block for some time, so it should not be called from a
    * time-sensitive thread.
-   * @param forceFlushAllStores whether we want to flush all stores
+   * @param families stores of region to flush.
    * @param writeFlushRequestWalMarker whether to write the flush request marker to WAL
    * @param tracker used to track the life cycle of this flush
    * @return whether the flush is success and whether the region needs compacting
@@ -2377,8 +2387,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * because a Snapshot was not properly persisted. The region is put in closing mode, and the
    * caller MUST abort after this.
    */
-  public FlushResultImpl flushcache(boolean forceFlushAllStores, boolean writeFlushRequestWalMarker,
-      FlushLifeCycleTracker tracker) throws IOException {
+  public FlushResultImpl flushcache(List<byte[]> families,
+      boolean writeFlushRequestWalMarker, FlushLifeCycleTracker tracker) throws IOException {
     // fail-fast instead of waiting on the lock
     if (this.closing.get()) {
       String msg = "Skipping flush on " + this + " because closing";
@@ -2425,8 +2435,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       try {
-        Collection<HStore> specificStoresToFlush =
-            forceFlushAllStores ? stores.values() : flushPolicy.selectStoresToFlush();
+        // The reason that we do not always use flushPolicy is, when the flush is
+        // caused by logRoller, we should select stores which must be flushed
+        // rather than could be flushed.
+        Collection<HStore> specificStoresToFlush = null;
+        if (families != null) {
+          specificStoresToFlush = getSpecificStores(families);
+        } else {
+          specificStoresToFlush = flushPolicy.selectStoresToFlush();
+        }
         FlushResultImpl fs =
             internalFlushcache(specificStoresToFlush, status, writeFlushRequestWalMarker, tracker);
 
@@ -2454,6 +2471,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         status.prettyPrintJournal());
       status.cleanup();
     }
+  }
+
+  /**
+   * get stores which matches the specified families
+   *
+   * @return the stores need to be flushed.
+   */
+  private Collection<HStore> getSpecificStores(List<byte[]> families) {
+    Collection<HStore> specificStoresToFlush = new ArrayList<>();
+    for (byte[] family : families) {
+      specificStoresToFlush.add(stores.get(family));
+    }
+    return specificStoresToFlush;
   }
 
   /**
@@ -8916,7 +8946,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     if (shouldFlush) {
       // Make request outside of synchronize block; HBASE-818.
-      this.rsServices.getFlushRequester().requestFlush(this, false, tracker);
+      this.rsServices.getFlushRequester().requestFlush(this, tracker);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Flush requested on " + this.getRegionInfo().getEncodedName());
       }

@@ -23,6 +23,7 @@ import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -44,8 +45,8 @@ import org.slf4j.LoggerFactory;
  * NOTE: This class extends Thread rather than Chore because the sleep time can be interrupted when
  * there is something to do, rather than the Chore sleep time which is invariant.
  * <p/>
- * The {@link #scheduleFlush(String)} is abstract here, as sometimes we hold a region without a
- * region server but we still want to roll its WAL.
+ * The {@link #scheduleFlush(String, List)} is abstract here,
+ * as sometimes we hold a region without a region server but we still want to roll its WAL.
  * <p/>
  * TODO: change to a pool of threads
  */
@@ -180,11 +181,12 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
           // reset the flag in front to avoid missing roll request before we return from rollWriter.
           walNeedsRoll.put(wal, Boolean.FALSE);
           // Force the roll if the logroll.period is elapsed or if a roll was requested.
-          // The returned value is an array of actual region names.
-          byte[][] regionsToFlush = wal.rollWriter(periodic || entry.getValue().booleanValue());
+          // The returned value is an collection of actual region and family names.
+          Map<byte[], List<byte[]>> regionsToFlush = wal.rollWriter(periodic ||
+            entry.getValue().booleanValue());
           if (regionsToFlush != null) {
-            for (byte[] r : regionsToFlush) {
-              scheduleFlush(Bytes.toString(r));
+            for (Map.Entry<byte[], List<byte[]>> r : regionsToFlush.entrySet()) {
+              scheduleFlush(Bytes.toString(r.getKey()), r.getValue());
             }
           }
           afterRoll(wal);
@@ -211,8 +213,9 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
 
   /**
    * @param encodedRegionName Encoded name of region to flush.
+   * @param families stores of region to flush.
    */
-  protected abstract void scheduleFlush(String encodedRegionName);
+  protected abstract void scheduleFlush(String encodedRegionName, List<byte[]> families);
 
   private boolean isWaiting() {
     Thread.State state = getState();

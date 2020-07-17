@@ -23,6 +23,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -121,8 +123,9 @@ public class TestFailedAppendAndSync {
       }
 
       @Override
-      public byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException {
-        byte [][] regions = super.rollWriter(force);
+      public Map<byte[], List<byte[]>> rollWriter(boolean force)
+          throws FailedLogCloseException, IOException {
+        Map<byte[], List<byte[]>> regions = super.rollWriter(force);
         rolls.getAndIncrement();
         return regions;
       }

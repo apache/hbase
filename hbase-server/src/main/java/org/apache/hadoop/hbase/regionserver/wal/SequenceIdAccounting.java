@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -431,10 +432,10 @@ class SequenceIdAccounting {
    * {@link #lowestUnflushedSequenceIds} has a sequence id less than that passed in
    * <code>sequenceids</code> then return it.
    * @param sequenceids Sequenceids keyed by encoded region name.
-   * @return regions found in this instance with sequence ids less than those passed in.
+   * @return stores of regions found in this instance with sequence ids less than those passed in.
    */
-  byte[][] findLower(Map<byte[], Long> sequenceids) {
-    List<byte[]> toFlush = null;
+  Map<byte[], List<byte[]>> findLower(Map<byte[], Long> sequenceids) {
+    Map<byte[], List<byte[]>> toFlush = null;
     // Keeping the old behavior of iterating unflushedSeqNums under oldestSeqNumsLock.
     synchronized (tieLock) {
       for (Map.Entry<byte[], Long> e : sequenceids.entrySet()) {
@@ -442,16 +443,17 @@ class SequenceIdAccounting {
         if (m == null) {
           continue;
         }
-        // The lowest sequence id outstanding for this region.
-        long lowest = getLowestSequenceId(m);
-        if (lowest != HConstants.NO_SEQNUM && lowest <= e.getValue()) {
-          if (toFlush == null) {
-            toFlush = new ArrayList<>();
+        for (Map.Entry<ImmutableByteArray, Long> me : m.entrySet()) {
+          if (me.getValue() <= e.getValue()) {
+            if (toFlush == null) {
+              toFlush = new TreeMap(Bytes.BYTES_COMPARATOR);
+            }
+            toFlush.computeIfAbsent(e.getKey(), k -> new ArrayList<>())
+              .add(Bytes.toBytes(me.getKey().toString()));
           }
-          toFlush.add(e.getKey());
         }
       }
     }
-    return toFlush == null ? null : toFlush.toArray(new byte[0][]);
+    return toFlush;
   }
 }
