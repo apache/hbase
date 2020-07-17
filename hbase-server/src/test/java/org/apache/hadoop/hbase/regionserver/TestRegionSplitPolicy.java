@@ -65,6 +65,7 @@ public class TestRegionSplitPolicy {
     RegionInfo hri = RegionInfoBuilder.newBuilder(TABLENAME).build();
     mockRegion = mock(HRegion.class);
     doReturn(hri).when(mockRegion).getRegionInfo();
+    doReturn(true).when(mockRegion).isAvailable();
     stores = new ArrayList<>();
     doReturn(stores).when(mockRegion).getStores();
   }
@@ -151,6 +152,44 @@ public class TestRegionSplitPolicy {
     assertWithinJitter(maxSplitSize, policy.getSizeToCheck(1000));
     // Assert same is true if count of regions is zero.
     assertWithinJitter(maxSplitSize, policy.getSizeToCheck(0));
+  }
+
+  @Test
+  public void testIsExceedSize() throws IOException {
+    // Configure SteppingAllStoresSizeSplitPolicy as our split policy
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+      ConstantSizeRegionSplitPolicy.class.getName());
+    conf.set(HConstants.OVERALL_HREGION_FILES, "true");
+    // Now make it so the mock region has a RegionServerService that will
+    // return 'online regions'.
+    RegionServerServices rss = mock(RegionServerServices.class);
+    final List<HRegion> regions = new ArrayList<>();
+    doReturn(regions).when(rss).getRegions(TABLENAME);
+    when(mockRegion.getRegionServerServices()).thenReturn(rss);
+
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLENAME).build();
+    doReturn(td).when(mockRegion).getTableDescriptor();
+    ConstantSizeRegionSplitPolicy policy =
+      (ConstantSizeRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+    regions.add(mockRegion);
+
+    HStore mockStore1 = mock(HStore.class);
+    doReturn(100L).when(mockStore1).getSize();
+    HStore mockStore2 = mock(HStore.class);
+    doReturn(924L).when(mockStore2).getSize();
+    HStore mockStore3 = mock(HStore.class);
+    doReturn(925L).when(mockStore3).getSize();
+
+    // test sum of store's size not greater than sizeToCheck
+    stores.add(mockStore1);
+    stores.add(mockStore2);
+    assertFalse(policy.isExceedSize(1024));
+    stores.clear();
+
+    // test sum of store's size greater than sizeToCheck
+    stores.add(mockStore1);
+    stores.add(mockStore3);
+    assertTrue(policy.isExceedSize(1024));
   }
 
   @Test
