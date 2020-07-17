@@ -33,6 +33,7 @@ EOF
 
       def command(table_name)
         formatter.row([admin.clear_block_cache(table_name)])
+        nil
       end
     end
   end
