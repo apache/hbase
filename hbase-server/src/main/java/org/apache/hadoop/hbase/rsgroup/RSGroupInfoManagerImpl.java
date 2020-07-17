@@ -591,7 +591,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     // This is added to the last of the list so it overwrites the 'default' rsgroup loaded
     // from region group table or zk
-    groupList.add(new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP, getDefaultServers()));
+    groupList.add(new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP, getDefaultServers(groupList)));
 
     // populate the data
     HashMap<String, RSGroupInfo> newGroupMap = Maps.newHashMap();
@@ -726,9 +726,14 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   // Called by ServerEventsListenerThread. Presume it has lock on this manager when it runs.
   private SortedSet<Address> getDefaultServers() {
+    return getDefaultServers(listRSGroups()/* get from rsGroupMap */);
+  }
+
+  // Called by ServerEventsListenerThread. Presume it has lock on this manager when it runs.
+  private SortedSet<Address> getDefaultServers(List<RSGroupInfo> rsGroupInfoList) {
     // Build a list of servers in other groups than default group, from rsGroupMap
     Set<Address> serversInOtherGroup = new HashSet<>();
-    for (RSGroupInfo group : listRSGroups() /* get from rsGroupMap */) {
+    for (RSGroupInfo group : rsGroupInfoList) {
       if (!RSGroupInfo.DEFAULT_GROUP.equals(group.getName())) { // not default group
         serversInOtherGroup.addAll(group.getServers());
       }
