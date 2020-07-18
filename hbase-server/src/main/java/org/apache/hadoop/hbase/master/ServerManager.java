@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -715,7 +716,10 @@ public class ServerManager {
           return;
         }
       } catch (IOException ioe) {
-        if (ioe instanceof NotServingRegionException) {
+        if (ioe instanceof NotServingRegionException ||
+          (ioe instanceof RemoteWithExtrasException &&
+            ((RemoteWithExtrasException)ioe).unwrapRemoteException()
+              instanceof NotServingRegionException)) {
           // no need to retry again
           return;
         }

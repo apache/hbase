@@ -29,8 +29,10 @@ EOF
       end
 
       def command(table)
-        formatter.row([admin.disabled?(table) ? 'true' : 'false'])
-    end
+        disabled = !!admin.disabled?(table)
+        formatter.row([disabled.to_s])
+        disabled
+      end
     end
   end
 end

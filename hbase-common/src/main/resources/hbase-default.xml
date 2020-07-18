@@ -773,6 +773,11 @@ possible configurations would overwhelm and obscure the important.
     value, the region is split in two.</description>
   </property>
   <property>
+    <name>hbase.hregion.split.overallfiles</name>
+    <value>true</value>
+    <description>If we should sum overall region files size when check to split.</description>
+  </property>
+  <property>
     <name>hbase.hregion.majorcompaction</name>
     <value>604800000</value>
     <description>Time between major compactions, expressed in milliseconds. Set to 0 to disable
@@ -1983,6 +1988,18 @@ possible configurations would overwhelm and obscure the important.
       warning will be logged. This config should be turned on to prevent RegionServer from serving
       very large batch size of rows and this way we can improve CPU usages by discarding
       too large batch request.
+    </description>
+  </property>
+  <property>
+    <name>hbase.namedqueue.provider.classes</name>
+    <value>org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService</value>
+    <description>
+      Default values for NamedQueueService implementors. This comma separated full class names
+      represent all implementors of NamedQueueService that we would like to be invoked by
+      LogEvent handler service. One example of NamedQueue service is SlowLogQueueService which
+      is used to store slow/large RPC logs in ringbuffer at each RegionServer.
+      All implementors of NamedQueueService should be found under package:
+      "org.apache.hadoop.hbase.namequeues.impl"
     </description>
   </property>
 </configuration>
