@@ -49,7 +49,7 @@ public abstract class JvmVersion {
    * Return the current JVM version information.
    */
   public static String getVersion() {
-    return System.getProperty("java.vm.vendor", "UsNKNOWN_VM_VENDOR") + ' ' +
+    return System.getProperty("java.vm.vendor", "UNKNOWN_VM_VENDOR") + ' ' +
       System.getProperty("java.version", "UNKNOWN_JAVA_VERSION") + '-' +
       System.getProperty("java.vm.version", "UNKNOWN_VM_VERSION");
   }
