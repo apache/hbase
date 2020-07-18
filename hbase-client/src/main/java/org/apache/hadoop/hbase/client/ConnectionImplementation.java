@@ -2113,7 +2113,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       this.metrics.shutdown();
     }
     this.closed = true;
-    registry.close();
+    if (this.registry != null) {
+      registry.close();
+    }
     this.stubs.clear();
     if (clusterStatusListener != null) {
       clusterStatusListener.close();
