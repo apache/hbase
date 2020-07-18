@@ -1276,8 +1276,12 @@ public class FSHLog implements WAL {
           Throwable lastException = null;
           try {
             Trace.addTimelineAnnotation("syncing writer");
+            long unSyncedFlushSeq = highestUnsyncedSequence;
             writer.sync();
             Trace.addTimelineAnnotation("writer synced");
+            if (unSyncedFlushSeq > currentSequence) {
+              currentSequence = unSyncedFlushSeq;
+            }
             currentSequence = updateHighestSyncedSequence(currentSequence);
           } catch (IOException e) {
             LOG.error("Error syncing, request close of WAL", e);
