@@ -44,4 +44,13 @@ public abstract class JvmVersion {
     String version = System.getProperty("java.version");
     return version != null && BAD_JVM_VERSIONS.contains(version);
   }
+
+  /**
+   * Return the current JVM version information.
+   */
+  public static String getVersion() {
+    return System.getProperty("java.vm.vendor", "UsNKNOWN_VM_VENDOR") + ' ' +
+      System.getProperty("java.version", "UNKNOWN_JAVA_VERSION") + '-' +
+      System.getProperty("java.vm.version", "UNKNOWN_VM_VERSION");
+  }
 }

@@ -25,6 +25,7 @@ java.util.Map;
 java.util.concurrent.atomic.LongAdder;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.tool.CanaryTool.RegionStdOutSink;
+org.apache.hadoop.hbase.util.JvmVersion;
 </%import>
 
 <!--[if IE]>
@@ -108,6 +109,11 @@ org.apache.hadoop.hbase.tool.CanaryTool.RegionStdOutSink;
                     <th>Attribute Name</th>
                     <th>Value</th>
                     <th>Description</th>
+                </tr>
+                <tr>
+                    <td>JVM Version</td>
+                    <td><% JvmVersion.getVersion() %></td>
+                    <td>JVM vendor and version</td>
                 </tr>
                 <tr>
                     <td>HBase Version</td>
