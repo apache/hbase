@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.AssignRe
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.LocalityType;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegionsAction;
+import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -826,26 +827,34 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   static class MoveCostFunction extends CostFunction {
     private static final String MOVE_COST_KEY = "hbase.master.balancer.stochastic.moveCost";
+    private static final String MOVE_COST_OFFPEAK_KEY =
+      "hbase.master.balancer.stochastic.moveCost.offpeak";
     private static final String MAX_MOVES_PERCENT_KEY =
         "hbase.master.balancer.stochastic.maxMovePercent";
-    private static final float DEFAULT_MOVE_COST = 7;
+    static final float DEFAULT_MOVE_COST = 7;
+    static final float DEFAULT_MOVE_COST_OFFPEAK = 3;
     private static final int DEFAULT_MAX_MOVES = 600;
     private static final float DEFAULT_MAX_MOVE_PERCENT = 0.25f;
 
     private final float maxMovesPercent;
+    private final Configuration conf;
 
     MoveCostFunction(Configuration conf) {
       super(conf);
-
-      // Move cost multiplier should be the same cost or higher than the rest of the costs to ensure
-      // that large benefits are need to overcome the cost of a move.
-      this.setMultiplier(conf.getFloat(MOVE_COST_KEY, DEFAULT_MOVE_COST));
+      this.conf = conf;
       // What percent of the number of regions a single run of the balancer can move.
       maxMovesPercent = conf.getFloat(MAX_MOVES_PERCENT_KEY, DEFAULT_MAX_MOVE_PERCENT);
     }
 
     @Override
     protected double cost() {
+      // Move cost multiplier should be the same cost or higher than the rest of the costs to ensure
+      // that large benefits are need to overcome the cost of a move.
+      if (OffPeakHours.getInstance(conf).isOffPeakHour()) {
+        this.setMultiplier(conf.getFloat(MOVE_COST_OFFPEAK_KEY, DEFAULT_MOVE_COST_OFFPEAK));
+      } else {
+        this.setMultiplier(conf.getFloat(MOVE_COST_KEY, DEFAULT_MOVE_COST));
+      }
       // Try and size the max number of Moves, but always be prepared to move some.
       int maxMoves = Math.max((int) (cluster.numRegions * maxMovesPercent),
           DEFAULT_MAX_MOVES);
