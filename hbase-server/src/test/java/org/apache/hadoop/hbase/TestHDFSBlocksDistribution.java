@@ -85,10 +85,11 @@ public class TestHDFSBlocksDistribution {
   }
 
   @Test
-  public void testLocalHostCompatibility () throws Exception {
+  public void testLocalHostCompatibility() throws Exception {
     String currentHost = DNS.getDefaultHost("default", "default");
     HDFSBlocksDistribution distribution = new HDFSBlocksDistribution();
-    assertEquals("Locality should be 0.0", 0.0, distribution.getBlockLocalityIndex(currentHost), 0.01);
+    assertEquals("Locality should be 0.0", 0.0,
+      distribution.getBlockLocalityIndex(currentHost), 0.01);
     distribution.addHostsAndBlockWeight(new String[] { "localhost" }, 10);
     assertEquals("Should be one host", 1, distribution.getHostAndWeights().size());
     assertEquals("Locality should be 0.0", 0.0,
