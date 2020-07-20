@@ -281,7 +281,7 @@ public class HRegionServer extends Thread implements
   /**
    * The asynchronous cluster connection to be shared by services.
    */
-  protected AsyncClusterConnection asyncClusterConnection;
+  protected volatile AsyncClusterConnection asyncClusterConnection;
 
   /**
    * Go here to get table descriptors.

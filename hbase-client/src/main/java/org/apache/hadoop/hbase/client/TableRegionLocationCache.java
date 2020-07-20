@@ -20,7 +20,8 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.canUpdateOnError;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isEqual;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.removeRegionLocation;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.locateRow;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.locateRowBefore;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -67,64 +68,17 @@ class TableRegionLocationCache {
     metrics.ifPresent(MetricsConnection::incrMetaCacheNumClearRegion);
   }
 
-  private RegionLocations locateRow(TableName tableName, byte[] row, int replicaId) {
-    Map.Entry<byte[], RegionLocations> entry = cache.floorEntry(row);
-    if (entry == null) {
-      recordCacheMiss();
-      return null;
-    }
-    RegionLocations locs = entry.getValue();
-    HRegionLocation loc = locs.getRegionLocation(replicaId);
-    if (loc == null) {
-      recordCacheMiss();
-      return null;
-    }
-    byte[] endKey = loc.getRegion().getEndKey();
-    if (isEmptyStopRow(endKey) || Bytes.compareTo(row, endKey) < 0) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Found {} in cache for {}, row='{}', locateType={}, replicaId={}", loc, tableName,
-          Bytes.toStringBinary(row), RegionLocateType.CURRENT, replicaId);
-      }
-      recordCacheHit();
-      return locs;
-    } else {
-      recordCacheMiss();
-      return null;
-    }
-  }
-
-  private RegionLocations locateRowBefore(TableName tableName, byte[] row, int replicaId) {
-    boolean isEmptyStopRow = isEmptyStopRow(row);
-    Map.Entry<byte[], RegionLocations> entry =
-      isEmptyStopRow ? cache.lastEntry() : cache.lowerEntry(row);
-    if (entry == null) {
-      recordCacheMiss();
-      return null;
-    }
-    RegionLocations locs = entry.getValue();
-    HRegionLocation loc = locs.getRegionLocation(replicaId);
-    if (loc == null) {
-      recordCacheMiss();
-      return null;
-    }
-    if (isEmptyStopRow(loc.getRegion().getEndKey()) ||
-      (!isEmptyStopRow && Bytes.compareTo(loc.getRegion().getEndKey(), row) >= 0)) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Found {} in cache for {}, row='{}', locateType={}, replicaId={}", loc, tableName,
-          Bytes.toStringBinary(row), RegionLocateType.BEFORE, replicaId);
-      }
-      recordCacheHit();
-      return locs;
-    } else {
-      recordCacheMiss();
-      return null;
-    }
-  }
-
   RegionLocations locate(TableName tableName, byte[] row, int replicaId,
     RegionLocateType locateType) {
-    return locateType.equals(RegionLocateType.BEFORE) ? locateRowBefore(tableName, row, replicaId) :
-      locateRow(tableName, row, replicaId);
+    RegionLocations locs = locateType.equals(RegionLocateType.BEFORE) ?
+      locateRowBefore(cache, tableName, row, replicaId) :
+      locateRow(cache, tableName, row, replicaId);
+    if (locs != null) {
+      recordCacheHit();
+    } else {
+      recordCacheMiss();
+    }
+    return locs;
   }
 
   // if we successfully add the locations to cache, return the locations, otherwise return the one

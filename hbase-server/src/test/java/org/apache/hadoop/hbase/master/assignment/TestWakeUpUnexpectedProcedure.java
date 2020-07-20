@@ -210,7 +210,6 @@ public class TestWakeUpUnexpectedProcedure {
 
     @Override
     protected ServerManager createServerManager(MasterServices master) throws IOException {
-      setupClusterConnection();
       return new SMForTest(master);
     }
   }

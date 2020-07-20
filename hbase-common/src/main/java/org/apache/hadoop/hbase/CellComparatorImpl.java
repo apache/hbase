@@ -296,6 +296,10 @@ public class CellComparatorImpl implements CellComparator {
    * {@link KeyValue}s.
    */
   public static class MetaCellComparator extends CellComparatorImpl {
+
+    public static final Comparator<byte[]> ROW_COMPARATOR =
+      (r1, r2) -> compareRows(r1, 0, r1.length, r2, 0, r2.length);
+
     // TODO: Do we need a ByteBufferKeyValue version of this?
     @Override
     public int compareRows(final Cell left, final Cell right) {
@@ -325,7 +329,7 @@ public class CellComparatorImpl implements CellComparator {
       return ignoreSequenceid? diff: Longs.compare(b.getSequenceId(), a.getSequenceId());
     }
 
-    public static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+    private static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
         int rlength) {
       int leftDelimiter = Bytes.searchDelimiterIndex(left, loffset, llength, HConstants.DELIMITER);
       int rightDelimiter = Bytes

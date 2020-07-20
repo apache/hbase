@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -52,6 +53,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
@@ -59,10 +61,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetAllMetaRegionLocationsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetAllMetaRegionLocationsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.LocateMetaRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.LocateMetaRegionResponse;
 
 /**
  * Master based registry implementation. Makes RPCs to the configured master addresses from config
@@ -118,7 +124,7 @@ public class MasterRegistry implements ConnectionRegistry {
     int rpcTimeoutMs = (int) Math.min(Integer.MAX_VALUE,
       conf.getLong(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
     // XXX: we pass cluster id as null here since we do not have a cluster id yet, we have to fetch
-    // this through the master registry...
+    // this through the connection registry...
     // This is a problem as we will use the cluster id to determine the authentication method
     rpcClient = RpcClientFactory.createClient(conf, null);
     rpcControllerFactory = RpcControllerFactory.instantiate(conf);
@@ -282,5 +288,37 @@ public class MasterRegistry implements ConnectionRegistry {
     if (rpcClient != null) {
       rpcClient.close();
     }
+  }
+
+  private RegionLocations transformRegionLocations(LocateMetaRegionResponse resp) {
+    return new RegionLocations(resp.getMetaLocationsList().stream()
+      .map(ProtobufUtil::toRegionLocation).collect(Collectors.toList()));
+  }
+
+  @Override
+  public CompletableFuture<RegionLocations> locateMeta(byte[] row, RegionLocateType locateType) {
+    LocateMetaRegionRequest request =
+      LocateMetaRegionRequest.newBuilder().setRow(ByteString.copyFrom(row))
+        .setLocateType(ProtobufUtil.toProtoRegionLocateType(locateType)).build();
+    return this.<LocateMetaRegionResponse> call((c, s, d) -> s.locateMetaRegion(c, request, d),
+      r -> true, "locateMeta()").thenApply(this::transformRegionLocations);
+  }
+
+  private List<HRegionLocation>
+    transformRegionLocationList(GetAllMetaRegionLocationsResponse resp) {
+    return resp.getMetaLocationsList().stream().map(ProtobufUtil::toRegionLocation)
+      .collect(Collectors.toList());
+  }
+
+  @Override
+  public CompletableFuture<List<HRegionLocation>>
+    getAllMetaRegionLocations(boolean excludeOfflinedSplitParents) {
+    GetAllMetaRegionLocationsRequest request = GetAllMetaRegionLocationsRequest.newBuilder()
+      .setExcludeOfflinedSplitParents(excludeOfflinedSplitParents).build();
+    return this
+      .<GetAllMetaRegionLocationsResponse> call(
+        (c, s, d) -> s.getAllMetaRegionLocations(c, request, d), r -> true,
+        "getAllMetaRegionLocations(" + excludeOfflinedSplitParents + ")")
+      .thenApply(this::transformRegionLocationList);
   }
 }
