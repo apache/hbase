@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.DNS;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -84,13 +85,16 @@ public class TestHDFSBlocksDistribution {
   }
 
   @Test
-  public void testLocalHostCompatibility() {
+  public void testLocalHostCompatibility () throws Exception {
+    String currentHost = DNS.getDefaultHost("default", "default");
     HDFSBlocksDistribution distribution = new HDFSBlocksDistribution();
-    assertEquals("Locality should be 0.0", 0.0, distribution.getBlockLocalityIndex("test"), 0.01);
+    assertEquals("Locality should be 0.0", 0.0, distribution.getBlockLocalityIndex(currentHost), 0.01);
     distribution.addHostsAndBlockWeight(new String[] { "localhost" }, 10);
     assertEquals("Should be one host", 1, distribution.getHostAndWeights().size());
-    assertNotEquals("Locality should not be 0.0", 0.0,
+    assertEquals("Locality should be 0.0", 0.0,
       distribution.getBlockLocalityIndex("test"), 0.01);
+    assertNotEquals("Locality should be 0.0", 0.0,
+      distribution.getBlockLocalityIndex(currentHost), 0.01);
   }
 
 }
