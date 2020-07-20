@@ -333,7 +333,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     // so it overwrites the default group loaded
     // from region group table or zk
     groupList.add(new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP,
-        Sets.newHashSet(getDefaultServers()),
+        Sets.newHashSet(getDefaultServers(groupList)),
         orphanTables));
 
     // populate the data
@@ -479,9 +479,13 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   }
 
   private List<Address> getDefaultServers() throws IOException {
+    return getDefaultServers(listRSGroups() /* get from rsGroupMap */);
+  }
+
+  private List<Address> getDefaultServers(List<RSGroupInfo> rsGroupInfoList) throws IOException {
     // Build a list of servers in other groups than default group, from rsGroupMap
     Set<Address> serverAddressesInOtherGroups = new HashSet<>();
-    for (RSGroupInfo group : listRSGroups() /* get from rsGroupMap */) {
+    for (RSGroupInfo group : rsGroupInfoList) {
       if (!RSGroupInfo.DEFAULT_GROUP.equals(group.getName())) { // not default group
         serverAddressesInOtherGroups.addAll(group.getServers());
       }
