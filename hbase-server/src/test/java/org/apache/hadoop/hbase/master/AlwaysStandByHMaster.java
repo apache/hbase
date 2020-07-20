@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -46,7 +47,8 @@ public class AlwaysStandByHMaster extends HMaster {
     private static final Logger LOG =
         LoggerFactory.getLogger(AlwaysStandByMasterManager.class);
 
-    AlwaysStandByMasterManager(ZKWatcher watcher, ServerName sn, Server master) {
+    AlwaysStandByMasterManager(ZKWatcher watcher, ServerName sn, Server master)
+        throws InterruptedIOException {
       super(watcher, sn, master);
     }
 
@@ -94,8 +96,8 @@ public class AlwaysStandByHMaster extends HMaster {
     super(conf);
   }
 
-  protected ActiveMasterManager createActiveMasterManager(
-      ZKWatcher zk, ServerName sn, org.apache.hadoop.hbase.Server server) {
+  protected ActiveMasterManager createActiveMasterManager(ZKWatcher zk, ServerName sn,
+      org.apache.hadoop.hbase.Server server) throws InterruptedIOException {
     return new AlwaysStandByMasterManager(zk, sn, server);
   }
 }

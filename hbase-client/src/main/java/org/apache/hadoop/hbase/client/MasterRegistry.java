@@ -33,11 +33,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -57,10 +59,11 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
 
@@ -89,11 +92,14 @@ public class MasterRegistry implements ConnectionRegistry {
   private final int hedgedReadFanOut;
 
   // Configured list of masters to probe the meta information from.
-  private final ImmutableMap<ServerName, ClientMetaService.Interface> masterAddr2Stub;
+  private volatile ImmutableMap<ServerName, ClientMetaService.Interface> masterAddr2Stub;
 
   // RPC client used to talk to the masters.
   private final RpcClient rpcClient;
   private final RpcControllerFactory rpcControllerFactory;
+  private final int rpcTimeoutMs;
+
+  protected final MasterAddressRefresher masterAddressRefresher;
 
   /**
    * Parses the list of master addresses from the provided configuration. Supported format is comma
@@ -115,20 +121,27 @@ public class MasterRegistry implements ConnectionRegistry {
   MasterRegistry(Configuration conf) throws IOException {
     this.hedgedReadFanOut = Math.max(1, conf.getInt(MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY,
       MASTER_REGISTRY_HEDGED_REQS_FANOUT_DEFAULT));
-    int rpcTimeoutMs = (int) Math.min(Integer.MAX_VALUE,
+    rpcTimeoutMs = (int) Math.min(Integer.MAX_VALUE,
       conf.getLong(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
     // XXX: we pass cluster id as null here since we do not have a cluster id yet, we have to fetch
     // this through the master registry...
     // This is a problem as we will use the cluster id to determine the authentication method
     rpcClient = RpcClientFactory.createClient(conf, null);
     rpcControllerFactory = RpcControllerFactory.instantiate(conf);
-    Set<ServerName> masterAddrs = parseMasterAddrs(conf);
+    // Generate the seed list of master stubs. Subsequent RPCs try to keep a live list of masters
+    // by fetching the end points from this list.
+    populateMasterStubs(parseMasterAddrs(conf));
+    masterAddressRefresher = new MasterAddressRefresher(conf, this);
+  }
+
+  void populateMasterStubs(Set<ServerName> masters) throws IOException {
+    Preconditions.checkNotNull(masters);
     ImmutableMap.Builder<ServerName, ClientMetaService.Interface> builder =
-      ImmutableMap.builderWithExpectedSize(masterAddrs.size());
+        ImmutableMap.builderWithExpectedSize(masters.size());
     User user = User.getCurrent();
-    for (ServerName masterAddr : masterAddrs) {
+    for (ServerName masterAddr : masters) {
       builder.put(masterAddr,
-        ClientMetaService.newStub(rpcClient.createRpcChannel(masterAddr, user, rpcTimeoutMs)));
+          ClientMetaService.newStub(rpcClient.createRpcChannel(masterAddr, user, rpcTimeoutMs)));
     }
     masterAddr2Stub = builder.build();
   }
@@ -169,7 +182,13 @@ public class MasterRegistry implements ConnectionRegistry {
     CompletableFuture<T> future = new CompletableFuture<>();
     callable.call(controller, stub, resp -> {
       if (controller.failed()) {
-        future.completeExceptionally(controller.getFailed());
+        IOException failureReason = controller.getFailed();
+        future.completeExceptionally(failureReason);
+        if (ClientExceptionsUtil.isConnectionException(failureReason)) {
+          // RPC has failed, trigger a refresh of master end points. We can have some spurious
+          // refreshes, but that is okay since the RPC is not expensive and not in a hot path.
+          masterAddressRefresher.refreshNow();
+        }
       } else {
         future.complete(resp);
       }
@@ -188,8 +207,9 @@ public class MasterRegistry implements ConnectionRegistry {
    * been tried and all of them are failed, we will fail the future.
    */
   private <T extends Message> void groupCall(CompletableFuture<T> future,
-    List<ClientMetaService.Interface> masterStubs, int startIndexInclusive, Callable<T> callable,
-    Predicate<T> isValidResp, String debug, ConcurrentLinkedQueue<Throwable> errors) {
+      Set<ServerName> masterServers, List<ClientMetaService.Interface> masterStubs,
+      int startIndexInclusive, Callable<T> callable, Predicate<T> isValidResp, String debug,
+      ConcurrentLinkedQueue<Throwable> errors) {
     int endIndexExclusive = Math.min(startIndexInclusive + hedgedReadFanOut, masterStubs.size());
     AtomicInteger remaining = new AtomicInteger(endIndexExclusive - startIndexInclusive);
     for (int i = startIndexInclusive; i < endIndexExclusive; i++) {
@@ -210,10 +230,10 @@ public class MasterRegistry implements ConnectionRegistry {
               RetriesExhaustedException ex = new RetriesExhaustedException("masters",
                 masterStubs.size(), new ArrayList<>(errors));
               future.completeExceptionally(
-                new MasterRegistryFetchException(masterAddr2Stub.keySet(), ex));
+                new MasterRegistryFetchException(masterServers, ex));
             } else {
-              groupCall(future, masterStubs, endIndexExclusive, callable, isValidResp, debug,
-                errors);
+              groupCall(future, masterServers, masterStubs, endIndexExclusive, callable,
+                  isValidResp, debug, errors);
             }
           }
         } else {
@@ -226,17 +246,20 @@ public class MasterRegistry implements ConnectionRegistry {
 
   private <T extends Message> CompletableFuture<T> call(Callable<T> callable,
     Predicate<T> isValidResp, String debug) {
-    List<ClientMetaService.Interface> masterStubs = new ArrayList<>(masterAddr2Stub.values());
+    ImmutableMap<ServerName, ClientMetaService.Interface> masterAddr2StubRef = masterAddr2Stub;
+    Set<ServerName> masterServers = masterAddr2StubRef.keySet();
+    List<ClientMetaService.Interface> masterStubs = new ArrayList<>(masterAddr2StubRef.values());
     Collections.shuffle(masterStubs, ThreadLocalRandom.current());
     CompletableFuture<T> future = new CompletableFuture<>();
-    groupCall(future, masterStubs, 0, callable, isValidResp, debug, new ConcurrentLinkedQueue<>());
+    groupCall(future, masterServers, masterStubs, 0, callable, isValidResp, debug,
+        new ConcurrentLinkedQueue<>());
     return future;
   }
 
   /**
    * Simple helper to transform the result of getMetaRegionLocations() rpc.
    */
-  private RegionLocations transformMetaRegionLocations(GetMetaRegionLocationsResponse resp) {
+  private static RegionLocations transformMetaRegionLocations(GetMetaRegionLocationsResponse resp) {
     List<HRegionLocation> regionLocations = new ArrayList<>();
     resp.getMetaLocationsList()
       .forEach(location -> regionLocations.add(ProtobufUtil.toRegionLocation(location)));
@@ -247,7 +270,7 @@ public class MasterRegistry implements ConnectionRegistry {
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {
     return this.<GetMetaRegionLocationsResponse> call((c, s, d) -> s.getMetaRegionLocations(c,
       GetMetaRegionLocationsRequest.getDefaultInstance(), d), r -> r.getMetaLocationsCount() != 0,
-      "getMetaLocationsCount").thenApply(this::transformMetaRegionLocations);
+      "getMetaLocationsCount").thenApply(MasterRegistry::transformMetaRegionLocations);
   }
 
   @Override
@@ -259,17 +282,54 @@ public class MasterRegistry implements ConnectionRegistry {
       .thenApply(GetClusterIdResponse::getClusterId);
   }
 
-  private ServerName transformServerName(GetActiveMasterResponse resp) {
-    return ProtobufUtil.toServerName(resp.getServerName());
+  private static boolean hasActiveMaster(GetMastersResponse resp) {
+    List<GetMastersResponseEntry> activeMasters =
+        resp.getMasterServersList().stream().filter(GetMastersResponseEntry::getIsActive).collect(
+        Collectors.toList());
+    return activeMasters.size() == 1;
+  }
+
+  private static ServerName filterActiveMaster(GetMastersResponse resp) throws IOException {
+    List<GetMastersResponseEntry> activeMasters =
+        resp.getMasterServersList().stream().filter(GetMastersResponseEntry::getIsActive).collect(
+            Collectors.toList());
+    if (activeMasters.size() != 1) {
+      throw new IOException(String.format("Incorrect number of active masters encountered." +
+          " Expected: 1 found: %d. Content: %s", activeMasters.size(), activeMasters));
+    }
+    return ProtobufUtil.toServerName(activeMasters.get(0).getServerName());
   }
 
   @Override
   public CompletableFuture<ServerName> getActiveMaster() {
+    CompletableFuture<ServerName> future = new CompletableFuture<>();
+    addListener(call((c, s, d) -> s.getMasters(c, GetMastersRequest.getDefaultInstance(), d),
+      MasterRegistry::hasActiveMaster, "getMasters()"), (resp, ex) -> {
+        if (ex != null) {
+          future.completeExceptionally(ex);
+        }
+        ServerName result = null;
+        try {
+          result = filterActiveMaster((GetMastersResponse)resp);
+        } catch (IOException e) {
+          future.completeExceptionally(e);
+        }
+        future.complete(result);
+      });
+    return future;
+  }
+
+  private static List<ServerName> transformServerNames(GetMastersResponse resp) {
+    return resp.getMasterServersList().stream().map(s -> ProtobufUtil.toServerName(
+        s.getServerName())).collect(Collectors.toList());
+  }
+
+  CompletableFuture<List<ServerName>> getMasters() {
+    System.out.println("getMasters()");
     return this
-      .<GetActiveMasterResponse> call(
-        (c, s, d) -> s.getActiveMaster(c, GetActiveMasterRequest.getDefaultInstance(), d),
-        GetActiveMasterResponse::hasServerName, "getActiveMaster()")
-      .thenApply(this::transformServerName);
+        .<GetMastersResponse> call((c, s, d) -> s.getMasters(
+            c, GetMastersRequest.getDefaultInstance(), d), r -> r.getMasterServersCount() != 0,
+            "getMasters()").thenApply(MasterRegistry::transformServerNames);
   }
 
   @VisibleForTesting
@@ -279,6 +339,9 @@ public class MasterRegistry implements ConnectionRegistry {
 
   @Override
   public void close() {
+    if (masterAddressRefresher != null) {
+      masterAddressRefresher.close();
+    }
     if (rpcClient != null) {
       rpcClient.close();
     }
