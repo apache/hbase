@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
@@ -183,7 +183,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
           try {
             // Force the roll if the logroll.period is elapsed or if a roll was requested.
             // The returned value is an collection of actual region and family names.
-            Map<byte[], List<byte[]>> regionsToFlush = controller.rollWal(now, isRequestRoll);
+            Map<byte[], List<byte[]>> regionsToFlush = controller.rollWal(now);
             if (regionsToFlush != null) {
               for (Map.Entry<byte[], List<byte[]>> r : regionsToFlush.entrySet()) {
                 scheduleFlush(Bytes.toString(r.getKey()), r.getValue());
@@ -254,30 +254,28 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    */
   protected class RollController {
     private final WAL wal;
-    // avoid missing roll request before we return from rollWriter
-    private final AtomicInteger rollRequestCounter;
+    private final AtomicBoolean rollRequest;
     private long lastRollTime;
 
     RollController(WAL wal) {
       this.wal = wal;
-      this.rollRequestCounter = new AtomicInteger(0);
+      this.rollRequest = new AtomicBoolean(false);
       this.lastRollTime = System.currentTimeMillis();
     }
 
     public void requestRoll() {
-      this.rollRequestCounter.incrementAndGet();
+      this.rollRequest.set(true);
     }
 
-    public Map<byte[], List<byte[]>> rollWal(long now, boolean isRequestRoll) throws IOException {
-      if (isRequestRoll) {
-        this.rollRequestCounter.decrementAndGet();
-      }
+    public Map<byte[], List<byte[]>> rollWal(long now) throws IOException {
       this.lastRollTime = now;
-      return wal.rollWriter(true);
+      Map<byte[], List<byte[]>> regionsToFlush = wal.rollWriter(true);
+      this.rollRequest.set(false);
+      return regionsToFlush;
     }
 
     public boolean isRollRequested() {
-      return rollRequestCounter.get() > 0;
+      return rollRequest.get();
     }
 
     public boolean needsPeriodicRoll(long now) {
