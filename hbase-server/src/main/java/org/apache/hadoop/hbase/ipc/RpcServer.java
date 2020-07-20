@@ -39,7 +39,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
@@ -47,8 +46,8 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
-import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
-import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.regionserver.slowlog.RpcLogDetails;
+import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
@@ -97,7 +96,6 @@ public abstract class RpcServer implements RpcServerInterface,
   private static final String MULTI_SERVICE_CALLS = "multi.service_calls";
 
   private final boolean authorize;
-  private final boolean isOnlineLogProviderEnabled;
   protected boolean isSecurityEnabled;
 
   public static final byte CURRENT_VERSION = 0;
@@ -229,7 +227,7 @@ public abstract class RpcServer implements RpcServerInterface,
   /**
    * Use to add online slowlog responses
    */
-  private NamedQueueRecorder namedQueueRecorder;
+  private SlowLogRecorder slowLogRecorder;
 
   @FunctionalInterface
   protected interface CallCleanup {
@@ -304,8 +302,6 @@ public abstract class RpcServer implements RpcServerInterface,
       saslProps = Collections.emptyMap();
     }
 
-    this.isOnlineLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
-      HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
     this.scheduler = scheduler;
   }
 
@@ -434,11 +430,11 @@ public abstract class RpcServer implements RpcServerInterface,
           tooLarge, tooSlow,
           status.getClient(), startTime, processingTime, qTime,
           responseSize, userName);
-        if (this.namedQueueRecorder != null && this.isOnlineLogProviderEnabled) {
+        if (this.slowLogRecorder != null) {
           // send logs to ring buffer owned by slowLogRecorder
-          final String className =
-            server == null ? StringUtils.EMPTY : server.getClass().getSimpleName();
-          this.namedQueueRecorder.addRecord(
+          final String className = server == null ? StringUtils.EMPTY :
+            server.getClass().getSimpleName();
+          this.slowLogRecorder.addSlowLogPayload(
             new RpcLogDetails(call, param, status.getClient(), responseSize, className, tooSlow,
               tooLarge));
         }
@@ -821,8 +817,12 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   @Override
-  public void setNamedQueueRecorder(NamedQueueRecorder namedQueueRecorder) {
-    this.namedQueueRecorder = namedQueueRecorder;
+  public void setSlowLogRecorder(SlowLogRecorder slowLogRecorder) {
+    this.slowLogRecorder = slowLogRecorder;
   }
 
+  @Override
+  public SlowLogRecorder getSlowLogRecorder() {
+    return slowLogRecorder;
+  }
 }
