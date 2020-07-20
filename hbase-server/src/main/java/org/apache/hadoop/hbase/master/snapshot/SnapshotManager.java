@@ -654,14 +654,16 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     TableName snapshotTable = TableName.valueOf(snapshot.getTable());
     if (master.getTableStateManager().isTableState(snapshotTable,
         TableState.State.ENABLED)) {
-      LOG.debug("Table enabled, starting distributed snapshot.");
+      LOG.debug("Table enabled, starting distributed snapshots for {}",
+        ClientSnapshotDescriptionUtils.toString(snapshot));
       snapshotEnabledTable(snapshot);
       LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
     }
     // For disabled table, snapshot is created by the master
     else if (master.getTableStateManager().isTableState(snapshotTable,
         TableState.State.DISABLED)) {
-      LOG.debug("Table is disabled, running snapshot entirely on master.");
+        LOG.debug("Table is disabled, running snapshot entirely on master for {}",
+          ClientSnapshotDescriptionUtils.toString(snapshot));
       snapshotDisabledTable(snapshot);
       LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
     } else {

@@ -19,14 +19,12 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URI;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
@@ -47,7 +45,6 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -126,7 +123,6 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     this.snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
     this.workingDirFs = this.workingDir.getFileSystem(this.conf);
     this.monitor = new ForeignExceptionDispatcher(snapshot.getName());
-    this.snapshotManifest = SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor);
 
     this.tableLock = master.getLockManager().createMasterLock(
         snapshotTable, LockType.EXCLUSIVE,
@@ -137,6 +133,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     // update the running tasks
     this.status = TaskMonitor.get().createStatus(
       "Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable);
+    this.status.enableStatusJournal(true);
+    this.snapshotManifest =
+        SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor, status);
   }
 
   private TableDescriptor loadTableDescriptor()
@@ -255,6 +254,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
         }
       } catch (IOException e) {
         LOG.error("Couldn't delete snapshot working directory:" + workingDir);
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Table snapshot journal : \n" + status.prettyPrintJournal());
       }
       tableLockToRelease.release();
     }
