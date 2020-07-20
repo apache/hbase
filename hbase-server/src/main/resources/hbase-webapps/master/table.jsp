@@ -657,7 +657,7 @@
       %><%= compactionState %><%
     } catch (Exception e) {
 
-      if(e.getCause().getCause() instanceof NotServingRegionException) {
+      if(e.getCause() != null && e.getCause().getCause() instanceof NotServingRegionException) {
         %><%= CompactionState.NONE %><%
       } else {
         // Nothing really to do here
