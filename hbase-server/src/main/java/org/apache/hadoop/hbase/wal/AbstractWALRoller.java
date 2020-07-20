@@ -269,9 +269,9 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
 
     public Map<byte[], List<byte[]>> rollWal(long now) throws IOException {
       this.lastRollTime = now;
-      Map<byte[], List<byte[]>> regionsToFlush = wal.rollWriter(true);
+      // reset the flag in front to avoid missing roll request before we return from rollWriter.
       this.rollRequest.set(false);
-      return regionsToFlush;
+      return wal.rollWriter(true);
     }
 
     public boolean isRollRequested() {
