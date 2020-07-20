@@ -1996,16 +1996,4 @@ possible configurations would overwhelm and obscure the important.
       too large batch request.
     </description>
   </property>
-  <property>
-    <name>hbase.namedqueue.provider.classes</name>
-    <value>org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService</value>
-    <description>
-      Default values for NamedQueueService implementors. This comma separated full class names
-      represent all implementors of NamedQueueService that we would like to be invoked by
-      LogEvent handler service. One example of NamedQueue service is SlowLogQueueService which
-      is used to store slow/large RPC logs in ringbuffer at each RegionServer.
-      All implementors of NamedQueueService should be found under package:
-      "org.apache.hadoop.hbase.namequeues.impl"
-    </description>
-  </property>
 </configuration>

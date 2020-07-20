@@ -17,33 +17,34 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.namequeues;
+package org.apache.hadoop.hbase.regionserver.slowlog;
 
+import com.lmax.disruptor.ExceptionHandler;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Base payload to be prepared by client to send various namedQueue events for in-memory
- * ring buffer storage in either HMaster or RegionServer.
- * e.g slowLog responses
+ * Exception Handler for Online Slow Log Ring Buffer
  */
 @InterfaceAudience.Private
-public class NamedQueuePayload {
+class DisruptorExceptionHandler implements ExceptionHandler<RingBufferEnvelope> {
 
-  public enum NamedQueueEvent {
-    SLOW_LOG
+  private static final Logger LOG = LoggerFactory.getLogger(DisruptorExceptionHandler.class);
+
+  @Override
+  public void handleEventException(Throwable e, long sequence, RingBufferEnvelope event) {
+    LOG.error("Sequence={}, event={}", sequence, event, e);
   }
 
-  private final NamedQueueEvent namedQueueEvent;
-
-  public NamedQueuePayload(NamedQueueEvent namedQueueEvent) {
-    if (namedQueueEvent == null) {
-      throw new RuntimeException("NamedQueuePayload with null namedQueueEvent");
-    }
-    this.namedQueueEvent = namedQueueEvent;
+  @Override
+  public void handleOnStartException(Throwable e) {
+    LOG.error("Disruptor onStartException: ", e);
   }
 
-  public NamedQueueEvent getNamedQueueEvent() {
-    return namedQueueEvent;
+  @Override
+  public void handleOnShutdownException(Throwable e) {
+    LOG.error("Disruptor onShutdownException: ", e);
   }
 
 }

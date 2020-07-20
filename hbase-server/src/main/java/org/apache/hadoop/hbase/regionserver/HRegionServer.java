@@ -138,8 +138,8 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
-import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
-import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
+import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
+import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogTableOpsChore;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
@@ -535,7 +535,7 @@ public class HRegionServer extends Thread implements
   /**
    * Provide online slow log responses from ringbuffer
    */
-  private NamedQueueRecorder namedQueueRecorder = null;
+  private SlowLogRecorder slowLogRecorder;
 
   /**
    * True if this RegionServer is coming up in a cluster where there is no Master;
@@ -597,12 +597,7 @@ public class HRegionServer extends Thread implements
       this.stopped = false;
 
       if (!(this instanceof HMaster)) {
-        final boolean isOnlineLogProviderEnabled = conf.getBoolean(
-          HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
-          HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
-        if (isOnlineLogProviderEnabled) {
-          this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
-        }
+        this.slowLogRecorder = new SlowLogRecorder(this.conf);
       }
       rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
@@ -1511,12 +1506,12 @@ public class HRegionServer extends Thread implements
   }
 
   /**
-   * get NamedQueue Provider to add different logs to ringbuffer
+   * get Online SlowLog Provider to add slow logs to ringbuffer
    *
-   * @return NamedQueueRecorder
+   * @return Online SlowLog Provider
    */
-  public NamedQueueRecorder getNamedQueueRecorder() {
-    return this.namedQueueRecorder;
+  public SlowLogRecorder getSlowLogRecorder() {
+    return this.slowLogRecorder;
   }
 
   /*
@@ -2075,7 +2070,7 @@ public class HRegionServer extends Thread implements
     if (isSlowLogTableEnabled) {
       // default chore duration: 10 min
       final int duration = conf.getInt("hbase.slowlog.systable.chore.duration", 10 * 60 * 1000);
-      slowLogTableOpsChore = new SlowLogTableOpsChore(this, duration, this.namedQueueRecorder);
+      slowLogTableOpsChore = new SlowLogTableOpsChore(this, duration, this.slowLogRecorder);
     }
 
     // Create the thread to clean the moved regions list

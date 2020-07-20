@@ -17,29 +17,29 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.namequeues;
+package org.apache.hadoop.hbase.regionserver.slowlog;
 
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.yetus.audience.InterfaceAudience;
 
 
 /**
- * An envelope to carry payload in the ring buffer that serves as online buffer
- * to provide latest events
+ * An envelope to carry payload in the slow log ring buffer that serves as online buffer
+ * to provide latest TooSlowLog
  */
 @InterfaceAudience.Private
 final class RingBufferEnvelope {
 
-  private NamedQueuePayload namedQueuePayload;
+  private RpcLogDetails rpcLogDetails;
 
   /**
    * Load the Envelope with {@link RpcCall}
    *
-   * @param namedQueuePayload all details of rpc call that would be useful for ring buffer
+   * @param rpcLogDetails all details of rpc call that would be useful for ring buffer
    *   consumers
    */
-  public void load(NamedQueuePayload namedQueuePayload) {
-    this.namedQueuePayload = namedQueuePayload;
+  public void load(RpcLogDetails rpcLogDetails) {
+    this.rpcLogDetails = rpcLogDetails;
   }
 
   /**
@@ -48,10 +48,10 @@ final class RingBufferEnvelope {
    *
    * @return Retrieve rpc log details
    */
-  public NamedQueuePayload getPayload() {
-    final NamedQueuePayload namedQueuePayload = this.namedQueuePayload;
-    this.namedQueuePayload = null;
-    return namedQueuePayload;
+  public RpcLogDetails getPayload() {
+    final RpcLogDetails rpcLogDetails = this.rpcLogDetails;
+    this.rpcLogDetails = null;
+    return rpcLogDetails;
   }
 
 }
