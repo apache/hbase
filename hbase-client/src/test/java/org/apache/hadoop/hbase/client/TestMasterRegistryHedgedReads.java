@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.security.User;
@@ -116,11 +115,20 @@ public class TestMasterRegistryHedgedReads {
     }
   }
 
+  /**
+   * A dummy RpcChannel implementation that intercepts the GetClusterId() RPC calls and injects
+   * errors. All other RPCs are ignored.
+   */
   public static final class RpcChannelImpl implements RpcChannel {
 
     @Override
     public void callMethod(MethodDescriptor method, RpcController controller, Message request,
       Message responsePrototype, RpcCallback<Message> done) {
+      if (!method.getName().equals("GetClusterId")) {
+        // On RPC failures, MasterRegistry internally runs getMasters() RPC to keep the master list
+        // fresh. We do not want to intercept those RPCs here and double count.
+        return;
+      }
       // simulate the asynchronous behavior otherwise all logic will perform in the same thread...
       EXECUTOR.execute(() -> {
         int index = CALLED.getAndIncrement();
@@ -129,7 +137,7 @@ public class TestMasterRegistryHedgedReads {
         } else if (GOOD_RESP_INDEXS.contains(index)) {
           done.run(RESP);
         } else {
-          ((HBaseRpcController) controller).setFailed("inject error");
+          controller.setFailed("inject error");
           done.run(null);
         }
       });
