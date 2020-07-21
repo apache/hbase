@@ -174,8 +174,9 @@ public class TestHBaseFsckCleanReplicationBarriers {
   }
 
   public static void createPeer() throws IOException {
-    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL.getClusterKey()).setSerial(true).build();
+    ReplicationPeerConfig rpc =
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL.getClusterKey() + "-test")
+        .setSerial(true).build();
     UTIL.getAdmin().addReplicationPeer(PEER_1, rpc);
     UTIL.getAdmin().addReplicationPeer(PEER_2, rpc);
   }
