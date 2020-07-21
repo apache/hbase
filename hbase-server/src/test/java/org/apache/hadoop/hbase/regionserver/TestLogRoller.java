@@ -122,7 +122,7 @@ public class TestLogRoller {
       wal.init();
       wals.put(wal, wal.getCurrentFileName());
       ROLLER.addWAL(wal);
-      Thread.sleep(3000);
+      Thread.sleep(1000);
     }
 
     // request roll

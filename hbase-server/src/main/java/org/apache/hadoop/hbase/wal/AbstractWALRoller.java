@@ -168,15 +168,12 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
           Entry<WAL, RollController> entry = iter.next();
           WAL wal = entry.getKey();
           RollController controller = entry.getValue();
-          boolean isRequestRoll;
           if (controller.isRollRequested()) {
             // WAL roll requested, fall through
             LOG.debug("WAL {} roll requested", wal);
-            isRequestRoll = true;
           } else if (controller.needsPeriodicRoll(now)){
             // Time for periodic roll, fall through
             LOG.debug("WAL {} roll period {} ms elapsed", wal, this.rollPeriod);
-            isRequestRoll = false;
           } else {
             continue;
           }
@@ -230,7 +227,9 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    * @return true if all WAL roll finished
    */
   public boolean walRollFinished() {
-    return wals.values().stream().noneMatch(RollController::isRollRequested) && isWaiting();
+    // TODO add a status field of roll in RollController
+    return wals.values().stream().noneMatch(rc -> rc.needsRoll(System.currentTimeMillis()))
+      && isWaiting();
   }
 
   /**
