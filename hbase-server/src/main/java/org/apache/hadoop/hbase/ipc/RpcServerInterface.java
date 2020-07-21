@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
-import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -102,12 +102,8 @@ public interface RpcServerInterface {
   /**
    * Set Online SlowLog Provider
    *
-   * @param slowLogRecorder instance of {@link SlowLogRecorder}
+   * @param namedQueueRecorder instance of {@link NamedQueueRecorder}
    */
-  void setSlowLogRecorder(final SlowLogRecorder slowLogRecorder);
+  void setNamedQueueRecorder(final NamedQueueRecorder namedQueueRecorder);
 
-  /**
-   * @return Retrieve instance of {@link SlowLogRecorder} maintained by RpcServer
-   */
-  SlowLogRecorder getSlowLogRecorder();
 }
