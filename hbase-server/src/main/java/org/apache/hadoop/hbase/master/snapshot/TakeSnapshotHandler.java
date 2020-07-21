@@ -125,7 +125,6 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     this.snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
     this.workingDirFs = this.workingDir.getFileSystem(this.conf);
     this.monitor = new ForeignExceptionDispatcher(snapshot.getName());
-    this.snapshotManifest = SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor);
 
     this.tableLock = master.getLockManager().createMasterLock(
         snapshotTable, LockType.EXCLUSIVE,
@@ -136,6 +135,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     // update the running tasks
     this.status = TaskMonitor.get().createStatus(
       "Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable);
+    this.status.enableStatusJournal(true);
+    this.snapshotManifest =
+        SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor, status);
   }
 
   private TableDescriptor loadTableDescriptor()
@@ -248,6 +250,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
         }
       } catch (IOException e) {
         LOG.error("Couldn't delete snapshot working directory:" + workingDir);
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Table snapshot journal : \n" + status.prettyPrintJournal());
       }
       tableLockToRelease.release();
     }
