@@ -21,14 +21,23 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -36,6 +45,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.junit.Assert;
@@ -48,12 +58,13 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
   private Table table;
   private ZKWatcher zkw;
   private RSGroupAdmin wrapped;
+  private Connection conn;
 
   public VerifyingRSGroupAdminClient(RSGroupAdmin RSGroupAdmin, Configuration conf)
       throws IOException {
     wrapped = RSGroupAdmin;
-    table = ConnectionFactory.createConnection(conf)
-        .getTable(RSGroupInfoManager.RSGROUP_TABLE_NAME);
+    conn = ConnectionFactory.createConnection(conf);
+    table = conn.getTable(RSGroupInfoManager.RSGROUP_TABLE_NAME);
     zkw = new ZKWatcher(conf, this.getClass().getSimpleName(), null);
   }
 
@@ -136,15 +147,26 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
     Map<String, RSGroupInfo> groupMap = Maps.newHashMap();
     Set<RSGroupInfo> zList = Sets.newHashSet();
 
-    for (Result result : table.getScanner(new Scan())) {
-      RSGroupProtos.RSGroupInfo proto =
-          RSGroupProtos.RSGroupInfo.parseFrom(
-              result.getValue(
-                  RSGroupInfoManager.META_FAMILY_BYTES,
-                  RSGroupInfoManager.META_QUALIFIER_BYTES));
-      groupMap.put(proto.getName(), RSGroupProtobufUtil.toGroupInfo(proto));
+    SortedSet<Address> lives = Sets.newTreeSet();
+    for (ServerName sn : conn.getAdmin().getClusterMetrics().getLiveServerMetrics().keySet()) {
+      lives.add(sn.getAddress());
     }
-    Assert.assertEquals(Sets.newHashSet(groupMap.values()),
+    for (ServerName sn : conn.getAdmin().listDecommissionedRegionServers()) {
+      lives.remove(sn.getAddress());
+    }
+
+    List<RSGroupInfo> rsGroupInfos = retrieveGroupListFromGroupTable();
+    for (RSGroupInfo rsGroupInfo : rsGroupInfos) {
+      groupMap.put(rsGroupInfo.getName(), rsGroupInfo);
+      for (Address address : rsGroupInfo.getServers()) {
+        lives.remove(address);
+      }
+    }
+
+    groupMap.put(RSGroupInfo.DEFAULT_GROUP,
+        new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP, lives, getDefaultRSGroupTables(groupMap)));
+
+      Assert.assertEquals(Sets.newHashSet(groupMap.values()),
         Sets.newHashSet(wrapped.listRSGroups()));
     try {
       String groupBasePath = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode, "rsgroup");
@@ -157,6 +179,7 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
           zList.add(RSGroupProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
         }
       }
+      groupMap.remove(RSGroupInfo.DEFAULT_GROUP);
       Assert.assertEquals(zList.size(), groupMap.size());
       for(RSGroupInfo RSGroupInfo : zList) {
         Assert.assertTrue(groupMap.get(RSGroupInfo.getName()).equals(RSGroupInfo));
@@ -168,5 +191,38 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
     } catch (InterruptedException e) {
       throw new IOException("ZK verification failed", e);
     }
+  }
+
+  private NavigableSet<TableName> getDefaultRSGroupTables(Map<String, RSGroupInfo> groupMap)
+      throws IOException {
+    NavigableSet<TableName> orphanTables = new TreeSet<>();
+    for (TableDescriptor td : conn.getAdmin().listTableDescriptors(Pattern.compile(".*"),
+        true)) {
+      orphanTables.add(td.getTableName());
+    }
+    for (RSGroupInfo group : groupMap.values()) {
+      if (!group.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
+        orphanTables.removeAll(group.getTables());
+      }
+    }
+    return orphanTables;
+  }
+
+  List<RSGroupInfo> retrieveGroupListFromGroupTable() throws IOException {
+    List<RSGroupInfo> rsGroupInfoList = Lists.newArrayList();
+    try (Table table = conn.getTable(RSGroupInfoManager.RSGROUP_TABLE_NAME);
+        ResultScanner scanner = table.getScanner(new Scan())) {
+      for (Result result; ; ) {
+        result = scanner.next();
+        if (result == null) {
+          break;
+        }
+        RSGroupProtos.RSGroupInfo proto = RSGroupProtos.RSGroupInfo.parseFrom(result
+            .getValue(RSGroupInfoManager.META_FAMILY_BYTES,
+                RSGroupInfoManager.META_QUALIFIER_BYTES));
+        rsGroupInfoList.add(RSGroupProtobufUtil.toGroupInfo(proto));
+      }
+    }
+    return rsGroupInfoList;
   }
 }

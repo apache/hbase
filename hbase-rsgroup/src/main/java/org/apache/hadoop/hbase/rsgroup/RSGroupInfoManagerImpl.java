@@ -576,13 +576,15 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
 
     // populate puts
-    for (RSGroupInfo RSGroupInfo : groupMap.values()) {
-      RSGroupProtos.RSGroupInfo proto = RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo);
-      Put p = new Put(Bytes.toBytes(RSGroupInfo.getName()));
-      p.addColumn(META_FAMILY_BYTES, META_QUALIFIER_BYTES, proto.toByteArray());
-      mutations.add(p);
-      for (TableName entry : RSGroupInfo.getTables()) {
-        newTableMap.put(entry, RSGroupInfo.getName());
+    for (RSGroupInfo gi : groupMap.values()) {
+      for (TableName entry : gi.getTables()) {
+        newTableMap.put(entry, gi.getName());
+      }
+      if (!gi.getName().equals(gi.DEFAULT_GROUP)) {
+        RSGroupProtos.RSGroupInfo proto = RSGroupProtobufUtil.toProtoGroupInfo(gi);
+        Put p = new Put(Bytes.toBytes(gi.getName()));
+        p.addColumn(META_FAMILY_BYTES, META_QUALIFIER_BYTES, proto.toByteArray());
+        mutations.add(p);
       }
     }
 
@@ -648,14 +650,16 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         }
       }
 
-      for (RSGroupInfo RSGroupInfo : newGroupMap.values()) {
-        String znode = ZNodePaths.joinZNode(groupBasePath, RSGroupInfo.getName());
-        RSGroupProtos.RSGroupInfo proto = RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo);
-        LOG.debug("Updating znode: " + znode);
-        ZKUtil.createAndFailSilent(watcher, znode);
-        zkOps.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(znode));
-        zkOps.add(ZKUtil.ZKUtilOp.createAndFailSilent(znode,
-          ProtobufUtil.prependPBMagic(proto.toByteArray())));
+      for (RSGroupInfo gi : newGroupMap.values()) {
+        if (!gi.getName().equals(gi.DEFAULT_GROUP)) {
+          String znode = ZNodePaths.joinZNode(groupBasePath, gi.getName());
+          RSGroupProtos.RSGroupInfo proto = RSGroupProtobufUtil.toProtoGroupInfo(gi);
+          LOG.debug("Updating znode: " + znode);
+          ZKUtil.createAndFailSilent(watcher, znode);
+          zkOps.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(znode));
+          zkOps.add(ZKUtil.ZKUtilOp
+              .createAndFailSilent(znode, ProtobufUtil.prependPBMagic(proto.toByteArray())));
+        }
       }
       LOG.debug("Writing ZK GroupInfo count: " + zkOps.size());
 
@@ -676,6 +680,14 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     // Make maps Immutable.
     this.rsGroupMap = Collections.unmodifiableMap(newRSGroupMap);
     this.tableMap = Collections.unmodifiableMap(newTableMap);
+  }
+
+  /**
+   * Make RSGroup changes visible. Caller must be synchronized on 'this'.
+   */
+  private void resetRSGroup(Map<String, RSGroupInfo> newRSGroupMap) {
+    // Make maps Immutable.
+    this.rsGroupMap = Collections.unmodifiableMap(newRSGroupMap);
   }
 
   /**
@@ -738,7 +750,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     RSGroupInfo newInfo = new RSGroupInfo(info.getName(), servers, info.getTables());
     HashMap<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.put(newInfo.getName(), newInfo);
-    flushConfig(newGroupMap);
+    resetRSGroup(newGroupMap);
+    updateCacheOfRSGroups(newGroupMap.keySet());
   }
 
   /**
