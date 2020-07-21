@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -150,9 +151,14 @@ public class ReplicationSinkManager {
    */
   public synchronized void chooseSinks() {
     List<ServerName> slaveAddresses = endpoint.getRegionServers();
-    Collections.shuffle(slaveAddresses, ThreadLocalRandom.current());
-    int numSinks = (int) Math.ceil(slaveAddresses.size() * ratio);
-    sinks = slaveAddresses.subList(0, numSinks);
+    if(slaveAddresses==null){
+      LOG.warn("No sinks available at peer. Will not be able to replicate");
+      sinks = new ArrayList<ServerName>();
+    } else {
+      Collections.shuffle(slaveAddresses, ThreadLocalRandom.current());
+      int numSinks = (int) Math.ceil(slaveAddresses.size() * ratio);
+      sinks = slaveAddresses.subList(0, numSinks);
+    }
     lastUpdateToPeers = System.currentTimeMillis();
     badReportCounts.clear();
   }

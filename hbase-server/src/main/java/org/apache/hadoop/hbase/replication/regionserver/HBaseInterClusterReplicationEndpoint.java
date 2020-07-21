@@ -127,6 +127,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private boolean dropOnDeletedTables;
   private boolean dropOnDeletedColumnFamilies;
   private boolean isSerial = false;
+  private long lastSinkFetchTime;
 
   /*
    * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
@@ -513,8 +514,14 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
 
     int numSinks = replicationSinkMgr.getNumSinks();
     if (numSinks == 0) {
-      LOG.warn("{} No replication sinks found, returning without replicating. "
-        + "The source should retry with the same set of edits.", logPeerId());
+      if((System.currentTimeMillis() - lastSinkFetchTime) >= (maxRetriesMultiplier*1000)) {
+        LOG.warn(
+          "No replication sinks found, returning without replicating. "
+            + "The source should retry with the same set of edits. Not logging this again for "
+            + "the next " + maxRetriesMultiplier + " seconds.");
+        lastSinkFetchTime = System.currentTimeMillis();
+      }
+      sleepForRetries("No sinks available at peer", sleepMultiplier);
       return false;
     }
 
