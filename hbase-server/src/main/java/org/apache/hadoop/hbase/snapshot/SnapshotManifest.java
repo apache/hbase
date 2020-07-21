@@ -494,7 +494,7 @@ public final class SnapshotManifest {
       FSTableDescriptors.createTableDescriptorForTableDirectory(workingDirFs, workingDir, htd,
           false);
     } else {
-      LOG.debug("Convert to Single Snapshot Manifest for " + this.desc.getName());
+      LOG.debug("Convert to Single Snapshot Manifest for {}", this.desc.getName());
       convertToV2SingleManifest();
     }
   }
