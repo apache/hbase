@@ -34,6 +34,7 @@
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionLocation"
   import="org.apache.hadoop.hbase.HTableDescriptor"
+  import="org.apache.hadoop.hbase.NotServingRegionException"
   import="org.apache.hadoop.hbase.RegionMetrics"
   import="org.apache.hadoop.hbase.RegionMetricsBuilder"
   import="org.apache.hadoop.hbase.ServerMetrics"
@@ -610,11 +611,16 @@
                 CompactionState compactionState = admin.getCompactionState(table.getName()).get();
           %><%= compactionState %><%
         } catch (Exception e) {
+
+          if(e.getCause() != null && e.getCause().getCause() instanceof NotServingRegionException) {
+            %><%= CompactionState.NONE %><%
+          } else {
           // Nothing really to do here
           for(StackTraceElement element : e.getStackTrace()) {
-        %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
-          }
-        %> Unknown <%
+          %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
+              }
+          %> Unknown <%
+            }
           }
         } else {
         %><%= CompactionState.NONE %><%
