@@ -1817,11 +1817,6 @@ public final class RequestConverter {
     } else {
       builder.setFilterByOperator(SlowLogResponseRequest.FilterByOperator.OR);
     }
-    if (LogQueryFilter.Type.SLOW_LOG.equals(logQueryFilter.getType())) {
-      builder.setLogType(SlowLogResponseRequest.LogType.SLOW_LOG);
-    } else {
-      builder.setLogType(SlowLogResponseRequest.LogType.LARGE_LOG);
-    }
     return builder.setLimit(logQueryFilter.getLimit()).build();
   }
 

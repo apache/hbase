@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.namequeues;
+package org.apache.hadoop.hbase.regionserver.slowlog;
 
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
@@ -33,7 +33,7 @@ public class SlowLogTableOpsChore extends ScheduledChore {
 
   private static final Logger LOG = LoggerFactory.getLogger(SlowLogTableOpsChore.class);
 
-  private final NamedQueueRecorder namedQueueRecorder;
+  private final SlowLogRecorder slowLogRecorder;
 
   /**
    * Chore Constructor
@@ -41,12 +41,12 @@ public class SlowLogTableOpsChore extends ScheduledChore {
    * @param stopper The stopper - When {@link Stoppable#isStopped()} is true, this chore will
    *   cancel and cleanup
    * @param period Period in millis with which this Chore repeats execution when scheduled
-   * @param namedQueueRecorder {@link NamedQueueRecorder} instance
+   * @param slowLogRecorder {@link SlowLogRecorder} instance
    */
   public SlowLogTableOpsChore(final Stoppable stopper, final int period,
-      final NamedQueueRecorder namedQueueRecorder) {
+      final SlowLogRecorder slowLogRecorder) {
     super("SlowLogTableOpsChore", stopper, period);
-    this.namedQueueRecorder = namedQueueRecorder;
+    this.slowLogRecorder = slowLogRecorder;
   }
 
   @Override
@@ -54,7 +54,7 @@ public class SlowLogTableOpsChore extends ScheduledChore {
     if (LOG.isTraceEnabled()) {
       LOG.trace("SlowLog Table Ops Chore is starting up.");
     }
-    namedQueueRecorder.persistAll(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    slowLogRecorder.addAllLogsToSysTable();
     if (LOG.isTraceEnabled()) {
       LOG.trace("SlowLog Table Ops Chore is closing.");
     }
