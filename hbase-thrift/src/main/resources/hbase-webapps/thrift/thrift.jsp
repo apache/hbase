@@ -20,6 +20,7 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
+  import="org.apache.hadoop.hbase.util.JvmVersion"
   import="org.apache.hadoop.hbase.util.VersionInfo"
   import="java.util.Date"
 %>
@@ -92,6 +93,11 @@ String framed = conf.get("hbase.regionserver.thrift.framed", "false");
             <th>Value</th>
             <th>Description</th>
         </tr>
+      <tr>
+        <td>JVM Version</td>
+        <td><%= JvmVersion.getVersion() %></td>
+        <td>JVM vendor and version information</td>
+      </tr>
         <tr>
             <td>HBase Version</td>
             <td><%= VersionInfo.getVersion() %>, r<%= VersionInfo.getRevision() %></td>
