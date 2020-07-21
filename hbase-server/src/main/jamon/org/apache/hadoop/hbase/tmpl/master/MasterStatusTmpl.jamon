@@ -299,6 +299,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     <th>Description</th>
                 </tr>
                 <tr>
+                    <td>JVM Version</td>
+                    <td><% JvmVersion.getVersion() %></td>
+                    <td>JVM vendor and version</td>
+                </tr>
+                <tr>
                     <td>HBase Version</td>
                     <td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, revision=<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and revision</td>
                 </tr>

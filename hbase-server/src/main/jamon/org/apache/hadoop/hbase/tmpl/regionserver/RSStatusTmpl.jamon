@@ -32,6 +32,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.io.hfile.CacheConfig;
 org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
+org.apache.hadoop.hbase.util.JvmVersion;
 org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 </%import>
 <%doc>If json AND bcn is NOT an empty string presume it a block cache view request.</%doc>
@@ -164,6 +165,11 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
             <th>Attribute Name</th>
             <th>Value</th>
             <th>Description</th>
+        </tr>
+        <tr>
+            <td>JVM Version</td>
+            <td><% JvmVersion.getVersion() %></td>
+            <td>JVM vendor and version</td>
         </tr>
         <tr>
             <td>HBase Version</td>
