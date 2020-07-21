@@ -394,7 +394,7 @@ module Hbase
 
     define_test 'clear slowlog responses should work' do
       output = capture_stdout { command(:clear_slowlog_responses, nil) }
-      assert(output.include?('Cleared Slowlog responses from 1/1 RegionServers'))
+      assert(output.include?('Cleared Slowlog responses from 0/1 RegionServers'))
     end
 
     #-------------------------------------------------------------------------------
