@@ -59,7 +59,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
   final SimpleRpcServerResponder responder;
 
   // If initial preamble with version and magic has been read or not.
-  private boolean connectionPreambleRead = false;
+  protected boolean connectionPreambleRead = false;
 
   final ConcurrentLinkedDeque<RpcResponse> responseQueue = new ConcurrentLinkedDeque<>();
   final Lock responseWriteLock = new ReentrantLock();
@@ -202,13 +202,9 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
             }
           };
           CodedInputStream cis = CodedInputStream.newInstance(is);
-          int headerSize = cis.readRawVarint32();
-          Message.Builder builder = RequestHeader.newBuilder();
-          ProtobufUtil.mergeFrom(builder, cis, headerSize);
-          RequestHeader header = (RequestHeader) builder.build();
-
+          int callId = parseCallId(cis);
           // Notify the client about the offending request
-          SimpleServerCall reqTooBig = new SimpleServerCall(header.getCallId(), this.service, null,
+          SimpleServerCall reqTooBig = new SimpleServerCall(callId, this.service, null,
               null, null, null, this, 0, this.addr, System.currentTimeMillis(), 0,
               this.rpcServer.bbAllocator, this.rpcServer.cellBlockBuilder, null, responder);
           this.rpcServer.metrics.exception(SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION);
@@ -244,15 +240,55 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
     count = channelDataRead(channel, data);
 
-    if (count >= 0 && data.remaining() == 0) { // count==0 if dataLength == 0
-      process();
+    try {
+      if (count >= 0 && data.remaining() == 0) { // count==0 if dataLength == 0
+        process();
+      } else {
+        if (connectionHeaderRead && connectionPreambleRead) {
+          CodedInputStream cis = getCodedInputStream(data);
+          int callId = parseCallId(cis);
+          SimpleServerCall requestMessUp = new SimpleServerCall(callId, this.service, null,
+            null, null, null, this, 0, this.addr, System.currentTimeMillis(), 0,
+            this.rpcServer.bbAllocator, this.rpcServer.cellBlockBuilder, null, responder);
+          this.rpcServer.metrics.exception(RpcServer.REQUEST_IO_MESS_UP_EXCEPTION);
+          String msg = "request IO mess up, " + count + " bytes read, remaining "
+              + data.remaining() + " size to read.";
+          if (VersionInfoUtil.hasMinimumVersion(connectionHeader.getVersionInfo(),
+              RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)) {
+            requestMessUp.setResponse(null, null, RpcServer.REQUEST_IO_MESS_UP_EXCEPTION, msg);
+          } else {
+            requestMessUp.setResponse(null, null, new IOException(), msg);
+          }
+          requestMessUp.sendResponseIfReady();
+        } else {
+          // Close the connection
+          return -1;
+        }
+      }
+    } finally {
+      dataLengthBuffer.clear(); // Clean for the next call
+      data = null; // For the GC
+      this.callCleanup = null;
     }
-
     return count;
   }
 
+  private int parseCallId(CodedInputStream cis) {
+    int callId = -1;
+    try {
+      int headerSize = cis.readRawVarint32();
+      Message.Builder builder = RequestHeader.newBuilder();
+      ProtobufUtil.mergeFrom(builder, cis, headerSize);
+      RequestHeader header = (RequestHeader) builder.build();
+      callId = header.getCallId();
+    } catch (IOException e) {
+      RpcServer.LOG.warn("error to parse the call id.", e);
+    }
+    return callId;
+  }
+
   // It creates the ByteBuff and CallCleanup and assign to Connection instance.
-  private void initByteBuffToReadInto(int length) {
+  void initByteBuffToReadInto(int length) {
     this.data = rpcServer.bbAllocator.allocate(length);
     this.callCleanup = data::release;
   }
@@ -270,22 +306,14 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
    */
   private void process() throws IOException, InterruptedException {
     data.rewind();
-    try {
-      if (skipInitialSaslHandshake) {
-        skipInitialSaslHandshake = false;
-        return;
-      }
-
-      if (useSasl) {
-        saslReadAndProcess(data);
-      } else {
-        processOneRpc(data);
-      }
-
-    } finally {
-      dataLengthBuffer.clear(); // Clean for the next call
-      data = null; // For the GC
-      this.callCleanup = null;
+    if (skipInitialSaslHandshake) {
+      skipInitialSaslHandshake = false;
+      return;
+    }
+    if (useSasl) {
+      saslReadAndProcess(data);
+    } else {
+      processOneRpc(data);
     }
   }
 
