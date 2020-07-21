@@ -259,7 +259,7 @@ class MonitoredTaskImpl implements MonitoredTask {
     if (journal == null) {
       journal = new ArrayList<StatusJournalEntry>();
     }
-    if (includeCurrentStatus) {
+    if (includeCurrentStatus && status != null) {
       journal.add(new StatusJournalEntryImpl(status, statusTime));
     }
   }
