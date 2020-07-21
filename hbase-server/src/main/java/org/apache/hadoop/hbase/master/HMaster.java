@@ -822,7 +822,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     this.rsGroupInfoManager = RSGroupInfoManager.create(this);
 
-    this.replicationPeerManager = ReplicationPeerManager.create(zooKeeper, conf, clusterId);
+    this.replicationPeerManager = ReplicationPeerManager.create(zooKeeper, conf);
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();
