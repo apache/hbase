@@ -382,6 +382,13 @@ public final class HConstants {
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024L;
 
+  /** Conf key for if we should sum overall region files size when check to split */
+  public static final String OVERALL_HREGION_FILES =
+    "hbase.hregion.split.overallfiles";
+
+  /** Default overall region files */
+  public static final boolean DEFAULT_OVERALL_HREGION_FILES = true;
+
   /**
    * Max size of single row for Get's or Scan's without in-row scanning flag set.
    */
@@ -608,7 +615,7 @@ public final class HConstants {
   /**
    * Last row in a table.
    */
-  public static final byte [] EMPTY_END_ROW = EMPTY_START_ROW;
+  public static final byte [] EMPTY_END_ROW = EMPTY_BYTE_ARRAY;
 
   /**
     * Used by scanners and others when they're trying to detect the end of a

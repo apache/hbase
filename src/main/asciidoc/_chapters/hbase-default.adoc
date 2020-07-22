@@ -887,11 +887,25 @@ Time to sleep in between searches for work (in milliseconds).
 +
 .Description
 
-    Maximum HFile size. If the sum of the sizes of a region's HFiles has grown to exceed this
-    value, the region is split in two.
+    Maximum file size. If the sum of the sizes of a region's HFiles has
+    grown to exceed this value, the region is split in two. There are two choices of
+    how this option works, the first is when any store's size exceed the threshold
+    then split, and the other is overall region's size exceed the threshold then split,
+    it can be configed by hbase.hregion.split.overallfiles.
 +
 .Default
 `10737418240`
+
+
+[[hbase.hregion.split.overallfiles]]
+*`hbase.hregion.split.overallfiles`*::
++
+.Description
+
+    If we should sum overall region files size when check to split.
++
+.Default
+`true`
 
 
 [[hbase.hregion.majorcompaction]]

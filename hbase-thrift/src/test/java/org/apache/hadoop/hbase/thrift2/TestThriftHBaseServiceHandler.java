@@ -200,6 +200,7 @@ public class TestThriftHBaseServiceHandler {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
+    UTIL.getConfiguration().setBoolean("hbase.regionserver.slowlog.buffer.enabled", true);
     UTIL.startMiniCluster();
     TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
       new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableAname));
