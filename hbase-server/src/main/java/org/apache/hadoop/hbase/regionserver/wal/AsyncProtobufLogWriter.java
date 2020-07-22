@@ -60,6 +60,10 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   private final Class<? extends Channel> channelClass;
 
   private volatile AsyncFSOutput output;
+  /**
+   * Save {@link AsyncFSOutput#getSyncedLength()} when {@link #output} is closed.
+   */
+  private volatile long finalSyncedLength = -1;
 
   private static final class OutputStreamWrapper extends OutputStream
       implements ByteBufferWriter {
@@ -156,6 +160,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
       LOG.warn("normal close failed, try recover", e);
       output.recoverAndClose(null);
     }
+    this.finalSyncedLength = this.output.getSyncedLength();
     this.output = null;
   }
 
@@ -234,15 +239,16 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   public long getSyncedLength() {
+   /**
+    * The last statement "this.output = null;" in {@link AsyncProtobufLogWriter#close}
+    * is a sync point, if output is null, then finalSyncedLength must set,
+    * so we can return finalSyncedLength, else we return output.getSyncedLength
+    */
     AsyncFSOutput outputToUse = this.output;
     if(outputToUse == null) {
-     /**
-      * When this method is called and output is null, it means the caller
-      * may incorrectly call this method because some synchronizing errors or other,
-      * so we should explicitly throw exception to indicate this illegal state.
-      */
-      throw new IllegalStateException("The output is null when getSyncedLength is called," +
-            "it is a illegal state might caused by some synchronizing errors or other");
+        long finalSyncedLengthToUse = this.finalSyncedLength;
+        assert finalSyncedLengthToUse >= 0;
+        return finalSyncedLengthToUse;
     }
     return outputToUse.getSyncedLength();
   }
