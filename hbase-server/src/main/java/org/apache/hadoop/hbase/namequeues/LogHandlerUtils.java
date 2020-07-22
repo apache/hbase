@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver.slowlog;
+package org.apache.hadoop.hbase.namequeues;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Event Handler utility class
  */
 @InterfaceAudience.Private
-class LogHandlerUtils {
+public class LogHandlerUtils {
 
   private static int getTotalFiltersCount(AdminProtos.SlowLogResponseRequest request) {
     int totalFilters = 0;
@@ -91,7 +91,7 @@ class LogHandlerUtils {
     return filteredSlowLogPayloads;
   }
 
-  static List<TooSlowLog.SlowLogPayload> getFilteredLogs(
+  public static List<TooSlowLog.SlowLogPayload> getFilteredLogs(
       AdminProtos.SlowLogResponseRequest request, List<TooSlowLog.SlowLogPayload> logPayloadList) {
     int totalFilters = getTotalFiltersCount(request);
     if (totalFilters > 0) {

@@ -287,12 +287,18 @@ message SlowLogResponseRequest {
     OR = 1;
   }
 
+  enum LogType {
+    SLOW_LOG = 0;
+    LARGE_LOG = 1;
+  }
+
   optional string region_name = 1;
   optional string table_name = 2;
   optional string client_address = 3;
   optional string user_name = 4;
   optional uint32 limit = 5 [default = 10];
   optional FilterByOperator filter_by_operator = 6 [default = OR];
+  optional LogType log_type = 7;
 }
 
 message SlowLogResponses {
