@@ -78,9 +78,9 @@ public class TestReplicationAdmin {
       new HBaseTestingUtility();
 
   private final String ID_ONE = "1";
-  private final String KEY_ONE = "127.0.0.1:2181:/hbase";
+  private static String KEY_ONE;
   private final String ID_SECOND = "2";
-  private final String KEY_SECOND = "127.0.0.1:2181:/hbase2";
+  private static String KEY_SECOND;
 
   private static ReplicationAdmin admin;
   private static Admin hbaseAdmin;
@@ -97,6 +97,8 @@ public class TestReplicationAdmin {
     TEST_UTIL.startMiniCluster();
     admin = new ReplicationAdmin(TEST_UTIL.getConfiguration());
     hbaseAdmin = TEST_UTIL.getAdmin();
+    KEY_ONE = TEST_UTIL.getClusterKey() + "-test1";
+    KEY_SECOND = TEST_UTIL.getClusterKey() + "-test2";
   }
 
   @AfterClass
