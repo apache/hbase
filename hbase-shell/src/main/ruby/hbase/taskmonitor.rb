@@ -80,13 +80,12 @@ module Hbase
       infoport = @admin.getClusterMetrics.getLiveServerMetrics.get(host).getInfoServerPort.to_s
 
       # Note: This condition use constants from hbase-server
-      # if (!@admin.getConfiguration().getBoolean(org.apache.hadoop.hbase.http.ServerConfigurationKeys::HBASE_SSL_ENABLED_KEY,
-      #  org.apache.hadoop.hbase.http.ServerConfigurationKeys::HBASE_SSL_ENABLED_DEFAULT))
-      #  schema = "http://"
-      # else
-      #  schema = "https://"
-      # end
-      schema = 'http://'
+      if (!@admin.getConfiguration().getBoolean(org.apache.hadoop.hbase.http.ServerConfigurationKeys::HBASE_SSL_ENABLED_KEY,
+        org.apache.hadoop.hbase.http.ServerConfigurationKeys::HBASE_SSL_ENABLED_DEFAULT))
+        schema = "http://"
+      else
+        schema = "https://"
+      end
       url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
 
       json = URL.new(url).openStream
