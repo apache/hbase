@@ -126,8 +126,6 @@ public class TestReplicationSink {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set("hbase.replication.source.fs.conf.provider",
       TestSourceFSConfigurationProvider.class.getCanonicalName());
-    TEST_UTIL.getConfiguration().setInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, 50000);
-
     TEST_UTIL.startMiniCluster(3);
     SINK = new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()));
     table1 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAME1);
