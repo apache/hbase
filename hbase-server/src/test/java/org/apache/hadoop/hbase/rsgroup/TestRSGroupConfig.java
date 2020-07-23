@@ -18,14 +18,12 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.junit.AfterClass;
@@ -37,8 +35,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 @Category({ RSGroupTests.class, MediumTests.class })
 public class TestRSGroupConfig extends TestRSGroupsBase {
@@ -52,12 +48,9 @@ public class TestRSGroupConfig extends TestRSGroupsBase {
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupConfig.class);
 
-  private static Admin admin;
-
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestRSGroupsBase.setUpTestBeforeClass();
-    admin = TEST_UTIL.getAdmin();
   }
 
   @AfterClass
@@ -66,33 +59,30 @@ public class TestRSGroupConfig extends TestRSGroupsBase {
   }
 
   @Test
-  public void testSetDefaultGroupConfiguration() throws IOException {
-    testSetConfiguration(RSGroupInfo.DEFAULT_GROUP);
+  public void testSetDefaultGroupConfiguration() {
+    assertThrows(ConstraintException.class, () -> testSetConfiguration(RSGroupInfo.DEFAULT_GROUP));
   }
 
   @Test
-  public void testSetNonDefaultGroupConfiguration() throws IOException {
+  public void testSetNonDefaultGroupConfiguration() throws Exception {
     String group = GROUP_PREFIX + name.getMethodName();
-    admin.addRSGroup(group);
-    testSetConfiguration(RSGroupInfo.DEFAULT_GROUP);
-    admin.removeRSGroup(group);
+    ADMIN.addRSGroup(group);
+    testSetConfiguration(group);
+    ADMIN.removeRSGroup(group);
   }
 
-  private void testSetConfiguration(String group) throws IOException {
+  private void testSetConfiguration(String group) throws Exception {
     Map<String, String> configuration = new HashMap<>();
     configuration.put("aaa", "111");
     configuration.put("bbb", "222");
-    admin.updateRSGroupConfig(group, configuration);
-    RSGroupInfo rsGroup = admin.getRSGroup(group);
-    Map<String, String> configFromGroup = Maps.newHashMap(rsGroup.getConfiguration());
-    assertNotNull(configFromGroup);
-    assertEquals(2, configFromGroup.size());
-    assertEquals("111", configFromGroup.get("aaa"));
+    ADMIN.updateRSGroupConfig(group, configuration);
+    RSGroupInfo rsGroup = ADMIN.getRSGroup(group);
+    assertEquals(configuration, rsGroup.getConfiguration());
+
     // unset configuration
-    admin.updateRSGroupConfig(group, null);
-    rsGroup = admin.getRSGroup(group);
-    configFromGroup = rsGroup.getConfiguration();
-    assertNotNull(configFromGroup);
+    ADMIN.updateRSGroupConfig(group, null);
+    rsGroup = ADMIN.getRSGroup(group);
+    Map<String, String> configFromGroup = rsGroup.getConfiguration();
     assertEquals(0, configFromGroup.size());
   }
 
