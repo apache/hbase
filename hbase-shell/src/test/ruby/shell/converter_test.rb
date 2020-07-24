@@ -17,11 +17,10 @@
 require 'hbase_constants'
 require 'shell'
 
-include HBaseConstants
-
 module Hbase
   class ConverterTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     non_ascii_text = '⻆⻇'
     non_ascii_row = '⻄'

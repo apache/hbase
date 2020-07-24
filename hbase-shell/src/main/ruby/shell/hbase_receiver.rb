@@ -16,30 +16,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-require 'shell'
-require 'stringio'
 require 'hbase_constants'
-require 'hbase/hbase'
-require 'hbase/table'
+require 'hbase/quotas'
 
-module Hbase
-  class NoClusterConnectionTest < Test::Unit::TestCase
-    include TestHelpers
-    include HBaseConstants
+#
+# Simple class to act as the main receiver for an IRB Workspace (and its respective ruby Binding)
+# in our HBase shell. This will hold all the commands we want in our shell.
+#
+class HBaseReceiver < Object
+  include HBaseConstants
+  include HBaseQuotasConstants
 
-    def setup
-      puts "starting shell"
-    end
-
-    def teardown
-      # nothing to teardown
-    end
-
-    define_test "start_hbase_shell_no_cluster" do
-      assert_nothing_raised do
-        setup_hbase
-      end
-    end
+  def get_binding
+    binding
   end
 end

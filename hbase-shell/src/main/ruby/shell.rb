@@ -16,6 +16,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+require 'irb'
+require 'irb/workspace'
+require 'shell/hbase_receiver'
+
+##
+# HBaseIOExtensions is a module to be "mixed-in" (ie. included) to Ruby's IO class. It is required
+# if you want to use RubyLex with an IO object. RubyLex claims to take an IO but really wants an
+# InputMethod.
+module HBaseIOExtensions
+  def encoding
+    external_encoding
+  end
+end
+
 
 # Shell commands module
 module Shell
@@ -115,20 +129,33 @@ module Shell
       @rsgroup_admin ||= hbase.rsgroup_admin
     end
 
-    def export_commands(where)
+    ##
+    # Create a class method on the given object for each of the loaded command classes
+    def export_commands(target)
+      # We need to store a reference to this Shell instance in the scope of this method so that it
+      # can be accessed later in the scope of the target object.
+      shell_inst = self
+      # If target is an instance, get the parent class
+      target = target.class unless target.is_a? Class
+      # Define each method as a lambda. We need to use a lambda (rather than a Proc or block) for
+      # its properties: preservation of local variables and return
       ::Shell.commands.keys.each do |cmd|
-        # here where is the IRB namespace
-        # this method just adds the call to the specified command
-        # which just references back to 'this' shell object
-        # a decently extensible way to add commands
-        where.send :instance_eval, <<-EOF
-          def #{cmd}(*args)
-            ret = @shell.command('#{cmd}', *args)
-            puts
-            return ret
-          end
-        EOF
+        target.send :define_method, cmd.to_sym, lambda { |*args|
+          ret = shell_inst.command("#{cmd}", *args)
+          puts
+          ret
+        }
       end
+      # Export help method
+      target.send :define_method, :help, lambda { |command=nil|
+        shell_inst.help(command)
+        nil
+      }
+      # Export tools method for backwards compatibility
+      target.send :define_method, :tools, lambda {
+        shell_inst.help_group('tools')
+        nil
+      }
     end
 
     def command_instance(command)
@@ -237,6 +264,60 @@ double-quote'd hexadecimal representation. For example:
 The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.
 For more on the HBase Shell, see http://hbase.apache.org/book.html
       HERE
+    end
+
+    @irb_workspace = nil
+    ##
+    # Returns an IRB Workspace for this shell instance with all the IRB and HBase commands installed
+    def get_workspace
+      return @irb_workspace unless @irb_workspace == nil
+      hbase_receiver = HBaseReceiver.new
+      # install all the hbase commands BEFORE the irb commands so that our help command is installed
+      # rather than IRB's help command
+      export_commands(hbase_receiver)
+      # install all the IRB commands onto our receiver
+      IRB::ExtendCommandBundle.extend_object(hbase_receiver)
+      ::IRB::WorkSpace.new(hbase_receiver.get_binding)
+    end
+
+    ##
+    # Read from an instance of Ruby's IO class and evaluate each line within the shell's workspace
+    #
+    # Unlike Ruby's require or load, this method allows us to execute code with a custom binding. In
+    # this case, we are using the binding constructed with all the HBase shell constants and
+    # methods.
+    def eval_io(io)
+      require 'irb/ruby-lex'
+      # Mixing HBaseIOExtensions into IO allows us to pass IO objects to RubyLex.
+      IO.include HBaseIOExtensions
+
+      workspace = get_workspace
+      scanner = RubyLex.new
+      scanner.set_input(io)
+
+      begin
+        scanner.each_top_level_statement do |statement, linenum|
+          puts(workspace.evaluate(nil, statement, 'stdin', linenum))
+        end
+      rescue Exception => exception
+        message = exception.to_s
+        # exception unwrapping in shell means we'll have to handle Java exceptions
+        # as a special case in order to format them properly.
+        if exception.is_a? java.lang.Exception
+          warn 'java exception'
+          message = exception.get_message
+        end
+        # Include the 'ERROR' string to try to make transition easier for scripts that
+        # may have already been relying on grepping output.
+        puts "ERROR #{exception.class}: #{message}"
+        if $fullBacktrace
+          # re-raising the will include a backtrace and exit.
+          raise exception
+        else
+          exit 1
+        end
+      end
+      nil
     end
   end
   # rubocop:enable Metrics/ClassLength

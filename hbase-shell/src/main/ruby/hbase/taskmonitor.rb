@@ -27,8 +27,6 @@ end
 
 module Hbase
   class TaskMonitor
-    include HBaseConstants
-
     #---------------------------------------------------------------------------------------------
     # Represents information reported by a server on a single MonitoredTask
     class Task

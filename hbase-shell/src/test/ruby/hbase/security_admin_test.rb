@@ -22,12 +22,11 @@ require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
-include HBaseConstants
-
 module Hbase
   # Simple secure administration methods tests
   class SecureAdminMethodsTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     def setup
       setup_hbase

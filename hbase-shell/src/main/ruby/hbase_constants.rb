@@ -116,7 +116,7 @@ module HBaseConstants
   promote_constants(org.apache.hadoop.hbase.client.TableDescriptorBuilder.constants)
 end
 
-# Include classes definition
+# Ensure that hbase class definitions are imported
 require 'hbase/hbase'
 require 'hbase/admin'
 require 'hbase/taskmonitor'
@@ -126,5 +126,3 @@ require 'hbase/replication_admin'
 require 'hbase/security'
 require 'hbase/visibility_labels'
 require 'hbase/rsgroup_admin'
-
-include HBaseQuotasConstants

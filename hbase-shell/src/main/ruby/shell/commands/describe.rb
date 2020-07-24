@@ -48,7 +48,7 @@ EOF
           # No QUOTAS if hbase:meta table
           puts
           formatter.header(%w[QUOTAS])
-          count = quotas_admin.list_quotas(TABLE => table.to_s) do |_, quota|
+          count = quotas_admin.list_quotas(::HBaseConstants::TABLE => table.to_s) do |_, quota|
             formatter.row([quota])
           end
           formatter.footer(count)
