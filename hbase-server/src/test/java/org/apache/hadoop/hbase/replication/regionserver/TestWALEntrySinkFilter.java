@@ -111,7 +111,7 @@ public class TestWALEntrySinkFilter {
         IfTimeIsGreaterThanBOUNDARYWALEntrySinkFilterImpl.class, WALEntrySinkFilter.class);
     conf.setClass(ClusterConnectionFactory.HBASE_SERVER_CLUSTER_CONNECTION_IMPL,
         DevNullAsyncClusterConnection.class, AsyncClusterConnection.class);
-    ReplicationSink sink = new ReplicationSink(conf, STOPPABLE);
+    ReplicationSink sink = new ReplicationSink(conf);
     // Create some dumb walentries.
     List<AdminProtos.WALEntry> entries = new ArrayList<>();
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();
