@@ -30,6 +30,7 @@ module Hbase
 
     def setup
       @peer_id = '1'
+      @dummy_endpoint = 'org.apache.hadoop.hbase.replication.DummyReplicationEndpoint'
 
       setup_hbase
 
@@ -70,7 +71,8 @@ module Hbase
     define_test "add_peer: single zk cluster key" do
       cluster_key = "server1.cie.com:2181:/hbase"
 
-      command(:add_peer, @peer_id, {CLUSTER_KEY => cluster_key})
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
+      command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
       peer = command(:list_peers).get(0)
@@ -85,7 +87,8 @@ module Hbase
     define_test "add_peer: multiple zk cluster key" do
       cluster_key = "zk1,zk2,zk3:2182:/hbase-prod"
 
-      command(:add_peer, @peer_id, {CLUSTER_KEY => cluster_key})
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
+      command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
       peer = command(:list_peers).get(0)
@@ -100,7 +103,7 @@ module Hbase
     define_test "add_peer: single zk cluster key with enabled/disabled state" do
       cluster_key = "server1.cie.com:2181:/hbase"
 
-      args = { CLUSTER_KEY => cluster_key }
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
@@ -109,7 +112,8 @@ module Hbase
 
       command(:remove_peer, @peer_id)
 
-      enable_args = { CLUSTER_KEY => cluster_key, STATE => 'ENABLED' }
+      enable_args = {CLUSTER_KEY => cluster_key, STATE => 'ENABLED',
+        ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, enable_args)
 
       assert_equal(1, command(:list_peers).length)
@@ -118,7 +122,8 @@ module Hbase
 
       command(:remove_peer, @peer_id)
 
-      disable_args = { CLUSTER_KEY => cluster_key, STATE => 'DISABLED' }
+      disable_args = {CLUSTER_KEY => cluster_key, STATE => 'DISABLED',
+        ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, disable_args)
 
       assert_equal(1, command(:list_peers).length)
@@ -131,7 +136,7 @@ module Hbase
     define_test "add_peer: multiple zk cluster key - peer config" do
       cluster_key = "zk1,zk2,zk3:2182:/hbase-prod"
 
-      args = { CLUSTER_KEY => cluster_key }
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
@@ -149,7 +154,8 @@ module Hbase
       namespaces = ["ns1", "ns2", "ns3"]
       namespaces_str = "ns1;ns2;ns3"
 
-      args = { CLUSTER_KEY => cluster_key, NAMESPACES => namespaces }
+      args = {CLUSTER_KEY => cluster_key, NAMESPACES => namespaces,
+        ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
@@ -172,8 +178,8 @@ module Hbase
         "ns3:table3" => ["cf1", "cf2"] }
       namespaces_str = "ns1;ns2"
 
-      args = { CLUSTER_KEY => cluster_key, NAMESPACES => namespaces,
-        TABLE_CFS => table_cfs }
+      args = {CLUSTER_KEY => cluster_key, NAMESPACES => namespaces,
+        TABLE_CFS => table_cfs, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
@@ -209,7 +215,8 @@ module Hbase
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       table_cfs = { "table1" => [], "table2" => ["cf1"], "table3" => ["cf1", "cf2"] }
 
-      args = { CLUSTER_KEY => cluster_key, TABLE_CFS => table_cfs }
+      args = {CLUSTER_KEY => cluster_key, TABLE_CFS => table_cfs,
+        ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
@@ -239,8 +246,8 @@ module Hbase
       table_cfs = { "ns3:table1" => [], "ns3:table2" => [],
         "ns3:table3" => [] }
       # add a new replication peer which serial flag is true
-      args = { CLUSTER_KEY => cluster_key, SERIAL => true,
-        TABLE_CFS => table_cfs}
+      args = {CLUSTER_KEY => cluster_key, SERIAL => true,
+        TABLE_CFS => table_cfs, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
@@ -256,7 +263,7 @@ module Hbase
 
     define_test "set_peer_tableCFs: works with table-cfs map" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
-      args = { CLUSTER_KEY => cluster_key}
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
       command(:set_peer_replicate_all, @peer_id, false)
 
@@ -275,7 +282,7 @@ module Hbase
 
     define_test "append_peer_tableCFs: works with table-cfs map" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
-      args = { CLUSTER_KEY => cluster_key}
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
       command(:set_peer_replicate_all, @peer_id, false)
 
@@ -299,7 +306,8 @@ module Hbase
     define_test "remove_peer_tableCFs: works with table-cfs map" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       table_cfs = { "table1" => [], "ns2:table2" => ["cf1"], "ns3:table3" => ["cf1", "cf2"] }
-      args = { CLUSTER_KEY => cluster_key, TABLE_CFS => table_cfs }
+      args = {CLUSTER_KEY => cluster_key, TABLE_CFS => table_cfs,
+        ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
@@ -317,7 +325,7 @@ module Hbase
 
     define_test 'set_peer_exclude_tableCFs: works with table-cfs map' do
       cluster_key = 'zk4,zk5,zk6:11000:/hbase-test'
-      args = { CLUSTER_KEY => cluster_key }
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
@@ -340,7 +348,7 @@ module Hbase
 
     define_test "append_peer_exclude_tableCFs: works with exclude table-cfs map" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
-      args = {CLUSTER_KEY => cluster_key}
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
       assert_equal(1, command(:list_peers).length)
       peer = command(:list_peers).get(0)
@@ -375,7 +383,7 @@ module Hbase
 
     define_test 'remove_peer_exclude_tableCFs: works with exclude table-cfs map' do
       cluster_key = 'zk4,zk5,zk6:11000:/hbase-test'
-      args = {CLUSTER_KEY => cluster_key}
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
       assert_equal(1, command(:list_peers).length)
       peer = command(:list_peers).get(0)
@@ -413,7 +421,7 @@ module Hbase
       namespaces = ["ns1", "ns2"]
       namespaces_str = "ns1;ns2"
 
-      args = { CLUSTER_KEY => cluster_key }
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
       command(:set_peer_replicate_all, @peer_id, false)
 
@@ -434,7 +442,7 @@ module Hbase
       namespaces = ["ns1", "ns2"]
       namespaces_str = "ns1;ns2"
 
-      args = { CLUSTER_KEY => cluster_key }
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
       command(:set_peer_replicate_all, @peer_id, false)
 
@@ -473,7 +481,8 @@ module Hbase
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       namespaces = ["ns1", "ns2", "ns3"]
 
-      args = { CLUSTER_KEY => cluster_key, NAMESPACES => namespaces }
+      args = {CLUSTER_KEY => cluster_key, NAMESPACES => namespaces,
+        ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       namespaces = ["ns1", "ns2"]
@@ -514,7 +523,7 @@ module Hbase
       namespaces = ['ns1', 'ns2']
       namespaces_str = '!ns1;ns2'
 
-      args = { CLUSTER_KEY => cluster_key }
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
       command(:set_peer_exclude_namespaces, @peer_id, namespaces)
 
@@ -531,7 +540,7 @@ module Hbase
     define_test 'set_peer_replicate_all' do
       cluster_key = 'zk4,zk5,zk6:11000:/hbase-test'
 
-      args = { CLUSTER_KEY => cluster_key }
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
@@ -553,7 +562,7 @@ module Hbase
     define_test 'set_peer_serial' do
       cluster_key = 'zk4,zk5,zk6:11000:/hbase-test'
 
-      args = { CLUSTER_KEY => cluster_key }
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
@@ -576,7 +585,7 @@ module Hbase
 
     define_test "set_peer_bandwidth: works with peer bandwidth upper limit" do
       cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
-      args = { CLUSTER_KEY => cluster_key }
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       peer_config = command(:get_peer_config, @peer_id)
@@ -591,7 +600,7 @@ module Hbase
 
     define_test "get_peer_config: works with simple clusterKey peer" do
       cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
-      args = { CLUSTER_KEY => cluster_key }
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
       peer_config = command(:get_peer_config, @peer_id)
       assert_equal(cluster_key, peer_config.get_cluster_key)
@@ -601,14 +610,13 @@ module Hbase
 
     define_test "get_peer_config: works with replicationendpointimpl peer and config params" do
       cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
-      repl_impl = 'org.apache.hadoop.hbase.replication.DummyReplicationEndpoint'
       config_params = { "config1" => "value1", "config2" => "value2" }
-      args = { CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => repl_impl,
+      args = { CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint,
                CONFIG => config_params }
       command(:add_peer, @peer_id, args)
       peer_config = command(:get_peer_config, @peer_id)
       assert_equal(cluster_key, peer_config.get_cluster_key)
-      assert_equal(repl_impl, peer_config.get_replication_endpoint_impl)
+      assert_equal(@dummy_endpoint, peer_config.get_replication_endpoint_impl)
       assert_equal(2, peer_config.get_configuration.size)
       assert_equal("value1", peer_config.get_configuration.get("config1"))
       #cleanup
@@ -617,29 +625,27 @@ module Hbase
 
     define_test "list_peer_configs: returns all peers' ReplicationPeerConfig objects" do
       cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
-      args = { CLUSTER_KEY => cluster_key }
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       peer_id_second = '2'
       command(:add_peer, @peer_id, args)
 
-      repl_impl = "org.apache.hadoop.hbase.replication.DummyReplicationEndpoint"
       config_params = { "config1" => "value1", "config2" => "value2" }
-      args2 = { ENDPOINT_CLASSNAME => repl_impl, CONFIG => config_params}
+      args2 = {ENDPOINT_CLASSNAME => @dummy_endpoint, CONFIG => config_params}
       command(:add_peer, peer_id_second, args2)
 
       peer_configs = command(:list_peer_configs)
       assert_equal(2, peer_configs.size)
       assert_equal(cluster_key, peer_configs.get(@peer_id).get_cluster_key)
-      assert_equal(repl_impl, peer_configs.get(peer_id_second).get_replication_endpoint_impl)
+      assert_equal(@dummy_endpoint, peer_configs.get(peer_id_second).get_replication_endpoint_impl)
       #cleanup
       command(:remove_peer, @peer_id)
       command(:remove_peer, peer_id_second)
     end
 
     define_test "update_peer_config: can update peer config and data" do
-      repl_impl = "org.apache.hadoop.hbase.replication.DummyReplicationEndpoint"
       config_params = { "config1" => "value1", "config2" => "value2" }
       data_params = {"data1" => "value1", "data2" => "value2"}
-      args = { ENDPOINT_CLASSNAME => repl_impl, CONFIG => config_params, DATA => data_params}
+      args = {ENDPOINT_CLASSNAME => @dummy_endpoint, CONFIG => config_params, DATA => data_params}
       command(:add_peer, @peer_id, args)
 
       new_config_params = { "config1" => "new_value1" }
@@ -659,7 +665,7 @@ module Hbase
 
     define_test "append_peer_exclude_namespaces: works with namespaces array" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
-      args = {CLUSTER_KEY => cluster_key}
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
       command(:set_peer_replicate_all, @peer_id, true)
 
@@ -695,7 +701,7 @@ module Hbase
 
     define_test "remove_peer_exclude_namespaces: works with namespaces array" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
-      args = {CLUSTER_KEY => cluster_key}
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
 
       namespaces = ["ns1", "ns2", "ns3"]

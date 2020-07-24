@@ -127,6 +127,11 @@ public class TestRaceWhenCreatingReplicationSource {
     protected void doStop() {
       notifyStopped();
     }
+
+    @Override
+    public boolean canReplicateToSameCluster() {
+      return true;
+    }
   }
 
   @BeforeClass
