@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -67,8 +68,8 @@ public class TestMultiLogThreshold {
     final TableName tableName = TableName.valueOf("tableName");
     TEST_UTIL = HBaseTestingUtility.createLocalHTU();
     CONF = TEST_UTIL.getConfiguration();
-    THRESHOLD = CONF.getInt(RSRpcServices.BATCH_ROWS_THRESHOLD_NAME,
-      RSRpcServices.BATCH_ROWS_THRESHOLD_DEFAULT);
+    THRESHOLD = CONF.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME,
+      HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.createTable(tableName, TEST_FAM);
     RS = TEST_UTIL.getRSForFirstRegionInTable(tableName);
