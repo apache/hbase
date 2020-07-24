@@ -99,9 +99,9 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -210,7 +210,7 @@ public class TestHStore {
       ColumnFamilyDescriptor hcd, MyStoreHook hook, boolean switchToPread) throws IOException {
     TableDescriptor htd = builder.setColumnFamily(hcd).build();
     Path basedir = new Path(DIR + methodName);
-    Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(basedir, htd.getTableName());
     final Path logdir = new Path(basedir, AbstractFSWALProvider.getWALDirectoryName(methodName));
 
     FileSystem fs = FileSystem.get(conf);
@@ -220,7 +220,7 @@ public class TestHStore {
       MemStoreLABImpl.CHUNK_SIZE_DEFAULT, 1, 0, null);
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, basedir);
+    CommonFSUtils.setRootDir(walConf, basedir);
     WALFactory wals = new WALFactory(walConf, methodName);
     region = new HRegion(new HRegionFileSystem(conf, fs, tableDir, info), wals.getWAL(info), conf,
         htd, null);

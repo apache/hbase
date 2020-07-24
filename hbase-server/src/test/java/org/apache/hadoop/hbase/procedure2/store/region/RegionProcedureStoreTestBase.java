@@ -20,9 +20,10 @@ package org.apache.hadoop.hbase.procedure2.store.region;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -30,42 +31,35 @@ import org.junit.After;
 import org.junit.Before;
 
 /**
- * This runs on local filesystem. hsync and hflush are not supported. May lose data!
- * Only use where data loss is not of consequence.
+ * This runs on local filesystem. hsync and hflush are not supported. May lose data! Only use where
+ * data loss is not of consequence.
  */
 public class RegionProcedureStoreTestBase {
 
   protected HBaseCommonTestingUtility htu;
 
+  protected MasterRegion region;
+
   protected RegionProcedureStore store;
-
-  protected ChoreService choreService;
-
-  protected DirScanPool cleanerPool;
-
-  protected void configure(Configuration conf) {
-  }
 
   @Before
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
-    htu.getConfiguration().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
+    Configuration conf = htu.getConfiguration();
+    conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
     // Runs on local filesystem. Test does not need sync. Turn off checks.
-    htu.getConfiguration().setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
-    configure(htu.getConfiguration());
+    conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
     Path testDir = htu.getDataTestDir();
-    CommonFSUtils.setWALRootDir(htu.getConfiguration(), testDir);
-    choreService = new ChoreService(getClass().getSimpleName());
-    cleanerPool = new DirScanPool(htu.getConfiguration());
-    store = RegionProcedureStoreTestHelper.createStore(htu.getConfiguration(), choreService,
-      cleanerPool, new LoadCounter());
+    CommonFSUtils.setRootDir(htu.getConfiguration(), testDir);
+    Server server = RegionProcedureStoreTestHelper.mockServer(conf);
+    region = MasterRegionFactory.create(server);
+    store = RegionProcedureStoreTestHelper.createStore(server, region, new LoadCounter());
   }
 
   @After
   public void tearDown() throws IOException {
     store.stop(true);
-    cleanerPool.shutdownNow();
-    choreService.shutdown();
+    region.close(true);
     htu.cleanupTestDir();
   }
 }

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -496,5 +497,89 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
       NUM_SLAVES_BASE - 1);
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     initialize();
+  }
+
+  @Test
+  public void testRenameRSGroup() throws Exception {
+    // Add rsgroup, and assign 2 servers and a table to it.
+    RSGroupInfo oldgroup = addGroup("oldgroup", 2);
+    final TableName tb1 = TableName.valueOf("testRename");
+    TEST_UTIL.createTable(tb1, "tr");
+    rsGroupAdmin.moveTables(Sets.newHashSet(tb1), oldgroup.getName());
+    TEST_UTIL.waitFor(1000,
+      (Waiter.Predicate<Exception>) () ->
+        rsGroupAdmin.getRSGroupInfoOfTable(tb1).getServers().size() == 2);
+    oldgroup = rsGroupAdmin.getRSGroupInfo(oldgroup.getName());
+    assertEquals(2, oldgroup.getServers().size());
+    assertEquals(oldgroup.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb1).getName());
+    assertTrue(oldgroup.getTables().contains(tb1));
+
+    // Another rsgroup and table for verification
+    // that they are unchanged during we're renaming oldgroup.
+    RSGroupInfo normal = addGroup("normal", 1);
+    final TableName tb2 = TableName.valueOf("unmovedTable");
+    TEST_UTIL.createTable(tb2, "ut");
+    rsGroupAdmin.moveTables(Sets.newHashSet(tb2), normal.getName());
+    TEST_UTIL.waitFor(1000,
+      (Waiter.Predicate<Exception>) () ->
+        rsGroupAdmin.getRSGroupInfoOfTable(tb2).getServers().size() == 1);
+    normal = rsGroupAdmin.getRSGroupInfo(normal.getName());
+    assertEquals(1, normal.getServers().size());
+    assertEquals(normal.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb2).getName());
+    assertTrue(normal.containsTable(tb2));
+
+
+    // Rename rsgroup
+    rsGroupAdmin.renameRSGroup(oldgroup.getName(), "newgroup");
+    Set<Address> servers = oldgroup.getServers();
+    RSGroupInfo newgroup = rsGroupAdmin.getRSGroupInfo("newgroup");
+    assertEquals(servers.size(), newgroup.getServers().size());
+    for (Address server : servers) {
+      assertTrue(newgroup.containsServer(server));
+    }
+    assertEquals(newgroup.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb1).getName());
+    assertTrue(newgroup.containsTable(tb1));
+    assertEquals(normal.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb2).getName());
+  }
+
+  @Test
+  public void testRenameRSGroupConstraints() throws Exception {
+    // Add RSGroup, and assign 2 servers and a table to it.
+    String oldGroupName = "oldGroup";
+    RSGroupInfo oldGroup = addGroup(oldGroupName, 2);
+    oldGroup = rsGroupAdmin.getRSGroupInfo(oldGroup.getName());
+    assertNotNull(oldGroup);
+    assertEquals(2, oldGroup.getServers().size());
+
+    //Add another RSGroup
+    String anotherRSGroupName = "anotherRSGroup";
+    RSGroupInfo anotherGroup = addGroup(anotherRSGroupName, 1);
+    anotherGroup = rsGroupAdmin.getRSGroupInfo(anotherGroup.getName());
+    assertNotNull(anotherGroup);
+    assertEquals(1, anotherGroup.getServers().size());
+
+    //Rename to existing group
+    try {
+      rsGroupAdmin.renameRSGroup(oldGroup.getName(), anotherRSGroupName);
+      fail("ConstraintException was expected.");
+    } catch (ConstraintException e) {
+      assertTrue(e.getMessage().contains("Group already exists"));
+    }
+
+    //Rename default RSGroup
+    try {
+      rsGroupAdmin.renameRSGroup(RSGroupInfo.DEFAULT_GROUP, "newRSGroup2");
+      fail("ConstraintException was expected.");
+    } catch (ConstraintException e) {
+      //Do nothing
+    }
+
+    //Rename to default RSGroup
+    try {
+      rsGroupAdmin.renameRSGroup(oldGroup.getName(), RSGroupInfo.DEFAULT_GROUP);
+      fail("ConstraintException was expected.");
+    } catch (ConstraintException e) {
+      assertTrue(e.getMessage().contains("Group already exists"));
+    }
   }
 }

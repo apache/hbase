@@ -43,14 +43,17 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +73,9 @@ public class TestTableSnapshotScanner {
 
   private FileSystem fs;
   private Path rootDir;
+
+  @Rule
+  public TestName name = new TestName();
 
   public static void blockUntilSplitFinished(HBaseTestingUtility util, TableName tableName,
       int expectedRegionSize) throws Exception {
@@ -125,7 +131,7 @@ public class TestTableSnapshotScanner {
     Table table = util.getConnection().getTable(tableName);
     util.loadTable(table, FAMILIES);
 
-    Path rootDir = FSUtils.getRootDir(util.getConfiguration());
+    Path rootDir = CommonFSUtils.getRootDir(util.getConfiguration());
     FileSystem fs = rootDir.getFileSystem(util.getConfiguration());
 
     SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName,
@@ -161,7 +167,7 @@ public class TestTableSnapshotScanner {
       admin.split(tableName, Bytes.toBytes("eee"));
       blockUntilSplitFinished(UTIL, tableName, 2);
 
-      Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
       FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());
 
       SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName,
@@ -184,6 +190,38 @@ public class TestTableSnapshotScanner {
       verifyScanner(scanner, bbb, yyy);
       scanner.close();
     } finally {
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+      tearDownCluster();
+    }
+  }
+
+
+  @Test
+  public void testScanLimit() throws Exception {
+    setupCluster();
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final String snapshotName = tableName + "Snapshot";
+    TableSnapshotScanner scanner = null;
+    try {
+      createTableAndSnapshot(UTIL, tableName, snapshotName, 50);
+      Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Scan scan = new Scan().withStartRow(bbb).setLimit(100); // limit the scan
+
+      scanner = new TableSnapshotScanner(UTIL.getConfiguration(), restoreDir, snapshotName, scan);
+      int count = 0;
+      while (true) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
+        }
+        count++;
+      }
+      Assert.assertEquals(100, count);
+    } finally {
+      if (scanner != null) {
+        scanner.close();
+      }
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
       tearDownCluster();
@@ -216,7 +254,7 @@ public class TestTableSnapshotScanner {
       Scan scan = new Scan(bbb, yyy); // limit the scan
 
       Configuration conf = UTIL.getConfiguration();
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
 
       TableSnapshotScanner scanner0 =
           new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
@@ -340,7 +378,7 @@ public class TestTableSnapshotScanner {
       // wait flush is finished
       UTIL.waitFor(timeout, () -> {
         try {
-          Path tableDir = FSUtils.getTableDir(rootDir, tableName);
+          Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
           for (RegionInfo region : regions) {
             Path regionDir = new Path(tableDir, region.getEncodedName());
             for (Path familyDir : FSUtils.getFamilyDirs(fs, regionDir)) {
@@ -384,7 +422,7 @@ public class TestTableSnapshotScanner {
               }
             }
           }
-          Path tableDir = FSUtils.getTableDir(rootDir, tableName);
+          Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
           HRegionFileSystem regionFs = HRegionFileSystem
               .openRegionFromFileSystem(UTIL.getConfiguration(), fs, tableDir, mergedRegion, true);
           return !regionFs.hasReferences(admin.getDescriptor(tableName));
@@ -397,7 +435,7 @@ public class TestTableSnapshotScanner {
       UTIL.getMiniHBaseCluster().getMaster().getCatalogJanitor().choreForTesting();
       UTIL.waitFor(timeout, () -> {
         try {
-          Path tableDir = FSUtils.getTableDir(rootDir, tableName);
+          Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
           for (FileStatus fileStatus : fs.listStatus(tableDir)) {
             String name = fileStatus.getPath().getName();
             if (name.equals(region0.getEncodedName()) || name.equals(region1.getEncodedName())) {

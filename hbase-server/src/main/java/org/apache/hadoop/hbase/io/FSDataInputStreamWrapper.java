@@ -20,11 +20,10 @@ package org.apache.hadoop.hbase.io;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -91,11 +90,6 @@ public class FSDataInputStreamWrapper implements Closeable {
   // reads without hbase checksum verification.
   private AtomicInteger hbaseChecksumOffCount = new AtomicInteger(-1);
 
-  private Boolean instanceOfCanUnbuffer = null;
-  // Using reflection to get org.apache.hadoop.fs.CanUnbuffer#unbuffer method to avoid compilation
-  // errors against Hadoop pre 2.6.4 and 2.7.1 versions.
-  private Method unbuffer = null;
-
   private final static ReadStatistics readStatistics = new ReadStatistics();
 
   private static class ReadStatistics {
@@ -104,6 +98,9 @@ public class FSDataInputStreamWrapper implements Closeable {
     long totalShortCircuitBytesRead;
     long totalZeroCopyBytesRead;
   }
+
+  private Boolean instanceOfCanUnbuffer = null;
+  private CanUnbuffer unbuffer = null;
 
   public FSDataInputStreamWrapper(FileSystem fs, Path path) throws IOException {
     this(fs, path, false, -1L);
@@ -256,7 +253,7 @@ public class FSDataInputStreamWrapper implements Closeable {
         readStatistics.totalBytesRead += hdfsDataInputStream.getReadStatistics().
           getTotalBytesRead();
         readStatistics.totalLocalBytesRead += hdfsDataInputStream.getReadStatistics().
-          getTotalBytesRead();
+          getTotalLocalBytesRead();
         readStatistics.totalShortCircuitBytesRead += hdfsDataInputStream.getReadStatistics().
           getTotalShortCircuitBytesRead();
         readStatistics.totalZeroCopyBytesRead += hdfsDataInputStream.getReadStatistics().
@@ -331,39 +328,23 @@ public class FSDataInputStreamWrapper implements Closeable {
       if (this.instanceOfCanUnbuffer == null) {
         // To ensure we compute whether the stream is instance of CanUnbuffer only once.
         this.instanceOfCanUnbuffer = false;
-        Class<?>[] streamInterfaces = streamClass.getInterfaces();
-        for (Class c : streamInterfaces) {
-          if (c.getCanonicalName().toString().equals("org.apache.hadoop.fs.CanUnbuffer")) {
-            try {
-              this.unbuffer = streamClass.getDeclaredMethod("unbuffer");
-            } catch (NoSuchMethodException | SecurityException e) {
-              if (isLogTraceEnabled) {
-                LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
-                    + " . So there may be a TCP socket connection "
-                    + "left open in CLOSE_WAIT state.", e);
-              }
-              return;
-            }
-            this.instanceOfCanUnbuffer = true;
-            break;
-          }
+        if (wrappedStream instanceof CanUnbuffer) {
+          this.unbuffer = (CanUnbuffer) wrappedStream;
+          this.instanceOfCanUnbuffer = true;
         }
       }
       if (this.instanceOfCanUnbuffer) {
         try {
-          this.unbuffer.invoke(wrappedStream);
-        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+          this.unbuffer.unbuffer();
+        } catch (UnsupportedOperationException e){
           if (isLogTraceEnabled) {
             LOG.trace("Failed to invoke 'unbuffer' method in class " + streamClass
-                + " . So there may be a TCP socket connection left open in CLOSE_WAIT state.", e);
+                + " . So there may be the stream does not support unbuffering.", e);
           }
         }
       } else {
         if (isLogTraceEnabled) {
-          LOG.trace("Failed to find 'unbuffer' method in class " + streamClass
-              + " . So there may be a TCP socket connection "
-              + "left open in CLOSE_WAIT state. For more details check "
-              + "https://issues.apache.org/jira/browse/HBASE-9393");
+          LOG.trace("Failed to find 'unbuffer' method in class " + streamClass);
         }
       }
     }

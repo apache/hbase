@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -154,7 +155,8 @@ public class CompactionConfiguration {
       + " major period %d, major jitter %f, min locality to compact %f;"
       + " tiered compaction: max_age %d, incoming window min %d,"
       + " compaction policy for tiered window %s, single output for minor %b,"
-      + " compaction window factory %s",
+      + " compaction window factory %s,"
+      + " region %s columnFamilyName %s",
       StringUtils.byteDesc(minCompactSize),
       StringUtils.byteDesc(maxCompactSize),
       StringUtils.byteDesc(offPeakMaxCompactSize),
@@ -170,7 +172,9 @@ public class CompactionConfiguration {
       dateTieredIncomingWindowMin,
       compactionPolicyForDateTieredWindow,
       dateTieredSingleOutputForMinorCompaction,
-      dateTieredCompactionWindowFactory
+      dateTieredCompactionWindowFactory,
+      RegionInfo.prettyPrint(storeConfigInfo.getRegionInfo().getEncodedName()),
+      storeConfigInfo.getColumnFamilyName()
       );
   }
 

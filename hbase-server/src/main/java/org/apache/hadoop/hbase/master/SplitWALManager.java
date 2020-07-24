@@ -67,6 +67,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * {@link SplitLogManager}, {@link org.apache.hadoop.hbase.zookeeper.ZKSplitLog} and
  * {@link org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination} can be removed
  * after we switch to procedure-based WAL splitting.
+ * @see SplitLogManager for the original distributed split WAL manager.
  */
 @InterfaceAudience.Private
 public class SplitWALManager {
@@ -96,7 +97,7 @@ public class SplitWALManager {
       // 2. create corresponding procedures
       return createSplitWALProcedures(splittingFiles, crashedServer);
     } catch (IOException e) {
-      LOG.error("failed to create procedures for splitting logs of {}", crashedServer, e);
+      LOG.error("Failed to create procedures for splitting WALs of {}", crashedServer, e);
       throw e;
     }
   }
@@ -106,7 +107,7 @@ public class SplitWALManager {
     List<Path> logDirs = master.getMasterWalManager().getLogDirs(Collections.singleton(serverName));
     FileStatus[] fileStatuses =
         SplitLogManager.getFileList(this.conf, logDirs, splitMeta ? META_FILTER : NON_META_FILTER);
-    LOG.info("size of WALs of {} is {}, isMeta: {}", serverName, fileStatuses.length, splitMeta);
+    LOG.info("{} WAL count={}, meta={}", serverName, fileStatuses.length, splitMeta);
     return Lists.newArrayList(fileStatuses);
   }
 
@@ -122,7 +123,9 @@ public class SplitWALManager {
 
   public void deleteWALDir(ServerName serverName) throws IOException {
     Path splitDir = getWALSplitDir(serverName);
-    fs.delete(splitDir, false);
+    if (!fs.delete(splitDir, false)) {
+      LOG.warn("Failed delete {}", splitDir);
+    }
   }
 
   public boolean isSplitWALFinished(String walPath) throws IOException {
@@ -138,17 +141,17 @@ public class SplitWALManager {
   }
 
   /**
-   * try to acquire an worker from online servers which is executring
+   * Acquire a split WAL worker
    * @param procedure split WAL task
    * @return an available region server which could execute this task
    * @throws ProcedureSuspendedException if there is no available worker,
-   *         it will throw this exception to let the procedure wait
+   *         it will throw this exception to WAIT the procedure.
    */
   public ServerName acquireSplitWALWorker(Procedure<?> procedure)
       throws ProcedureSuspendedException {
     Optional<ServerName> worker = splitWorkerAssigner.acquire();
-    LOG.debug("acquired a worker {} to split a WAL", worker);
     if (worker.isPresent()) {
+      LOG.debug("Acquired split WAL worker={}", worker.get());
       return worker.get();
     }
     splitWorkerAssigner.suspend(procedure);
@@ -162,7 +165,7 @@ public class SplitWALManager {
    * @param scheduler scheduler which is to wake up the procedure event
    */
   public void releaseSplitWALWorker(ServerName worker, MasterProcedureScheduler scheduler) {
-    LOG.debug("release a worker {} to split a WAL", worker);
+    LOG.debug("Release split WAL worker={}", worker);
     splitWorkerAssigner.release(worker);
     splitWorkerAssigner.wake(scheduler);
   }

@@ -27,6 +27,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -72,6 +73,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -115,11 +117,11 @@ public class TestScannersFromClientSide {
   }
 
   @Parameterized.Parameters
-  public static Collection parameters() {
-    return Arrays.asList(new Object[][]{
-        {MasterRegistry.class, 1},
-        {MasterRegistry.class, 2},
-        {ZKConnectionRegistry.class, 1}
+  public static Collection<Object[]> parameters() {
+    return Arrays.asList(new Object[][] {
+        { MasterRegistry.class, 1},
+        { MasterRegistry.class, 2},
+        { ZKConnectionRegistry.class, 1}
     });
   }
 
@@ -134,21 +136,21 @@ public class TestScannersFromClientSide {
    * to initialize from scratch. While this is a hack, it saves a ton of time for the full
    * test and de-flakes it.
    */
-  private static boolean isSameParameterizedCluster(Class registryImpl, int numHedgedReqs) {
+  private static boolean isSameParameterizedCluster(Class<?> registryImpl, int numHedgedReqs) {
     // initialize() is called for every unit test, however we only want to reset the cluster state
     // at the end of every parameterized run.
     if (TEST_UTIL == null) {
       return false;
     }
     Configuration conf = TEST_UTIL.getConfiguration();
-    Class confClass = conf.getClass(
-        HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, ZKConnectionRegistry.class);
-    int hedgedReqConfig = conf.getInt(HConstants.HBASE_RPCS_HEDGED_REQS_FANOUT_KEY,
-        HConstants.HBASE_RPCS_HEDGED_REQS_FANOUT_DEFAULT);
+    Class<?> confClass = conf.getClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+      ZKConnectionRegistry.class);
+    int hedgedReqConfig = conf.getInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY,
+      MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_DEFAULT);
     return confClass.getName().equals(registryImpl.getName()) && numHedgedReqs == hedgedReqConfig;
   }
 
-  public TestScannersFromClientSide(Class registryImpl, int numHedgedReqs) throws Exception {
+  public TestScannersFromClientSide(Class<?> registryImpl, int numHedgedReqs) throws Exception {
     if (isSameParameterizedCluster(registryImpl, numHedgedReqs)) {
       return;
     }
@@ -161,13 +163,8 @@ public class TestScannersFromClientSide {
     conf.setLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, 10 * 1024 * 1024);
     conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, registryImpl,
         ConnectionRegistry.class);
-    if (numHedgedReqs == 1) {
-      conf.setBoolean(HConstants.MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY, false);
-    } else {
-      Preconditions.checkArgument(numHedgedReqs > 1);
-      conf.setBoolean(HConstants.MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY, true);
-    }
-    conf.setInt(HConstants.HBASE_RPCS_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
+    Preconditions.checkArgument(numHedgedReqs > 0);
+    conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
     StartMiniClusterOption.Builder builder = StartMiniClusterOption.builder();
     // Multiple masters needed only when hedged reads for master registry are enabled.
     builder.numMasters(numHedgedReqs > 1 ? 3 : 1).numRegionServers(3);

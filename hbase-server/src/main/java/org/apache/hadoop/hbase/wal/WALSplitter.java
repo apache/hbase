@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.apache.hadoop.hbase.wal.BoundedRecoveredHFilesOutputSink.DEFAULT_WAL_SPLIT_TO_HFILE;
-import static org.apache.hadoop.hbase.wal.BoundedRecoveredHFilesOutputSink.WAL_SPLIT_TO_HFILE;
 import static org.apache.hadoop.hbase.wal.WALSplitUtil.finishSplitLogFile;
-
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -40,7 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -51,9 +48,9 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -61,17 +58,19 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
+
 /**
- * This class is responsible for splitting up a bunch of regionserver commit log
- * files that are no longer being written to, into new files, one per region, for
- * recovering data on startup. Delete the old log files when finished.
+ * Split RegionServer WAL files. Splits the WAL into new files,
+ * one per region, to be picked up on Region reopen. Deletes the split WAL when finished.
+ * See {@link #split(Path, Path, Path, FileSystem, Configuration, WALFactory)} or
+ * {@link #splitLogFile(Path, FileStatus, FileSystem, Configuration, CancelableProgressable,
+ *   LastSequenceId, SplitLogWorkerCoordination, WALFactory, RegionServerServices)} for
+ *   entry-point.
  */
 @InterfaceAudience.Private
 public class WALSplitter {
@@ -87,14 +86,18 @@ public class WALSplitter {
   final Path rootDir;
   final FileSystem rootFS;
   final RegionServerServices rsServices;
-  final TableDescriptors tableDescriptors;
 
   // Major subcomponents of the split process.
   // These are separated into inner classes to make testing easier.
   OutputSink outputSink;
   private EntryBuffers entryBuffers;
 
+  /**
+   * Coordinator for split log. Used by the zk-based log splitter.
+   * Not used by the procedure v2-based log splitter.
+   */
   private SplitLogWorkerCoordination splitLogWorkerCoordination;
+
   private final WALFactory walFactory;
 
   private MonitoredTask status;
@@ -113,7 +116,20 @@ public class WALSplitter {
 
   private final String tmpDirName;
 
+  /**
+   * Split WAL directly to hfiles instead of into intermediary 'recovered.edits' files.
+   */
+  public static final String WAL_SPLIT_TO_HFILE = "hbase.wal.split.to.hfile";
+  public static final boolean DEFAULT_WAL_SPLIT_TO_HFILE = false;
+
+  /**
+   * True if we are to run with bounded amount of writers rather than let the count blossom.
+   * Default is 'false'. Does not apply if you have set 'hbase.wal.split.to.hfile' as that
+   * is always bounded. Only applies when you are doing recovery to 'recovered.edits'
+   * files (the old default). Bounded writing tends to have higher throughput.
+   */
   public final static String SPLIT_WRITER_CREATION_BOUNDED = "hbase.split.writer.creation.bounded";
+
   public final static String SPLIT_WAL_BUFFER_SIZE = "hbase.regionserver.hlog.splitlog.buffersize";
   public final static String SPLIT_WAL_WRITER_THREADS =
       "hbase.regionserver.hlog.splitlog.writer.threads";
@@ -133,12 +149,6 @@ public class WALSplitter {
     this.sequenceIdChecker = idChecker;
     this.splitLogWorkerCoordination = splitLogWorkerCoordination;
     this.rsServices = rsServices;
-    if (rsServices != null) {
-      this.tableDescriptors = rsServices.getTableDescriptors();
-    } else {
-      this.tableDescriptors = new FSTableDescriptors(rootFS, rootDir, true, true);
-    }
-
     this.walFactory = factory;
     PipelineController controller = new PipelineController();
     this.tmpDirName =
@@ -182,32 +192,31 @@ public class WALSplitter {
   }
 
   /**
-   * Splits a WAL file into region's recovered-edits directory.
-   * This is the main entry point for distributed log splitting from SplitLogWorker.
-   * <p>
-   * If the log file has N regions then N recovered.edits files will be produced.
-   * <p>
+   * Splits a WAL file.
    * @return false if it is interrupted by the progress-able.
    */
   public static boolean splitLogFile(Path walDir, FileStatus logfile, FileSystem walFS,
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
       SplitLogWorkerCoordination splitLogWorkerCoordination, WALFactory factory,
       RegionServerServices rsServices) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem rootFS = rootDir.getFileSystem(conf);
     WALSplitter s = new WALSplitter(factory, conf, walDir, walFS, rootDir, rootFS, idChecker,
         splitLogWorkerCoordination, rsServices);
     return s.splitLogFile(logfile, reporter);
   }
 
-  // A wrapper to split one log folder using the method used by distributed
-  // log splitting. Used by tools and unit tests. It should be package private.
-  // It is public only because TestWALObserver is in a different package,
-  // which uses this method to do log splitting.
+  /**
+   * Split a folder of WAL files. Delete the directory when done.
+   * Used by tools and unit tests. It should be package private.
+   * It is public only because TestWALObserver is in a different package,
+   * which uses this method to do log splitting.
+   * @return List of output files created by the split.
+   */
   @VisibleForTesting
   public static List<Path> split(Path walDir, Path logDir, Path oldLogDir, FileSystem walFS,
       Configuration conf, final WALFactory factory) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem rootFS = rootDir.getFileSystem(conf);
     final FileStatus[] logfiles =
         SplitLogManager.getFileList(conf, Collections.singletonList(logDir), null);
@@ -231,7 +240,7 @@ public class WALSplitter {
   }
 
   /**
-   * log splitting implementation, splits one log file.
+   * WAL splitting implementation, splits one log file.
    * @param logfile should be an actual log file.
    */
   @VisibleForTesting
@@ -251,6 +260,7 @@ public class WALSplitter {
 
     status = TaskMonitor.get().createStatus(
           "Splitting log file " + logfile.getPath() + "into a temporary staging area.");
+    status.enableStatusJournal(true);
     Reader logFileReader = null;
     this.fileBeingSplit = logfile;
     long startTS = EnvironmentEdgeManager.currentTime();
@@ -258,7 +268,7 @@ public class WALSplitter {
       long logLength = logfile.getLen();
       LOG.info("Splitting WAL={}, size={} ({} bytes)", logPath, StringUtils.humanSize(logLength),
           logLength);
-      status.setStatus("Opening log file");
+      status.setStatus("Opening log file " + logPath);
       if (reporter != null && !reporter.progress()) {
         progressFailed = true;
         return false;
@@ -273,6 +283,7 @@ public class WALSplitter {
       int numOpenedFilesBeforeReporting = conf.getInt("hbase.splitlog.report.openedfiles", 3);
       int numOpenedFilesLastCheck = 0;
       outputSink.setReporter(reporter);
+      outputSink.setStatus(status);
       outputSink.startWriterThreads();
       outputSinkStarted = true;
       Entry entry;
@@ -283,22 +294,34 @@ public class WALSplitter {
         String encodedRegionNameAsStr = Bytes.toString(region);
         lastFlushedSequenceId = lastFlushedSequenceIds.get(encodedRegionNameAsStr);
         if (lastFlushedSequenceId == null) {
-          if (sequenceIdChecker != null) {
-            RegionStoreSequenceIds ids = sequenceIdChecker.getLastSequenceId(region);
-            Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-            for (StoreSequenceId storeSeqId : ids.getStoreSequenceIdList()) {
-              maxSeqIdInStores.put(storeSeqId.getFamilyName().toByteArray(),
-                storeSeqId.getSequenceId());
+          if (!(isRegionDirPresentUnderRoot(entry.getKey().getTableName(),
+              encodedRegionNameAsStr))) {
+            // The region directory itself is not present in the FS. This indicates that
+            // the region/table is already removed. We can just skip all the edits for this
+            // region. Setting lastFlushedSequenceId as Long.MAX_VALUE so that all edits
+            // will get skipped by the seqId check below.
+            // See more details at https://issues.apache.org/jira/browse/HBASE-24189
+            LOG.info("{} no longer available in the FS. Skipping all edits for this region.",
+                encodedRegionNameAsStr);
+            lastFlushedSequenceId = Long.MAX_VALUE;
+          } else {
+            if (sequenceIdChecker != null) {
+              RegionStoreSequenceIds ids = sequenceIdChecker.getLastSequenceId(region);
+              Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+              for (StoreSequenceId storeSeqId : ids.getStoreSequenceIdList()) {
+                maxSeqIdInStores.put(storeSeqId.getFamilyName().toByteArray(),
+                    storeSeqId.getSequenceId());
+              }
+              regionMaxSeqIdInStores.put(encodedRegionNameAsStr, maxSeqIdInStores);
+              lastFlushedSequenceId = ids.getLastFlushedSequenceId();
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("DLS Last flushed sequenceid for " + encodedRegionNameAsStr + ": "
+                    + TextFormat.shortDebugString(ids));
+              }
             }
-            regionMaxSeqIdInStores.put(encodedRegionNameAsStr, maxSeqIdInStores);
-            lastFlushedSequenceId = ids.getLastFlushedSequenceId();
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("DLS Last flushed sequenceid for " + encodedRegionNameAsStr + ": " +
-                  TextFormat.shortDebugString(ids));
+            if (lastFlushedSequenceId == null) {
+              lastFlushedSequenceId = -1L;
             }
-          }
-          if (lastFlushedSequenceId == null) {
-            lastFlushedSequenceId = -1L;
           }
           lastFlushedSequenceIds.put(encodedRegionNameAsStr, lastFlushedSequenceId);
         }
@@ -345,7 +368,9 @@ public class WALSplitter {
       e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
       throw e;
     } finally {
-      LOG.debug("Finishing writing output logs and closing down");
+      final String log = "Finishing writing output logs and closing down";
+      LOG.debug(log);
+      status.setStatus(log);
       try {
         if (null != logFileReader) {
           logFileReader.close();
@@ -370,9 +395,19 @@ public class WALSplitter {
             ", corrupted=" + isCorrupted + ", progress failed=" + progressFailed;
         LOG.info(msg);
         status.markComplete(msg);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("WAL split completed for {} , Journal Log: {}", logPath,
+            status.prettyPrintJournal());
+        }
       }
     }
     return !progressFailed;
+  }
+
+  private boolean isRegionDirPresentUnderRoot(TableName tableName, String regionName)
+      throws IOException {
+    Path regionDirPath = CommonFSUtils.getRegionDir(this.rootDir, tableName, regionName);
+    return this.rootFS.exists(regionDirPath);
   }
 
   /**
@@ -392,7 +427,7 @@ public class WALSplitter {
     }
 
     try {
-      FSUtils.getInstance(walFS, conf).recoverFileLease(walFS, path, conf, reporter);
+      RecoverLeaseFSUtils.recoverFileLease(walFS, path, conf, reporter);
       try {
         in = getReader(path, reporter);
       } catch (EOFException e) {

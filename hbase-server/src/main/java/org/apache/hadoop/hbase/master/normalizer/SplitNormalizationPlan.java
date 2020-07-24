@@ -18,9 +18,11 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import java.io.IOException;
 import java.util.Arrays;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +40,14 @@ public class SplitNormalizationPlan implements NormalizationPlan {
   public SplitNormalizationPlan(RegionInfo regionInfo, byte[] splitPoint) {
     this.regionInfo = regionInfo;
     this.splitPoint = splitPoint;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public long submit(MasterServices masterServices) throws IOException {
+    return masterServices.splitRegion(regionInfo, null, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   @Override
@@ -69,16 +79,4 @@ public class SplitNormalizationPlan implements NormalizationPlan {
       '}';
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void execute(Admin admin) {
-    LOG.info("Executing splitting normalization plan: " + this);
-    try {
-      admin.splitRegionAsync(regionInfo.getRegionName()).get();
-    } catch (Exception ex) {
-      LOG.error("Error during region split: ", ex);
-    }
-  }
 }

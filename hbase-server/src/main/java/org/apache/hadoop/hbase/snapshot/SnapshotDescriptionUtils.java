@@ -18,14 +18,15 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
+import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -44,6 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
@@ -278,7 +281,7 @@ public final class SnapshotDescriptionUtils {
    */
   public static boolean isWithinDefaultWorkingDir(final Path workingDir, Configuration conf)
     throws IOException {
-    Path defaultWorkingDir = getDefaultWorkingSnapshotDir(FSUtils.getRootDir(conf));
+    Path defaultWorkingDir = getDefaultWorkingSnapshotDir(CommonFSUtils.getRootDir(conf));
     return workingDir.equals(defaultWorkingDir) || isSubDirectoryOf(workingDir, defaultWorkingDir);
   }
 
@@ -353,11 +356,11 @@ public final class SnapshotDescriptionUtils {
    */
   public static void writeSnapshotInfo(SnapshotDescription snapshot, Path workingDir, FileSystem fs)
       throws IOException {
-    FsPermission perms = FSUtils.getFilePermissions(fs, fs.getConf(),
+    FsPermission perms = CommonFSUtils.getFilePermissions(fs, fs.getConf(),
       HConstants.DATA_FILE_UMASK_KEY);
     Path snapshotInfo = new Path(workingDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
     try {
-      FSDataOutputStream out = FSUtils.create(fs, snapshotInfo, perms, true);
+      FSDataOutputStream out = CommonFSUtils.create(fs, snapshotInfo, perms, true);
       try {
         snapshot.writeTo(out);
       } finally {
@@ -399,25 +402,38 @@ public final class SnapshotDescriptionUtils {
   }
 
   /**
-   * Move the finished snapshot to its final, publicly visible directory - this marks the snapshot
-   * as 'complete'.
-   * @param snapshot description of the snapshot being tabken
-   * @param rootdir root directory of the hbase installation
-   * @param workingDir directory where the in progress snapshot was built
-   * @param fs {@link FileSystem} where the snapshot was built
-   * @throws org.apache.hadoop.hbase.snapshot.SnapshotCreationException if the
-   * snapshot could not be moved
+   * Commits the snapshot process by moving the working snapshot
+   * to the finalized filepath
+   *
+   * @param snapshotDir The file path of the completed snapshots
+   * @param workingDir  The file path of the in progress snapshots
+   * @param fs The file system of the completed snapshots
+   * @param workingDirFs The file system of the in progress snapshots
+   * @param conf Configuration
+   *
+   * @throws SnapshotCreationException if the snapshot could not be moved
    * @throws IOException the filesystem could not be reached
    */
-  public static void completeSnapshot(SnapshotDescription snapshot, Path rootdir, Path workingDir,
-      FileSystem fs) throws SnapshotCreationException, IOException {
-    Path finishedDir = getCompletedSnapshotDir(snapshot, rootdir);
-    LOG.debug("Snapshot is done, just moving the snapshot from " + workingDir + " to "
-        + finishedDir);
-    if (!fs.rename(workingDir, finishedDir)) {
-      throw new SnapshotCreationException(
-          "Failed to move working directory(" + workingDir + ") to completed directory("
-              + finishedDir + ").", ProtobufUtil.createSnapshotDesc(snapshot));
+  public static void completeSnapshot(Path snapshotDir, Path workingDir, FileSystem fs,
+    FileSystem workingDirFs, final Configuration conf)
+    throws SnapshotCreationException, IOException {
+    LOG.debug("Sentinel is done, just moving the snapshot from " + workingDir + " to "
+      + snapshotDir);
+    // If the working and completed snapshot directory are on the same file system, attempt
+    // to rename the working snapshot directory to the completed location. If that fails,
+    // or the file systems differ, attempt to copy the directory over, throwing an exception
+    // if this fails
+    URI workingURI = workingDirFs.getUri();
+    URI rootURI = fs.getUri();
+    if ((!workingURI.getScheme().equals(rootURI.getScheme()) ||
+      workingURI.getAuthority() == null ||
+      !workingURI.getAuthority().equals(rootURI.getAuthority()) ||
+      workingURI.getUserInfo() == null ||
+      !workingURI.getUserInfo().equals(rootURI.getUserInfo()) ||
+      !fs.rename(workingDir, snapshotDir)) && !FileUtil.copy(workingDirFs, workingDir, fs,
+      snapshotDir, true, true, conf)) {
+      throw new SnapshotCreationException("Failed to copy working directory(" + workingDir
+        + ") to completed directory(" + snapshotDir + ").");
     }
   }
 

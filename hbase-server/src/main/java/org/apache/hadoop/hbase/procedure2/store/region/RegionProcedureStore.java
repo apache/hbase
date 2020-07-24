@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.procedure2.store.region;
 
 import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
-import static org.apache.hadoop.hbase.HConstants.HREGION_LOGDIR_NAME;
 import static org.apache.hadoop.hbase.HConstants.NO_NONCE;
+import static org.apache.hadoop.hbase.master.region.MasterRegionFactory.PROC_FAMILY;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -30,86 +30,48 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
 import org.apache.hadoop.hbase.master.assignment.MoveRegionProcedure;
 import org.apache.hadoop.hbase.master.assignment.UnassignProcedure;
-import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
-import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.procedure.RecoverMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreBase;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureTree;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hbase.thirdparty.com.google.common.math.IntMath;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
- * A procedure store which uses a region to store all the procedures.
+ * A procedure store which uses the master local store to store all the procedures.
  * <p/>
- * FileSystem layout:
- *
- * <pre>
- * hbase
- *   |
- *   --MasterProcs
- *       |
- *       --data
- *       |  |
- *       |  --/master/procedure/&lt;encoded-region-name&gt; <---- The region data
- *       |      |
- *       |      --replay <---- The edits to replay
- *       |
- *       --WALs
- *          |
- *          --&lt;master-server-name&gt; <---- The WAL dir for active master
- *          |
- *          --&lt;master-server-name&gt;-dead <---- The WAL dir dead master
- * </pre>
- *
- * We use p:d column to store the serialized protobuf format procedure, and when deleting we will
+ * We use proc:d column to store the serialized protobuf format procedure, and when deleting we will
  * first fill the info:proc column with an empty byte array, and then actually delete them in the
  * {@link #cleanup()} method. This is because that we need to retain the max procedure id, so we can
  * not directly delete a procedure row as we do not know if it is the one with the max procedure id.
@@ -119,58 +81,20 @@ public class RegionProcedureStore extends ProcedureStoreBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionProcedureStore.class);
 
-  static final String MAX_WALS_KEY = "hbase.procedure.store.region.maxwals";
-
-  private static final int DEFAULT_MAX_WALS = 10;
-
-  static final String USE_HSYNC_KEY = "hbase.procedure.store.region.wal.hsync";
-
-  static final String MASTER_PROCEDURE_DIR = "MasterProcs";
-
-  static final String HFILECLEANER_PLUGINS = "hbase.procedure.store.region.hfilecleaner.plugins";
-
-  private static final String REPLAY_EDITS_DIR = "recovered.wals";
-
-  private static final String DEAD_WAL_DIR_SUFFIX = "-dead";
-
-  static final TableName TABLE_NAME = TableName.valueOf("master:procedure");
-
-  static final byte[] FAMILY = Bytes.toBytes("p");
-
   static final byte[] PROC_QUALIFIER = Bytes.toBytes("d");
-
-  private static final int REGION_ID = 1;
-
-  private static final TableDescriptor TABLE_DESC = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
 
   private final Server server;
 
-  private final DirScanPool cleanerPool;
-
   private final LeaseRecovery leaseRecovery;
 
-  // Used to delete the compacted hfiles. Since we put all data on WAL filesystem, it is not
-  // possible to move the compacted hfiles to the global hfile archive directory, we have to do it
-  // by ourselves.
-  private HFileCleaner cleaner;
-
-  private WALFactory walFactory;
-
   @VisibleForTesting
-  HRegion region;
-
-  @VisibleForTesting
-  RegionFlusherAndCompactor flusherAndCompactor;
-
-  @VisibleForTesting
-  RegionProcedureStoreWALRoller walRoller;
+  final MasterRegion region;
 
   private int numThreads;
 
-  public RegionProcedureStore(Server server, DirScanPool cleanerPool, LeaseRecovery leaseRecovery) {
+  public RegionProcedureStore(Server server, MasterRegion region, LeaseRecovery leaseRecovery) {
     this.server = server;
-    this.cleanerPool = cleanerPool;
+    this.region = region;
     this.leaseRecovery = leaseRecovery;
   }
 
@@ -183,52 +107,12 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     this.numThreads = numThreads;
   }
 
-  private void shutdownWAL() {
-    if (walFactory != null) {
-      try {
-        walFactory.shutdown();
-      } catch (IOException e) {
-        LOG.warn("Failed to shutdown WAL", e);
-      }
-    }
-  }
-
-  private void closeRegion(boolean abort) {
-    if (region != null) {
-      try {
-        region.close(abort);
-      } catch (IOException e) {
-        LOG.warn("Failed to close region", e);
-      }
-    }
-
-  }
-
   @Override
   public void stop(boolean abort) {
     if (!setRunning(false)) {
       return;
     }
     LOG.info("Stopping the Region Procedure Store, isAbort={}", abort);
-    if (cleaner != null) {
-      cleaner.cancel(abort);
-    }
-    if (flusherAndCompactor != null) {
-      flusherAndCompactor.close();
-    }
-    // if abort, we shutdown wal first to fail the ongoing updates to the region, and then close the
-    // region, otherwise there will be dead lock.
-    if (abort) {
-      shutdownWAL();
-      closeRegion(true);
-    } else {
-      closeRegion(false);
-      shutdownWAL();
-    }
-
-    if (walRoller != null) {
-      walRoller.close();
-    }
   }
 
   @Override
@@ -240,91 +124,6 @@ public class RegionProcedureStore extends ProcedureStoreBase {
   public int setRunningProcedureCount(int count) {
     // useless for region based storage.
     return count;
-  }
-
-  private WAL createWAL(FileSystem fs, Path rootDir, RegionInfo regionInfo) throws IOException {
-    String logName = AbstractFSWALProvider.getWALDirectoryName(server.getServerName().toString());
-    Path walDir = new Path(rootDir, logName);
-    LOG.debug("WALDir={}", walDir);
-    if (fs.exists(walDir)) {
-      throw new HBaseIOException(
-        "Master procedure store has already created directory at " + walDir);
-    }
-    if (!fs.mkdirs(walDir)) {
-      throw new IOException("Can not create master procedure wal directory " + walDir);
-    }
-    WAL wal = walFactory.getWAL(regionInfo);
-    walRoller.addWAL(wal);
-    return wal;
-  }
-
-  private HRegion bootstrap(Configuration conf, FileSystem fs, Path rootDir) throws IOException {
-    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TABLE_NAME).setRegionId(REGION_ID).build();
-    Path tmpTableDir = CommonFSUtils.getTableDir(rootDir, TableName
-      .valueOf(TABLE_NAME.getNamespaceAsString(), TABLE_NAME.getQualifierAsString() + "-tmp"));
-    if (fs.exists(tmpTableDir) && !fs.delete(tmpTableDir, true)) {
-      throw new IOException("Can not delete partial created proc region " + tmpTableDir);
-    }
-    HRegion.createHRegion(conf, regionInfo, fs, tmpTableDir, TABLE_DESC).close();
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, TABLE_NAME);
-    if (!fs.rename(tmpTableDir, tableDir)) {
-      throw new IOException("Can not rename " + tmpTableDir + " to " + tableDir);
-    }
-    WAL wal = createWAL(fs, rootDir, regionInfo);
-    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, TABLE_DESC, wal, null,
-      null);
-  }
-
-  private HRegion open(Configuration conf, FileSystem fs, Path rootDir) throws IOException {
-    String factoryId = server.getServerName().toString();
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, TABLE_NAME);
-    Path regionDir =
-      fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
-        .getPath();
-    Path replayEditsDir = new Path(regionDir, REPLAY_EDITS_DIR);
-    if (!fs.exists(replayEditsDir) && !fs.mkdirs(replayEditsDir)) {
-      throw new IOException("Failed to create replay directory: " + replayEditsDir);
-    }
-    Path walsDir = new Path(rootDir, HREGION_LOGDIR_NAME);
-    for (FileStatus walDir : fs.listStatus(walsDir)) {
-      if (!walDir.isDirectory()) {
-        continue;
-      }
-      if (walDir.getPath().getName().startsWith(factoryId)) {
-        LOG.warn("This should not happen in real production as we have not created our WAL " +
-          "directory yet, ignore if you are running a procedure related UT");
-      }
-      Path deadWALDir;
-      if (!walDir.getPath().getName().endsWith(DEAD_WAL_DIR_SUFFIX)) {
-        deadWALDir =
-          new Path(walDir.getPath().getParent(), walDir.getPath().getName() + DEAD_WAL_DIR_SUFFIX);
-        if (!fs.rename(walDir.getPath(), deadWALDir)) {
-          throw new IOException("Can not rename " + walDir + " to " + deadWALDir +
-            " when recovering lease of proc store");
-        }
-        LOG.info("Renamed {} to {} as it is dead", walDir.getPath(), deadWALDir);
-      } else {
-        deadWALDir = walDir.getPath();
-        LOG.info("{} is already marked as dead", deadWALDir);
-      }
-      for (FileStatus walFile : fs.listStatus(deadWALDir)) {
-        Path replayEditsFile = new Path(replayEditsDir, walFile.getPath().getName());
-        leaseRecovery.recoverFileLease(fs, walFile.getPath());
-        if (!fs.rename(walFile.getPath(), replayEditsFile)) {
-          throw new IOException("Can not rename " + walFile.getPath() + " to " + replayEditsFile +
-            " when recovering lease of proc store");
-        }
-        LOG.info("Renamed {} to {}", walFile.getPath(), replayEditsFile);
-      }
-      LOG.info("Delete empty proc wal dir {}", deadWALDir);
-      fs.delete(deadWALDir, true);
-    }
-    RegionInfo regionInfo = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
-    WAL wal = createWAL(fs, rootDir, regionInfo);
-    conf.set(HRegion.SPECIAL_RECOVERED_EDITS_DIR,
-      replayEditsDir.makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString());
-    return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, TABLE_DESC, wal, null,
-      null);
   }
 
   @SuppressWarnings("deprecation")
@@ -437,8 +236,8 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     if (maxProcIdSet.longValue() > maxProcIdFromProcs.longValue()) {
       if (maxProcIdSet.longValue() > 0) {
         // let's add a fake row to retain the max proc id
-        region.put(new Put(Bytes.toBytes(maxProcIdSet.longValue())).addColumn(FAMILY,
-          PROC_QUALIFIER, EMPTY_BYTE_ARRAY));
+        region.update(r -> r.put(new Put(Bytes.toBytes(maxProcIdSet.longValue()))
+          .addColumn(PROC_FAMILY, PROC_QUALIFIER, EMPTY_BYTE_ARRAY)));
       }
     } else if (maxProcIdSet.longValue() < maxProcIdFromProcs.longValue()) {
       LOG.warn("The WALProcedureStore max pid is less than the max pid of all loaded procedures");
@@ -453,46 +252,8 @@ public class RegionProcedureStore extends ProcedureStoreBase {
 
   @Override
   public void recoverLease() throws IOException {
-    LOG.debug("Starting Region Procedure Store lease recovery...");
-    Configuration baseConf = server.getConfiguration();
-    FileSystem fs = CommonFSUtils.getWALFileSystem(baseConf);
-    Path globalWALRootDir = CommonFSUtils.getWALRootDir(baseConf);
-    Path rootDir = new Path(globalWALRootDir, MASTER_PROCEDURE_DIR);
-    // we will override some configurations so create a new one.
-    Configuration conf = new Configuration(baseConf);
-    CommonFSUtils.setRootDir(conf, rootDir);
-    CommonFSUtils.setWALRootDir(conf, rootDir);
-    RegionFlusherAndCompactor.setupConf(conf);
-    conf.setInt(AbstractFSWAL.MAX_LOGS, conf.getInt(MAX_WALS_KEY, DEFAULT_MAX_WALS));
-    if (conf.get(USE_HSYNC_KEY) != null) {
-      conf.set(HRegion.WAL_HSYNC_CONF_KEY, conf.get(USE_HSYNC_KEY));
-    }
-    conf.setInt(AbstractFSWAL.RING_BUFFER_SLOT_COUNT, IntMath.ceilingPowerOfTwo(16 * numThreads));
-
-    walRoller = RegionProcedureStoreWALRoller.create(conf, server, fs, rootDir, globalWALRootDir);
-    walRoller.start();
-
-    walFactory = new WALFactory(conf, server.getServerName().toString());
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, TABLE_NAME);
-    if (fs.exists(tableDir)) {
-      // load the existing region.
-      region = open(conf, fs, rootDir);
-    } else {
-      // bootstrapping...
-      region = bootstrap(conf, fs, rootDir);
-    }
-    flusherAndCompactor = new RegionFlusherAndCompactor(conf, server, region);
-    walRoller.setFlusherAndCompactor(flusherAndCompactor);
-    int cleanerInterval = conf.getInt(HMaster.HBASE_MASTER_CLEANER_INTERVAL,
-      HMaster.DEFAULT_HBASE_MASTER_CLEANER_INTERVAL);
-    Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
-    if (!fs.mkdirs(archiveDir)) {
-      LOG.warn("Failed to create archive directory {}. Usually this should not happen but it will" +
-        " be created again when we actually archive the hfiles later, so continue", archiveDir);
-    }
-    cleaner = new HFileCleaner("RegionProcedureStoreHFileCleaner", cleanerInterval, server, conf,
-      fs, archiveDir, HFILECLEANER_PLUGINS, cleanerPool, Collections.emptyMap());
-    server.getChoreService().scheduleChore(cleaner);
+    LOG.info("Starting Region Procedure Store lease recovery...");
+    FileSystem fs = CommonFSUtils.getWALFileSystem(server.getConfiguration());
     tryMigrate(fs);
   }
 
@@ -501,7 +262,8 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     List<ProcedureProtos.Procedure> procs = new ArrayList<>();
     long maxProcId = 0;
 
-    try (RegionScanner scanner = region.getScanner(new Scan().addColumn(FAMILY, PROC_QUALIFIER))) {
+    try (RegionScanner scanner =
+      region.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER))) {
       List<Cell> cells = new ArrayList<>();
       boolean moreRows;
       do {
@@ -530,7 +292,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     throws IOException {
     ProcedureProtos.Procedure proto = ProcedureUtil.convertToProtoProcedure(proc);
     byte[] row = Bytes.toBytes(proc.getProcId());
-    mutations.add(new Put(row).addColumn(FAMILY, PROC_QUALIFIER, proto.toByteArray()));
+    mutations.add(new Put(row).addColumn(PROC_FAMILY, PROC_QUALIFIER, proto.toByteArray()));
     rowsToLock.add(row);
   }
 
@@ -538,7 +300,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
   // the proc column with an empty array.
   private void serializeDelete(long procId, List<Mutation> mutations, List<byte[]> rowsToLock) {
     byte[] row = Bytes.toBytes(procId);
-    mutations.add(new Put(row).addColumn(FAMILY, PROC_QUALIFIER, EMPTY_BYTE_ARRAY));
+    mutations.add(new Put(row).addColumn(PROC_FAMILY, PROC_QUALIFIER, EMPTY_BYTE_ARRAY));
     rowsToLock.add(row);
   }
 
@@ -571,14 +333,13 @@ public class RegionProcedureStore extends ProcedureStoreBase {
         for (Procedure<?> subProc : subProcs) {
           serializePut(subProc, mutations, rowsToLock);
         }
-        region.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE);
+        region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
       } catch (IOException e) {
         LOG.error(HBaseMarkers.FATAL, "Failed to insert proc {}, sub procs {}", proc,
           Arrays.toString(subProcs), e);
         throw new UncheckedIOException(e);
       }
     });
-    flusherAndCompactor.onUpdate();
   }
 
   @Override
@@ -590,13 +351,12 @@ public class RegionProcedureStore extends ProcedureStoreBase {
         for (Procedure<?> proc : procs) {
           serializePut(proc, mutations, rowsToLock);
         }
-        region.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE);
+        region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
       } catch (IOException e) {
         LOG.error(HBaseMarkers.FATAL, "Failed to insert procs {}", Arrays.toString(procs), e);
         throw new UncheckedIOException(e);
       }
     });
-    flusherAndCompactor.onUpdate();
   }
 
   @Override
@@ -604,26 +364,24 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     runWithoutRpcCall(() -> {
       try {
         ProcedureProtos.Procedure proto = ProcedureUtil.convertToProtoProcedure(proc);
-        region.put(new Put(Bytes.toBytes(proc.getProcId())).addColumn(FAMILY, PROC_QUALIFIER,
-          proto.toByteArray()));
+        region.update(r -> r.put(new Put(Bytes.toBytes(proc.getProcId())).addColumn(PROC_FAMILY,
+          PROC_QUALIFIER, proto.toByteArray())));
       } catch (IOException e) {
         LOG.error(HBaseMarkers.FATAL, "Failed to update proc {}", proc, e);
         throw new UncheckedIOException(e);
       }
     });
-    flusherAndCompactor.onUpdate();
   }
 
   @Override
   public void delete(long procId) {
     try {
-      region
-        .put(new Put(Bytes.toBytes(procId)).addColumn(FAMILY, PROC_QUALIFIER, EMPTY_BYTE_ARRAY));
+      region.update(r -> r.put(
+        new Put(Bytes.toBytes(procId)).addColumn(PROC_FAMILY, PROC_QUALIFIER, EMPTY_BYTE_ARRAY)));
     } catch (IOException e) {
       LOG.error(HBaseMarkers.FATAL, "Failed to delete pid={}", procId, e);
       throw new UncheckedIOException(e);
     }
-    flusherAndCompactor.onUpdate();
   }
 
   @Override
@@ -635,13 +393,12 @@ public class RegionProcedureStore extends ProcedureStoreBase {
       for (long subProcId : subProcIds) {
         serializeDelete(subProcId, mutations, rowsToLock);
       }
-      region.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE);
+      region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
     } catch (IOException e) {
       LOG.error(HBaseMarkers.FATAL, "Failed to delete parent proc {}, sub pids={}", parentProc,
         Arrays.toString(subProcIds), e);
       throw new UncheckedIOException(e);
     }
-    flusherAndCompactor.onUpdate();
   }
 
   @Override
@@ -660,12 +417,11 @@ public class RegionProcedureStore extends ProcedureStoreBase {
       serializeDelete(procId, mutations, rowsToLock);
     }
     try {
-      region.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE);
+      region.update(r -> r.mutateRowsWithLocks(mutations, rowsToLock, NO_NONCE, NO_NONCE));
     } catch (IOException e) {
       LOG.error(HBaseMarkers.FATAL, "Failed to delete pids={}", Arrays.toString(procIds), e);
       throw new UncheckedIOException(e);
     }
-    flusherAndCompactor.onUpdate();
   }
 
   @Override
@@ -673,7 +429,7 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     // actually delete the procedures if it is not the one with the max procedure id.
     List<Cell> cells = new ArrayList<Cell>();
     try (RegionScanner scanner =
-      region.getScanner(new Scan().addColumn(FAMILY, PROC_QUALIFIER).setReversed(true))) {
+      region.getScanner(new Scan().addColumn(PROC_FAMILY, PROC_QUALIFIER).setReversed(true))) {
       // skip the row with max procedure id
       boolean moreRows = scanner.next(cells);
       if (cells.isEmpty()) {
@@ -688,7 +444,8 @@ public class RegionProcedureStore extends ProcedureStoreBase {
         Cell cell = cells.get(0);
         cells.clear();
         if (cell.getValueLength() == 0) {
-          region.delete(new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+          region.update(r -> r
+            .delete(new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())));
         }
       }
     } catch (IOException e) {

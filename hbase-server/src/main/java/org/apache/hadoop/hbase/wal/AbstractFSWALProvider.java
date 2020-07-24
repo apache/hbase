@@ -38,8 +38,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -433,8 +434,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @throws IOException exception
    */
   public static Path getArchivedLogPath(Path path, Configuration conf) throws IOException {
-    Path walRootDir = FSUtils.getWALRootDir(conf);
-    Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    Path rootDir = CommonFSUtils.getWALRootDir(conf);
+    Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     if (conf.getBoolean(SEPARATE_OLDLOGDIR, DEFAULT_SEPARATE_OLDLOGDIR)) {
       ServerName serverName = getServerNameFromWALDirectoryName(path);
       if (serverName == null) {
@@ -444,7 +445,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       oldLogDir = new Path(oldLogDir, serverName.getServerName());
     }
     Path archivedLogLocation = new Path(oldLogDir, path.getName());
-    final FileSystem fs = FSUtils.getWALFileSystem(conf);
+    final FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
 
     if (fs.exists(archivedLogLocation)) {
       LOG.info("Log " + path + " was moved to " + archivedLogLocation);
@@ -513,9 +514,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   // For HBASE-15019
   private static void recoverLease(final Configuration conf, final Path path) {
     try {
-      final FileSystem dfs = FSUtils.getCurrentFileSystem(conf);
-      FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
-      fsUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
+      final FileSystem dfs = CommonFSUtils.getCurrentFileSystem(conf);
+      RecoverLeaseFSUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
         @Override
         public boolean progress() {
           LOG.debug("Still trying to recover WAL lease: " + path);

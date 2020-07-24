@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -73,8 +73,8 @@ public class TestWALActionsListener {
     conf.setInt("hbase.regionserver.maxlogs", 5);
     rootDir = TEST_UTIL.createRootDir();
     walRootDir = TEST_UTIL.createWALRootDir();
-    fs = FSUtils.getRootDirFileSystem(conf);
-    logFs = FSUtils.getWALFileSystem(conf);
+    fs = CommonFSUtils.getRootDirFileSystem(conf);
+    logFs = CommonFSUtils.getWALFileSystem(conf);
   }
 
   @Before

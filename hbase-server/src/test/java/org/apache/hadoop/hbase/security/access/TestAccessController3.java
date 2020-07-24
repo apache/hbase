@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.security.access;
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -195,14 +194,13 @@ public class TestAccessController3 extends SecureTestUtil {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    HRegionServer rs = null;
-    for (JVMClusterUtil.RegionServerThread thread:
-      TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
-      rs = thread.getRegionServer();
-    }
+    assertEquals(1, TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().size());
+    HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().get(0).
+      getRegionServer();
+    // Strange place for an assert.
+    assertFalse("RegionServer should have ABORTED (FaultyAccessController)", rs.isAborted());
     cleanUp();
     TEST_UTIL.shutdownMiniCluster();
-    assertFalse("region server should have aborted due to FaultyAccessController", rs.isAborted());
   }
 
   private static void setUpTableAndUserPermissions() throws Exception {
@@ -289,11 +287,11 @@ public class TestAccessController3 extends SecureTestUtil {
     };
 
     // verify that superuser can create tables
-    verifyAllowed(createTable, SUPERUSER, USER_ADMIN, USER_GROUP_CREATE);
+    verifyAllowed(createTable, SUPERUSER, USER_ADMIN, USER_GROUP_CREATE, USER_GROUP_ADMIN);
 
     // all others should be denied
-    verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_ADMIN,
-      USER_GROUP_READ, USER_GROUP_WRITE);
+    verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE);
   }
 
 }

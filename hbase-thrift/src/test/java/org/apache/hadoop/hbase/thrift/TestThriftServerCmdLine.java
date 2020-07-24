@@ -27,13 +27,13 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.net.BoundSocketMaker;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
@@ -83,14 +83,6 @@ public class TestThriftServerCmdLine {
 
   protected static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
-
-  private Thread cmdLineThread;
-  private volatile Exception cmdLineException;
-
-  private Exception clientSideException;
-
-  private volatile ThriftServer thriftServer;
-  protected int port;
 
   @Parameters
   public static Collection<Object[]> getParameters() {
@@ -142,59 +134,39 @@ public class TestThriftServerCmdLine {
     EnvironmentEdgeManager.reset();
   }
 
-  private void startCmdLineThread(final String[] args) {
+  static ThriftServerRunner startCmdLineThread(Supplier<ThriftServer> supplier,
+      final String[] args) {
     LOG.info("Starting HBase Thrift server with command line: " + Joiner.on(" ").join(args));
-
-    cmdLineException = null;
-    cmdLineThread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        try {
-          thriftServer.run(args);
-        } catch (Exception e) {
-          LOG.error("Error when start thrift server", e);
-          cmdLineException = e;
-        }
-      }
-    });
-    cmdLineThread.setName(ThriftServer.class.getSimpleName() +
-        "-cmdline");
-    cmdLineThread.start();
+    ThriftServerRunner tsr = new ThriftServerRunner(supplier.get(), args);
+    tsr.setName(ThriftServer.class.getSimpleName() + "-cmdline");
+    tsr.start();
+    return tsr;
   }
 
-  protected ThriftServer createThriftServer() {
-    return new ThriftServer(TEST_UTIL.getConfiguration());
-  }
-
-  private int getRandomPort() {
+  static int getRandomPort() {
     return HBaseTestingUtility.randomFreePort();
   }
 
-  /**
-   * Server can fail to bind if clashing address. Add retrying until we get a good server.
-   */
-  ThriftServer createBoundServer() {
-    return createBoundServer(false, false);
+  protected Supplier<ThriftServer> getThriftServerSupplier() {
+    return () -> new ThriftServer(TEST_UTIL.getConfiguration());
   }
 
-  private ServerSocket getBoundSocket() {
-    ServerSocket ss = null;
-    while (true) {
-      port = getRandomPort();
-      try {
-        ss = new ServerSocket();
-        ss.bind(new InetSocketAddress(port));
-        break;
-      } catch (IOException ioe) {
-        LOG.warn("Failed bind", ioe);
-        try {
-          ss.close();
-        } catch (IOException ioe2) {
-          LOG.warn("FAILED CLOSE of failed bind socket", ioe2);
-        }
-      }
-    }
-    return ss;
+  static ThriftServerRunner createBoundServer(Supplier<ThriftServer> thriftServerSupplier)
+      throws Exception {
+    return createBoundServer(thriftServerSupplier, false, false);
+  }
+
+  static ThriftServerRunner createBoundServer(Supplier<ThriftServer> thriftServerSupplier,
+      boolean protocolPortClash, boolean infoPortClash) throws Exception {
+    return createBoundServer(thriftServerSupplier, null, false, false,
+      false, protocolPortClash, infoPortClash);
+  }
+
+  static ThriftServerRunner createBoundServer(Supplier<ThriftServer> thriftServerSupplier,
+      ImplType implType, boolean specifyFramed, boolean specifyCompact, boolean specifyBindIP)
+      throws Exception {
+    return createBoundServer(thriftServerSupplier, implType, specifyFramed, specifyCompact,
+      specifyBindIP, false, false);
   }
 
   /**
@@ -202,14 +174,18 @@ public class TestThriftServerCmdLine {
    *   the code does the right thing when this happens during actual test runs. Ugly but works.
    * @see TestBindExceptionHandling#testProtocolPortClash()
    */
-  ThriftServer createBoundServer(boolean protocolPortClash, boolean infoPortClash) {
+  static ThriftServerRunner createBoundServer(Supplier<ThriftServer> thriftServerSupplier,
+      ImplType implType, boolean specifyFramed, boolean specifyCompact, boolean specifyBindIP,
+      boolean protocolPortClash, boolean infoPortClash) throws Exception {
     if (protocolPortClash && infoPortClash) {
       throw new RuntimeException("Can't set both at same time");
     }
     boolean testClashOfFirstProtocolPort = protocolPortClash;
     boolean testClashOfFirstInfoPort = infoPortClash;
     List<String> args = new ArrayList<>();
-    ServerSocket ss = null;
+    BoundSocketMaker bsm = null;
+    int port = -1;
+    ThriftServerRunner tsr = null;
     for (int i = 0; i < 100; i++) {
       args.clear();
       if (implType != null) {
@@ -220,8 +196,8 @@ public class TestThriftServerCmdLine {
       if (testClashOfFirstProtocolPort) {
         // Test what happens if already something bound to the socket.
         // Occupy the random port we just pulled.
-        ss = getBoundSocket();
-        port = ss.getLocalPort();
+        bsm = new BoundSocketMaker(() -> getRandomPort());
+        port = bsm.getPort();
         testClashOfFirstProtocolPort = false;
       } else {
         port = getRandomPort();
@@ -231,8 +207,8 @@ public class TestThriftServerCmdLine {
       args.add("-" + INFOPORT_OPTION);
       int infoPort;
       if (testClashOfFirstInfoPort) {
-        ss = getBoundSocket();
-        infoPort = ss.getLocalPort();
+        bsm = new BoundSocketMaker(() -> getRandomPort());
+        infoPort = bsm.getPort();
         testClashOfFirstInfoPort = false;
       } else {
         infoPort = getRandomPort();
@@ -251,35 +227,43 @@ public class TestThriftServerCmdLine {
       }
       args.add("start");
 
-      thriftServer = createThriftServer();
-      startCmdLineThread(args.toArray(new String[args.size()]));
+      tsr = startCmdLineThread(thriftServerSupplier, args.toArray(new String[args.size()]));
       // wait up to 10s for the server to start
-      for (int ii = 0; ii < 100 && (thriftServer.tserver == null); ii++) {
+      for (int ii = 0; ii < 100 && (tsr.getThriftServer().tserver == null &&
+          tsr.getRunException() == null); ii++) {
         Threads.sleep(100);
       }
-      if (isBindException(cmdLineException)) {
-        LOG.info("BindException; trying new port", cmdLineException);
-        cmdLineException =  null;
-        thriftServer.stop();
+      if (isBindException(tsr.getRunException())) {
+        LOG.info("BindException; trying new port", tsr.getRunException());
+        try {
+          tsr.close();
+          tsr.join();
+        } catch (IOException | InterruptedException ioe) {
+          LOG.warn("Exception closing", ioe);
+        }
         continue;
       }
       break;
     }
-    if (ss != null) {
+    if (bsm != null) {
       try {
-        ss.close();
+        bsm.close();
       } catch (IOException ioe) {
         LOG.warn("Failed close", ioe);
       }
     }
-    Class<? extends TServer> expectedClass = implType != null ?
-      implType.serverClass : TBoundedThreadPoolServer.class;
-    assertEquals(expectedClass, thriftServer.tserver.getClass());
-    LOG.info("Server={}", args);
-    return thriftServer;
+    if (tsr.getRunException() != null) {
+      throw tsr.getRunException();
+    }
+    if (tsr.getThriftServer().tserver != null) {
+      Class<? extends TServer> expectedClass =
+        implType != null ? implType.serverClass : TBoundedThreadPoolServer.class;
+      assertEquals(expectedClass, tsr.getThriftServer().tserver.getClass());
+    }
+    return tsr;
   }
 
-  private boolean isBindException(Exception cmdLineException) {
+  private static boolean isBindException(Exception cmdLineException) {
     if (cmdLineException == null) {
       return false;
     }
@@ -295,32 +279,40 @@ public class TestThriftServerCmdLine {
 
   @Test
   public void testRunThriftServer() throws Exception {
-    ThriftServer thriftServer = createBoundServer();
     // Add retries in case we see stuff like connection reset
+    Exception clientSideException =  null;
     for (int i = 0; i < 10; i++) {
+      clientSideException =  null;
+      ThriftServerRunner thriftServerRunner = createBoundServer(getThriftServerSupplier(),
+        this.implType, this.specifyFramed, this.specifyCompact, this.specifyBindIP);
       try {
-        talkToThriftServer();
+        talkToThriftServer(thriftServerRunner.getThriftServer().listenPort);
         break;
       } catch (Exception ex) {
         clientSideException = ex;
         LOG.info("Exception", ex);
       } finally {
-        stopCmdLineThread();
-        thriftServer.stop();
+        LOG.debug("Stopping " + this.implType.simpleClassName() + " Thrift server");
+        thriftServerRunner.close();
+        thriftServerRunner.join();
+        if (thriftServerRunner.getRunException() != null) {
+          LOG.error("Command-line invocation of HBase Thrift server threw exception",
+            thriftServerRunner.getRunException());
+          throw thriftServerRunner.getRunException();
+        }
       }
     }
 
     if (clientSideException != null) {
-      LOG.error("Thrift client threw an exception. Parameters:" +
-          getParametersString(), clientSideException);
+      LOG.error("Thrift Client; parameters={}", getParametersString(), clientSideException);
       throw new Exception(clientSideException);
     }
   }
 
   protected static volatile boolean tableCreated = false;
 
-  protected void talkToThriftServer() throws Exception {
-    LOG.info("Talking to port=" + this.port);
+  protected void talkToThriftServer(int port) throws Exception {
+    LOG.info("Talking to port={}", port);
     TSocket sock = new TSocket(InetAddress.getLoopbackAddress().getHostName(), port);
     TTransport transport = sock;
     if (specifyFramed || implType.isAlwaysFramed) {
@@ -345,17 +337,6 @@ public class TestThriftServerCmdLine {
 
     } finally {
       sock.close();
-    }
-  }
-
-  private void stopCmdLineThread() throws Exception {
-    LOG.debug("Stopping " + implType.simpleClassName() + " Thrift server");
-    thriftServer.stop();
-    cmdLineThread.join();
-    if (cmdLineException != null) {
-      LOG.error("Command-line invocation of HBase Thrift server threw an " +
-          "exception", cmdLineException);
-      throw new Exception(cmdLineException);
     }
   }
 }

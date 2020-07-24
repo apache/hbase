@@ -125,7 +125,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.master.logcleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveProcedureWALCleaner</value>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveProcedureWALCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveMasterLocalStoreWALCleaner</value>
     <description>A comma-separated list of BaseLogCleanerDelegate invoked by
     the LogsCleaner service. These WAL cleaners are called in order,
     so put the cleaner that prunes the most files in front. To
@@ -140,29 +140,11 @@ possible configurations would overwhelm and obscure the important.
     after which it will be cleaned by a Master thread. The value is in milliseconds.</description>
   </property>
   <property>
-    <name>hbase.master.procedurewalcleaner.ttl</name>
-    <value>604800000</value>
-    <description>How long a Procedure WAL will remain in the
-    archive directory, after which it will be cleaned
-    by a Master thread. The value is in milliseconds.</description>
-  </property>
-  <property>
     <name>hbase.master.hfilecleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveMasterLocalStoreHFileCleaner</value>
     <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
     the HFileCleaner service. These HFiles cleaners are called in order,
     so put the cleaner that prunes the most files in front. To
-    implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
-    and add the fully qualified class name here. Always add the above
-    default hfile cleaners in the list as they will be overwritten in
-    hbase-site.xml.</description>
-  </property>
-  <property>
-    <name>hbase.procedure.store.region.hfilecleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
-    <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
-    the RegionProcedureStore HFileCleaner service. These HFiles cleaners are
-    called in order, so put the cleaner that prunes the most files in front. To
     implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
     and add the fully qualified class name here. Always add the above
     default hfile cleaners in the list as they will be overwritten in
@@ -623,30 +605,54 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.balancer.period
     </name>
     <value>300000</value>
-    <description>Period at which the region balancer runs in the Master.</description>
-  </property>
-  <property>
-    <name>hbase.normalizer.period</name>
-    <value>300000</value>
-    <description>Period at which the region normalizer runs in the Master.</description>
-  </property>
-  <property>
-    <name>hbase.normalizer.min.region.count</name>
-    <value>3</value>
-    <description>configure the minimum number of regions</description>
-  </property>
-  <property>
-    <name>hbase.normalizer.min.region.merge.age</name>
-    <value>3</value>
-    <description>configure the minimum age in days for region before it is considered for merge while
-      normalizing</description>
+    <description>Period at which the region balancer runs in the Master, in
+      milliseconds.</description>
   </property>
   <property>
     <name>hbase.regions.slop</name>
     <value>0.001</value>
     <description>Rebalance if any regionserver has average + (average * slop) regions.
-      The default value of this parameter is 0.001 in StochasticLoadBalancer (the default load balancer),
-      while the default is 0.2 in other load balancers (i.e., SimpleLoadBalancer).</description>
+      The default value of this parameter is 0.001 in StochasticLoadBalancer (the default load
+      balancer), while the default is 0.2 in other load balancers (i.e.,
+      SimpleLoadBalancer).</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.period</name>
+    <value>300000</value>
+    <description>Period at which the region normalizer runs in the Master, in
+      milliseconds.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.split.enabled</name>
+    <value>true</value>
+    <description>Whether to split a region as part of normalization.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.enabled</name>
+    <value>true</value>
+    <description>Whether to merge a region as part of normalization.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.min.region.count</name>
+    <value>3</value>
+    <description>The minimum number of regions in a table to consider it for merge
+      normalization.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min_region_age.days</name>
+    <value>3</value>
+    <description>The minimum age for a region to be considered for a merge, in days.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min_region_age.days</name>
+    <value>3</value>
+    <description>The minimum age for a region to be considered for a merge, in days.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min_region_size.mb</name>
+    <value>1</value>
+    <description>The minimum size for a region to be considered for a merge, in whole
+      MBs.</description>
   </property>
   <property>
     <name>hbase.server.thread.wakefrequency</name>
@@ -806,14 +812,15 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.hstore.compaction.min</name>
-    <value>3</value>
+    <value></value>
     <description>The minimum number of StoreFiles which must be eligible for compaction before
       compaction can run. The goal of tuning hbase.hstore.compaction.min is to avoid ending up with
       too many tiny StoreFiles to compact. Setting this value to 2 would cause a minor compaction
       each time you have two StoreFiles in a Store, and this is probably not appropriate. If you
       set this value too high, all the other values will need to be adjusted accordingly. For most
-      cases, the default value is appropriate. In previous versions of HBase, the parameter
-      hbase.hstore.compaction.min was named hbase.hstore.compactionThreshold.</description>
+      cases, the default value is appropriate  (empty value here, results in 3 by code logic). In 
+      previous versions of HBase, the parameter hbase.hstore.compaction.min was named 
+      hbase.hstore.compactionThreshold.</description>
   </property>
   <property>
     <name>hbase.hstore.compaction.max</name>
@@ -1958,6 +1965,30 @@ possible configurations would overwhelm and obscure the important.
       the ring buffer is indicated by config: hbase.regionserver.slowlog.ringbuffer.size
       The default value is false, turn this on and get latest slowlog
       responses with complete data.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.slowlog.systable.enabled</name>
+    <value>false</value>
+    <description>
+      Should be enabled only if hbase.regionserver.slowlog.buffer.enabled is enabled. If enabled
+      (true), all slow/large RPC logs would be persisted to system table hbase:slowlog (in addition
+      to in-memory ring buffer at each RegionServer). The records are stored in increasing
+      order of time. Operators can scan the table with various combination of ColumnValueFilter.
+      More details are provided in the doc section:
+      "Get Slow/Large Response Logs from System table hbase:slowlog"
+    </description>
+  </property>
+  <property>
+    <name>hbase.rpc.rows.size.threshold.reject</name>
+    <value>false</value>
+    <description>
+      If value is true, RegionServer will abort batch requests of Put/Delete with number of rows
+      in a batch operation exceeding threshold defined by value of config:
+      hbase.rpc.rows.warning.threshold. The default value is false and hence, by default, only
+      warning will be logged. This config should be turned on to prevent RegionServer from serving
+      very large batch size of rows and this way we can improve CPU usages by discarding
+      too large batch request.
     </description>
   </property>
 </configuration>

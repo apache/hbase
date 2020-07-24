@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -101,8 +102,7 @@ public class TestHFileProcedurePrettyPrinter extends RegionProcedureStoreTestBas
     store.cleanup();
     store.region.flush(true);
     Path tableDir = CommonFSUtils.getTableDir(
-      new Path(htu.getDataTestDir(), RegionProcedureStore.MASTER_PROCEDURE_DIR),
-      RegionProcedureStore.TABLE_NAME);
+      new Path(htu.getDataTestDir(), MasterRegionFactory.MASTER_STORE_DIR), MasterRegionFactory.TABLE_NAME);
     FileSystem fs = tableDir.getFileSystem(htu.getConfiguration());
     Path regionDir =
       fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]

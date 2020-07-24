@@ -34,7 +34,7 @@
       <includes>
         <!-- Keep this list sorted by name -->
         <include>org.apache.hbase:hbase-annotations</include>
-        <include>org.apache.hbase:hbase-backup</include>
+        <include>org.apache.hbase:hbase-asyncfs</include>
         <include>org.apache.hbase:hbase-client</include>
         <include>org.apache.hbase:hbase-common</include>
         <include>org.apache.hbase:hbase-endpoint</include>
@@ -44,6 +44,7 @@
         <include>org.apache.hbase:hbase-hadoop2-compat</include>
         <include>org.apache.hbase:hbase-http</include>
         <include>org.apache.hbase:hbase-it</include>
+        <include>org.apache.hbase:hbase-logging</include>
         <include>org.apache.hbase:hbase-mapreduce</include>
         <include>org.apache.hbase:hbase-metrics</include>
         <include>org.apache.hbase:hbase-metrics-api</include>
@@ -208,6 +209,8 @@
         <include>org.apache.htrace:htrace-core</include>
         <include>org.apache.yetus:audience-annotations</include>
         <include>org.slf4j:slf4j-api</include>
+        <include>org.slf4j:jcl-over-slf4j</include>
+        <include>org.slf4j:jul-to-slf4j</include>
         <include>org.slf4j:slf4j-log4j12</include>
       </includes>
     </dependencySet>

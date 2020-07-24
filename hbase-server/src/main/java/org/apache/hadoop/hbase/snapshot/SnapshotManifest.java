@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -39,21 +38,24 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDataManifest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -84,6 +86,7 @@ public final class SnapshotManifest {
   private final FileSystem rootFs;
   private final FileSystem workingDirFs;
   private int manifestSizeLimit;
+  private final MonitoredTask statusTask;
 
   /**
    *
@@ -97,12 +100,13 @@ public final class SnapshotManifest {
    */
   private SnapshotManifest(final Configuration conf, final FileSystem rootFs,
       final Path workingDir, final SnapshotDescription desc,
-      final ForeignExceptionSnare monitor) throws IOException {
+      final ForeignExceptionSnare monitor, final MonitoredTask statusTask) throws IOException {
     this.monitor = monitor;
     this.desc = desc;
     this.workingDir = workingDir;
     this.conf = conf;
     this.rootFs = rootFs;
+    this.statusTask = statusTask;
     this.workingDirFs = this.workingDir.getFileSystem(this.conf);
     this.manifestSizeLimit = conf.getInt(SNAPSHOT_MANIFEST_SIZE_LIMIT_CONF_KEY, 64 * 1024 * 1024);
   }
@@ -123,7 +127,14 @@ public final class SnapshotManifest {
   public static SnapshotManifest create(final Configuration conf, final FileSystem fs,
       final Path workingDir, final SnapshotDescription desc,
       final ForeignExceptionSnare monitor) throws IOException {
-    return new SnapshotManifest(conf, fs, workingDir, desc, monitor);
+    return create(conf, fs, workingDir, desc, monitor, null);
+
+  }
+
+  public static SnapshotManifest create(final Configuration conf, final FileSystem fs,
+      final Path workingDir, final SnapshotDescription desc, final ForeignExceptionSnare monitor,
+      final MonitoredTask statusTask) throws IOException {
+    return new SnapshotManifest(conf, fs, workingDir, desc, monitor, statusTask);
 
   }
 
@@ -138,7 +149,7 @@ public final class SnapshotManifest {
    */
   public static SnapshotManifest open(final Configuration conf, final FileSystem fs,
       final Path workingDir, final SnapshotDescription desc) throws IOException {
-    SnapshotManifest manifest = new SnapshotManifest(conf, fs, workingDir, desc, null);
+    SnapshotManifest manifest = new SnapshotManifest(conf, fs, workingDir, desc, null, null);
     manifest.load();
     return manifest;
   }
@@ -287,7 +298,7 @@ public final class SnapshotManifest {
       Path baseDir = tableDir;
       // Open the RegionFS
       if (isMobRegion) {
-        baseDir = FSUtils.getTableDir(MobUtils.getMobHome(conf), regionInfo.getTable());
+        baseDir = CommonFSUtils.getTableDir(MobUtils.getMobHome(conf), regionInfo.getTable());
       }
       HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, rootFs,
         baseDir, regionInfo, true);
@@ -337,7 +348,7 @@ public final class SnapshotManifest {
   }
 
   private List<StoreFileInfo> getStoreFiles(Path storeDir) throws IOException {
-    FileStatus[] stats = FSUtils.listStatus(rootFs, storeDir);
+    FileStatus[] stats = CommonFSUtils.listStatus(rootFs, storeDir);
     if (stats == null) return null;
 
     ArrayList<StoreFileInfo> storeFiles = new ArrayList<>(stats.length);
@@ -455,6 +466,12 @@ public final class SnapshotManifest {
     return this.regionManifests;
   }
 
+  private void setStatusMsg(String msg) {
+    if (this.statusTask != null) {
+      statusTask.setStatus(msg);
+    }
+  }
+
   /**
    * Get all the Region Manifest from the snapshot.
    * This is an helper to get a map with the region encoded name
@@ -477,7 +494,7 @@ public final class SnapshotManifest {
       FSTableDescriptors.createTableDescriptorForTableDirectory(workingDirFs, workingDir, htd,
           false);
     } else {
-      LOG.debug("Convert to Single Snapshot Manifest");
+      LOG.debug("Convert to Single Snapshot Manifest for {}", this.desc.getName());
       convertToV2SingleManifest();
     }
   }
@@ -490,6 +507,7 @@ public final class SnapshotManifest {
     // Try to load v1 and v2 regions
     List<SnapshotRegionManifest> v1Regions, v2Regions;
     ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
+    setStatusMsg("Loading Region manifests for " + this.desc.getName());
     try {
       v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, workingDirFs,
           workingDir, desc);
@@ -513,6 +531,7 @@ public final class SnapshotManifest {
     // Once the data-manifest is written, the snapshot can be considered complete.
     // Currently snapshots are written in a "temporary" directory and later
     // moved to the "complated" snapshot directory.
+    setStatusMsg("Writing data manifest for " + this.desc.getName());
     SnapshotDataManifest dataManifest = dataManifestBuilder.build();
     writeDataManifest(dataManifest);
     this.regionManifests = dataManifest.getRegionManifestsList();

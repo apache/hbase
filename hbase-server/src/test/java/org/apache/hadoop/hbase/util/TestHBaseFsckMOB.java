@@ -116,7 +116,7 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
       Path corrupt = new Path(mobFile.getParent(), corruptMobFile);
       TestHFile.truncateFile(fs, mobFile, corrupt);
       LOG.info("Created corrupted mob file " + corrupt);
-      HBaseFsck.debugLsr(conf, FSUtils.getRootDir(conf));
+      HBaseFsck.debugLsr(conf, CommonFSUtils.getRootDir(conf));
       HBaseFsck.debugLsr(conf, MobUtils.getMobHome(conf));
 
       // A corrupt mob file doesn't abort the start of regions, so we can enable the table.

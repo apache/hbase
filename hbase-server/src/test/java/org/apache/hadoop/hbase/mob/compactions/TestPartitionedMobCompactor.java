@@ -73,7 +73,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.junit.AfterClass;
@@ -132,7 +132,7 @@ public class TestPartitionedMobCompactor {
 
   private void init(String tableName) throws Exception {
     fs = FileSystem.get(conf);
-    Path testDir = FSUtils.getRootDir(conf);
+    Path testDir = CommonFSUtils.getRootDir(conf);
     Path mobTestDir = new Path(testDir, MobConstants.MOB_DIR_NAME);
     basePath = new Path(new Path(mobTestDir, tableName), family);
     mobSuffix = TEST_UTIL.getRandomUUID().toString().replaceAll("-", "");
@@ -369,7 +369,7 @@ public class TestPartitionedMobCompactor {
     String tableName = name.getMethodName();
     fs = FileSystem.get(conf);
     FaultyDistributedFileSystem faultyFs = (FaultyDistributedFileSystem)fs;
-    Path testDir = FSUtils.getRootDir(conf);
+    Path testDir = CommonFSUtils.getRootDir(conf);
     Path mobTestDir = new Path(testDir, MobConstants.MOB_DIR_NAME);
     basePath = new Path(new Path(mobTestDir, tableName), family);
 

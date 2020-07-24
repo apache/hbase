@@ -26,7 +26,6 @@ import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -44,7 +43,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -215,9 +214,9 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
     final MasterFileSystem masterFileSystem =
       UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
-    final Path tableDir = FSUtils.getTableDir(masterFileSystem.getRootDir(), tableName);
+    final Path tableDir = CommonFSUtils.getTableDir(masterFileSystem.getRootDir(), tableName);
     final Path tempDir = masterFileSystem.getTempDir();
-    final Path tempTableDir = FSUtils.getTableDir(tempDir, tableName);
+    final Path tempTableDir = CommonFSUtils.getTableDir(tempDir, tableName);
     final FileSystem fs = masterFileSystem.getFileSystem();
 
     // copy the table to the temporary directory to make sure the temp directory is not empty

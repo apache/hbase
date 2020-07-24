@@ -68,7 +68,6 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -444,7 +443,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize=" +
       StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix=" +
-      walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir);
+      walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir +
+      ", maxLogs=" + this.maxLogs);
     this.slowSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(SLOW_SYNC_TIME_MS,
       conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS)));
     this.rollOnSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(ROLL_ON_SYNC_TIME_MS,
@@ -1061,7 +1061,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       Path currentPath = getOldPath();
       if (path.equals(currentPath)) {
         W writer = this.writer;
-        return writer != null ? OptionalLong.of(writer.getLength()) : OptionalLong.empty();
+        return writer != null ? OptionalLong.of(writer.getSyncedLength()) : OptionalLong.empty();
       } else {
         return OptionalLong.empty();
       }
@@ -1200,7 +1200,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   abstract int getLogReplication();
 
   private static void split(final Configuration conf, final Path p) throws IOException {
-    FileSystem fs = FSUtils.getWALFileSystem(conf);
+    FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
     if (!fs.exists(p)) {
       throw new FileNotFoundException(p.toString());
     }
@@ -1208,7 +1208,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       throw new IOException(p + " is not a directory");
     }
 
-    final Path baseDir = FSUtils.getWALRootDir(conf);
+    final Path baseDir = CommonFSUtils.getWALRootDir(conf);
     Path archiveDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     if (conf.getBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR,
       AbstractFSWALProvider.DEFAULT_SEPARATE_OLDLOGDIR)) {
@@ -1250,7 +1250,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       for (int i = 1; i < args.length; i++) {
         try {
           Path logPath = new Path(args[i]);
-          FSUtils.setFsDefault(conf, logPath);
+          CommonFSUtils.setFsDefault(conf, logPath);
           split(conf, logPath);
         } catch (IOException t) {
           t.printStackTrace(System.err);

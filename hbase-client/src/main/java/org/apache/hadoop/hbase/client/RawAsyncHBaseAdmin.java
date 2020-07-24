@@ -1284,7 +1284,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
 
-      MergeTableRegionsRequest request = null;
+      final MergeTableRegionsRequest request;
       try {
         request = RequestConverter.buildMergeTableRegionsRequest(encodedNameOfRegionsToMerge,
           forcible, ng.getNonceGroup(), ng.newNonce());
@@ -1294,8 +1294,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
 
       addListener(
-        this.<MergeTableRegionsRequest, MergeTableRegionsResponse> procedureCall(tableName, request,
-          (s, c, req, done) -> s.mergeTableRegions(c, req, done), (resp) -> resp.getProcId(),
+        this.procedureCall(tableName, request,
+          MasterService.Interface::mergeTableRegions, MergeTableRegionsResponse::getProcId,
           new MergeTableRegionProcedureBiConsumer(tableName)),
         (ret, err2) -> {
           if (err2 != null) {
@@ -1470,7 +1470,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private CompletableFuture<Void> split(final RegionInfo hri, byte[] splitPoint) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     TableName tableName = hri.getTable();
-    SplitTableRegionRequest request = null;
+    final SplitTableRegionRequest request;
     try {
       request = RequestConverter.buildSplitTableRegionRequest(hri, splitPoint, ng.getNonceGroup(),
         ng.newNonce());
@@ -1480,8 +1480,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
 
     addListener(
-      this.<SplitTableRegionRequest, SplitTableRegionResponse> procedureCall(tableName,
-        request, (s, c, req, done) -> s.splitRegion(c, req, done), (resp) -> resp.getProcId(),
+      this.procedureCall(tableName,
+        request, MasterService.Interface::splitRegion, SplitTableRegionResponse::getProcId,
         new SplitTableRegionProcedureBiConsumer(tableName)),
       (ret, err2) -> {
         if (err2 != null) {
@@ -3890,8 +3890,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
-      @Nullable final Set<ServerName> serverNames,
-      final LogQueryFilter logQueryFilter) {
+      @Nullable final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }
@@ -3914,7 +3913,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<List<OnlineLogRecord>> getLargeLogResponseFromServer(
-    final ServerName serverName, final LogQueryFilter logQueryFilter) {
+      final ServerName serverName, final LogQueryFilter logQueryFilter) {
     return this.<List<OnlineLogRecord>>newAdminCaller()
       .action((controller, stub) -> this
         .adminCall(

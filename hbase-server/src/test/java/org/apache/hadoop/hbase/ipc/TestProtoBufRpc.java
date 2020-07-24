@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -31,8 +32,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -42,7 +41,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoResponseProto;
@@ -81,10 +82,10 @@ public class TestProtoBufRpc {
     this.conf = HBaseConfiguration.create();
     this.conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
         rpcServerImpl);
-    Logger log = Logger.getLogger("org.apache.hadoop.ipc.HBaseServer");
-    log.setLevel(Level.DEBUG);
-    log = Logger.getLogger("org.apache.hadoop.ipc.HBaseServer.trace");
-    log.setLevel(Level.TRACE);
+    org.apache.log4j.Logger.getLogger("org.apache.hadoop.ipc.HBaseServer")
+      .setLevel(org.apache.log4j.Level.ERROR);
+    org.apache.log4j.Logger.getLogger("org.apache.hadoop.ipc.HBaseServer.trace")
+      .setLevel(org.apache.log4j.Level.TRACE);
     // Create server side implementation
     // Get RPC server for server side implementation
     this.server = RpcServerFactory.createRpcServer(null, "testrpc",

@@ -28,8 +28,8 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -162,7 +162,7 @@ public class TestHColumnDescriptorDefaultVersions {
 
     // Verify descriptor from HDFS
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
-    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
+    Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), tableName);
     TableDescriptor td = FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
     hcds = td.getColumnFamilies();
     verifyHColumnDescriptor(expected, hcds, tableName, families);

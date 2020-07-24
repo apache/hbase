@@ -179,5 +179,11 @@ module Hbase
       end
       @admin.removeServers(servers)
     end
+
+    #--------------------------------------------------------------------------
+    # rename rsgroup
+    def rename_rsgroup(oldname, newname)
+      @admin.renameRSGroup(oldname, newname)
+    end
   end
 end

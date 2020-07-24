@@ -27,11 +27,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,11 +57,32 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
 
   private static final Logger LOG = LoggerFactory.getLogger(LogEventHandler.class);
 
-  private final Queue<SlowLogPayload> queue;
+  private static final String SYS_TABLE_QUEUE_SIZE =
+    "hbase.regionserver.slowlog.systable.queue.size";
+  private static final int DEFAULT_SYS_TABLE_QUEUE_SIZE = 1000;
+  private static final int SYSTABLE_PUT_BATCH_SIZE = 100;
 
-  LogEventHandler(int eventCount) {
+  private final Queue<SlowLogPayload> queueForRingBuffer;
+  private final Queue<SlowLogPayload> queueForSysTable;
+  private final boolean isSlowLogTableEnabled;
+
+  private Configuration configuration;
+
+  private static final ReentrantLock LOCK = new ReentrantLock();
+
+  LogEventHandler(int eventCount, boolean isSlowLogTableEnabled, Configuration conf) {
+    this.configuration = conf;
     EvictingQueue<SlowLogPayload> evictingQueue = EvictingQueue.create(eventCount);
-    queue = Queues.synchronizedQueue(evictingQueue);
+    queueForRingBuffer = Queues.synchronizedQueue(evictingQueue);
+    this.isSlowLogTableEnabled = isSlowLogTableEnabled;
+    if (isSlowLogTableEnabled) {
+      int sysTableQueueSize = conf.getInt(SYS_TABLE_QUEUE_SIZE, DEFAULT_SYS_TABLE_QUEUE_SIZE);
+      EvictingQueue<SlowLogPayload> evictingQueueForTable =
+        EvictingQueue.create(sysTableQueueSize);
+      queueForSysTable = Queues.synchronizedQueue(evictingQueueForTable);
+    } else {
+      queueForSysTable = null;
+    }
   }
 
   /**
@@ -83,7 +107,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
       return;
     }
     Descriptors.MethodDescriptor methodDescriptor = rpcCall.getMethod();
-    Message param = rpcCall.getParam();
+    Message param = rpcCallDetails.getParam();
     long receiveTime = rpcCall.getReceiveTime();
     long startTime = rpcCall.getStartTime();
     long endTime = System.currentTimeMillis();
@@ -129,7 +153,12 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
       .setType(type)
       .setUserName(userName)
       .build();
-    queue.add(slowLogPayload);
+    queueForRingBuffer.add(slowLogPayload);
+    if (isSlowLogTableEnabled) {
+      if (!slowLogPayload.getRegionName().startsWith("hbase:slowlog")) {
+        queueForSysTable.add(slowLogPayload);
+      }
+    }
   }
 
   private SlowLogPayload.Type getLogType(RpcLogDetails rpcCallDetails) {
@@ -160,7 +189,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Received request to clean up online slowlog buffer..");
     }
-    queue.clear();
+    queueForRingBuffer.clear();
     return true;
   }
 
@@ -172,7 +201,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
    */
   List<SlowLogPayload> getSlowLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
     List<SlowLogPayload> slowLogPayloadList =
-      Arrays.stream(queue.toArray(new SlowLogPayload[0]))
+      Arrays.stream(queueForRingBuffer.toArray(new SlowLogPayload[0]))
         .filter(e -> e.getType() == SlowLogPayload.Type.ALL
           || e.getType() == SlowLogPayload.Type.SLOW_LOG)
         .collect(Collectors.toList());
@@ -180,7 +209,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
     // latest slow logs first, operator is interested in latest records from in-memory buffer
     Collections.reverse(slowLogPayloadList);
 
-    return getFilteredLogs(request, slowLogPayloadList);
+    return LogHandlerUtils.getFilteredLogs(request, slowLogPayloadList);
   }
 
   /**
@@ -191,7 +220,7 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
    */
   List<SlowLogPayload> getLargeLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
     List<SlowLogPayload> slowLogPayloadList =
-      Arrays.stream(queue.toArray(new SlowLogPayload[0]))
+      Arrays.stream(queueForRingBuffer.toArray(new SlowLogPayload[0]))
         .filter(e -> e.getType() == SlowLogPayload.Type.ALL
           || e.getType() == SlowLogPayload.Type.LARGE_LOG)
         .collect(Collectors.toList());
@@ -199,61 +228,39 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
     // latest large logs first, operator is interested in latest records from in-memory buffer
     Collections.reverse(slowLogPayloadList);
 
-    return getFilteredLogs(request, slowLogPayloadList);
+    return LogHandlerUtils.getFilteredLogs(request, slowLogPayloadList);
   }
 
-  private List<SlowLogPayload> getFilteredLogs(AdminProtos.SlowLogResponseRequest request,
-      List<SlowLogPayload> logPayloadList) {
-    if (isFilterProvided(request)) {
-      logPayloadList = filterLogs(request, logPayloadList);
+  /**
+   * Poll from queueForSysTable and insert 100 records in hbase:slowlog table in single batch
+   */
+  void addAllLogsToSysTable() {
+    if (queueForSysTable == null) {
+      // hbase.regionserver.slowlog.systable.enabled is turned off. Exiting.
+      return;
     }
-    int limit = request.getLimit() >= logPayloadList.size() ? logPayloadList.size()
-      : request.getLimit();
-    return logPayloadList.subList(0, limit);
-  }
-
-  private boolean isFilterProvided(AdminProtos.SlowLogResponseRequest request) {
-    if (StringUtils.isNotEmpty(request.getUserName())) {
-      return true;
+    if (LOCK.isLocked()) {
+      return;
     }
-    if (StringUtils.isNotEmpty(request.getTableName())) {
-      return true;
-    }
-    if (StringUtils.isNotEmpty(request.getClientAddress())) {
-      return true;
-    }
-    return StringUtils.isNotEmpty(request.getRegionName());
-  }
-
-  private List<SlowLogPayload> filterLogs(AdminProtos.SlowLogResponseRequest request,
-      List<SlowLogPayload> slowLogPayloadList) {
-    List<SlowLogPayload> filteredSlowLogPayloads = new ArrayList<>();
-    for (SlowLogPayload slowLogPayload : slowLogPayloadList) {
-      if (StringUtils.isNotEmpty(request.getRegionName())) {
-        if (slowLogPayload.getRegionName().equals(request.getRegionName())) {
-          filteredSlowLogPayloads.add(slowLogPayload);
-          continue;
+    LOCK.lock();
+    try {
+      List<SlowLogPayload> slowLogPayloads = new ArrayList<>();
+      int i = 0;
+      while (!queueForSysTable.isEmpty()) {
+        slowLogPayloads.add(queueForSysTable.poll());
+        i++;
+        if (i == SYSTABLE_PUT_BATCH_SIZE) {
+          SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.configuration);
+          slowLogPayloads.clear();
+          i = 0;
         }
       }
-      if (StringUtils.isNotEmpty(request.getTableName())) {
-        if (slowLogPayload.getRegionName().startsWith(request.getTableName())) {
-          filteredSlowLogPayloads.add(slowLogPayload);
-          continue;
-        }
+      if (slowLogPayloads.size() > 0) {
+        SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.configuration);
       }
-      if (StringUtils.isNotEmpty(request.getClientAddress())) {
-        if (slowLogPayload.getClientAddress().equals(request.getClientAddress())) {
-          filteredSlowLogPayloads.add(slowLogPayload);
-          continue;
-        }
-      }
-      if (StringUtils.isNotEmpty(request.getUserName())) {
-        if (slowLogPayload.getUserName().equals(request.getUserName())) {
-          filteredSlowLogPayloads.add(slowLogPayload);
-        }
-      }
+    } finally {
+      LOCK.unlock();
     }
-    return filteredSlowLogPayloads;
   }
 
 }

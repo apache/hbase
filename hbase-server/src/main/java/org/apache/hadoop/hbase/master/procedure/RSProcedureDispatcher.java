@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -234,12 +235,19 @@ public class RSProcedureDispatcher
     private int numberOfAttemptsSoFar = 0;
     private long maxWaitTime = -1;
 
+    private final long rsRpcRetryInterval;
+    private static final String RS_RPC_RETRY_INTERVAL_CONF_KEY =
+        "hbase.regionserver.rpc.retry.interval";
+    private static final int DEFAULT_RS_RPC_RETRY_INTERVAL = 100;
+
     private ExecuteProceduresRequest.Builder request = null;
 
     public ExecuteProceduresRemoteCall(final ServerName serverName,
         final Set<RemoteProcedure> remoteProcedures) {
       this.serverName = serverName;
       this.remoteProcedures = remoteProcedures;
+      this.rsRpcRetryInterval = master.getConfiguration().getLong(RS_RPC_RETRY_INTERVAL_CONF_KEY,
+        DEFAULT_RS_RPC_RETRY_INTERVAL);
     }
 
     private AdminService.BlockingInterface getRsAdmin() throws IOException {
@@ -256,31 +264,33 @@ public class RSProcedureDispatcher
     }
 
     private boolean scheduleForRetry(IOException e) {
-      LOG.debug("request to {} failed, try={}", serverName, numberOfAttemptsSoFar, e);
+      LOG.debug("Request to {} failed, try={}", serverName, numberOfAttemptsSoFar, e);
       // Should we wait a little before retrying? If the server is starting it's yes.
       if (e instanceof ServerNotRunningYetException) {
         long remainingTime = getMaxWaitTime() - EnvironmentEdgeManager.currentTime();
         if (remainingTime > 0) {
-          LOG.warn("waiting a little before trying on the same server={}," +
-            " try={}, can wait up to {}ms", serverName, numberOfAttemptsSoFar, remainingTime);
+          LOG.warn("Waiting a little before retrying {}, try={}, can wait up to {}ms",
+            serverName, numberOfAttemptsSoFar, remainingTime);
           numberOfAttemptsSoFar++;
-          submitTask(this, 100, TimeUnit.MILLISECONDS);
+          // Retry every rsRpcRetryInterval millis up to maximum wait time.
+          submitTask(this, rsRpcRetryInterval, TimeUnit.MILLISECONDS);
           return true;
         }
-        LOG.warn("server {} is not up for a while; try a new one", serverName);
+        LOG.warn("{} is throwing ServerNotRunningYetException for {}ms; trying another server",
+          serverName, getMaxWaitTime());
         return false;
       }
       if (e instanceof DoNotRetryIOException) {
-        LOG.warn("server {} tells us do not retry due to {}, try={}, give up", serverName,
+        LOG.warn("{} tells us DoNotRetry due to {}, try={}, give up", serverName,
           e.toString(), numberOfAttemptsSoFar);
         return false;
       }
-      // this exception is thrown in the rpc framework, where we can make sure that the call has not
+      // This exception is thrown in the rpc framework, where we can make sure that the call has not
       // been executed yet, so it is safe to mark it as fail. Especially for open a region, we'd
-      // better choose another region server
-      // notice that, it is safe to quit only if this is the first time we send request to region
-      // server. Maybe the region server has accept our request the first time, and then there is a
-      // network error which prevents we receive the response, and the second time we hit a
+      // better choose another region server.
+      // Notice that, it is safe to quit only if this is the first time we send request to region
+      // server. Maybe the region server has accepted our request the first time, and then there is
+      // a network error which prevents we receive the response, and the second time we hit a
       // CallQueueTooBigException, obviously it is not safe to quit here, otherwise it may lead to a
       // double assign...
       if (e instanceof CallQueueTooBigException && numberOfAttemptsSoFar == 0) {
@@ -290,7 +300,7 @@ public class RSProcedureDispatcher
       }
       // Always retry for other exception types if the region server is not dead yet.
       if (!master.getServerManager().isServerOnline(serverName)) {
-        LOG.warn("request to {} failed due to {}, try={}, and the server is dead, give up",
+        LOG.warn("Request to {} failed due to {}, try={} and the server is not online, give up",
           serverName, e.toString(), numberOfAttemptsSoFar);
         return false;
       }
@@ -299,14 +309,22 @@ public class RSProcedureDispatcher
         // background task to check whether the region server is dead. And if it is dead, call
         // remoteCallFailed to tell the upper layer. Keep retrying here does not lead to incorrect
         // result, but waste some resources.
-        LOG.warn("server {} is aborted or stopped, for safety we still need to" +
+        LOG.warn("{} is aborted or stopped, for safety we still need to" +
           " wait until it is fully dead, try={}", serverName, numberOfAttemptsSoFar);
       } else {
-        LOG.warn("request to server {} failed due to {}, try={}, retrying...", serverName,
+        LOG.warn("request to {} failed due to {}, try={}, retrying...", serverName,
           e.toString(), numberOfAttemptsSoFar);
       }
       numberOfAttemptsSoFar++;
-      submitTask(this, 100, TimeUnit.MILLISECONDS);
+      // Add some backoff here as the attempts rise otherwise if a stuck condition, will fill logs
+      // with failed attempts. None of our backoff classes -- RetryCounter or ClientBackoffPolicy
+      // -- fit here nicely so just do something simple; increment by rsRpcRetryInterval millis *
+      // retry^2 on each try
+      // up to max of 10 seconds (don't want to back off too much in case of situation change).
+      submitTask(this,
+        Math.min(rsRpcRetryInterval * (this.numberOfAttemptsSoFar * this.numberOfAttemptsSoFar),
+          10 * 1000),
+        TimeUnit.MILLISECONDS);
       return true;
     }
 

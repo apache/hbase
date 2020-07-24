@@ -56,10 +56,6 @@ class MasterMetaBootstrap {
       throws IOException, InterruptedException, KeeperException {
     int numReplicas = master.getConfiguration().getInt(HConstants.META_REPLICAS_NUM,
            HConstants.DEFAULT_META_REPLICA_NUM);
-    if (numReplicas <= 1) {
-      // No replicaas to assign. Return.
-      return;
-    }
     final AssignmentManager assignmentManager = master.getAssignmentManager();
     if (!assignmentManager.isMetaLoaded()) {
       throw new IllegalStateException("hbase:meta must be initialized first before we can " +
@@ -81,9 +77,9 @@ class MasterMetaBootstrap {
       // down hosting server which calls AM#stop.
       if (metaState != null && metaState.getServerName() != null) {
         // Try to retain old assignment.
-        assignmentManager.assign(hri, metaState.getServerName());
+        assignmentManager.assignAsync(hri, metaState.getServerName());
       } else {
-        assignmentManager.assign(hri);
+        assignmentManager.assignAsync(hri);
       }
     }
     unassignExcessMetaReplica(numReplicas);

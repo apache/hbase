@@ -35,7 +35,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -84,8 +83,8 @@ import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -93,13 +92,15 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription.Type;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This class manages the procedure of taking and restoring snapshots. There is only one
@@ -635,7 +636,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       builder.setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION);
     }
     RpcServer.getRequestUser().ifPresent(user -> {
-      if (User.isHBaseSecurityEnabled(master.getConfiguration())) {
+      if (AccessChecker.isAuthorizationSupported(master.getConfiguration())) {
         builder.setOwner(user.getShortName());
       }
     });
@@ -653,16 +654,26 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     TableName snapshotTable = TableName.valueOf(snapshot.getTable());
     if (master.getTableStateManager().isTableState(snapshotTable,
         TableState.State.ENABLED)) {
-      LOG.debug("Table enabled, starting distributed snapshot.");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Table enabled, starting distributed snapshots for {}",
+          ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
       snapshotEnabledTable(snapshot);
-      LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Started snapshot: {}", ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
     }
     // For disabled table, snapshot is created by the master
     else if (master.getTableStateManager().isTableState(snapshotTable,
         TableState.State.DISABLED)) {
-      LOG.debug("Table is disabled, running snapshot entirely on master.");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Table is disabled, running snapshot entirely on master for {}",
+          ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
       snapshotDisabledTable(snapshot);
-      LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Started snapshot: {}", ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
     } else {
       LOG.error("Can't snapshot table '" + snapshot.getTable()
           + "', isn't open or closed, we don't know what to do!");
@@ -1158,7 +1169,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       LOG.info("Snapshot feature is not enabled, missing log and hfile cleaners.");
       Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(mfs.getRootDir());
       if (fs.exists(snapshotDir)) {
-        FileStatus[] snapshots = FSUtils.listStatus(fs, snapshotDir,
+        FileStatus[] snapshots = CommonFSUtils.listStatus(fs, snapshotDir,
           new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
         if (snapshots != null) {
           LOG.error("Snapshots are present, but cleaners are not enabled.");

@@ -22,16 +22,15 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A mob compactor to directly compact the mob files.
@@ -55,7 +54,7 @@ public abstract class MobCompactor {
     this.tableName = tableName;
     this.column = column;
     this.pool = pool;
-    mobTableDir = FSUtils.getTableDir(MobUtils.getMobHome(conf), tableName);
+    mobTableDir = CommonFSUtils.getTableDir(MobUtils.getMobHome(conf), tableName);
     mobFamilyDir = MobUtils.getMobFamilyPath(conf, tableName, column.getNameAsString());
   }
 

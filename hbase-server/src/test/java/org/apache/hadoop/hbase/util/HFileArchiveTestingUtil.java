@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -211,10 +210,8 @@ public class HFileArchiveTestingUtil {
    * @return {@link Path} to the archive directory for the given region
    */
   public static Path getRegionArchiveDir(Configuration conf, HRegion region) throws IOException {
-    return HFileArchiveUtil.getRegionArchiveDir(
-        FSUtils.getRootDir(conf),
-        region.getTableDescriptor().getTableName(),
-        region.getRegionInfo().getEncodedName());
+    return HFileArchiveUtil.getRegionArchiveDir(CommonFSUtils.getRootDir(conf),
+      region.getTableDescriptor().getTableName(), region.getRegionInfo().getEncodedName());
   }
 
   /**

@@ -29,7 +29,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
-import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStorePerformanceEvaluation;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
@@ -47,19 +48,15 @@ public class RegionProcedureStorePerformanceEvaluation
     private final ServerName serverName =
       ServerName.valueOf("localhost", 12345, System.currentTimeMillis());
 
-    private final ChoreService choreService;
-
     private volatile boolean abort = false;
 
     public MockServer(Configuration conf) {
       this.conf = conf;
-      this.choreService = new ChoreService("Cleaner-Chore-Service");
     }
 
     @Override
     public void abort(String why, Throwable e) {
       abort = true;
-      choreService.shutdown();
     }
 
     @Override
@@ -69,7 +66,6 @@ public class RegionProcedureStorePerformanceEvaluation
 
     @Override
     public void stop(String why) {
-      choreService.shutdown();
     }
 
     @Override
@@ -114,11 +110,11 @@ public class RegionProcedureStorePerformanceEvaluation
 
     @Override
     public ChoreService getChoreService() {
-      return choreService;
+      throw new UnsupportedOperationException();
     }
   }
 
-  private DirScanPool cleanerPool;
+  private MasterRegion region;
 
   @Override
   protected RegionProcedureStore createProcedureStore(Path storeDir) throws IOException {
@@ -132,10 +128,11 @@ public class RegionProcedureStorePerformanceEvaluation
     int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY, MemStoreLAB.CHUNK_SIZE_DEFAULT);
     ChunkCreator.initialize(chunkSize, offheap, globalMemStoreSize, poolSizePercentage,
       initialCountPercentage, null);
-    conf.setBoolean(RegionProcedureStore.USE_HSYNC_KEY, "hsync".equals(syncType));
+    conf.setBoolean(MasterRegionFactory.USE_HSYNC_KEY, "hsync".equals(syncType));
     CommonFSUtils.setRootDir(conf, storeDir);
-    cleanerPool = new DirScanPool(conf);
-    return new RegionProcedureStore(new MockServer(conf), cleanerPool, (fs, apth) -> {
+    MockServer server = new MockServer(conf);
+    region = MasterRegionFactory.create(server);
+    return new RegionProcedureStore(server, region, (fs, apth) -> {
     });
   }
 
@@ -152,7 +149,7 @@ public class RegionProcedureStorePerformanceEvaluation
 
   @Override
   protected void postStop(RegionProcedureStore store) throws IOException {
-    cleanerPool.shutdownNow();
+    region.close(true);
   }
 
   public static void main(String[] args) throws IOException {

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,7 +30,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,6 +83,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
   private ClientSideRegionScanner currentRegionScanner  = null;
   private int currentRegion = -1;
 
+  private int numOfCompleteRows = 0;
   /**
    * Creates a TableSnapshotScanner.
    * @param conf the configuration
@@ -96,7 +96,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
    */
   public TableSnapshotScanner(Configuration conf, Path restoreDir, String snapshotName, Scan scan)
       throws IOException {
-    this(conf, FSUtils.getRootDir(conf), restoreDir, snapshotName, scan);
+    this(conf, CommonFSUtils.getRootDir(conf), restoreDir, snapshotName, scan);
   }
 
   public TableSnapshotScanner(Configuration conf, Path rootDir, Path restoreDir,
@@ -194,6 +194,9 @@ public class TableSnapshotScanner extends AbstractClientScanner {
       try {
         result = currentRegionScanner.next();
         if (result != null) {
+          if (scan.getLimit() > 0 && ++this.numOfCompleteRows > scan.getLimit()) {
+            result = null;
+          }
           return result;
         }
       } finally {

@@ -74,7 +74,6 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.SequenceId;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -228,20 +227,21 @@ public class AssignmentManager {
     ZKWatcher zkw = master.getZooKeeper();
     // it could be null in some tests
     if (zkw != null) {
+      // here we are still in the early steps of active master startup. There is only one thread(us)
+      // can access AssignmentManager and create region node, so here we do not need to lock the
+      // region node.
       RegionState regionState = MetaTableLocator.getMetaRegionState(zkw);
       RegionStateNode regionNode =
         regionStates.getOrCreateRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
-      regionNode.lock();
-      try {
-        regionNode.setRegionLocation(regionState.getServerName());
-        regionNode.setState(regionState.getState());
-        if (regionNode.getProcedure() != null) {
-          regionNode.getProcedure().stateLoaded(this, regionNode);
-        }
-        setMetaAssigned(regionState.getRegion(), regionState.getState() == State.OPEN);
-      } finally {
-        regionNode.unlock();
+      regionNode.setRegionLocation(regionState.getServerName());
+      regionNode.setState(regionState.getState());
+      if (regionNode.getProcedure() != null) {
+        regionNode.getProcedure().stateLoaded(this, regionNode);
       }
+      if (regionState.getServerName() != null) {
+        regionStates.addRegionToServer(regionNode);
+      }
+      setMetaAssigned(regionState.getRegion(), regionState.getState() == State.OPEN);
     }
   }
 
@@ -589,9 +589,9 @@ public class AssignmentManager {
     }
   }
 
-  // TODO: Need an async version of this for hbck2.
-  public long assign(RegionInfo regionInfo, ServerName sn) throws IOException {
-    // TODO: should we use getRegionStateNode?
+  private TransitRegionStateProcedure createAssignProcedure(RegionInfo regionInfo, ServerName sn)
+    throws IOException {
+     // TODO: should we use getRegionStateNode?
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
     TransitRegionStateProcedure proc;
     regionNode.lock();
@@ -602,12 +602,40 @@ public class AssignmentManager {
     } finally {
       regionNode.unlock();
     }
+    return proc;
+  }
+
+  // TODO: Need an async version of this for hbck2.
+  public long assign(RegionInfo regionInfo, ServerName sn) throws IOException {
+    TransitRegionStateProcedure proc = createAssignProcedure(regionInfo, sn);
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
     return proc.getProcId();
   }
 
   public long assign(RegionInfo regionInfo) throws IOException {
     return assign(regionInfo, null);
+  }
+
+  /**
+   * Submits a procedure that assigns a region to a target server without waiting for it to finish
+   * @param regionInfo the region we would like to assign
+   * @param sn target server name
+   * @return
+   * @throws IOException
+   */
+  public Future<byte[]> assignAsync(RegionInfo regionInfo, ServerName sn) throws IOException {
+    TransitRegionStateProcedure proc = createAssignProcedure(regionInfo, sn);
+    return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(), proc);
+  }
+
+  /**
+   * Submits a procedure that assigns a region without waiting for it to finish
+   * @param regionInfo the region we would like to assign
+   * @return
+   * @throws IOException
+   */
+  public Future<byte[]> assignAsync(RegionInfo regionInfo) throws IOException {
+    return assignAsync(regionInfo, null);
   }
 
   public long unassign(RegionInfo regionInfo) throws IOException {
@@ -1553,7 +1581,8 @@ public class AssignmentManager {
       ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
       carryingMeta = isCarryingMeta(serverName);
       if (!force && serverNode != null && !serverNode.isInState(ServerState.ONLINE)) {
-        LOG.info("Skip adding SCP for {} (meta={}) -- running?", serverNode, carryingMeta);
+        LOG.info("Skip adding ServerCrashProcedure for {} (meta={}) -- running?",
+          serverNode, carryingMeta);
         return Procedure.NO_PROC_ID;
       } else {
         MasterProcedureEnv mpe = procExec.getEnvironment();
@@ -1574,8 +1603,9 @@ public class AssignmentManager {
           pid = procExec.submitProcedure(
               new ServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta));
         }
-        LOG.info("Scheduled SCP pid={} for {} (carryingMeta={}){}.", pid, serverName, carryingMeta,
-            serverNode == null? "": " " + serverNode.toString() + ", oldState=" + oldState);
+        LOG.info("Scheduled ServerCrashProcedure pid={} for {} (carryingMeta={}){}.",
+          pid, serverName, carryingMeta,
+          serverNode == null? "": " " + serverNode.toString() + ", oldState=" + oldState);
       }
     } finally {
       if (serverNode != null) {
@@ -1897,11 +1927,7 @@ public class AssignmentManager {
   }
 
   private void startAssignmentThread() {
-    // Get Server Thread name. Sometimes the Server is mocked so may not implement HasThread.
-    // For example, in tests.
-    String name = master instanceof HasThread? ((HasThread)master).getName():
-        master.getServerName().toShortString();
-    assignThread = new Thread(name) {
+    assignThread = new Thread(master.getServerName().toShortString()) {
       @Override
       public void run() {
         while (isRunning()) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,9 +32,7 @@ import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperat
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
@@ -94,11 +92,12 @@ public abstract class RegionTransitionProcedure extends Procedure<MasterProcedur
 
   @Override
   public void toStringClassDetails(final StringBuilder sb) {
-    sb.append(getClass().getSimpleName());
-    sb.append(" table=");
-    sb.append(getTableName());
-    sb.append(", region=");
-    sb.append(getRegionInfo() == null ? null : getRegionInfo().getEncodedName());
+    sb.append(getProcName());
+  }
+
+  @Override public String getProcName() {
+    RegionInfo r = getRegionInfo();
+    return getClass().getSimpleName() + " " + getTableName() + (r != null? r.getEncodedName(): "");
   }
 
   public RegionStateNode getRegionState(final MasterProcedureEnv env) {

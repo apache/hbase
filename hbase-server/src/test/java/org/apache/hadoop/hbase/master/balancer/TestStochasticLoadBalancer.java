@@ -174,7 +174,8 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
               (Map) mockClusterServersWithTables(servers);
           List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
-          assertTrue(plans == null || plans.isEmpty());
+          boolean emptyPlans = plans == null || plans.isEmpty();
+          assertTrue(emptyPlans || needsBalanceIdleRegion(mockCluster));
         }
       }
     } finally {
@@ -200,6 +201,27 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       double expected = 1 - expectedLocalities[test];
       assertEquals(expected, cost, 0.001);
     }
+  }
+
+  @Test
+  public void testMoveCostMultiplier() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    StochasticLoadBalancer.CostFunction
+      costFunction = new StochasticLoadBalancer.MoveCostFunction(conf);
+    BaseLoadBalancer.Cluster cluster = mockCluster(clusterStateMocks[0]);
+    costFunction.init(cluster);
+    costFunction.cost();
+    assertEquals(StochasticLoadBalancer.MoveCostFunction.DEFAULT_MOVE_COST,
+      costFunction.getMultiplier(), 0.01);
+
+    //In offpeak hours, the multiplier of move cost should be lower
+    conf.setInt("hbase.offpeak.start.hour",0);
+    conf.setInt("hbase.offpeak.end.hour",23);
+    costFunction = new StochasticLoadBalancer.MoveCostFunction(conf);
+    costFunction.init(cluster);
+    costFunction.cost();
+    assertEquals(StochasticLoadBalancer.MoveCostFunction.DEFAULT_MOVE_COST_OFFPEAK
+      , costFunction.getMultiplier(), 0.01);
   }
 
   @Test
@@ -393,6 +415,10 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertTrue(Arrays.
             asList(loadBalancer.getCostFunctionNames()).
             contains(DummyCostFunction.class.getSimpleName()));
+  }
+
+  private boolean needsBalanceIdleRegion(int[] cluster){
+    return (Arrays.stream(cluster).anyMatch(x -> x>1)) && (Arrays.stream(cluster).anyMatch(x -> x<1));
   }
 
   // This mock allows us to test the LocalityCostFunction

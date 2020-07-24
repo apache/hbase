@@ -457,8 +457,8 @@ public class RegionSplitter {
       // Max outstanding splits. default == 50% of servers
       final int MAX_OUTSTANDING = Math.max(getRegionServerCount(connection) / 2, minOS);
 
-      Path hbDir = FSUtils.getRootDir(conf);
-      Path tableDir = FSUtils.getTableDir(hbDir, tableName);
+      Path hbDir = CommonFSUtils.getRootDir(conf);
+      Path tableDir = CommonFSUtils.getTableDir(hbDir, tableName);
       Path splitFile = new Path(tableDir, "_balancedSplit");
       FileSystem fs = FileSystem.get(conf);
 
@@ -783,10 +783,9 @@ public class RegionSplitter {
    * @throws IOException if a remote or network exception occurs
    */
   private static Pair<Path, Path> getTableDirAndSplitFile(final Configuration conf,
-      final TableName tableName)
-  throws IOException {
-    Path hbDir = FSUtils.getRootDir(conf);
-    Path tableDir = FSUtils.getTableDir(hbDir, tableName);
+    final TableName tableName) throws IOException {
+    Path hbDir = CommonFSUtils.getRootDir(conf);
+    Path tableDir = CommonFSUtils.getTableDir(hbDir, tableName);
     Path splitFile = new Path(tableDir, "_balancedSplit");
     return new Pair<>(tableDir, splitFile);
   }
@@ -846,8 +845,7 @@ public class RegionSplitter {
       fs.rename(tmpFile, splitFile);
     } else {
       LOG.debug("_balancedSplit file found. Replay log to restore state...");
-      FSUtils.getInstance(fs, connection.getConfiguration())
-        .recoverFileLease(fs, splitFile, connection.getConfiguration(), null);
+      RecoverLeaseFSUtils.recoverFileLease(fs, splitFile, connection.getConfiguration(), null);
 
       // parse split file and process remaining splits
       FSDataInputStream tmpIn = fs.open(splitFile);

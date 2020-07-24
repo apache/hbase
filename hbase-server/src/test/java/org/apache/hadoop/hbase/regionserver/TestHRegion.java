@@ -152,7 +152,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
@@ -393,7 +392,7 @@ public class TestHRegion {
       Configuration conf, TableName tableName) throws IOException {
     final Path logDir = TEST_UTIL.getDataTestDirOnTestFS(callingMethod + ".log");
     final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, logDir);
+    CommonFSUtils.setRootDir(walConf, logDir);
     return new WALFactory(walConf, callingMethod)
         .getWAL(RegionInfoBuilder.newBuilder(tableName).build());
   }
@@ -976,7 +975,7 @@ public class TestHRegion {
 
       // now find the compacted file, and manually add it to the recovered edits
       Path tmpDir = new Path(region.getRegionFileSystem().getTempDir(), Bytes.toString(family));
-      FileStatus[] files = FSUtils.listStatus(fs, tmpDir);
+      FileStatus[] files = CommonFSUtils.listStatus(fs, tmpDir);
       String errorMsg = "Expected to find 1 file in the region temp directory "
           + "from the compaction, could not find any";
       assertNotNull(errorMsg, files);
@@ -1031,7 +1030,7 @@ public class TestHRegion {
       if (!mismatchedRegionName) {
         assertEquals(1, region.getStore(family).getStorefilesCount());
       }
-      files = FSUtils.listStatus(fs, tmpDir);
+      files = CommonFSUtils.listStatus(fs, tmpDir);
       assertTrue("Expected to find 0 files inside " + tmpDir, files == null || files.length == 0);
 
       for (long i = minSeqId; i < maxSeqId; i++) {
@@ -1054,7 +1053,7 @@ public class TestHRegion {
     byte[] family = Bytes.toBytes("family");
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(method + ".log");
     final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
-    FSUtils.setRootDir(walConf, logDir);
+    CommonFSUtils.setRootDir(walConf, logDir);
     final WALFactory wals = new WALFactory(walConf, method);
     final WAL wal = wals.getWAL(RegionInfoBuilder.newBuilder(tableName).build());
 
@@ -1208,7 +1207,7 @@ public class TestHRegion {
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(method + "log");
 
     final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
-    FSUtils.setRootDir(walConf, logDir);
+    CommonFSUtils.setRootDir(walConf, logDir);
     // Make up a WAL that we can manipulate at append time.
     class FailAppendFlushMarkerWAL extends FSHLog {
       volatile FlushAction [] flushActions = null;
@@ -1252,12 +1251,16 @@ public class TestHRegion {
           public long getLength() {
             return w.getLength();
           }
+
+          @Override
+          public long getSyncedLength() {
+            return w.getSyncedLength();
+          }
         };
       }
     }
-    FailAppendFlushMarkerWAL wal =
-      new FailAppendFlushMarkerWAL(FileSystem.get(walConf), FSUtils.getRootDir(walConf),
-        method, walConf);
+    FailAppendFlushMarkerWAL wal = new FailAppendFlushMarkerWAL(FileSystem.get(walConf),
+      CommonFSUtils.getRootDir(walConf), method, walConf);
     wal.init();
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
       HConstants.EMPTY_END_ROW, false, Durability.USE_DEFAULT, wal, family);
@@ -1286,9 +1289,9 @@ public class TestHRegion {
     wal.close();
 
     // 2. Test case where START_FLUSH succeeds but COMMIT_FLUSH will throw exception
-    wal.flushActions = new FlushAction [] {FlushAction.COMMIT_FLUSH};
-    wal = new FailAppendFlushMarkerWAL(FileSystem.get(walConf), FSUtils.getRootDir(walConf),
-          method, walConf);
+    wal.flushActions = new FlushAction[] { FlushAction.COMMIT_FLUSH };
+    wal = new FailAppendFlushMarkerWAL(FileSystem.get(walConf), CommonFSUtils.getRootDir(walConf),
+      method, walConf);
     wal.init();
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
       HConstants.EMPTY_END_ROW, false, Durability.USE_DEFAULT, wal, family);
@@ -4755,7 +4758,7 @@ public class TestHRegion {
     byte[] family = Bytes.toBytes("family");
     Path logDir = new Path(new Path(dir + method), "log");
     final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, logDir);
+    CommonFSUtils.setRootDir(walConf, logDir);
     // XXX: The spied AsyncFSWAL can not work properly because of a Mockito defect that can not
     // deal with classes which have a field of an inner class. See discussions in HBASE-15536.
     walConf.set(WALFactory.WAL_PROVIDER, "filesystem");
@@ -4805,7 +4808,7 @@ public class TestHRegion {
     // create a primary region, load some data and flush
     // create a secondary region, and do a get against that
     Path rootDir = new Path(dir + name.getMethodName());
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
@@ -4855,7 +4858,7 @@ public class TestHRegion {
     // create a primary region, load some data and flush
     // create a secondary region, and do a put against that
     Path rootDir = new Path(dir + name.getMethodName());
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
@@ -4914,7 +4917,7 @@ public class TestHRegion {
   @Test
   public void testCompactionFromPrimary() throws IOException {
     Path rootDir = new Path(dir + name.getMethodName());
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
@@ -6005,7 +6008,7 @@ public class TestHRegion {
   @Test
   public void testCloseRegionWrittenToWAL() throws Exception {
     Path rootDir = new Path(dir + name.getMethodName());
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     final ServerName serverName = ServerName.valueOf("testCloseRegionWrittenToWAL", 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));

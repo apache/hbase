@@ -119,6 +119,12 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
     verify();
   }
 
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    wrapped.renameRSGroup(oldName, newName);
+    verify();
+  }
+
   public void verify() throws IOException {
     Map<String, RSGroupInfo> groupMap = Maps.newHashMap();
     Set<RSGroupInfo> zList = Sets.newHashSet();

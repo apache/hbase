@@ -127,7 +127,11 @@ YETUS_ARGS+=("--skip-errorprone")
 YETUS_ARGS+=("--skip-dirs=dev-support")
 # For testing with specific hadoop version. Activates corresponding profile in maven runs.
 if [[ -n "${HADOOP_PROFILE}" ]]; then
-  YETUS_ARGS+=("--hadoop-profile=${HADOOP_PROFILE}")
+  # Master has only Hadoop3 support. We don't need to activate any profile.
+  # The Jenkinsfile should not attempt to run any Hadoop2 tests.
+  if [[ "${CHANGE_TARGET}" =~ branch-2* ]]; then
+    YETUS_ARGS+=("--hadoop-profile=${HADOOP_PROFILE}")
+  fi
 fi
 if [[ -n "${EXCLUDE_TESTS_URL}" ]]; then
   YETUS_ARGS+=("--exclude-tests-url=${EXCLUDE_TESTS_URL}")

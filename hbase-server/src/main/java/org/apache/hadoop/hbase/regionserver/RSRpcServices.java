@@ -296,6 +296,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
+  /*
+   * Whether to reject rows with size > threshold defined by
+   * {@link RSRpcServices#BATCH_ROWS_THRESHOLD_NAME}
+   */
+  private static final String REJECT_BATCH_ROWS_OVER_THRESHOLD =
+    "hbase.rpc.rows.size.threshold.reject";
+
+  /*
+   * Default value of config {@link RSRpcServices#REJECT_BATCH_ROWS_OVER_THRESHOLD}
+   */
+  private static final boolean DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD = false;
+
   // Request counter. (Includes requests that are not serviced by regions.)
   // Count only once for requests with multiple actions like multi/caching-scan/replayBatch
   final LongAdder requestCount = new LongAdder();
@@ -348,6 +360,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * Row size threshold for multi requests above which a warning is logged
    */
   private final int rowSizeWarnThreshold;
+  /*
+   * Whether we should reject requests with very high no of rows i.e. beyond threshold
+   * defined by rowSizeWarnThreshold
+   */
+  private final boolean rejectRowsWithSizeOverThreshold;
 
   final AtomicBoolean clearCompactionQueues = new AtomicBoolean(false);
 
@@ -703,8 +720,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           r = region.append(append, nonceGroup, nonce);
         } else {
           // convert duplicate append to get
-          List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cellScanner), false,
-              nonceGroup, nonce);
+          List<Cell> results = region.get(toGet(append), false, nonceGroup, nonce);
           r = Result.create(results);
         }
         success = true;
@@ -750,8 +766,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           r = region.increment(increment, nonceGroup, nonce);
         } else {
           // convert duplicate increment to get
-          List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cells), false, nonceGroup,
-              nonce);
+          List<Cell> results = region.get(toGet(increment), false, nonceGroup, nonce);
           r = Result.create(results);
         }
         success = true;
@@ -771,6 +786,31 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           EnvironmentEdgeManager.currentTime() - before);
     }
     return r == null ? Result.EMPTY_RESULT : r;
+  }
+
+  private static Get toGet(final Mutation mutation) throws IOException {
+    if(!(mutation instanceof Increment) && !(mutation instanceof Append)) {
+      throw new AssertionError("mutation must be a instance of Increment or Append");
+    }
+    Get get = new Get(mutation.getRow());
+    CellScanner cellScanner = mutation.cellScanner();
+    while (!cellScanner.advance()) {
+      Cell cell = cellScanner.current();
+      get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
+    }
+    if (mutation instanceof Increment) {
+      // Increment
+      Increment increment = (Increment) mutation;
+      get.setTimeRange(increment.getTimeRange().getMin(), increment.getTimeRange().getMax());
+    } else {
+      // Append
+      Append append = (Append) mutation;
+      get.setTimeRange(append.getTimeRange().getMin(), append.getTimeRange().getMax());
+    }
+    for (Entry<String, byte[]> entry : mutation.getAttributesMap().entrySet()) {
+      get.setAttribute(entry.getKey(), entry.getValue());
+    }
+    return get;
   }
 
   /**
@@ -956,9 +996,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         int size = PrivateCellUtil.estimatedSerializedSizeOf(cells.current());
         if (size > r.maxCellSize) {
           String msg = "Cell with size " + size + " exceeds limit of " + r.maxCellSize + " bytes";
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(msg);
-          }
+          LOG.debug(msg);
           throw new DoNotRetryIOException(msg);
         }
       }
@@ -1221,6 +1259,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     this.ld = ld;
     regionServer = rs;
     rowSizeWarnThreshold = conf.getInt(BATCH_ROWS_THRESHOLD_NAME, BATCH_ROWS_THRESHOLD_DEFAULT);
+    rejectRowsWithSizeOverThreshold =
+      conf.getBoolean(REJECT_BATCH_ROWS_OVER_THRESHOLD, DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD);
 
     final RpcSchedulerFactory rpcSchedulerFactory;
     try {
@@ -1355,6 +1395,21 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     builder.append("table: ").append(scanner.getRegionInfo().getTable().getNameAsString());
     builder.append(" region: ").append(scanner.getRegionInfo().getRegionNameAsString());
     return builder.toString();
+  }
+
+  public String getScanDetailsWithRequest(ScanRequest request) {
+    try {
+      if (!request.hasRegion()) {
+        return null;
+      }
+      Region region = getRegion(request.getRegion());
+      StringBuilder builder = new StringBuilder();
+      builder.append("table: ").append(region.getRegionInfo().getTable().getNameAsString());
+      builder.append(" region: ").append(region.getRegionInfo().getRegionNameAsString());
+      return builder.toString();
+    } catch (IOException ignored) {
+      return null;
+    }
   }
 
   /**
@@ -2655,7 +2710,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }
 
-  private void checkBatchSizeAndLogLargeSize(MultiRequest request) {
+  private void checkBatchSizeAndLogLargeSize(MultiRequest request) throws ServiceException {
     int sum = 0;
     String firstRegionName = null;
     for (RegionAction regionAction : request.getRegionActionList()) {
@@ -2666,6 +2721,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     if (sum > rowSizeWarnThreshold) {
       ld.logBatchWarning(firstRegionName, sum, rowSizeWarnThreshold);
+      if (rejectRowsWithSizeOverThreshold) {
+        throw new ServiceException(
+          "Rejecting large batch operation for current batch with firstRegionName: "
+            + firstRegionName + " , Requested Number of Rows: " + sum + " , Size Threshold: "
+            + rowSizeWarnThreshold);
+      }
     }
   }
 

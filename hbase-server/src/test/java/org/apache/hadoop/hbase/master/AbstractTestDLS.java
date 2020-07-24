@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -43,6 +43,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -72,7 +73,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
@@ -170,7 +171,8 @@ public abstract class AbstractTestDLS {
   @After
   public void after() throws Exception {
     TEST_UTIL.shutdownMiniHBaseCluster();
-    TEST_UTIL.getTestFileSystem().delete(FSUtils.getRootDir(TEST_UTIL.getConfiguration()), true);
+    TEST_UTIL.getTestFileSystem().delete(CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration()),
+      true);
     ZKUtil.deleteNodeRecursively(TEST_UTIL.getZooKeeperWatcher(), "/hbase");
   }
 
@@ -188,7 +190,7 @@ public abstract class AbstractTestDLS {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
 
-    Path rootdir = FSUtils.getRootDir(conf);
+    Path rootdir = CommonFSUtils.getRootDir(conf);
 
     int numRegions = 50;
     try (Table t = installTable(numRegions)) {
@@ -223,9 +225,9 @@ public abstract class AbstractTestDLS {
       for (RegionInfo hri : regions) {
         @SuppressWarnings("deprecation")
         Path editsdir = WALSplitUtil
-            .getRegionDirRecoveredEditsDir(FSUtils.getWALRegionDir(conf,
+            .getRegionDirRecoveredEditsDir(CommonFSUtils.getWALRegionDir(conf,
                 tableName, hri.getEncodedName()));
-        LOG.debug("checking edits dir " + editsdir);
+        LOG.debug("Checking edits dir " + editsdir);
         FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
           @Override
           public boolean accept(Path p) {
@@ -235,9 +237,9 @@ public abstract class AbstractTestDLS {
             return true;
           }
         });
-        assertTrue(
-          "edits dir should have more than a single file in it. instead has " + files.length,
-          files.length > 1);
+        LOG.info("Files {}", Arrays.stream(files).map(f -> f.getPath().toString()).
+          collect(Collectors.joining(",")));
+        assertTrue("Edits dir should have more than a one file", files.length > 1);
         for (int i = 0; i < files.length; i++) {
           int c = countWAL(files[i].getPath(), fs, conf);
           count += c;
@@ -320,7 +322,7 @@ public abstract class AbstractTestDLS {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     HRegionServer hrs = findRSToKill(false);
-    Path rootdir = FSUtils.getRootDir(conf);
+    Path rootdir = CommonFSUtils.getRootDir(conf);
     final Path logDir = new Path(rootdir,
         AbstractFSWALProvider.getWALDirectoryName(hrs.getServerName().toString()));
 
@@ -413,7 +415,8 @@ public abstract class AbstractTestDLS {
     startCluster(1);
     final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path logDir = new Path(new Path(FSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME),
+    final Path logDir =
+      new Path(new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME),
         ServerName.valueOf("x", 1, 1).toString());
     fs.mkdirs(logDir);
     ExecutorService executor = null;

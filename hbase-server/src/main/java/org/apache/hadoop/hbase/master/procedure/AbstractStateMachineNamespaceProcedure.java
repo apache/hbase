@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Base class for all the Namespace procedures that want to use a StateMachineProcedure.

@@ -51,10 +51,9 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.function.BooleanSupplier;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.logging.impl.Jdk14Logger;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -95,6 +94,7 @@ import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -144,14 +144,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.minikdc.MiniKdc;
-import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.impl.Log4jLoggerAdapter;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
@@ -456,21 +452,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createSubDir(
       "mapreduce.cluster.local.dir",
       testPath, "mapred-local-dir");
-
-    // Frustrate yarn's attempts at writing /tmp.
-    String property = "yarn.node-labels.fs-store.root-dir";
-    createSubDir(property, testPath, property);
-    property = "yarn.nodemanager.log-dirs";
-    createSubDir(property, testPath, property);
-    property = "yarn.nodemanager.remote-app-log-dir";
-    createSubDir(property, testPath, property);
-    property = "yarn.timeline-service.entity-group-fs-store.active-dir";
-    createSubDir(property, testPath, property);
-    property = "yarn.timeline-service.entity-group-fs-store.done-dir";
-    createSubDir(property, testPath, property);
-    property = "yarn.nodemanager.remote-app-log-dir";
-    createSubDir(property, testPath, property);
-
     return testPath;
   }
 
@@ -669,7 +650,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       return;
     }
     FileSystem fs = this.dfsCluster.getFileSystem();
-    FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
+    CommonFSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
 
     // re-enable this check with dfs
     conf.unset(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE);
@@ -681,10 +662,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
 
     // Error level to skip some warnings specific to the minicluster. See HBASE-4709
-    org.apache.log4j.Logger.getLogger(org.apache.hadoop.metrics2.util.MBeans.class).
-        setLevel(org.apache.log4j.Level.ERROR);
-    org.apache.log4j.Logger.getLogger(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class).
-        setLevel(org.apache.log4j.Level.ERROR);
+    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
+    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
+      "ERROR");
 
     TraceUtil.initTracer(conf);
 
@@ -708,21 +688,37 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public MiniDFSCluster startMiniDFSClusterForTestWAL(int namenodePort) throws IOException {
     createDirsAndSetProperties();
+    // Error level to skip some warnings specific to the minicluster. See HBASE-4709
+    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
+    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
+      "ERROR");
     dfsCluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null,
         null, null, null);
     return dfsCluster;
   }
 
-  /** This is used before starting HDFS and map-reduce mini-clusters */
+  /**
+   * This is used before starting HDFS and map-reduce mini-clusters Run something like the below to
+   * check for the likes of '/tmp' references -- i.e. references outside of the test data dir -- in
+   * the conf.
+   *
+   * <pre>
+   * Configuration conf = TEST_UTIL.getConfiguration();
+   * for (Iterator&lt;Map.Entry&lt;String, String&gt;&gt; i = conf.iterator(); i.hasNext();) {
+   *   Map.Entry&lt;String, String&gt; e = i.next();
+   *   assertFalse(e.getKey() + " " + e.getValue(), e.getValue().contains("/tmp"));
+   * }
+   * </pre>
+   */
   private void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
     conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
     System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
-    createDirAndSetProperty("cache_data", "test.cache.data");
-    createDirAndSetProperty("hadoop_tmp", "hadoop.tmp.dir");
-    hadoopLogDir = createDirAndSetProperty("hadoop_logs", "hadoop.log.dir");
-    createDirAndSetProperty("mapred_local", "mapreduce.cluster.local.dir");
-    createDirAndSetProperty("mapred_temp", "mapreduce.cluster.temp.dir");
+    createDirAndSetProperty("test.cache.data");
+    createDirAndSetProperty("hadoop.tmp.dir");
+    hadoopLogDir = createDirAndSetProperty("hadoop.log.dir");
+    createDirAndSetProperty("mapreduce.cluster.local.dir");
+    createDirAndSetProperty("mapreduce.cluster.temp.dir");
     enableShortCircuit();
 
     Path root = getDataTestDirOnTestFS("hadoop");
@@ -734,6 +730,23 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     conf.set("mapreduce.job.working.dir", new Path(root, "mapred-working-dir").toString());
     conf.set("yarn.app.mapreduce.am.staging-dir",
       new Path(root, "mapreduce-am-staging-root-dir").toString());
+
+    // Frustrate yarn's and hdfs's attempts at writing /tmp.
+    // Below is fragile. Make it so we just interpolate any 'tmp' reference.
+    createDirAndSetProperty("yarn.node-labels.fs-store.root-dir");
+    createDirAndSetProperty("yarn.node-attribute.fs-store.root-dir");
+    createDirAndSetProperty("yarn.nodemanager.log-dirs");
+    createDirAndSetProperty("yarn.nodemanager.remote-app-log-dir");
+    createDirAndSetProperty("yarn.timeline-service.entity-group-fs-store.active-dir");
+    createDirAndSetProperty("yarn.timeline-service.entity-group-fs-store.done-dir");
+    createDirAndSetProperty("yarn.nodemanager.remote-app-log-dir");
+    createDirAndSetProperty("dfs.journalnode.edits.dir");
+    createDirAndSetProperty("dfs.datanode.shared.file.descriptor.paths");
+    createDirAndSetProperty("nfs.dump.dir");
+    createDirAndSetProperty("java.io.tmpdir");
+    createDirAndSetProperty("dfs.journalnode.edits.dir");
+    createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
+    createDirAndSetProperty("fs.s3a.committer.staging.tmp.path");
   }
 
   /**
@@ -782,6 +795,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     }
   }
 
+  private String createDirAndSetProperty(String property) {
+    return createDirAndSetProperty(property, property);
+  }
+
   private String createDirAndSetProperty(final String relPath, String property) {
     String path = getDataTestDir(relPath).toString();
     System.setProperty(property, path);
@@ -802,7 +819,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       this.dfsCluster.shutdown();
       dfsCluster = null;
       dataTestDirOnTestFS = null;
-      FSUtils.setFsDefault(this.conf, new Path("file:///"));
+      CommonFSUtils.setFsDefault(this.conf, new Path("file:///"));
     }
   }
 
@@ -1128,16 +1145,15 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Starts up mini hbase cluster.
-   * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
-   * This is useful when doing stepped startup of clusters.
+   * Starts up mini hbase cluster. Usually you won't want this. You'll usually want
+   * {@link #startMiniCluster()}. This is useful when doing stepped startup of clusters.
    * @return Reference to the hbase mini hbase cluster.
    * @see #startMiniCluster(StartMiniClusterOption)
    * @see #shutdownMiniHBaseCluster()
    */
   public MiniHBaseCluster startMiniHBaseCluster(StartMiniClusterOption option)
-      throws IOException, InterruptedException {
-    // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
+    throws IOException, InterruptedException {
+    // Now do the mini hbase cluster. Set the hbase.rootdir in config.
     createRootDir(option.isCreateRootDir());
     if (option.isCreateWALDir()) {
       createWALRootDir();
@@ -1155,22 +1171,26 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, option.getNumRegionServers());
     }
 
+    // Avoid log flooded with chore execution time, see HBASE-24646 for more details.
+    Log4jUtils.setLogLevel(org.apache.hadoop.hbase.ScheduledChore.class.getName(), "INFO");
+
     Configuration c = new Configuration(this.conf);
     TraceUtil.initTracer(c);
-    this.hbaseCluster =
-        new MiniHBaseCluster(c, option.getNumMasters(), option.getNumAlwaysStandByMasters(),
-            option.getNumRegionServers(), option.getRsPorts(), option.getMasterClass(),
-            option.getRsClass());
+    this.hbaseCluster = new MiniHBaseCluster(c, option.getNumMasters(),
+      option.getNumAlwaysStandByMasters(), option.getNumRegionServers(), option.getRsPorts(),
+      option.getMasterClass(), option.getRsClass());
     // Populate the master address configuration from mini cluster configuration.
     conf.set(HConstants.MASTER_ADDRS_KEY, MasterRegistry.getMasterAddr(c));
     // Don't leave here till we've done a successful scan of the hbase:meta
-    Table t = getConnection().getTable(TableName.META_TABLE_NAME);
-    ResultScanner s = t.getScanner(new Scan());
-    while (s.next() != null) {
-      continue;
+    try (Table t = getConnection().getTable(TableName.META_TABLE_NAME);
+      ResultScanner s = t.getScanner(new Scan())) {
+      for (;;) {
+        if (s.next() == null) {
+          break;
+        }
+      }
     }
-    s.close();
-    t.close();
+
 
     getAdmin(); // create immediately the hbaseAdmin
     LOG.info("Minicluster is up; activeMaster={}", getHBaseCluster().getMaster());
@@ -1424,7 +1444,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public Path createRootDir(boolean create) throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
     Path hbaseRootdir = getDefaultRootDirPath(create);
-    FSUtils.setRootDir(this.conf, hbaseRootdir);
+    CommonFSUtils.setRootDir(this.conf, hbaseRootdir);
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
     return hbaseRootdir;
@@ -1452,7 +1472,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public Path createWALRootDir() throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
     Path walDir = getNewDataTestDirOnTestFS();
-    FSUtils.setWALRootDir(this.conf, walDir);
+    CommonFSUtils.setWALRootDir(this.conf, walDir);
     fs.mkdirs(walDir);
     return walDir;
   }
@@ -1578,6 +1598,19 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public Table createMultiRegionTable(TableName tableName, byte[][] families) throws IOException {
     return createTable(tableName, families, KEYS_FOR_HBA_CREATE_TABLE);
+  }
+
+  /**
+   * Create a table with multiple regions.
+   * @param tableName
+   * @param replicaCount replica count.
+   * @param families
+   * @return A Table instance for the created table.
+   * @throws IOException
+   */
+  public Table createMultiRegionTable(TableName tableName, int replicaCount, byte[][] families)
+    throws IOException {
+    return createTable(tableName, families, KEYS_FOR_HBA_CREATE_TABLE, replicaCount);
   }
 
   /**
@@ -2977,18 +3010,14 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Switches the logger for the given class to DEBUG level.
-   *
-   * @param clazz  The class for which to switch to debug logging.
+   * @param clazz The class for which to switch to debug logging.
+   * @deprecated In 2.3.0, will be removed in 4.0.0. Only support changing log level on log4j now as
+   *             HBase only uses log4j. You should do this by your own as it you know which log
+   *             framework you are using then set the log level to debug is very easy.
    */
+  @Deprecated
   public void enableDebug(Class<?> clazz) {
-    Logger l = LoggerFactory.getLogger(clazz);
-    if (l instanceof Log4JLogger) {
-      ((Log4JLogger) l).getLogger().setLevel(org.apache.log4j.Level.DEBUG);
-    } else if (l instanceof Log4jLoggerAdapter) {
-      LogManager.getLogger(clazz).setLevel(org.apache.log4j.Level.DEBUG);
-    } else if (l instanceof Jdk14Logger) {
-      ((Jdk14Logger) l).getLogger().setLevel(java.util.logging.Level.ALL);
-    }
+    Log4jUtils.enableDebug(clazz);
   }
 
   /**
@@ -3924,80 +3953,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return table;
   }
 
-  private static Random random = new Random();
-
-  private static final PortAllocator portAllocator = new PortAllocator(random);
-
   public static int randomFreePort() {
-    return portAllocator.randomFreePort();
+    return HBaseCommonTestingUtility.randomFreePort();
   }
-
-  static class PortAllocator {
-    private static final int MIN_RANDOM_PORT = 0xc000;
-    private static final int MAX_RANDOM_PORT = 0xfffe;
-
-    /** A set of ports that have been claimed using {@link #randomFreePort()}. */
-    private final Set<Integer> takenRandomPorts = new HashSet<>();
-
-    private final Random random;
-    private final AvailablePortChecker portChecker;
-
-    public PortAllocator(Random random) {
-      this.random = random;
-      this.portChecker = new AvailablePortChecker() {
-        @Override
-        public boolean available(int port) {
-          try {
-            ServerSocket sock = new ServerSocket(port);
-            sock.close();
-            return true;
-          } catch (IOException ex) {
-            return false;
-          }
-        }
-      };
-    }
-
-    public PortAllocator(Random random, AvailablePortChecker portChecker) {
-      this.random = random;
-      this.portChecker = portChecker;
-    }
-
-    /**
-     * Returns a random free port and marks that port as taken. Not thread-safe. Expected to be
-     * called from single-threaded test setup code/
-     */
-    public int randomFreePort() {
-      int port = 0;
-      do {
-        port = randomPort();
-        if (takenRandomPorts.contains(port)) {
-          port = 0;
-          continue;
-        }
-        takenRandomPorts.add(port);
-
-        if (!portChecker.available(port)) {
-          port = 0;
-        }
-      } while (port == 0);
-      return port;
-    }
-
-    /**
-     * Returns a random port. These ports cannot be registered with IANA and are
-     * intended for dynamic allocation (see http://bit.ly/dynports).
-     */
-    private int randomPort() {
-      return MIN_RANDOM_PORT
-          + random.nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
-    }
-
-    interface AvailablePortChecker {
-      boolean available(int port);
-    }
-  }
-
   public static String randomMultiCastAddress() {
     return "226.1.1." + random.nextInt(254);
   }
@@ -4466,6 +4424,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Sets up {@link MiniKdc} for testing security.
    * Uses {@link HBaseKerberosUtils} to set the given keytab file as
    * {@link HBaseKerberosUtils#KRB_KEYTAB_FILE}.
+   * FYI, there is also the easier-to-use kerby KDC server and utility for using it,
+   * {@link org.apache.hadoop.hbase.util.SimpleKdcServerUtil}. The kerby KDC server is preferred;
+   * less baggage. It came in in HBASE-5291.
    */
   public MiniKdc setupMiniKdc(File keytabFile) throws Exception {
     Properties conf = MiniKdc.createConf();
@@ -4524,6 +4485,24 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
          rtdFamilies.iterator(); it.hasNext();) {
       assertEquals(0,
           ColumnFamilyDescriptor.COMPARATOR.compare(it.next(), it2.next()));
+    }
+  }
+
+  /**
+   * Await the successful return of {@code condition}, sleeping {@code sleepMillis} between
+   * invocations.
+   */
+  public static void await(final long sleepMillis, final BooleanSupplier condition)
+    throws InterruptedException {
+    try {
+      while (!condition.getAsBoolean()) {
+        Thread.sleep(sleepMillis);
+      }
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof AssertionError) {
+        throw (AssertionError) e.getCause();
+      }
+      throw e;
     }
   }
 }

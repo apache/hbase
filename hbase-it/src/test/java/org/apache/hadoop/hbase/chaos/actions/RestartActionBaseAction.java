@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,18 +19,13 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Threads;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
 * Base class for restarting HBaseServer's
 */
-public class RestartActionBaseAction extends Action {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(RestartActionBaseAction.class);
+public abstract class RestartActionBaseAction extends Action {
   long sleepTime; // how long should we sleep
 
   public RestartActionBaseAction(long sleepTime) {
@@ -38,7 +33,7 @@ public class RestartActionBaseAction extends Action {
   }
 
   void sleep(long sleepTime) {
-    LOG.info("Sleeping for:" + sleepTime);
+    getLogger().info("Sleeping for:" + sleepTime);
     Threads.sleep(sleepTime);
   }
 
@@ -49,10 +44,10 @@ public class RestartActionBaseAction extends Action {
       return;
     }
 
-    LOG.info("Killing master: {}", server);
+    getLogger().info("Killing master: {}", server);
     killMaster(server);
     sleep(sleepTime);
-    LOG.info("Starting master: {}", server);
+    getLogger().info("Starting master: {}", server);
     startMaster(server);
   }
 
@@ -68,10 +63,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
-    LOG.info("Stopping region server: {}", server);
+    getLogger().info("Stopping region server: {}", server);
     stopRs(server);
     sleep(sleepTime);
-    LOG.info("Starting region server: {}", server);
+    getLogger().info("Starting region server: {}", server);
     startRs(server);
   }
 
@@ -81,10 +76,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
-    LOG.info("Killing region server: {}", server);
+    getLogger().info("Killing region server: {}", server);
     killRs(server);
     sleep(sleepTime);
-    LOG.info("Starting region server: {}", server);
+    getLogger().info("Starting region server: {}", server);
     startRs(server);
   }
 
@@ -94,10 +89,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
-    LOG.info("Killing zookeeper node: {}", server);
+    getLogger().info("Killing zookeeper node: {}", server);
     killZKNode(server);
     sleep(sleepTime);
-    LOG.info("Starting zookeeper node: {}", server);
+    getLogger().info("Starting zookeeper node: {}", server);
     startZKNode(server);
   }
 
@@ -107,10 +102,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
-    LOG.info("Killing data node: {}", server);
+    getLogger().info("Killing data node: {}", server);
     killDataNode(server);
     sleep(sleepTime);
-    LOG.info("Starting data node: {}", server);
+    getLogger().info("Starting data node: {}", server);
     startDataNode(server);
   }
 
@@ -120,11 +115,10 @@ public class RestartActionBaseAction extends Action {
     if (context.isStopping()) {
       return;
     }
-    LOG.info("Killing name node: {}", server);
+    getLogger().info("Killing name node: {}", server);
     killNameNode(server);
     sleep(sleepTime);
-    LOG.info("Starting name node: {}", server);
+    getLogger().info("Starting name node: {}", server);
     startNameNode(server);
   }
-
 }

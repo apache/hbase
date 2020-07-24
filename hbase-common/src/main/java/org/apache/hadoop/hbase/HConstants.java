@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -190,13 +191,6 @@ public final class HConstants {
   public static final String ZK_CONNECTION_REGISTRY_CLASS =
       "org.apache.hadoop.hbase.client.ZKConnectionRegistry";
 
-  /** Configuration to enable hedged reads on master registry **/
-  public static final String MASTER_REGISTRY_ENABLE_HEDGED_READS_KEY =
-      "hbase.client.master_registry.enable_hedged_reads";
-
-  /** Default value for enabling hedging reads on master registry **/
-  public static final boolean MASTER_REGISTRY_ENABLE_HEDGED_READS_DEFAULT = false;
-
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
 
@@ -291,6 +285,15 @@ public final class HConstants {
 
   /** Configuration key for ZooKeeper session timeout */
   public static final String ZK_SESSION_TIMEOUT = "zookeeper.session.timeout";
+
+  /** Timeout for the ZK sync() call */
+  public static final String ZK_SYNC_BLOCKING_TIMEOUT_MS = "hbase.zookeeper.sync.timeout.millis";
+  // Choice of the default value is based on the following ZK recommendation (from docs). Keeping it
+  // lower lets the callers fail fast in case of any issues.
+  // "The clients view of the system is guaranteed to be up-to-date within a certain time bound.
+  // (On the order of tens of seconds.) Either system changes will be seen by a client within this
+  // bound, or the client will detect a service outage."
+  public static final long ZK_SYNC_BLOCKING_TIMEOUT_DEFAULT_MS = 30 * 1000;
 
   /** Default value for ZooKeeper session timeout */
   public static final int DEFAULT_ZK_SESSION_TIMEOUT = 90 * 1000;
@@ -542,11 +545,15 @@ public final class HConstants {
 
   public static final byte [] SERVERNAME_QUALIFIER = Bytes.toBytes(SERVERNAME_QUALIFIER_STR);
 
+  /** The lower-half split region column qualifier string. */
+  public static final String SPLITA_QUALIFIER_STR = "splitA";
   /** The lower-half split region column qualifier */
-  public static final byte [] SPLITA_QUALIFIER = Bytes.toBytes("splitA");
+  public static final byte [] SPLITA_QUALIFIER = Bytes.toBytes(SPLITA_QUALIFIER_STR);
 
+  /** The upper-half split region column qualifier String. */
+  public static final String SPLITB_QUALIFIER_STR = "splitB";
   /** The upper-half split region column qualifier */
-  public static final byte [] SPLITB_QUALIFIER = Bytes.toBytes("splitB");
+  public static final byte [] SPLITB_QUALIFIER = Bytes.toBytes(SPLITB_QUALIFIER_STR);
 
   /**
    * Merge qualifier prefix.
@@ -631,7 +638,7 @@ public final class HConstants {
   /**
    * Last row in a table.
    */
-  public static final byte [] EMPTY_END_ROW = EMPTY_START_ROW;
+  public static final byte [] EMPTY_END_ROW = EMPTY_BYTE_ARRAY;
 
   /**
     * Used by scanners and others when they're trying to detect the end of a
@@ -939,12 +946,6 @@ public final class HConstants {
    */
   public static final String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
 
-  /** Configuration key that controls the fan out of requests in hedged channel implementation. **/
-  public static final String HBASE_RPCS_HEDGED_REQS_FANOUT_KEY = "hbase.rpc.hedged.fanout";
-
-  /** Default value for the fan out of hedged requests. **/
-  public static final int HBASE_RPCS_HEDGED_REQS_FANOUT_DEFAULT = 2;
-
   /**
    * timeout for each read RPC
    */
@@ -1244,6 +1245,16 @@ public final class HConstants {
       HBCK_SIDELINEDIR_NAME, HBASE_TEMP_DIRECTORY, MIGRATION_NAME
     }));
 
+  /**
+   * Directories that are not HBase user table directories.
+   * @deprecated Since hbase-2.3.0; no replacement as not used any more (internally at least)
+   */
+  @Deprecated
+  public static final List<String> HBASE_NON_USER_TABLE_DIRS =
+    Collections.unmodifiableList(Arrays.asList((String[])ArrayUtils.addAll(
+      new String[] { TableName.META_TABLE_NAME.getNameAsString() },
+      HBASE_NON_TABLE_DIRS.toArray())));
+
   /** Health script related settings. */
   public static final String HEALTH_SCRIPT_LOC = "hbase.node.health.script.location";
   public static final String HEALTH_SCRIPT_TIMEOUT = "hbase.node.health.script.timeout";
@@ -1348,7 +1359,11 @@ public final class HConstants {
   public static final String REPLICATION_SOURCE_MAXTHREADS_KEY =
       "hbase.replication.source.maxthreads";
 
-  /** Drop edits for tables that been deleted from the replication source and target */
+  /**
+   * Drop edits for tables that been deleted from the replication source and target
+   * @deprecated moved it into HBaseInterClusterReplicationEndpoint
+   */
+  @Deprecated
   public static final String REPLICATION_DROP_ON_DELETED_TABLE_KEY =
       "hbase.replication.drop.on.deleted.table";
 
@@ -1497,6 +1512,7 @@ public final class HConstants {
 
   public static final String HBASE_CANARY_READ_RAW_SCAN_KEY = "hbase.canary.read.raw.enabled";
 
+  public static final String HBASE_CANARY_READ_ALL_CF = "hbase.canary.read.all.column.famliy";
   /**
    * Configuration keys for programmatic JAAS configuration for secured ZK interaction
    */
@@ -1571,6 +1587,16 @@ public final class HConstants {
   public static final String SLOW_LOG_BUFFER_ENABLED_KEY =
     "hbase.regionserver.slowlog.buffer.enabled";
   public static final boolean DEFAULT_ONLINE_LOG_PROVIDER_ENABLED = false;
+
+  /** The slowlog info family as a string*/
+  private static final String SLOWLOG_INFO_FAMILY_STR = "info";
+
+  /** The slowlog info family */
+  public static final byte [] SLOWLOG_INFO_FAMILY = Bytes.toBytes(SLOWLOG_INFO_FAMILY_STR);
+
+  public static final String SLOW_LOG_SYS_TABLE_ENABLED_KEY =
+    "hbase.regionserver.slowlog.systable.enabled";
+  public static final boolean DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY = false;
 
   private HConstants() {
     // Can't be instantiated with this ctor.

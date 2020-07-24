@@ -27,10 +27,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -108,6 +110,11 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     configureRSGroupAdminEndpoint(conf);
 
     TEST_UTIL.startMiniCluster();
+
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    TEST_UTIL.waitFor(60000, (Predicate<Exception>) () ->
+        master.isInitialized() && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
+
     rsGroupAdminEndpoint = (RSGroupAdminEndpoint) TEST_UTIL.getMiniHBaseCluster().getMaster().
         getMasterCoprocessorHost().findCoprocessor(RSGroupAdminEndpoint.class.getName());
     // Wait for the ACL table to become available
@@ -332,5 +339,17 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
     verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
         USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testRenameRSGroup() throws Exception {
+    AccessTestAction action = () -> {
+      rsGroupAdminEndpoint.checkPermission("renameRSGroup");
+      return null;
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+      USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 }

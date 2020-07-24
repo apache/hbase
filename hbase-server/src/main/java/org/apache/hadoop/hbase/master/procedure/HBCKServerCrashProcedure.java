@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -153,7 +154,8 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
             MetaTableAccessor.updateRegionState(this.connection, hrl.getRegion(),
                 RegionState.State.CLOSED);
           } catch (IOException ioe) {
-            LOG.warn("Failed moving {} from CLOSING to CLOSED", ioe);
+            LOG.warn("Failed moving {} from CLOSING to CLOSED",
+              hrl.getRegion().getRegionNameAsString(), ioe);
           }
         } else if (rs.isOpening() || rs.isOpened()) {
           this.reassigns.add(hrl.getRegion());
@@ -167,5 +169,17 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
     private List<RegionInfo> getReassigns() {
       return this.reassigns;
     }
+  }
+
+  /**
+   * The RegionStateNode will not have a location if a confirm of an OPEN fails. On fail,
+   * the RegionStateNode regionLocation is set to null. This is 'looser' than the test done
+   * in the superclass. The HBCKSCP has been scheduled by an operator via hbck2 probably at the
+   * behest of a report of an 'Unknown Server' in the 'HBCK Report'. Let the operators operation
+   * succeed even in case where the region location in the RegionStateNode is null.
+   */
+  @Override
+  protected boolean isMatchingRegionLocation(RegionStateNode rsn) {
+    return super.isMatchingRegionLocation(rsn) || rsn.getRegionLocation() == null;
   }
 }

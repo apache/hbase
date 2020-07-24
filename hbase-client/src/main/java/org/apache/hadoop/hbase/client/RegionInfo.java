@@ -304,12 +304,11 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   }
 
   /**
-   * @return Return a String of short, printable names for <code>hris</code>
-   * (usually encoded name) for us logging.
+   * @return Return a String of short, printable names for <code>hris</code> (usually encoded name)
+   *   for us logging.
    */
   static String getShortNameToLog(final List<RegionInfo> ris) {
-    return ris.stream().map(ri -> ri.getShortNameToLog()).
-    collect(Collectors.toList()).toString();
+    return ris.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()).toString();
   }
 
   /**
@@ -769,7 +768,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @return True if this is last Region in Table
    */
   default boolean isLast() {
-    return Bytes.equals(getEndKey(), HConstants.EMPTY_START_ROW);
+    return Bytes.equals(getEndKey(), HConstants.EMPTY_END_ROW);
   }
 
   /**

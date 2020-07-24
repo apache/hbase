@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -167,7 +166,7 @@ public class HbckRegionInfo implements KeyRange {
       // we are only guaranteed to have a path and not an HRI for hdfsEntry,
       // so we get the name from the Path
       Path tableDir = this.hdfsEntry.regionDir.getParent();
-      return FSUtils.getTableName(tableDir);
+      return CommonFSUtils.getTableName(tableDir);
     } else {
       // return the info from the first online/deployed hri
       for (OnlineEntry e : deployedEntries) {

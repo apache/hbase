@@ -63,6 +63,26 @@ public class GCMultipleMergedRegionsProcedure extends
     super();
   }
 
+  @Override protected boolean holdLock(MasterProcedureEnv env) {
+    return true;
+  }
+
+  @Override
+  protected LockState acquireLock(final MasterProcedureEnv env) {
+    // It now takes an exclusive lock on the merged child region to make sure
+    // that no two parallel running of two GCMultipleMergedRegionsProcedures on the
+    // region.
+    if (env.getProcedureScheduler().waitRegion(this, mergedChild)) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    return LockState.LOCK_ACQUIRED;
+  }
+
+  @Override
+  protected void releaseLock(final MasterProcedureEnv env) {
+    env.getProcedureScheduler().wakeRegion(this, mergedChild);
+  }
+
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.MERGED_REGIONS_GC;
@@ -77,7 +97,15 @@ public class GCMultipleMergedRegionsProcedure extends
     try {
       switch (state) {
         case GC_MERGED_REGIONS_PREPARE:
-          // Nothing to do to prepare.
+          // If GCMultipleMergedRegionsProcedure processing is slower than the CatalogJanitor's scan
+          // interval, it will end resubmitting GCMultipleMergedRegionsProcedure for the same
+          // region. We can skip duplicate GCMultipleMergedRegionsProcedure while previous finished
+          List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(
+            env.getMasterServices().getConnection(), mergedChild.getRegionName());
+          if (parents == null || parents.isEmpty()) {
+            LOG.info("{} mergeXXX qualifiers have ALL been deleted", mergedChild.getShortNameToLog());
+            return Flow.NO_MORE_STATE;
+          }
           setNextState(GCMergedRegionsState.GC_MERGED_REGIONS_PURGE);
           break;
         case GC_MERGED_REGIONS_PURGE:

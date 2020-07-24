@@ -67,7 +67,7 @@ import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -287,24 +287,23 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       setupTable(connection, table, 10);
       LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration()) {
         @Override
-        protected List<LoadQueueItem> tryAtomicRegionLoad(
-            ClientServiceCallable<byte[]> serviceCallable, TableName tableName, final byte[] first,
-            Collection<LoadQueueItem> lqis) throws IOException {
+        protected List<LoadQueueItem> tryAtomicRegionLoad(Connection connection,
+            TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis,
+            boolean copyFile) throws IOException {
           int i = attmptedCalls.incrementAndGet();
           if (i == 1) {
             Connection errConn;
             try {
               errConn = getMockedConnection(util.getConfiguration());
-              serviceCallable = this.buildClientServiceCallable(errConn, table, first, lqis, true);
             } catch (Exception e) {
               LOG.error(HBaseMarkers.FATAL, "mocking cruft, should never happen", e);
               throw new RuntimeException("mocking cruft, should never happen");
             }
             failedCalls.incrementAndGet();
-            return super.tryAtomicRegionLoad(serviceCallable, tableName, first, lqis);
+            return super.tryAtomicRegionLoad(errConn, tableName, first, lqis, true);
           }
 
-          return super.tryAtomicRegionLoad(serviceCallable, tableName, first, lqis);
+          return super.tryAtomicRegionLoad(connection, tableName, first, lqis, true);
         }
       };
       try {
@@ -337,23 +336,21 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     util.getConfiguration().setBoolean(LoadIncrementalHFiles.RETRY_ON_IO_EXCEPTION, true);
     final LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration()) {
       @Override
-      protected List<LoadQueueItem> tryAtomicRegionLoad(
-          ClientServiceCallable<byte[]> serverCallable, TableName tableName, final byte[] first,
-          Collection<LoadQueueItem> lqis) throws IOException {
-        if (calls.get() < util.getConfiguration().getInt(
-          HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)) {
-          ClientServiceCallable<byte[]> newServerCallable = new ClientServiceCallable<byte[]>(conn,
-              tableName, first, new RpcControllerFactory(util.getConfiguration()).newController(),
+      protected ClientServiceCallable<byte[]> buildClientServiceCallable(Connection conn,
+          TableName tableName, byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile) {
+        if (calls.get() < util.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+          HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)) {
+          calls.getAndIncrement();
+          return new ClientServiceCallable<byte[]>(conn, tableName, first,
+              new RpcControllerFactory(util.getConfiguration()).newController(),
               HConstants.PRIORITY_UNSET) {
             @Override
             public byte[] rpcCall() throws Exception {
               throw new IOException("Error calling something on RegionServer");
             }
           };
-          calls.getAndIncrement();
-          return super.tryAtomicRegionLoad(newServerCallable, tableName, first, lqis);
         } else {
-          return super.tryAtomicRegionLoad(serverCallable, tableName, first, lqis);
+          return super.buildClientServiceCallable(conn, tableName, first, lqis, true);
         }
       }
     };
@@ -504,7 +501,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       assertTrue(fs.exists(tmpPath));
       // TMP_DIR should have been cleaned-up
       assertNull(LoadIncrementalHFiles.TMP_DIR + " should be empty.",
-        FSUtils.listStatus(fs, tmpPath));
+        CommonFSUtils.listStatus(fs, tmpPath));
       assertExpectedTable(connection, table, ROWCOUNT, 2);
     }
   }

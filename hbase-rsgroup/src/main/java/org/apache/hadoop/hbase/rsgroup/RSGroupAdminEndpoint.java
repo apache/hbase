@@ -79,6 +79,8 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGro
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RenameRSGroupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -107,48 +109,6 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   /** Provider for mapping principal names to Users */
   private UserProvider userProvider;
 
-  /** Get rsgroup table mapping script */
-  private RSGroupMappingScript script;
-
-  // Package visibility for testing
-  static class RSGroupMappingScript {
-
-    static final String RS_GROUP_MAPPING_SCRIPT = "hbase.rsgroup.table.mapping.script";
-    static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT =
-      "hbase.rsgroup.table.mapping.script.timeout";
-
-    private ShellCommandExecutor rsgroupMappingScript;
-
-    RSGroupMappingScript(Configuration conf) {
-      String script = conf.get(RS_GROUP_MAPPING_SCRIPT);
-      if (script == null || script.isEmpty()) {
-        return;
-      }
-
-      rsgroupMappingScript = new ShellCommandExecutor(
-        new String[] { script, "", "" }, null, null,
-        conf.getLong(RS_GROUP_MAPPING_SCRIPT_TIMEOUT, 5000) // 5 seconds
-      );
-    }
-
-    String getRSGroup(String namespace, String tablename) {
-      if (rsgroupMappingScript == null) {
-        return RSGroupInfo.DEFAULT_GROUP;
-      }
-      String[] exec = rsgroupMappingScript.getExecString();
-      exec[1] = namespace;
-      exec[2] = tablename;
-      try {
-        rsgroupMappingScript.execute();
-      } catch (IOException e) {
-        LOG.error(e.getMessage() + " placing back to default rsgroup");
-        return RSGroupInfo.DEFAULT_GROUP;
-      }
-      return rsgroupMappingScript.getOutput().trim();
-    }
-
-  }
-
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     if (!(env instanceof HasMasterServices)) {
@@ -167,7 +127,6 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
 
     // set the user-provider.
     this.userProvider = UserProvider.instantiate(env.getConfiguration());
-    this.script = new RSGroupMappingScript(env.getConfiguration());
   }
 
   @Override
@@ -441,6 +400,31 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
       }
       done.run(builder.build());
     }
+
+    @Override
+    public void renameRSGroup(RpcController controller,
+                              RenameRSGroupRequest request,
+                              RpcCallback<RenameRSGroupResponse> done) {
+      String oldRSGroup = request.getOldRsgroupName();
+      String newRSGroup = request.getNewRsgroupName();
+      LOG.info("{} rename rsgroup from {} to {}",
+        master.getClientIdAuditPrefix(), oldRSGroup, newRSGroup);
+
+      RenameRSGroupResponse.Builder builder = RenameRSGroupResponse.newBuilder();
+      try {
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().preRenameRSGroup(oldRSGroup, newRSGroup);
+        }
+        checkPermission("renameRSGroup");
+        groupAdminServer.renameRSGroup(oldRSGroup, newRSGroup);
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().postRenameRSGroup(oldRSGroup, newRSGroup);
+        }
+      } catch (IOException e) {
+        CoprocessorRpcUtils.setControllerException(controller, e);
+      }
+      done.run(builder.build());
+    }
   }
 
   boolean rsgroupHasServersOnline(TableDescriptor desc) throws IOException {
@@ -473,30 +457,14 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   }
 
   void assignTableToGroup(TableDescriptor desc) throws IOException {
-    String groupName =
-        master.getClusterSchema().getNamespace(desc.getTableName().getNamespaceAsString())
-                .getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
-    if (groupName == null) {
-      groupName = RSGroupInfo.DEFAULT_GROUP;
-    }
-
-    if (groupName.equals(RSGroupInfo.DEFAULT_GROUP)) {
-      TableName tableName = desc.getTableName();
-      groupName = script.getRSGroup(
-        tableName.getNamespaceAsString(),
-        tableName.getQualifierAsString()
-      );
-      LOG.info("rsgroup for " + tableName + " is " + groupName);
-    }
-
-    RSGroupInfo rsGroupInfo = groupAdminServer.getRSGroupInfo(groupName);
+    RSGroupInfo rsGroupInfo = groupInfoManager.determineRSGroupInfoForTable(desc.getTableName());
     if (rsGroupInfo == null) {
-      throw new ConstraintException("Default RSGroup (" + groupName + ") for this table's "
-          + "namespace does not exist.");
+      throw new ConstraintException("Default RSGroup for this table " + desc.getTableName()
+        + " does not exist.");
     }
     if (!rsGroupInfo.containsTable(desc.getTableName())) {
-      LOG.debug("Pre-moving table " + desc.getTableName() + " to RSGroup " + groupName);
-      groupAdminServer.moveTables(Sets.newHashSet(desc.getTableName()), groupName);
+      LOG.debug("Pre-moving table " + desc.getTableName() + " to RSGroup " + rsGroupInfo.getName());
+      groupAdminServer.moveTables(Sets.newHashSet(desc.getTableName()), rsGroupInfo.getName());
     }
   }
 
@@ -509,17 +477,22 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableDescriptor desc,
       final RegionInfo[] regions) throws IOException {
-    if (!desc.getTableName().isSystemTable() && !rsgroupHasServersOnline(desc)) {
-      throw new HBaseIOException("No online servers in the rsgroup, which table " +
-          desc.getTableName().getNameAsString() + " belongs to");
+    if (desc.getTableName().isSystemTable()) {
+      return;
     }
-  }
-
-  // Assign table to default RSGroup.
-  @Override
-  public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableDescriptor desc, RegionInfo[] regions) throws IOException {
-    assignTableToGroup(desc);
+    RSGroupInfo rsGroupInfo = groupInfoManager.determineRSGroupInfoForTable(desc.getTableName());
+    if (rsGroupInfo == null) {
+      throw new ConstraintException("Default RSGroup for this table " + desc.getTableName()
+        + " does not exist.");
+    }
+    if (!RSGroupUtil.rsGroupHasOnlineServer(master, rsGroupInfo)) {
+      throw new HBaseIOException("No online servers in the rsgroup " + rsGroupInfo.getName()
+        + " which table " + desc.getTableName().getNameAsString() + " belongs to");
+    }
+    synchronized (groupInfoManager) {
+      groupInfoManager.moveTables(
+        Collections.singleton(desc.getTableName()), rsGroupInfo.getName());
+    }
   }
 
   // Remove table from its RSGroup.

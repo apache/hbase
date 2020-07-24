@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -920,7 +919,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
    *
    * Thread is triggered into action by {@link LruBlockCache#runEviction()}
    */
-  static class EvictionThread extends HasThread {
+  static class EvictionThread extends Thread {
 
     private WeakReference<LruBlockCache> cache;
     private volatile boolean go = true;

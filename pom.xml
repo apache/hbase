@@ -32,14 +32,14 @@
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>22</version>
+    <version>23</version>
     <relativePath/>
     <!-- no parent resolution -->
   </parent>
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <version>2.3.0-SNAPSHOT</version>
+  <version>2.3.1-SNAPSHOT</version>
   <name>Apache HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
@@ -90,6 +90,8 @@
     <module>hbase-metrics</module>
     <module>hbase-zookeeper</module>
     <module>hbase-hbtop</module>
+    <module>hbase-asyncfs</module>
+    <module>hbase-logging</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -666,6 +668,11 @@
                 <goal>jar-no-fork</goal>
                 <goal>test-jar-no-fork</goal>
               </goals>
+              <configuration>
+                <excludes>
+                  <exclude>log4j.properties</exclude>
+                </excludes>
+              </configuration>
             </execution>
           </executions>
         </plugin>
@@ -689,7 +696,6 @@
             <excludes>
               <exclude>hbase-site.xml</exclude>
               <exclude>hdfs-site.xml</exclude>
-              <exclude>log4j.properties</exclude>
               <exclude>mapred-queues.xml</exclude>
               <exclude>mapred-site.xml</exclude>
             </excludes>
@@ -699,7 +705,6 @@
           <!-- excludes are inherited -->
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>${apache.rat.version}</version>
           <configuration>
             <excludes>
               <exclude>**/*.versionsBackup</exclude>
@@ -942,6 +947,25 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-commons-logging</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>commons-logging:commons-logging</exclude>
+                  </excludes>
+                  <message>
+                    We don't use commons-logging any more, so do not depend on it directly.
+                  </message>
+                  <searchTransitive>false</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <!-- must check after LICENSE is built at 'generate-resources' -->
             <phase>process-resources</phase>
@@ -989,8 +1013,17 @@
                   <commentLineBufferSize>512</commentLineBufferSize>
                   <reason>Use SLF4j for logging</reason>
                   <bannedImports>
-                    <bannedImport>org.apache.commons.logging.Log</bannedImport>
-                    <bannedImport>org.apache.commons.logging.LogFactory</bannedImport>
+                    <bannedImport>org.apache.commons.logging.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>false</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>
+                    Do not use log4j directly in code, see Log4jUtils in hbase-logging for more details.
+                  </reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.log4j.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
@@ -1350,7 +1383,7 @@
     <external.protobuf.version>2.5.0</external.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
-    <thrift.version>0.12.0</thrift.version>
+    <thrift.version>0.13.0</thrift.version>
     <zookeeper.version>3.5.7</zookeeper.version>
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.30</slf4j.version>
@@ -1366,7 +1399,6 @@
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>4.2.0</curator.version>
     <!-- Plugin Dependencies -->
-    <apache.rat.version>0.13</apache.rat.version>
     <asciidoctor.plugin.version>1.5.8</asciidoctor.plugin.version>
     <asciidoctorj.pdf.version>1.5.0-rc.2</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
@@ -1391,7 +1423,7 @@
     <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>3.2.0</hbase-thirdparty.version>
+    <hbase-thirdparty.version>3.3.0</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -1403,6 +1435,7 @@
     <rsgroup.test.jar>hbase-rsgroup-${project.version}-tests.jar</rsgroup.test.jar>
     <mapreduce.test.jar>hbase-mapreduce-${project.version}-tests.jar</mapreduce.test.jar>
     <zookeeper.test.jar>hbase-zookeeper-${project.version}-tests.jar</zookeeper.test.jar>
+    <asyncfs.test.jar>hbase-asyncfs-${project.version}-tests.jar</asyncfs.test.jar>
     <shell-executable>bash</shell-executable>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
@@ -1493,6 +1526,18 @@
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-common</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-logging</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-logging</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
@@ -1728,13 +1773,34 @@
         <artifactId>hbase-shaded-mapreduce</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-asyncfs</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-asyncfs</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
       <!-- General dependencies -->
       <dependency>
         <groupId>com.github.stephenc.findbugs</groupId>
         <artifactId>findbugs-annotations</artifactId>
         <version>${findbugs-annotations.version}</version>
       </dependency>
-      <!-- General dependencies -->
+      <!--
+        Logging dependencies. In general, we use slf4j as the log facade in HBase, so all sub
+        modules should depend on slf4j-api at compile scope, and then depend on slf4j-log4j12
+        and log4j at test scope(and in hbase-assembly when shipping the binary) to redirect the
+        log message to log4j. Do not introduce logging dependencies other than slf4j-api at compile
+        scope as it will mess up the logging framework for downstream users.
+        Here we also depend on jcl-over-slf4j and jul-to-slf4j, as some of the libraries we depend
+        on use these logging framework so we need to redirect their log message to slf4j, and then
+        redirect the log message to our log4j framework.
+      -->
       <dependency>
         <groupId>org.codehaus.jettison</groupId>
         <artifactId>jettison</artifactId>
@@ -1742,7 +1808,22 @@
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jcl-over-slf4j</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jul-to-slf4j</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
       <dependency>
@@ -1758,11 +1839,6 @@
       </dependency>
       <!--This is not used by hbase directly.  Used by thrift,
           dropwizard and zk.-->
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>${slf4j.version}</version>
-      </dependency>
       <dependency>
         <groupId>com.github.ben-manes.caffeine</groupId>
         <artifactId>caffeine</artifactId>
@@ -1843,6 +1919,14 @@
           <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -2860,6 +2944,7 @@
         <module>hbase-hadoop2-compat</module>
       </modules>
       <properties>
+        <hadoop.profile>3.0</hadoop.profile>
         <hadoop.version>${hadoop-three.version}</hadoop.version>
         <!--Use this compat module for now. TODO: Make h3 one if we need one-->
         <compat.module>hbase-hadoop2-compat</compat.module>
@@ -2892,6 +2977,10 @@
                <artifactId>netty</artifactId>
              </exclusion>
               <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
               </exclusion>
@@ -2903,10 +2992,18 @@
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>jackson-mapper-asl</artifactId>
               </exclusion>
-             <exclusion>
-               <groupId>com.google.guava</groupId>
-               <artifactId>guava</artifactId>
-             </exclusion>
+              <exclusion>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2921,6 +3018,18 @@
              <exclusion>
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
+             </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -2939,6 +3048,18 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2978,10 +3099,18 @@
                <groupId>org.codehaus.jackson</groupId>
                <artifactId>jackson-mapper-asl</artifactId>
              </exclusion>
-              <exclusion>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-              </exclusion>
+             <exclusion>
+               <groupId>com.google.guava</groupId>
+               <artifactId>guava</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
+             </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -3023,6 +3152,14 @@
                <groupId>com.sun.jersey</groupId>
                <artifactId>jersey-core</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
+             </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -3051,6 +3188,14 @@
              <exclusion>
                <groupId>net.minidev</groupId>
                <artifactId>json-smart</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -3106,6 +3251,14 @@
              <exclusion>
                <groupId>org.codehause.jackson</groupId>
                <artifactId>jackson-mapper-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -3188,15 +3341,32 @@
                <groupId>com.google.code.findbugs</groupId>
                <artifactId>jsr305</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
+             </exclusion>
            </exclusions>
          </dependency>
          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-minikdc</artifactId>
-            <version>${hadoop-three.version}</version>
-            <scope>test</scope>
-          </dependency>
-
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-minikdc</artifactId>
+           <version>${hadoop-three.version}</version>
+           <scope>test</scope>
+           <exclusions>
+             <exclusion>
+               <groupId>org.slf4j</groupId>
+               <artifactId>slf4j-log4j12</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>log4j</groupId>
+               <artifactId>log4j</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
          <dependency>
            <groupId>org.apache.hadoop</groupId>
            <artifactId>hadoop-distcp</artifactId>

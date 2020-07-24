@@ -47,11 +47,13 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -334,7 +336,7 @@ public class ServerManager {
    */
   private void checkClockSkew(final ServerName serverName, final long serverCurrentTime)
       throws ClockOutOfSyncException {
-    long skew = Math.abs(System.currentTimeMillis() - serverCurrentTime);
+    long skew = Math.abs(EnvironmentEdgeManager.currentTime() - serverCurrentTime);
     if (skew > maxSkew) {
       String message = "Server " + serverName + " has been " +
         "rejected; Reported time is too far out of sync with master.  " +
@@ -694,8 +696,13 @@ public class ServerManager {
           ProtobufUtil.getRegionInfo(controller, rs, region.getRegionName());
         if (rsRegion == null) return;
       } catch (IOException ioe) {
-        if (ioe instanceof NotServingRegionException) // no need to retry again
+        if (ioe instanceof NotServingRegionException ||
+          (ioe instanceof RemoteWithExtrasException &&
+            ((RemoteWithExtrasException)ioe).unwrapRemoteException()
+              instanceof NotServingRegionException)) {
+          // no need to retry again
           return;
+        }
         LOG.warn("Exception when retrieving regioninfo from: "
           + region.getRegionNameAsString(), ioe);
       }

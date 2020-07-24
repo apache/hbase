@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
-
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.CHECK;
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.FORCE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.DELETED;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.FAILURE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.IN_PROGRESS;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.SUCCESS;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,7 +33,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,9 +49,8 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -89,6 +85,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * completed (either with success or with error) it will be not be submitted
  * again. If a task is resubmitted then there is a risk that old "delete task"
  * can delete the re-submission.
+ * @see SplitWALManager for an alternate implementation based on Procedures.
  */
 @InterfaceAudience.Private
 public class SplitLogManager {
@@ -122,25 +119,28 @@ public class SplitLogManager {
       throws IOException {
     this.server = master;
     this.conf = conf;
-    // Get Server Thread name. Sometimes the Server is mocked so may not implement HasThread.
-    // For example, in tests.
-    String name = master instanceof HasThread? ((HasThread)master).getName():
-        master.getServerName().toShortString();
-    this.choreService =
-        new ChoreService(name + ".splitLogManager.");
+    // If no CoordinatedStateManager, skip registering as a chore service (The
+    // CoordinatedStateManager is non-null if we are running the ZK-based distributed WAL
+    // splitting. It is null if we are configured to use procedure-based distributed WAL
+    // splitting.
     if (server.getCoordinatedStateManager() != null) {
+      this.choreService =
+        new ChoreService(master.getServerName().toShortString() + ".splitLogManager.");
       SplitLogManagerCoordination coordination = getSplitLogManagerCoordination();
       Set<String> failedDeletions = Collections.synchronizedSet(new HashSet<String>());
       SplitLogManagerDetails details = new SplitLogManagerDetails(tasks, master, failedDeletions);
       coordination.setDetails(details);
       coordination.init();
-    }
-    this.unassignedTimeout =
+      this.unassignedTimeout =
         conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
-    this.timeoutMonitor =
+      this.timeoutMonitor =
         new TimeoutMonitor(conf.getInt("hbase.splitlog.manager.timeoutmonitor.period", 1000),
-            master);
-    choreService.scheduleChore(timeoutMonitor);
+          master);
+      this.choreService.scheduleChore(timeoutMonitor);
+    } else {
+      this.choreService = null;
+      this.timeoutMonitor = null;
+    }
   }
 
   private SplitLogManagerCoordination getSplitLogManagerCoordination() {
@@ -173,7 +173,7 @@ public class SplitLogManager {
         LOG.warn(logDir + " doesn't exist. Nothing to do!");
         continue;
       }
-      FileStatus[] logfiles = FSUtils.listStatus(fs, logDir, filter);
+      FileStatus[] logfiles = CommonFSUtils.listStatus(fs, logDir, filter);
       if (logfiles == null || logfiles.length == 0) {
         LOG.info("{} dir is empty, no logs to split.", logDir);
       } else {
@@ -254,7 +254,7 @@ public class SplitLogManager {
         // recover-lease is done. totalSize will be under in most cases and the
         // metrics that it drives will also be under-reported.
         totalSize += lf.getLen();
-        String pathToLog = FSUtils.removeWALRootPath(lf.getPath(), conf);
+        String pathToLog = CommonFSUtils.removeWALRootPath(lf.getPath(), conf);
         if (!enqueueSplitTask(pathToLog, batch)) {
           throw new IOException("duplicate log split scheduled for " + lf.getPath());
         }
@@ -319,6 +319,21 @@ public class SplitLogManager {
     return false;
   }
 
+  /**
+   * Get the amount of time in milliseconds to wait till next check.
+   * Check less frequently if a bunch of work to do still. At a max, check every minute.
+   * At a minimum, check every 100ms. This is to alleviate case where perhaps there are a bunch of
+   * threads waiting on a completion. For example, if the zk-based implementation, we will scan the
+   * '/hbase/splitWAL' dir every time through this loop. If there are lots of WALs to
+   * split -- could be tens of thousands if big cluster -- then it will take a while. If
+   * the Master has many SCPs waiting on wal splitting -- could be up to 10 x the configured
+   * PE thread count (default would be 160) -- then the Master will be putting up a bunch of
+   * load on zk.
+   */
+  static int getBatchWaitTimeMillis(int remainingTasks) {
+    return remainingTasks < 10? 100: remainingTasks < 100? 1000: 60_000;
+  }
+
   private void waitForSplittingCompletion(TaskBatch batch, MonitoredTask status) {
     synchronized (batch) {
       while ((batch.done + batch.error) != batch.installed) {
@@ -343,7 +358,7 @@ public class SplitLogManager {
               return;
             }
           }
-          batch.wait(100);
+          batch.wait(getBatchWaitTimeMillis(remainingTasks));
           if (server.isStopped()) {
             LOG.warn("Stopped while waiting for log splits to be completed");
             return;
@@ -550,7 +565,9 @@ public class SplitLogManager {
 
     @Override
     protected void chore() {
-      if (server.getCoordinatedStateManager() == null) return;
+      if (server.getCoordinatedStateManager() == null) {
+        return;
+      }
 
       int resubmitted = 0;
       int unassigned = 0;

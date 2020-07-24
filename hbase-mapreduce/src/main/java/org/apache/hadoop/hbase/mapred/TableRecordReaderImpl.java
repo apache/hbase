@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,24 +18,22 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
+import static org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl.LOG_PER_ROW_COUNT;
 import java.io.IOException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
-
-import static org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl.LOG_PER_ROW_COUNT;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Iterate over an HBase table data, return (Text, RowResult) pairs
@@ -58,9 +56,6 @@ public class TableRecordReaderImpl {
 
   /**
    * Restart from survivable exceptions by creating a new scanner.
-   *
-   * @param firstRow
-   * @throws IOException
    */
   public void restart(byte[] firstRow) throws IOException {
     Scan currentScan;
@@ -100,8 +95,6 @@ public class TableRecordReaderImpl {
 
   /**
    * Build the scanner. Not done in constructor to allow for extension.
-   *
-   * @throws IOException
    */
   public void init() throws IOException {
     restart(startRow);
@@ -116,7 +109,7 @@ public class TableRecordReaderImpl {
   public void setHTable(Table htable) {
     Configuration conf = htable.getConfiguration();
     logScannerActivity = conf.getBoolean(
-      ScannerCallable.LOG_SCANNER_ACTIVITY, false);
+      "hbase.client.log.scanner.activity" /*ScannerCallable.LOG_SCANNER_ACTIVITY*/, false);
     logPerRowCount = conf.getInt(LOG_PER_ROW_COUNT, 100);
     this.htable = htable;
   }
@@ -194,10 +187,8 @@ public class TableRecordReaderImpl {
    * @param key HStoreKey as input key.
    * @param value MapWritable as input value
    * @return true if there was more data
-   * @throws IOException
    */
-  public boolean next(ImmutableBytesWritable key, Result value)
-  throws IOException {
+  public boolean next(ImmutableBytesWritable key, Result value) throws IOException {
     Result result;
     try {
       try {

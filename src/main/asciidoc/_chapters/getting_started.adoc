@@ -67,89 +67,22 @@ $ tar xzvf hbase-{Version}-bin.tar.gz
 $ cd hbase-{Version}/
 ----
 
-. You are required to set the `JAVA_HOME` environment variable before starting HBase.
-  You can set the variable via your operating system's usual mechanism, but HBase
-  provides a central mechanism, _conf/hbase-env.sh_.
-  Edit this file, uncomment the line starting with `JAVA_HOME`, and set it to the
-  appropriate location for your operating system.
-  The `JAVA_HOME` variable should be set to a directory which contains the executable file _bin/java_.
-  Most modern Linux operating systems provide a mechanism, such as /usr/bin/alternatives on RHEL or CentOS, for transparently switching between versions of executables such as Java.
-  In this case, you can set `JAVA_HOME` to the directory containing the symbolic link to _bin/java_, which is usually _/usr_.
+. You must set the `JAVA_HOME` environment variable before starting HBase.
+  To make this easier, HBase lets you set it within the _conf/hbase-env.sh_ file. You must locate where Java is
+  installed on your machine, and one way to find this is by using the _whereis java_ command. Once you have the location,
+  edit the _conf/hbase-env.sh_ file and uncomment the line starting with _#export JAVA_HOME=_, and then set it to your Java installation path.
 +
-----
-JAVA_HOME=/usr
-----
+.Example extract from _hbase-env.sh_ where _JAVA_HOME_ is set
+  # Set environment variables here.
+  # The java implementation to use.
+  export JAVA_HOME=/usr/jdk64/jdk1.8.0_112
 +
-
-. Edit _conf/hbase-site.xml_, which is the main HBase configuration file.
-  At this time, you need to specify the directory on the local filesystem where HBase and ZooKeeper write data and acknowledge some risks.
-  By default, a new directory is created under /tmp.
-  Many servers are configured to delete the contents of _/tmp_ upon reboot, so you should store the data elsewhere.
-  The following configuration will store HBase's data in the _hbase_ directory, in the home directory of the user called `testuser`.
-  Paste the `<property>` tags beneath the `<configuration>` tags, which should be empty in a new HBase install.
-+
-.Example _hbase-site.xml_ for Standalone HBase
-====
-[source,xml]
-----
-
-<configuration>
-  <property>
-    <name>hbase.rootdir</name>
-    <value>file:///home/testuser/hbase</value>
-  </property>
-  <property>
-    <name>hbase.zookeeper.property.dataDir</name>
-    <value>/home/testuser/zookeeper</value>
-  </property>
-  <property>
-    <name>hbase.unsafe.stream.capability.enforce</name>
-    <value>false</value>
-    <description>
-      Controls whether HBase will check for stream capabilities (hflush/hsync).
-
-      Disable this if you intend to run on LocalFileSystem, denoted by a rootdir
-      with the 'file://' scheme, but be mindful of the NOTE below.
-
-      WARNING: Setting this to false blinds you to potential data loss and
-      inconsistent system state in the event of process and/or node failures. If
-      HBase is complaining of an inability to use hsync or hflush it's most
-      likely not a false positive.
-    </description>
-  </property>
-</configuration>
-----
-====
-+
-You do not need to create the HBase data directory.
-HBase will do this for you.  If you create the directory,
-HBase will attempt to do a migration, which is not what you want.
-+
-NOTE: The _hbase.rootdir_ in the above example points to a directory
-in the _local filesystem_. The 'file://' prefix is how we denote local
-filesystem. You should take the WARNING present in the configuration example
-to heart. In standalone mode HBase makes use of the local filesystem abstraction
-from the Apache Hadoop project. That abstraction doesn't provide the durability
-promises that HBase needs to operate safely. This is fine for local development
-and testing use cases where the cost of cluster failure is well contained. It is
-not appropriate for production deployments; eventually you will lose data.
-
-To home HBase on an existing instance of HDFS, set the _hbase.rootdir_ to point at a
-directory up on your instance: e.g. _hdfs://namenode.example.org:8020/hbase_.
-For more on this variant, see the section below on Standalone HBase over HDFS.
-
 . The _bin/start-hbase.sh_ script is provided as a convenient way to start HBase.
   Issue the command, and if all goes well, a message is logged to standard output showing that HBase started successfully.
   You can use the `jps` command to verify that you have one running process called `HMaster`.
   In standalone mode HBase runs all daemons within this single JVM, i.e.
   the HMaster, a single HRegionServer, and the ZooKeeper daemon.
   Go to _http://localhost:16010_ to view the HBase Web UI.
-+
-NOTE: Java needs to be installed and available.
-If you get an error indicating that Java is not installed,
-but it is on your system, perhaps in a non-standard location,
-edit the _conf/hbase-env.sh_ file and modify the `JAVA_HOME`
-setting to point to the directory that contains _bin/java_ on your system.
 
 
 [[shell_exercises]]
@@ -309,7 +242,7 @@ The above has shown you how to start and stop a standalone instance of HBase.
 In the next sections we give a quick overview of other modes of hbase deploy.
 
 [[quickstart_pseudo]]
-=== Pseudo-Distributed Local Install
+=== Pseudo-Distributed for Local Testing
 
 After working your way through <<quickstart,quickstart>> standalone mode,
 you can re-configure HBase to run in pseudo-distributed mode.
@@ -351,8 +284,8 @@ First, add the following property which directs HBase to run in distributed mode
 </property>
 ----
 +
-Next, change the `hbase.rootdir` from the local filesystem to the address of your HDFS instance, using the `hdfs:////` URI syntax.
-In this example, HDFS is running on the localhost at port 8020. Be sure to either remove the entry for `hbase.unsafe.stream.capability.enforce` or set it to true.
+Next, add a configuration for `hbase.rootdir`, pointing to the address of your HDFS instance, using the `hdfs:////` URI syntax.
+In this example, HDFS is running on the localhost at port 8020.
 +
 [source,xml]
 ----
@@ -364,8 +297,9 @@ In this example, HDFS is running on the localhost at port 8020. Be sure to eithe
 ----
 +
 You do not need to create the directory in HDFS.
-HBase will do this for you.
-If you create the directory, HBase will attempt to do a migration, which is not what you want.
+HBase will do this for you. If you create the directory, HBase will attempt to do a migration, which is not what you want.
++
+Finally, remove existing configuration for `hbase.tmp.dir` and `hbase.unsafe.stream.capability.enforce`,
 
 . Start HBase.
 +
@@ -452,7 +386,7 @@ You can stop HBase the same way as in the <<quickstart,quickstart>> procedure, u
 
 
 [[quickstart_fully_distributed]]
-=== Advanced - Fully Distributed
+=== Fully Distributed for Production
 
 In reality, you need a fully-distributed configuration to fully test HBase and to use it in real-world scenarios.
 In a distributed configuration, the cluster contains multiple nodes, each of which runs one or more HBase daemon.
@@ -640,11 +574,11 @@ For more about ZooKeeper configuration, including using an external ZooKeeper in
 . Browse to the Web UI.
 +
 .Web UI Port Changes
-NOTE: Web UI Port Changes
-+
+[NOTE]
+====
 In HBase newer than 0.98.x, the HTTP ports used by the HBase Web UI changed from 60010 for the
 Master and 60030 for each RegionServer to 16010 for the Master and 16030 for the RegionServer.
-
+====
 +
 If everything is set up correctly, you should be able to connect to the UI for the Master
 `http://node-a.example.com:16010/` or the secondary master at `http://node-b.example.com:16010/`

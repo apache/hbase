@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
+
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -93,7 +95,7 @@ public class TestSyncTable {
     writeTestData(sourceTableName, targetTableName);
     hashSourceTable(sourceTableName, testDir);
     Counters syncCounters = syncTables(sourceTableName, targetTableName, testDir);
-    assertEqualTables(90, sourceTableName, targetTableName);
+    assertEqualTables(90, sourceTableName, targetTableName, false);
 
     assertEquals(60, syncCounters.findCounter(Counter.ROWSWITHDIFFS).getValue());
     assertEquals(10, syncCounters.findCounter(Counter.SOURCEMISSINGROWS).getValue());
@@ -152,8 +154,31 @@ public class TestSyncTable {
     TEST_UTIL.deleteTable(targetTableName);
   }
 
+  @Test
+  public void testSyncTableIgnoreTimestampsTrue() throws Exception {
+    final TableName sourceTableName = TableName.valueOf(name.getMethodName() + "_source");
+    final TableName targetTableName = TableName.valueOf(name.getMethodName() + "_target");
+    Path testDir = TEST_UTIL.getDataTestDirOnTestFS("testSyncTableIgnoreTimestampsTrue");
+    long current = System.currentTimeMillis();
+    writeTestData(sourceTableName, targetTableName, current - 1000, current);
+    hashSourceTable(sourceTableName, testDir, "--ignoreTimestamps=true");
+    Counters syncCounters = syncTables(sourceTableName, targetTableName,
+      testDir, "--ignoreTimestamps=true");
+    assertEqualTables(90, sourceTableName, targetTableName, true);
+
+    assertEquals(50, syncCounters.findCounter(Counter.ROWSWITHDIFFS).getValue());
+    assertEquals(10, syncCounters.findCounter(Counter.SOURCEMISSINGROWS).getValue());
+    assertEquals(10, syncCounters.findCounter(Counter.TARGETMISSINGROWS).getValue());
+    assertEquals(30, syncCounters.findCounter(Counter.SOURCEMISSINGCELLS).getValue());
+    assertEquals(30, syncCounters.findCounter(Counter.TARGETMISSINGCELLS).getValue());
+    assertEquals(20, syncCounters.findCounter(Counter.DIFFERENTCELLVALUES).getValue());
+
+    TEST_UTIL.deleteTable(sourceTableName);
+    TEST_UTIL.deleteTable(targetTableName);
+  }
+
   private void assertEqualTables(int expectedRows, TableName sourceTableName,
-      TableName targetTableName) throws Exception {
+      TableName targetTableName, boolean ignoreTimestamps) throws Exception {
     Table sourceTable = TEST_UTIL.getConnection().getTable(sourceTableName);
     Table targetTable = TEST_UTIL.getConnection().getTable(targetTableName);
 
@@ -200,7 +225,7 @@ public class TestSyncTable {
           if (!CellUtil.matchingQualifier(sourceCell, targetCell)) {
             Assert.fail("Qualifiers don't match");
           }
-          if (!CellUtil.matchingTimestamp(sourceCell, targetCell)) {
+          if (!ignoreTimestamps && !CellUtil.matchingTimestamp(sourceCell, targetCell)) {
             Assert.fail("Timestamps don't match");
           }
           if (!CellUtil.matchingValue(sourceCell, targetCell)) {
@@ -426,18 +451,19 @@ public class TestSyncTable {
     return syncTable.counters;
   }
 
-  private void hashSourceTable(TableName sourceTableName, Path testDir) throws Exception {
+  private void hashSourceTable(TableName sourceTableName, Path testDir, String... options)
+      throws Exception {
     int numHashFiles = 3;
     long batchSize = 100;  // should be 2 batches per region
     int scanBatch = 1;
     HashTable hashTable = new HashTable(TEST_UTIL.getConfiguration());
-    int code = hashTable.run(new String[] {
-      "--batchsize=" + batchSize,
-      "--numhashfiles=" + numHashFiles,
-      "--scanbatch=" + scanBatch,
-      sourceTableName.getNameAsString(),
-      testDir.toString()
-    });
+    String[] args = Arrays.copyOf(options, options.length+5);
+    args[options.length] = "--batchsize=" + batchSize;
+    args[options.length + 1] = "--numhashfiles=" + numHashFiles;
+    args[options.length + 2] = "--scanbatch=" + scanBatch;
+    args[options.length + 3] = sourceTableName.getNameAsString();
+    args[options.length + 4] = testDir.toString();
+    int code = hashTable.run(args);
     assertEquals("hash table job failed", 0, code);
 
     FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -451,8 +477,8 @@ public class TestSyncTable {
     LOG.info("Hash table completed");
   }
 
-  private void writeTestData(TableName sourceTableName, TableName targetTableName)
-      throws Exception {
+  private void writeTestData(TableName sourceTableName, TableName targetTableName,
+      long... timestamps) throws Exception {
     final byte[] family = Bytes.toBytes("family");
     final byte[] column1 = Bytes.toBytes("c1");
     final byte[] column2 = Bytes.toBytes("c2");
@@ -463,6 +489,10 @@ public class TestSyncTable {
     int numRows = 100;
     int sourceRegions = 10;
     int targetRegions = 6;
+    if (ArrayUtils.isEmpty(timestamps)) {
+      long current = System.currentTimeMillis();
+      timestamps = new long[]{current,current};
+    }
 
     Table sourceTable = TEST_UTIL.createTable(sourceTableName,
         family, generateSplits(numRows, sourceRegions));
@@ -470,19 +500,17 @@ public class TestSyncTable {
     Table targetTable = TEST_UTIL.createTable(targetTableName,
         family, generateSplits(numRows, targetRegions));
 
-    long timestamp = 1430764183454L;
-
     int rowIndex = 0;
     // a bunch of identical rows
     for (; rowIndex < 40; rowIndex++) {
       Put sourcePut = new Put(Bytes.toBytes(rowIndex));
-      sourcePut.addColumn(family, column1, timestamp, value1);
-      sourcePut.addColumn(family, column2, timestamp, value2);
+      sourcePut.addColumn(family, column1, timestamps[0], value1);
+      sourcePut.addColumn(family, column2, timestamps[0], value2);
       sourceTable.put(sourcePut);
 
       Put targetPut = new Put(Bytes.toBytes(rowIndex));
-      targetPut.addColumn(family, column1, timestamp, value1);
-      targetPut.addColumn(family, column2, timestamp, value2);
+      targetPut.addColumn(family, column1, timestamps[1], value1);
+      targetPut.addColumn(family, column2, timestamps[1], value2);
       targetTable.put(targetPut);
     }
     // some rows only in the source table
@@ -491,8 +519,8 @@ public class TestSyncTable {
     // TARGETMISSINGCELLS: 20
     for (; rowIndex < 50; rowIndex++) {
       Put put = new Put(Bytes.toBytes(rowIndex));
-      put.addColumn(family, column1, timestamp, value1);
-      put.addColumn(family, column2, timestamp, value2);
+      put.addColumn(family, column1, timestamps[0], value1);
+      put.addColumn(family, column2, timestamps[0], value2);
       sourceTable.put(put);
     }
     // some rows only in the target table
@@ -501,8 +529,8 @@ public class TestSyncTable {
     // SOURCEMISSINGCELLS: 20
     for (; rowIndex < 60; rowIndex++) {
       Put put = new Put(Bytes.toBytes(rowIndex));
-      put.addColumn(family, column1, timestamp, value1);
-      put.addColumn(family, column2, timestamp, value2);
+      put.addColumn(family, column1, timestamps[1], value1);
+      put.addColumn(family, column2, timestamps[1], value2);
       targetTable.put(put);
     }
     // some rows with 1 missing cell in target table
@@ -510,12 +538,12 @@ public class TestSyncTable {
     // TARGETMISSINGCELLS: 10
     for (; rowIndex < 70; rowIndex++) {
       Put sourcePut = new Put(Bytes.toBytes(rowIndex));
-      sourcePut.addColumn(family, column1, timestamp, value1);
-      sourcePut.addColumn(family, column2, timestamp, value2);
+      sourcePut.addColumn(family, column1, timestamps[0], value1);
+      sourcePut.addColumn(family, column2, timestamps[0], value2);
       sourceTable.put(sourcePut);
 
       Put targetPut = new Put(Bytes.toBytes(rowIndex));
-      targetPut.addColumn(family, column1, timestamp, value1);
+      targetPut.addColumn(family, column1, timestamps[1], value1);
       targetTable.put(targetPut);
     }
     // some rows with 1 missing cell in source table
@@ -523,12 +551,12 @@ public class TestSyncTable {
     // SOURCEMISSINGCELLS: 10
     for (; rowIndex < 80; rowIndex++) {
       Put sourcePut = new Put(Bytes.toBytes(rowIndex));
-      sourcePut.addColumn(family, column1, timestamp, value1);
+      sourcePut.addColumn(family, column1, timestamps[0], value1);
       sourceTable.put(sourcePut);
 
       Put targetPut = new Put(Bytes.toBytes(rowIndex));
-      targetPut.addColumn(family, column1, timestamp, value1);
-      targetPut.addColumn(family, column2, timestamp, value2);
+      targetPut.addColumn(family, column1, timestamps[1], value1);
+      targetPut.addColumn(family, column2, timestamps[1], value2);
       targetTable.put(targetPut);
     }
     // some rows differing only in timestamp
@@ -537,13 +565,13 @@ public class TestSyncTable {
     // TARGETMISSINGCELLS: 20
     for (; rowIndex < 90; rowIndex++) {
       Put sourcePut = new Put(Bytes.toBytes(rowIndex));
-      sourcePut.addColumn(family, column1, timestamp, column1);
-      sourcePut.addColumn(family, column2, timestamp, value2);
+      sourcePut.addColumn(family, column1, timestamps[0], column1);
+      sourcePut.addColumn(family, column2, timestamps[0], value2);
       sourceTable.put(sourcePut);
 
       Put targetPut = new Put(Bytes.toBytes(rowIndex));
-      targetPut.addColumn(family, column1, timestamp+1, column1);
-      targetPut.addColumn(family, column2, timestamp-1, value2);
+      targetPut.addColumn(family, column1, timestamps[1]+1, column1);
+      targetPut.addColumn(family, column2, timestamps[1]-1, value2);
       targetTable.put(targetPut);
     }
     // some rows with different values
@@ -551,13 +579,13 @@ public class TestSyncTable {
     // DIFFERENTCELLVALUES: 20
     for (; rowIndex < numRows; rowIndex++) {
       Put sourcePut = new Put(Bytes.toBytes(rowIndex));
-      sourcePut.addColumn(family, column1, timestamp, value1);
-      sourcePut.addColumn(family, column2, timestamp, value2);
+      sourcePut.addColumn(family, column1, timestamps[0], value1);
+      sourcePut.addColumn(family, column2, timestamps[0], value2);
       sourceTable.put(sourcePut);
 
       Put targetPut = new Put(Bytes.toBytes(rowIndex));
-      targetPut.addColumn(family, column1, timestamp, value3);
-      targetPut.addColumn(family, column2, timestamp, value3);
+      targetPut.addColumn(family, column1, timestamps[1], value3);
+      targetPut.addColumn(family, column2, timestamps[1], value3);
       targetTable.put(targetPut);
     }
 

@@ -22,7 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.StringWriter;
-
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -36,8 +37,11 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Layout;
 import org.apache.log4j.PatternLayout;
@@ -221,6 +225,71 @@ public class TestRegionServerReportForDuty {
     assertEquals(backupMaster.getMaster().getServerManager().getOnlineServersList().size(),
       tablesOnMaster? 3: 2);
 
+  }
+  
+  /**
+   * Tests region sever reportForDuty with RS RPC retry
+   */
+  @Test
+  public void testReportForDutyWithRSRpcRetry() throws Exception {
+    ScheduledThreadPoolExecutor scheduledThreadPoolExecutor =
+        new ScheduledThreadPoolExecutor(1, Threads.newDaemonThreadFactory("RSDelayedStart"));
+
+    // Start a master and wait for it to become the active/primary master.
+    // Use a random unique port
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
+    // Override the default RS RPC retry interval of 100ms to 300ms
+    cluster.getConfiguration().setLong("hbase.regionserver.rpc.retry.interval", 300);
+    // master has a rs. defaultMinToStart = 2
+    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(testUtil.getConfiguration());
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
+      tablesOnMaster ? 2 : 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART,
+      tablesOnMaster ? 2 : 1);
+    master = cluster.addMaster();
+    rs = cluster.addRegionServer();
+    LOG.debug("Starting master: " + master.getMaster().getServerName());
+    master.start();
+    // Delay the RS start so that the meta assignment fails in first attempt and goes to retry block
+    scheduledThreadPoolExecutor.schedule(new Runnable() {
+      @Override
+      public void run() {
+        rs.start();
+      }
+    }, 1000, TimeUnit.MILLISECONDS);
+
+    waitForClusterOnline(master);
+  }
+
+  /**
+   * Tests region sever reportForDuty with manual environment edge
+   */
+  @Test
+  public void testReportForDutyWithEnvironmentEdge() throws Exception {
+    // Start a master and wait for it to become the active/primary master.
+    // Use a random unique port
+    cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
+    // Set the dispatch and retry delay to 0 since we want the rpc request to be sent immediately
+    cluster.getConfiguration().setInt("hbase.procedure.remote.dispatcher.delay.msec", 0);
+    cluster.getConfiguration().setLong("hbase.regionserver.rpc.retry.interval", 0);
+
+    // master has a rs. defaultMinToStart = 2
+    boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(testUtil.getConfiguration());
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
+      tablesOnMaster ? 2 : 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART,
+      tablesOnMaster ? 2 : 1);
+
+    // Inject manual environment edge for clock skew computation between RS and master
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(edge);
+    master = cluster.addMaster();
+    rs = cluster.addRegionServer();
+    LOG.debug("Starting master: " + master.getMaster().getServerName());
+    master.start();
+    rs.start();
+
+    waitForClusterOnline(master);
   }
 
   private void waitForClusterOnline(MasterThread master) throws InterruptedException {

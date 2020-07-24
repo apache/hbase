@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,10 +22,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -35,12 +30,14 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor.Status;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
-import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.ExceptionUtil;
-import org.apache.hadoop.hbase.util.FSUtils;
-
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -67,13 +64,14 @@ public class SplitLogWorker implements Runnable {
 
   Thread worker;
   // thread pool which executes recovery work
-  private SplitLogWorkerCoordination coordination;
-  private Configuration conf;
-  private RegionServerServices server;
+  private final SplitLogWorkerCoordination coordination;
+  private final Configuration conf;
+  private final RegionServerServices server;
 
   public SplitLogWorker(Server hserver, Configuration conf, RegionServerServices server,
       TaskExecutor splitTaskExecutor) {
     this.server = server;
+    // Unused.
     this.conf = conf;
     this.coordination = hserver.getCoordinatedStateManager().getSplitLogWorkerCoordination();
     coordination.init(server, conf, splitTaskExecutor, this);
@@ -84,15 +82,18 @@ public class SplitLogWorker implements Runnable {
     this(server, conf, server, (f, p) -> splitLog(f, p, conf, server, sequenceIdChecker, factory));
   }
 
+  /**
+   * @return Result either DONE, RESIGNED, or ERR.
+   */
   static Status splitLog(String filename, CancelableProgressable p, Configuration conf,
       RegionServerServices server, LastSequenceId sequenceIdChecker, WALFactory factory) {
     Path walDir;
     FileSystem fs;
     try {
-      walDir = FSUtils.getWALRootDir(conf);
+      walDir = CommonFSUtils.getWALRootDir(conf);
       fs = walDir.getFileSystem(conf);
     } catch (IOException e) {
-      LOG.warn("could not find root dir or fs", e);
+      LOG.warn("Resigning, could not find root dir or fs", e);
       return Status.RESIGNED;
     }
     // TODO have to correctly figure out when log splitting has been
@@ -107,28 +108,27 @@ public class SplitLogWorker implements Runnable {
         return Status.PREEMPTED;
       }
     } catch (InterruptedIOException iioe) {
-      LOG.warn("log splitting of " + filename + " interrupted, resigning", iioe);
+      LOG.warn("Resigning, interrupted splitting WAL {}", filename, iioe);
       return Status.RESIGNED;
     } catch (IOException e) {
       if (e instanceof FileNotFoundException) {
         // A wal file may not exist anymore. Nothing can be recovered so move on
-        LOG.warn("WAL {} does not exist anymore", filename, e);
+        LOG.warn("Done, WAL {} does not exist anymore", filename, e);
         return Status.DONE;
       }
       Throwable cause = e.getCause();
       if (e instanceof RetriesExhaustedException && (cause instanceof NotServingRegionException
           || cause instanceof ConnectException || cause instanceof SocketTimeoutException)) {
-        LOG.warn("log replaying of " + filename + " can't connect to the target regionserver, "
-            + "resigning",
-          e);
+        LOG.warn("Resigning, can't connect to target regionserver splitting WAL {}", filename, e);
         return Status.RESIGNED;
       } else if (cause instanceof InterruptedException) {
-        LOG.warn("log splitting of " + filename + " interrupted, resigning", e);
+        LOG.warn("Resigning, interrupted splitting WAL {}", filename, e);
         return Status.RESIGNED;
       }
-      LOG.warn("log splitting of " + filename + " failed, returning error", e);
+      LOG.warn("Error splitting WAL {}", filename, e);
       return Status.ERR;
     }
+    LOG.debug("Done splitting WAL {}", filename);
     return Status.DONE;
   }
 

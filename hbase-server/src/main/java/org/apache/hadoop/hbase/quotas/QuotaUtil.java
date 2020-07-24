@@ -266,6 +266,14 @@ public class QuotaUtil extends QuotaTableUtil {
     if (qualifier != null) {
       delete.addColumns(QUOTA_FAMILY_INFO, qualifier);
     }
+    if (isNamespaceRowKey(rowKey)) {
+      String ns = getNamespaceFromRowKey(rowKey);
+      Quotas namespaceQuota = getNamespaceQuota(connection,ns);
+      if (namespaceQuota != null && namespaceQuota.hasSpace()) {
+        // When deleting namespace space quota, also delete table usage(u:p) snapshots
+        deleteTableUsageSnapshotsForNamespace(connection, ns);
+      }
+    }
     doDelete(connection, delete);
   }
 

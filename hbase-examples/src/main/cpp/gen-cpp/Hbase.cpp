@@ -16127,10 +16127,10 @@ void HbaseProcessor::process_getRegionInfo(int32_t seqid, ::apache::thrift::prot
   }
 }
 
-::boost::shared_ptr< ::apache::thrift::TProcessor > HbaseProcessorFactory::getProcessor(const ::apache::thrift::TConnectionInfo& connInfo) {
+std::shared_ptr< ::apache::thrift::TProcessor > HbaseProcessorFactory::getProcessor(const ::apache::thrift::TConnectionInfo& connInfo) {
   ::apache::thrift::ReleaseHandler< HbaseIfFactory > cleanup(handlerFactory_);
-  ::boost::shared_ptr< HbaseIf > handler(handlerFactory_->getHandler(connInfo), cleanup);
-  ::boost::shared_ptr< ::apache::thrift::TProcessor > processor(new HbaseProcessor(handler));
+  std::shared_ptr< HbaseIf > handler(handlerFactory_->getHandler(connInfo), cleanup);
+  std::shared_ptr< ::apache::thrift::TProcessor > processor(new HbaseProcessor(handler));
   return processor;
 }
 }}}} // namespace

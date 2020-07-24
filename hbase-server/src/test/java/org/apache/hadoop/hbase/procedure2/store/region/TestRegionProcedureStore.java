@@ -227,7 +227,7 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
 
       @Override
       public void setResponse(Message param, CellScanner cells, Throwable errorThrowable,
-          String error) {
+        String error) {
       }
 
       @Override

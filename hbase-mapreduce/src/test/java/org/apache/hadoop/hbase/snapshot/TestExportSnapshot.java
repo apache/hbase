@@ -21,6 +21,7 @@ import static org.apache.hadoop.util.ToolRunner.run;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -41,24 +42,27 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
  * Test Export Snapshot Tool
  */
+@Ignore // HBASE-24493
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestExportSnapshot {
 
@@ -92,7 +96,7 @@ public class TestExportSnapshot {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     setUpBaseConf(TEST_UTIL.getConfiguration());
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.startMiniMapReduceCluster();
   }
 
@@ -285,7 +289,7 @@ public class TestExportSnapshot {
           snapshotFiles.add(hfile);
           if (!storeFile.hasReference()) {
             verifyNonEmptyFile(new Path(exportedArchive,
-              new Path(FSUtils.getTableDir(new Path("./"), tableName),
+              new Path(CommonFSUtils.getTableDir(new Path("./"), tableName),
                   new Path(regionInfo.getEncodedName(), new Path(family, hfile)))));
           }
         }
@@ -308,7 +312,7 @@ public class TestExportSnapshot {
     Set<String> files = new HashSet<>();
     LOG.debug("List files in {} in root {} at {}", fs, root, dir);
     int rootPrefix = root.makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString().length();
-    FileStatus[] list = FSUtils.listStatus(fs, dir);
+    FileStatus[] list = CommonFSUtils.listStatus(fs, dir);
     if (list != null) {
       for (FileStatus fstat: list) {
         LOG.debug(Objects.toString(fstat.getPath()));

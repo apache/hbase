@@ -32,14 +32,15 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
-import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
@@ -65,13 +66,13 @@ public class TestRegionProcedureStoreMigration {
 
   private HBaseCommonTestingUtility htu;
 
+  private Server server;
+
+  private MasterRegion region;
+
   private RegionProcedureStore store;
 
   private WALProcedureStore walStore;
-
-  private ChoreService choreService;
-
-  private DirScanPool cleanerPool;
 
   @Before
   public void setUp() throws IOException {
@@ -81,7 +82,7 @@ public class TestRegionProcedureStoreMigration {
     // Runs on local filesystem. Test does not need sync. Turn off checks.
     htu.getConfiguration().setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
     Path testDir = htu.getDataTestDir();
-    CommonFSUtils.setWALRootDir(conf, testDir);
+    CommonFSUtils.setRootDir(conf, testDir);
     walStore = new WALProcedureStore(conf, new LeaseRecovery() {
 
       @Override
@@ -91,8 +92,8 @@ public class TestRegionProcedureStoreMigration {
     walStore.start(1);
     walStore.recoverLease();
     walStore.load(new LoadCounter());
-    choreService = new ChoreService(getClass().getSimpleName());
-    cleanerPool = new DirScanPool(htu.getConfiguration());
+    server = RegionProcedureStoreTestHelper.mockServer(conf);
+    region = MasterRegionFactory.create(server);
   }
 
   @After
@@ -100,9 +101,8 @@ public class TestRegionProcedureStoreMigration {
     if (store != null) {
       store.stop(true);
     }
+    region.close(true);
     walStore.stop(true);
-    cleanerPool.shutdownNow();
-    choreService.shutdown();
     htu.cleanupTestDir();
   }
 
@@ -121,30 +121,29 @@ public class TestRegionProcedureStoreMigration {
     SortedSet<RegionProcedureStoreTestProcedure> loadedProcs =
       new TreeSet<>((p1, p2) -> Long.compare(p1.getProcId(), p2.getProcId()));
     MutableLong maxProcIdSet = new MutableLong(0);
-    store = RegionProcedureStoreTestHelper.createStore(htu.getConfiguration(), choreService,
-      cleanerPool, new ProcedureLoader() {
+    store = RegionProcedureStoreTestHelper.createStore(server, region, new ProcedureLoader() {
 
-        @Override
-        public void setMaxProcId(long maxProcId) {
-          maxProcIdSet.setValue(maxProcId);
-        }
+      @Override
+      public void setMaxProcId(long maxProcId) {
+        maxProcIdSet.setValue(maxProcId);
+      }
 
-        @Override
-        public void load(ProcedureIterator procIter) throws IOException {
-          while (procIter.hasNext()) {
-            RegionProcedureStoreTestProcedure proc =
-              (RegionProcedureStoreTestProcedure) procIter.next();
-            loadedProcs.add(proc);
-          }
+      @Override
+      public void load(ProcedureIterator procIter) throws IOException {
+        while (procIter.hasNext()) {
+          RegionProcedureStoreTestProcedure proc =
+            (RegionProcedureStoreTestProcedure) procIter.next();
+          loadedProcs.add(proc);
         }
+      }
 
-        @Override
-        public void handleCorrupted(ProcedureIterator procIter) throws IOException {
-          if (procIter.hasNext()) {
-            fail("Found corrupted procedures");
-          }
+      @Override
+      public void handleCorrupted(ProcedureIterator procIter) throws IOException {
+        if (procIter.hasNext()) {
+          fail("Found corrupted procedures");
         }
-      });
+      }
+    });
     assertEquals(10, maxProcIdSet.longValue());
     assertEquals(5, loadedProcs.size());
     int procId = 1;
@@ -168,8 +167,7 @@ public class TestRegionProcedureStoreMigration {
     walStore.stop(true);
 
     try {
-      store = RegionProcedureStoreTestHelper.createStore(htu.getConfiguration(), choreService,
-        cleanerPool, new LoadCounter());
+      store = RegionProcedureStoreTestHelper.createStore(server, region, new LoadCounter());
       fail("Should fail since AssignProcedure is not supported");
     } catch (HBaseIOException e) {
       assertThat(e.getMessage(), startsWith("Unsupported"));

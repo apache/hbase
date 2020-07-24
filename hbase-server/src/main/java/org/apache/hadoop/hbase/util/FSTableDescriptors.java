@@ -104,7 +104,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * filesystem where that root dir lives. This instance can do write operations (is not read only).
    */
   public FSTableDescriptors(final Configuration conf) throws IOException {
-    this(FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf));
+    this(CommonFSUtils.getCurrentFileSystem(conf), CommonFSUtils.getRootDir(conf));
   }
 
   public FSTableDescriptors(final FileSystem fs, final Path rootdir) {
@@ -120,8 +120,8 @@ public class FSTableDescriptors implements TableDescriptors {
   }
 
   public static void tryUpdateMetaTableDescriptor(Configuration conf) throws IOException {
-    tryUpdateMetaTableDescriptor(conf, FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf),
-      null);
+    tryUpdateMetaTableDescriptor(conf, CommonFSUtils.getCurrentFileSystem(conf),
+      CommonFSUtils.getRootDir(conf), null);
   }
 
   public static void tryUpdateMetaTableDescriptor(Configuration conf, FileSystem fs, Path rootdir,
@@ -137,7 +137,7 @@ public class FSTableDescriptors implements TableDescriptors {
       TableDescriptor td = builder.build();
       LOG.info("Creating new hbase:meta table descriptor {}", td);
       TableName tableName = td.getTableName();
-      Path tableDir = FSUtils.getTableDir(rootdir, tableName);
+      Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
       Path p = writeTableDescriptor(fs, td, tableDir, getTableInfoPath(fs, tableDir, true));
       if (p == null) {
         throw new IOException("Failed update hbase:meta table descriptor");
@@ -258,7 +258,7 @@ public class FSTableDescriptors implements TableDescriptors {
       for (Path d : FSUtils.getTableDirs(fs, rootdir)) {
         TableDescriptor htd = null;
         try {
-          htd = get(FSUtils.getTableName(d));
+          htd = get(CommonFSUtils.getTableName(d));
         } catch (FileNotFoundException fnfe) {
           // inability of retrieving one HTD shouldn't stop getting the remaining
           LOG.warn("Trouble retrieving htd", fnfe);
@@ -284,17 +284,17 @@ public class FSTableDescriptors implements TableDescriptors {
   throws IOException {
     Map<String, TableDescriptor> htds = new TreeMap<>();
     List<Path> tableDirs =
-        FSUtils.getLocalTableDirs(fs, FSUtils.getNamespaceDir(rootdir, name));
+        FSUtils.getLocalTableDirs(fs, CommonFSUtils.getNamespaceDir(rootdir, name));
     for (Path d: tableDirs) {
       TableDescriptor htd = null;
       try {
-        htd = get(FSUtils.getTableName(d));
+        htd = get(CommonFSUtils.getTableName(d));
       } catch (FileNotFoundException fnfe) {
         // inability of retrieving one HTD shouldn't stop getting the remaining
         LOG.warn("Trouble retrieving htd", fnfe);
       }
       if (htd == null) continue;
-      htds.put(FSUtils.getTableName(d).getNameAsString(), htd);
+      htds.put(CommonFSUtils.getTableName(d).getNameAsString(), htd);
     }
     return htds;
   }
@@ -383,8 +383,8 @@ public class FSTableDescriptors implements TableDescriptors {
    */
   // only visible for FSTableDescriptorMigrationToSubdir, can be removed with that
   static FileStatus getCurrentTableInfoStatus(FileSystem fs, Path dir, boolean removeOldFiles)
-  throws IOException {
-    FileStatus [] status = FSUtils.listStatus(fs, dir, TABLEINFO_PATHFILTER);
+    throws IOException {
+    FileStatus[] status = CommonFSUtils.listStatus(fs, dir, TABLEINFO_PATHFILTER);
     if (status == null || status.length < 1) return null;
     FileStatus mostCurrent = null;
     for (FileStatus file : status) {
@@ -423,8 +423,9 @@ public class FSTableDescriptors implements TableDescriptors {
   /**
    * Return the table directory in HDFS
    */
-  @VisibleForTesting Path getTableDir(final TableName tableName) {
-    return FSUtils.getTableDir(rootdir, tableName);
+  @VisibleForTesting
+  Path getTableDir(final TableName tableName) {
+    return CommonFSUtils.getTableDir(rootdir, tableName);
   }
 
   private static final PathFilter TABLEINFO_PATHFILTER = new PathFilter() {
@@ -490,7 +491,7 @@ public class FSTableDescriptors implements TableDescriptors {
    */
   public static TableDescriptor getTableDescriptorFromFs(FileSystem fs,
       Path hbaseRootDir, TableName tableName) throws IOException {
-    Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableName);
+    Path tableDir = CommonFSUtils.getTableDir(hbaseRootDir, tableName);
     return getTableDescriptorFromFs(fs, tableDir);
   }
 
@@ -556,12 +557,12 @@ public class FSTableDescriptors implements TableDescriptors {
    */
   private static void deleteTableDescriptorFiles(FileSystem fs, Path dir, int maxSequenceId)
   throws IOException {
-    FileStatus [] status = FSUtils.listStatus(fs, dir, TABLEINFO_PATHFILTER);
+    FileStatus [] status = CommonFSUtils.listStatus(fs, dir, TABLEINFO_PATHFILTER);
     for (FileStatus file : status) {
       Path path = file.getPath();
       int sequenceId = getTableInfoSequenceId(path);
       if (sequenceId <= maxSequenceId) {
-        boolean success = FSUtils.delete(fs, path, false);
+        boolean success = CommonFSUtils.delete(fs, path, false);
         if (success) {
           LOG.debug("Deleted " + path);
         } else {
@@ -621,7 +622,7 @@ public class FSTableDescriptors implements TableDescriptors {
       } catch (IOException ioe) {
         // Presume clash of names or something; go around again.
         LOG.debug("Failed write and/or rename; retrying", ioe);
-        if (!FSUtils.deleteDirectory(fs, tempPath)) {
+        if (!CommonFSUtils.deleteDirectory(fs, tempPath)) {
           LOG.warn("Failed cleanup of " + tempPath);
         }
         tableInfoDirPath = null;

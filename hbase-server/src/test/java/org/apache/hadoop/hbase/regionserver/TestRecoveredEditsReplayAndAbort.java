@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,7 +39,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -134,7 +133,7 @@ public class TestRecoveredEditsReplayAndAbort {
         .getDataTestDirOnTestFS("TestRecoveredEidtsReplayAndAbort.log");
     final WAL wal = HBaseTestingUtility.createWal(CONF, logDir, info);
     Path rootDir = TEST_UTIL.getDataTestDir();
-    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
     HRegionFileSystem
         .createRegionOnFileSystem(CONF, TEST_UTIL.getTestFileSystem(), tableDir, info);
     region = HRegion.newHRegion(tableDir, wal, TEST_UTIL.getTestFileSystem(), CONF, info,

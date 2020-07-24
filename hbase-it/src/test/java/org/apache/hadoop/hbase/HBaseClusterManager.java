@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -45,9 +44,12 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class HBaseClusterManager extends Configured implements ClusterManager {
-  private static final String SIGKILL = "SIGKILL";
-  private static final String SIGSTOP = "SIGSTOP";
-  private static final String SIGCONT = "SIGCONT";
+
+  protected enum Signal {
+    SIGKILL,
+    SIGSTOP,
+    SIGCONT,
+  }
 
   protected static final Logger LOG = LoggerFactory.getLogger(HBaseClusterManager.class);
   private String sshUserName;
@@ -71,11 +73,11 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       "timeout %6$s /usr/bin/ssh %1$s %2$s%3$s%4$s \"sudo %5$s\"";
   private String tunnelSudoCmd;
 
-  private static final String RETRY_ATTEMPTS_KEY = "hbase.it.clustermanager.retry.attempts";
-  private static final int DEFAULT_RETRY_ATTEMPTS = 5;
+  static final String RETRY_ATTEMPTS_KEY = "hbase.it.clustermanager.retry.attempts";
+  static final int DEFAULT_RETRY_ATTEMPTS = 5;
 
-  private static final String RETRY_SLEEP_INTERVAL_KEY = "hbase.it.clustermanager.retry.sleep.interval";
-  private static final int DEFAULT_RETRY_SLEEP_INTERVAL = 1000;
+  static final String RETRY_SLEEP_INTERVAL_KEY = "hbase.it.clustermanager.retry.sleep.interval";
+  static final int DEFAULT_RETRY_SLEEP_INTERVAL = 1000;
 
   protected RetryCounterFactory retryCounterFactory;
 
@@ -107,7 +109,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
         .setSleepInterval(conf.getLong(RETRY_SLEEP_INTERVAL_KEY, DEFAULT_RETRY_SLEEP_INTERVAL)));
   }
 
-  private String getServiceUser(ServiceType service) {
+  protected String getServiceUser(ServiceType service) {
     Configuration conf = getConf();
     switch (service) {
       case HADOOP_DATANODE:
@@ -329,9 +331,9 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
    * @return pair of exit code and command output
    * @throws IOException if something goes wrong.
    */
-  private Pair<Integer, String> exec(String hostname, ServiceType service, String... cmd)
+  protected Pair<Integer, String> exec(String hostname, ServiceType service, String... cmd)
     throws IOException {
-    LOG.info("Executing remote command: {} , hostname:{}", StringUtils.join(cmd, " "),
+    LOG.info("Executing remote command: {}, hostname:{}", StringUtils.join(cmd, " "),
         hostname);
 
     RemoteShell shell = new RemoteShell(hostname, getServiceUser(service), cmd);
@@ -444,8 +446,9 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     exec(hostname, service, Operation.RESTART);
   }
 
-  public void signal(ServiceType service, String signal, String hostname) throws IOException {
-    execWithRetries(hostname, service, getCommandProvider(service).signalCommand(service, signal));
+  public void signal(ServiceType service, Signal signal, String hostname) throws IOException {
+    execWithRetries(hostname, service,
+      getCommandProvider(service).signalCommand(service, signal.toString()));
   }
 
   @Override
@@ -457,16 +460,16 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
 
   @Override
   public void kill(ServiceType service, String hostname, int port) throws IOException {
-    signal(service, SIGKILL, hostname);
+    signal(service, Signal.SIGKILL, hostname);
   }
 
   @Override
   public void suspend(ServiceType service, String hostname, int port) throws IOException {
-    signal(service, SIGSTOP, hostname);
+    signal(service, Signal.SIGSTOP, hostname);
   }
 
   @Override
   public void resume(ServiceType service, String hostname, int port) throws IOException {
-    signal(service, SIGCONT, hostname);
+    signal(service, Signal.SIGCONT, hostname);
   }
 }

@@ -336,7 +336,7 @@ public class JVMClusterUtil {
             // The below has been replaced to debug sometime hangs on end of
             // tests.
             // this.master.join():
-            Threads.threadDumpingIsAlive(t.master.getThread());
+            Threads.threadDumpingIsAlive(t.master);
           } catch(InterruptedException e) {
             LOG.info("Got InterruptedException on shutdown - " +
                 "not waiting anymore on master ends", e);

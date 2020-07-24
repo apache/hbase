@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
@@ -76,16 +77,15 @@ public class HFileProcedurePrettyPrinter extends AbstractHBaseTool {
     addOptWithArg("w", "seekToPid", "Seek to this procedure id and print this procedure only");
     OptionGroup files = new OptionGroup();
     files.addOption(new Option("f", "file", true,
-      "File to scan. Pass full-path; e.g. hdfs://a:9000/MasterProcs/master/procedure/p/xxx"));
+      "File to scan. Pass full-path; e.g. hdfs://a:9000/MasterProcs/master/local/proc/xxx"));
     files.addOption(new Option("a", "all", false, "Scan the whole procedure region."));
     files.setRequired(true);
     options.addOptionGroup(files);
   }
 
   private void addAllHFiles() throws IOException {
-    Path masterProcDir =
-      new Path(CommonFSUtils.getWALRootDir(conf), RegionProcedureStore.MASTER_PROCEDURE_DIR);
-    Path tableDir = CommonFSUtils.getTableDir(masterProcDir, RegionProcedureStore.TABLE_NAME);
+    Path masterProcDir = new Path(CommonFSUtils.getRootDir(conf), MasterRegionFactory.MASTER_STORE_DIR);
+    Path tableDir = CommonFSUtils.getTableDir(masterProcDir, MasterRegionFactory.TABLE_NAME);
     FileSystem fs = tableDir.getFileSystem(conf);
     Path regionDir =
       fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]

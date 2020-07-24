@@ -26,6 +26,12 @@
     <fileSet>
       <directory>${project.basedir}/../target/site</directory>
       <outputDirectory>docs</outputDirectory>
+      <!--
+        Don't include dev apidocs. They bloat the tgz by almost 50%.
+        See HBASE-20149, HBASE-24630 -->
+      <excludes>
+        <exclude>**/*devapidocs/**</exclude>
+      </excludes>
     </fileSet>
     <!-- Include top level text files-->
     <fileSet>
@@ -116,6 +122,14 @@
       <outputDirectory>lib</outputDirectory>
       <includes>
         <include>${common.test.jar}</include>
+      </includes>
+      <fileMode>0644</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>${project.basedir}/../hbase-asyncfs/target/</directory>
+      <outputDirectory>lib</outputDirectory>
+      <includes>
+        <include>${asyncfs.test.jar}</include>
       </includes>
       <fileMode>0644</fileMode>
     </fileSet>

@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -81,14 +83,17 @@ public class TestFSUtils {
     conf = htu.getConfiguration();
   }
 
-  @Test public void testIsHDFS() throws Exception {
-    assertFalse(FSUtils.isHDFS(conf));
+  @Test
+  public void testIsHDFS() throws Exception {
+    assertFalse(CommonFSUtils.isHDFS(conf));
     MiniDFSCluster cluster = null;
     try {
       cluster = htu.startMiniDFSCluster(1);
-      assertTrue(FSUtils.isHDFS(conf));
+      assertTrue(CommonFSUtils.isHDFS(conf));
     } finally {
-      if (cluster != null) cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
@@ -204,8 +209,8 @@ public class TestFSUtils {
   }
 
   private void writeVersionFile(Path versionFile, String version) throws IOException {
-    if (FSUtils.isExists(fs, versionFile)) {
-      assertTrue(FSUtils.delete(fs, versionFile, true));
+    if (CommonFSUtils.isExists(fs, versionFile)) {
+      assertTrue(CommonFSUtils.delete(fs, versionFile, true));
     }
     try (FSDataOutputStream s = fs.create(versionFile)) {
       s.writeUTF(version);
@@ -223,13 +228,13 @@ public class TestFSUtils {
     FSUtils.checkVersion(fs, rootdir, true);
     // Now remove the version file and create a metadir so checkVersion fails.
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
-    assertTrue(FSUtils.isExists(fs, versionFile));
-    assertTrue(FSUtils.delete(fs, versionFile, true));
+    assertTrue(CommonFSUtils.isExists(fs, versionFile));
+    assertTrue(CommonFSUtils.delete(fs, versionFile, true));
     Path metaRegionDir =
         FSUtils.getRegionDirFromRootDir(rootdir, RegionInfoBuilder.FIRST_META_REGIONINFO);
-    FsPermission defaultPerms = FSUtils.getFilePermissions(fs, this.conf,
+    FsPermission defaultPerms = CommonFSUtils.getFilePermissions(fs, this.conf,
         HConstants.DATA_FILE_UMASK_KEY);
-    FSUtils.create(fs, metaRegionDir, defaultPerms, false);
+    CommonFSUtils.create(fs, metaRegionDir, defaultPerms, false);
     boolean thrown = false;
     try {
       FSUtils.checkVersion(fs, rootdir, true);
@@ -268,24 +273,24 @@ public class TestFSUtils {
     final Path rootdir = htu.getDataTestDir();
     final FileSystem fs = rootdir.getFileSystem(conf);
     // default fs permission
-    FsPermission defaultFsPerm = FSUtils.getFilePermissions(fs, conf,
+    FsPermission defaultFsPerm = CommonFSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
     // 'hbase.data.umask.enable' is false. We will get default fs permission.
     assertEquals(FsPermission.getFileDefault(), defaultFsPerm);
 
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
     // first check that we don't crash if we don't have perms set
-    FsPermission defaultStartPerm = FSUtils.getFilePermissions(fs, conf,
+    FsPermission defaultStartPerm = CommonFSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
     // default 'hbase.data.umask'is 000, and this umask will be used when
     // 'hbase.data.umask.enable' is true.
     // Therefore we will not get the real fs default in this case.
     // Instead we will get the starting point FULL_RWX_PERMISSIONS
-    assertEquals(new FsPermission(FSUtils.FULL_RWX_PERMISSIONS), defaultStartPerm);
+    assertEquals(new FsPermission(CommonFSUtils.FULL_RWX_PERMISSIONS), defaultStartPerm);
 
     conf.setStrings(HConstants.DATA_FILE_UMASK_KEY, "077");
     // now check that we get the right perms
-    FsPermission filePerm = FSUtils.getFilePermissions(fs, conf,
+    FsPermission filePerm = CommonFSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
     assertEquals(new FsPermission("700"), filePerm);
 
@@ -307,7 +312,7 @@ public class TestFSUtils {
     final Path rootdir = htu.getDataTestDir();
     final FileSystem fs = rootdir.getFileSystem(conf);
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
-    FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
+    FsPermission perms = CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // then that the correct file is created
     String file = htu.getRandomUUID().toString();
     Path p = new Path(htu.getDataTestDir(), "temptarget" + File.separator + file);
@@ -315,19 +320,19 @@ public class TestFSUtils {
     try {
       FSDataOutputStream out = FSUtils.create(conf, fs, p, perms, null);
       out.close();
-      assertTrue("The created file should be present", FSUtils.isExists(fs, p));
+      assertTrue("The created file should be present", CommonFSUtils.isExists(fs, p));
       // delete the file with recursion as false. Only the file will be deleted.
-      FSUtils.delete(fs, p, false);
+      CommonFSUtils.delete(fs, p, false);
       // Create another file
       FSDataOutputStream out1 = FSUtils.create(conf, fs, p1, perms, null);
       out1.close();
       // delete the file with recursion as false. Still the file only will be deleted
-      FSUtils.delete(fs, p1, true);
-      assertFalse("The created file should be present", FSUtils.isExists(fs, p1));
+      CommonFSUtils.delete(fs, p1, true);
+      assertFalse("The created file should be present", CommonFSUtils.isExists(fs, p1));
       // and then cleanup
     } finally {
-      FSUtils.delete(fs, p, true);
-      FSUtils.delete(fs, p1, true);
+      CommonFSUtils.delete(fs, p, true);
+      CommonFSUtils.delete(fs, p1, true);
     }
   }
 
@@ -345,7 +350,7 @@ public class TestFSUtils {
   @Test
   public void testRenameAndSetModifyTime() throws Exception {
     MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
-    assertTrue(FSUtils.isHDFS(conf));
+    assertTrue(CommonFSUtils.isHDFS(conf));
 
     FileSystem fs = FileSystem.get(conf);
     Path testDir = htu.getDataTestDirOnTestFS("testArchiveFile");
@@ -355,7 +360,7 @@ public class TestFSUtils {
 
     FSDataOutputStream out = fs.create(p);
     out.close();
-    assertTrue("The created file should be present", FSUtils.isExists(fs, p));
+    assertTrue("The created file should be present", CommonFSUtils.isExists(fs, p));
 
     long expect = System.currentTimeMillis() + 1000;
     assertNotEquals(expect, fs.getFileStatus(p).getModificationTime());
@@ -367,9 +372,9 @@ public class TestFSUtils {
       String dstFile = htu.getRandomUUID().toString();
       Path dst = new Path(testDir , dstFile);
 
-      assertTrue(FSUtils.renameAndSetModifyTime(fs, p, dst));
-      assertFalse("The moved file should not be present", FSUtils.isExists(fs, p));
-      assertTrue("The dst file should be present", FSUtils.isExists(fs, dst));
+      assertTrue(CommonFSUtils.renameAndSetModifyTime(fs, p, dst));
+      assertFalse("The moved file should not be present", CommonFSUtils.isExists(fs, p));
+      assertTrue("The dst file should be present", CommonFSUtils.isExists(fs, dst));
 
       assertEquals(expect, fs.getFileStatus(dst).getModificationTime());
       cluster.shutdown();
@@ -393,15 +398,15 @@ public class TestFSUtils {
     // There should be no exception thrown when setting to default storage policy, which indicates
     // the HDFS API hasn't been called
     try {
-      FSUtils.setStoragePolicy(testFs, new Path("non-exist"), HConstants.DEFAULT_WAL_STORAGE_POLICY,
-        true);
+      CommonFSUtils.setStoragePolicy(testFs, new Path("non-exist"),
+        HConstants.DEFAULT_WAL_STORAGE_POLICY, true);
     } catch (IOException e) {
       Assert.fail("Should have bypassed the FS API when setting default storage policy");
     }
     // There should be exception thrown when given non-default storage policy, which indicates the
     // HDFS API has been called
     try {
-      FSUtils.setStoragePolicy(testFs, new Path("non-exist"), "HOT", true);
+      CommonFSUtils.setStoragePolicy(testFs, new Path("non-exist"), "HOT", true);
       Assert.fail("Should have invoked the FS API but haven't");
     } catch (IOException e) {
       // expected given an invalid path
@@ -436,7 +441,7 @@ public class TestFSUtils {
 
     MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
     try {
-      assertTrue(FSUtils.isHDFS(conf));
+      assertTrue(CommonFSUtils.isHDFS(conf));
 
       FileSystem fs = FileSystem.get(conf);
       Path testDir = htu.getDataTestDirOnTestFS("testArchiveFile");
@@ -444,7 +449,7 @@ public class TestFSUtils {
 
       String storagePolicy =
           conf.get(HConstants.WAL_STORAGE_POLICY, HConstants.DEFAULT_WAL_STORAGE_POLICY);
-      FSUtils.setStoragePolicy(fs, testDir, storagePolicy);
+      CommonFSUtils.setStoragePolicy(fs, testDir, storagePolicy);
 
       String file =htu.getRandomUUID().toString();
       Path p = new Path(testDir, file);
@@ -642,17 +647,12 @@ public class TestFSUtils {
   }
 
 
-  private static final boolean STREAM_CAPABILITIES_IS_PRESENT;
   static {
-    boolean tmp = false;
     try {
       Class.forName("org.apache.hadoop.fs.StreamCapabilities");
-      tmp = true;
       LOG.debug("Test thought StreamCapabilities class was present.");
     } catch (ClassNotFoundException exception) {
       LOG.debug("Test didn't think StreamCapabilities class was present.");
-    } finally {
-      STREAM_CAPABILITIES_IS_PRESENT = tmp;
     }
   }
 
@@ -667,6 +667,58 @@ public class TestFSUtils {
       assertFalse(stream.hasCapability("a capability that hopefully HDFS doesn't add."));
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  private void testIsSameHdfs(int nnport) throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    Path srcPath = new Path("hdfs://localhost:" + nnport + "/");
+    Path desPath = new Path("hdfs://127.0.0.1/");
+    FileSystem srcFs = srcPath.getFileSystem(conf);
+    FileSystem desFs = desPath.getFileSystem(conf);
+
+    assertTrue(FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    desPath = new Path("hdfs://127.0.0.1:8070/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    desPath = new Path("hdfs://127.0.1.1:" + nnport + "/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    conf.set("fs.defaultFS", "hdfs://haosong-hadoop");
+    conf.set("dfs.nameservices", "haosong-hadoop");
+    conf.set("dfs.ha.namenodes.haosong-hadoop", "nn1,nn2");
+    conf.set("dfs.client.failover.proxy.provider.haosong-hadoop",
+      "org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider");
+
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn1", "127.0.0.1:" + nnport);
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn2", "127.10.2.1:8000");
+    desPath = new Path("/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(FSUtils.isSameHdfs(conf, srcFs, desFs));
+
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn1", "127.10.2.1:" + nnport);
+    conf.set("dfs.namenode.rpc-address.haosong-hadoop.nn2", "127.0.0.1:8000");
+    desPath = new Path("/");
+    desFs = desPath.getFileSystem(conf);
+    assertTrue(!FSUtils.isSameHdfs(conf, srcFs, desFs));
+  }
+
+  @Test
+  public void testIsSameHdfs() throws IOException {
+    String hadoopVersion = org.apache.hadoop.util.VersionInfo.getVersion();
+    LOG.info("hadoop version is: " + hadoopVersion);
+    boolean isHadoop3_0_0 = hadoopVersion.startsWith("3.0.0");
+    if (isHadoop3_0_0) {
+      // Hadoop 3.0.0 alpha1+ ~ 3.0.0 GA changed default nn port to 9820.
+      // See HDFS-9427
+      testIsSameHdfs(9820);
+    } else {
+      // pre hadoop 3.0.0 defaults to port 8020
+      // Hadoop 3.0.1 changed it back to port 8020. See HDFS-12990
+      testIsSameHdfs(8020);
     }
   }
 }

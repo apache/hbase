@@ -85,10 +85,10 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -140,7 +140,7 @@ public abstract class AbstractTestWALReplay {
     Path hbaseRootDir =
       TEST_UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
-    FSUtils.setRootDir(conf, hbaseRootDir);
+    CommonFSUtils.setRootDir(conf, hbaseRootDir);
   }
 
   @AfterClass
@@ -152,7 +152,7 @@ public abstract class AbstractTestWALReplay {
   public void setUp() throws Exception {
     this.conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    this.hbaseRootDir = FSUtils.getRootDir(this.conf);
+    this.hbaseRootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName =
       ServerName.valueOf(currentTest.getMethodName() + "-manual", 16010, System.currentTimeMillis())
@@ -275,7 +275,7 @@ public abstract class AbstractTestWALReplay {
 
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
-    Path basedir = FSUtils.getTableDir(hbaseRootDir, tableName);
+    Path basedir = CommonFSUtils.getTableDir(hbaseRootDir, tableName);
     deleteDir(basedir);
 
     HTableDescriptor htd = createBasic3FamilyHTD(tableName);
@@ -477,7 +477,7 @@ public abstract class AbstractTestWALReplay {
     final TableName tableName =
         TableName.valueOf("testReplayEditsWrittenViaHRegion");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
-    final Path basedir = FSUtils.getTableDir(this.hbaseRootDir, tableName);
+    final Path basedir = CommonFSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
@@ -585,7 +585,7 @@ public abstract class AbstractTestWALReplay {
     final TableName tableName =
         TableName.valueOf("testReplayEditsWrittenViaHRegion");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
-    final Path basedir = FSUtils.getTableDir(this.hbaseRootDir, tableName);
+    final Path basedir = CommonFSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
@@ -670,7 +670,7 @@ public abstract class AbstractTestWALReplay {
     final TableName tableName =
         TableName.valueOf("testReplayEditsAfterAbortingFlush");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
-    final Path basedir = FSUtils.getTableDir(this.hbaseRootDir, tableName);
+    final Path basedir = CommonFSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
     final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
     HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
@@ -769,7 +769,7 @@ public abstract class AbstractTestWALReplay {
         TableName.valueOf("testReplayEditsWrittenIntoWAL");
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
-    final Path basedir = FSUtils.getTableDir(hbaseRootDir, tableName);
+    final Path basedir = CommonFSUtils.getTableDir(hbaseRootDir, tableName);
     deleteDir(basedir);
 
     final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
@@ -871,7 +871,7 @@ public abstract class AbstractTestWALReplay {
     final TableName tableName = TableName.valueOf(currentTest.getMethodName());
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir =
-        FSUtils.getWALTableDir(conf, tableName);
+      CommonFSUtils.getWALTableDir(conf, tableName);
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
@@ -903,14 +903,14 @@ public abstract class AbstractTestWALReplay {
     assertTrue(listStatus.length > 0);
     WALSplitter.splitLogFile(hbaseRootDir, listStatus[0], this.fs, this.conf, null, null, null,
       wals, null);
-    FileStatus[] listStatus1 = this.fs.listStatus(new Path(FSUtils.getWALTableDir(conf, tableName),
-        new Path(hri.getEncodedName(), "recovered.edits")),
-      new PathFilter() {
-        @Override
-        public boolean accept(Path p) {
-          return !WALSplitUtil.isSequenceIdFile(p);
-        }
-      });
+    FileStatus[] listStatus1 =
+      this.fs.listStatus(new Path(CommonFSUtils.getWALTableDir(conf, tableName),
+        new Path(hri.getEncodedName(), "recovered.edits")), new PathFilter() {
+          @Override
+          public boolean accept(Path p) {
+            return !WALSplitUtil.isSequenceIdFile(p);
+          }
+        });
     int editCount = 0;
     for (FileStatus fileStatus : listStatus1) {
       editCount = Integer.parseInt(fileStatus.getPath().getName());
@@ -928,7 +928,7 @@ public abstract class AbstractTestWALReplay {
   public void testDatalossWhenInputError() throws Exception {
     final TableName tableName = TableName.valueOf("testDatalossWhenInputError");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
-    final Path basedir = FSUtils.getWALTableDir(conf, tableName);
+    final Path basedir = CommonFSUtils.getWALTableDir(conf, tableName);
     deleteDir(basedir);
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
@@ -1025,7 +1025,7 @@ public abstract class AbstractTestWALReplay {
     final TableName tableName = TableName.valueOf("testReplayEditsWrittenIntoWAL");
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
-    final Path basedir = FSUtils.getTableDir(hbaseRootDir, tableName);
+    final Path basedir = CommonFSUtils.getTableDir(hbaseRootDir, tableName);
     deleteDir(basedir);
 
     final HTableDescriptor htd = createBasic1FamilyHTD(tableName);

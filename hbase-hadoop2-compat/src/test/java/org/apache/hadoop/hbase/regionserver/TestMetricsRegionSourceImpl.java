@@ -20,6 +20,9 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
@@ -210,6 +213,20 @@ public class TestMetricsRegionSourceImpl {
     @Override
     public long getTotalRequestCount() {
       return 0;
+    }
+
+    @Override
+    public Map<String, Long> getMemstoreOnlyRowReadsCount() {
+      Map<String, Long> map = new HashMap<String, Long>();
+      map.put("info", 0L);
+      return map;
+    }
+
+    @Override
+    public Map<String, Long> getMixedRowReadsCount() {
+      Map<String, Long> map = new HashMap<String, Long>();
+      map.put("info", 0L);
+      return map;
     }
   }
 }

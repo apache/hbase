@@ -321,19 +321,18 @@ public class MiniZooKeeperCluster {
   public void shutdown() throws IOException {
     // shut down all the zk servers
     for (int i = 0; i < standaloneServerFactoryList.size(); i++) {
-      NIOServerCnxnFactory standaloneServerFactory =
-        standaloneServerFactoryList.get(i);
+      NIOServerCnxnFactory standaloneServerFactory = standaloneServerFactoryList.get(i);
       int clientPort = clientPortList.get(i);
-
       standaloneServerFactory.shutdown();
       if (!waitForServerDown(clientPort, connectionTimeout)) {
-        throw new IOException("Waiting for shutdown of standalone server");
+        throw new IOException("Waiting for shutdown of standalone server at port=" + clientPort +
+          ", timeout=" + this.connectionTimeout);
       }
     }
     standaloneServerFactoryList.clear();
 
     for (ZooKeeperServer zkServer: zooKeeperServers) {
-      //explicitly close ZKDatabase since ZookeeperServer does not close them
+      // Explicitly close ZKDatabase since ZookeeperServer does not close them
       zkServer.getZKDatabase().close();
     }
     zooKeeperServers.clear();

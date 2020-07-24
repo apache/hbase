@@ -18,24 +18,23 @@
 
 package org.apache.hadoop.hbase.io;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.FileNotFoundException;
 import java.util.List;
-
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -115,7 +114,7 @@ public class FileLink {
 
     public FileLinkInputStream(final FileSystem fs, final FileLink fileLink)
         throws IOException {
-      this(fs, fileLink, FSUtils.getDefaultBufferSize(fs));
+      this(fs, fileLink, CommonFSUtils.getDefaultBufferSize(fs));
     }
 
     public FileLinkInputStream(final FileSystem fs, final FileLink fileLink, int bufferSize)
@@ -522,12 +521,13 @@ public class FileLink {
 
   /**
    * Checks if the specified directory path is a back reference links folder.
-   *
    * @param dirPath Directory path to verify
    * @return True if the specified directory is a link references folder
    */
   public static boolean isBackReferencesDir(final Path dirPath) {
-    if (dirPath == null) return false;
+    if (dirPath == null) {
+      return false;
+    }
     return dirPath.getName().startsWith(BACK_REFERENCES_DIRECTORY_PREFIX);
   }
 

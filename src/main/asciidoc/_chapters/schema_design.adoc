@@ -127,8 +127,9 @@ ____
 ==  On the number of column families
 
 HBase currently does not do well with anything above two or three column families so keep the number of column families in your schema low.
-Currently, flushing and compactions are done on a per Region basis so if one column family is carrying the bulk of the data bringing on flushes, the adjacent families will also be flushed even though the amount of data they carry is small.
-When many column families exist the flushing and compaction interaction can make for a bunch of needless i/o (To be addressed by changing flushing and compaction to work on a per column family basis). For more information on compactions, see <<compaction>>.
+Currently, flushing is done on a per Region basis so if one column family is carrying the bulk of the data bringing on flushes, the adjacent families will also be flushed even though the amount of data they carry is small.
+When many column families exist the flushing interaction can make for a bunch of needless i/o (To be addressed by changing flushing to work on a per column family basis).
+In addition, compactions triggered at table/region level will happen per store too.
 
 Try to make do with one column family if you can in your schemas.
 Only introduce a second and third column family in the case where data access is usually column scoped; i.e.
@@ -1142,7 +1143,11 @@ Disable Nagle’s algorithm. Delayed ACKs can add up to ~200ms to RPC round trip
 Detect regionserver failure as fast as reasonable. Set the following parameters:
 
 * In `hbase-site.xml`, set `zookeeper.session.timeout` to 30 seconds or less to bound failure detection (20-30 seconds is a good start).
-- Notice: the `sessionTimeout` of zookeeper is limited between 2 times and 20 times the `tickTime`(the basic time unit in milliseconds used by ZooKeeper.the default value is 2000ms.It is used to do heartbeats and the minimum session timeout will be twice the tickTime).
+- Note: Zookeeper clients negotiate a session timeout with the server during client init. Server enforces this timeout to be in the
+range [`minSessionTimeout`, `maxSessionTimeout`] and both these timeouts (measured in milliseconds) are configurable in Zookeeper service configuration.
+If not configured, these default to 2 * `tickTime` and 20 * `tickTime` respectively (`tickTime` is the basic time unit used by ZooKeeper,
+as measured in milliseconds. It is used to regulate heartbeats, timeouts etc.). Refer to Zookeeper documentation for additional details.
+
 * Detect and avoid unhealthy or failed HDFS DataNodes: in `hdfs-site.xml` and `hbase-site.xml`, set the following parameters:
 - `dfs.namenode.avoid.read.stale.datanode = true`
 - `dfs.namenode.avoid.write.stale.datanode = true`
@@ -1159,7 +1164,7 @@ the regionserver/dfsclient side.
 
 * In `hbase-site.xml`, set the following parameters:
 - `dfs.client.read.shortcircuit = true`
-- `dfs.client.read.shortcircuit.skip.checksum = true` so we don't double checksum (HBase does its own checksumming to save on i/os. See <<hbase.regionserver.checksum.verify.performance>> for more on this.
+- `dfs.client.read.shortcircuit.skip.checksum = true` so we don't double checksum (HBase does its own checksumming to save on i/os. See <<hbase.regionserver.checksum.verify.performance>> for more on this. 
 - `dfs.domain.socket.path` to match what was set for the datanodes.
 - `dfs.client.read.shortcircuit.buffer.size = 131072` Important to avoid OOME -- hbase has a default it uses if unset, see `hbase.dfs.client.read.shortcircuit.buffer.size`; its default is 131072.
 * Ensure data locality. In `hbase-site.xml`, set `hbase.hstore.min.locality.to.skip.major.compact = 0.7` (Meaning that 0.7 \<= n \<= 1)

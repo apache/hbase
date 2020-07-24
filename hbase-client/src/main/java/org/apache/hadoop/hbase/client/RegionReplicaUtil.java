@@ -64,23 +64,7 @@ public class RegionReplicaUtil {
     if (regionInfo.getReplicaId() == replicaId) {
       return regionInfo;
     }
-
-    if (regionInfo.isMetaRegion()) {
-      return RegionInfoBuilder.newBuilder(regionInfo.getTable())
-          .setRegionId(regionInfo.getRegionId())
-          .setReplicaId(replicaId)
-          .setOffline(regionInfo.isOffline())
-          .build();
-    } else {
-      return RegionInfoBuilder.newBuilder(regionInfo.getTable())
-              .setStartKey(regionInfo.getStartKey())
-              .setEndKey(regionInfo.getEndKey())
-              .setSplit(regionInfo.isSplit())
-              .setRegionId(regionInfo.getRegionId())
-              .setReplicaId(replicaId)
-              .setOffline(regionInfo.isOffline())
-              .build();
-    }
+    return RegionInfoBuilder.newBuilder(regionInfo).setReplicaId(replicaId).build();
   }
 
   /**
@@ -163,14 +147,13 @@ public class RegionReplicaUtil {
   /**
    * Create any replicas for the regions (the default replicas that was already created is passed to
    * the method)
-   * @param tableDescriptor descriptor to use
    * @param regions existing regions
    * @param oldReplicaCount existing replica count
    * @param newReplicaCount updated replica count due to modify table
    * @return the combined list of default and non-default replicas
    */
-  public static List<RegionInfo> addReplicas(final TableDescriptor tableDescriptor,
-      final List<RegionInfo> regions, int oldReplicaCount, int newReplicaCount) {
+  public static List<RegionInfo> addReplicas(final List<RegionInfo> regions, int oldReplicaCount,
+    int newReplicaCount) {
     if ((newReplicaCount - 1) <= 0) {
       return regions;
     }

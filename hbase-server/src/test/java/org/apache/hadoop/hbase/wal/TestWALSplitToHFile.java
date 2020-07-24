@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +18,12 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.regionserver.wal.AbstractTestWALReplay.addRegionEdits;
-import static org.apache.hadoop.hbase.wal.BoundedRecoveredHFilesOutputSink.WAL_SPLIT_TO_HFILE;
+import static org.apache.hadoop.hbase.wal.WALSplitter.WAL_SPLIT_TO_HFILE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -33,7 +31,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -72,7 +69,6 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -120,7 +116,7 @@ public class TestWALSplitToHFile {
     UTIL.startMiniCluster(3);
     Path hbaseRootDir = UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
-    FSUtils.setRootDir(conf, hbaseRootDir);
+    CommonFSUtils.setRootDir(conf, hbaseRootDir);
   }
 
   @AfterClass
@@ -133,7 +129,7 @@ public class TestWALSplitToHFile {
     this.conf = HBaseConfiguration.create(UTIL.getConfiguration());
     this.conf.setBoolean(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS, false);
     this.fs = UTIL.getDFSCluster().getFileSystem();
-    this.rootDir = FSUtils.getRootDir(this.conf);
+    this.rootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName =
         ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010, System.currentTimeMillis())
@@ -189,7 +185,7 @@ public class TestWALSplitToHFile {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     final TableDescriptor td = createBasic3FamilyTD(tableName);
     final RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).build();
-    final Path tableDir = FSUtils.getTableDir(this.rootDir, tableName);
+    final Path tableDir = CommonFSUtils.getTableDir(this.rootDir, tableName);
     deleteDir(tableDir);
     FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, false);
     HRegion region = HBaseTestingUtility.createRegionAndWAL(ri, rootDir, this.conf, td);
@@ -210,7 +206,7 @@ public class TestWALSplitToHFile {
     Path walRootDir = UTIL.createWALRootDir();
     this.conf = HBaseConfiguration.create(UTIL.getConfiguration());
 
-    FileSystem walFs = FSUtils.getWALFileSystem(this.conf);
+    FileSystem walFs = CommonFSUtils.getWALFileSystem(this.conf);
     this.oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName =
         ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010, System.currentTimeMillis())
@@ -440,7 +436,7 @@ public class TestWALSplitToHFile {
         FileSystem newFS = FileSystem.get(newConf);
         // Make a new wal for new region open.
         WAL wal3 = createWAL(newConf, rootDir, logName);
-        Path tableDir = FSUtils.getTableDir(rootDir, td.getTableName());
+        Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
         HRegion region3 = new HRegion(tableDir, wal3, newFS, newConf, ri, td, null);
         long seqid3 = region3.initialize();
         Result result3 = region3.get(g);

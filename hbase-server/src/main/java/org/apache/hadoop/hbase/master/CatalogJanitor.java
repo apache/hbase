@@ -28,7 +28,6 @@ import java.util.Properties;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -57,8 +56,8 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
@@ -248,7 +247,7 @@ public class CatalogJanitor extends ScheduledChore {
       throws IOException {
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
-    Path tabledir = FSUtils.getTableDir(rootdir, mergedRegion.getTable());
+    Path tabledir = CommonFSUtils.getTableDir(rootdir, mergedRegion.getTable());
     TableDescriptor htd = getDescriptor(mergedRegion.getTable());
     HRegionFileSystem regionFs = null;
     try {
@@ -373,14 +372,14 @@ public class CatalogJanitor extends ScheduledChore {
 
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
-    Path tabledir = FSUtils.getTableDir(rootdir, daughter.getTable());
+    Path tabledir = CommonFSUtils.getTableDir(rootdir, daughter.getTable());
 
     Path daughterRegionDir = new Path(tabledir, daughter.getEncodedName());
 
     HRegionFileSystem regionFs;
 
     try {
-      if (!FSUtils.isExists(fs, daughterRegionDir)) {
+      if (!CommonFSUtils.isExists(fs, daughterRegionDir)) {
         return new Pair<>(Boolean.FALSE, Boolean.FALSE);
       }
     } catch (IOException ioe) {
@@ -425,7 +424,11 @@ public class CatalogJanitor extends ScheduledChore {
       // It doesn't have merge qualifier, no need to clean
       return true;
     }
-    return cleanMergeRegion(region, parents);
+
+    // If a parent region is a merged child region and GC has not kicked in/finish its work yet,
+    // return false in this case to avoid kicking in a merge, trying later.
+    cleanMergeRegion(region, parents);
+    return false;
   }
 
   /**
@@ -471,6 +474,10 @@ public class CatalogJanitor extends ScheduledChore {
      */
     public List<Pair<RegionInfo, RegionInfo>> getOverlaps() {
       return this.overlaps;
+    }
+
+    public Map<RegionInfo, Result> getMergedRegions() {
+      return this.mergedRegions;
     }
 
     public List<Pair<RegionInfo, ServerName>> getUnknownServers() {
@@ -649,7 +656,12 @@ public class CatalogJanitor extends ScheduledChore {
             } else if (ri.isOverlap(this.highestEndKeyRegionInfo)) {
               // We may have seen a region a few rows back that overlaps this one.
               addOverlap(this.highestEndKeyRegionInfo, ri);
-            } else {
+            } else if (!this.highestEndKeyRegionInfo.isNext(ri)) {
+              // Need to check the case if this.highestEndKeyRegionInfo.isNext(ri). If no,
+              // report a hole, otherwise, it is ok. For an example,
+              // previous: [aa, bb), ri: [cc, dd), highestEndKeyRegionInfo: [a, cc)
+              // In this case, it should not report a hole, as highestEndKeyRegionInfo covers
+              // the hole between previous and ri.
               addHole(this.previous, ri);
             }
           } else if (ri.isOverlap(this.highestEndKeyRegionInfo)) {

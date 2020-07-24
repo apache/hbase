@@ -19,19 +19,19 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CreateNamespaceState;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * The procedure to create a new namespace.
@@ -225,7 +225,7 @@ public class CreateNamespaceProcedure
       final NamespaceDescriptor nsDescriptor) throws IOException {
     MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     mfs.getFileSystem().mkdirs(
-      FSUtils.getNamespaceDir(mfs.getRootDir(), nsDescriptor.getName()));
+      CommonFSUtils.getNamespaceDir(mfs.getRootDir(), nsDescriptor.getName()));
   }
 
   /**

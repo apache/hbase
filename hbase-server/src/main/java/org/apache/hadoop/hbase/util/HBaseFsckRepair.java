@@ -186,7 +186,7 @@ public class HBaseFsckRepair {
   public static HRegion createHDFSRegionDir(Configuration conf,
       RegionInfo hri, TableDescriptor htd) throws IOException {
     // Create HRegion
-    Path root = FSUtils.getRootDir(conf);
+    Path root = CommonFSUtils.getRootDir(conf);
     HRegion region = HRegion.createHRegion(hri, root, conf, htd, null);
 
     // Close the new region to flush to disk. Close log file too.

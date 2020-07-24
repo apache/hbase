@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
@@ -85,8 +84,6 @@ class MemStoreFlusher implements FlushRequester {
 
   private final FlushHandler[] flushHandlers;
   private List<FlushRequestListener> flushRequestListeners = new ArrayList<>(1);
-
-  private FlushType flushType;
 
   /**
    * Singleton instance inserted into flush queue used for signaling.
@@ -128,6 +125,11 @@ class MemStoreFlusher implements FlushRequester {
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
     int handlerCount = conf.getInt("hbase.hstore.flusher.count", 2);
+    if (handlerCount < 1) {
+      LOG.warn("hbase.hstore.flusher.count was configed to {} which is less than 1, corrected to 1",
+          handlerCount);
+      handlerCount = 1;
+    }
     this.flushHandlers = new FlushHandler[handlerCount];
     LOG.info("globalMemStoreLimit="
         + TraditionalBinaryPrefix
@@ -143,17 +145,13 @@ class MemStoreFlusher implements FlushRequester {
     return this.updatesBlockedMsHighWater;
   }
 
-  public void setFlushType(FlushType flushType) {
-    this.flushType = flushType;
-  }
-
   /**
    * The memstore across all regions has exceeded the low water mark. Pick
    * one region to flush and flush it synchronously (this is called from the
    * flush thread)
    * @return true if successful
    */
-  private boolean flushOneForGlobalPressure() {
+  private boolean flushOneForGlobalPressure(FlushType flushType) {
     SortedMap<Long, HRegion> regionsBySize = null;
     switch(flushType) {
       case ABOVE_OFFHEAP_HIGHER_MARK:
@@ -320,7 +318,7 @@ class MemStoreFlusher implements FlushRequester {
     return r == null? 0: r.getMemStoreDataSize();
   }
 
-  private class FlushHandler extends HasThread {
+  private class FlushHandler extends Thread {
 
     private FlushHandler(String name) {
       super(name);
@@ -343,7 +341,7 @@ class MemStoreFlusher implements FlushRequester {
               // we still select the regions based on the region's memstore data size.
               // TODO : If we want to decide based on heap over head it can be done without tracking
               // it per region.
-              if (!flushOneForGlobalPressure()) {
+              if (!flushOneForGlobalPressure(type)) {
                 // Wasn't able to flush any region, but we're above low water mark
                 // This is unlikely to happen, but might happen when closing the
                 // entire server - another thread is flushing regions. We'll just
@@ -530,7 +528,7 @@ class MemStoreFlusher implements FlushRequester {
   void join() {
     for (FlushHandler flushHander : flushHandlers) {
       if (flushHander != null) {
-        Threads.shutdown(flushHander.getThread());
+        Threads.shutdown(flushHander);
       }
     }
   }
@@ -706,7 +704,6 @@ class MemStoreFlusher implements FlushRequester {
           try {
             flushType = isAboveHighWaterMark();
             while (flushType != FlushType.NORMAL && !server.isStopped()) {
-              server.getMemStoreFlusher().setFlushType(flushType);
               if (!blocked) {
                 startTime = EnvironmentEdgeManager.currentTime();
                 if (!server.getRegionServerAccounting().isOffheap()) {
@@ -764,7 +761,6 @@ class MemStoreFlusher implements FlushRequester {
       } else {
         flushType = isAboveLowWaterMark();
         if (flushType != FlushType.NORMAL) {
-          server.getMemStoreFlusher().setFlushType(flushType);
           wakeupFlushThread();
         }
       }

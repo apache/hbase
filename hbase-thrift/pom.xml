@@ -25,7 +25,7 @@
   <parent>
     <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>2.3.0-SNAPSHOT</version>
+    <version>2.3.1-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-thrift</artifactId>
@@ -149,6 +149,12 @@
     <!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-logging</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-common</artifactId>
       <type>jar</type>
     </dependency>
@@ -181,6 +187,12 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-asyncfs</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -246,6 +258,26 @@
     <dependency>
       <groupId>org.apache.kerby</groupId>
       <artifactId>kerb-simplekdc</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jul-to-slf4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -324,12 +356,12 @@
                     <requireProperty>
                       <property>thrift.version</property>
                       <message>"The Thrift version must be specified."</message>
-                      <regex>0\.12\.0</regex>
+                      <regex>0\.13\.0</regex>
                       <regexMessage>
 -
 -
 [FATAL] ==========================================================================================
-[FATAL] HBase Thrift requires the thrift generator version 0.12.0.
+[FATAL] HBase Thrift requires the thrift generator version 0.13.0.
 [FATAL] Setting it to something else needs to be reviewed for wire and behavior compatibility.
 [FATAL] ==========================================================================================
 -
@@ -428,6 +460,10 @@
               <groupId>com.google.guava</groupId>
               <artifactId>guava</artifactId>
             </exclusion>
+            <exclusion>
+              <groupId>javax.xml.bind</groupId>
+              <artifactId>jaxb-api</artifactId>
+            </exclusion>
           </exclusions>
         </dependency>
         <dependency>
@@ -437,6 +473,10 @@
             <exclusion>
               <groupId>com.google.guava</groupId>
               <artifactId>guava</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>javax.xml.bind</groupId>
+              <artifactId>jaxb-api</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
@@ -468,6 +508,10 @@
             <exclusion>
               <groupId>org.apache.zookeeper</groupId>
               <artifactId>zookeeper</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>javax.xml.bind</groupId>
+              <artifactId>jaxb-api</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
@@ -518,6 +562,20 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minicluster</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>javax.xml.bind</groupId>
+              <artifactId>jaxb-api</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>javax.ws.rs</groupId>
+              <artifactId>jsr311-api</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
       </dependencies>
       <build>

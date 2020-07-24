@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Set;
 import org.apache.hadoop.fs.Path;
@@ -34,8 +35,8 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -276,7 +277,7 @@ public class TestTableDescriptorModificationFromClient {
 
     // Verify descriptor from HDFS
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
-    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
+    Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), tableName);
     TableDescriptor td =
         FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
     verifyTableDescriptor(td, tableName, families);

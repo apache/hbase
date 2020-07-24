@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CONF_DIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -76,7 +77,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
@@ -349,7 +350,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   }
 
   private Path createMobFiles(HBaseTestingUtility util) throws IOException {
-    Path testDir = FSUtils.getRootDir(util.getConfiguration());
+    Path testDir = CommonFSUtils.getRootDir(util.getConfiguration());
     Path mobTestDir = new Path(testDir, MobConstants.MOB_DIR_NAME);
     Path basePath = new Path(new Path(mobTestDir, tableName.getNameAsString()), "f");
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();

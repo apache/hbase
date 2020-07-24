@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
 import org.apache.hadoop.hbase.util.IdReadWriteLock.ReferenceType;
 import org.apache.hadoop.util.StringUtils;
@@ -867,7 +866,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
   // This handles flushing the RAM cache to IOEngine.
   @VisibleForTesting
-  class WriterThread extends HasThread {
+  class WriterThread extends Thread {
     private final BlockingQueue<RAMQueueEntry> inputQueue;
     private volatile boolean writerEnabled = true;
 
@@ -1165,8 +1164,10 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private void checkIOErrorIsTolerated() {
     long now = EnvironmentEdgeManager.currentTime();
-    if (this.ioErrorStartTime > 0) {
-      if (cacheEnabled && (now - ioErrorStartTime) > this.ioErrorsTolerationDuration) {
+    // Do a single read to a local variable to avoid timing issue - HBASE-24454
+    long ioErrorStartTimeTmp = this.ioErrorStartTime;
+    if (ioErrorStartTimeTmp > 0) {
+      if (cacheEnabled && (now - ioErrorStartTimeTmp) > this.ioErrorsTolerationDuration) {
         LOG.error("IO errors duration time has exceeded " + ioErrorsTolerationDuration +
           "ms, disabling cache, please check your IOEngine");
         disableCache();

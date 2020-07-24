@@ -20,9 +20,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
   DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
     ca-certificates=20180409 \
-    curl=7.58.0-2ubuntu3.8 \
-    git=1:2.17.1-1ubuntu0.5 \
-    locales=2.27-3ubuntu1 \
+    curl='7.58.0-*' \
+    git='1:2.17.1-*' \
+    locales='2.27-*' \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

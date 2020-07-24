@@ -33,7 +33,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -60,6 +59,7 @@ import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -67,7 +67,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -146,15 +148,10 @@ public class RestoreSnapshotHelper {
     this(conf, fs, manifest, tableDescriptor, rootDir, monitor, status, true);
   }
 
-  public RestoreSnapshotHelper(final Configuration conf,
-      final FileSystem fs,
-      final SnapshotManifest manifest,
-      final TableDescriptor tableDescriptor,
-      final Path rootDir,
-      final ForeignExceptionDispatcher monitor,
-      final MonitoredTask status,
-      final boolean createBackRefs)
-  {
+  public RestoreSnapshotHelper(final Configuration conf, final FileSystem fs,
+    final SnapshotManifest manifest, final TableDescriptor tableDescriptor, final Path rootDir,
+    final ForeignExceptionDispatcher monitor, final MonitoredTask status,
+    final boolean createBackRefs) {
     this.fs = fs;
     this.conf = conf;
     this.snapshotManifest = manifest;
@@ -162,7 +159,7 @@ public class RestoreSnapshotHelper {
     this.snapshotTable = TableName.valueOf(snapshotDesc.getTable());
     this.tableDesc = tableDescriptor;
     this.rootDir = rootDir;
-    this.tableDir = FSUtils.getTableDir(rootDir, tableDesc.getTableName());
+    this.tableDir = CommonFSUtils.getTableDir(rootDir, tableDesc.getTableName());
     this.monitor = monitor;
     this.status = status;
     this.createBackRefs = createBackRefs;
@@ -565,8 +562,10 @@ public class RestoreSnapshotHelper {
    * @return The set of files in the specified family directory.
    */
   private Set<String> getTableRegionFamilyFiles(final Path familyDir) throws IOException {
-    FileStatus[] hfiles = FSUtils.listStatus(fs, familyDir);
-    if (hfiles == null) return Collections.emptySet();
+    FileStatus[] hfiles = CommonFSUtils.listStatus(fs, familyDir);
+    if (hfiles == null) {
+      return Collections.emptySet();
+    }
 
     Set<String> familyFiles = new HashSet<>(hfiles.length);
     for (int i = 0; i < hfiles.length; ++i) {
@@ -807,8 +806,11 @@ public class RestoreSnapshotHelper {
    */
   private List<RegionInfo> getTableRegions() throws IOException {
     LOG.debug("get table regions: " + tableDir);
-    FileStatus[] regionDirs = FSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
-    if (regionDirs == null) return null;
+    FileStatus[] regionDirs =
+      CommonFSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
+    if (regionDirs == null) {
+      return null;
+    }
 
     List<RegionInfo> regions = new ArrayList<>(regionDirs.length);
     for (int i = 0; i < regionDirs.length; ++i) {
@@ -816,7 +818,7 @@ public class RestoreSnapshotHelper {
       regions.add(hri);
     }
     LOG.debug("found " + regions.size() + " regions for table=" +
-        tableDesc.getTableName().getNameAsString());
+      tableDesc.getTableName().getNameAsString());
     return regions;
   }
 
@@ -857,7 +859,7 @@ public class RestoreSnapshotHelper {
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Restored table dir:" + restoreDir);
-      FSUtils.logFileSystemState(fs, restoreDir, LOG);
+      CommonFSUtils.logFileSystemState(fs, restoreDir, LOG);
     }
     return metaChanges;
   }

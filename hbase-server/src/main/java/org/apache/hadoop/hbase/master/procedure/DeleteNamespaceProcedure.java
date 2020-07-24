@@ -20,24 +20,24 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteNamespaceState;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * The procedure to remove a namespace.
@@ -292,7 +292,7 @@ public class DeleteNamespaceProcedure
       final String namespaceName) throws IOException {
     MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     FileSystem fs = mfs.getFileSystem();
-    Path p = FSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName);
+    Path p = CommonFSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName);
 
     try {
       for(FileStatus status : fs.listStatus(p)) {
@@ -300,7 +300,7 @@ public class DeleteNamespaceProcedure
           throw new IOException("Namespace directory contains table dir: " + status.getPath());
         }
       }
-      if (!fs.delete(FSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName), true)) {
+      if (!fs.delete(CommonFSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName), true)) {
         throw new IOException("Failed to remove namespace: " + namespaceName);
       }
     } catch (FileNotFoundException e) {

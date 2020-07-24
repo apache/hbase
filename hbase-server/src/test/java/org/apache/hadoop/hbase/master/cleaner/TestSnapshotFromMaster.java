@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -59,8 +58,8 @@ import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -413,7 +412,7 @@ public class TestSnapshotFromMaster {
     admin.snapshot(snapshotName, TABLE_NAME);
 
     LOG.info("After snapshot File-System state");
-    FSUtils.logFileSystemState(fs, rootDir, LOG);
+    CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
 
     // ensure we only have one snapshot
     SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshotNameBytes, TABLE_NAME);
@@ -445,13 +444,13 @@ public class TestSnapshotFromMaster {
     CompactedHFilesDischarger cleaner = new CompactedHFilesDischarger(100, null, hrs, false);
     cleaner.chore();
     LOG.info("After compaction File-System state");
-    FSUtils.logFileSystemState(fs, rootDir, LOG);
+    CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
 
     // make sure the cleaner has run
     LOG.debug("Running hfile cleaners");
     ensureHFileCleanersRun();
     LOG.info("After cleaners File-System state: " + rootDir);
-    FSUtils.logFileSystemState(fs, rootDir, LOG);
+    CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
 
     // get the snapshot files for the table
     Path snapshotTable = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
@@ -492,7 +491,7 @@ public class TestSnapshotFromMaster {
     LOG.debug("Running hfile cleaners");
     ensureHFileCleanersRun();
     LOG.info("After delete snapshot cleaners run File-System state");
-    FSUtils.logFileSystemState(fs, rootDir, LOG);
+    CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
 
     archives = getHFiles(archiveDir, fs, TABLE_NAME);
     assertEquals("Still have some hfiles in the archive, when their snapshot has been deleted.", 0,
@@ -504,7 +503,7 @@ public class TestSnapshotFromMaster {
    * @throws IOException on expected failure
    */
   private final Collection<String> getHFiles(Path dir, FileSystem fs, TableName tableName) throws IOException {
-    Path tableDir = FSUtils.getTableDir(dir, tableName);
+    Path tableDir = CommonFSUtils.getTableDir(dir, tableName);
     return SnapshotTestingUtils.listHFileNames(fs, tableDir);
   }
 

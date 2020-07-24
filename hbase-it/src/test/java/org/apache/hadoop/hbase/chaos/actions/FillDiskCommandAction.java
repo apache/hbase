@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.slf4j.Logger;
@@ -31,9 +30,9 @@ import org.slf4j.LoggerFactory;
  */
 public class FillDiskCommandAction extends SudoCommandAction {
   private static final Logger LOG = LoggerFactory.getLogger(FillDiskCommandAction.class);
-  private long size;
-  private long duration;
-  private String path;
+  private final long size;
+  private final long duration;
+  private final String path;
 
   /**
    * Fill the disk on a random regionserver.
@@ -52,20 +51,24 @@ public class FillDiskCommandAction extends SudoCommandAction {
     this.path = path;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   protected void localPerform() throws IOException {
-    LOG.info("Starting to execute FillDiskCommandAction");
+    getLogger().info("Starting to execute FillDiskCommandAction");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
     String hostname = server.getHostname();
 
     try {
       clusterManager.execSudo(hostname, duration, getFillCommand());
     } catch (IOException ex) {
-      LOG.info("Potential timeout. We try to stop the dd process on target machine");
+      getLogger().info("Potential timeout. We try to stop the dd process on target machine");
       clusterManager.execSudoWithRetries(hostname, timeout, getStopCommand());
       throw ex;
     } finally {
       clusterManager.execSudoWithRetries(hostname, timeout, getClearCommand());
-      LOG.info("Finished to execute FillDiskCommandAction");
+      getLogger().info("Finished to execute FillDiskCommandAction");
     }
   }
 
@@ -82,6 +85,6 @@ public class FillDiskCommandAction extends SudoCommandAction {
   }
 
   private String getStopCommand() {
-    return String.format("killall dd");
+    return "killall dd";
   }
 }

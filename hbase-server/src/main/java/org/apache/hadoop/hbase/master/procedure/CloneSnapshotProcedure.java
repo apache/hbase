@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,13 +50,15 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -456,10 +457,15 @@ public class CloneSnapshotProcedure
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
-    final Path tempTableDir = FSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
-    ((FSTableDescriptors)(env.getMasterServices().getTableDescriptors()))
+    final Path tempTableDir = CommonFSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
+    if (CommonFSUtils.isExists(mfs.getFileSystem(), tempTableDir)) {
+      // if the region dirs exist, will cause exception and unlimited retry (see HBASE-24546)
+      LOG.warn("temp table dir already exists on disk: {}, will be deleted.", tempTableDir);
+      CommonFSUtils.deleteDirectory(mfs.getFileSystem(), tempTableDir);
+    }
+    ((FSTableDescriptors) (env.getMasterServices().getTableDescriptors()))
       .createTableDescriptorForTableDirectory(tempTableDir,
-              TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);
+        TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);
 
     // 2. Create Regions
     newRegions = hdfsRegionHandler.createHdfsRegions(
