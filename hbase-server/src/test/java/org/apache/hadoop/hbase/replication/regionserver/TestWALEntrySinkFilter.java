@@ -125,7 +125,7 @@ public class TestWALEntrySinkFilter {
         IfTimeIsGreaterThanBOUNDARYWALEntrySinkFilterImpl.class, WALEntrySinkFilter.class);
     conf.setClass("hbase.client.connection.impl", DevNullConnection.class,
         Connection.class);
-    ReplicationSink sink = new ReplicationSink(conf, STOPPABLE);
+    ReplicationSink sink = new ReplicationSink(conf);
     // Create some dumb walentries.
     List< org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry > entries =
         new ArrayList<>();
