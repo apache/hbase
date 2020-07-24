@@ -43,6 +43,9 @@ public final class UnsafeAccess {
 
   /** The offset to the first element in a byte array. */
   public static final int BYTE_ARRAY_BASE_OFFSET;
+  /** The offset to the first element in a object array. */
+  private static final int OBJECT_BASE_OFFSET;
+  private static final int OBJECT_SCALE;
 
   public static final boolean LITTLE_ENDIAN =
     ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
@@ -68,8 +71,12 @@ public final class UnsafeAccess {
 
     if(theUnsafe != null){
       BYTE_ARRAY_BASE_OFFSET = theUnsafe.arrayBaseOffset(byte[].class);
+      OBJECT_BASE_OFFSET = theUnsafe.arrayBaseOffset(Object[].class);
+      OBJECT_SCALE = theUnsafe.arrayIndexScale(Object[].class);
     } else{
       BYTE_ARRAY_BASE_OFFSET = -1;
+      OBJECT_BASE_OFFSET = -1;
+      OBJECT_SCALE = -1;
     }
   }
 
@@ -393,6 +400,21 @@ public final class UnsafeAccess {
   }
 
   /**
+   * Put a long value out to the specified BB position in big-endian format. (Volatile version)
+   * @param bytes the byte buffer
+   * @param offset position in the buffer
+   * @param val long to write out
+   * @return incremented offset
+   */
+  public static int putLongVolatile(byte[] bytes, int offset, long val) {
+    if (LITTLE_ENDIAN) {
+      val = Long.reverseBytes(val);
+    }
+    theUnsafe.putLongVolatile(bytes, BYTE_ARRAY_BASE_OFFSET + offset, val);
+    return offset + Bytes.SIZEOF_LONG;
+  }
+
+  /**
    * Put a byte value out to the specified BB position in big-endian format.
    * @param buf the byte buffer
    * @param offset position in the buffer
@@ -422,4 +444,33 @@ public final class UnsafeAccess {
       return theUnsafe.getByte(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
     }
   }
+
+  public static boolean compareAndSetLong(byte[] bytes, int offset, long expect, long update) {
+    if (LITTLE_ENDIAN) {
+      expect = Long.reverseBytes(expect);
+      update = Long.reverseBytes(update);
+    }
+    return theUnsafe.compareAndSwapLong(bytes, BYTE_ARRAY_BASE_OFFSET + offset,
+                                        expect,
+                                        update);
+  }
+
+  public static boolean compareAndSwapObject(Object[] objects, int offset,
+                                             Object expect, Object update) {
+    return theUnsafe.compareAndSwapObject(objects,
+                                          OBJECT_BASE_OFFSET + offset * OBJECT_SCALE,
+                                          expect,
+                                          update);
+  }
+
+  public static long toLongVolatile(byte[] bytes, int offset) {
+    return LITTLE_ENDIAN ?
+      Long.reverseBytes(theUnsafe.getLongVolatile(bytes, BYTE_ARRAY_BASE_OFFSET + offset)) :
+      theUnsafe.getLongVolatile(bytes, BYTE_ARRAY_BASE_OFFSET + offset);
+  }
+
+  public static Object getObjectVolatile(Object[] objects, int offset) {
+    return theUnsafe.getObjectVolatile(objects, OBJECT_BASE_OFFSET + offset * OBJECT_SCALE);
+  }
+
 }
