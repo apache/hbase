@@ -934,7 +934,6 @@
           <artifactId>protobuf-maven-plugin</artifactId>
           <version>${protobuf.plugin.version}</version>
           <configuration>
-            <protocArtifact>${external.protobuf.groupid}:protoc:${external.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
             <protoSourceRoot>${basedir}/src/main/protobuf/</protoSourceRoot>
             <clearOutputDirectory>false</clearOutputDirectory>
             <checkStaleness>true</checkStaleness>
@@ -1560,8 +1559,6 @@
     <htrace.version>4.2.0-incubating</htrace.version>
     <log4j.version>1.2.17</log4j.version>
     <mockito-core.version>2.28.2</mockito-core.version>
-    <!--Internally we use a different version of protobuf. See hbase-protocol-shaded-->
-    <external.protobuf.version>2.5.0</external.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.13.0</thrift.version>
@@ -1680,7 +1677,6 @@
     <!-- TODO HBASE-15041 clean up our javadocs so jdk8 linter can be used.
          property as of javadoc-plugin 3.0.0 -->
     <doclint>none</doclint>
-    <external.protobuf.groupid>com.google.protobuf</external.protobuf.groupid>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -2226,11 +2222,6 @@
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-util-ajax</artifactId>
         <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.protobuf</groupId>
-        <artifactId>protobuf-java</artifactId>
-        <version>${external.protobuf.version}</version>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.containers</groupId>
