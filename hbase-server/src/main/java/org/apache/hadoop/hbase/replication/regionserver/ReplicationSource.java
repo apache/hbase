@@ -524,16 +524,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (!this.isSourceActive()) {
       return;
     }
-
-    // In rare case, zookeeper setting may be messed up. That leads to the incorrect
-    // peerClusterId value, which is the same as the source clusterId
-    if (clusterId.equals(peerClusterId) && !replicationEndpoint.canReplicateToSameCluster()) {
-      this.terminate("ClusterId " + clusterId + " is replicating to itself: peerClusterId "
-          + peerClusterId + " which is not allowed by ReplicationEndpoint:"
-          + replicationEndpoint.getClass().getName(), null, false);
-      this.manager.removeSource(this);
-      return;
-    }
     LOG.info("{} Source: {}, is now replicating from cluster: {}; to peer cluster: {};",
       logPeerId(), this.replicationQueueInfo.getQueueId(), clusterId, peerClusterId);
 
