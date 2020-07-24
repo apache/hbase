@@ -184,6 +184,7 @@ import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint;
+import org.apache.hadoop.hbase.rsgroup.RSGroupAutoScaleChore;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
@@ -385,6 +386,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
   private QuotaObserverChore quotaObserverChore;
   private SnapshotQuotaObserverChore snapshotQuotaChore;
+  private RSGroupAutoScaleChore rsGroupAutoScaleChore;
 
   private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
   private ProcedureStore procedureStore;
@@ -1024,6 +1026,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.hbckChore = new HbckChore(this);
     getChoreService().scheduleChore(hbckChore);
     this.serverManager.startChore();
+    if (RSGroupUtil.isRSGroupAutoScaleEnabled(conf)) {
+      this.rsGroupAutoScaleChore = new RSGroupAutoScaleChore(this);
+      getChoreService().scheduleChore(this.rsGroupAutoScaleChore);
+    }
 
     // Only for rolling upgrade, where we need to migrate the data in namespace table to meta table.
     if (!waitForNamespaceOnline()) {
@@ -1561,6 +1567,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       shutdownChore(snapshotCleanerChore);
       shutdownChore(hbckChore);
       shutdownChore(regionsRecoveryChore);
+      shutdownChore(rsGroupAutoScaleChore);
     }
   }
 
