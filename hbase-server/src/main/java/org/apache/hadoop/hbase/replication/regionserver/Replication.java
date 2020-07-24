@@ -187,7 +187,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   @Override
   public void startReplicationService() throws IOException {
     this.replicationManager.init();
-    this.replicationSink = new ReplicationSink(this.conf, this.server);
+    this.replicationSink = new ReplicationSink(this.conf);
     this.scheduleThreadPool.scheduleAtFixedRate(
       new ReplicationStatisticsTask(this.replicationSink, this.replicationManager),
       statsThreadPeriod, statsThreadPeriod, TimeUnit.SECONDS);
