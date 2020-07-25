@@ -433,6 +433,11 @@ public class QuotaObserverChore extends ScheduledChore {
             LOG.info(tableInNS + " moving into violation of namespace space quota with policy "
                 + targetStatus.getPolicy());
             this.snapshotNotifier.transitionTable(tableInNS, targetSnapshot);
+            // when the Namespace is in violation due to Disable Policy, Disable the table
+            if (targetStatus.isInViolation()
+              && targetStatus.getPolicy().get() == SpaceViolationPolicy.DISABLE) {
+              QuotaUtil.disableTableIfNotDisabled(conn, tableInNS);
+            }
           }
         }
       }
