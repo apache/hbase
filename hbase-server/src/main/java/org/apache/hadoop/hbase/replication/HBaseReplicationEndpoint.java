@@ -168,8 +168,8 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   /**
-   * Get a list of all the addresses of all the region servers
-   * for this peer cluster
+   * Get a list of all the addresses of all the available region servers
+   * for this peer cluster, or an empty list if no region servers available at peer cluster.
    * @return list of addresses
    */
   // Synchronize peer cluster connection attempts to avoid races and rate
