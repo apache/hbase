@@ -151,7 +151,7 @@ require 'shell/formatter'
 ##
 # Toggle shell debugging
 #
-# @return [Boolean] true is debug is turned on after updating the flag
+# @return [Boolean] true if debug is turned on after updating the flag
 def debug
   if @shell_debug
     @shell_debug = false
