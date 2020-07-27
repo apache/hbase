@@ -58,7 +58,7 @@ Usage: shell [OPTIONS] [SCRIPTFILE [ARGUMENTS]]
  -h | --help             This help.
  -n | --noninteractive   Do not run within an IRB session and exit with non-zero
                          status on first error.
- --top-level-cmds        Compatibility flag to export HBase shell commands onto
+ --top-level-defs        Compatibility flag to export HBase shell commands onto
                          Ruby's main object
  -Dkey=value             Pass hbase-*.xml Configuration overrides. For example, to
                          use an alternate zookeeper ensemble, pass:
@@ -111,7 +111,7 @@ while (arg = ARGV.shift)
     warn '[INFO] the -r | --return-values option is ignored. we always behave '\
          'as though it was given.'
     found.push(arg)
-  elsif arg == '--top-level-cmds'
+  elsif arg == '--top-level-defs'
     top_level_definitions = true
   else
     # Presume it a script. Save it off for running later below
@@ -174,12 +174,9 @@ def debug?
   nil
 end
 
-# For backwards compatibility, this will export all the HBase shell commands onto Ruby's top-level
-# receiver object known as "main".
-if top_level_definitions
-  include HBaseConstants
-  @shell.export_commands(self)
-end
+# For backwards compatibility, this will export all the HBase shell commands, constants, and
+# instance variables (@hbase and @shell) onto Ruby's top-level receiver object known as "main".
+@shell.export_all(self) if top_level_definitions
 
 # If script2run, try running it.  If we're in interactive mode, will go on to run the shell unless
 # script calls 'exit' or 'exit 0' or 'exit errcode'.

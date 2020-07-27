@@ -139,8 +139,13 @@ EOF
               # Table/Namespace argument is verified in remove_space_limit
               quotas_admin.remove_space_limit(args)
             else
-              raise(ArgumentError, 'Expected a LIMIT to be provided') unless args.key?(::HBaseConstants::LIMIT)
-              raise(ArgumentError, 'Expected a POLICY to be provided') unless args.key?(::HBaseConstants::POLICY)
+              unless args.key?(::HBaseConstants::LIMIT)
+                raise(ArgumentError, 'Expected a LIMIT to be provided')
+              end
+              unless args.key?(::HBaseConstants::POLICY)
+                raise(ArgumentError, 'Expected a POLICY to be provided')
+              end
+
               quotas_admin.limit_space(args)
             end
           else

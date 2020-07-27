@@ -96,8 +96,13 @@ EOF
           if options.key? ::HBaseConstants::LOCALITY_THRESHOLD
             value = options[::HBaseConstants::LOCALITY_THRESHOLD]
             # Value validation. Must be a Float, and must be between [0, 1.0]
-            raise "#{::HBaseConstants::LOCALITY_THRESHOLD} must be a float value" unless value.is_a? Float
-            raise "#{::HBaseConstants::LOCALITY_THRESHOLD} must be between 0 and 1.0, inclusive" unless valid_locality_threshold? value
+            unless value.is_a? Float
+              raise "#{::HBaseConstants::LOCALITY_THRESHOLD} must be a float value"
+            end
+            unless valid_locality_threshold? value
+              raise "#{::HBaseConstants::LOCALITY_THRESHOLD} must be between 0 and 1.0, inclusive"
+            end
+
             locality_threshold = value
           end
 

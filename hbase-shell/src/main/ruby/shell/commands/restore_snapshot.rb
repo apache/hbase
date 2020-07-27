@@ -37,7 +37,7 @@ EOF
 
       def command(snapshot_name, args = {})
         raise(ArgumentError, 'Arguments should be a Hash') unless args.is_a?(Hash)
-        restore_acl = args.delete(RESTORE_ACL) || false
+        restore_acl = args.delete(::HBaseConstants::RESTORE_ACL) || false
         admin.restore_snapshot(snapshot_name, restore_acl)
       end
     end

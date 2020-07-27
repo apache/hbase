@@ -18,7 +18,16 @@
 #
 require 'irb'
 require 'irb/workspace'
-require 'shell/hbase_receiver'
+
+#
+# Simple class to act as the main receiver for an IRB Workspace (and its respective ruby Binding)
+# in our HBase shell. This will hold all the commands we want in our shell.
+#
+class HBaseReceiver < Object
+  def get_binding
+    binding
+  end
+end
 
 ##
 # HBaseIOExtensions is a module to be "mixed-in" (ie. included) to Ruby's IO class. It is required
@@ -130,32 +139,47 @@ module Shell
     end
 
     ##
-    # Create a class method on the given object for each of the loaded command classes
+    # Create singleton methods on the target receiver object for all the loaded commands
+    #
+    # Therefore, export_commands will create "class methods" if passed a Module/Class and if passed
+    # an instance the methods will not exist on any other instances of the instantiated class.
     def export_commands(target)
       # We need to store a reference to this Shell instance in the scope of this method so that it
       # can be accessed later in the scope of the target object.
       shell_inst = self
-      # If target is an instance, get the parent class
-      target = target.class unless target.is_a? Class
       # Define each method as a lambda. We need to use a lambda (rather than a Proc or block) for
       # its properties: preservation of local variables and return
       ::Shell.commands.keys.each do |cmd|
-        target.send :define_method, cmd.to_sym, lambda { |*args|
-          ret = shell_inst.command("#{cmd}", *args)
+        target.send :define_singleton_method, cmd.to_sym, lambda { |*args|
+          ret = shell_inst.command(cmd.to_s, *args)
           puts
           ret
         }
       end
       # Export help method
-      target.send :define_method, :help, lambda { |command=nil|
+      target.send :define_singleton_method, :help, lambda { |command = nil|
         shell_inst.help(command)
         nil
       }
       # Export tools method for backwards compatibility
-      target.send :define_method, :tools, lambda {
+      target.send :define_singleton_method, :tools, lambda {
         shell_inst.help_group('tools')
         nil
       }
+    end
+
+    # Export HBase commands, constants, and variables to target receiver
+    def export_all(target)
+      raise ArgumentError, 'target should not be a module' if target.is_a? Module
+
+      # add constants to class of target
+      target.class.include ::HBaseConstants
+      target.class.include ::HBaseQuotasConstants
+      # add instance variables @hbase and @shell for backwards compatibility
+      target.instance_variable_set :'@hbase', @hbase
+      target.instance_variable_set :'@shell', self
+      # add commands to target
+      export_commands(target)
     end
 
     def command_instance(command)
@@ -270,11 +294,12 @@ For more on the HBase Shell, see http://hbase.apache.org/book.html
     ##
     # Returns an IRB Workspace for this shell instance with all the IRB and HBase commands installed
     def get_workspace
-      return @irb_workspace unless @irb_workspace == nil
+      return @irb_workspace unless @irb_workspace.nil?
+
       hbase_receiver = HBaseReceiver.new
-      # install all the hbase commands BEFORE the irb commands so that our help command is installed
-      # rather than IRB's help command
-      export_commands(hbase_receiver)
+      # Install all the hbase commands, constants, and instance variables @shell and @hbase. This
+      # must be BEFORE the irb commands are installed so that our help command is not overwritten.
+      export_all(hbase_receiver)
       # install all the IRB commands onto our receiver
       IRB::ExtendCommandBundle.extend_object(hbase_receiver)
       ::IRB::WorkSpace.new(hbase_receiver.get_binding)
@@ -299,20 +324,20 @@ For more on the HBase Shell, see http://hbase.apache.org/book.html
         scanner.each_top_level_statement do |statement, linenum|
           puts(workspace.evaluate(nil, statement, 'stdin', linenum))
         end
-      rescue Exception => exception
-        message = exception.to_s
+      rescue Exception => e
+        message = e.to_s
         # exception unwrapping in shell means we'll have to handle Java exceptions
         # as a special case in order to format them properly.
-        if exception.is_a? java.lang.Exception
+        if e.is_a? java.lang.Exception
           warn 'java exception'
-          message = exception.get_message
+          message = e.get_message
         end
         # Include the 'ERROR' string to try to make transition easier for scripts that
         # may have already been relying on grepping output.
-        puts "ERROR #{exception.class}: #{message}"
+        puts "ERROR #{e.class}: #{message}"
         if $fullBacktrace
           # re-raising the will include a backtrace and exit.
-          raise exception
+          raise e
         else
           exit 1
         end
