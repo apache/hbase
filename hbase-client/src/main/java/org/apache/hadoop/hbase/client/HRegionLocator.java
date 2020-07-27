@@ -95,7 +95,7 @@ public class HRegionLocator implements RegionLocator {
   }
 
   private List<RegionLocations> listRegionLocations() throws IOException {
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName)) {
       return Collections
         .singletonList(connection.locateRegion(tableName, HConstants.EMPTY_START_ROW, false, true));
     }

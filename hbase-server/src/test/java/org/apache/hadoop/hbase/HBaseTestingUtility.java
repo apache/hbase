@@ -3412,7 +3412,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       }
     };
     MetaTableAccessor
-        .scanMeta(connection, null, null,
+        .scanCatalog(connection, TableName.META_TABLE_NAME, null, null,
             MetaTableAccessor.QueryType.TABLE,
             Integer.MAX_VALUE, visitor);
     return lastTableState.get();

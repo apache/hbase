@@ -130,7 +130,8 @@ public class TestCatalogJanitorCluster {
         setStartKey(incrementRow(newRi1.getStartKey())).
         setEndKey(incrementRow(newRi1.getEndKey())).build();
     Put p2 = MetaTableAccessor.makePutFromRegionInfo(newRi2, System.currentTimeMillis());
-    MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(p1, p2));
+    MetaTableAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
+        Arrays.asList(p1, p2));
     gc = janitor.scan();
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
@@ -147,7 +148,8 @@ public class TestCatalogJanitorCluster {
     Put pServer = new Put(t1Ri1.getRegionName());
     pServer.addColumn(MetaTableAccessor.getCatalogFamily(),
         MetaTableAccessor.getServerColumn(0), Bytes.toBytes("bad.server.example.org:1234"));
-    MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(pServer));
+    MetaTableAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
+        Arrays.asList(pServer));
     gc = janitor.scan();
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
@@ -159,7 +161,8 @@ public class TestCatalogJanitorCluster {
     Put emptyInfoServerPut = new Put(t1Ri1.getRegionName());
     emptyInfoServerPut.addColumn(MetaTableAccessor.getCatalogFamily(),
         MetaTableAccessor.getServerColumn(0), Bytes.toBytes(""));
-    MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(emptyInfoServerPut));
+    MetaTableAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
+      Arrays.asList(emptyInfoServerPut));
     janitor.scan();
     report = janitor.getLastReport();
     assertEquals(0, report.getUnknownServers().size());
@@ -168,7 +171,8 @@ public class TestCatalogJanitorCluster {
     Put pEmptyRI = new Put(t1Ri2.getRegionName());
     pEmptyRI.addColumn(MetaTableAccessor.getCatalogFamily(),
         MetaTableAccessor.getRegionInfoColumn(), HConstants.EMPTY_BYTE_ARRAY);
-    MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(pEmptyRI));
+    MetaTableAccessor.putsToCatalogTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME,
+      Arrays.asList(pEmptyRI));
     janitor.scan();
     report = janitor.getLastReport();
     assertEquals(1, report.getEmptyRegionInfo().size());

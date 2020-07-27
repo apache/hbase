@@ -486,7 +486,7 @@ public class TestMetaTableAccessor {
     long seqNum1 = random.nextLong();
     long seqNum100 = random.nextLong();
 
-    try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
+    try (Table meta = MetaTableAccessor.getCatalogHTable(connection, TableName.META_TABLE_NAME)) {
       MetaTableAccessor.updateRegionLocation(connection, primary, serverName0, seqNum0,
         EnvironmentEdgeManager.currentTime());
 
@@ -551,12 +551,12 @@ public class TestMetaTableAccessor {
         .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
         .setRegionId(regionId).setReplicaId(0).build();
 
-    Table meta = MetaTableAccessor.getMetaHTable(connection);
+    Table meta = MetaTableAccessor.getCatalogHTable(connection, TableName.META_TABLE_NAME);
     try {
       List<RegionInfo> regionInfos = Lists.newArrayList(primary);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
-      MetaTableAccessor.removeRegionReplicasFromMeta(Sets.newHashSet(primary.getRegionName()), 1, 2,
-        connection);
+      MetaTableAccessor.removeRegionReplicasFromCatalog(Sets.newHashSet(primary.getRegionName()),
+        1, 2, connection, TableName.META_TABLE_NAME);
       Get get = new Get(primary.getRegionName());
       Result result = meta.get(get);
       for (int replicaId = 0; replicaId < 3; replicaId++) {
@@ -593,7 +593,7 @@ public class TestMetaTableAccessor {
         .setReplicaId(0)
         .build();
 
-    Table meta = MetaTableAccessor.getMetaHTable(connection);
+    Table meta = MetaTableAccessor.getCatalogHTable(connection, TableName.META_TABLE_NAME);
     try {
       List<RegionInfo> regionInfos = Lists.newArrayList(primary);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
@@ -632,7 +632,7 @@ public class TestMetaTableAccessor {
         .setReplicaId(0)
         .build();
 
-    try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
+    try (Table meta = MetaTableAccessor.getCatalogHTable(connection, TableName.META_TABLE_NAME)) {
       List<RegionInfo> regionInfos = Lists.newArrayList(parent);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
 
@@ -673,7 +673,7 @@ public class TestMetaTableAccessor {
         .setReplicaId(0)
         .build();
 
-    try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
+    try (Table meta = MetaTableAccessor.getCatalogHTable(connection, TableName.META_TABLE_NAME)) {
       List<RegionInfo> regionInfos = Lists.newArrayList(parentA, parentB);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
       MetaTableAccessor.mergeRegions(connection, merged, getMapOfRegionsToSeqNum(parentA, parentB),
@@ -750,7 +750,7 @@ public class TestMetaTableAccessor {
         .build();
 
     ServerName sn = ServerName.valueOf("bar", 0, 0);
-    try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
+    try (Table meta = MetaTableAccessor.getCatalogHTable(connection, TableName.META_TABLE_NAME)) {
       List<RegionInfo> regionInfos = Lists.newArrayList(regionInfo);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 1);
 
@@ -805,7 +805,7 @@ public class TestMetaTableAccessor {
         .build();
 
     ServerName sn = ServerName.valueOf("bar", 0, 0);
-    try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
+    try (Table meta = MetaTableAccessor.getCatalogHTable(connection, TableName.META_TABLE_NAME)) {
       List<RegionInfo> regionInfos = Lists.newArrayList(regionInfoA, regionInfoB);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 1);
 
@@ -958,7 +958,7 @@ public class TestMetaTableAccessor {
         .setReplicaId(0)
         .build();
 
-    Table meta = MetaTableAccessor.getMetaHTable(connection);
+    Table meta = MetaTableAccessor.getCatalogHTable(connection, TableName.META_TABLE_NAME);
     try {
       List<RegionInfo> regionInfos = Lists.newArrayList(parent);
       MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);

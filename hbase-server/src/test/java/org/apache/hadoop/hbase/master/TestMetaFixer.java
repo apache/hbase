@@ -165,7 +165,8 @@ public class TestMetaFixer {
         setStartKey(a.getStartKey()).
         setEndKey(b.getEndKey()).
         build();
-    MetaTableAccessor.putsToMetaTable(services.getConnection(),
+    MetaTableAccessor.putsToCatalogTable(services.getConnection(),
+        TableName.META_TABLE_NAME,
         Collections.singletonList(MetaTableAccessor.makePutFromRegionInfo(overlapRegion,
             System.currentTimeMillis())));
     // TODO: Add checks at assign time to PREVENT being able to assign over existing assign.

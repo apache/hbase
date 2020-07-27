@@ -1731,7 +1731,8 @@ public class AssignmentManager {
       if (!isRootLoaded()) {
         // TODO: use a thread pool
         LOG.debug("Loaded hbase:root");
-        regionStateStore.visitCatalogTable(true, new RegionCatalogLoadingVisitor());
+        regionStateStore.visitCatalogTable(TableName.ROOT_TABLE_NAME,
+            new RegionCatalogLoadingVisitor());
         wakeRootLoadedEvent();
       } else {
         LOG.debug("Not loading hbase:root, already loaded");
@@ -1742,7 +1743,8 @@ public class AssignmentManager {
   private void loadMeta() throws IOException {
     // TODO: use a thread pool
     LOG.debug("Loaded hbase:meta");
-    regionStateStore.visitCatalogTable(false, new RegionCatalogLoadingVisitor());
+    regionStateStore.visitCatalogTable(TableName.META_TABLE_NAME,
+        new RegionCatalogLoadingVisitor());
     // every assignment is blocked until meta is loaded.
     wakeMetaLoadedEvent();
   }

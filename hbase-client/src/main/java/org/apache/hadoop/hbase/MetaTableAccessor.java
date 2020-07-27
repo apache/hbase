@@ -92,7 +92,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
  * when this class is used on client-side (e.g. HBaseAdmin), we want to use short-lived connection
  * (opened before each operation, closed right after), while when used on HM or HRS (like in
  * AssignmentManager) we want permanent connection.
- * </p>
+ * </p>catalogTableName
+ * </p>catalogTableName
  * <p>
  * HBASE-10070 adds a replicaId to HRI, meaning more than one HRI can be defined for the same table
  * range (table, startKey, endKey). For every range, there will be at least one HRI defined which is
@@ -192,9 +193,10 @@ public class MetaTableAccessor {
    * @param connection connection we're using
    * @param visitor Visitor invoked against each row in regions family.
    */
-  public static void fullScanRegions(Connection connection, boolean useRoot, final Visitor visitor)
-    throws IOException {
-    scanCatalogTable(connection, useRoot, null, null, QueryType.REGION, null, Integer.MAX_VALUE, visitor);
+  public static void fullScanRegions(Connection connection, TableName catalogTableName,
+    final Visitor visitor) throws IOException {
+    scanCatalogTable(connection, catalogTableName, null, null, QueryType.REGION,
+      null, Integer.MAX_VALUE, visitor);
   }
 
   /**
@@ -241,31 +243,21 @@ public class MetaTableAccessor {
    * Callers should call close on the returned {@link Table} instance.
    * @param connection connection we're using to access Meta
    * @return An {@link Table} for <code>hbase:meta</code>
-   */
-  public static Table getRootHTable(final Connection connection)
-    throws IOException {
-    // We used to pass whole CatalogTracker in here, now we just pass in Connection
-    if (connection.isClosed()) {
-      throw new IOException("connection is closed");
-    }
-    return connection.getTable(TableName.ROOT_TABLE_NAME);
-  }
-
-  /**
-   * Callers should call close on the returned {@link Table} instance.
-   * @param connection connection we're using to access Meta
-   * @return An {@link Table} for <code>hbase:meta</code>
    * @throws NullPointerException if {@code connection} is {@code null}
    */
-  public static Table getMetaHTable(final Connection connection)
+  public static Table getCatalogHTable(final Connection connection,
+    TableName catalogTableName)
   throws IOException {
+    if (!isCatalogTable(catalogTableName)) {
+      throw new IllegalStateException("Table supplied is not a catalog table: " + catalogTableName);
+    }
     // We used to pass whole CatalogTracker in here, now we just pass in Connection
     if (connection == null) {
       throw new NullPointerException("No connection");
     } else if (connection.isClosed()) {
       throw new IOException("connection is closed");
     }
-    return connection.getTable(TableName.META_TABLE_NAME);
+    return connection.getTable(catalogTableName);
   }
 
   /**
@@ -311,11 +303,12 @@ public class MetaTableAccessor {
       parsedInfo = parseRegionInfoFromRegionName(regionName);
       row = getCatalogKeyForRegion(parsedInfo);
     } catch (Exception parseEx) {
-      // Ignore. This is used with tableName passed as regionName.
+      return null;
     }
     Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
-    Result r = get(getMetaHTable(connection), get);
+    Result r = get(getCatalogHTable(connection, getCatalogTableForTable(parsedInfo.getTable())),
+        get);
     RegionLocations locations = getRegionLocations(r);
     return locations == null ? null
       : locations.getRegionLocation(parsedInfo == null ? 0 : parsedInfo.getReplicaId());
@@ -340,12 +333,27 @@ public class MetaTableAccessor {
       throws IOException {
     Get get = new Get(getCatalogKeyForRegion(ri));
     get.addFamily(HConstants.CATALOG_FAMILY);
-    return get(getMetaHTable(connection), get);
+    return get(getCatalogHTable(connection, getCatalogTableForTable(ri.getTable())), get);
   }
 
   /** Returns the row key to use for this regionInfo */
   public static byte[] getCatalogKeyForRegion(RegionInfo regionInfo) {
     return RegionReplicaUtil.getRegionInfoForDefaultReplica(regionInfo).getRegionName();
+  }
+
+  public static TableName getCatalogTableForTable(TableName tableName) {
+    if (TableName.ROOT_TABLE_NAME.equals(tableName)) {
+      throw new IllegalStateException("Can't get catalog table for hbase:root table");
+    }
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      return TableName.ROOT_TABLE_NAME;
+    }
+    return TableName.META_TABLE_NAME;
+  }
+
+  public static boolean isCatalogTable(TableName tableName) {
+    return tableName.equals(TableName.ROOT_TABLE_NAME) ||
+      tableName.equals(TableName.META_TABLE_NAME);
   }
 
   /** Returns an HRI parsed from this regionName. Not all the fields of the HRI
@@ -378,11 +386,8 @@ public class MetaTableAccessor {
     if (Bytes.equals(RegionInfoBuilder.ROOT_REGIONINFO.getRegionName(), regionName)) {
       throw new IllegalStateException("This method cannot be used for hbase:root region");
     }
-    if (Bytes.equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName(), regionName)) {
-      catalogTable = getRootHTable(connection);
-    } else {
-      catalogTable = getMetaHTable(connection);
-    }
+    catalogTable = getCatalogHTable(connection,
+      getCatalogTableForTable(parseRegionInfoFromRegionName(regionName).getTable()));
     Get get = new Get(regionName);
     get.addFamily(HConstants.CATALOG_FAMILY);
     return get(catalogTable, get);
@@ -403,12 +408,13 @@ public class MetaTableAccessor {
       new SubstringComparator(regionEncodedName));
     Scan scan = getCatalogScan(connection, 1);
     scan.setFilter(rowFilter);
-    ResultScanner resultScanner = getMetaHTable(connection).getScanner(scan);
+    ResultScanner resultScanner = getCatalogHTable(connection, TableName.META_TABLE_NAME)
+      .getScanner(scan);
     Result res = resultScanner.next();
     if (res == null) {
       scan = getCatalogScan(connection, 1);
       scan.setFilter(rowFilter);
-      resultScanner = getRootHTable(connection).getScanner(scan);
+      resultScanner = getCatalogHTable(connection, TableName.ROOT_TABLE_NAME).getScanner(scan);
       res = resultScanner.next();
     }
     return res;
@@ -772,18 +778,19 @@ public class MetaTableAccessor {
 
   public static void scanMetaForTableRegions(Connection connection, Visitor visitor,
       TableName tableName) throws IOException {
-    scanMeta(connection, tableName, QueryType.REGION, Integer.MAX_VALUE, visitor);
+    scanCatalog(connection, tableName, QueryType.REGION, Integer.MAX_VALUE, visitor);
   }
 
-  private static void scanMeta(Connection connection, TableName table, QueryType type, int maxRows,
+  private static void scanCatalog(Connection connection, TableName table, QueryType type, int maxRows,
       final Visitor visitor) throws IOException {
-    scanMeta(connection, getTableStartRowForMeta(table, type), getTableStopRowForMeta(table, type),
-      type, maxRows, visitor);
+    scanCatalog(connection, getCatalogTableForTable(table), getTableStartRowForMeta(table, type),
+        getTableStopRowForMeta(table, type), type, maxRows, visitor);
   }
 
   private static void scanMeta(Connection connection, @Nullable final byte[] startRow,
       @Nullable final byte[] stopRow, QueryType type, final Visitor visitor) throws IOException {
-    scanMeta(connection, startRow, stopRow, type, Integer.MAX_VALUE, visitor);
+    scanCatalog(connection, TableName.META_TABLE_NAME, startRow, stopRow, type, Integer.MAX_VALUE,
+        visitor);
   }
 
   /**
@@ -807,7 +814,8 @@ public class MetaTableAccessor {
       }
       stopRow = getTableStopRowForMeta(tableName, QueryType.REGION);
     }
-    scanMeta(connection, startRow, stopRow, QueryType.REGION, rowLimit, visitor);
+    scanCatalog(connection, TableName.META_TABLE_NAME, startRow, stopRow, QueryType.REGION,
+        rowLimit, visitor);
   }
 
   /**
@@ -821,13 +829,13 @@ public class MetaTableAccessor {
    * @param maxRows maximum rows to return
    * @param visitor Visitor invoked against each row.
    */
-  static void scanMeta(Connection connection, @Nullable final byte[] startRow,
-        @Nullable final byte[] stopRow, QueryType type, int maxRows, final Visitor visitor)
-      throws IOException {
-    scanCatalogTable(connection, false, startRow, stopRow, type, null, maxRows, visitor);
+  static void scanCatalog(Connection connection, TableName catalogTable,
+      @Nullable final byte[] startRow, @Nullable final byte[] stopRow, QueryType type, int maxRows,
+      final Visitor visitor) throws IOException {
+    scanCatalogTable(connection, catalogTable, startRow, stopRow, type, null, maxRows, visitor);
   }
 
-  private static void scanCatalogTable(Connection connection, boolean useRoot,
+  private static void scanCatalogTable(Connection connection, TableName catalogTableName,
       @Nullable final byte[] startRow, @Nullable final byte[] stopRow,
       QueryType type, @Nullable Filter filter, int maxRows,
       final Visitor visitor) throws IOException {
@@ -854,7 +862,7 @@ public class MetaTableAccessor {
     }
 
     int currentRow = 0;
-    try (Table catalogTable = useRoot ? getRootHTable(connection) : getMetaHTable(connection)) {
+    try (Table catalogTable = getCatalogHTable(connection, catalogTableName)) {
       try (ResultScanner scanner = catalogTable.getScanner(scan)) {
         Result data;
         while ((data = scanner.next()) != null) {
@@ -885,7 +893,8 @@ public class MetaTableAccessor {
     Scan scan = getCatalogScan(connection, 1);
     scan.setReversed(true);
     scan.withStartRow(searchRow);
-    try (ResultScanner resultScanner = getMetaHTable(connection).getScanner(scan)) {
+    try (ResultScanner resultScanner =
+        getCatalogHTable(connection, getCatalogTableForTable(tableName)).getScanner(scan)) {
       Result result = resultScanner.next();
       if (result == null) {
         throw new TableNotFoundException("Cannot find row in META " +
@@ -1200,7 +1209,7 @@ public class MetaTableAccessor {
       tableName.equals(TableName.META_TABLE_NAME)) {
       return new TableState(tableName, TableState.State.ENABLED);
     }
-    Table metaHTable = getMetaHTable(conn);
+    Table metaHTable = getCatalogHTable(conn, TableName.META_TABLE_NAME);
     Get get = new Get(tableName.getName()).addColumn(getTableFamily(), getTableStateColumn());
     Result result = metaHTable.get(get);
     return getTableState(result);
@@ -1445,7 +1454,7 @@ public class MetaTableAccessor {
    * @param p Put to add to hbase:meta
    */
   private static void putToMetaTable(Connection connection, Put p) throws IOException {
-    try (Table table = getMetaHTable(connection)) {
+    try (Table table = getCatalogHTable(connection, TableName.META_TABLE_NAME)) {
       put(table, p);
     }
   }
@@ -1455,7 +1464,7 @@ public class MetaTableAccessor {
    * @param p put to make
    */
   private static void put(Table t, Put p) throws IOException {
-    debugLogMutation(p);
+    debugLogMutation(t.getName(), p);
     t.put(p);
   }
 
@@ -1464,13 +1473,14 @@ public class MetaTableAccessor {
    * @param connection connection we're using
    * @param ps Put to add to hbase:meta
    */
-  public static void putsToMetaTable(final Connection connection, final List<Put> ps)
+  public static void putsToCatalogTable(final Connection connection, TableName tableName,
+    final List<Put> ps)
       throws IOException {
     if (ps.isEmpty()) {
       return;
     }
-    try (Table t = getMetaHTable(connection)) {
-      debugLogMutations(ps);
+    try (Table t = getCatalogHTable(connection, tableName)) {
+      debugLogMutations(t.getName(), ps);
       // the implementation for putting a single Put is much simpler so here we do a check first.
       if (ps.size() == 1) {
         t.put(ps.get(0));
@@ -1485,11 +1495,11 @@ public class MetaTableAccessor {
    * @param connection connection we're using
    * @param d Delete to add to hbase:meta
    */
-  private static void deleteFromMetaTable(final Connection connection, final Delete d)
-      throws IOException {
+  private static void deleteFromCatalogTable(final Connection connection, TableName catalogTable,
+    final Delete d) throws IOException {
     List<Delete> dels = new ArrayList<>(1);
     dels.add(d);
-    deleteFromMetaTable(connection, dels);
+    deleteFromCatalogTable(connection, catalogTable, dels);
   }
 
   /**
@@ -1497,10 +1507,10 @@ public class MetaTableAccessor {
    * @param connection connection we're using
    * @param deletes Deletes to add to hbase:meta  This list should support #remove.
    */
-  private static void deleteFromMetaTable(final Connection connection, final List<Delete> deletes)
-      throws IOException {
-    try (Table t = getMetaHTable(connection)) {
-      debugLogMutations(deletes);
+  private static void deleteFromCatalogTable(final Connection connection,
+    TableName catalogTableName, final List<Delete> deletes) throws IOException {
+    try (Table t = getCatalogHTable(connection, catalogTableName)) {
+      debugLogMutations(catalogTableName, deletes);
       t.delete(deletes);
     }
   }
@@ -1512,8 +1522,9 @@ public class MetaTableAccessor {
    * @param numReplicasToRemove how many replicas to remove
    * @param connection connection we're using to access meta table
    */
-  public static void removeRegionReplicasFromMeta(Set<byte[]> metaRows,
-    int replicaIndexToDeleteFrom, int numReplicasToRemove, Connection connection)
+  public static void removeRegionReplicasFromCatalog(Set<byte[]> metaRows,
+    int replicaIndexToDeleteFrom, int numReplicasToRemove,
+    Connection connection, TableName catalogTableName)
       throws IOException {
     int absoluteIndex = replicaIndexToDeleteFrom + numReplicasToRemove;
     for (byte[] row : metaRows) {
@@ -1530,7 +1541,7 @@ public class MetaTableAccessor {
         deleteReplicaLocations.addColumns(getCatalogFamily(), getRegionStateColumn(i), now);
       }
 
-      deleteFromMetaTable(connection, deleteReplicaLocations);
+      deleteFromCatalogTable(connection, catalogTableName, deleteReplicaLocations);
     }
   }
 
@@ -1552,7 +1563,7 @@ public class MetaTableAccessor {
   public static void updateRegionState(Connection connection, RegionInfo ri,
       RegionState.State state) throws IOException {
     Put put = new Put(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionName());
-    MetaTableAccessor.putsToMetaTable(connection,
+    MetaTableAccessor.putsToCatalogTable(connection, getCatalogTableForTable(ri.getTable()),
         Collections.singletonList(addRegionStateToPut(put, state)));
   }
 
@@ -1570,11 +1581,12 @@ public class MetaTableAccessor {
    */
   public static void addSplitsToParent(Connection connection, RegionInfo regionInfo,
       RegionInfo splitA, RegionInfo splitB) throws IOException {
-    try (Table meta = getMetaHTable(connection)) {
+    TableName catalogTable = getCatalogTableForTable(regionInfo.getTable());
+    try (Table catalog = getCatalogHTable(connection, catalogTable)) {
       Put put = makePutFromRegionInfo(regionInfo, EnvironmentEdgeManager.currentTime());
       addDaughtersToPut(put, splitA, splitB);
-      meta.put(put);
-      debugLogMutation(put);
+      catalog.put(put);
+      debugLogMutation(catalogTable, put);
       LOG.debug("Added region {}", regionInfo.getRegionNameAsString());
     }
   }
@@ -1632,8 +1644,8 @@ public class MetaTableAccessor {
         puts.add(put);
       }
     }
-    putsToMetaTable(connection, puts);
-    LOG.info("Added {} regions to meta.", puts.size());
+    putsToCatalogTable(connection, TableName.META_TABLE_NAME, puts);
+    LOG.info("Added {} regions to {}.",puts.size(), TableName.META_TABLE_NAME);
   }
 
   static Put addMergeRegions(Put put, Collection<RegionInfo> mergeRegions) throws IOException {
@@ -1671,7 +1683,8 @@ public class MetaTableAccessor {
   public static void mergeRegions(Connection connection, RegionInfo mergedRegion,
         Map<RegionInfo, Long> parentSeqNum, ServerName sn, int regionReplication)
       throws IOException {
-    try (Table meta = getMetaHTable(connection)) {
+    try (Table meta =
+      getCatalogHTable(connection, getCatalogTableForTable(mergedRegion.getTable()))) {
       long time = HConstants.LATEST_TIMESTAMP;
       List<Mutation> mutations = new ArrayList<>();
       List<RegionInfo> replicationParents = new ArrayList<>();
@@ -1732,7 +1745,7 @@ public class MetaTableAccessor {
   public static void splitRegion(Connection connection, RegionInfo parent, long parentOpenSeqNum,
       RegionInfo splitA, RegionInfo splitB, ServerName sn, int regionReplication)
       throws IOException {
-    try (Table meta = getMetaHTable(connection)) {
+    try (Table meta = getCatalogHTable(connection, getCatalogTableForTable(parent.getTable()))) {
       long time = EnvironmentEdgeManager.currentTime();
       // Put for parent
       Put putParent = makePutFromRegionInfo(RegionInfoBuilder.newBuilder(parent)
@@ -1802,8 +1815,8 @@ public class MetaTableAccessor {
     long time = EnvironmentEdgeManager.currentTime();
     Delete delete = new Delete(table.getName());
     delete.addColumns(getTableFamily(), getTableStateColumn(), time);
-    deleteFromMetaTable(connection, delete);
-    LOG.info("Deleted table " + table + " state from META");
+    deleteFromCatalogTable(connection, TableName.META_TABLE_NAME, delete);
+    LOG.info("Deleted table " + table + " state from Catalog");
   }
 
   private static void multiMutate(Table table, byte[] row,
@@ -1819,7 +1832,7 @@ public class MetaTableAccessor {
   @VisibleForTesting
   static void multiMutate(final Table table, byte[] row, final List<Mutation> mutations)
       throws IOException {
-    debugLogMutations(mutations);
+    debugLogMutations(table.getName(), mutations);
     Batch.Call<MultiRowMutationService, MutateRowsResponse> callable = instance -> {
       MutateRowsRequest.Builder builder = MutateRowsRequest.newBuilder();
       for (Mutation mutation : mutations) {
@@ -1907,7 +1920,7 @@ public class MetaTableAccessor {
       throws IOException {
     Delete delete = new Delete(regionInfo.getRegionName());
     delete.addFamily(getCatalogFamily(), HConstants.LATEST_TIMESTAMP);
-    deleteFromMetaTable(connection, delete);
+    deleteFromCatalogTable(connection, getCatalogTableForTable(regionInfo.getTable()), delete);
     LOG.info("Deleted " + regionInfo.getRegionNameAsString());
   }
 
@@ -1930,13 +1943,22 @@ public class MetaTableAccessor {
         long ts)
       throws IOException {
     List<Delete> deletes = new ArrayList<>(regionsInfo.size());
+    TableName prevCatalogTableName = null;
+    RegionInfo prevRegionInfo = null;
     for (RegionInfo hri : regionsInfo) {
       Delete e = new Delete(hri.getRegionName());
       e.addFamily(getCatalogFamily(), ts);
       deletes.add(e);
+      TableName currCatalogTableName = getCatalogTableForTable(hri.getTable());
+      if (prevCatalogTableName != null && !prevCatalogTableName.equals(currCatalogTableName)) {
+        throw new IllegalStateException("Deleting from than one catalog table: " +
+          prevRegionInfo + ","+ hri);
+      }
+      prevCatalogTableName = currCatalogTableName;
+      prevRegionInfo = hri;
     }
-    deleteFromMetaTable(connection, deletes);
-    LOG.info("Deleted {} regions from META", regionsInfo.size());
+    deleteFromCatalogTable(connection, prevCatalogTableName,  deletes);
+    LOG.info("Deleted {} regions from {}", regionsInfo.size(), prevCatalogTableName);
     LOG.debug("Deleted regions: {}", regionsInfo);
   }
 
@@ -1994,7 +2016,7 @@ public class MetaTableAccessor {
       return;
     }
 
-    deleteFromMetaTable(connection, delete);
+    deleteFromCatalogTable(connection, getCatalogTableForTable(mergeRegion.getTable()), delete);
     LOG.info("Deleted merge references in " + mergeRegion.getRegionNameAsString() +
         ", deleted qualifiers " + qualifiers.stream().map(Bytes::toStringBinary).
         collect(Collectors.joining(", ")));
@@ -2203,7 +2225,8 @@ public class MetaTableAccessor {
       .addColumn(getCatalogFamily(), getRegionStateColumn())
       .addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions().setReversed(true)
       .setCaching(10);
-    try (Table table = getMetaHTable(conn); ResultScanner scanner = table.getScanner(scan)) {
+    try (Table table = getCatalogHTable(conn, TableName.META_TABLE_NAME);
+        ResultScanner scanner = table.getScanner(scan)) {
       for (Result result;;) {
         result = scanner.next();
         if (result == null) {
@@ -2224,7 +2247,7 @@ public class MetaTableAccessor {
 
   public static long[] getReplicationBarrier(Connection conn, byte[] regionName)
       throws IOException {
-    try (Table table = getMetaHTable(conn)) {
+    try (Table table = getCatalogHTable(conn, TableName.META_TABLE_NAME)) {
       Result result = table.get(new Get(regionName)
         .addColumn(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER)
         .readAllVersions());
@@ -2253,7 +2276,8 @@ public class MetaTableAccessor {
   public static List<String> getTableEncodedRegionNamesForSerialReplication(Connection conn,
       TableName tableName) throws IOException {
     List<String> list = new ArrayList<>();
-    scanCatalogTable(conn, false, getTableStartRowForMeta(tableName, QueryType.REPLICATION),
+    scanCatalogTable(conn, TableName.META_TABLE_NAME,
+      getTableStartRowForMeta(tableName, QueryType.REPLICATION),
       getTableStopRowForMeta(tableName, QueryType.REPLICATION), QueryType.REPLICATION,
       new FirstKeyOnlyFilter(), Integer.MAX_VALUE, r -> {
         list.add(RegionInfo.encodeRegionName(r.getRow()));
@@ -2262,19 +2286,20 @@ public class MetaTableAccessor {
     return list;
   }
 
-  private static void debugLogMutations(List<? extends Mutation> mutations) throws IOException {
+  private static void debugLogMutations(TableName tableName, List<? extends Mutation> mutations)
+    throws IOException {
     if (!METALOG.isDebugEnabled()) {
       return;
     }
     // Logging each mutation in separate line makes it easier to see diff between them visually
     // because of common starting indentation.
     for (Mutation mutation : mutations) {
-      debugLogMutation(mutation);
+      debugLogMutation(tableName, mutation);
     }
   }
 
-  private static void debugLogMutation(Mutation p) throws IOException {
-    METALOG.debug("{} {}", p.getClass().getSimpleName(), p.toJSON());
+  private static void debugLogMutation(TableName t, Mutation p) throws IOException {
+    METALOG.debug("{} {} {}", t, p.getClass().getSimpleName(), p.toJSON());
   }
 
   private static Put addSequenceNum(Put p, long openSeqNum, int replicaId) throws IOException {
