@@ -28,8 +28,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
