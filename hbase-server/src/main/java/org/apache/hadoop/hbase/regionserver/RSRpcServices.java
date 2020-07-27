@@ -276,15 +276,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   private static final long DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA = 10;
 
-  /**
-   * Number of rows in a batch operation above which a warning will be logged.
-   */
-  static final String BATCH_ROWS_THRESHOLD_NAME = "hbase.rpc.rows.warning.threshold";
-  /**
-   * Default value of {@link RSRpcServices#BATCH_ROWS_THRESHOLD_NAME}
-   */
-  static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
-
   protected static final String RESERVOIR_ENABLED_KEY = "hbase.ipc.server.reservoir.enabled";
 
   // Request counter. (Includes requests that are not serviced by regions.)
@@ -1229,7 +1220,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   RSRpcServices(HRegionServer rs, LogDelegate ld) throws IOException {
     this.ld = ld;
     regionServer = rs;
-    rowSizeWarnThreshold = rs.conf.getInt(BATCH_ROWS_THRESHOLD_NAME, BATCH_ROWS_THRESHOLD_DEFAULT);
+    rowSizeWarnThreshold = rs.conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME,
+      HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     RpcSchedulerFactory rpcSchedulerFactory;
     try {
       rpcSchedulerFactory = getRpcSchedulerFactoryClass().asSubclass(RpcSchedulerFactory.class)
