@@ -175,8 +175,11 @@ public final class FieldValue implements Comparable<FieldValue> {
       case INTEGER:
       case LONG:
       case FLOAT:
-      case SIZE:
         return value.toString();
+
+      case SIZE:
+        Size size = (Size) value;
+        return String.format("%.1f", size.get()) + size.getUnit().getSimpleName();
 
       case PERCENT:
         return String.format("%.2f", (Float) value) + "%";
