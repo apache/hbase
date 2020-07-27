@@ -59,6 +59,7 @@ org.apache.hadoop.hbase.tool.CanaryTool;
 org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.util.CommonFSUtils;
 org.apache.hadoop.hbase.util.JvmVersion;
+org.apache.hadoop.hbase.util.Threads;
 org.apache.hadoop.util.StringUtils;
 </%import>
 
@@ -224,6 +225,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
         </%if>
         <%if !master.isInMaintenanceMode() %>
+          <%java>
+          while (master.getMasterCoprocessorHost() == null) {
+            Threads.sleep(50);
+          }
+          </%java>
           <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null &&
             serverManager.getOnlineServersList().size() > 0 %>
             <section>
