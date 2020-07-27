@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -61,8 +62,8 @@ public class InfoServer {
       new org.apache.hadoop.hbase.http.HttpServer.Builder();
 
     builder.setName(name).addEndpoint(URI.create(httpConfig.getSchemePrefix() +
-      bindAddress + ":" +
-      port)).setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
+      HostAndPort.fromParts(bindAddress,port).toString())).
+        setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
     String logDir = System.getProperty("hbase.log.dir");
     if (logDir != null) {
       builder.setLogDir(logDir);
