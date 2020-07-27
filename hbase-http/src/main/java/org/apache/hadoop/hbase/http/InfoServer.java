@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
+
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
  * is to serve up status information for the server.
@@ -61,8 +63,8 @@ public class InfoServer {
       new org.apache.hadoop.hbase.http.HttpServer.Builder();
 
     builder.setName(name).addEndpoint(URI.create(httpConfig.getSchemePrefix() +
-      bindAddress + ":" +
-      port)).setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
+      HostAndPort.fromParts(bindAddress,port).toString())).
+        setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
     String logDir = System.getProperty("hbase.log.dir");
     if (logDir != null) {
       builder.setLogDir(logDir);
