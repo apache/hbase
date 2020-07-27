@@ -55,6 +55,16 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 public class MasterWalManager {
   private static final Logger LOG = LoggerFactory.getLogger(MasterWalManager.class);
 
+  final static PathFilter ROOT_FILTER = new PathFilter() {
+    @Override
+    public boolean accept(Path p) {
+      return AbstractFSWALProvider.isRootFile(p);
+    }
+  };
+
+  /**
+   * Filter *in* WAL files that are for the hbase:meta Region.
+   */
   final static PathFilter META_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path p) {
@@ -63,10 +73,10 @@ public class MasterWalManager {
   };
 
   @VisibleForTesting
-  public final static PathFilter NON_META_FILTER = new PathFilter() {
+  public final static PathFilter NON_CATALOG_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path p) {
-      return !AbstractFSWALProvider.isMetaFile(p);
+      return !AbstractFSWALProvider.isCatalogFile(p);
     }
   };
 
@@ -273,6 +283,22 @@ public class MasterWalManager {
   }
 
   /**
+   * Specialized method to handle the splitting for root WAL
+   * @param serverName logs belonging to this server will be split
+   */
+  public void splitRootLog(final ServerName serverName) throws IOException {
+    splitRootLog(Collections.<ServerName>singleton(serverName));
+  }
+
+  /**
+   * Specialized method to handle the splitting for root WAL
+   * @param serverNames logs belonging to these servers will be split
+   */
+  public void splitRootLog(final Set<ServerName> serverNames) throws IOException {
+    splitLog(serverNames, ROOT_FILTER);
+  }
+
+  /**
    * Specialized method to handle the splitting for meta WAL
    * @param serverName logs belonging to this server will be split
    */
@@ -332,7 +358,7 @@ public class MasterWalManager {
   }
 
   public void splitLog(final Set<ServerName> serverNames) throws IOException {
-    splitLog(serverNames, NON_META_FILTER);
+    splitLog(serverNames, NON_CATALOG_FILTER);
   }
 
   /**
@@ -351,7 +377,9 @@ public class MasterWalManager {
     splitTime = EnvironmentEdgeManager.currentTime() - splitTime;
 
     if (this.metricsMasterFilesystem != null) {
-      if (filter == META_FILTER) {
+      if (filter == ROOT_FILTER) {
+        //TODO francis add metrics
+      } else  if (filter == META_FILTER) {
         this.metricsMasterFilesystem.addMetaWALSplit(splitTime, splitLogSize);
       } else {
         this.metricsMasterFilesystem.addSplit(splitTime, splitLogSize);
@@ -367,13 +395,19 @@ public class MasterWalManager {
    * meta log and Archiving the meta log and delete the dir.
    * @param serverName the server to archive meta log
    */
-  public void archiveMetaLog(final ServerName serverName) {
+  public void archiveCatalogLog(final ServerName serverName, boolean isRoot) {
+    String regionType = "meta";
+    PathFilter filterType = META_FILTER;
+    if (isRoot) {
+      regionType = "root";
+      filterType = ROOT_FILTER;
+    }
     try {
       Path logDir = new Path(this.rootDir,
           AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
       Path splitDir = logDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
       if (fs.exists(splitDir)) {
-        FileStatus[] logfiles = CommonFSUtils.listStatus(fs, splitDir, META_FILTER);
+        FileStatus[] logfiles = CommonFSUtils.listStatus(fs, splitDir, filterType);
         if (logfiles != null) {
           for (FileStatus status : logfiles) {
             if (!status.isDir()) {
@@ -382,7 +416,7 @@ public class MasterWalManager {
               if (!CommonFSUtils.renameAndSetModifyTime(fs, status.getPath(), newPath)) {
                 LOG.warn("Unable to move  " + status.getPath() + " to " + newPath);
               } else {
-                LOG.debug("Archived meta log " + status.getPath() + " to " + newPath);
+                LOG.debug("Archived "+regionType+" log " + status.getPath() + " to " + newPath);
               }
             }
           }
@@ -392,7 +426,7 @@ public class MasterWalManager {
         }
       }
     } catch (IOException ie) {
-      LOG.warn("Failed archiving meta log for server " + serverName, ie);
+      LOG.warn("Failed archiving "+regionType+" log for server " + serverName, ie);
     }
   }
 

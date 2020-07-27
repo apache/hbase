@@ -290,6 +290,7 @@ message ServerCrashStateData {
   repeated RegionInfo regions_assigned = 4;
   optional bool carrying_meta = 5;
   optional bool should_split_wal = 6 [default = true];
+  optional bool carrying_root = 7;
 }
 
 message RecoverMetaStateData {
@@ -314,6 +315,10 @@ enum ServerCrashState {
   SERVER_CRASH_DELETE_SPLIT_WALS_DIR=13;
   SERVER_CRASH_HANDLE_RIT2 = 20[deprecated=true];
   SERVER_CRASH_FINISH = 100;
+  SERVER_CRASH_SPLIT_ROOT_LOGS = 21;
+  SERVER_CRASH_ASSIGN_ROOT = 22;
+  SERVER_CRASH_CHECK_CARRYING_META = 23;
+  SERVER_CRASH_DELETE_SPLIT_ROOT_WALS_DIR=24;
 }
 
 enum RecoverMetaState {
@@ -465,6 +470,15 @@ enum ReopenTableRegionsState {
 message ReopenTableRegionsStateData {
   required TableName table_name = 1;
   repeated RegionLocation region = 2;
+}
+
+enum InitRootState{
+  INIT_ROOT_ASSIGN_ROOT = 1;
+  INIT_ROOT_LOAD_ROOT = 2;
+  INIT_ROOT_INIT_META = 3;
+}
+
+message InitRootStateData {
 }
 
 enum InitMetaState {

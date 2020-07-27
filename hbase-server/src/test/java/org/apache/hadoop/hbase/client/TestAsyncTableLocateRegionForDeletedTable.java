@@ -35,7 +35,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Fix an infinite loop in {@link AsyncNonMetaRegionLocator}, see the comments on HBASE-21943 for
+ * Fix an infinite loop in {@link AsyncNonRootRegionLocator}, see the comments on HBASE-21943 for
  * more details.
  */
 @Category({ MediumTests.class, ClientTests.class })

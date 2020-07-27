@@ -67,10 +67,16 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
   private Class<? extends Channel> channelClass;
   @Override
   protected AsyncFSWAL createWAL() throws IOException {
+    String suffix = null;
+    if (ROOT_WAL_PROVIDER_ID.equals(providerId)) {
+      suffix = ROOT_WAL_PROVIDER_ID;
+    } else if (META_WAL_PROVIDER_ID.equals(providerId)) {
+      suffix = META_WAL_PROVIDER_ID;
+    }
     return new AsyncFSWAL(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
         getWALDirectoryName(factory.factoryId),
         getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
-        META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null,
+        suffix,
         eventLoopGroup, channelClass);
   }
 

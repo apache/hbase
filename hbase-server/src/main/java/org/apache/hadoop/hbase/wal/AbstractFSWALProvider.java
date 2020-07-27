@@ -247,6 +247,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
 
   // should be package private; more visible for use in AbstractFSWAL
   public static final String WAL_FILE_NAME_DELIMITER = ".";
+
+  /** The hbase:root region's WAL filename extension */
+  @VisibleForTesting
+  public static final String ROOT_WAL_PROVIDER_ID = ".root";
+
   /** The hbase:meta region's WAL filename extension */
   @VisibleForTesting
   public static final String META_WAL_PROVIDER_ID = ".meta";
@@ -408,6 +413,25 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       serverName = null;
     }
     return serverName;
+  }
+
+  public static boolean isCatalogFile(Path p) {
+    return isRootFile(p) || isMetaFile(p);
+  }
+
+  public static boolean isCatalogFile(String p) {
+    return isRootFile(p) || isMetaFile(p);
+  }
+
+  public static boolean isRootFile(Path p) {
+    return isRootFile(p.getName());
+  }
+
+  public static boolean isRootFile(String p) {
+    if (p != null && p.endsWith(ROOT_WAL_PROVIDER_ID)) {
+      return true;
+    }
+    return false;
   }
 
   public static boolean isMetaFile(Path p) {

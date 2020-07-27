@@ -122,6 +122,10 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
     return this.crashedServer;
   }
 
+  @Override public boolean hasRootTableRegion() {
+    return AbstractFSWALProvider.isRootFile(new Path(walPath));
+  }
+
   @Override
   public boolean hasMetaTableRegion() {
     return AbstractFSWALProvider.isMetaFile(new Path(walPath));

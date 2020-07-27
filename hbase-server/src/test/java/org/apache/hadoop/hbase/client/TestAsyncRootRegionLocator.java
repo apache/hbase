@@ -36,17 +36,17 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MediumTests.class, ClientTests.class })
-public class TestAsyncMetaRegionLocator {
+public class TestAsyncRootRegionLocator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncMetaRegionLocator.class);
+    HBaseClassTestRule.forClass(TestAsyncRootRegionLocator.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static ConnectionRegistry REGISTRY;
 
-  private static AsyncMetaRegionLocator LOCATOR;
+  private static AsyncRootRegionLocator LOCATOR;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -56,7 +56,7 @@ public class TestAsyncMetaRegionLocator {
     REGISTRY = ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
-    LOCATOR = new AsyncMetaRegionLocator(REGISTRY);
+    LOCATOR = new AsyncRootRegionLocator(REGISTRY);
   }
 
   @AfterClass
@@ -67,7 +67,7 @@ public class TestAsyncMetaRegionLocator {
 
   @Test
   public void test() throws Exception {
-    testLocator(TEST_UTIL, TableName.META_TABLE_NAME, new Locator() {
+    testLocator(TEST_UTIL, TableName.ROOT_TABLE_NAME, new Locator() {
 
       @Override
       public void updateCachedLocationOnError(HRegionLocation loc, Throwable error)

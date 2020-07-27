@@ -7609,19 +7609,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return true if the row is within the range specified by the RegionInfo
    */
   public static boolean rowIsInRange(RegionInfo info, final byte [] row) {
-    return ((info.getStartKey().length == 0) ||
-        (Bytes.compareTo(info.getStartKey(), row) <= 0)) &&
-        ((info.getEndKey().length == 0) ||
-            (Bytes.compareTo(info.getEndKey(), row) > 0));
+    return info.containsRow(row, 0, (short)row.length);
   }
 
   public static boolean rowIsInRange(RegionInfo info, final byte [] row, final int offset,
       final short length) {
-    return ((info.getStartKey().length == 0) ||
-        (Bytes.compareTo(info.getStartKey(), 0, info.getStartKey().length,
-          row, offset, length) <= 0)) &&
-        ((info.getEndKey().length == 0) ||
-          (Bytes.compareTo(info.getEndKey(), 0, info.getEndKey().length, row, offset, length) > 0));
+    return info.containsRow(row, offset, length);
   }
 
   @Override
@@ -8869,7 +8862,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public CellComparator getCellComparator() {
-    return cellComparator;
+    if (this.getRegionInfo().isRootRegion()) {
+      return CellComparatorImpl.ROOT_COMPARATOR;
+    }
+    if (this.getRegionInfo().isMetaRegion()) {
+      return CellComparatorImpl.META_COMPARATOR;
+    }
+    return CellComparatorImpl.COMPARATOR;
   }
 
   public long getMemStoreFlushSize() {

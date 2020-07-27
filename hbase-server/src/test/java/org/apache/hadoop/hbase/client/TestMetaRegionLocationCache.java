@@ -75,7 +75,7 @@ public class TestMetaRegionLocationCache {
     for (String znode: zk.getMetaReplicaNodes()) {
       String path = ZNodePaths.joinZNode(zk.getZNodePaths().baseZNode, znode);
       int replicaId = zk.getZNodePaths().getMetaReplicaIdFromPath(path);
-      RegionState state = MetaTableLocator.getMetaRegionState(zk, replicaId);
+      RegionState state = MetaTableLocator.getRootRegionState(zk, replicaId);
       result.add(new HRegionLocation(state.getRegion(), state.getServerName()));
     }
     return result;

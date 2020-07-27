@@ -111,7 +111,7 @@ public class AsyncMetaTableAccessor {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
     try {
       RegionInfo parsedRegionInfo = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
-      addListener(metaTable.get(new Get(MetaTableAccessor.getMetaKeyForRegion(parsedRegionInfo))
+      addListener(metaTable.get(new Get(MetaTableAccessor.getCatalogKeyForRegion(parsedRegionInfo))
         .addFamily(HConstants.CATALOG_FAMILY)), (r, err) -> {
           if (err != null) {
             future.completeExceptionally(err);
@@ -206,13 +206,13 @@ public class AsyncMetaTableAccessor {
    * @param tableName table we're looking for, can be null for getting all regions
    * @param excludeOfflinedSplitParents don't return split parents
    * @return the list of regioninfos and server. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
+   *         {@link CompletableFuture}.META_TABLE_NAME
    */
   private static CompletableFuture<List<Pair<RegionInfo, ServerName>>> getTableRegionsAndLocations(
       final AsyncTable<AdvancedScanResultConsumer> metaTable,
       final TableName tableName, final boolean excludeOfflinedSplitParents) {
     CompletableFuture<List<Pair<RegionInfo, ServerName>>> future = new CompletableFuture<>();
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
+    if (TableName.ROOT_TABLE_NAME.equals(tableName)) {
       future.completeExceptionally(new IOException(
           "This method can't be used to locate meta regions;" + " use MetaTableLocator instead"));
     }

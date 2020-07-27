@@ -1860,13 +1860,13 @@ public final class ZKUtil {
         }
       }
       sb.append("\nRegion server holding hbase:meta: "
-        + MetaTableLocator.getMetaRegionLocation(zkw));
+        + MetaTableLocator.getRootRegionLocation(zkw));
       Configuration conf = HBaseConfiguration.create();
       int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
                HConstants.DEFAULT_META_REPLICA_NUM);
       for (int i = 1; i < numMetaReplicas; i++) {
         sb.append("\nRegion server holding hbase:meta, replicaId " + i + " "
-                    + MetaTableLocator.getMetaRegionLocation(zkw, i));
+                    + MetaTableLocator.getRootRegionLocation(zkw, i));
       }
       sb.append("\nRegion servers:");
       final List<String> rsChildrenNoWatchList =

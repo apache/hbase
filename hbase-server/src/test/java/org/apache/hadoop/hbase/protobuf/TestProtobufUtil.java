@@ -369,14 +369,14 @@ public class TestProtobufUtil {
       ProtobufUtil.prependPBMagic(data);
       // Deserialize
       RegionState regionStateNew =
-          org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.parseMetaRegionStateFrom(data, 1);
+          org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.parseRootRegionStateFrom(data, 1);
       assertEquals(regionState.getServerName(), regionStateNew.getServerName());
       assertEquals(regionState.getState(), regionStateNew.getState());
     }
     // old style.
     RegionState rs =
-        org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.parseMetaRegionStateFrom(
-            serverName.getVersionedBytes(), 1);
+        org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.parseRootRegionStateFrom((
+            serverName.getVersionedBytes()), 1);
     assertEquals(serverName, rs.getServerName());
     assertEquals(rs.getState(), RegionState.State.OPEN);
   }

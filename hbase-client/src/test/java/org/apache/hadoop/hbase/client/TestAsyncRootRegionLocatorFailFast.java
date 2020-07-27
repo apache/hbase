@@ -33,15 +33,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, SmallTests.class })
-public class TestAsyncMetaRegionLocatorFailFast {
+public class TestAsyncRootRegionLocatorFailFast {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncMetaRegionLocatorFailFast.class);
+    HBaseClassTestRule.forClass(TestAsyncRootRegionLocatorFailFast.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
-  private static AsyncMetaRegionLocator LOCATOR;
+  private static AsyncRootRegionLocator LOCATOR;
 
   private static final class FaultyConnectionRegistry extends DoNothingConnectionRegistry {
 
@@ -57,7 +57,7 @@ public class TestAsyncMetaRegionLocatorFailFast {
 
   @BeforeClass
   public static void setUp() {
-    LOCATOR = new AsyncMetaRegionLocator(new FaultyConnectionRegistry(CONF));
+    LOCATOR = new AsyncRootRegionLocator(new FaultyConnectionRegistry(CONF));
   }
 
   @Test(expected = DoNotRetryIOException.class)

@@ -372,6 +372,13 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   public boolean restoreClusterMetrics(ClusterMetrics desiredStatus) throws IOException {
     return true;
   }
+  /**
+   * Get the ServerName of region server serving the first hbase:meta region
+   */
+  public ServerName getServerHoldingRoot() throws IOException {
+    return getServerHoldingRegion(TableName.ROOT_TABLE_NAME,
+      RegionInfoBuilder.ROOT_REGIONINFO.getRegionName());
+  }
 
   /**
    * Get the ServerName of region server serving the first hbase:meta region

@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -170,7 +169,7 @@ public class TestHRegionInfo {
     Path basedir = htu.getDataTestDir();
     // Create a region.  That'll write the .regioninfo file.
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(htu.getConfiguration());
-    FSTableDescriptors.tryUpdateMetaTableDescriptor(htu.getConfiguration());
+    FSTableDescriptors.tryUpdateCatalogTableDescriptor(htu.getConfiguration());
     HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, basedir, htu.getConfiguration(),
         fsTableDescriptors.get(TableName.META_TABLE_NAME));
     // Get modtime on the file.

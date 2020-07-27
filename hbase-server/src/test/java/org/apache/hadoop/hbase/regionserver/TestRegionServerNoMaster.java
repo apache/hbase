@@ -111,7 +111,7 @@ public class TestRegionServerNoMaster {
     HRegionServer hrs = HTU.getHBaseCluster()
       .getLiveRegionServerThreads().get(0).getRegionServer();
     ZKWatcher zkw = hrs.getZooKeeper();
-    ServerName sn = MetaTableLocator.getMetaRegionLocation(zkw);
+    ServerName sn = MetaTableLocator.getRootRegionLocation(zkw);
     if (sn != null && !masterAddr.equals(sn)) {
       return;
     }
@@ -119,7 +119,7 @@ public class TestRegionServerNoMaster {
     ProtobufUtil.openRegion(null, hrs.getRSRpcServices(),
       hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
     while (true) {
-      sn = MetaTableLocator.getMetaRegionLocation(zkw);
+      sn = MetaTableLocator.getRootRegionLocation(zkw);
       if (sn != null && sn.equals(hrs.getServerName())
           && hrs.getOnlineRegions().containsKey(
               HRegionInfo.FIRST_META_REGIONINFO.getEncodedName())) {

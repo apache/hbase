@@ -275,10 +275,10 @@ public class TestMasterNoCluster {
 
     HMaster master = new HMaster(conf) {
       @Override
-      protected MasterMetaBootstrap createMetaBootstrap() {
-        return new MasterMetaBootstrap(this) {
+      protected MasterCatalogBootstrap createCatalogBootstrap() {
+        return new MasterCatalogBootstrap(this) {
           @Override
-          protected void assignMetaReplicas()
+          protected void assignCatalogReplicas()
               throws IOException, InterruptedException, KeeperException {
             // Nothing to do.
           }

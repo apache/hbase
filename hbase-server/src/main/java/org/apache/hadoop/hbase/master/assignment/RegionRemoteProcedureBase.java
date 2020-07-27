@@ -148,13 +148,20 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
 
   @Override
   protected boolean waitInitialized(MasterProcedureEnv env) {
-    if (TableName.isMetaTableName(getTableName())) {
+    if (TableName.isRootTableName(getTableName())) {
       return false;
     }
-    // First we need meta to be loaded, and second, if meta is not online then we will likely to
-    // fail when updating meta so we wait until it is assigned.
-    AssignmentManager am = env.getAssignmentManager();
-    return am.waitMetaLoaded(this) || am.waitMetaAssigned(this, region);
+    if (TableName.isMetaTableName(getTableName())) {
+      // First we need rot to be loaded, and second, if root is not online then we will likely to
+      // fail when updating root so we wait until it is assigned.
+      AssignmentManager am = env.getAssignmentManager();
+      return am.waitRootLoaded(this) || am.waitRootAssigned(this, region);
+    } else {
+      // First we need meta to be loaded, and second, if meta is not online then we will likely to
+      // fail when updating meta so we wait until it is assigned.
+      AssignmentManager am = env.getAssignmentManager();
+      return am.waitMetaLoaded(this) || am.waitMetaAssigned(this, region);
+    }
   }
 
   @Override

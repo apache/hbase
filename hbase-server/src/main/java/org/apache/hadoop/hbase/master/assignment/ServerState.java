@@ -35,6 +35,19 @@ public enum ServerState {
   CRASHED,
 
   /**
+   * Only server which carries root can have this state. We will split wal for root and then
+   * assign root first before splitting other wals.
+   */
+  SPLITTING_ROOT,
+
+  /**
+   * Indicate that the root splitting is done. We need this state so that the UnassignProcedure
+   * for root can safely quit. See the comments in UnassignProcedure.remoteCallFailed for more
+   * details.
+   */
+  SPLITTING_ROOT_DONE,
+
+  /**
    * Only server which carries meta can have this state. We will split wal for meta and then
    * assign meta first before splitting other wals.
    */

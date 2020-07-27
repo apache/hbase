@@ -173,6 +173,10 @@ public class SplitWALProcedure
     return this.crashedServer;
   }
 
+  @Override public boolean hasRootTableRegion() {
+    return AbstractFSWALProvider.isRootFile(new Path(walPath));
+  }
+
   @Override
   public boolean hasMetaTableRegion() {
     return AbstractFSWALProvider.isMetaFile(new Path(walPath));

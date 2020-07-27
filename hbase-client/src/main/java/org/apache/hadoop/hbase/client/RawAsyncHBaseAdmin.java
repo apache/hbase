@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.apache.hadoop.hbase.TableName.ROOT_TABLE_NAME;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException;
 import com.google.protobuf.Message;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
@@ -322,6 +324,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private final HashedWheelTimer retryTimer;
 
+  private final AsyncTable<AdvancedScanResultConsumer> rootTable;
+
   private final AsyncTable<AdvancedScanResultConsumer> metaTable;
 
   private final long rpcTimeoutNs;
@@ -338,10 +342,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private final NonceGenerator ng;
 
+  private final int metaReplicasNum;
+
   RawAsyncHBaseAdmin(AsyncConnectionImpl connection, HashedWheelTimer retryTimer,
       AsyncAdminBuilderBase builder) {
     this.connection = connection;
     this.retryTimer = retryTimer;
+    this.rootTable = connection.getTable(ROOT_TABLE_NAME);
     this.metaTable = connection.getTable(META_TABLE_NAME);
     this.rpcTimeoutNs = builder.rpcTimeoutNs;
     this.operationTimeoutNs = builder.operationTimeoutNs;
@@ -359,6 +366,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     this.maxAttempts = builder.maxAttempts;
     this.startLogErrorsCnt = builder.startLogErrorsCnt;
     this.ng = connection.getNonceGenerator();
+    this.metaReplicasNum = connection.getConfiguration().getInt(HConstants.META_REPLICAS_NUM,
+      HConstants.DEFAULT_META_REPLICA_NUM);
   }
 
   private <T> MasterRequestCallerBuilder<T> newMasterCaller() {
@@ -2351,11 +2360,27 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       CompletableFuture<Optional<HRegionLocation>> future;
       if (RegionInfo.isEncodedRegionName(regionNameOrEncodedRegionName)) {
         String encodedName = Bytes.toString(regionNameOrEncodedRegionName);
-        if (encodedName.length() < RegionInfo.MD5_HEX_LENGTH) {
+
+        //TODO francis do we really need to support root replica encoded name lookup?
+        //if so can we make this better?
+        //The same goes for meta when it's split?
+        boolean isRootRegion = false;
+        for (int i=0; i<metaReplicasNum; i++) {
+          RegionInfo regionInfo =
+            RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.ROOT_REGIONINFO, i);
+          if (encodedName.equals(regionInfo.getEncodedName())) {
+            isRootRegion = true;
+            break;
+          }
+        }
+        if (isRootRegion) {
           // old format encodedName, should be meta region
           future = connection.registry.getMetaRegionLocations()
             .thenApply(locs -> Stream.of(locs.getRegionLocations())
               .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
+        } else if (encodedName.length() < RegionInfo.MD5_HEX_LENGTH) {
+          future = AsyncMetaTableAccessor.getRegionLocationWithEncodedName(rootTable,
+            regionNameOrEncodedRegionName);
         } else {
           future = AsyncMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
             regionNameOrEncodedRegionName);
@@ -2363,11 +2388,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       } else {
         RegionInfo regionInfo =
           MetaTableAccessor.parseRegionInfoFromRegionName(regionNameOrEncodedRegionName);
-        if (regionInfo.isMetaRegion()) {
+        if (regionInfo.isRootRegion()) {
           future = connection.registry.getMetaRegionLocations()
             .thenApply(locs -> Stream.of(locs.getRegionLocations())
               .filter(loc -> loc.getRegion().getReplicaId() == regionInfo.getReplicaId())
               .findFirst());
+          //TODO francis it won't reach here once meta is split
+        } else if (regionInfo.isMetaRegion())   {
+          future =
+            AsyncMetaTableAccessor.getRegionLocation(rootTable, regionNameOrEncodedRegionName);
         } else {
           future =
             AsyncMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
@@ -2403,6 +2432,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private CompletableFuture<RegionInfo> getRegionInfo(byte[] regionNameOrEncodedRegionName) {
     if (regionNameOrEncodedRegionName == null) {
       return failedFuture(new IllegalArgumentException("Passed region name can't be null"));
+    }
+
+    if (Bytes.equals(regionNameOrEncodedRegionName,
+      RegionInfoBuilder.ROOT_REGIONINFO.getRegionName()) ||
+      Bytes.equals(regionNameOrEncodedRegionName,
+        RegionInfoBuilder.ROOT_REGIONINFO.getEncodedNameAsBytes())) {
+      return CompletableFuture.completedFuture(RegionInfoBuilder.ROOT_REGIONINFO);
     }
 
     if (Bytes.equals(regionNameOrEncodedRegionName,

@@ -158,7 +158,7 @@ public class TestSplitWALManager {
     Assert.assertFalse(TEST_UTIL.getTestFileSystem().exists(wals[0].getPath()));
 
     // Test splitting wal
-    wals = TEST_UTIL.getTestFileSystem().listStatus(metaWALDir, MasterWalManager.NON_META_FILTER);
+    wals = TEST_UTIL.getTestFileSystem().listStatus(metaWALDir, MasterWalManager.NON_CATALOG_FILTER);
     Assert.assertEquals(1, wals.length);
     testProcedures =
         splitWALManager.createSplitWALProcedures(Lists.newArrayList(wals[0]), metaServer);
@@ -279,6 +279,10 @@ public class TestSplitWALManager {
 
     public ServerName getServerName() {
       return serverName;
+    }
+
+    @Override public boolean hasRootTableRegion() {
+      return false;
     }
 
     @Override

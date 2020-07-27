@@ -224,7 +224,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
    * back any response, which cause master startup hangs forever
    */
   @Test
-  public void testAssignMetaAndCrashBeforeResponse() throws Exception {
+  public void testAssignRootAndCrashBeforeResponse() throws Exception {
     tearDown();
     // See setUp(), start HBase until set up meta
     util = new HBaseTestingUtility();
@@ -237,8 +237,8 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
 
     // Assign meta
     rsDispatcher.setMockRsExecutor(new HangThenRSRestartExecutor());
-    am.assign(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    assertEquals(true, am.isMetaAssigned());
+    am.assign(RegionInfoBuilder.ROOT_REGIONINFO);
+    assertEquals(true, am.isRootAssigned());
 
     // set it back as default, see setUpMeta()
     am.wakeMetaLoadedEvent();
@@ -302,7 +302,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
       MetaTableAccessor.addRegionToMeta(this.util.getConnection(), hri);
       assertNull("RegionInfo was manually added in META, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
-      hri = am.loadRegionFromMeta(hri.getEncodedName());
+      hri = am.loadRegionFromCatalog(hri.getEncodedName());
       assertEquals(hri.getEncodedName(),
         am.getRegionStates().getRegionState(hri).getRegion().getEncodedName());
     }finally {
@@ -321,7 +321,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
       assertNull("RegionInfo was just instantiated by the test, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
       assertNull("RegionInfo was never added in META, should had returned null.",
-        am.loadRegionFromMeta(hri.getEncodedName()));
+        am.loadRegionFromCatalog(hri.getEncodedName()));
     }finally {
       this.util.killMiniHBaseCluster();
     }

@@ -166,13 +166,20 @@ public class TransitRegionStateProcedure
 
   @Override
   protected boolean waitInitialized(MasterProcedureEnv env) {
-    if (TableName.isMetaTableName(getTableName())) {
+    if (TableName.isRootTableName(getTableName())) {
       return false;
     }
-    // First we need meta to be loaded, and second, if meta is not online then we will likely to
-    // fail when updating meta so we wait until it is assigned.
-    AssignmentManager am = env.getAssignmentManager();
-    return am.waitMetaLoaded(this) || am.waitMetaAssigned(this, getRegion());
+    if (TableName.isMetaTableName(getTableName())) {
+      // First we need root to be loaded, and second, if root is not online then we will likely to
+      // fail when updating root so we wait until it is assigned.
+      AssignmentManager am = env.getAssignmentManager();
+      return am.waitRootLoaded(this) || am.waitRootAssigned(this, getRegion());
+    } else {
+      // First we need meta to be loaded, and second, if meta is not online then we will likely to
+      // fail when updating meta so we wait until it is assigned.
+      AssignmentManager am = env.getAssignmentManager();
+      return am.waitMetaLoaded(this) || am.waitMetaAssigned(this, getRegion());
+    }
   }
 
   private void queueAssign(MasterProcedureEnv env, RegionStateNode regionNode)

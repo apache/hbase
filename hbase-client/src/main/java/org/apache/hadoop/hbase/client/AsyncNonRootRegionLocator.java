@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.HConstants.NINES;
 import static org.apache.hadoop.hbase.HConstants.USE_META_REPLICAS;
 import static org.apache.hadoop.hbase.HConstants.ZEROES;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.apache.hadoop.hbase.TableName.ROOT_TABLE_NAME;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.canUpdateOnError;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.createRegionLocations;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isGood;
@@ -35,6 +36,7 @@ import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -47,9 +49,12 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -68,9 +73,9 @@ import org.apache.hbase.thirdparty.com.google.common.base.Objects;
  * The asynchronous locator for regions other than meta.
  */
 @InterfaceAudience.Private
-class AsyncNonMetaRegionLocator {
+class AsyncNonRootRegionLocator {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AsyncNonMetaRegionLocator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncNonRootRegionLocator.class);
 
   @VisibleForTesting
   static final String MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE =
@@ -121,8 +126,15 @@ class AsyncNonMetaRegionLocator {
 
   private static final class TableCache {
 
-    private final ConcurrentNavigableMap<byte[], RegionLocations> cache =
-      new ConcurrentSkipListMap<>(BYTES_COMPARATOR);
+    private TableCache(TableName tableName) {
+      final KeyValue.KVComparator comparator = getComparator(tableName);
+      cache = new ConcurrentSkipListMap<>(new Comparator<byte[]>() {
+        @Override public int compare(byte[] left, byte[] right) {
+          return comparator.compareRows(left, 0, left.length, right, 0, right.length);
+        }
+      });
+    }
+    private final ConcurrentNavigableMap<byte[], RegionLocations> cache;
 
     private final Set<LocateRequest> pendingRequests = new HashSet<>();
 
@@ -174,10 +186,14 @@ class AsyncNonMetaRegionLocator {
         // startKey < req.row and endKey >= req.row. Here we split it to endKey == req.row ||
         // (endKey > req.row && startKey < req.row). The two conditions are equal since startKey <
         // endKey.
+        KeyValue.KVComparator comparator = getComparator(loc.getRegion().getTable());
         byte[] endKey = loc.getRegion().getEndKey();
-        int c = Bytes.compareTo(endKey, req.row);
+        int c = comparator.compareRows(endKey, 0, endKey.length,
+          req.row,0, req.row.length);
         completed = c == 0 || ((c > 0 || Bytes.equals(EMPTY_END_ROW, endKey)) &&
-          Bytes.compareTo(loc.getRegion().getStartKey(), req.row) < 0);
+          comparator.compareRows(
+            loc.getRegion().getStartKey(), 0, loc.getRegion().getStartKey().length,
+            req.row, 0, req.row.length) < 0);
       } else {
         completed = loc.getRegion().containsRow(req.row);
       }
@@ -190,7 +206,7 @@ class AsyncNonMetaRegionLocator {
     }
   }
 
-  AsyncNonMetaRegionLocator(AsyncConnectionImpl conn) {
+  AsyncNonRootRegionLocator(AsyncConnectionImpl conn) {
     this.conn = conn;
     this.maxConcurrentLocateRequestPerTable = conn.getConfiguration().getInt(
       MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE, DEFAULT_MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE);
@@ -201,7 +217,7 @@ class AsyncNonMetaRegionLocator {
   }
 
   private TableCache getTableCache(TableName tableName) {
-    return computeIfAbsent(cache, tableName, TableCache::new);
+    return computeIfAbsent(cache, tableName, ()->  new TableCache(tableName));
   }
 
   private boolean isEqual(RegionLocations locs1, RegionLocations locs2) {
@@ -369,8 +385,10 @@ class AsyncNonMetaRegionLocator {
       recordCacheMiss();
       return null;
     }
+    KeyValue.KVComparator comparator = getComparator(tableName);
     byte[] endKey = loc.getRegion().getEndKey();
-    if (isEmptyStopRow(endKey) || Bytes.compareTo(row, endKey) < 0) {
+    if (isEmptyStopRow(endKey) ||
+      comparator.compareRows(row, 0, row.length, endKey, 0, endKey.length) < 0) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Found {} in cache for {}, row='{}', locateType={}, replicaId={}", loc, tableName,
           Bytes.toStringBinary(row), RegionLocateType.CURRENT, replicaId);
@@ -398,8 +416,12 @@ class AsyncNonMetaRegionLocator {
       recordCacheMiss();
       return null;
     }
+    KeyValue.KVComparator comparator = getComparator(tableName);
     if (isEmptyStopRow(loc.getRegion().getEndKey()) ||
-      (!isEmptyStopRow && Bytes.compareTo(loc.getRegion().getEndKey(), row) >= 0)) {
+      (!isEmptyStopRow &&
+        comparator.compareRows(
+          loc.getRegion().getEndKey(), 0, loc.getRegion().getEndKey().length,
+          row, 0, row.length) >= 0)) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Found {} in cache for {}, row='{}', locateType={}, replicaId={}", loc, tableName,
           Bytes.toStringBinary(row), RegionLocateType.BEFORE, replicaId);
@@ -413,6 +435,8 @@ class AsyncNonMetaRegionLocator {
   }
 
   private void locateInMeta(TableName tableName, LocateRequest req) {
+    TableName parentTableName =
+      META_TABLE_NAME.equals(tableName) ? ROOT_TABLE_NAME : META_TABLE_NAME;
     if (LOG.isTraceEnabled()) {
       LOG.trace("Try locate '" + tableName + "', row='" + Bytes.toStringBinary(req.row) +
         "', locateType=" + req.locateType + " in meta");
@@ -436,7 +460,7 @@ class AsyncNonMetaRegionLocator {
     if (useMetaReplicas) {
       scan.setConsistency(Consistency.TIMELINE);
     }
-    conn.getTable(META_TABLE_NAME).scan(scan, new AdvancedScanResultConsumer() {
+    conn.getTable(parentTableName).scan(scan, new AdvancedScanResultConsumer() {
 
       private boolean completeNormally = false;
 
@@ -656,5 +680,15 @@ class AsyncNonMetaRegionLocator {
       return null;
     }
     return locateRowInCache(tableCache, tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+  }
+
+  private static KeyValue.KVComparator getComparator(TableName tableName) {
+    if (TableName.ROOT_TABLE_NAME.equals(tableName)) {
+      return KeyValue.ROOT_COMPARATOR;
+    }
+    if (META_TABLE_NAME.equals(tableName)) {
+      return KeyValue.META_COMPARATOR;
+    }
+    return KeyValue.COMPARATOR;
   }
 }

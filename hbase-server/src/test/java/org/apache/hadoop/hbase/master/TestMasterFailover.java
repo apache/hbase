@@ -187,7 +187,7 @@ public class TestMasterFailover {
       LOG.info("Master has aborted");
 
       // meta should remain where it was
-      RegionState metaState = MetaTableLocator.getMetaRegionState(hrs.getZooKeeper());
+      RegionState metaState = MetaTableLocator.getRootRegionState(hrs.getZooKeeper());
       assertEquals("hbase:meta should be online on RS",
           metaState.getServerName(), metaServerName);
       assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
@@ -200,7 +200,7 @@ public class TestMasterFailover {
       LOG.info("Master is ready");
 
       // ensure meta is still deployed on RS
-      metaState = MetaTableLocator.getMetaRegionState(activeMaster.getZooKeeper());
+      metaState = MetaTableLocator.getRootRegionState(activeMaster.getZooKeeper());
       assertEquals("hbase:meta should be online on RS",
           metaState.getServerName(), metaServerName);
       assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());

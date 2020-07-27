@@ -77,6 +77,10 @@ public final class TableName implements Comparable<TableName> {
          "(?:"+VALID_TABLE_QUALIFIER_REGEX+"))";
 
   /** The hbase:meta table's name. */
+  public static final TableName ROOT_TABLE_NAME =
+    valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "root");
+
+  /** The hbase:meta table's name. */
   public static final TableName META_TABLE_NAME =
       valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
 
@@ -89,6 +93,13 @@ public final class TableName implements Comparable<TableName> {
 
   /** One globally disallowed name */
   public static final String DISALLOWED_TABLE_NAME = "zookeeper";
+
+  /**
+   * @return True if <code>tn</code> is the hbase:meta table name.
+   */
+  public static boolean isRootTableName(final TableName tn) {
+    return tn.equals(TableName.ROOT_TABLE_NAME);
+  }
 
   /**
    * @return True if <code>tn</code> is the hbase:meta table name.

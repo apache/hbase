@@ -60,6 +60,12 @@ public class CellComparatorImpl implements CellComparator {
    * A {@link CellComparatorImpl} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
    */
+  public static final CellComparatorImpl ROOT_COMPARATOR = new RootCellComparator();
+
+  /**
+   * A {@link CellComparatorImpl} for <code>hbase:meta</code> catalog table
+   * {@link KeyValue}s.
+   */
   public static final CellComparatorImpl META_COMPARATOR = new MetaCellComparator();
 
   @Override
@@ -292,6 +298,72 @@ public class CellComparatorImpl implements CellComparator {
   }
 
   /**
+   * A {@link CellComparatorImpl} for <code>hbase:root</code> catalog table
+   * {@link KeyValue}s.
+   */
+  public static class RootCellComparator extends MetaCellComparator {
+
+    private static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+      int rlength) {
+      // Rows look like this: hbase:meta,ROW_FROM_META,RID
+      //        LOG.info("ROOT " + Bytes.toString(left, loffset, llength) +
+      //          "---" + Bytes.toString(right, roffset, rlength));
+      final int metalength = TableName.META_TABLE_NAME.getName().length+1; // 'hbase:meta,' length
+      int leftDelimiter = loffset+metalength;
+      int rightDelimiter = roffset+metalength;
+      int leftFarDelimiter = Bytes.searchDelimiterIndexInReverse(left,
+        leftDelimiter,
+        llength - metalength, HConstants.DELIMITER);
+      int rightFarDelimiter = Bytes.searchDelimiterIndexInReverse(right,
+        rightDelimiter, rlength - metalength,
+        HConstants.DELIMITER);
+      if (leftFarDelimiter < 0 && rightFarDelimiter >= 0) {
+        // Nothing between hbase:meta and regionid.  Its first key.
+        return -1;
+      } else if (rightFarDelimiter < 0 && leftFarDelimiter >= 0) {
+        return 1;
+      } else if (leftFarDelimiter < 0 && rightFarDelimiter < 0) {
+        return 0;
+      }
+      //Use superclass comparator
+      int result = MetaCellComparator.compareRows(left, leftDelimiter,
+        leftFarDelimiter - leftDelimiter,
+        right, rightDelimiter,
+        rightFarDelimiter - rightDelimiter);
+      if (result != 0) {
+        return result;
+      }
+
+      // Compare last part of row, the rowid.
+      leftFarDelimiter++;
+      rightFarDelimiter++;
+      result = Bytes.compareTo(left, leftFarDelimiter, llength - (leftFarDelimiter - loffset),
+        right, rightFarDelimiter, rlength - (rightFarDelimiter - roffset));
+      return result;
+    }
+
+    @Override
+    public int compareRows(ByteBuffer row, Cell cell) {
+      byte [] array;
+      int offset;
+      int len = row.remaining();
+      if (row.hasArray()) {
+        array = row.array();
+        offset = row.position() + row.arrayOffset();
+      } else {
+        // We copy the row array if offheap just so we can do a compare. We do this elsewhere too
+        // in BBUtils when Cell is backed by an offheap ByteBuffer. Needs fixing so no copy. TODO.
+        array = new byte[len];
+        offset = 0;
+        ByteBufferUtils.copyFromBufferToArray(array, row, row.position(),
+          0, len);
+      }
+      // Reverse result since we swap the order of the params we pass below.
+      return -compareRows(cell, array, offset, len);
+    }
+  }
+
+  /**
    * A {@link CellComparatorImpl} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
    */
@@ -423,7 +495,12 @@ public class CellComparatorImpl implements CellComparator {
    */
   public static CellComparator getCellComparator(byte [] tableName) {
     // FYI, TableName.toBytes does not create an array; just returns existing array pointer.
-    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())?
-      CellComparatorImpl.META_COMPARATOR: CellComparatorImpl.COMPARATOR;
+    if(Bytes.equals(tableName, TableName.ROOT_TABLE_NAME.toBytes())) {
+      return CellComparatorImpl.ROOT_COMPARATOR;
+    }
+    if(Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())) {
+      return CellComparatorImpl.META_COMPARATOR;
+    }
+    return CellComparatorImpl.COMPARATOR;
   }
 }

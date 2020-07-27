@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -75,6 +76,8 @@ import org.apache.hadoop.hbase.regionserver.SequenceId;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RetryCounter;
+import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -149,6 +152,9 @@ public class AssignmentManager {
   public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD =
       "hbase.metrics.rit.stuck.warning.threshold";
   private static final int DEFAULT_RIT_STUCK_WARNING_THRESHOLD = 60 * 1000;
+
+  private final ProcedureEvent<?> rootAssignEvent = new ProcedureEvent<>("root assign");
+  private final ProcedureEvent<?> rootLoadEvent = new ProcedureEvent<>("root load");
 
   private final ProcedureEvent<?> metaAssignEvent = new ProcedureEvent<>("meta assign");
   private final ProcedureEvent<?> metaLoadEvent = new ProcedureEvent<>("meta load");
@@ -230,9 +236,9 @@ public class AssignmentManager {
       // here we are still in the early steps of active master startup. There is only one thread(us)
       // can access AssignmentManager and create region node, so here we do not need to lock the
       // region node.
-      RegionState regionState = MetaTableLocator.getMetaRegionState(zkw);
+      RegionState regionState = MetaTableLocator.getRootRegionState(zkw);
       RegionStateNode regionNode =
-        regionStates.getOrCreateRegionStateNode(RegionInfoBuilder.FIRST_META_REGIONINFO);
+        regionStates.getOrCreateRegionStateNode(RegionInfoBuilder.ROOT_REGIONINFO);
       regionNode.setRegionLocation(regionState.getServerName());
       regionNode.setState(regionState.getState());
       if (regionNode.getProcedure() != null) {
@@ -309,6 +315,10 @@ public class AssignmentManager {
       metaLoadEvent.suspend();
       for (RegionInfo hri: getMetaRegionSet()) {
         setMetaAssigned(hri, false);
+      }
+      rootLoadEvent.suspend();
+      for(RegionInfo hri: getRootRegionSet()) {
+        setRootAssigned(hri, false);
       }
     }
   }
@@ -393,6 +403,130 @@ public class AssignmentManager {
   }
 
   // ============================================================================================
+  //  ROOT Helpers
+  // ============================================================================================
+  private boolean isRootRegion(final RegionInfo regionInfo) {
+    return regionInfo.isRootRegion();
+  }
+
+  public boolean isRootRegion(final byte[] regionName) {
+    return getRootRegionFromName(regionName) != null;
+  }
+
+  public RegionInfo getRootRegionFromName(final byte[] regionName) {
+    for (RegionInfo hri: getRootRegionSet()) {
+      if (Bytes.equals(hri.getRegionName(), regionName)) {
+        return hri;
+      }
+    }
+    return null;
+  }
+
+  public boolean isCarryingRoot(final ServerName serverName) {
+    // TODO: handle multiple root
+    return isCarryingRegion(serverName, RegionInfoBuilder.ROOT_REGIONINFO);
+  }
+
+  private RegionInfo getRootForRegion(final RegionInfo regionInfo) {
+    //if (regionInfo.isRootRegion()) return regionInfo;
+    // TODO: handle multiple root. if the region provided is not root lookup
+    // which root the region belongs to.
+    return RegionInfoBuilder.ROOT_REGIONINFO;
+  }
+
+  /**
+   * Check hbase:root is up and ready for reading. For use during Master startup only.
+   * @return True if root is UP and online and startup can progress. Otherwise, root is not online
+   *   and we will hold here until operator intervention.
+   */
+  public boolean waitForRootOnline() {
+    return isRegionOnline(RegionInfoBuilder.ROOT_REGIONINFO);
+  }
+
+  // TODO: handle multiple root.
+  private static final Set<RegionInfo> ROOT_REGION_SET =
+    Collections.singleton(RegionInfoBuilder.ROOT_REGIONINFO);
+  public Set<RegionInfo> getRootRegionSet() {
+    return ROOT_REGION_SET;
+  }
+
+  // ============================================================================================
+  //  ROOT Event(s) helpers
+  // ============================================================================================
+  /**
+   * Notice that, this only means the root region is available on a RS, but the AM may still be
+   * loading the region states from root, so usually you need to check {@link #isRootLoaded()} first
+   * before checking this method, unless you can make sure that your piece of code can only be
+   * executed after AM builds the region states.
+   * @see #isRootLoaded()
+   */
+  public boolean isRootAssigned() {
+    return rootAssignEvent.isReady();
+  }
+
+  public boolean isRootRegionInTransition() {
+    return !isRootAssigned();
+  }
+
+  /**
+   * Notice that this event does not mean the AM has already finished region state rebuilding. See
+   * the comment of {@link #isRootAssigned()} for more details.
+   * @see #isRootAssigned()
+   */
+  public boolean waitRootAssigned(Procedure<?> proc, RegionInfo regionInfo) {
+    return getRootAssignEvent(getRootForRegion(regionInfo)).suspendIfNotReady(proc);
+  }
+
+  private void setRootAssigned(RegionInfo rootRegionInfo, boolean assigned) {
+    assert isRootRegion(rootRegionInfo) : "unexpected non-root region " + rootRegionInfo;
+    ProcedureEvent<?> rootAssignEvent = getRootAssignEvent(rootRegionInfo);
+    if (assigned) {
+      LOG.debug("Setting hbase:root region assigned: "+rootRegionInfo);
+      rootAssignEvent.wake(getProcedureScheduler());
+    } else {
+      LOG.debug("Setting hbase:root region unassigned: "+rootRegionInfo);
+      rootAssignEvent.suspend();
+    }
+  }
+
+  private ProcedureEvent<?> getRootAssignEvent(RegionInfo rootRegionInfo) {
+    assert isRootRegion(rootRegionInfo) : "unexpected non-catalog region " + rootRegionInfo;
+    // TODO: handle multiple root.
+    return rootAssignEvent;
+  }
+
+  /**
+   * Wait until AM finishes the root loading, i.e, the region states rebuilding.
+   * @see #isRootLoaded()
+   * @see #waitRootAssigned(Procedure, RegionInfo)
+   */
+  public boolean waitRootLoaded(Procedure<?> proc) {
+    if (rootLoadEvent.suspendIfNotReady(proc)) {
+      LOG.debug("Waiting for root to be loaded: "+proc);
+      return true;
+    }
+    return false;
+  }
+
+  @VisibleForTesting
+  void wakeRootLoadedEvent() {
+    synchronized (rootLoadEvent) {
+      rootLoadEvent.wake(getProcedureScheduler());
+      assert isRootLoaded() : "expected root to be loaded";
+    }
+  }
+
+  /**
+   * Return whether AM finishes the root loading, i.e, the region states rebuilding.
+   * @see #isRootAssigned()
+   * @see #waitRootLoaded(Procedure)
+   */
+  public boolean isRootLoaded() {
+    return rootLoadEvent.isReady();
+  }
+
+
+  // ============================================================================================
   //  META Helpers
   // ============================================================================================
   private boolean isMetaRegion(final RegionInfo regionInfo) {
@@ -428,6 +562,15 @@ public class AssignmentManager {
     // TODO: handle multiple meta. if the region provided is not meta lookup
     // which meta the region belongs to.
     return RegionInfoBuilder.FIRST_META_REGIONINFO;
+  }
+
+  /**
+   * Check hbase:meta is up and ready for reading. For use during Master startup only.
+   * @return True if meta is UP and online and startup can progress. Otherwise, meta is not online
+   *   and we will hold here until operator intervention.
+   */
+  public boolean waitForMetaOnline() {
+    return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
   }
 
   // TODO: handle multiple meta.
@@ -468,8 +611,10 @@ public class AssignmentManager {
     assert isMetaRegion(metaRegionInfo) : "unexpected non-meta region " + metaRegionInfo;
     ProcedureEvent<?> metaAssignEvent = getMetaAssignEvent(metaRegionInfo);
     if (assigned) {
+      LOG.debug("Setting hbase:meta region assigned: "+metaRegionInfo);
       metaAssignEvent.wake(getProcedureScheduler());
     } else {
+      LOG.debug("Setting hbase:meta region unassigned: "+metaRegionInfo);
       metaAssignEvent.suspend();
     }
   }
@@ -486,7 +631,11 @@ public class AssignmentManager {
    * @see #waitMetaAssigned(Procedure, RegionInfo)
    */
   public boolean waitMetaLoaded(Procedure<?> proc) {
-    return metaLoadEvent.suspendIfNotReady(proc);
+    if (metaLoadEvent.suspendIfNotReady(proc)) {
+      LOG.debug("Waiting for meta to be loaded: "+proc);
+      return true;
+    }
+    return false;
   }
 
   @VisibleForTesting
@@ -502,6 +651,39 @@ public class AssignmentManager {
    */
   public boolean isMetaLoaded() {
     return metaLoadEvent.isReady();
+  }
+
+
+  /**
+   * @return True if region is online and scannable else false if an error or shutdown (Otherwise
+   *   we just block in here holding up all forward-progess).
+   */
+  public boolean isRegionOnline(RegionInfo ri) {
+    RetryCounter rc = null;
+    while (!master.isStopped()) {
+      RegionState rs = regionStates.getRegionState(ri);
+      if (rs.isOpened()) {
+        if (master.getServerManager().isServerOnline(rs.getServerName())) {
+          return true;
+        }
+      }
+      // Region is not OPEN.
+      Optional<Procedure<MasterProcedureEnv>> optProc =
+        master.getMasterProcedureExecutor().getProcedures().
+        stream().filter(p -> p instanceof ServerCrashProcedure).findAny();
+      // TODO: Add a page to refguide on how to do repair. Have this log message point to it.
+      // Page will talk about loss of edits, how to schedule at least the meta WAL recovery, and
+      // then how to assign including how to break region lock if one held.
+      LOG.warn("{} is NOT online; state={}; ServerCrashProcedures={}. Master startup cannot " +
+          "progress, in holding-pattern until region onlined.",
+        ri.getRegionNameAsString(), rs, optProc.isPresent());
+      // Check once-a-minute.
+      if (rc == null) {
+        rc = new RetryCounterFactory(1000).create();
+      }
+      Threads.sleep(rc.getBackoffTimeAndIncrementAttempts());
+    }
+    return false;
   }
 
   /**
@@ -970,7 +1152,7 @@ public class AssignmentManager {
 
   private void updateRegionTransition(ServerName serverName, TransitionCode state,
       RegionInfo regionInfo, long seqId, long procId) throws IOException {
-    checkMetaLoaded(regionInfo);
+    checkParentCatalogLoaded(regionInfo);
 
     RegionStateNode regionNode = regionStates.getRegionStateNode(regionInfo);
     if (regionNode == null) {
@@ -1022,7 +1204,7 @@ public class AssignmentManager {
   private void updateRegionSplitTransition(final ServerName serverName, final TransitionCode state,
       final RegionInfo parent, final RegionInfo hriA, final RegionInfo hriB)
       throws IOException {
-    checkMetaLoaded(parent);
+    checkParentCatalogLoaded(parent);
 
     if (state != TransitionCode.READY_TO_SPLIT) {
       throw new UnexpectedStateException("unsupported split regionState=" + state +
@@ -1060,7 +1242,7 @@ public class AssignmentManager {
 
   private void updateRegionMergeTransition(final ServerName serverName, final TransitionCode state,
       final RegionInfo merged, final RegionInfo hriA, final RegionInfo hriB) throws IOException {
-    checkMetaLoaded(merged);
+    checkParentCatalogLoaded(merged);
 
     if (state != TransitionCode.READY_TO_MERGE) {
       throw new UnexpectedStateException("Unsupported merge regionState=" + state +
@@ -1129,7 +1311,7 @@ public class AssignmentManager {
       LOG.trace("no online region found on {}", serverName);
       return;
     }
-    if (!isMetaLoaded()) {
+    if (!isRootLoaded() || !isMetaLoaded()) {
       // we are still on startup, skip checking
       return;
     }
@@ -1400,6 +1582,28 @@ public class AssignmentManager {
     long startTime = System.nanoTime();
     LOG.debug("Joining cluster...");
 
+    // FIRST Catalog tables READ!!!!
+    // The below cannot make progress w/o hbase:meta being online.
+    // This is the FIRST attempt at going to hbase:meta. Meta on-lining is going on in background
+    // as procedures run -- in particular SCPs for crashed servers... One should put up hbase:meta
+    // if it is down. It may take a while to come online. So, wait here until meta if for sure
+    // available. That's what waitForXXXXOnline does.
+
+
+
+    LOG.debug("Waiting for hbase:root to be online.");
+    if (!waitForRootOnline()) {
+      throw new IOException("Waited too long for hbase:root to be online");
+    }
+
+    //load hbase:root to build regionstate for hbase:meta regions
+    loadRoot();
+
+    LOG.debug("Waiting for hbase:meta to be online.");
+    if (!waitForMetaOnline()) {
+      throw new IOException("Waited too long for hbase:meta to be online");
+    }
+
     // Scan hbase:meta to build list of existing regions, servers, and assignment.
     // hbase:meta is online now or will be. Inside loadMeta, we keep trying. Can't make progress
     // w/o  meta.
@@ -1442,13 +1646,13 @@ public class AssignmentManager {
   }
 
   /* AM internal RegionStateStore.RegionStateVisitor implementation. To be used when
-   * scanning META table for region rows, using RegionStateStore utility methods. RegionStateStore
+   * scanning Catalog table for region rows, using RegionStateStore utility methods. RegionStateStore
    * methods will convert Result into proper RegionInfo instances, but those would still need to be
    * added into AssignmentManager.regionStates in-memory cache.
    * RegionMetaLoadingVisitor.visitRegionState method provides the logic for adding RegionInfo
    * instances as loaded from latest META scan into AssignmentManager.regionStates.
    */
-  private class RegionMetaLoadingVisitor implements RegionStateStore.RegionStateVisitor  {
+  private class RegionCatalogLoadingVisitor implements RegionStateStore.RegionStateVisitor  {
 
     @Override
     public void visitRegionState(Result result, final RegionInfo regionInfo, final State state,
@@ -1489,6 +1693,13 @@ public class AssignmentManager {
       if (regionNode.getProcedure() != null) {
         regionNode.getProcedure().stateLoaded(AssignmentManager.this, regionNode);
       }
+      if (isMetaRegion(regionInfo)) {
+        if (localState.matches(State.OPEN)) {
+          setMetaAssigned(regionInfo, true);
+        } else if (localState.matches(State.CLOSING, State.CLOSED)){
+          setMetaAssigned(regionInfo, false);
+        }
+      }
     }
   };
 
@@ -1502,10 +1713,10 @@ public class AssignmentManager {
    *          cache, <b>null</b> otherwise.
    * @throws UnknownRegionException if any errors occur while querying meta.
    */
-  public RegionInfo loadRegionFromMeta(String regionEncodedName) throws UnknownRegionException {
+  public RegionInfo loadRegionFromCatalog(String regionEncodedName) throws UnknownRegionException {
     try {
-      RegionMetaLoadingVisitor visitor = new RegionMetaLoadingVisitor();
-      regionStateStore.visitMetaForRegion(regionEncodedName, visitor);
+      RegionCatalogLoadingVisitor visitor = new RegionCatalogLoadingVisitor();
+      regionStateStore.visitCatalogForRegion(regionEncodedName, visitor);
       return regionStates.getRegionState(regionEncodedName) == null ? null :
         regionStates.getRegionState(regionEncodedName).getRegion();
     } catch(IOException e) {
@@ -1514,11 +1725,45 @@ public class AssignmentManager {
     }
   }
 
+  public void loadRoot() throws IOException {
+    //TODO francis is the the right monitor lock to synchronize on?
+    synchronized (rootLoadEvent) {
+      if (!isRootLoaded()) {
+        // TODO: use a thread pool
+        LOG.debug("Loaded hbase:root");
+        regionStateStore.visitCatalogTable(true, new RegionCatalogLoadingVisitor());
+        wakeRootLoadedEvent();
+      } else {
+        LOG.debug("Not loading hbase:root, already loaded");
+      }
+    }
+  }
+
   private void loadMeta() throws IOException {
     // TODO: use a thread pool
-    regionStateStore.visitMeta(new RegionMetaLoadingVisitor());
+    LOG.debug("Loaded hbase:meta");
+    regionStateStore.visitCatalogTable(false, new RegionCatalogLoadingVisitor());
     // every assignment is blocked until meta is loaded.
     wakeMetaLoadedEvent();
+  }
+
+  /**
+   * Used to check if the meta loading is done.
+   * <p/>
+   * if not we throw PleaseHoldException since we are rebuilding the RegionStates
+   * @param hri region to check if it is already rebuild
+   * @throws PleaseHoldException if meta has not been loaded yet
+   */
+  private void checkRootLoaded(RegionInfo hri) throws PleaseHoldException {
+    if (!isRunning()) {
+      throw new PleaseHoldException("AssignmentManager not running");
+    }
+    boolean root = isRootRegion(hri);
+    boolean rootLoaded = isRootLoaded();
+    if (!root && !rootLoaded) {
+      throw new PleaseHoldException(
+        "Master not fully online; hbase:root=" + root + ", rootLoaded=" + rootLoaded);
+    }
   }
 
   /**
@@ -1537,6 +1782,15 @@ public class AssignmentManager {
     if (!meta && !metaLoaded) {
       throw new PleaseHoldException(
         "Master not fully online; hbase:meta=" + meta + ", metaLoaded=" + metaLoaded);
+    }
+  }
+
+
+  private void checkParentCatalogLoaded(RegionInfo regionInfo) throws PleaseHoldException {
+    if (regionInfo.isMetaRegion()) {
+      checkRootLoaded(regionInfo);
+    } else if (!regionInfo.isRootRegion()) {
+      checkMetaLoaded(regionInfo);
     }
   }
 
@@ -1575,14 +1829,16 @@ public class AssignmentManager {
     if (serverNode != null) {
       serverNode.writeLock().lock();
     }
+    boolean carryingRoot;
     boolean carryingMeta;
     long pid;
     try {
       ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
+      carryingRoot = isCarryingRoot(serverName);
       carryingMeta = isCarryingMeta(serverName);
       if (!force && serverNode != null && !serverNode.isInState(ServerState.ONLINE)) {
-        LOG.info("Skip adding ServerCrashProcedure for {} (meta={}) -- running?",
-          serverNode, carryingMeta);
+        LOG.info("Skip adding ServerCrashProcedure for {} (root={}, meta={}) -- running?",
+          serverNode, carryingRoot, carryingMeta);
         return Procedure.NO_PROC_ID;
       } else {
         MasterProcedureEnv mpe = procExec.getEnvironment();
@@ -1598,13 +1854,15 @@ public class AssignmentManager {
 
         if (force) {
           pid = procExec.submitProcedure(
-              new HBCKServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta));
+              new HBCKServerCrashProcedure(
+                mpe, serverName, shouldSplitWal, carryingRoot, carryingMeta));
         } else {
           pid = procExec.submitProcedure(
-              new ServerCrashProcedure(mpe, serverName, shouldSplitWal, carryingMeta));
+              new ServerCrashProcedure(
+                mpe, serverName, shouldSplitWal, carryingRoot, carryingMeta));
         }
-        LOG.info("Scheduled ServerCrashProcedure pid={} for {} (carryingMeta={}){}.",
-          pid, serverName, carryingMeta,
+        LOG.info("Scheduled ServerCrashProcedure pid={} for {} (carryingRoot={}, carryingMeta={}){}.",
+          pid, serverName, carryingRoot, carryingMeta,
           serverNode == null? "": " " + serverNode.toString() + ", oldState=" + oldState);
       }
     } finally {
@@ -1767,8 +2025,11 @@ public class AssignmentManager {
     transitStateAndUpdate(regionNode, State.CLOSING, STATES_EXPECTED_ON_CLOSING);
 
     RegionInfo hri = regionNode.getRegionInfo();
-    // Set meta has not initialized early. so people trying to create/edit tables will wait
-    if (isMetaRegion(hri)) {
+    // Set root has not initialized early. so people trying to create/edit tables will wait
+    if (isRootRegion(hri)) {
+      setRootAssigned(hri, false);
+    } else if (isMetaRegion(hri)) {
+      // Set meta has not initialized early. so people trying to create/edit tables will wait
       setMetaAssigned(hri, false);
     }
     regionStates.addRegionToServer(regionNode);
@@ -1833,6 +2094,13 @@ public class AssignmentManager {
       // which is backed by hbase:meta... Avoid setting ENABLED to avoid having to update state
       // on table that contains state.
       setMetaAssigned(regionInfo, true);
+    }
+    if (isRootRegion(regionInfo) && regionNode.getState() == State.OPEN) {
+      // Usually we'd set a table ENABLED at this stage but hbase:meta is ALWAYs enabled, it
+      // can't be disabled -- so skip the RPC (besides... enabled is managed by TableStateManager
+      // which is backed by hbase:meta... Avoid setting ENABLED to avoid having to update state
+      // on table that contains state.
+      setRootAssigned(regionInfo, true);
     }
   }
 

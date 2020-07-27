@@ -120,20 +120,39 @@ public class FSTableDescriptors implements TableDescriptors {
   }
 
   @VisibleForTesting
-  public static void tryUpdateMetaTableDescriptor(Configuration conf) throws IOException {
-    tryUpdateMetaTableDescriptor(conf, CommonFSUtils.getCurrentFileSystem(conf),
+  public static void tryUpdateCatalogTableDescriptor(Configuration conf) throws IOException {
+    tryUpdateCatalogTableDescriptor(conf, CommonFSUtils.getCurrentFileSystem(conf),
       CommonFSUtils.getRootDir(conf), null);
   }
 
-  public static void tryUpdateMetaTableDescriptor(Configuration conf, FileSystem fs, Path rootdir,
-      Function<TableDescriptorBuilder, TableDescriptorBuilder> metaObserver) throws IOException {
+  public static void tryUpdateCatalogTableDescriptor(Configuration conf, FileSystem fs, Path rootdir,
+      Function<TableDescriptorBuilder, TableDescriptorBuilder> catalogObserver) throws IOException {
+    // see if we already have root descriptor on fs. Write one if not.
+    try {
+      getTableDescriptorFromFs(fs, rootdir, TableName.ROOT_TABLE_NAME);
+    } catch (TableInfoMissingException e) {
+      TableDescriptorBuilder builder = createRootTableDescriptorBuilder(conf);
+      if (catalogObserver != null) {
+        builder = catalogObserver.apply(builder);
+      }
+      TableDescriptor td = builder.build();
+      LOG.info("Creating new hbase:root table descriptor {}", td);
+      TableName tableName = td.getTableName();
+      Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
+      Path p = writeTableDescriptor(fs, td, tableDir, getTableInfoPath(fs, tableDir, true));
+      if (p == null) {
+        throw new IOException("Failed update hbase:root table descriptor");
+      }
+      LOG.info("Updated hbase:root table descriptor to {}", p);
+    }
+
     // see if we already have meta descriptor on fs. Write one if not.
     try {
       getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
     } catch (TableInfoMissingException e) {
       TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
-      if (metaObserver != null) {
-        builder = metaObserver.apply(builder);
+      if (catalogObserver != null) {
+        builder = catalogObserver.apply(builder);
       }
       TableDescriptor td = builder.build();
       LOG.info("Creating new hbase:meta table descriptor {}", td);
@@ -197,6 +216,45 @@ public class FSTableDescriptors implements TableDescriptors {
   public void setCacheOff() throws IOException {
     this.usecache = false;
     this.cache.clear();
+  }
+
+  private static TableDescriptorBuilder createRootTableDescriptorBuilder(final Configuration conf)
+    throws IOException {
+    // TODO We used to set CacheDataInL1 for META table. When we have BucketCache in file mode, now
+    // the META table data goes to File mode BC only. Test how that affect the system. If too much,
+    // we have to rethink about adding back the setCacheDataInL1 for META table CFs.
+    return TableDescriptorBuilder.newBuilder(TableName.ROOT_TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
+        .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+          HConstants.DEFAULT_HBASE_META_VERSIONS))
+        .setInMemory(true)
+        .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+          HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+        .setBloomFilterType(BloomType.NONE)
+        .build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.TABLE_FAMILY)
+        .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+          HConstants.DEFAULT_HBASE_META_VERSIONS))
+        .setInMemory(true)
+        .setBlocksize(8 * 1024)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+        .setBloomFilterType(BloomType.NONE)
+        .build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(HConstants.REPLICATION_BARRIER_FAMILY)
+        .setMaxVersions(HConstants.ALL_VERSIONS)
+        .setInMemory(true)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+        .setBloomFilterType(BloomType.NONE)
+        .build())
+      .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(
+        MultiRowMutationEndpoint.class.getName())
+        .setPriority(Coprocessor.PRIORITY_SYSTEM)
+        .build());
   }
 
   @VisibleForTesting

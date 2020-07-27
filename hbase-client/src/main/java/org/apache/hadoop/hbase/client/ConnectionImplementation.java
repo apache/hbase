@@ -757,7 +757,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     // Since this is an explicit request not to use any caching, finding
     // disabled tables should not be desirable.  This will ensure that an exception is thrown when
     // the first time a disabled table is interacted with.
-    if (!tableName.equals(TableName.META_TABLE_NAME) && isTableDisabled(tableName)) {
+    if (!tableName.equals(TableName.META_TABLE_NAME) &&
+      !tableName.equals(TableName.META_TABLE_NAME) && isTableDisabled(tableName)) {
       throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");
     }
 
@@ -777,15 +778,15 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (tableName == null || tableName.getName().length == 0) {
       throw new IllegalArgumentException("table name cannot be null or zero length");
     }
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
-      return locateMeta(tableName, useCache, replicaId);
+    if (tableName.equals(TableName.ROOT_TABLE_NAME)) {
+      return locateRoot(tableName, useCache, replicaId);
     } else {
       // Region not in the cache - have to go to the meta RS
       return locateRegionInMeta(tableName, row, useCache, retry, replicaId);
     }
   }
 
-  private RegionLocations locateMeta(final TableName tableName,
+  private RegionLocations locateRoot(final TableName tableName,
       boolean useCache, int replicaId) throws IOException {
     // HBASE-10785: We cache the location of the META itself, so that we are not overloading
     // zookeeper with one request for every region lookup. We cache the META with empty row
@@ -833,6 +834,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         return locations;
       }
     }
+
+    TableName parentTable = TableName.META_TABLE_NAME;
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      parentTable = TableName.ROOT_TABLE_NAME;
+    }
+
     // build the key of the meta region we should be looking for.
     // the extra 9's on the end are necessary to allow "exact" matches
     // without knowing the precise region names.
@@ -846,7 +853,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       s.setConsistency(Consistency.TIMELINE);
     }
     int maxAttempts = (retry ? numTries : 1);
-    boolean relocateMeta = false;
+    boolean relocateParent = false;
     for (int tries = 0; ; tries++) {
       if (tries >= maxAttempts) {
         throw new NoServerForRegionException("Unable to find region for "
@@ -873,13 +880,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
             return locations;
           }
         }
-        if (relocateMeta) {
-          relocateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW,
+        if (relocateParent) {
+          relocateRegion(parentTable, HConstants.EMPTY_START_ROW,
             RegionInfo.DEFAULT_REPLICA_ID);
         }
         s.resetMvccReadPoint();
         try (ReversedClientScanner rcs =
-          new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME, this, rpcCallerFactory,
+          new ReversedClientScanner(conf, s, parentTable, this, rpcCallerFactory,
             rpcControllerFactory, getMetaLookupPool(), metaReplicaCallTimeoutScanInMicroSecond)) {
           boolean tableNotFound = true;
           for (;;) {
@@ -900,7 +907,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
             }
             RegionInfo regionInfo = locations.getRegionLocation(replicaId).getRegion();
             if (regionInfo == null) {
-              throw new IOException("RegionInfo null or empty in " + TableName.META_TABLE_NAME +
+              throw new IOException("RegionInfo null or empty in " + parentTable +
                 ", row=" + regionInfoRow);
             }
             // See HBASE-20182. It is possible that we locate to a split parent even after the
@@ -922,7 +929,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
             ServerName serverName = locations.getRegionLocation(replicaId).getServerName();
             if (serverName == null) {
               throw new NoServerForRegionException("No server address listed in " +
-                TableName.META_TABLE_NAME + " for region " + regionInfo.getRegionNameAsString() +
+                parentTable + " for region " + regionInfo.getRegionNameAsString() +
                 " containing row " + Bytes.toStringBinary(row));
             }
             if (isDeadServer(serverName)) {
@@ -951,12 +958,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         }
         if (tries < maxAttempts - 1) {
           LOG.debug("locateRegionInMeta parentTable='{}', attempt={} of {} failed; retrying " +
-            "after sleep of {}", TableName.META_TABLE_NAME, tries, maxAttempts, maxAttempts, e);
+            "after sleep of {}", parentTable, tries, maxAttempts, maxAttempts, e);
         } else {
           throw e;
         }
         // Only relocate the parent region if necessary
-        relocateMeta =
+        relocateParent =
           !(e instanceof RegionOfflineException || e instanceof NoServerForRegionException);
       } finally {
         userRegionLock.unlock();

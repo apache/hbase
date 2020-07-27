@@ -65,8 +65,8 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
    * @param carryingMeta True if carrying hbase:meta table region.
    */
   public HBCKServerCrashProcedure(final MasterProcedureEnv env, final ServerName serverName,
-                              final boolean shouldSplitWal, final boolean carryingMeta) {
-    super(env, serverName, shouldSplitWal, carryingMeta);
+            final boolean shouldSplitWal, final boolean carryingRoot, final boolean carryingMeta) {
+    super(env, serverName, shouldSplitWal, carryingRoot, carryingMeta);
   }
 
   /**

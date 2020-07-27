@@ -118,25 +118,25 @@ public class TestMetaTableLocator {
     Mockito.when(client.get((RpcController) Mockito.any(), (GetRequest) Mockito.any()))
       .thenReturn(GetResponse.newBuilder().build());
 
-    assertNull(MetaTableLocator.getMetaRegionLocation(this.watcher));
+    assertNull(MetaTableLocator.getRootRegionLocation(this.watcher));
     for (RegionState.State state : RegionState.State.values()) {
       if (state.equals(RegionState.State.OPEN)) {
         continue;
       }
       MetaTableLocator.setMetaLocation(this.watcher, SN, state);
-      assertNull(MetaTableLocator.getMetaRegionLocation(this.watcher));
-      assertEquals(state, MetaTableLocator.getMetaRegionState(this.watcher).getState());
+      assertNull(MetaTableLocator.getRootRegionLocation(this.watcher));
+      assertEquals(state, MetaTableLocator.getRootRegionState(this.watcher).getState());
     }
     MetaTableLocator.setMetaLocation(this.watcher, SN, RegionState.State.OPEN);
-    assertEquals(SN, MetaTableLocator.getMetaRegionLocation(this.watcher));
+    assertEquals(SN, MetaTableLocator.getRootRegionLocation(this.watcher));
     assertEquals(RegionState.State.OPEN,
-      MetaTableLocator.getMetaRegionState(this.watcher).getState());
+      MetaTableLocator.getRootRegionState(this.watcher).getState());
 
     MetaTableLocator.deleteMetaLocation(this.watcher);
-    assertNull(MetaTableLocator.getMetaRegionState(this.watcher).getServerName());
+    assertNull(MetaTableLocator.getRootRegionState(this.watcher).getServerName());
     assertEquals(RegionState.State.OFFLINE,
-      MetaTableLocator.getMetaRegionState(this.watcher).getState());
-    assertNull(MetaTableLocator.getMetaRegionLocation(this.watcher));
+      MetaTableLocator.getRootRegionState(this.watcher).getState());
+    assertNull(MetaTableLocator.getRootRegionLocation(this.watcher));
   }
 
   @Test(expected = NotAllMetaRegionsOnlineException.class)
@@ -149,7 +149,7 @@ public class TestMetaTableLocator {
    */
   @Test
   public void testNoTimeoutWaitForMeta() throws IOException, InterruptedException, KeeperException {
-    ServerName hsa = MetaTableLocator.getMetaRegionLocation(watcher);
+    ServerName hsa = MetaTableLocator.getRootRegionLocation(watcher);
     assertNull(hsa);
 
     // Now test waiting on meta location getting set.
@@ -161,7 +161,7 @@ public class TestMetaTableLocator {
     // Join the thread... should exit shortly.
     t.join();
     // Now meta is available.
-    assertTrue(MetaTableLocator.getMetaRegionLocation(watcher).equals(hsa));
+    assertTrue(MetaTableLocator.getRootRegionLocation(watcher).equals(hsa));
   }
 
   private void startWaitAliveThenWaitItLives(final Thread t, final int ms) {

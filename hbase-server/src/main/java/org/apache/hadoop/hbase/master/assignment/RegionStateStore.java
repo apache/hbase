@@ -74,8 +74,10 @@ public class RegionStateStore {
       ServerName regionLocation, ServerName lastHost, long openSeqNum);
   }
 
-  public void visitMeta(final RegionStateVisitor visitor) throws IOException {
-    MetaTableAccessor.fullScanRegions(master.getConnection(), new MetaTableAccessor.Visitor() {
+  public void visitCatalogTable(boolean useRoot, final RegionStateVisitor visitor)
+    throws IOException {
+    MetaTableAccessor.fullScanRegions(master.getConnection(), useRoot,
+        new MetaTableAccessor.Visitor() {
       final boolean isDebugEnabled = LOG.isDebugEnabled();
 
       @Override
@@ -85,7 +87,7 @@ public class RegionStateStore {
           if (LOG.isTraceEnabled()) {
             st = System.currentTimeMillis();
           }
-          visitMetaEntry(visitor, r);
+          visitCatalogEntry(visitor, r);
           if (LOG.isTraceEnabled()) {
             long et = System.currentTimeMillis();
             LOG.trace("[T] LOAD META PERF " + StringUtils.humanTimeDiff(et - st));
@@ -106,16 +108,16 @@ public class RegionStateStore {
    * @param visitor The <code>RegionStateVisitor</code> instance to react over the query results.
    * @throws IOException If some error occurs while querying META or parsing results.
    */
-  public void visitMetaForRegion(final String regionEncodedName, final RegionStateVisitor visitor)
+  public void visitCatalogForRegion(final String regionEncodedName, final RegionStateVisitor visitor)
       throws IOException {
     Result result = MetaTableAccessor.
       scanByRegionEncodedName(master.getConnection(), regionEncodedName);
     if (result != null) {
-      visitMetaEntry(visitor, result);
+      visitCatalogEntry(visitor, result);
     }
   }
 
-  private void visitMetaEntry(final RegionStateVisitor visitor, final Result result)
+  private void visitCatalogEntry(final RegionStateVisitor visitor, final Result result)
       throws IOException {
     final RegionLocations rl = MetaTableAccessor.getRegionLocations(result);
     if (rl == null) return;
@@ -147,13 +149,13 @@ public class RegionStateStore {
   }
 
   void updateRegionLocation(RegionStateNode regionStateNode) throws IOException {
-    if (regionStateNode.getRegionInfo().isMetaRegion()) {
-      updateMetaLocation(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation(),
+    if (regionStateNode.getRegionInfo().isRootRegion()) {
+      updateRootLocation(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation(),
         regionStateNode.getState());
     } else {
       long openSeqNum = regionStateNode.getState() == State.OPEN ? regionStateNode.getOpenSeqNum()
         : HConstants.NO_SEQNUM;
-      updateUserRegionLocation(regionStateNode.getRegionInfo(), regionStateNode.getState(),
+      updateRegionLocation(regionStateNode.getRegionInfo(), regionStateNode.getState(),
         regionStateNode.getRegionLocation(), openSeqNum,
         // The regionStateNode may have no procedure in a test scenario; allow for this.
         regionStateNode.getProcedure() != null ? regionStateNode.getProcedure().getProcId()
@@ -161,7 +163,7 @@ public class RegionStateStore {
     }
   }
 
-  private void updateMetaLocation(RegionInfo regionInfo, ServerName serverName, State state)
+  private void updateRootLocation(RegionInfo regionInfo, ServerName serverName, State state)
       throws IOException {
     try {
       MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
@@ -171,15 +173,17 @@ public class RegionStateStore {
     }
   }
 
-  private void updateUserRegionLocation(RegionInfo regionInfo, State state,
+  private void updateRegionLocation(RegionInfo regionInfo, State state,
       ServerName regionLocation, long openSeqNum,
        long pid) throws IOException {
+    TableName catalogTableName = regionInfo.getTable().equals(TableName.META_TABLE_NAME) ?
+      TableName.ROOT_TABLE_NAME : TableName.META_TABLE_NAME;
     long time = EnvironmentEdgeManager.currentTime();
     final int replicaId = regionInfo.getReplicaId();
-    final Put put = new Put(MetaTableAccessor.getMetaKeyForRegion(regionInfo), time);
+    final Put put = new Put(MetaTableAccessor.getCatalogKeyForRegion(regionInfo), time);
     MetaTableAccessor.addRegionInfo(put, regionInfo);
     final StringBuilder info =
-      new StringBuilder("pid=").append(pid).append(" updating hbase:meta row=")
+      new StringBuilder("pid=").append(pid).append(" updating "+catalogTableName+" row=")
         .append(regionInfo.getEncodedName()).append(", regionState=").append(state);
     if (openSeqNum >= 0) {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
@@ -215,12 +219,13 @@ public class RegionStateStore {
         .setValue(Bytes.toBytes(state.name()))
         .build());
     LOG.info(info.toString());
-    updateRegionLocation(regionInfo, state, put);
+    updateRegionLocation(catalogTableName, regionInfo, state, put);
   }
 
-  private void updateRegionLocation(RegionInfo regionInfo, State state, Put put)
+  private void updateRegionLocation(TableName catalogTableName,
+    RegionInfo regionInfo, State state, Put put)
       throws IOException {
-    try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = master.getConnection().getTable(catalogTableName)) {
       table.put(put);
     } catch (IOException e) {
       // TODO: Revist!!!! Means that if a server is loaded, then we will abort our host!
