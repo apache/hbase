@@ -401,7 +401,7 @@ public final class UnsafeAccess {
 
   /**
    * Put a long value out to the specified BB position in big-endian format. (Volatile version)
-   * @param bytes the byte buffer
+   * @param bytes the byte array
    * @param offset position in the buffer
    * @param val long to write out
    * @return incremented offset
@@ -445,6 +445,14 @@ public final class UnsafeAccess {
     }
   }
 
+  /**
+   * A CAS operation for long.
+   * @param bytes the byte array
+   * @param offset position in the array
+   * @param expect an expect value (long)
+   * @param update an updating value (long)
+   * @return true if successful
+   */
   public static boolean compareAndSetLong(byte[] bytes, int offset, long expect, long update) {
     if (LITTLE_ENDIAN) {
       expect = Long.reverseBytes(expect);
@@ -455,6 +463,14 @@ public final class UnsafeAccess {
                                         update);
   }
 
+  /**
+   * A CAS operation for object.
+   * @param objects the objects array
+   * @param offset position in the array
+   * @param expect an expect value (Object)
+   * @param update an updating value (Object)
+   * @return true if successful
+   */
   public static boolean compareAndSwapObject(Object[] objects, int offset,
                                              Object expect, Object update) {
     return theUnsafe.compareAndSwapObject(objects,
@@ -463,12 +479,24 @@ public final class UnsafeAccess {
                                           update);
   }
 
+  /**
+   * Read a long from bytes array starting from offset.
+   * @param bytes the bytes array
+   * @param offset the start offset
+   * @return a long value
+   */
   public static long toLongVolatile(byte[] bytes, int offset) {
     return LITTLE_ENDIAN ?
       Long.reverseBytes(theUnsafe.getLongVolatile(bytes, BYTE_ARRAY_BASE_OFFSET + offset)) :
       theUnsafe.getLongVolatile(bytes, BYTE_ARRAY_BASE_OFFSET + offset);
   }
 
+  /**
+   * Read a object from objects array starting from offset.
+   * @param objects the object array
+   * @param offset the start offset
+   * @return an object value
+   */
   public static Object getObjectVolatile(Object[] objects, int offset) {
     return theUnsafe.getObjectVolatile(objects, OBJECT_BASE_OFFSET + offset * OBJECT_SCALE);
   }

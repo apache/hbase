@@ -18,16 +18,17 @@
 package org.apache.hadoop.hbase.ccsmap;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.HBaseException;
 
 @InterfaceAudience.Private
-public class SpaceNotEnoughExcpetion extends RuntimeException {
+public class NotEnoughSpaceException extends HBaseException {
   private static final long serialVersionUID = 3220889776327332235L;
 
-  public SpaceNotEnoughExcpetion(String name, long used, long limited, long request) {
+  public NotEnoughSpaceException(String name, long used, long limited, long request) {
     super(createMessage(name, used, limited, request));
   }
 
-  public SpaceNotEnoughExcpetion(String message) {
+  public NotEnoughSpaceException(String message) {
     super(message);
   }
 

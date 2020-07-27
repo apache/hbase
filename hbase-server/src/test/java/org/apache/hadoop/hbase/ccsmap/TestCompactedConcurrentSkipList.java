@@ -81,7 +81,6 @@ public class TestCompactedConcurrentSkipList {
       copyIntToArray(key, data, offset);
       byte[] src = value.getBytes();
       Assert.assertEquals(value.length(), src.length);
-      System.arraycopy(src, 0, data, offset + 4, src.length);
     }
 
     @Override
@@ -1735,7 +1734,7 @@ public class TestCompactedConcurrentSkipList {
   public void testRandomBehaviorParallelly() throws InterruptedException {
     final int RANGE = 32768;
     final int INIT_DATA = 50000;
-    final int THREAD = 8;
+    final int THREAD = Runtime.getRuntime().availableProcessors();
     final int COUNT = 1000000; // all threads will run COUNT times
     final RandomBehavior rb = new RandomBehavior(true);
     CompactedConcurrentSkipListMap<Integer, String> mapForTest = createMapForTest(true);

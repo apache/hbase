@@ -181,7 +181,7 @@ public abstract class PageManager<P> {
       throw new RuntimeException("Impossible, invalid size=" + size);
     }
     if (size > this.pageSize) {
-      throw new SpaceNotEnoughExcpetion(name
+      throw new NotEnoughSpaceException(name
         + " : allocating size is bigger than page size");
     }
     int alignedSize = ((size - 1) >> alignShift) + 1;
@@ -192,7 +192,7 @@ public abstract class PageManager<P> {
       // it is no need to check ret + size, since (ret) & (ret + size) will
       // always on same page
       if (ret >= maxAlignedSize) {
-        throw new SpaceNotEnoughExcpetion(name, used(), maxSize(), alignedSize << alignShift);
+        throw new NotEnoughSpaceException(name, used(), maxSize(), alignedSize << alignShift);
       }
       // page not enough
       if ((ret >> pageLocationShift) + 1 > usingPages.get()) {
