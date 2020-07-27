@@ -160,6 +160,9 @@ public class ReplicationSinkManager {
    */
   public synchronized void chooseSinks() {
     List<ServerName> slaveAddresses = endpoint.getRegionServers();
+    if(slaveAddresses.isEmpty()){
+      LOG.warn("No sinks available at peer. Will not be able to replicate");
+    }
     Collections.shuffle(slaveAddresses, random);
     int numSinks = (int) Math.ceil(slaveAddresses.size() * ratio);
     sinks = slaveAddresses.subList(0, numSinks);
