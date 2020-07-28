@@ -32,11 +32,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -380,6 +380,10 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public boolean hasCoprocessor(String classNameToMatch) {
+    return desc.hasCoprocessor(classNameToMatch);
+  }
+
   public TableDescriptorBuilder setColumnFamily(final ColumnFamilyDescriptor family) {
     desc.setColumnFamily(Objects.requireNonNull(family));
     return this;
@@ -408,6 +412,16 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder removeValue(byte[] key) {
     desc.removeValue(key);
+    return this;
+  }
+
+  public TableDescriptorBuilder removeValue(BiPredicate<Bytes, Bytes> predicate) {
+    List<Bytes> toRemove =
+      desc.getValues().entrySet().stream().filter(e -> predicate.test(e.getKey(), e.getValue()))
+        .map(Map.Entry::getKey).collect(Collectors.toList());
+    for (Bytes key : toRemove) {
+      removeValue(key);
+    }
     return this;
   }
 
@@ -529,6 +543,10 @@ public class TableDescriptorBuilder {
   public TableDescriptorBuilder setValue(final byte[] key, final byte[] value) {
     desc.setValue(key, value);
     return this;
+  }
+
+  public String getValue(String key) {
+    return desc.getValue(key);
   }
 
   /**
