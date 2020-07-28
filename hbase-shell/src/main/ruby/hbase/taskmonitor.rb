@@ -76,22 +76,23 @@ module Hbase
     # Returns a filtered list of tasks on the given host
     def tasksOnHost(filter, host)
       java_import 'java.net.URL'
+      java_import 'java.net.SocketException'
       java_import 'java.io.InputStreamReader'
       java_import 'org.apache.hbase.thirdparty.com.google.gson.JsonParser'
 
       infoport = @admin.getClusterStatus.getLoad(host).getInfoServerPort.to_s
 
-      # Note: This condition use constants from hbase-server
-      # if (!@admin.getConfiguration().getBoolean(org.apache.hadoop.hbase.http.ServerConfigurationKeys::HBASE_SSL_ENABLED_KEY,
-      #  org.apache.hadoop.hbase.http.ServerConfigurationKeys::HBASE_SSL_ENABLED_DEFAULT))
-      #  schema = "http://"
-      # else
-      #  schema = "https://"
-      # end
-      schema = 'http://'
-      url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
+      begin
+        schema = "http://"
+        url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
+        json = URL.new(url).openStream
+      rescue SocketException => e
+        # Let's try with https when SocketException occur
+        schema = "https://"
+        url = schema + host.hostname + ':' + infoport + '/rs-status?format=json&filter=' + filter
+        json = URL.new(url).openStream
+      end
 
-      json = URL.new(url).openStream
       parser = JsonParser.new
 
       # read and parse JSON
