@@ -23,8 +23,6 @@ java_import org.apache.hadoop.hbase.util.Pair
 
 module Hbase
   class RSGroupAdmin
-    include HBaseConstants
-
     def initialize(connection)
       @connection = connection
       @admin = org.apache.hadoop.hbase.rsgroup.RSGroupAdminClient.new(connection)
@@ -207,11 +205,11 @@ module Hbase
         unless arg.is_a?(Hash)
           raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash type")
         end
-        method = arg[METHOD]
+        method = arg[::HBaseConstants::METHOD]
         if method == 'unset'
-          configuration.remove(arg[NAME])
+          configuration.remove(arg[::HBaseConstants::NAME])
         elsif method == 'set'
-          arg.delete(METHOD)
+          arg.delete(::HBaseConstants::METHOD)
           for k, v in arg
             v = v.to_s unless v.nil?
             configuration.put(k, v)
