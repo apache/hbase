@@ -27,6 +27,7 @@ java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder
 java_import org.apache.hadoop.hbase.client.TableDescriptorBuilder
+java_import org.apache.hadoop.hbase.HConstants
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
@@ -1011,7 +1012,7 @@ module Hbase
       cfdb.setTimeToLive(arg.delete(ColumnFamilyDescriptorBuilder::TTL)) if arg.include?(ColumnFamilyDescriptorBuilder::TTL)
       cfdb.setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::DATA_BLOCK_ENCODING))) if arg.include?(ColumnFamilyDescriptorBuilder::DATA_BLOCK_ENCODING)
       cfdb.setBlocksize(JInteger.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::BLOCKSIZE))) if arg.include?(ColumnFamilyDescriptorBuilder::BLOCKSIZE)
-      cfdb.setMaxVersions(JInteger.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::VERSIONS))) if arg.include?(ColumnFamilyDescriptorBuilder::VERSIONS)
+      cfdb.setMaxVersions(JInteger.valueOf(arg.delete(HConstants::VERSIONS))) if arg.include?(HConstants::VERSIONS)
       cfdb.setMinVersions(JInteger.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::MIN_VERSIONS))) if arg.include?(ColumnFamilyDescriptorBuilder::MIN_VERSIONS)
       cfdb.setKeepDeletedCells(org.apache.hadoop.hbase.KeepDeletedCells.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::KEEP_DELETED_CELLS).to_s.upcase)) if arg.include?(ColumnFamilyDescriptorBuilder::KEEP_DELETED_CELLS)
       cfdb.setCompressTags(JBoolean.valueOf(arg.delete(ColumnFamilyDescriptorBuilder::COMPRESS_TAGS))) if arg.include?(ColumnFamilyDescriptorBuilder::COMPRESS_TAGS)

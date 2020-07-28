@@ -22,7 +22,6 @@ require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
-include HBaseConstants
 include Java
 
 java_import org.apache.hadoop.hbase.replication.SyncReplicationState
@@ -30,6 +29,7 @@ java_import org.apache.hadoop.hbase.replication.SyncReplicationState
 module Hbase
   class ReplicationAdminTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     def setup
       @peer_id = '1'

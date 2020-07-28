@@ -123,31 +123,36 @@ EOF
       end
 
       def command(args = {})
-        if args.key?(TYPE)
-          qtype = args.delete(TYPE)
+        if args.key?(::HBaseConstants::TYPE)
+          qtype = args.delete(::HBaseConstants::TYPE)
           case qtype
-          when THROTTLE
-            if args[LIMIT].eql? NONE
-              args.delete(LIMIT)
+          when ::HBaseQuotasConstants::THROTTLE
+            if args[::HBaseConstants::LIMIT].eql? ::HBaseConstants::NONE
+              args.delete(::HBaseConstants::LIMIT)
               quotas_admin.unthrottle(args)
             else
               quotas_admin.throttle(args)
             end
-          when SPACE
-            if args[LIMIT].eql? NONE
-              args.delete(LIMIT)
+          when ::HBaseQuotasConstants::SPACE
+            if args[::HBaseConstants::LIMIT].eql? ::HBaseConstants::NONE
+              args.delete(::HBaseConstants::LIMIT)
               # Table/Namespace argument is verified in remove_space_limit
               quotas_admin.remove_space_limit(args)
             else
-              raise(ArgumentError, 'Expected a LIMIT to be provided') unless args.key?(LIMIT)
-              raise(ArgumentError, 'Expected a POLICY to be provided') unless args.key?(POLICY)
+              unless args.key?(::HBaseConstants::LIMIT)
+                raise(ArgumentError, 'Expected a LIMIT to be provided')
+              end
+              unless args.key?(::HBaseConstants::POLICY)
+                raise(ArgumentError, 'Expected a POLICY to be provided')
+              end
+
               quotas_admin.limit_space(args)
             end
           else
             raise 'Invalid TYPE argument. got ' + qtype
           end
-        elsif args.key?(GLOBAL_BYPASS)
-          quotas_admin.set_global_bypass(args.delete(GLOBAL_BYPASS), args)
+        elsif args.key?(::HBaseQuotasConstants::GLOBAL_BYPASS)
+          quotas_admin.set_global_bypass(args.delete(::HBaseQuotasConstants::GLOBAL_BYPASS), args)
         else
           raise 'Expected TYPE argument'
         end

@@ -22,8 +22,6 @@ include Java
 
 module Hbase
   class SecurityAdmin
-    include HBaseConstants
-
     def initialize(admin)
       @admin = admin
       @connection = @admin.getConnection

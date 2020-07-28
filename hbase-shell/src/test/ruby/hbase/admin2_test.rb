@@ -23,12 +23,11 @@ require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
-include HBaseConstants
-
 module Hbase
   # Tests for the `status` shell command
   class StatusTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     def setup
       setup_hbase
@@ -126,7 +125,7 @@ module Hbase
 
     define_test "Snapshot should work when SKIP_FLUSH args" do
       drop_test_snapshot()
-      command(:snapshot, @test_name, @create_test_snapshot, {SKIP_FLUSH => true})
+      command(:snapshot, @test_name, @create_test_snapshot, {::HBaseConstants::SKIP_FLUSH => true})
       list = command(:list_snapshots, @create_test_snapshot)
       assert_equal(1, list.size)
     end
@@ -156,7 +155,7 @@ module Hbase
       assert_match(/f1/, admin.describe(restore_table))
       assert_match(/f2/, admin.describe(restore_table))
       command(:snapshot, restore_table, @create_test_snapshot)
-      command(:alter, restore_table, METHOD => 'delete', NAME => 'f1')
+      command(:alter, restore_table, ::HBaseConstants::METHOD => 'delete', ::HBaseConstants::NAME => 'f1')
       assert_no_match(/f1/, admin.describe(restore_table))
       assert_match(/f2/, admin.describe(restore_table))
       drop_test_table(restore_table)

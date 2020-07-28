@@ -23,12 +23,12 @@ require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
-include HBaseConstants
-
 module Hbase
   # rubocop:disable Metrics/ClassLength
   class SpaceQuotasTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
+    include HBaseQuotasConstants
 
     def setup
       setup_hbase
