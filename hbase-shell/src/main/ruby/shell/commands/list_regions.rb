@@ -46,7 +46,7 @@ module Shell
         elsif !options.is_a? Hash
           # When options isn't a hash, assume it's the server name
           # and create the hash internally
-          options = { SERVER_NAME => options }
+          options = { ::HBaseConstants::SERVER_NAME => options }
         end
 
         raise "Table #{table_name} must be enabled." unless admin.enabled?(table_name)
@@ -84,7 +84,7 @@ module Shell
         hregion_locator_instance = conn_instance.getRegionLocator(TableName.valueOf(table_name))
         hregion_locator_list = hregion_locator_instance.getAllRegionLocations.to_a
         results = []
-        desired_server_name = options[SERVER_NAME]
+        desired_server_name = options[::HBaseConstants::SERVER_NAME]
 
         begin
           # Filter out region servers which we don't want, default to all RS
@@ -92,11 +92,16 @@ module Shell
           # A locality threshold of "1.0" would be all regions (cannot have greater than 1 locality)
           # Regions which have a `dataLocality` less-than-or-equal to this value are accepted
           locality_threshold = 1.0
-          if options.key? LOCALITY_THRESHOLD
-            value = options[LOCALITY_THRESHOLD]
+          if options.key? ::HBaseConstants::LOCALITY_THRESHOLD
+            value = options[::HBaseConstants::LOCALITY_THRESHOLD]
             # Value validation. Must be a Float, and must be between [0, 1.0]
-            raise "#{LOCALITY_THRESHOLD} must be a float value" unless value.is_a? Float
-            raise "#{LOCALITY_THRESHOLD} must be between 0 and 1.0, inclusive" unless valid_locality_threshold? value
+            unless value.is_a? Float
+              raise "#{::HBaseConstants::LOCALITY_THRESHOLD} must be a float value"
+            end
+            unless valid_locality_threshold? value
+              raise "#{::HBaseConstants::LOCALITY_THRESHOLD} must be between 0 and 1.0, inclusive"
+            end
+
             locality_threshold = value
           end
 
