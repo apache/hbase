@@ -1190,6 +1190,7 @@ public class HRegionServer extends Thread implements
     LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
   }
 
+  //TODO francis update this
   private boolean containsMetaTableRegions() {
     return onlineRegions.containsKey(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
   }
@@ -1981,12 +1982,16 @@ public class HRegionServer extends Thread implements
     // Start executor services
     this.executorService.startExecutorService(ExecutorType.RS_OPEN_REGION,
         conf.getInt("hbase.regionserver.executor.openregion.threads", 3));
+    this.executorService.startExecutorService(ExecutorType.RS_OPEN_ROOT,
+      conf.getInt("hbase.regionserver.executor.openmeta.threads", 1));
     this.executorService.startExecutorService(ExecutorType.RS_OPEN_META,
         conf.getInt("hbase.regionserver.executor.openmeta.threads", 1));
     this.executorService.startExecutorService(ExecutorType.RS_OPEN_PRIORITY_REGION,
         conf.getInt("hbase.regionserver.executor.openpriorityregion.threads", 3));
     this.executorService.startExecutorService(ExecutorType.RS_CLOSE_REGION,
         conf.getInt("hbase.regionserver.executor.closeregion.threads", 3));
+    this.executorService.startExecutorService(ExecutorType.RS_CLOSE_ROOT,
+      conf.getInt("hbase.regionserver.executor.closemeta.threads", 1));
     this.executorService.startExecutorService(ExecutorType.RS_CLOSE_META,
         conf.getInt("hbase.regionserver.executor.closemeta.threads", 1));
     if (conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false)) {

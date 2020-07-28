@@ -439,7 +439,7 @@ class AsyncNonRootRegionLocator {
       META_TABLE_NAME.equals(tableName) ? ROOT_TABLE_NAME : META_TABLE_NAME;
     if (LOG.isTraceEnabled()) {
       LOG.trace("Try locate '" + tableName + "', row='" + Bytes.toStringBinary(req.row) +
-        "', locateType=" + req.locateType + " in meta");
+        "', locateType=" + req.locateType + " in "+parentTableName);
     }
     byte[] metaStartKey;
     if (req.locateType.equals(RegionLocateType.BEFORE)) {

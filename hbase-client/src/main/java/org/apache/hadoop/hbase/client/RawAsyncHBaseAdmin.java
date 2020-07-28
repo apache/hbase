@@ -2357,6 +2357,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return failedFuture(new IllegalArgumentException("Passed region name can't be null"));
     }
     try {
+      TableName parentTable;
       CompletableFuture<Optional<HRegionLocation>> future;
       if (RegionInfo.isEncodedRegionName(regionNameOrEncodedRegionName)) {
         String encodedName = Bytes.toString(regionNameOrEncodedRegionName);
@@ -2378,12 +2379,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           future = connection.registry.getMetaRegionLocations()
             .thenApply(locs -> Stream.of(locs.getRegionLocations())
               .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
+          parentTable = null;
         } else if (encodedName.length() < RegionInfo.MD5_HEX_LENGTH) {
           future = AsyncMetaTableAccessor.getRegionLocationWithEncodedName(rootTable,
             regionNameOrEncodedRegionName);
+          parentTable = ROOT_TABLE_NAME;
         } else {
           future = AsyncMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
             regionNameOrEncodedRegionName);
+          parentTable = META_TABLE_NAME;
         }
       } else {
         RegionInfo regionInfo =
@@ -2393,16 +2397,20 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             .thenApply(locs -> Stream.of(locs.getRegionLocations())
               .filter(loc -> loc.getRegion().getReplicaId() == regionInfo.getReplicaId())
               .findFirst());
+          parentTable = null;
           //TODO francis it won't reach here once meta is split
         } else if (regionInfo.isMetaRegion())   {
           future =
             AsyncMetaTableAccessor.getRegionLocation(rootTable, regionNameOrEncodedRegionName);
+          parentTable = ROOT_TABLE_NAME;
         } else {
           future =
             AsyncMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
+          parentTable = META_TABLE_NAME;
         }
       }
 
+      final TableName finalParentTable = parentTable;
       CompletableFuture<HRegionLocation> returnedFuture = new CompletableFuture<>();
       addListener(future, (location, err) -> {
         if (err != null) {
@@ -2410,9 +2418,33 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           return;
         }
         if (!location.isPresent() || location.get().getRegion() == null) {
-          returnedFuture.completeExceptionally(
-            new UnknownRegionException("Invalid region name or encoded region name: " +
-              Bytes.toStringBinary(regionNameOrEncodedRegionName)));
+          if (META_TABLE_NAME.equals(finalParentTable)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(
+                "Didn't find encoded name in hbase:meta, trying hbase:root for region :" +
+                  Bytes.toStringBinary(regionNameOrEncodedRegionName));
+            }
+            CompletableFuture<Optional<HRegionLocation>> innerfuture =
+              AsyncMetaTableAccessor.getRegionLocationWithEncodedName(rootTable,
+                regionNameOrEncodedRegionName);
+            addListener(innerfuture, (innerlocation, innererr) -> {
+              if (innererr != null) {
+                returnedFuture.completeExceptionally(innererr);
+                return;
+              }
+              if (!innerlocation.isPresent() || innerlocation.get().getRegion() == null) {
+                returnedFuture.completeExceptionally(new UnknownRegionException(
+                  "Invalid region name or encoded region name: " +
+                    Bytes.toStringBinary(regionNameOrEncodedRegionName)));
+              } else {
+                returnedFuture.complete(innerlocation.get());
+              }
+            });
+          } else {
+            returnedFuture.completeExceptionally(new UnknownRegionException(
+              "Invalid region name or encoded region name: " +
+                Bytes.toStringBinary(regionNameOrEncodedRegionName)));
+          }
         } else {
           returnedFuture.complete(location.get());
         }
