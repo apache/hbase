@@ -19,6 +19,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -261,7 +262,12 @@ public class TestSpaceQuotaBasicFunctioning {
 
   @Test
   public void testDisableAtNamespaceLevel() throws Exception {
-    NamespaceDescriptor nd = helper.createNamespace();
+    final String ns = testName.getMethodName();
+    if (namespaceExists(ns)) {
+      TEST_UTIL.getAdmin().deleteNamespace(ns);
+    }
+    NamespaceDescriptor nd = NamespaceDescriptor.create(ns).build();
+    TEST_UTIL.getAdmin().createNamespace(nd);
     TableName table1 = helper.createTableInNamespace(nd);
     TableName table2 = helper.createTableInNamespace(nd);
     helper.setQuotaLimit(nd.getName(), SpaceViolationPolicy.DISABLE, 2L);
@@ -273,7 +279,12 @@ public class TestSpaceQuotaBasicFunctioning {
 
   @Test
   public void testTableQuotaOverridesNamespaceQuotaDisableViolation() throws Exception {
-    NamespaceDescriptor nd = helper.createNamespace();
+    final String ns = testName.getMethodName();
+    if (namespaceExists(ns)) {
+      TEST_UTIL.getAdmin().deleteNamespace(ns);
+    }
+    NamespaceDescriptor nd = NamespaceDescriptor.create(ns).build();
+    TEST_UTIL.getAdmin().createNamespace(nd);
     TableName table1 = helper.createTableInNamespace(nd);
     TableName table2 = helper.createTableInNamespace(nd);
     helper.setQuotaLimit(nd.getName(), SpaceViolationPolicy.DISABLE, 3L);
@@ -291,7 +302,12 @@ public class TestSpaceQuotaBasicFunctioning {
 
   @Test
   public void testTableQuotaOverridesNamespaceQuotaDisableObservance() throws Exception {
-    NamespaceDescriptor nd = helper.createNamespace();
+    final String ns = testName.getMethodName();
+    if (namespaceExists(ns)) {
+      TEST_UTIL.getAdmin().deleteNamespace(ns);
+    }
+    NamespaceDescriptor nd = NamespaceDescriptor.create(ns).build();
+    TEST_UTIL.getAdmin().createNamespace(nd);
     TableName table1 = helper.createTableInNamespace(nd);
     TableName table2 = helper.createTableInNamespace(nd);
     helper.setQuotaLimit(nd.getName(), SpaceViolationPolicy.DISABLE, 3L);
@@ -300,5 +316,15 @@ public class TestSpaceQuotaBasicFunctioning {
     helper.writeData(table2, 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
     TEST_UTIL.waitTableDisabled(table2, 20000);
     TEST_UTIL.waitTableDisabled(table1, 20000);
+  }
+
+  public boolean namespaceExists(String ns) throws IOException {
+    NamespaceDescriptor[] descs = TEST_UTIL.getAdmin().listNamespaceDescriptors();
+    for (NamespaceDescriptor desc : descs) {
+      if (ns.equals(desc.getName())) {
+        return true;
+      }
+    }
+    return false;
   }
 }
