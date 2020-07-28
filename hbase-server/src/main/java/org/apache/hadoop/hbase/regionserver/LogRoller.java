@@ -63,7 +63,7 @@ public class LogRoller extends AbstractWALRoller<RegionServerServices> {
   }
 
   @VisibleForTesting
-  Map<WAL, Boolean> getWalNeedsRoll() {
-    return this.walNeedsRoll;
+  Map<WAL, RollController> getWalNeedsRoll() {
+    return this.wals;
   }
 }
