@@ -17,8 +17,13 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.*;
-
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,7 +61,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
 @Category({FlakeyTests.class, LargeTests.class})
@@ -375,14 +379,13 @@ public class TestPerTableCFReplication {
   @Test
   public void testPerTableCFReplication() throws Exception {
     LOG.info("testPerTableCFReplication");
-    Admin replicationAdmin = ConnectionFactory.createConnection(conf1).getAdmin();
-    Connection connection1 = ConnectionFactory.createConnection(conf1);
-    Connection connection2 = ConnectionFactory.createConnection(conf2);
-    Connection connection3 = ConnectionFactory.createConnection(conf3);
-    try {
+    try (Connection connection1 = ConnectionFactory.createConnection(conf1);
+      Connection connection2 = ConnectionFactory.createConnection(conf2);
+      Connection connection3 = ConnectionFactory.createConnection(conf3);
       Admin admin1 = connection1.getAdmin();
       Admin admin2 = connection2.getAdmin();
       Admin admin3 = connection3.getAdmin();
+      Admin replicationAdmin = connection1.getAdmin()) {
 
       admin1.createTable(tabA);
       admin1.createTable(tabB);
@@ -524,10 +527,6 @@ public class TestPerTableCFReplication {
       //     cf 'f3' of tableC can replicated to cluster2 and cluster3
       putAndWaitWithFamily(row2, f3Name, htab1C, htab2C, htab3C);
       deleteAndWaitWithFamily(row2, f3Name, htab1C, htab2C, htab3C);
-    } finally {
-      connection1.close();
-      connection2.close();
-      connection3.close();
     }
   }
 

@@ -396,12 +396,12 @@ public class TestReplicaWithCluster {
     LOG.info("Setup second Zk");
     HTU2.getAdmin().createTable(tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
 
-    Admin admin = ConnectionFactory.createConnection(HTU.getConfiguration()).getAdmin();
-
-    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(HTU2.getClusterKey());
-    admin.addReplicationPeer("2", rpc);
-    admin.close();
+    try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+      Admin admin = connection.getAdmin()) {
+      ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+      rpc.setClusterKey(HTU2.getClusterKey());
+      admin.addReplicationPeer("2", rpc);
+    }
 
     Put p = new Put(row);
     p.addColumn(row, row, row);
