@@ -567,6 +567,13 @@ public class QuotaObserverChore extends ScheduledChore {
   }
 
   /**
+   * Removes the quota state for the given table.
+   */
+  void removeTableQuotasnapshot(TableName table) {
+    this.tableQuotaSnapshots.remove(table);
+  }
+
+  /**
    * Fetches the {@link SpaceQuotaSnapshot} for the given namespace from this chore.
    */
   SpaceQuotaSnapshot getNamespaceQuotaSnapshot(String namespace) {
