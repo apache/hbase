@@ -166,7 +166,13 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
     try (Connection connection = ConnectionFactory.createConnection(conf);
       Admin admin = connection.getAdmin()) {
       ReplicationPeerConfig peerConfig = null;
-      peerConfig = admin.getReplicationPeerConfig(REGION_REPLICA_REPLICATION_PEER);
+      try {
+        peerConfig = admin.getReplicationPeerConfig(REGION_REPLICA_REPLICATION_PEER);
+      } catch (ReplicationPeerNotFoundException e) {
+        LOG.warn(
+          "Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER + " not exist",
+          e);
+      }
 
       if (peerConfig == null) {
         LOG.info("Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER
@@ -176,10 +182,6 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
         peerConfig.setReplicationEndpointImpl(RegionReplicaReplicationEndpoint.class.getName());
         admin.addReplicationPeer(REGION_REPLICA_REPLICATION_PEER, peerConfig);
       }
-    } catch (ReplicationPeerNotFoundException e) {
-      LOG.warn(
-        "Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER + " not exist",
-        e);
     }
   }
 
