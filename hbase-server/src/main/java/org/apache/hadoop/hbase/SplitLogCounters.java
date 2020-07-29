@@ -32,8 +32,6 @@ public class SplitLogCounters {
   public final static LongAdder tot_mgr_log_split_batch_start = new LongAdder();
   public final static LongAdder tot_mgr_log_split_batch_success = new LongAdder();
   public final static LongAdder tot_mgr_log_split_batch_err = new LongAdder();
-  public final static LongAdder tot_mgr_new_unexpected_wals = new LongAdder();
-  public final static LongAdder tot_mgr_log_split_start = new LongAdder();
   public final static LongAdder tot_mgr_log_split_success = new LongAdder();
   public final static LongAdder tot_mgr_log_split_err = new LongAdder();
   public final static LongAdder tot_mgr_node_create_queued = new LongAdder();
@@ -62,7 +60,6 @@ public class SplitLogCounters {
   public final static LongAdder tot_mgr_rescan_deleted = new LongAdder();
   public final static LongAdder tot_mgr_task_deleted = new LongAdder();
   public final static LongAdder tot_mgr_resubmit_unassigned = new LongAdder();
-  public final static LongAdder tot_mgr_relist_logdir = new LongAdder();
   public final static LongAdder tot_mgr_resubmit_dead_server_task = new LongAdder();
   public final static LongAdder tot_mgr_resubmit_force = new LongAdder();
 
