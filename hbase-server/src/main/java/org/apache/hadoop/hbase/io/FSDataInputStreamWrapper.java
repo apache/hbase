@@ -253,7 +253,7 @@ public class FSDataInputStreamWrapper implements Closeable {
         readStatistics.totalBytesRead += hdfsDataInputStream.getReadStatistics().
           getTotalBytesRead();
         readStatistics.totalLocalBytesRead += hdfsDataInputStream.getReadStatistics().
-          getTotalBytesRead();
+          getTotalLocalBytesRead();
         readStatistics.totalShortCircuitBytesRead += hdfsDataInputStream.getReadStatistics().
           getTotalShortCircuitBytesRead();
         readStatistics.totalZeroCopyBytesRead += hdfsDataInputStream.getReadStatistics().
