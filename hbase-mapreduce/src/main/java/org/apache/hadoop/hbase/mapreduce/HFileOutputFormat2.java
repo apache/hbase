@@ -222,7 +222,7 @@ public class HFileOutputFormat2
       private final Map<byte[], WriterLength> writers = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       private final Map<byte[], byte[]> previousRows = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       private final long now = EnvironmentEdgeManager.currentTime();
-      private byte[] tableNameBytes =  Bytes.toBytes(writeTableNames);;
+      private byte[] tableNameBytes = Bytes.toBytes(writeTableNames);
 
       @Override
       public void write(ImmutableBytesWritable row, V cell) throws IOException {
@@ -254,7 +254,7 @@ public class HFileOutputFormat2
           Path writerPath = null;
           if (writeMultipleTables) {
             Path tableRelPath = getTableRelativePath(tableNameBytes);
-            writerPath = new Path(outputDir,new Path(tableRelPath, Bytes.toString(family)));
+            writerPath = new Path(outputDir, new Path(tableRelPath, Bytes.toString(family)));
           } else {
             writerPath = new Path(outputDir, Bytes.toString(family));
           }
@@ -369,10 +369,10 @@ public class HFileOutputFormat2
         DataBlockEncoding encoding = overriddenEncoding;
         encoding = encoding == null ? datablockEncodingMap.get(tableAndFamily) : encoding;
         encoding = encoding == null ? DataBlockEncoding.NONE : encoding;
-        HFileContextBuilder contextBuilder = new HFileContextBuilder()
-          .withCompression(compression).withDataBlockEncoding(encoding).withChecksumType(HStore.getChecksumType(conf))
-          .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(blockSize)
-          .withColumnFamily(family).withTableName(tableName);
+        HFileContextBuilder contextBuilder = new HFileContextBuilder().withCompression(compression)
+            .withDataBlockEncoding(encoding).withChecksumType(HStore.getChecksumType(conf))
+            .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(blockSize)
+            .withColumnFamily(family).withTableName(tableName);
 
         if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
           contextBuilder.withIncludesTags(true);
