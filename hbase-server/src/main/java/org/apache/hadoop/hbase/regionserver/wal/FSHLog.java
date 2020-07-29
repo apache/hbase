@@ -374,7 +374,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         if (isUnflushedEntries() || closeErrorCount.get() >= this.closeErrorsTolerated) {
           closeWriter(this.writer, oldPath, true);
         } else {
-		  Writer localWriter = this.writer;	
+          Writer localWriter = this.writer;
           closeExecutor.execute(() -> {
             try {
               closeWriter(localWriter, oldPath, false);
@@ -468,11 +468,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     closeExecutor.shutdown();
     try {
       if (!closeExecutor.awaitTermination(waitOnShutdownInSeconds, TimeUnit.SECONDS)) {
-        LOG.error("We have waited " + waitOnShutdownInSeconds + " seconds but"
-            + " the close of writer(s) doesn't complete."
+        LOG.error("We have waited {} seconds but the close of writer(s) doesn't complete."
             + "Please check the status of underlying filesystem"
-            + " or increase the wait time by the config \"" + FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS
-            + "\"");
+            + " or increase the wait time by the config \"{}\"", this.waitOnShutdownInSeconds,
+            FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS);
       }
     } catch (InterruptedException e) {
       LOG.error("The wait for termination of FSHLog writer(s) is interrupted");
