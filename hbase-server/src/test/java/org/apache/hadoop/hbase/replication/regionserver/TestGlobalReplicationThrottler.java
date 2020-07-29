@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -105,11 +106,13 @@ public class TestGlobalReplicationThrottler {
     utility1.startMiniCluster();
     utility2.startMiniCluster();
 
-    Admin admin1 = ConnectionFactory.createConnection(conf1).getAdmin();
-    admin1.addReplicationPeer("peer1", rpc);
-    admin1.addReplicationPeer("peer2", rpc);
-    admin1.addReplicationPeer("peer3", rpc);
-    numOfPeer = admin1.listReplicationPeers().size();
+    try (Connection connection = ConnectionFactory.createConnection(utility1.getConfiguration());
+      Admin admin1 = connection.getAdmin()) {
+      admin1.addReplicationPeer("peer1", rpc);
+      admin1.addReplicationPeer("peer2", rpc);
+      admin1.addReplicationPeer("peer3", rpc);
+      numOfPeer = admin1.listReplicationPeers().size();
+    }
   }
 
   @AfterClass
