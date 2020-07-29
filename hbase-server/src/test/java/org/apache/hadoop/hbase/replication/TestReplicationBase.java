@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +53,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
@@ -66,7 +64,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
  */
 public class TestReplicationBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBase.class);
-  private static Connection connection;
+  private static Connection connection1;
+  private static Connection connection2;
   protected static Configuration CONF_WITH_LOCALFS;
 
   protected static Admin hbaseAdmin;
@@ -244,26 +243,26 @@ public class TestReplicationBase {
     // as a component in deciding maximum number of parallel batches to send to the peer cluster.
     UTIL2.startMiniCluster(NUM_SLAVES2);
 
-    connection = ConnectionFactory.createConnection(CONF1);
-    hbaseAdmin = connection.getAdmin();
+    connection1 = ConnectionFactory.createConnection(CONF1);
+    connection2 = ConnectionFactory.createConnection(CONF2);
+    hbaseAdmin = connection1.getAdmin();
 
     TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
             .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
 
-    try (Connection connection1 = ConnectionFactory.createConnection(CONF1);
-      Admin admin1 = connection1.getAdmin()) {
+    try (
+      Admin admin1 = connection1.getAdmin();
+      Admin admin2 = connection2.getAdmin()) {
       admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
       UTIL1.waitUntilAllRegionsAssigned(tableName);
       htable1 = connection1.getTable(tableName);
-    }
-    try (Connection connection2 = ConnectionFactory.createConnection(CONF2);
-      Admin admin2 = connection2.getAdmin()) {
-      admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
       UTIL2.waitUntilAllRegionsAssigned(tableName);
       htable2 = connection2.getTable(tableName);
     }
+
   }
 
   @BeforeClass
@@ -368,8 +367,11 @@ public class TestReplicationBase {
       hbaseAdmin.close();
     }
 
-    if (connection != null) {
-      connection.close();
+    if (connection2 != null) {
+      connection2.close();
+    }
+    if (connection1 != null) {
+      connection1.close();
     }
     UTIL2.shutdownMiniCluster();
     UTIL1.shutdownMiniCluster();
