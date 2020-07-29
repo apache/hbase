@@ -25,9 +25,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Counters kept by the distributed WAL split log process.
  * Used by master and regionserver packages.
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *   distributed WAL splitter, see SplitWALManager
  */
+@Deprecated
 @InterfaceAudience.Private
 public class SplitLogCounters {
+  private SplitLogCounters() {}
+
   //Spnager counters
   public final static LongAdder tot_mgr_log_split_batch_start = new LongAdder();
   public final static LongAdder tot_mgr_log_split_batch_success = new LongAdder();
