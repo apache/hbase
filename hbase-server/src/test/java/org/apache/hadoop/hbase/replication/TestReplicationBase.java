@@ -145,12 +145,10 @@ public class TestReplicationBase {
     table.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);
     table.addFamily(fam);
-    Connection connection1 = ConnectionFactory.createConnection(conf1);
-    Connection connection2 = ConnectionFactory.createConnection(conf2);
-    try (Admin admin1 = connection1.getAdmin()) {
+    Connection connection1 = utility1.getConnection();
+    Connection connection2 = utility2.getConnection();
+    try (Admin admin1 = connection1.getAdmin(); Admin admin2 = connection2.getAdmin()) {
       admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
-    }
-    try (Admin admin2 = connection2.getAdmin()) {
       admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     }
     utility1.waitUntilAllRegionsAssigned(tableName);

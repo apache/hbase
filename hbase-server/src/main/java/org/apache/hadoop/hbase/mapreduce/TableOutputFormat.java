@@ -173,8 +173,8 @@ implements Configurable {
   @Override
   public void checkOutputSpecs(JobContext context) throws IOException,
       InterruptedException {
-
-    try (Admin admin = ConnectionFactory.createConnection(getConf()).getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(getConf());
+         Admin admin = conn.getAdmin()) {
       TableName tableName = TableName.valueOf(this.conf.get(OUTPUT_TABLE));
       if (!admin.tableExists(tableName)) {
         throw new TableNotFoundException("Can't write, table does not exist:" +
