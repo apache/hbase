@@ -85,7 +85,7 @@ public class TestChunkPool {
     System.out.println("chunk BB limit=" + chunk.getByteBuffer().limit());
     System.out.println("chunk BB capacity=" + chunk.getByteBuffer().capacity());
 
-    chunkPool.putbackChunk(chunk);
+    chunkPool.reclaimChunk(chunk);
     Assert.assertEquals(2 * 1024, chunkPool.getChunkQueue().size());
     Assert.assertEquals(2 * 1024, chunkPool.getChunkArray().length);
     Assert.assertEquals(2 * 1024, chunkPool.getCurrentChunkCounter());
@@ -100,7 +100,7 @@ public class TestChunkPool {
     System.out.println("chunk BB limit=" + chunk.getByteBuffer().limit());
     System.out.println("chunk BB capacity=" + chunk.getByteBuffer().capacity());
 
-    chunkPool.putbackChunk(unpooledChunk);
+    chunkPool.reclaimChunk(unpooledChunk);
     Assert.assertEquals(2 * 1024, chunkPool.getChunkQueue().size());
     Assert.assertEquals(2 * 1024, chunkPool.getChunkArray().length);
     Assert.assertEquals(2 * 1024, chunkPool.getCurrentChunkCounter());
@@ -159,7 +159,7 @@ public class TestChunkPool {
     Assert.assertEquals(0, chunkPool.getChunkQueue().size());
     Assert.assertEquals(2, chunkPool.getChunkArray().length);
 
-    chunkPool.putbackChunk(chunk4);
+    chunkPool.reclaimChunk(chunk4);
     Assert.assertEquals(1, chunkPool.getUnpooledChunksMap().size());
     Assert.assertEquals(0, chunkPool.getChunkQueue().size());
     Assert.assertEquals(2, chunkPool.getChunkArray().length);

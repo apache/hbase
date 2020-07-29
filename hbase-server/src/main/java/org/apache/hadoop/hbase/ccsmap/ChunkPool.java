@@ -31,7 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * strategy pattern for allocate Chunk.
+ * It mainly focus on managing reusable chunks, to make GC friendy.
+ * Also, if situation needs, this class also keep tracking non-resuable chunks.
  */
 @InterfaceAudience.Private
 public class ChunkPool {
@@ -43,11 +44,11 @@ public class ChunkPool {
   private final HeapMode heapMode;
   private final int maxChunkCount;
   private final int chunkSize;
+  private final ChunkAllocator chunkAllocator;
   private final AbstractHeapChunk[] chunkArray;
+  private final Queue<AbstractHeapChunk> chunkQueue;
   // Map for tracking unpooled chunk's
   private final Map<Long, AbstractHeapChunk> unpooledChunks = new ConcurrentHashMap<>();
-  private final Queue<AbstractHeapChunk> chunkQueue;
-  private final ChunkAllocator chunkAllocator;
 
   private final AtomicLong currentChunkCounter = new AtomicLong(0);
   private final AtomicLong unpooledChunkUsed = new AtomicLong(0);
@@ -68,27 +69,31 @@ public class ChunkPool {
     chunkArray = new AbstractHeapChunk[maxChunkCount];
     chunkQueue = new ConcurrentLinkedQueue<>();
     for (int i = 0; i < initialCount; i++) {
-      LOG.info("Allocating chunk " + i);
       if (!this.chunkQueue.offer(allocatePooledChunk())) {
-        // Should not happen
+        // Should not happen, since the queue has no size limit.
         throw new IllegalStateException("Initial count=" + initialCount +
           ", but failed to allocate the " + i + "th chunk.");
       }
     }
   }
 
-  public AbstractHeapChunk allocate(int len) {
+  /**
+   * Try to allocate a chunk with specified size.
+   * @param size size of a chunk
+   * @return a chunk
+   */
+  public AbstractHeapChunk allocate(int size) {
     AbstractHeapChunk chunk;
-    if (len > chunkSize) {
-      LOG.warn("Allocating a big chunk which size is " + len +
+    if (size > chunkSize) {
+      LOG.warn("Allocating a big chunk which size is " + size +
         " larger than specified size: " + chunkSize);
-      return allocateUnpooledChunk(len);
+      return allocateUnpooledChunk(size);
     }
     chunk = chunkQueue.poll();
     if (chunk == null) {
       synchronized (chunkAllocator) {
         if (currentChunkCounter.get() >= maxChunkCount) {
-          LOG.debug("No more available chunk in this pool, "
+          LOG.debug("No more available reusable chunk in this pool, "
             + "will use unpooled chunk on heap before pooled chunks reclaimed.");
           return allocateUnpooledChunk(chunkSize);
         }
@@ -106,12 +111,16 @@ public class ChunkPool {
     return chunk;
   }
 
-  public void putbackChunk(AbstractHeapChunk chunk) {
+  /**
+   * Reclaim a chunk if it is reusable, remove it otherwise.
+   * @param chunk a chunk not in use
+   */
+  public void reclaimChunk(AbstractHeapChunk chunk) {
     //not support putback duplicate.
     if (chunk.getHeapMode() == this.heapMode && chunk.isPooledChunk()) {
       chunk.getByteBuffer().clear();
       if (!chunkQueue.offer(chunk)) {
-        // Should not happen
+        // Should not happen, since the queue has no size limit.
         throw new IllegalStateException("Can't reclaim chunk");
       }
     } else {
@@ -169,7 +178,7 @@ public class ChunkPool {
       if (globalInstance == null) {
         ChunkPoolParameters parameters = new ChunkPoolParameters(conf);
         globalInstance = new ChunkPool(parameters);
-        LOG.debug("CCSMapMemstore's chunkPool initialized with " + parameters);
+        LOG.info("CCSMapMemstore's chunkPool initialized with " + parameters);
       }
     }
     return globalInstance;

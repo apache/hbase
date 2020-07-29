@@ -55,8 +55,8 @@ public abstract class AbstractHeapChunk implements HeapChunk {
   public int allocate(int len) {
     int oldLen = len;
     //TODO reuse the removed node's space.
-    //align
     //TODO add config for support unalign
+    //align
     len = align(len);
 
     while (true) {
