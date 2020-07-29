@@ -94,9 +94,7 @@ public class LogRollBackupSubprocedure extends Subprocedure {
           + " highest: " + highest + " on " + rss.getServerName());
       ((HRegionServer) rss).getWalRoller().requestRollAll();
       long start = EnvironmentEdgeManager.currentTime();
-      while (!((HRegionServer) rss).getWalRoller().walRollFinished()) {
-        Thread.sleep(20);
-      }
+      ((HRegionServer) rss).getWalRoller().waitUntilWalRollFinished();
       LOG.debug("log roll took " + (EnvironmentEdgeManager.currentTime() - start));
       LOG.info("After roll log in backup subprocedure, current log number: " + fsWAL.getFilenum()
           + " on " + rss.getServerName());

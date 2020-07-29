@@ -218,26 +218,21 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    */
   protected abstract void scheduleFlush(String encodedRegionName, List<byte[]> families);
 
-  private boolean isWaiting() {
-    Thread.State state = getState();
-    return state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING;
-  }
-
   /**
    * @return true if all WAL roll finished
    */
   public boolean walRollFinished() {
-    // TODO add a status field of roll in RollController
-    return wals.values().stream().noneMatch(rc -> rc.needsRoll(System.currentTimeMillis()))
-      && isWaiting();
+    return wals.values().stream().allMatch(rc -> rc.isRollFinished(System.currentTimeMillis()));
   }
 
   /**
    * Wait until all wals have been rolled after calling {@link #requestRollAll()}.
    */
   public void waitUntilWalRollFinished() throws InterruptedException {
-    while (!walRollFinished()) {
-      Thread.sleep(100);
+    synchronized (RollController.class) {
+      while (!walRollFinished()) {
+        RollController.class.wait();
+      }
     }
   }
 
@@ -255,11 +250,13 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     private final WAL wal;
     private final AtomicBoolean rollRequest;
     private long lastRollTime;
+    private boolean isRolling;
 
     RollController(WAL wal) {
       this.wal = wal;
       this.rollRequest = new AtomicBoolean(false);
       this.lastRollTime = System.currentTimeMillis();
+      this.isRolling = false;
     }
 
     public void requestRoll() {
@@ -267,10 +264,18 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     }
 
     public Map<byte[], List<byte[]>> rollWal(long now) throws IOException {
-      this.lastRollTime = now;
-      // reset the flag in front to avoid missing roll request before we return from rollWriter.
-      this.rollRequest.set(false);
-      return wal.rollWriter(true);
+      this.isRolling = true;
+      try {
+        this.lastRollTime = now;
+        // reset the flag in front to avoid missing roll request before we return from rollWriter.
+        this.rollRequest.set(false);
+        return wal.rollWriter(true);
+      } finally {
+        this.isRolling = false;
+        synchronized (RollController.class) {
+          RollController.class.notifyAll();
+        }
+      }
     }
 
     public boolean isRollRequested() {
@@ -283,6 +288,10 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
 
     public boolean needsRoll(long now) {
       return isRollRequested() || needsPeriodicRoll(now);
+    }
+
+    public boolean isRollFinished(long now) {
+      return !needsRoll(now) && !this.isRolling;
     }
   }
 }
