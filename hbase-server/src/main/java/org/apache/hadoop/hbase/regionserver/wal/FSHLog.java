@@ -372,11 +372,12 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         // closeErrorsTolerated count, call the closeWriter inline rather than in async
         // way so that in case of an IOE we will throw it back and abort RS.
         if (isUnflushedEntries() || closeErrorCount.get() >= this.closeErrorsTolerated) {
-          closeWriter(oldPath, true);
+          closeWriter(this.writer, oldPath, true);
         } else {
+		  Writer localWriter = this.writer;	
           closeExecutor.execute(() -> {
             try {
-              closeWriter(oldPath, false);
+              closeWriter(localWriter, oldPath, false);
             } catch (IOException e) {
               // We will never reach here.
             }
@@ -422,7 +423,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
   }
 
-  private void closeWriter(Path path, boolean syncCloseCall) throws IOException {
+  private void closeWriter(Writer writer, Path path, boolean syncCloseCall) throws IOException {
     try {
       TraceUtil.addTimelineAnnotation("closing writer");
       writer.close();
