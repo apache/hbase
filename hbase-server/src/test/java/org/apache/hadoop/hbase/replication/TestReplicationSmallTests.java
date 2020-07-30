@@ -518,12 +518,10 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
       table.addFamily(fam);
 
-      Connection connection1 = ConnectionFactory.createConnection(conf1);
-      Connection connection2 = ConnectionFactory.createConnection(conf2);
-      try (Admin admin1 = connection1.getAdmin()) {
+      try (Admin admin1 =  utility1.getConnection().getAdmin()) {
         admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
       }
-      try (Admin admin2 = connection2.getAdmin()) {
+      try (Admin admin2 = utility2.getConnection().getAdmin()) {
         admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
       }
       utility1.waitUntilAllRegionsAssigned(tablename);
