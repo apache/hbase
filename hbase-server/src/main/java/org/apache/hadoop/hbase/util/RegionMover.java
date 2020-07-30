@@ -484,7 +484,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         throw e;
       } catch (ExecutionException e) {
         if (e.getCause() instanceof UnknownRegionException) {
-          LOG.debug("Ignore unknown region, it might have been split/merged.");
+          LOG.info("Ignore unknown region, it might have been split/merged.");
         } else {
           LOG.error("Got Exception From Thread While moving region {}", e.getMessage(), e);
           throw e;

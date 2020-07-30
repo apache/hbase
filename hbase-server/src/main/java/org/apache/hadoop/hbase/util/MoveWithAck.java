@@ -88,7 +88,7 @@ class MoveWithAck implements Callable<Boolean> {
         if (!sameServer) {
           break;
         }
-        Thread.sleep(100);
+        Thread.sleep(1000);
       }
     }
     if (sameServer) {
