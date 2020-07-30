@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -64,6 +66,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
   private static HBaseTestingUtility TEST_UTIL2;
   private static Configuration conf2;
   private static AsyncAdmin admin2;
+  private static AsyncConnection connection;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -78,12 +81,19 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     TEST_UTIL2 = new HBaseTestingUtility(conf2);
     TEST_UTIL2.startMiniCluster();
-    admin2 =
-        ConnectionFactory.createAsyncConnection(TEST_UTIL2.getConfiguration()).get().getAdmin();
+
+    connection =
+      ConnectionFactory.createAsyncConnection(TEST_UTIL2.getConfiguration()).get();
+    admin2 = connection.getAdmin();
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(TEST_UTIL2.getClusterKey());
     ASYNC_CONN.getAdmin().addReplicationPeer(ID_SECOND, rpc).join();
+  }
+
+  @AfterClass
+  public static void clearUp() throws IOException {
+    connection.close();
   }
 
   @Override
