@@ -1943,11 +1943,11 @@ public class HMaster extends HRegionServer implements MasterServices {
             mergePlanCount++;
           }
         }
-        int totalPlansSubmitted = submittedPlanProcIds.size();
-        if (totalPlansSubmitted > 0 && LOG.isDebugEnabled()) {
-          LOG.debug("Normalizer plans submitted. Total plans count: {} , procID list: {}",
+      }
+      int totalPlansSubmitted = submittedPlanProcIds.size();
+      if (totalPlansSubmitted > 0 && LOG.isDebugEnabled()) {
+        LOG.debug("Normalizer plans submitted. Total plans count: {} , procID list: {}",
             totalPlansSubmitted, submittedPlanProcIds);
-        }
       }
     } finally {
       normalizationInProgressLock.unlock();
