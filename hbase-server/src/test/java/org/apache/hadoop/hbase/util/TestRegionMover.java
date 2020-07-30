@@ -23,11 +23,8 @@ import static org.junit.Assert.assertFalse;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -40,8 +37,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -461,39 +456,6 @@ public class TestRegionMover {
 
     TEST_UTIL.getAdmin().recommissionRegionServer(decomServer.getServerName(),
       Collections.emptyList());
-  }
-
-  @Test
-  public void testWithMergedRegions() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    Admin admin = TEST_UTIL.getAdmin();
-    Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
-    List<Put> puts = new ArrayList<>();
-    for (int i = 0; i < 10000; i++) {
-      puts.add(new Put(Bytes.toBytes("rowkey_" + i))
-        .addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
-    }
-    table.put(puts);
-    admin.flush(TABLE_NAME);
-    HRegionServer regionServer = cluster.getRegionServer(0);
-    String rsName = regionServer.getServerName().getAddress().toString();
-    int numRegions = regionServer.getNumberOfOnlineRegions();
-    List<HRegion> hRegions = regionServer.getRegions().stream()
-      .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(TABLE_NAME))
-      .collect(Collectors.toList());
-    RegionMoverBuilder rmBuilder =
-      new RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true).maxthreads(8);
-    try (RegionMover rm = rmBuilder.build()) {
-      LOG.debug("Unloading " + regionServer.getServerName());
-      rm.unload();
-      Assert.assertEquals(0, regionServer.getNumberOfOnlineRegions());
-      LOG.debug("Successfully Unloaded\nNow Loading");
-      admin.mergeRegionsAsync(new byte[][] { hRegions.get(0).getRegionInfo().getRegionName(),
-        hRegions.get(1).getRegionInfo().getRegionName() }, true)
-        .get(5, TimeUnit.SECONDS);
-      Assert.assertTrue(rm.load());
-      Assert.assertEquals(numRegions - 2, regionServer.getNumberOfOnlineRegions());
-    }
   }
 
 }

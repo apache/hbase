@@ -57,7 +57,9 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -483,8 +485,10 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         LOG.error("Interrupted while waiting for Thread to Complete " + e.getMessage(), e);
         throw e;
       } catch (ExecutionException e) {
-        if (e.getCause() instanceof UnknownRegionException) {
-          LOG.info("Ignore unknown region, it might have been split/merged.");
+        boolean ignoreFailure = ignoreRegionMoveFailure(e);
+        if (ignoreFailure) {
+          LOG.debug("Ignore region move failure, it might have been split/merged, "
+              + "detailed message: {}", e.getCause().getMessage());
         } else {
           LOG.error("Got Exception From Thread While moving region {}", e.getMessage(), e);
           throw e;
@@ -495,6 +499,22 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         throw e;
       }
     }
+  }
+
+  private boolean ignoreRegionMoveFailure(ExecutionException e) {
+    boolean ignoreFailure;
+    if (e.getCause() instanceof UnknownRegionException) {
+      // region does not exist anymore
+      ignoreFailure = true;
+    } else if (e.getCause() instanceof DoNotRetryRegionException
+        && e.getCause().getMessage() != null && e.getCause().getMessage()
+        .contains(AssignmentManager.UNEXPECTED_STATE_REGION + "state=SPLIT,")) {
+      // region is recently split
+      ignoreFailure = true;
+    } else {
+      ignoreFailure = false;
+    }
+    return ignoreFailure;
   }
 
   private ServerName getTargetServer() throws Exception {

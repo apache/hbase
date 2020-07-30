@@ -59,7 +59,8 @@ class MoveWithoutAck implements Callable<Boolean> {
       LOG.info("Moving region: {} from {} to {}", region.getEncodedName(), sourceServer,
         targetServer);
       admin.move(region.getEncodedNameAsBytes(), targetServer);
-      LOG.info("Moved {} from {} to {}", region.getEncodedName(), sourceServer, targetServer);
+      LOG.info("Requested move {} from {} to {}", region.getEncodedName(), sourceServer,
+        targetServer);
     } catch (Exception e) {
       LOG.error("Error Moving Region: {}", region.getEncodedName(), e);
     } finally {
