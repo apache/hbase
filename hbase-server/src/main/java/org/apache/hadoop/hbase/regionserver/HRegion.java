@@ -797,8 +797,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         DEFAULT_ROWLOCK_WAIT_DURATION);
     if (tmpRowLockDuration <= 0) {
       LOG.info("Found hbase.rowlock.wait.duration set to {}. values <= 0 will cause all row " +
-          "locking to fail. Treating it as 1ms to approximate behavior of hbase versions older " +
-          "than 1.4.", tmpRowLockDuration);
+          "locking to fail. Treating it as 1ms to avoid region failure.", tmpRowLockDuration);
       tmpRowLockDuration = 1;
     }
     this.rowLockWaitDuration = tmpRowLockDuration;
