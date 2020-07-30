@@ -21,7 +21,7 @@ module Shell
   module Commands
     class Compact < Command
       def help
-        <<-EOF
+        <<~EOF
           Compact all regions in passed table or pass a region row
           to compact an individual region. You can also compact a single column
           family within a region.

@@ -19,7 +19,7 @@ module Shell
   module Commands
     class GetPeerConfig < Command
       def help
-        <<-EOF
+        <<~EOF
           Outputs the cluster key, replication endpoint class (if present), and any replication configuration parameters
         EOF
       end

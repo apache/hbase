@@ -22,7 +22,7 @@ module Shell
   module Commands
     class SetPeerNamespaces < Command
       def help
-        <<-EOF
+        <<~EOF
   Set the replicable namespaces config for the specified peer.
 
   1. The replicate_all flag need to be false when set the replicable namespaces.
