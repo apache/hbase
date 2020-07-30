@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -516,8 +517,8 @@ public class TestMasterReplication {
 
   private void addPeer(String id, int masterClusterNumber,
       int slaveClusterNumber) throws Exception {
-    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
-        .getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
+      Admin admin = conn.getAdmin()) {
       admin.addReplicationPeer(id,
         new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey()));
     }
@@ -525,8 +526,8 @@ public class TestMasterReplication {
 
   private void addPeer(String id, int masterClusterNumber, int slaveClusterNumber, String tableCfs)
       throws Exception {
-    try (Admin admin =
-        ConnectionFactory.createConnection(configurations[masterClusterNumber]).getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
+      Admin admin = conn.getAdmin()) {
       admin.addReplicationPeer(
         id,
         new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey())
@@ -536,15 +537,15 @@ public class TestMasterReplication {
   }
 
   private void disablePeer(String id, int masterClusterNumber) throws Exception {
-    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
-        .getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
+      Admin admin = conn.getAdmin()) {
       admin.disableReplicationPeer(id);
     }
   }
 
   private void enablePeer(String id, int masterClusterNumber) throws Exception {
-    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
-        .getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
+      Admin admin = conn.getAdmin()) {
       admin.enableReplicationPeer(id);
     }
   }

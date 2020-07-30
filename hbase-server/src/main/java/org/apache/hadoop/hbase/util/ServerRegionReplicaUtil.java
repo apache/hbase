@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -161,25 +162,26 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
     if (!isRegionReplicaReplicationEnabled(conf)) {
       return;
     }
-    Admin admin = ConnectionFactory.createConnection(conf).getAdmin();
-    ReplicationPeerConfig peerConfig = null;
-    try {
-      peerConfig = admin.getReplicationPeerConfig(REGION_REPLICA_REPLICATION_PEER);
-    } catch (ReplicationPeerNotFoundException e) {
-      LOG.warn("Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER
-          + " not exist", e);
-    }
-    try {
+
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+      Admin admin = connection.getAdmin()) {
+      ReplicationPeerConfig peerConfig = null;
+      try {
+        peerConfig = admin.getReplicationPeerConfig(REGION_REPLICA_REPLICATION_PEER);
+      } catch (ReplicationPeerNotFoundException e) {
+        LOG.warn(
+          "Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER + " not exist",
+          e);
+      }
+
       if (peerConfig == null) {
         LOG.info("Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER
-            + " not exist. Creating...");
+          + " not exist. Creating...");
         peerConfig = new ReplicationPeerConfig();
         peerConfig.setClusterKey(ZKConfig.getZooKeeperClusterKey(conf));
         peerConfig.setReplicationEndpointImpl(RegionReplicaReplicationEndpoint.class.getName());
         admin.addReplicationPeer(REGION_REPLICA_REPLICATION_PEER, peerConfig);
       }
-    } finally {
-      admin.close();
     }
   }
 
