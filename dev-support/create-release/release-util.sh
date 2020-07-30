@@ -567,7 +567,7 @@ make_binary_release() {
   "${MVN[@]}" clean install -DskipTests
   "${MVN[@]}" site -DskipTests
   kick_gpg_agent
-  "${MVN[@]}" install assembly:single -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}"
+  "${MVN[@]}" assembly:single -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}"
 
   # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
   local f_bin_prefix="./${PROJECT}-assembly/target/${base_name}"
