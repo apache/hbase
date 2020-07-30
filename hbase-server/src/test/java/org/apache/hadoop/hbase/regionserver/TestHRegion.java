@@ -6356,6 +6356,68 @@ public class TestHRegion {
   }
 
   @Test
+  public void testBatchMutateWithZeroRowLockWait() throws Exception {
+    final byte[] a = Bytes.toBytes("a");
+    final byte[] b = Bytes.toBytes("b");
+    final byte[] c = Bytes.toBytes("c"); // exclusive
+
+    Configuration conf = new Configuration(CONF);
+    conf.setInt("hbase.rowlock.wait.duration", 0);
+    final HRegionInfo hri = new HRegionInfo(TableName.valueOf(tableName), a, c);
+    final HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor(fam1));
+    region = HRegion.createHRegion(hri, TEST_UTIL.getDataTestDir(), conf, htd, TEST_UTIL.createWal(conf, TEST_UTIL.getDataTestDir(), TEST_UTIL.getDataTestDirOnTestFS(method + ".log"), hri));
+
+    Mutation[] mutations = new Mutation[] {
+        new Put(a).addImmutable(fam1, null, null),
+        new Put(b).addImmutable(fam1, null, null),
+    };
+
+    OperationStatus[] status = region.batchMutate(mutations);
+    assertEquals(OperationStatusCode.SUCCESS, status[0].getOperationStatusCode());
+    assertEquals(OperationStatusCode.SUCCESS, status[1].getOperationStatusCode());
+
+
+    // test with a row lock held for a long time
+    final CountDownLatch obtainedRowLock = new CountDownLatch(1);
+    ExecutorService exec = Executors.newFixedThreadPool(2);
+    Future<Void> f1 = exec.submit(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        LOG.info("Acquiring row lock");
+        RowLock rl = region.getRowLock(b);
+        obtainedRowLock.countDown();
+        LOG.info("Waiting for 5 seconds before releasing lock");
+        Threads.sleep(5000);
+        LOG.info("Releasing row lock");
+        rl.release();
+        return null;
+      }
+    });
+    obtainedRowLock.await(30, TimeUnit.SECONDS);
+
+    Future<Void> f2 = exec.submit(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        Mutation[] mutations = new Mutation[] {
+            new Put(a).addImmutable(fam1, null, null),
+            new Put(b).addImmutable(fam1, null, null),
+        };
+        // when handling row b we are going to spin on the failure to get the row lock
+        // until the lock above is released, but we will still succeed so long as that
+        // takes less time then the test time out.
+        OperationStatus[] status = region.batchMutate(mutations);
+        assertEquals(OperationStatusCode.SUCCESS, status[0].getOperationStatusCode());
+        assertEquals(OperationStatusCode.SUCCESS, status[1].getOperationStatusCode());
+        return null;
+      }
+    });
+
+    f1.get();
+    f2.get();
+  }
+
+  @Test
   public void testCheckAndRowMutateTimestampsAreMonotonic() throws IOException {
     region = initHRegion(tableName, name.getMethodName(), CONF, fam1);
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
