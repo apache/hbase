@@ -25,9 +25,26 @@ require 'shell'
 # Tests whether all registered commands have a help and command method
 
 class ShellCommandsTest < Test::Unit::TestCase
+
+  ##
+  # Determine the indentation of the given text
+  #
+  # @param [String] text
+  # @return [Integer] number of whitespace characters used for indentation
+  def determine_indentation(text)
+    # Ignore lines only containing whitespace. For all other lines, capture
+    # the number of whitespace characters preceding the first non-whitespace
+    # character. Return the minimum number found.
+    text.scan(/^([ \t]*)[^\s].*$/).flatten.map { |space| space.length }.min
+  end
+
   Shell.commands.each do |name, klass|
-    define_test "#{name} command class #{klass} should respond to help" do
-      assert_respond_to(klass.new(nil), :help)
+    define_test "#{name} command class #{klass} should return help" do
+      result = klass.new(nil).help
+      # check that help text exists and is non-empty
+      assert(result.is_a?(String) && result.length > 0)
+      # check that the help text is not indented
+      assert(determine_indentation(result) == 0)
     end
 
     define_test "#{name} command class #{klass} should respond to :command" do

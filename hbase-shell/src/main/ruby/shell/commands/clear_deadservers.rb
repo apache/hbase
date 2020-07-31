@@ -21,7 +21,7 @@ module Shell
   module Commands
     class ClearDeadservers < Command
       def help
-        <<-EOF
+        <<~EOF
           Clear the dead region servers that are never used. Returns an array containing any
           deadservers that could not be cleared.
 

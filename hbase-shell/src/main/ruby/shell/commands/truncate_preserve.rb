@@ -21,8 +21,11 @@ module Shell
   module Commands
     class TruncatePreserve < Command
       def help
-        <<-EOF
-  Disables, drops and recreates the specified table while still maintaing the previous region boundaries.
+        <<~EOF
+  Disables, drops and recreates the specified table while still maintaining the previous region boundaries.
+
+  Example:
+    hbase> truncate_preserve 'my_table'
 EOF
       end
 

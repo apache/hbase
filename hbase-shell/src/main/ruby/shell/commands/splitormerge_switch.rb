@@ -22,13 +22,13 @@ module Shell
     # Command for set switch for split and merge
     class SplitormergeSwitch < Command
       def help
-        print <<-EOF
+        <<-EOF
 Enable/Disable one switch. You can set switch type 'SPLIT' or 'MERGE'. Returns previous split state.
 Examples:
 
   hbase> splitormerge_switch 'SPLIT', true
   hbase> splitormerge_switch 'SPLIT', false
-EOF
+        EOF
       end
 
       def command(switch_type, enabled)
