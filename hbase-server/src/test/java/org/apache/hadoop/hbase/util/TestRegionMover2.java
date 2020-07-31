@@ -34,13 +34,15 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -57,11 +59,12 @@ public class TestRegionMover2 {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionMover2.class);
 
+  @Rule
+  public TestName name = new TestName();
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMover2.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
-  private static final TableName TABLE_NAME = TableName.valueOf("testRegionMover2");
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -74,82 +77,82 @@ public class TestRegionMover2 {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    // Create a pre-split table just to populate some regions
-    Admin admin = TEST_UTIL.getAdmin();
-    if (admin.tableExists(TABLE_NAME)) {
-      TEST_UTIL.deleteTable(TABLE_NAME);
-    }
-    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+  private void initTableRegions(TableName tableName) throws IOException {
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     int startKey = 0;
     int endKey = 80000;
-    admin.createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
+    TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
   }
 
   @Test
   public void testWithMergedRegions() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
-    Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<>();
     for (int i = 0; i < 10000; i++) {
       puts.add(new Put(Bytes.toBytes("rowkey_" + i))
         .addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
     }
     table.put(puts);
-    admin.flush(TABLE_NAME);
+    admin.flush(tableName);
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getAddress().toString();
     int numRegions = regionServer.getNumberOfOnlineRegions();
     List<HRegion> hRegions = regionServer.getRegions().stream()
-      .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(TABLE_NAME))
+      .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
       .collect(Collectors.toList());
     RegionMover.RegionMoverBuilder rmBuilder =
       new RegionMover.RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true)
         .maxthreads(8);
     try (RegionMover rm = rmBuilder.build()) {
-      LOG.debug("Unloading " + regionServer.getServerName());
+      LOG.debug("Unloading {}", regionServer.getServerName());
       rm.unload();
       Assert.assertEquals(0, regionServer.getNumberOfOnlineRegions());
-      LOG.debug("Successfully Unloaded\nNow Loading");
+      LOG.debug("Successfully Unloaded, now Loading");
       admin.mergeRegionsAsync(new byte[][] { hRegions.get(0).getRegionInfo().getRegionName(),
         hRegions.get(1).getRegionInfo().getRegionName() }, true)
         .get(5, TimeUnit.SECONDS);
       Assert.assertTrue(rm.load());
       Assert.assertEquals(numRegions - 2, regionServer.getNumberOfOnlineRegions());
     }
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   @Test
   public void testWithSplitRegions() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
-    Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<>();
     for (int i = 10; i < 50000; i++) {
       puts.add(new Put(Bytes.toBytes(i))
         .addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
     }
     table.put(puts);
-    admin.flush(TABLE_NAME);
-    admin.compact(TABLE_NAME);
+    admin.flush(tableName);
+    admin.compact(tableName);
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getAddress().toString();
     int numRegions = regionServer.getNumberOfOnlineRegions();
     List<HRegion> hRegions = regionServer.getRegions().stream()
-      .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(TABLE_NAME))
+      .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
       .collect(Collectors.toList());
 
     RegionMover.RegionMoverBuilder rmBuilder =
       new RegionMover.RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true)
         .maxthreads(8);
     try (RegionMover rm = rmBuilder.build()) {
-      LOG.debug("Unloading " + regionServer.getServerName());
+      LOG.debug("Unloading {}", regionServer.getServerName());
       rm.unload();
       Assert.assertEquals(0, regionServer.getNumberOfOnlineRegions());
-      LOG.debug("Successfully Unloaded\nNow Loading");
+      LOG.debug("Successfully Unloaded, now Loading");
       HRegion hRegion = hRegions.get(1);
       int startKey = 0;
       int endKey = Integer.MAX_VALUE;
@@ -165,38 +168,44 @@ public class TestRegionMover2 {
       Assert.assertTrue(rm.load());
       Assert.assertEquals(numRegions - 1, regionServer.getNumberOfOnlineRegions());
     }
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   @Test
   public void testFailedRegionMove() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
-    Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<>();
     for (int i = 0; i < 1000; i++) {
       puts.add(new Put(Bytes.toBytes("rowkey_" + i))
         .addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)));
     }
     table.put(puts);
-    admin.flush(TABLE_NAME);
+    admin.flush(tableName);
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getAddress().toString();
     int numRegions = regionServer.getNumberOfOnlineRegions();
     List<HRegion> hRegions = regionServer.getRegions().stream()
-      .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(TABLE_NAME))
+      .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
       .collect(Collectors.toList());
     RegionMover.RegionMoverBuilder rmBuilder =
       new RegionMover.RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true)
         .maxthreads(8);
     try (RegionMover rm = rmBuilder.build()) {
-      LOG.debug("Unloading " + regionServer.getServerName());
+      LOG.debug("Unloading {}", regionServer.getServerName());
       rm.unload();
       Assert.assertEquals(0, regionServer.getNumberOfOnlineRegions());
-      LOG.debug("Successfully Unloaded\nNow Loading");
+      LOG.debug("Successfully Unloaded, now Loading");
       admin.offline(hRegions.get(0).getRegionInfo().getRegionName());
       // loading regions will fail because of offline region
       Assert.assertFalse(rm.load());
     }
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
 }

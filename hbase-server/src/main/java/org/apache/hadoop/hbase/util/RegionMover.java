@@ -288,7 +288,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         "Moving " + regionsToMove.size() + " regions to " + server + " using " + this.maxthreads
             + " threads.Ack mode:" + this.ack);
 
-    ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
+    final ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
     List<Future<Boolean>> taskList = new ArrayList<>();
     int counter = 0;
     while (counter < regionsToMove.size()) {
@@ -410,26 +410,23 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         LOG.info("No Regions to move....Quitting now");
         break;
       }
-      int counter = 0;
-      LOG.info("Moving " + regionsToMove.size() + " regions from " + this.hostname + " to "
-          + regionServers.size() + " servers using " + this.maxthreads + " threads .Ack Mode:"
-          + ack);
-      ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
+      LOG.info("Moving {} regions from {} to {} servers using {} threads .Ack Mode: {}",
+        regionsToMove.size(), this.hostname, regionServers.size(), this.maxthreads, ack);
+      final ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
       List<Future<Boolean>> taskList = new ArrayList<>();
       int serverIndex = 0;
-      while (counter < regionsToMove.size()) {
+      for (RegionInfo regionToMove : regionsToMove) {
         if (ack) {
           Future<Boolean> task = moveRegionsPool.submit(
-            new MoveWithAck(conn, regionsToMove.get(counter), server,
-              regionServers.get(serverIndex), movedRegions));
+            new MoveWithAck(conn, regionToMove, server, regionServers.get(serverIndex),
+              movedRegions));
           taskList.add(task);
         } else {
           Future<Boolean> task = moveRegionsPool.submit(
-            new MoveWithoutAck(admin, regionsToMove.get(counter), server,
-              regionServers.get(serverIndex), movedRegions));
+            new MoveWithoutAck(admin, regionToMove, server, regionServers.get(serverIndex),
+              movedRegions));
           taskList.add(task);
         }
-        counter++;
         serverIndex = (serverIndex + 1) % regionServers.size();
       }
       moveRegionsPool.shutdown();
@@ -487,8 +484,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       } catch (ExecutionException e) {
         boolean ignoreFailure = ignoreRegionMoveFailure(e);
         if (ignoreFailure) {
-          LOG.debug("Ignore region move failure, it might have been split/merged, "
-              + "detailed message: {}", e.getCause().getMessage());
+          LOG.debug("Ignore region move failure, it might have been split/merged.", e);
         } else {
           LOG.error("Got Exception From Thread While moving region {}", e.getMessage(), e);
           throw e;
@@ -502,7 +498,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   private boolean ignoreRegionMoveFailure(ExecutionException e) {
-    boolean ignoreFailure;
+    boolean ignoreFailure = false;
     if (e.getCause() instanceof UnknownRegionException) {
       // region does not exist anymore
       ignoreFailure = true;
@@ -511,8 +507,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         .contains(AssignmentManager.UNEXPECTED_STATE_REGION + "state=SPLIT,")) {
       // region is recently split
       ignoreFailure = true;
-    } else {
-      ignoreFailure = false;
     }
     return ignoreFailure;
   }

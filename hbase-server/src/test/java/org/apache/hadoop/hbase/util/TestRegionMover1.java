@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -46,11 +45,12 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.RegionMover.RegionMoverBuilder;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,17 +59,18 @@ import org.slf4j.LoggerFactory;
  * exclude functionality useful for rack decommissioning
  */
 @Category({MiscTests.class, LargeTests.class})
-public class TestRegionMover {
+public class TestRegionMover1 {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMover.class);
+    HBaseClassTestRule.forClass(TestRegionMover1.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionMover.class);
+  @Rule
+  public TestName name = new TestName();
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionMover1.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
-  private static final TableName TABLE_NAME = TableName.valueOf("testRegionMover");
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -82,22 +83,18 @@ public class TestRegionMover {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    // Create a pre-split table just to populate some regions
-    Admin admin = TEST_UTIL.getAdmin();
-    if (admin.tableExists(TABLE_NAME)) {
-      TEST_UTIL.deleteTable(TABLE_NAME);
-    }
-    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+  private void initTableRegions(TableName tableName) throws IOException {
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     String startKey = "a";
     String endKey = "z";
-    admin.createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
+    TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
   }
 
   @Test
   public void testWithAck() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getAddress().toString();
@@ -114,6 +111,8 @@ public class TestRegionMover {
       // Repeat the same load. It should be very fast because all regions are already moved.
       rm.load();
     }
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   /**
@@ -121,6 +120,8 @@ public class TestRegionMover {
    */
   @Test
   public void testWithoutAck() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getAddress().toString();
@@ -147,6 +148,8 @@ public class TestRegionMover {
         }
       });
     }
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   /**
@@ -155,6 +158,8 @@ public class TestRegionMover {
    */
   @Test
   public void testExclude() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     File excludeFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(), "exclude_file");
     FileWriter fos = new FileWriter(excludeFile);
@@ -179,10 +184,14 @@ public class TestRegionMover {
       LOG.info("Before:" + regionsExcludeServer + " After:" +
         cluster.getRegionServer(1).getNumberOfOnlineRegions());
     }
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   @Test
   public void testDesignatedFile() throws Exception{
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     File designatedFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(),
       "designated_file");
@@ -210,10 +219,14 @@ public class TestRegionMover {
       LOG.debug("Before:{} After:{}", regionsInDesignatedServer,
         designatedServer.getNumberOfOnlineRegions());
     }
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   @Test
   public void testExcludeAndDesignated() throws Exception{
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     // create designated file
     File designatedFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(),
@@ -258,10 +271,14 @@ public class TestRegionMover {
       LOG.debug("ExcludeServer Before:{} After:{}", regionsInExcludeServer,
         excludeServer.getNumberOfOnlineRegions());
     }
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   @Test
-  public void testRegionServerPort() {
+  public void testRegionServerPort() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getHostname();
@@ -275,6 +292,8 @@ public class TestRegionMover {
     if (originalPort != null) {
       conf.set(HConstants.REGIONSERVER_PORT, originalPort);
     }
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   /**
@@ -282,6 +301,8 @@ public class TestRegionMover {
    */
   @Test
   public void testLoadMetaRegion() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     HRegionServer rsWithMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
       .map(t -> t.getRegionServer())
       .filter(rs -> rs.getRegions(TableName.META_TABLE_NAME).size() > 0).findFirst().get();
@@ -296,6 +317,8 @@ public class TestRegionMover {
       rm.load();
       assertEquals(onlineRegions, rsWithMeta.getNumberOfOnlineRegions());
     }
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   /**
@@ -303,6 +326,8 @@ public class TestRegionMover {
    */
   @Test
   public void testTargetServerDeadWhenLoading() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
     String rsName = rs.getServerName().getAddress().toString();
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
@@ -324,10 +349,14 @@ public class TestRegionMover {
       LOG.info("Loading to an inexist region server {}", inexistRsName);
       assertFalse(rm.load());
     }
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   @Test
   public void testDecomServerExclusionWithAck() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer excludeServer = cluster.getRegionServer(1);
     List<HRegion> regions = excludeServer.getRegions();
@@ -367,6 +396,8 @@ public class TestRegionMover {
 
     TEST_UTIL.getAdmin().recommissionRegionServer(excludeServer.getServerName(),
       Collections.emptyList());
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   private void waitForServerDecom(HRegionServer excludeServer) {
@@ -384,6 +415,8 @@ public class TestRegionMover {
 
   @Test
   public void testDecomServerExclusion() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer excludeServer = cluster.getRegionServer(0);
     List<HRegion> regions = excludeServer.getRegions();
@@ -422,10 +455,14 @@ public class TestRegionMover {
 
     TEST_UTIL.getAdmin().recommissionRegionServer(excludeServer.getServerName(),
       Collections.emptyList());
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   @Test
   public void testExcludeAndDecomServers() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     File excludeFile = new File(TEST_UTIL.getDataTestDir().toUri().getPath(), "exclude_file");
     FileWriter fos = new FileWriter(excludeFile);
@@ -456,6 +493,8 @@ public class TestRegionMover {
 
     TEST_UTIL.getAdmin().recommissionRegionServer(decomServer.getServerName(),
       Collections.emptyList());
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
 }

@@ -74,11 +74,12 @@ class MoveWithAck implements Callable<Boolean> {
     boolean sameServer = true;
     // Assert we can scan the region in its current location
     isSuccessfulScan(region);
-    LOG
-      .info("Moving region: {} from {} to {}", region.getEncodedName(), sourceServer, targetServer);
+    LOG.info("Moving region: {} from {} to {}", region.getRegionNameAsString(), sourceServer,
+      targetServer);
     while (count < retries && sameServer) {
       if (count > 0) {
-        LOG.info("Retry " + count + " of maximum " + retries);
+        LOG.debug("Retry {} of maximum {} for region: {}", count, retries,
+          region.getRegionNameAsString());
       }
       count = count + 1;
       admin.move(region.getEncodedNameAsBytes(), targetServer);
@@ -92,16 +93,20 @@ class MoveWithAck implements Callable<Boolean> {
       }
     }
     if (sameServer) {
-      LOG.error("Region: {} stuck on {} ,newServer={}", region.getRegionNameAsString(),
-        this.sourceServer, this.targetServer);
+      LOG.error("Region: {} stuck on {} for {} sec , newServer={}", region.getRegionNameAsString(),
+        this.sourceServer, getTimeDiffInSec(startTime), this.targetServer);
     } else {
       isSuccessfulScan(region);
-      LOG.info("Moved Region " + region.getRegionNameAsString() + " cost:" + String
-        .format("%.3f", (float) (EnvironmentEdgeManager.currentTime() - startTime) / 1000));
+      LOG.info("Moved Region {} , cost (sec): {}", region.getRegionNameAsString(),
+        getTimeDiffInSec(startTime));
       moved = true;
       movedRegions.add(region);
     }
     return moved;
+  }
+
+  private static String getTimeDiffInSec(long startTime) {
+    return String.format("%.3f", (float) (EnvironmentEdgeManager.currentTime() - startTime) / 1000);
   }
 
   /**
@@ -115,7 +120,7 @@ class MoveWithAck implements Callable<Boolean> {
       ResultScanner scanner = table.getScanner(scan)) {
       scanner.next();
     } catch (IOException e) {
-      LOG.error("Could not scan region:" + region.getEncodedName(), e);
+      LOG.error("Could not scan region: {}", region.getEncodedName(), e);
       throw e;
     }
   }
