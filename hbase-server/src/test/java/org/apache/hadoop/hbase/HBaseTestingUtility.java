@@ -25,6 +25,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.BindException;
@@ -209,10 +210,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     * HBaseTestingUtility*/
   private Path dataTestDirOnTestFS = null;
 
-  /**
-   * Shared cluster connection.
-   */
-  private volatile Connection connection;
+  private final AtomicReference<Connection> connection = new AtomicReference<>();
 
   /** Filesystem URI used for map-reduce mini-cluster setup */
   private static String FS_URI;
@@ -1300,14 +1298,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public void restartHBaseCluster(StartMiniClusterOption option)
       throws IOException, InterruptedException {
-    if (hbaseAdmin != null) {
-      hbaseAdmin.close();
-      hbaseAdmin = null;
-    }
-    if (this.connection != null) {
-      this.connection.close();
-      this.connection = null;
-    }
+    closeConnection();
     this.hbaseCluster =
         new MiniHBaseCluster(this.conf, option.getNumMasters(), option.getNumAlwaysStandByMasters(),
             option.getNumRegionServers(), option.getRsPorts(), option.getMasterClass(),
@@ -1389,14 +1380,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   // close hbase admin, close current connection and reset MIN MAX configs for RS.
   private void cleanup() throws IOException {
-    if (hbaseAdmin != null) {
-      hbaseAdmin.close();
-      hbaseAdmin = null;
-    }
-    if (this.connection != null) {
-      this.connection.close();
-      this.connection = null;
-    }
+    closeConnection();
     // unset the configuration for MIN and MAX RS to start
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, -1);
@@ -3143,13 +3127,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return hbaseCluster;
   }
 
-  public void closeConnection() throws IOException {
-    Closeables.close(hbaseAdmin, true);
-    Closeables.close(connection, true);
-    this.hbaseAdmin = null;
-    this.connection = null;
-  }
-
   /**
    * Resets the connections so that the next time getConnection() is called, a new connection is
    * created. This is needed in cases where the entire cluster / all the masters are shutdown and
@@ -3171,14 +3148,26 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
+   * Get a shared Connection to the cluster.
+   * this method is threadsafe.
    * @return A Connection that can be shared. Don't close. Will be closed on shutdown of cluster.
    * @throws IOException
    */
   public Connection getConnection() throws IOException {
-    if (this.connection == null) {
-      this.connection = ConnectionFactory.createConnection(this.conf);
+    try {
+      return this.connection.updateAndGet(connection -> {
+        if (connection == null) {
+          try {
+            connection = ConnectionFactory.createConnection(this.conf);
+          } catch(IOException ioe) {
+            throw new UncheckedIOException("Failed to create connection", ioe);
+          }
+        }
+        return connection;
+      });
+    } catch (UncheckedIOException exception) {
+      throw exception.getCause();
     }
-    return this.connection;
   }
 
   /**
@@ -3198,6 +3187,17 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       this.hbaseAdmin = (HBaseAdmin) getConnection().getAdmin();
     }
     return hbaseAdmin;
+  }
+
+  public void closeConnection() throws IOException {
+    if (hbaseAdmin != null) {
+      Closeables.close(hbaseAdmin, true);
+      hbaseAdmin = null;
+    }
+    Connection connection = this.connection.getAndSet(null);
+    if (connection != null) {
+      Closeables.close(connection, true);
+    }
   }
 
   /**
@@ -3363,7 +3363,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
           getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
               .getRegionAssignments();
       final List<Pair<RegionInfo, ServerName>> metaLocations =
-          MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
+          MetaTableAccessor.getTableRegionsAndLocations(getConnection(), tableName);
       for (Pair<RegionInfo, ServerName> metaLocation : metaLocations) {
         RegionInfo hri = metaLocation.getFirst();
         ServerName sn = metaLocation.getSecond();
@@ -3386,7 +3386,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public String explainTableState(final TableName table, TableState.State state)
       throws IOException {
-    TableState tableState = MetaTableAccessor.getTableState(connection, table);
+    TableState tableState = MetaTableAccessor.getTableState(getConnection(), table);
     if (tableState == null) {
       return "TableState in META: No table state in META for table " + table
           + " last state in meta (including deleted is " + findLastTableState(table) + ")";
@@ -3412,7 +3412,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       }
     };
     MetaTableAccessor
-        .scanMeta(connection, null, null,
+        .scanMeta(getConnection(), null, null,
             MetaTableAccessor.QueryType.TABLE,
             Integer.MAX_VALUE, visitor);
     return lastTableState.get();

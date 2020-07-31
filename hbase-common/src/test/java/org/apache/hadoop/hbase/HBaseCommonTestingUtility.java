@@ -69,7 +69,7 @@ public class HBaseCommonTestingUtility {
     Compression.Algorithm.NONE, Compression.Algorithm.GZ
   };
 
-  protected Configuration conf;
+  protected final Configuration conf;
 
   public HBaseCommonTestingUtility() {
     this(null);
