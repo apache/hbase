@@ -21,7 +21,7 @@ module Shell
   module Commands
     class DisableRpcThrottle < Command
       def help
-        return <<-EOF
+        <<-EOF
 Disable quota rpc throttle. Returns previous rpc throttle enabled value.
 NOTE: if quota is not enabled, this will not work and always return false.
 
