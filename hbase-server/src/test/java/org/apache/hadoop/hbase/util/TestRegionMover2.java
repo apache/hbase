@@ -32,8 +32,10 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -42,7 +44,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -77,7 +78,9 @@ public class TestRegionMover2 {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private void initTableRegions(TableName tableName) throws IOException {
+  @Before
+  public void setUp() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     int startKey = 0;
@@ -85,10 +88,16 @@ public class TestRegionMover2 {
     TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
   }
 
+  @After
+  public void tearDown() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
+  }
+
   @Test
   public void testWithMergedRegions() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -119,14 +128,11 @@ public class TestRegionMover2 {
       Assert.assertTrue(rm.load());
       Assert.assertEquals(numRegions - 2, regionServer.getNumberOfOnlineRegions());
     }
-    TEST_UTIL.getAdmin().disableTable(tableName);
-    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   @Test
   public void testWithSplitRegions() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -168,14 +174,11 @@ public class TestRegionMover2 {
       Assert.assertTrue(rm.load());
       Assert.assertEquals(numRegions - 1, regionServer.getNumberOfOnlineRegions());
     }
-    TEST_UTIL.getAdmin().disableTable(tableName);
-    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   @Test
   public void testFailedRegionMove() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    initTableRegions(tableName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -204,8 +207,6 @@ public class TestRegionMover2 {
       // loading regions will fail because of offline region
       Assert.assertFalse(rm.load());
     }
-    TEST_UTIL.getAdmin().disableTable(tableName);
-    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
 }
