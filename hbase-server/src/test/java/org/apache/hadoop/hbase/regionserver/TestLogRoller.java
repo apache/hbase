@@ -99,6 +99,7 @@ public class TestLogRoller {
     walEntry.getKey().requestLogRoll();
     Thread.sleep(5000);
 
+    // check whether all are rolled
     assertNotEquals(walEntry.getValue(), walEntry.getKey().getCurrentFileName());
     walEntry.setValue(walEntry.getKey().getCurrentFileName());
     while (it.hasNext()) {
