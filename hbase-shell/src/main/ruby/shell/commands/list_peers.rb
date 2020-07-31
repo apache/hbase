@@ -22,7 +22,7 @@ module Shell
   module Commands
     class ListPeers < Command
       def help
-        <<-EOF
+        <<~EOF
   List all replication peer clusters.
 
   If replicate_all flag is false, the namespaces and table-cfs in peer config

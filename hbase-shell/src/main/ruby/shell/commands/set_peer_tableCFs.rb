@@ -22,7 +22,7 @@ module Shell
   module Commands
     class SetPeerTableCFs < Command
       def help
-        <<-EOF
+        <<~EOF
   Set the replicable table-cf config for the specified peer.
 
   Note:

@@ -21,7 +21,7 @@ module Shell
   module Commands
     class ListRegions < Command
       def help
-        return <<EOF
+        <<~EOF
         List all regions for a particular table as an array and also filter them by server name (optional) as prefix
         and maximum locality (optional). By default, it will return all the regions for the table with any locality.
         The command displays server name, region name, start key, end key, size of the region in MB, number of requests
@@ -37,8 +37,7 @@ module Shell
         hbase> list_regions 'table_name', {}, ['SERVER_NAME', 'start_key']
         hbase> list_regions 'table_name', '', ['SERVER_NAME', 'start_key']
 
-EOF
-        nil
+        EOF
       end
 
       def command(table_name, options = nil, cols = nil)
