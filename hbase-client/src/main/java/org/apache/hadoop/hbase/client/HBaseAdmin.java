@@ -1151,12 +1151,21 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void flush(final TableName tableName) throws IOException {
+    flush(tableName, null);
+  }
+
+  @Override
+  public void flush(final TableName tableName, byte[] columnFamily) throws IOException {
     checkTableExists(tableName);
     if (isTableDisabled(tableName)) {
       LOG.info("Table is disabled: " + tableName.getNameAsString());
       return;
     }
-    execProcedure("flush-table-proc", tableName.getNameAsString(), new HashMap<>());
+    Map<String, String> props = new HashMap<>();
+    if (columnFamily != null) {
+      props.put(HConstants.FAMILY_KEY_STR, Bytes.toString(columnFamily));
+    }
+    execProcedure("flush-table-proc", tableName.getNameAsString(), props);
   }
 
   @Override
