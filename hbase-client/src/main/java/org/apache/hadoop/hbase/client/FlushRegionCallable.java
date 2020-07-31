@@ -82,7 +82,7 @@ public class FlushRegionCallable extends RegionAdminServiceCallable<FlushRegionR
     }
 
     FlushRegionRequest request =
-        RequestConverter.buildFlushRegionRequest(regionName, writeFlushWalMarker);
+        RequestConverter.buildFlushRegionRequest(regionName, null, writeFlushWalMarker);
     return stub.flushRegion(controller, request);
   }
 }
