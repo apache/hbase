@@ -317,7 +317,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     SyncFuture syncFuture = null;
     SafePointZigZagLatch zigzagLatch = null;
     long sequence = -1L;
-    if (this.ringBufferEventHandler != null) {
+    if (this.writer != null && this.ringBufferEventHandler != null) {
       // Get sequence first to avoid dead lock when ring buffer is full
       // Considering below sequence
       // 1. replaceWriter is called and zigzagLatch is initialized
