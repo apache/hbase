@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.procedure.flush;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -28,7 +29,9 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.procedure.flush.RegionServerFlushTableProcedureManager.FlushTableSubprocedurePool;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This flush region implementation uses the distributed procedure framework to flush
@@ -40,23 +43,27 @@ public class FlushTableSubprocedure extends Subprocedure {
   private static final Logger LOG = LoggerFactory.getLogger(FlushTableSubprocedure.class);
 
   private final String table;
+  private final String family;
   private final List<HRegion> regions;
   private final FlushTableSubprocedurePool taskManager;
 
   public FlushTableSubprocedure(ProcedureMember member,
       ForeignExceptionDispatcher errorListener, long wakeFrequency, long timeout,
-      List<HRegion> regions, String table,
+      List<HRegion> regions, String table, String family,
       FlushTableSubprocedurePool taskManager) {
     super(member, table, errorListener, wakeFrequency, timeout);
     this.table = table;
+    this.family = family;
     this.regions = regions;
     this.taskManager = taskManager;
   }
 
   private static class RegionFlushTask implements Callable<Void> {
     HRegion region;
-    RegionFlushTask(HRegion region) {
+    List<byte[]> families;
+    RegionFlushTask(HRegion region, List<byte[]> families) {
       this.region = region;
+      this.families = families;
     }
 
     @Override
@@ -65,7 +72,7 @@ public class FlushTableSubprocedure extends Subprocedure {
       region.startRegionOperation();
       try {
         LOG.debug("Flush region " + region.toString() + " started...");
-        region.flush(true);
+        region.flushcache(families, false, FlushLifeCycleTracker.DUMMY);
         // TODO: flush result is not checked?
       } finally {
         LOG.debug("Closing region operation on " + region);
@@ -88,11 +95,15 @@ public class FlushTableSubprocedure extends Subprocedure {
       throw new IllegalStateException("Attempting to flush "
           + table + " but we currently have outstanding tasks");
     }
-
+    List<byte[]> families = null;
+    if (family != null) {
+      LOG.debug("Flush regions with specified family:{}", family);
+      families = Arrays.asList(Bytes.toBytes(family));
+    }
     // Add all hfiles already existing in region.
     for (HRegion region : regions) {
       // submit one task per region for parallelize by region.
-      taskManager.submitTask(new RegionFlushTask(region));
+      taskManager.submitTask(new RegionFlushTask(region, families));
       monitor.rethrowException();
     }
 

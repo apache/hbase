@@ -51,6 +51,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
  * This manager class handles flushing of the regions for table on a {@link HRegionServer}.
@@ -129,9 +130,10 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
    * there is a possibility of a race where regions may be missed.
    *
    * @param table
+   * @param family
    * @return Subprocedure to submit to the ProcedureMemeber.
    */
-  public Subprocedure buildSubprocedure(String table) {
+  public Subprocedure buildSubprocedure(String table, String family) {
 
     // don't run the subprocedure if the parent is stop(ping)
     if (rss.isStopping() || rss.isStopped()) {
@@ -162,7 +164,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
     FlushTableSubprocedurePool taskManager =
         new FlushTableSubprocedurePool(rss.getServerName().toString(), conf, rss);
     return new FlushTableSubprocedure(member, exnDispatcher, wakeMillis,
-      timeoutMillis, involvedRegions, table, taskManager);
+      timeoutMillis, involvedRegions, table, family, taskManager);
   }
 
   /**
@@ -183,8 +185,17 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
 
     @Override
     public Subprocedure buildSubprocedure(String name, byte[] data) {
+      String family = null;
+      if (data.length > 0) {
+        try {
+          HBaseProtos.NameStringPair nsp = HBaseProtos.NameStringPair.parseFrom(data);
+          family = nsp.getValue();
+        } catch (Exception e) {
+          LOG.error("fail to get family by parsing from data", e);
+        }
+      }
       // The name of the procedure instance from the master is the table name.
-      return RegionServerFlushTableProcedureManager.this.buildSubprocedure(name);
+      return RegionServerFlushTableProcedureManager.this.buildSubprocedure(name, family);
     }
 
   }

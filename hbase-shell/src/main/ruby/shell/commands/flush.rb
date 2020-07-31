@@ -25,10 +25,11 @@ module Shell
 Flush all regions in passed table or pass a region row to
 flush an individual region or a region server name whose format
 is 'host,port,startcode', to flush all its regions.
-You can also flush a single column family within a region.
+You can also flush a single column family within a table or region.
 For example:
 
   hbase> flush 'TABLENAME'
+  hbase> flush 'TABLENAME','FAMILYNAME'
   hbase> flush 'REGIONNAME'
   hbase> flush 'REGIONNAME','FAMILYNAME'
   hbase> flush 'ENCODED_REGIONNAME'
