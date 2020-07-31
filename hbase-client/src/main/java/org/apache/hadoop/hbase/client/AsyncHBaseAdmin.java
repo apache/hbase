@@ -250,6 +250,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> flushRegion(byte[] regionName, byte[] columnFamily) {
+    return wrap(rawAdmin.flushRegion(regionName, columnFamily));
+  }
+
+  @Override
   public CompletableFuture<Void> flushRegionServer(ServerName sn) {
     return wrap(rawAdmin.flushRegionServer(sn));
   }
