@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -113,6 +115,9 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   final AtomicInteger ctPreCheckAndDeleteWithFilterAfterRowLock = new AtomicInteger(0);
   final AtomicInteger ctPostCheckAndDelete = new AtomicInteger(0);
   final AtomicInteger ctPostCheckAndDeleteWithFilter = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndMutate = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndMutateAfterRowLock = new AtomicInteger(0);
+  final AtomicInteger ctPostCheckAndMutate = new AtomicInteger(0);
   final AtomicInteger ctPreScannerNext = new AtomicInteger(0);
   final AtomicInteger ctPostScannerNext = new AtomicInteger(0);
   final AtomicInteger ctPostScannerFilterRow = new AtomicInteger(0);
@@ -584,6 +589,28 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
+  public CheckAndMutateResult preCheckAndMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    CheckAndMutate checkAndMutate, CheckAndMutateResult result) throws IOException {
+    ctPreCheckAndMutate.incrementAndGet();
+    return RegionObserver.super.preCheckAndMutate(c, checkAndMutate, result);
+  }
+
+  @Override
+  public CheckAndMutateResult preCheckAndMutateAfterRowLock(
+    ObserverContext<RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
+    CheckAndMutateResult result) throws IOException {
+    ctPreCheckAndMutateAfterRowLock.incrementAndGet();
+    return RegionObserver.super.preCheckAndMutateAfterRowLock(c, checkAndMutate, result);
+  }
+
+  @Override
+  public CheckAndMutateResult postCheckAndMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    CheckAndMutate checkAndMutate, CheckAndMutateResult result) throws IOException {
+    ctPostCheckAndMutate.incrementAndGet();
+    return RegionObserver.super.postCheckAndMutate(c, checkAndMutate, result);
+  }
+
+  @Override
   public Result preAppendAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
       Append append) throws IOException {
     ctPreAppendAfterRowLock.incrementAndGet();
@@ -824,6 +851,18 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
 
   public int getPostCheckAndDeleteWithFilter() {
     return ctPostCheckAndDeleteWithFilter.get();
+  }
+
+  public int getPreCheckAndMutate() {
+    return ctPreCheckAndMutate.get();
+  }
+
+  public int getPreCheckAndMutateAfterRowLock() {
+    return ctPreCheckAndMutateAfterRowLock.get();
+  }
+
+  public int getPostCheckAndMutate() {
+    return ctPostCheckAndMutate.get();
   }
 
   public boolean hadPreIncrement() {

@@ -87,6 +87,12 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   void updateCheckAndPut(long t);
 
   /**
+   * Update checkAndMutate histogram
+   * @param t time it took
+   */
+  void updateCheckAndMutate(long t);
+
+  /**
    * Update the Get time histogram .
    *
    * @param t time it took
@@ -393,6 +399,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String DELETE_KEY = "delete";
   String CHECK_AND_DELETE_KEY = "checkAndDelete";
   String CHECK_AND_PUT_KEY = "checkAndPut";
+  String CHECK_AND_MUTATE_KEY = "checkAndMutate";
   String DELETE_BATCH_KEY = "deleteBatch";
   String GET_SIZE_KEY = "getSize";
   String GET_KEY = "get";

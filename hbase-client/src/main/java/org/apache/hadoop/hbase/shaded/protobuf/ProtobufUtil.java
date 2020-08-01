@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
@@ -65,6 +66,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -84,6 +86,7 @@ import org.apache.hadoop.hbase.client.RegionLoadStats;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
@@ -3469,4 +3472,72 @@ public final class ProtobufUtil {
     return clearSlowLogResponses.getIsCleaned();
   }
 
+  public static CheckAndMutate toCheckAndMutate(ClientProtos.Condition condition,
+    MutationProto mutation, CellScanner cellScanner) throws IOException {
+    byte[] row = condition.getRow().toByteArray();
+    CheckAndMutate.Builder builder = CheckAndMutate.newBuilder(row);
+    Filter filter = condition.hasFilter() ? ProtobufUtil.toFilter(condition.getFilter()) : null;
+    if (filter != null) {
+      builder.ifMatches(filter);
+    } else {
+      builder.ifMatches(condition.getFamily().toByteArray(),
+        condition.getQualifier().toByteArray(),
+        CompareOperator.valueOf(condition.getCompareType().name()),
+        ProtobufUtil.toComparator(condition.getComparator()).getValue());
+    }
+    TimeRange timeRange = condition.hasTimeRange() ?
+      ProtobufUtil.toTimeRange(condition.getTimeRange()) : TimeRange.allTime();
+    builder.timeRange(timeRange);
+
+    try {
+      MutationType type = mutation.getMutateType();
+      switch (type) {
+        case PUT:
+          return builder.build(ProtobufUtil.toPut(mutation, cellScanner));
+        case DELETE:
+          return builder.build(ProtobufUtil.toDelete(mutation, cellScanner));
+        default:
+          throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
+      }
+    } catch (IllegalArgumentException e) {
+      throw new DoNotRetryIOException(e.getMessage());
+    }
+  }
+
+  public static CheckAndMutate toCheckAndMutate(ClientProtos.Condition condition,
+    List<Mutation> mutations) throws IOException {
+    assert mutations.size() > 0;
+    byte[] row = condition.getRow().toByteArray();
+    CheckAndMutate.Builder builder = CheckAndMutate.newBuilder(row);
+    Filter filter = condition.hasFilter() ? ProtobufUtil.toFilter(condition.getFilter()) : null;
+    if (filter != null) {
+      builder.ifMatches(filter);
+    } else {
+      builder.ifMatches(condition.getFamily().toByteArray(),
+        condition.getQualifier().toByteArray(),
+        CompareOperator.valueOf(condition.getCompareType().name()),
+        ProtobufUtil.toComparator(condition.getComparator()).getValue());
+    }
+    TimeRange timeRange = condition.hasTimeRange() ?
+      ProtobufUtil.toTimeRange(condition.getTimeRange()) : TimeRange.allTime();
+    builder.timeRange(timeRange);
+
+    try {
+      if (mutations.size() == 1) {
+        Mutation m = mutations.get(0);
+        if (m instanceof Put) {
+          return builder.build((Put) m);
+        } else if (m instanceof Delete) {
+          return builder.build((Delete) m);
+        } else {
+          throw new DoNotRetryIOException("Unsupported mutate type: " + mutations.get(0)
+            .getClass().getSimpleName().toUpperCase());
+        }
+      } else {
+        return builder.build(new RowMutations(mutations.get(0).getRow()).add(mutations));
+      }
+    } catch (IllegalArgumentException e) {
+      throw new DoNotRetryIOException(e.getMessage());
+    }
+  }
 }

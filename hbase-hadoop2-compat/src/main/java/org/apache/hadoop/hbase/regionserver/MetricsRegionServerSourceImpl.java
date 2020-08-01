@@ -42,6 +42,7 @@ public class MetricsRegionServerSourceImpl
   private final MetricHistogram deleteBatchHisto;
   private final MetricHistogram checkAndDeleteHisto;
   private final MetricHistogram checkAndPutHisto;
+  private final MetricHistogram checkAndMutateHisto;
   private final MetricHistogram getHisto;
   private final MetricHistogram incrementHisto;
   private final MetricHistogram appendHisto;
@@ -112,6 +113,7 @@ public class MetricsRegionServerSourceImpl
     deleteBatchHisto = getMetricsRegistry().newTimeHistogram(DELETE_BATCH_KEY);
     checkAndDeleteHisto = getMetricsRegistry().newTimeHistogram(CHECK_AND_DELETE_KEY);
     checkAndPutHisto = getMetricsRegistry().newTimeHistogram(CHECK_AND_PUT_KEY);
+    checkAndMutateHisto = getMetricsRegistry().newTimeHistogram(CHECK_AND_MUTATE_KEY);
 
     getHisto = getMetricsRegistry().newTimeHistogram(GET_KEY);
     slowGet = getMetricsRegistry().newCounter(SLOW_GET_KEY, SLOW_GET_DESC, 0L);
@@ -612,6 +614,11 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void updateCheckAndPut(long t) {
     checkAndPutHisto.add(t);
+  }
+
+  @Override
+  public void updateCheckAndMutate(long t) {
+    checkAndMutateHisto.add(t);
   }
 
   @Override

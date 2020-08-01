@@ -153,6 +153,10 @@ public class MetricsRegionServer {
     serverSource.updateCheckAndPut(t);
   }
 
+  public void updateCheckAndMutate(long t) {
+    serverSource.updateCheckAndMutate(t);
+  }
+
   public void updateGet(TableName tn, long t) {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updateGet(tn, t);
