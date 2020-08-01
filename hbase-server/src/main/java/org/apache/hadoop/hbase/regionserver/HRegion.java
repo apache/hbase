@@ -102,6 +102,8 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Delete;
@@ -127,6 +129,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
@@ -4278,43 +4281,103 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
+  @Deprecated
   public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
     ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException {
-    return doCheckAndRowMutate(row, family, qualifier, op, comparator, null, timeRange, null,
-      mutation);
+    CheckAndMutate checkAndMutate;
+    try {
+      CheckAndMutate.Builder builder = CheckAndMutate.newBuilder(row)
+        .ifMatches(family, qualifier, op, comparator.getValue()).timeRange(timeRange);
+      if (mutation instanceof Put) {
+        checkAndMutate = builder.build((Put) mutation);
+      } else if (mutation instanceof Delete) {
+        checkAndMutate = builder.build((Delete) mutation);
+      } else {
+        throw new DoNotRetryIOException("Unsupported mutate type: " + mutation.getClass()
+          .getSimpleName().toUpperCase());
+      }
+    } catch (IllegalArgumentException e) {
+      throw new DoNotRetryIOException(e.getMessage());
+    }
+    return checkAndMutate(checkAndMutate).isSuccess();
   }
 
   @Override
+  @Deprecated
   public boolean checkAndMutate(byte[] row, Filter filter, TimeRange timeRange, Mutation mutation)
     throws IOException {
-    return doCheckAndRowMutate(row, null, null, null, null, filter, timeRange, null, mutation);
+    CheckAndMutate checkAndMutate;
+    try {
+      CheckAndMutate.Builder builder = CheckAndMutate.newBuilder(row).ifMatches(filter)
+        .timeRange(timeRange);
+      if (mutation instanceof Put) {
+        checkAndMutate = builder.build((Put) mutation);
+      } else if (mutation instanceof Delete) {
+        checkAndMutate = builder.build((Delete) mutation);
+      } else {
+        throw new DoNotRetryIOException("Unsupported mutate type: " + mutation.getClass()
+          .getSimpleName().toUpperCase());
+      }
+    } catch (IllegalArgumentException e) {
+      throw new DoNotRetryIOException(e.getMessage());
+    }
+    return checkAndMutate(checkAndMutate).isSuccess();
   }
 
   @Override
+  @Deprecated
   public boolean checkAndRowMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
     ByteArrayComparable comparator, TimeRange timeRange, RowMutations rm) throws IOException {
-    return doCheckAndRowMutate(row, family, qualifier, op, comparator, null, timeRange, rm, null);
+    CheckAndMutate checkAndMutate;
+    try {
+      checkAndMutate = CheckAndMutate.newBuilder(row)
+        .ifMatches(family, qualifier, op, comparator.getValue()).timeRange(timeRange).build(rm);
+    } catch (IllegalArgumentException e) {
+      throw new DoNotRetryIOException(e.getMessage());
+    }
+    return checkAndMutate(checkAndMutate).isSuccess();
   }
 
   @Override
+  @Deprecated
   public boolean checkAndRowMutate(byte[] row, Filter filter, TimeRange timeRange, RowMutations rm)
     throws IOException {
-    return doCheckAndRowMutate(row, null, null, null, null, filter, timeRange, rm, null);
+    CheckAndMutate checkAndMutate;
+    try {
+      checkAndMutate = CheckAndMutate.newBuilder(row).ifMatches(filter).timeRange(timeRange)
+        .build(rm);
+    } catch (IllegalArgumentException e) {
+      throw new DoNotRetryIOException(e.getMessage());
+    }
+    return checkAndMutate(checkAndMutate).isSuccess();
   }
 
-  /**
-   * checkAndMutate and checkAndRowMutate are 90% the same. Rather than copy/paste, below has
-   * switches in the few places where there is deviation.
-   */
-  private boolean doCheckAndRowMutate(byte[] row, byte[] family, byte[] qualifier,
-    CompareOperator op, ByteArrayComparable comparator, Filter filter, TimeRange timeRange,
-    RowMutations rowMutations, Mutation mutation)
-  throws IOException {
-    // Could do the below checks but seems wacky with two callers only. Just comment out for now.
-    // One caller passes a Mutation, the other passes RowMutation. Presume all good so we don't
-    // need these commented out checks.
-    // if (rowMutations == null && mutation == null) throw new DoNotRetryIOException("Both null");
-    // if (rowMutations != null && mutation != null) throw new DoNotRetryIOException("Both set");
+  @Override
+  public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+    byte[] row = checkAndMutate.getRow();
+    Filter filter = null;
+    byte[] family = null;
+    byte[] qualifier = null;
+    CompareOperator op = null;
+    ByteArrayComparable comparator = null;
+    if (checkAndMutate.hasFilter()) {
+      filter = checkAndMutate.getFilter();
+    } else {
+      family = checkAndMutate.getFamily();
+      qualifier = checkAndMutate.getQualifier();
+      op = checkAndMutate.getCompareOp();
+      comparator = new BinaryComparator(checkAndMutate.getValue());
+    }
+    TimeRange timeRange = checkAndMutate.getTimeRange();
+
+    Mutation mutation = null;
+    RowMutations rowMutations = null;
+    if (checkAndMutate.getAction() instanceof Mutation) {
+      mutation = (Mutation) checkAndMutate.getAction();
+    } else {
+      rowMutations = (RowMutations) checkAndMutate.getAction();
+    }
+
     if (mutation != null) {
       checkMutationType(mutation);
       checkRow(mutation, row);
@@ -4341,32 +4404,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       checkRow(row, "doCheckAndRowMutate");
       RowLock rowLock = getRowLockInternal(get.getRow(), false, null);
       try {
-        if (mutation != null && this.getCoprocessorHost() != null) {
-          // Call coprocessor.
-          Boolean processed = null;
-          if (mutation instanceof Put) {
-            if (filter != null) {
-              processed = this.getCoprocessorHost()
-                .preCheckAndPutAfterRowLock(row, filter, (Put) mutation);
-            } else {
-              processed = this.getCoprocessorHost()
-                .preCheckAndPutAfterRowLock(row, family, qualifier, op, comparator,
-                  (Put) mutation);
-            }
-          } else if (mutation instanceof Delete) {
-            if (filter != null) {
-              processed = this.getCoprocessorHost()
-                .preCheckAndDeleteAfterRowLock(row, filter, (Delete) mutation);
-            } else {
-              processed = this.getCoprocessorHost()
-                .preCheckAndDeleteAfterRowLock(row, family, qualifier, op, comparator,
-                  (Delete) mutation);
-            }
-          }
-          if (processed != null) {
-            return processed;
+        if (this.getCoprocessorHost() != null) {
+          CheckAndMutateResult result =
+            getCoprocessorHost().preCheckAndMutateAfterRowLock(checkAndMutate);
+          if (result != null) {
+            return result;
           }
         }
+
         // NOTE: We used to wait here until mvcc caught up:  mvcc.await();
         // Supposition is that now all changes are done under row locks, then when we go to read,
         // we'll get the latest on this row.
@@ -4424,10 +4469,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             mutateRow(rowMutations);
           }
           this.checkAndMutateChecksPassed.increment();
-          return true;
+          return new CheckAndMutateResult(true, null);
         }
         this.checkAndMutateChecksFailed.increment();
-        return false;
+        return new CheckAndMutateResult(false, null);
       } finally {
         rowLock.release();
       }
