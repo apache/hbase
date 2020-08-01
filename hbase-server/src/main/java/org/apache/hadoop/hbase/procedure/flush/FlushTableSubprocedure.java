@@ -72,7 +72,11 @@ public class FlushTableSubprocedure extends Subprocedure {
       region.startRegionOperation();
       try {
         LOG.debug("Flush region " + region.toString() + " started...");
-        region.flushcache(families, false, FlushLifeCycleTracker.DUMMY);
+        if (families == null) {
+          region.flush(true);
+        } else {
+          region.flushcache(families, false, FlushLifeCycleTracker.DUMMY);
+        }
         // TODO: flush result is not checked?
       } finally {
         LOG.debug("Closing region operation on " + region);
@@ -97,7 +101,7 @@ public class FlushTableSubprocedure extends Subprocedure {
     }
     List<byte[]> families = null;
     if (family != null) {
-      LOG.debug("Flush regions with specified family:{}", family);
+      LOG.debug("About to flush family {} on all regions for table {}", family, table);
       families = Arrays.asList(Bytes.toBytes(family));
     }
     // Add all hfiles already existing in region.

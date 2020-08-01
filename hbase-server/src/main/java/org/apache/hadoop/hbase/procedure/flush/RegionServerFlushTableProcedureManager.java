@@ -186,6 +186,8 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
     @Override
     public Subprocedure buildSubprocedure(String name, byte[] data) {
       String family = null;
+      // Currently we do not put other data except family, so it is ok to
+      // judge by length that if family was specified
       if (data.length > 0) {
         try {
           HBaseProtos.NameStringPair nsp = HBaseProtos.NameStringPair.parseFrom(data);
