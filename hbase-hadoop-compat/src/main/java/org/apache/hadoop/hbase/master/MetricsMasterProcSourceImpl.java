@@ -69,8 +69,8 @@ public class MetricsMasterProcSourceImpl
         .addGauge(Interns.info(NUM_MASTER_WALS_NAME, NUM_MASTER_WALS_DESC),
           masterWrapper.getNumWALFiles());
       metricsRecordBuilder
-          .addGauge(Interns.info(NUM_SPLIT_PROCEDURE_REQUEST_NAME, NUM_SPLIT_PROCEDURE_REQUEST_DESC),
-              masterWrapper.getSplitProcedureRequestCount());
+        .addGauge(Interns.info(NUM_SPLIT_PROCEDURE_REQUEST_NAME, NUM_SPLIT_PROCEDURE_REQUEST_DESC),
+          masterWrapper.getSplitProcedureRequestCount());
       metricsRecordBuilder
         .addGauge(Interns.info(NUM_SPLIT_PROCEDURE_FAILED_NAME, NUM_SPLIT_PROCEDURE_FAILED_DESC),
           masterWrapper.getSplitProcedureFailureCount());

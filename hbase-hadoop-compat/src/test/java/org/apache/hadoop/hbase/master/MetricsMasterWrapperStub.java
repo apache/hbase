@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.hbase.master;
 
+import java.util.Map;
+
 import org.apache.hadoop.hbase.metrics.Histogram;
 import org.apache.hadoop.hbase.metrics.Snapshot;
 import org.apache.hadoop.hbase.util.PairOfSameType;
-
-import java.util.Map;
 
 public class MetricsMasterWrapperStub implements MetricsMasterWrapper {
 

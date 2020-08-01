@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hadoop.hbase.master.MetricsMasterProcSource.*;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
@@ -72,9 +71,9 @@ public class TestMetricsMasterProcSourceImpl {
 
   @Test
   public void testSplitProcedureMetrics() {
-    HELPER.assertGauge(NUM_SPLIT_PROCEDURE_REQUEST_NAME, 32, masterProcSource);
-    HELPER.assertGauge(NUM_SPLIT_PROCEDURE_FAILED_NAME, 8, masterProcSource);
-    HELPER.assertGauge(NUM_SPLIT_PROCEDURE_SUCCESS_NAME, 24, masterProcSource);
+    HELPER.assertGauge(MetricsMasterProcSource.NUM_SPLIT_PROCEDURE_REQUEST_NAME, 32, masterProcSource);
+    HELPER.assertGauge(MetricsMasterProcSource.NUM_SPLIT_PROCEDURE_FAILED_NAME, 8, masterProcSource);
+    HELPER.assertGauge(MetricsMasterProcSource.NUM_SPLIT_PROCEDURE_SUCCESS_NAME, 24, masterProcSource);
     HELPER.assertGauge("SplitProcedureTime_max", 2082, masterProcSource);
     HELPER.assertGauge("SplitProcedureTime_min", 2082, masterProcSource);
   }
