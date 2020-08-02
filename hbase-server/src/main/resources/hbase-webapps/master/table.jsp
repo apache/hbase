@@ -27,6 +27,8 @@
   import="java.util.List"
   import="java.util.LinkedHashMap"
   import="java.util.Map"
+  import="java.util.Set"
+  import="java.util.HashSet"
   import="java.util.Collections"
   import="java.util.Collection"
   import="org.apache.commons.lang.StringEscapeUtils"
@@ -45,6 +47,7 @@
   import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
+  import="org.apache.hadoop.hbase.io.ImmutableBytesWritable"
   import="org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest"
   import="org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState"
   import="org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos"
@@ -417,40 +420,45 @@ if ( fqtn != null ) {
 </table>
 <h2>Table Schema</h2>
 <table class="table table-striped">
+<%
+  Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
+  Set<ImmutableBytesWritable> familyKeySet = new HashSet<>();
+  for (HColumnDescriptor family: families) {
+    familyKeySet.addAll(family.getValues().keySet());
+  }
+%>
   <tr>
-      <th>Column Family Name</th>
-      <th></th>
-  </tr>
-  <%
-    Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
-    for (HColumnDescriptor family: families) {
-  %>
-  <tr>
-    <td><%= StringEscapeUtils.escapeHtml(family.getNameAsString()) %></td>
-    <td>
-    <table class="table table-striped">
-      <tr>
-       <th>Property</th>
-       <th>Value</th>       
-      </tr>
+    <th>Property \ Column Family Name</th>
     <%
-    Map<ImmutableBytesWritable, ImmutableBytesWritable> familyValues = family.getValues();
-    for (ImmutableBytesWritable familyKey: familyValues.keySet()) {
-      final ImmutableBytesWritable familyValue = familyValues.get(familyKey);
+    for (HColumnDescriptor family: families) {
+    %>
+    <th>
+      <%= StringEscapeUtils.escapeHtml(family.getNameAsString()) %>
+    </th>
+    <% } %>
+  </tr>
+    <%
+    for (ImmutableBytesWritable familyKey: familyKeySet) {
     %>
       <tr>
         <td>
           <%= StringEscapeUtils.escapeHtml(Bytes.toString(familyKey.get(), familyKey.getOffset(), familyKey.getLength())) %>
-		</td>
-        <td>
-          <%= StringEscapeUtils.escapeHtml(Bytes.toString(familyValue.get(), familyValue.getOffset(), familyValue.getLength())) %>
         </td>
+        <%
+        for (HColumnDescriptor family: families) {
+          String familyValueStr = "-";
+          Map<ImmutableBytesWritable, ImmutableBytesWritable> familyValues = family.getValues();
+          if(familyValues.containsKey(familyKey)){
+            final ImmutableBytesWritable familyValue = familyValues.get(familyKey);
+            familyValueStr = Bytes.toString(familyValue.get(), familyValue.getOffset(), familyValue.getLength());
+          }
+        %>
+        <td>
+          <%= StringEscapeUtils.escapeHtml(familyValueStr) %>
+        </td>
+        <% } %>
       </tr>
     <% } %>
-    </table>
-    </td>
-  </tr>
-  <% } %>
 </table>
 <%
   long totalReadReq = 0;
