@@ -38,17 +38,17 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
@@ -96,7 +96,7 @@ public class TestMajorCompaction {
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
-  private HTableDescriptor htd = null;
+  private TableDescriptor htd = null;
   private static final byte[] COLUMN_FAMILY = fam1;
   private final byte[] STARTROW = Bytes.toBytes(START_KEY);
   private static final byte[] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
@@ -126,8 +126,8 @@ public class TestMajorCompaction {
   public void setUp() throws Exception {
     this.htd = UTIL.createTableDescriptor(
       TableName.valueOf(name.getMethodName().replace('[', 'i').replace(']', 'i')),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
+      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     this.r = UTIL.createLocalHRegion(htd, null, null);
   }
 

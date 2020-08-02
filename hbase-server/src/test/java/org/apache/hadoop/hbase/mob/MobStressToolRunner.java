@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -30,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,7 +57,6 @@ import org.slf4j.LoggerFactory;
  This class is used by MobStressTool only. This is not a unit test
 
  */
-@SuppressWarnings("deprecation")
 public class MobStressToolRunner {
   private static final Logger LOG = LoggerFactory.getLogger(MobStressToolRunner.class);
 
@@ -71,8 +71,8 @@ public class MobStressToolRunner {
       .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
 
   private Configuration conf;
-  private TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
-  private ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor;
+  private TableDescriptor tableDescriptor;
+  private ColumnFamilyDescriptor familyDescriptor;
   private Admin admin;
   private long count = 500000;
   private double failureProb = 0.1;
@@ -82,7 +82,6 @@ public class MobStressToolRunner {
   private static volatile boolean run = true;
 
   public MobStressToolRunner() {
-
   }
 
   public void init(Configuration conf, long numRows) throws IOException {
@@ -90,15 +89,13 @@ public class MobStressToolRunner {
     this.count = numRows;
     initConf();
     printConf();
-    tableDescriptor = new TableDescriptorBuilder.ModifyableTableDescriptor(
-      TableName.valueOf("testMobCompactTable"));
     Connection conn = ConnectionFactory.createConnection(this.conf);
     this.admin = conn.getAdmin();
-    this.familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-    this.familyDescriptor.setMobEnabled(true);
-    this.familyDescriptor.setMobThreshold(mobLen);
-    this.familyDescriptor.setMaxVersions(1);
-    this.tableDescriptor.setColumnFamily(familyDescriptor);
+    this.familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
+      .setMobThreshold(mobLen).setMaxVersions(1).build();
+    this.tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("testMobCompactTable"))
+        .setColumnFamily(familyDescriptor).build();
     if (admin.tableExists(tableDescriptor.getTableName())) {
       admin.disableTable(tableDescriptor.getTableName());
       admin.deleteTable(tableDescriptor.getTableName());

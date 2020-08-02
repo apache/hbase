@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,9 +38,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -1309,29 +1308,31 @@ public class TestFromClientSide4 extends FromClientSideBase {
       // Test user metadata
       Admin admin = TEST_UTIL.getAdmin();
       // make a modifiable descriptor
-      HTableDescriptor desc = new HTableDescriptor(a.getDescriptor());
+      TableDescriptor desc = a.getDescriptor();
       // offline the table
       admin.disableTable(tableAname);
       // add a user attribute to HTD
-      desc.setValue(attrName, attrValue);
+      TableDescriptorBuilder builder =
+        TableDescriptorBuilder.newBuilder(desc).setValue(attrName, attrValue);
       // add a user attribute to HCD
-      for (HColumnDescriptor c : desc.getFamilies()) {
-        c.setValue(attrName, attrValue);
+      for (ColumnFamilyDescriptor c : desc.getColumnFamilies()) {
+        builder.modifyColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(c).setValue(attrName, attrValue).build());
       }
       // update metadata for all regions of this table
-      admin.modifyTable(desc);
+      admin.modifyTable(builder.build());
       // enable the table
       admin.enableTable(tableAname);
 
       // Test that attribute changes were applied
-      desc = new HTableDescriptor(a.getDescriptor());
+      desc = a.getDescriptor();
       assertEquals("wrong table descriptor returned", desc.getTableName(), tableAname);
       // check HTD attribute
       value = desc.getValue(attrName);
       assertNotNull("missing HTD attribute value", value);
       assertFalse("HTD attribute value is incorrect", Bytes.compareTo(value, attrValue) != 0);
       // check HCD attribute
-      for (HColumnDescriptor c : desc.getFamilies()) {
+      for (ColumnFamilyDescriptor c : desc.getColumnFamilies()) {
         value = c.getValue(attrName);
         assertNotNull("missing HCD attribute value", value);
         assertFalse("HCD attribute value is incorrect", Bytes.compareTo(value, attrValue) != 0);

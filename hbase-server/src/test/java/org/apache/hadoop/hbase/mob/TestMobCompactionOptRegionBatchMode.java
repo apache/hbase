@@ -46,7 +46,6 @@ import org.slf4j.LoggerFactory;
   * 11 Verifies that number of MOB files in a mob directory is 20.
   * 12 Runs scanner and checks all 3 * 1000 rows.
  */
-@SuppressWarnings("deprecation")
 @Category(LargeTests.class)
 public class TestMobCompactionOptRegionBatchMode extends TestMobCompactionWithDefaults {
   private static final Logger LOG =

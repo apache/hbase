@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -61,6 +63,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
 @Category({FlakeyTests.class, LargeTests.class})
@@ -95,10 +98,10 @@ public class TestPerTableCFReplication {
   private static final byte[] noRepfamName = Bytes.toBytes("norep");
   private static final byte[] val = Bytes.toBytes("myval");
 
-  private static TableDescriptorBuilder.ModifyableTableDescriptor table;
-  private static TableDescriptorBuilder.ModifyableTableDescriptor tabA;
-  private static TableDescriptorBuilder.ModifyableTableDescriptor tabB;
-  private static TableDescriptorBuilder.ModifyableTableDescriptor tabC;
+  private static TableDescriptor table;
+  private static TableDescriptor tabA;
+  private static TableDescriptor tabB;
+  private static TableDescriptor tabC;
 
   @Rule
   public TestName name = new TestName();
@@ -137,47 +140,37 @@ public class TestPerTableCFReplication {
     utility3.setZkCluster(miniZK);
     new ZKWatcher(conf3, "cluster3", null, true);
 
-    table = new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(famName);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.setColumnFamily(familyDescriptor);
-    familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(noRepfamName);
-    table.setColumnFamily(familyDescriptor);
+    table = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
 
-    tabA = new TableDescriptorBuilder.ModifyableTableDescriptor(tabAName);
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(f1Name);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabA.setColumnFamily(familyDescriptor);
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(f2Name);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabA.setColumnFamily(familyDescriptor);
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(f3Name);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabA.setColumnFamily(familyDescriptor);
+    tabA = TableDescriptorBuilder.newBuilder(tabAName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f1Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f2Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f3Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .build();
 
-    tabB = new TableDescriptorBuilder.ModifyableTableDescriptor(tabBName);
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(f1Name);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabB.setColumnFamily(familyDescriptor);
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(f2Name);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabB.setColumnFamily(familyDescriptor);
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(f3Name);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabB.setColumnFamily(familyDescriptor);
+    tabB = TableDescriptorBuilder.newBuilder(tabBName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f1Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f2Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f3Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .build();
 
-    tabC = new TableDescriptorBuilder.ModifyableTableDescriptor(tabCName);
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(f1Name);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabC.setColumnFamily(familyDescriptor);
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(f2Name);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabC.setColumnFamily(familyDescriptor);
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(f3Name);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tabC.setColumnFamily(familyDescriptor);
+    tabC = TableDescriptorBuilder.newBuilder(tabCName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f1Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f2Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(f3Name)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .build();
 
     utility1.startMiniCluster();
     utility2.startMiniCluster();

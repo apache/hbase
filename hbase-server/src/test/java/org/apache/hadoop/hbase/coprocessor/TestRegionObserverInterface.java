@@ -577,12 +577,9 @@ public class TestRegionObserverInterface {
       admin.deleteTable(compactTable);
     }
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(compactTable);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(A));
-    tableDescriptor.setCoprocessor(EvenOnlyCompactor.class.getName());
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(compactTable)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(A))
+      .setCoprocessor(EvenOnlyCompactor.class.getName()).build();
     admin.createTable(tableDescriptor);
 
     Table table = util.getConnection().getTable(compactTable);

@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -137,7 +136,7 @@ public class BaseTestHBaseFsck {
    * @param metaRow  if true remove region's row from META
    * @param hdfs if true remove region's dir in HDFS
    */
-  protected void deleteRegion(Configuration conf, final HTableDescriptor htd,
+  protected void deleteRegion(Configuration conf, final TableDescriptor htd,
       byte[] startKey, byte[] endKey, boolean unassign, boolean metaRow,
       boolean hdfs) throws IOException, InterruptedException {
     deleteRegion(conf, htd, startKey, endKey, unassign, metaRow, hdfs, false,
@@ -152,7 +151,7 @@ public class BaseTestHBaseFsck {
    * @param regionInfoOnly if true remove a region dir's .regioninfo file
    * @param replicaId replica id
    */
-  protected void deleteRegion(Configuration conf, final HTableDescriptor htd,
+  protected void deleteRegion(Configuration conf, final TableDescriptor htd,
       byte[] startKey, byte[] endKey, boolean unassign, boolean metaRow,
       boolean hdfs, boolean regionInfoOnly, int replicaId)
           throws IOException, InterruptedException {

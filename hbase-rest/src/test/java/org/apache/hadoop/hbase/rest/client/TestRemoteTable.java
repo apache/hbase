@@ -122,17 +122,11 @@ public class TestRemoteTable {
       admin.deleteTable(TABLE);
     }
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_1)
-        .setMaxVersions(3));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_2)
-        .setMaxVersions(3));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_3)
-        .setMaxVersions(3));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_1).setMaxVersions(3).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_2).setMaxVersions(3).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_3).setMaxVersions(3).build())
+      .build();
     admin.createTable(tableDescriptor);
     try (Table table = TEST_UTIL.getConnection().getTable(TABLE)) {
       Put put = new Put(ROW_1);

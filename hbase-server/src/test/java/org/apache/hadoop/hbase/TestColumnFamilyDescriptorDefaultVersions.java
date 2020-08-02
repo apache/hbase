@@ -42,15 +42,15 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Verify that the HColumnDescriptor version is set correctly by default, hbase-site.xml, and user
- * input
+ * Verify that the ColumnFamilyDescriptor version is set correctly by default, hbase-site.xml, and
+ * user input
  */
-@Category({MiscTests.class, MediumTests.class})
-public class TestHColumnDescriptorDefaultVersions {
+@Category({ MiscTests.class, MediumTests.class })
+public class TestColumnFamilyDescriptorDefaultVersions {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHColumnDescriptorDefaultVersions.class);
+    HBaseClassTestRule.forClass(TestColumnFamilyDescriptorDefaultVersions.class);
 
   @Rule
   public TestName name = new TestName();
@@ -60,7 +60,6 @@ public class TestHColumnDescriptorDefaultVersions {
 
   /**
    * Start up a mini cluster and put a small table of empty regions into it.
-   * @throws Exception
    */
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -82,11 +81,8 @@ public class TestHColumnDescriptorDefaultVersions {
   public void testCreateTableWithDefault() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -105,12 +101,10 @@ public class TestHColumnDescriptorDefaultVersions {
 
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
-        .setMaxVersions(TEST_UTIL.getConfiguration().getInt("hbase.column.max.version", 1));
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY)
+        .setMaxVersions(TEST_UTIL.getConfiguration().getInt("hbase.column.max.version", 1)).build())
+      .build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -129,12 +123,9 @@ public class TestHColumnDescriptorDefaultVersions {
 
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
-        .setMaxVersions(5);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(5).build())
+      .build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -148,41 +139,39 @@ public class TestHColumnDescriptorDefaultVersions {
 
   @Test
   public void testHColumnDescriptorCachedMaxVersions() throws Exception {
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-    familyDescriptor.setMaxVersions(5);
+    ColumnFamilyDescriptor familyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(5).build();
     // Verify the max version
     assertEquals(5, familyDescriptor.getMaxVersions());
 
     // modify the max version
-    familyDescriptor.setValue(Bytes.toBytes(HConstants.VERSIONS), Bytes.toBytes("8"));
+    familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(familyDescriptor)
+      .setValue(Bytes.toBytes(HConstants.VERSIONS), Bytes.toBytes("8")).build();
     // Verify the max version
     assertEquals(8, familyDescriptor.getMaxVersions());
   }
 
   private void verifyHColumnDescriptor(int expected, final TableName tableName,
-      final byte[]... families) throws IOException {
+    final byte[]... families) throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
 
     // Verify descriptor from master
     TableDescriptor htd = admin.getDescriptor(tableName);
     ColumnFamilyDescriptor[] hcds = htd.getColumnFamilies();
-    verifyHColumnDescriptor(expected, hcds, tableName, families);
+    verifyColumnFamilyDescriptor(expected, hcds, tableName, families);
 
     // Verify descriptor from HDFS
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), tableName);
     TableDescriptor td = FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
     hcds = td.getColumnFamilies();
-    verifyHColumnDescriptor(expected, hcds, tableName, families);
+    verifyColumnFamilyDescriptor(expected, hcds, tableName, families);
   }
 
-  private void verifyHColumnDescriptor(int expected, final ColumnFamilyDescriptor[] hcds,
-      final TableName tableName,
-      final byte[]... families) {
+  private void verifyColumnFamilyDescriptor(int expected, final ColumnFamilyDescriptor[] hcds,
+    final TableName tableName, final byte[]... families) {
     for (ColumnFamilyDescriptor hcd : hcds) {
       assertEquals(expected, hcd.getMaxVersions());
     }
   }
-
 }

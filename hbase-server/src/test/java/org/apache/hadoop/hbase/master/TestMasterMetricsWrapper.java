@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
@@ -125,12 +126,9 @@ public class TestMasterMetricsWrapper {
     TableName table = TableName.valueOf("testRegionNumber");
     try {
       RegionInfo hri;
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(table);
-
       byte[] FAMILY = Bytes.toBytes("FAMILY");
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY));
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(table)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
       TEST_UTIL.getAdmin().createTable(tableDescriptor, Bytes.toBytes("A"),
         Bytes.toBytes("Z"), 5);
 

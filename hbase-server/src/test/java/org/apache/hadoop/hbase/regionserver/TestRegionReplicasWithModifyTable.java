@@ -25,9 +25,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,10 +65,11 @@ public class TestRegionReplicasWithModifyTable {
   private static void enableReplicationByModification(final TableName tableName,
       boolean withReplica, int initialReplicaCount, int enableReplicaCount, int splitCount)
       throws IOException, InterruptedException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     if (withReplica) {
-      htd.setRegionReplication(initialReplicaCount);
+      builder.setRegionReplication(initialReplicaCount);
     }
+    TableDescriptor htd = builder.build();
     if (splitCount > 0) {
       byte[][] splits = getSplits(splitCount);
       table = HTU.createTable(htd, new byte[][] { f }, splits,

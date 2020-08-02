@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -221,18 +222,15 @@ public class TestSCVFWithMiniCluster {
   }
 
   private static void create(Admin admin, TableName tableName, byte[]... families)
-      throws IOException {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    throws IOException {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
-      familyDescriptor.setMaxVersions(1);
-      familyDescriptor.setCompressionType(Algorithm.GZ);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setMaxVersions(1).setCompressionType(Algorithm.GZ).build();
+      builder.setColumnFamily(familyDescriptor);
     }
     try {
-      admin.createTable(tableDescriptor);
+      admin.createTable(builder.build());
     } catch (TableExistsException tee) {
       /* Ignore */
     }

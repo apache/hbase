@@ -21,14 +21,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -49,6 +50,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
@@ -118,10 +120,10 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     snapshot = ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotList.get(0));
 
     // modify the table
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor columnFamilyDescriptor3 =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(CF3);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor columnFamilyDescriptor4 =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(CF4);
+    ColumnFamilyDescriptor columnFamilyDescriptor3 =
+      ColumnFamilyDescriptorBuilder.of(CF3);
+    ColumnFamilyDescriptor columnFamilyDescriptor4 =
+      ColumnFamilyDescriptorBuilder.of(CF4);
     admin.addColumnFamily(snapshotTableName, columnFamilyDescriptor3);
     admin.addColumnFamily(snapshotTableName, columnFamilyDescriptor4);
     admin.deleteColumnFamily(snapshotTableName, CF2);
@@ -130,27 +132,25 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     SnapshotTestingUtils.loadData(UTIL, snapshotTableName, rowCountCF3, CF3);
     SnapshotTestingUtils.loadData(UTIL, snapshotTableName, rowCountCF4, CF4);
     SnapshotTestingUtils.loadData(UTIL, snapshotTableName, rowCountCF1addition, CF1);
-    HTableDescriptor currentHTD = new HTableDescriptor(admin.getDescriptor(snapshotTableName));
-    assertTrue(currentHTD.hasFamily(CF1));
-    assertFalse(currentHTD.hasFamily(CF2));
-    assertTrue(currentHTD.hasFamily(CF3));
-    assertTrue(currentHTD.hasFamily(CF4));
-    assertNotEquals(currentHTD.getFamiliesKeys().size(), snapshotHTD.getColumnFamilies().length);
+    TableDescriptor currentHTD = admin.getDescriptor(snapshotTableName);
+    assertTrue(currentHTD.hasColumnFamily(CF1));
+    assertFalse(currentHTD.hasColumnFamily(CF2));
+    assertTrue(currentHTD.hasColumnFamily(CF3));
+    assertTrue(currentHTD.hasColumnFamily(CF4));
+    assertNotEquals(currentHTD.getColumnFamilyNames().size(), snapshotHTD.getColumnFamilies().length);
     SnapshotTestingUtils.verifyRowCount(
       UTIL, snapshotTableName, rowCountCF1 + rowCountCF3 + rowCountCF4 + rowCountCF1addition);
     admin.disableTable(snapshotTableName);
   }
 
-  private static TableDescriptor createHTableDescriptor(
-      final TableName tableName, final byte[] ... family) {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+  private static TableDescriptor createHTableDescriptor(final TableName tableName,
+    final byte[]... family) {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
     for (int i = 0; i < family.length; ++i) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family[i]));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family[i]));
     }
-    return tableDescriptor;
+    return builder.build();
   }
 
   @Test
@@ -222,13 +222,13 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     try {
       UTIL.getAdmin().enableTable(snapshotTableName);
 
-      HTableDescriptor currentHTD =
-        new HTableDescriptor(UTIL.getAdmin().getDescriptor(snapshotTableName));
-      assertTrue(currentHTD.hasFamily(CF1));
-      assertTrue(currentHTD.hasFamily(CF2));
-      assertFalse(currentHTD.hasFamily(CF3));
-      assertFalse(currentHTD.hasFamily(CF4));
-      assertEquals(currentHTD.getFamiliesKeys().size(), snapshotHTD.getColumnFamilies().length);
+      TableDescriptor currentHTD = UTIL.getAdmin().getDescriptor(snapshotTableName);
+      assertTrue(currentHTD.hasColumnFamily(CF1));
+      assertTrue(currentHTD.hasColumnFamily(CF2));
+      assertFalse(currentHTD.hasColumnFamily(CF3));
+      assertFalse(currentHTD.hasColumnFamily(CF4));
+      assertEquals(currentHTD.getColumnFamilyNames().size(),
+        snapshotHTD.getColumnFamilies().length);
       SnapshotTestingUtils.verifyRowCount(UTIL, snapshotTableName, rowCountCF1 + rowCountCF2);
     } finally {
       UTIL.getAdmin().disableTable(snapshotTableName);

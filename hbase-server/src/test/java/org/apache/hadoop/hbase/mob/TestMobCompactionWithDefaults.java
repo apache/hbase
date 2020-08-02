@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,7 +42,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -75,7 +73,6 @@ import org.slf4j.LoggerFactory;
   * 11 Verifies that number of MOB files in a mob directory is 20.
   * 12 Runs scanner and checks all 3 * 1000 rows.
  */
-@SuppressWarnings("deprecation")
 @Category(LargeTests.class)
 public class TestMobCompactionWithDefaults {
   private static final Logger LOG =
@@ -97,8 +94,8 @@ public class TestMobCompactionWithDefaults {
 
   @Rule
   public TestName test = new TestName();
-  protected TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
-  private ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor;
+  protected TableDescriptor tableDescriptor;
+  private ColumnFamilyDescriptor familyDescriptor;
   protected Admin admin;
   protected TableName table = null;
   protected int numRegions = 20;
@@ -130,14 +127,12 @@ public class TestMobCompactionWithDefaults {
 
   @Before
   public void setUp() throws Exception {
-    tableDescriptor = HTU.createModifyableTableDescriptor(test.getMethodName());
     admin = HTU.getAdmin();
     cleanerChore = new MobFileCleanerChore();
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-    familyDescriptor.setMobEnabled(true);
-    familyDescriptor.setMobThreshold(mobLen);
-    familyDescriptor.setMaxVersions(1);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
+      .setMobThreshold(mobLen).setMaxVersions(1).build();
+    tableDescriptor = HTU.createModifyableTableDescriptor(test.getMethodName())
+      .setColumnFamily(familyDescriptor).build();
     RegionSplitter.UniformSplit splitAlgo = new RegionSplitter.UniformSplit();
     byte[][] splitKeys = splitAlgo.split(numRegions);
     table = HTU.createTable(tableDescriptor, splitKeys).getName();
