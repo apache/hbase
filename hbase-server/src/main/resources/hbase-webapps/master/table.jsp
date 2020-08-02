@@ -25,12 +25,13 @@
   import="java.util.LinkedHashMap"
   import="java.util.List"
   import="java.util.Map"
+  import="java.util.Set"
+  import="java.util.HashSet"
   import="java.util.Optional"
   import="java.util.TreeMap"
   import="java.util.concurrent.TimeUnit"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.HColumnDescriptor"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionLocation"
   import="org.apache.hadoop.hbase.HTableDescriptor"
@@ -51,6 +52,7 @@
   import="org.apache.hadoop.hbase.client.RegionLocator"
   import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
   import="org.apache.hadoop.hbase.client.Table"
+  import="org.apache.hadoop.hbase.client.ColumnFamilyDescriptor"
   import="org.apache.hadoop.hbase.http.InfoServer"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.RegionState"
@@ -683,39 +685,43 @@
     </table>
     <h2>Table Schema</h2>
     <table class="table table-striped">
+    <%
+      ColumnFamilyDescriptor[] families = table.getDescriptor().getColumnFamilies();
+      Set<Bytes> familyKeySet = new HashSet<>();
+      for (ColumnFamilyDescriptor family: families) {
+        familyKeySet.addAll(family.getValues().keySet());
+      }
+    %>
       <tr>
-        <th>Column Family Name</th>
-        <th></th>
+        <th>Property \ Column Family Name</th>
+        <%
+        for (ColumnFamilyDescriptor family: families) {
+        %>
+        <th>
+          <%= StringEscapeUtils.escapeHtml4(family.getNameAsString()) %>
+        </th>
+        <% } %>
       </tr>
-      <%
-        Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
-        for (HColumnDescriptor family: families) {
-      %>
-      <tr>
-        <td><%= StringEscapeUtils.escapeHtml4(family.getNameAsString()) %></td>
-        <td>
-          <table class="table table-striped">
-            <tr>
-              <th>Property</th>
-              <th>Value</th>
-            </tr>
+        <%
+        for (Bytes familyKey: familyKeySet) {
+        %>
+          <tr>
+            <td>
+              <%= StringEscapeUtils.escapeHtml4(familyKey.toString()) %>
+            </td>
             <%
-              Map<Bytes, Bytes> familyValues = family.getValues();
-              for (Bytes familyKey: familyValues.keySet()) {
+            for (ColumnFamilyDescriptor family: families) {
+              String familyValue = "-";
+              if(family.getValues().containsKey(familyKey)){
+                familyValue = family.getValues().get(familyKey).toString();
+              }
             %>
-            <tr>
-              <td>
-                <%= StringEscapeUtils.escapeHtml4(familyKey.toString()) %>
-              </td>
-              <td>
-                <%= StringEscapeUtils.escapeHtml4(familyValues.get(familyKey).toString()) %>
-              </td>
-            </tr>
+            <td>
+              <%= StringEscapeUtils.escapeHtml4(familyValue) %>
+            </td>
             <% } %>
-          </table>
-        </td>
-      </tr>
-      <% } %>
+          </tr>
+        <% } %>
     </table>
     <%
       long totalReadReq = 0;
