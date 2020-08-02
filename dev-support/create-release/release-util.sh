@@ -236,6 +236,14 @@ function get_release_info {
 
   GIT_EMAIL="$ASF_USERNAME@apache.org"
   GPG_KEY="$(read_config "GPG_KEY" "$GIT_EMAIL")"
+  if ! GPG_KEY_ID=$("${GPG}" "${GPG_ARGS[@]}" --keyid-format 0xshort --list-public-key "${GPG_KEY}" | grep "\[S\]" | grep -o "0x[0-9A-F]*") ||
+      [ -z "${GPG_KEY_ID}" ] ; then
+    GPG_KEY_ID=$("${GPG}" "${GPG_ARGS[@]}" --keyid-format 0xshort --list-public-key "${GPG_KEY}" | head -n 1 | grep -o "0x[0-9A-F]*" || true)
+  fi
+  read -r -p "We think the key '${GPG_KEY}' corresponds to the key id '${GPG_KEY_ID}'. Is this correct [y/n]? " ANSWER
+  if [ "$ANSWER" = "y" ]; then
+    GPG_KEY="${GPG_KEY_ID}"
+  fi
   export API_DIFF_TAG ASF_USERNAME GIT_NAME GIT_EMAIL GPG_KEY
 
   cat <<EOF
