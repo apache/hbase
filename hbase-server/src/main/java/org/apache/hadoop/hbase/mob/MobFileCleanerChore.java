@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mob;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +80,7 @@ public class MobFileCleanerChore extends ScheduledChore {
           MobConstants.DEFAULT_MOB_CLEANER_PERIOD),
         TimeUnit.SECONDS);
     this.master = master;
-    cleaner = new ExpiredMobFileCleaner();
+    cleaner = new ExpiredMobFileCleaner(master.getConnection());
     cleaner.setConf(master.getConfiguration());
     checkObsoleteConfigurations();
   }
@@ -103,38 +104,38 @@ public class MobFileCleanerChore extends ScheduledChore {
 
   @VisibleForTesting
   public MobFileCleanerChore() {
+    // maybe remove? We can do little if the master is null, even in unit test.
     this.master = null;
   }
 
   @Override
   protected void chore() {
     TableDescriptors htds = master.getTableDescriptors();
-
-    Map<String, TableDescriptor> map = null;
+    Collection<TableDescriptor> mobTableDescriptors;
     try {
-      map = htds.getAll();
+      mobTableDescriptors = htds.getAll().values();
     } catch (IOException e) {
       LOG.error("MobFileCleanerChore failed", e);
       return;
     }
-    for (TableDescriptor htd : map.values()) {
-      for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
-        if (hcd.isMobEnabled() && hcd.getMinVersions() == 0) {
+    for (TableDescriptor t : mobTableDescriptors) {
+      for (ColumnFamilyDescriptor cf : t.getColumnFamilies()) {
+        if (cf.isMobEnabled() && cf.getMinVersions() == 0) {
           try {
-            cleaner.cleanExpiredMobFiles(htd.getTableName().getNameAsString(), hcd);
+            cleaner.cleanExpiredMobFiles(t.getTableName().getNameAsString(), cf);
           } catch (IOException e) {
             LOG.error("Failed to clean the expired mob files table={} family={}",
-              htd.getTableName().getNameAsString(), hcd.getNameAsString(), e);
+              t.getTableName().getNameAsString(), cf.getNameAsString(), e);
           }
         }
       }
       try {
         // Now clean obsolete files for a table
-        LOG.info("Cleaning obsolete MOB files from table={}", htd.getTableName());
-        cleanupObsoleteMobFiles(master.getConfiguration(), htd.getTableName());
-        LOG.info("Cleaning obsolete MOB files finished for table={}", htd.getTableName());
+        LOG.info("Cleaning obsolete MOB files from table={}", t.getTableName());
+        cleanupObsoleteMobFiles(master.getConfiguration(), t.getTableName());
+        LOG.info("Cleaning obsolete MOB files finished for table={}", t.getTableName());
       } catch (IOException e) {
-        LOG.error("Failed to clean the obsolete mob files for table={}",htd.getTableName(), e);
+        LOG.error("Failed to clean the obsolete mob files for table={}",t.getTableName(), e);
       }
     }
   }
@@ -146,7 +147,6 @@ public class MobFileCleanerChore extends ScheduledChore {
    * @throws IOException exception
    */
   public void cleanupObsoleteMobFiles(Configuration conf, TableName table) throws IOException {
-
     long minAgeToArchive =
         conf.getLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, MobConstants.DEFAULT_MIN_AGE_TO_ARCHIVE);
     // We check only those MOB files, which creation time is less
@@ -156,140 +156,143 @@ public class MobFileCleanerChore extends ScheduledChore {
     // So, if MOB file creation time is greater than this maxTimeToArchive,
     // this will be skipped and won't be archived.
     long maxCreationTimeToArchive = EnvironmentEdgeManager.currentTime() - minAgeToArchive;
-    try (final Connection conn = ConnectionFactory.createConnection(conf);
-        final Admin admin = conn.getAdmin();) {
-      TableDescriptor htd = admin.getDescriptor(table);
-      List<ColumnFamilyDescriptor> list = MobUtils.getMobColumnFamilies(htd);
-      if (list.size() == 0) {
-        LOG.info("Skipping non-MOB table [{}]", table);
-        return;
-      } else {
-        LOG.info("Only MOB files whose creation time older than {} will be archived, table={}",
-          maxCreationTimeToArchive, table);
-      }
+    TableDescriptor htd = null;
+    try (Admin admin = master.getConnection().getAdmin()) {
+      htd = admin.getDescriptor(table);
+    }
+    if (htd == null) {
+      return;
+    }
+    List<ColumnFamilyDescriptor> list = MobUtils.getMobColumnFamilies(htd);
+    if (list.size() == 0) {
+      LOG.info("Skipping non-MOB table [{}]", table);
+      return;
+    } else {
+      LOG.info("Only MOB files whose creation time older than {} will be archived, table={}",
+        maxCreationTimeToArchive, table);
+    }
 
-      Path rootDir = CommonFSUtils.getRootDir(conf);
-      Path tableDir = CommonFSUtils.getTableDir(rootDir, table);
-      // How safe is this call?
-      List<Path> regionDirs = FSUtils.getRegionDirs(FileSystem.get(conf), tableDir);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, table);
+    // How safe is this call?
+    List<Path> regionDirs = FSUtils.getRegionDirs(FileSystem.get(conf), tableDir);
 
-      Set<String> allActiveMobFileName = new HashSet<String>();
-      FileSystem fs = FileSystem.get(conf);
-      for (Path regionPath : regionDirs) {
-        for (ColumnFamilyDescriptor hcd : list) {
-          String family = hcd.getNameAsString();
-          Path storePath = new Path(regionPath, family);
-          boolean succeed = false;
-          Set<String> regionMobs = new HashSet<String>();
+    Set<String> allActiveMobFileName = new HashSet<String>();
+    FileSystem fs = FileSystem.get(conf);
+    for (Path regionPath : regionDirs) {
+      for (ColumnFamilyDescriptor hcd : list) {
+        String family = hcd.getNameAsString();
+        Path storePath = new Path(regionPath, family);
+        boolean succeed = false;
+        Set<String> regionMobs = new HashSet<String>();
 
-          while (!succeed) {
-            if (!fs.exists(storePath)) {
-              String errMsg =
-                  String.format("Directory %s was deleted during MOB file cleaner chore"
+        while (!succeed) {
+          if (!fs.exists(storePath)) {
+            String errMsg =
+              String.format("Directory %s was deleted during MOB file cleaner chore"
                   + " execution, aborting MOB file cleaner chore.",
                 storePath);
-              throw new IOException(errMsg);
+            throw new IOException(errMsg);
+          }
+          RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(storePath);
+          List<Path> storeFiles = new ArrayList<Path>();
+          // Load list of store files first
+          while (rit.hasNext()) {
+            Path p = rit.next().getPath();
+            if (fs.isFile(p)) {
+              storeFiles.add(p);
             }
-            RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(storePath);
-            List<Path> storeFiles = new ArrayList<Path>();
-            // Load list of store files first
-            while (rit.hasNext()) {
-              Path p = rit.next().getPath();
-              if (fs.isFile(p)) {
-                storeFiles.add(p);
-              }
-            }
-            LOG.info("Found {} store files in: {}", storeFiles.size(), storePath);
-            Path currentPath = null;
-            try {
-              for (Path pp : storeFiles) {
-                currentPath = pp;
-                LOG.trace("Store file: {}", pp);
-                HStoreFile sf =
-                    new HStoreFile(fs, pp, conf, CacheConfig.DISABLED, BloomType.NONE, true);
-                sf.initReader();
-                byte[] mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
-                byte[] bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
-                // close store file to avoid memory leaks
-                sf.closeStoreFile(true);
-                if (mobRefData == null) {
-                  if (bulkloadMarkerData == null) {
-                    LOG.warn("Found old store file with no MOB_FILE_REFS: {} - "
-                        + "can not proceed until all old files will be MOB-compacted.",
-                      pp);
-                    return;
-                  } else {
-                    LOG.debug("Skipping file without MOB references (bulkloaded file):{}", pp);
-                    continue;
-                  }
-                }
-                // file may or may not have MOB references, but was created by the distributed
-                // mob compaction code.
-                try {
-                  SetMultimap<TableName, String> mobs = MobUtils.deserializeMobFileRefs(mobRefData)
-                      .build();
-                  LOG.debug("Found {} mob references for store={}", mobs.size(), sf);
-                  LOG.trace("Specific mob references found for store={} : {}", sf, mobs);
-                  regionMobs.addAll(mobs.values());
-                } catch (RuntimeException exception) {
-                  throw new IOException("failure getting mob references for hfile " + sf,
-                      exception);
+          }
+          LOG.info("Found {} store files in: {}", storeFiles.size(), storePath);
+          Path currentPath = null;
+          try {
+            for (Path pp : storeFiles) {
+              currentPath = pp;
+              LOG.trace("Store file: {}", pp);
+              HStoreFile sf =
+                new HStoreFile(fs, pp, conf, CacheConfig.DISABLED, BloomType.NONE, true);
+              sf.initReader();
+              byte[] mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
+              byte[] bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
+              // close store file to avoid memory leaks
+              sf.closeStoreFile(true);
+              if (mobRefData == null) {
+                if (bulkloadMarkerData == null) {
+                  LOG.warn("Found old store file with no MOB_FILE_REFS: {} - "
+                      + "can not proceed until all old files will be MOB-compacted.",
+                    pp);
+                  return;
+                } else {
+                  LOG.debug("Skipping file without MOB references (bulkloaded file):{}", pp);
+                  continue;
                 }
               }
-            } catch (FileNotFoundException e) {
-              LOG.warn("Missing file:{} Starting MOB cleaning cycle from the beginning"+
-                " due to error", currentPath, e);
-              regionMobs.clear();
-              continue;
+              // file may or may not have MOB references, but was created by the distributed
+              // mob compaction code.
+              try {
+                SetMultimap<TableName, String> mobs = MobUtils.deserializeMobFileRefs(mobRefData)
+                  .build();
+                LOG.debug("Found {} mob references for store={}", mobs.size(), sf);
+                LOG.trace("Specific mob references found for store={} : {}", sf, mobs);
+                regionMobs.addAll(mobs.values());
+              } catch (RuntimeException exception) {
+                throw new IOException("failure getting mob references for hfile " + sf,
+                  exception);
+              }
             }
-            succeed = true;
+          } catch (FileNotFoundException e) {
+            LOG.warn("Missing file:{} Starting MOB cleaning cycle from the beginning"+
+              " due to error", currentPath, e);
+            regionMobs.clear();
+            continue;
           }
-
-          // Add MOB references for current region/family
-          allActiveMobFileName.addAll(regionMobs);
-        } // END column families
-      } // END regions
-      // Check if number of MOB files too big (over 1M)
-      if (allActiveMobFileName.size() > 1000000) {
-        LOG.warn("Found too many active MOB files: {}, table={}, "+
-          "this may result in high memory pressure.",
-          allActiveMobFileName.size(), table);
-      }
-      LOG.debug("Found: {} active mob refs for table={}",
-        allActiveMobFileName.size(), table);
-      allActiveMobFileName.stream().forEach(LOG::trace);
-
-      // Now scan MOB directories and find MOB files with no references to them
-      for (ColumnFamilyDescriptor hcd : list) {
-        List<Path> toArchive = new ArrayList<Path>();
-        String family = hcd.getNameAsString();
-        Path dir = MobUtils.getMobFamilyPath(conf, table, family);
-        RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(dir);
-        while (rit.hasNext()) {
-          LocatedFileStatus lfs = rit.next();
-          Path p = lfs.getPath();
-          if (!allActiveMobFileName.contains(p.getName())) {
-            // MOB is not in a list of active references, but it can be too
-            // fresh, skip it in this case
-            long creationTime = fs.getFileStatus(p).getModificationTime();
-            if (creationTime < maxCreationTimeToArchive) {
-              LOG.trace("Archiving MOB file {} creation time={}", p,
-                (fs.getFileStatus(p).getModificationTime()));
-              toArchive.add(p);
-            } else {
-              LOG.trace("Skipping fresh file: {}. Creation time={}", p,
-                fs.getFileStatus(p).getModificationTime());
-            }
-          } else {
-            LOG.trace("Keeping active MOB file: {}", p);
-          }
+          succeed = true;
         }
-        LOG.info(" MOB Cleaner found {} files to archive for table={} family={}",
-          toArchive.size(), table, family);
-        archiveMobFiles(conf, table, family.getBytes(), toArchive);
-        LOG.info(" MOB Cleaner archived {} files, table={} family={}",
-          toArchive.size(), table, family);
+
+        // Add MOB references for current region/family
+        allActiveMobFileName.addAll(regionMobs);
+      } // END column families
+    } // END regions
+    // Check if number of MOB files too big (over 1M)
+    if (allActiveMobFileName.size() > 1000000) {
+      LOG.warn("Found too many active MOB files: {}, table={}, "+
+          "this may result in high memory pressure.",
+        allActiveMobFileName.size(), table);
+    }
+    LOG.debug("Found: {} active mob refs for table={}",
+      allActiveMobFileName.size(), table);
+    allActiveMobFileName.stream().forEach(LOG::trace);
+
+    // Now scan MOB directories and find MOB files with no references to them
+    for (ColumnFamilyDescriptor hcd : list) {
+      List<Path> toArchive = new ArrayList<Path>();
+      String family = hcd.getNameAsString();
+      Path dir = MobUtils.getMobFamilyPath(conf, table, family);
+      RemoteIterator<LocatedFileStatus> rit = fs.listLocatedStatus(dir);
+      while (rit.hasNext()) {
+        LocatedFileStatus lfs = rit.next();
+        Path p = lfs.getPath();
+        if (!allActiveMobFileName.contains(p.getName())) {
+          // MOB is not in a list of active references, but it can be too
+          // fresh, skip it in this case
+          long creationTime = fs.getFileStatus(p).getModificationTime();
+          if (creationTime < maxCreationTimeToArchive) {
+            LOG.trace("Archiving MOB file {} creation time={}", p,
+              (fs.getFileStatus(p).getModificationTime()));
+            toArchive.add(p);
+          } else {
+            LOG.trace("Skipping fresh file: {}. Creation time={}", p,
+              fs.getFileStatus(p).getModificationTime());
+          }
+        } else {
+          LOG.trace("Keeping active MOB file: {}", p);
+        }
       }
+      LOG.info(" MOB Cleaner found {} files to archive for table={} family={}",
+        toArchive.size(), table, family);
+      archiveMobFiles(conf, table, family.getBytes(), toArchive);
+      LOG.info(" MOB Cleaner archived {} files, table={} family={}",
+        toArchive.size(), table, family);
     }
   }
 
