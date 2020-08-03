@@ -160,6 +160,9 @@ public class TestRegionMover2 {
       Assert.assertEquals(0, regionServer.getNumberOfOnlineRegions());
       LOG.debug("Successfully Unloaded, now Loading");
       HRegion hRegion = hRegions.get(1);
+      if (hRegion.getRegionInfo().getStartKey().length == 0) {
+        hRegion = hRegions.get(0);
+      }
       int startKey = 0;
       int endKey = Integer.MAX_VALUE;
       if (hRegion.getRegionInfo().getStartKey().length > 0) {
