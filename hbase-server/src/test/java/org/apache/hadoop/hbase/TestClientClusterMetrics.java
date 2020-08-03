@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.filter.FilterAllFilter;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.MetricsUserAggregateFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -251,6 +252,11 @@ public class TestClientClusterMetrics {
 
   @Test public void testUserMetrics() throws Exception {
     Configuration conf = UTIL.getConfiguration();
+    // If metrics for users is not enabled, this test doesn't  make sense.
+    if (!conf.getBoolean(MetricsUserAggregateFactory.METRIC_USER_ENABLED_CONF,
+        MetricsUserAggregateFactory.DEFAULT_METRIC_USER_ENABLED_CONF)) {
+      return;
+    }
     User userFoo = User.createUserForTesting(conf, "FOO_USER_METRIC_TEST", new String[0]);
     User userBar = User.createUserForTesting(conf, "BAR_USER_METRIC_TEST", new String[0]);
     User userTest = User.createUserForTesting(conf, "TEST_USER_METRIC_TEST", new String[0]);
