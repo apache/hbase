@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -44,13 +43,16 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.RegionMover.RegionMoverBuilder;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,13 +61,16 @@ import org.slf4j.LoggerFactory;
  * exclude functionality useful for rack decommissioning
  */
 @Category({MiscTests.class, LargeTests.class})
-public class TestRegionMover {
+public class TestRegionMover1 {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMover.class);
+    HBaseClassTestRule.forClass(TestRegionMover1.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionMover.class);
+  @Rule
+  public TestName name = new TestName();
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionMover1.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -82,17 +87,19 @@ public class TestRegionMover {
 
   @Before
   public void setUp() throws Exception {
-    // Create a pre-split table just to populate some regions
-    TableName tableName = TableName.valueOf("testRegionMover");
-    Admin admin = TEST_UTIL.getAdmin();
-    if (admin.tableExists(tableName)) {
-      TEST_UTIL.deleteTable(tableName);
-    }
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     String startKey = "a";
     String endKey = "z";
-    admin.createTable(tableDesc, startKey.getBytes(), endKey.getBytes(), 9);
+    TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    TEST_UTIL.getAdmin().deleteTable(tableName);
   }
 
   @Test
@@ -181,7 +188,7 @@ public class TestRegionMover {
   }
 
   @Test
-  public void testRegionServerPort() {
+  public void testRegionServerPort() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getHostname();

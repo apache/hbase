@@ -38,7 +38,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -52,16 +51,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -241,105 +238,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   /**
-   * Move Regions and make sure that they are up on the target server.If a region movement fails we
-   * exit as failure
-   */
-  private class MoveWithAck implements Callable<Boolean> {
-    private RegionInfo region;
-    private ServerName targetServer;
-    private List<RegionInfo> movedRegions;
-    private ServerName sourceServer;
-
-    public MoveWithAck(RegionInfo regionInfo, ServerName sourceServer,
-        ServerName targetServer, List<RegionInfo> movedRegions) {
-      this.region = regionInfo;
-      this.targetServer = targetServer;
-      this.movedRegions = movedRegions;
-      this.sourceServer = sourceServer;
-    }
-
-    @Override
-    public Boolean call() throws IOException, InterruptedException {
-      boolean moved = false;
-      int count = 0;
-      int retries = admin.getConfiguration().getInt(MOVE_RETRIES_MAX_KEY, DEFAULT_MOVE_RETRIES_MAX);
-      int maxWaitInSeconds =
-          admin.getConfiguration().getInt(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX);
-      long startTime = EnvironmentEdgeManager.currentTime();
-      boolean sameServer = true;
-      // Assert we can scan the region in its current location
-      isSuccessfulScan(region);
-      LOG.info("Moving region:" + region.getEncodedName() + " from " + sourceServer + " to "
-          + targetServer);
-      while (count < retries && sameServer) {
-        if (count > 0) {
-          LOG.info("Retry " + Integer.toString(count) + " of maximum " + Integer.toString(retries));
-        }
-        count = count + 1;
-        admin.move(region.getEncodedNameAsBytes(), targetServer);
-        long maxWait = startTime + (maxWaitInSeconds * 1000);
-        while (EnvironmentEdgeManager.currentTime() < maxWait) {
-          sameServer = isSameServer(region, sourceServer);
-          if (!sameServer) {
-            break;
-          }
-          Thread.sleep(100);
-        }
-      }
-      if (sameServer) {
-        LOG.error("Region: " + region.getRegionNameAsString() + " stuck on " + this.sourceServer
-            + ",newServer=" + this.targetServer);
-      } else {
-        isSuccessfulScan(region);
-        LOG.info("Moved Region "
-            + region.getRegionNameAsString()
-            + " cost:"
-            + String.format("%.3f",
-            (float) (EnvironmentEdgeManager.currentTime() - startTime) / 1000));
-        moved = true;
-        movedRegions.add(region);
-      }
-      return moved;
-    }
-  }
-
-  /**
-   * Move Regions without Acknowledging.Usefule in case of RS shutdown as we might want to shut the
-   * RS down anyways and not abort on a stuck region. Improves movement performance
-   */
-  private class MoveWithoutAck implements Callable<Boolean> {
-    private RegionInfo region;
-    private ServerName targetServer;
-    private List<RegionInfo> movedRegions;
-    private ServerName sourceServer;
-
-    public MoveWithoutAck(RegionInfo regionInfo, ServerName sourceServer,
-        ServerName targetServer, List<RegionInfo> movedRegions) {
-      this.region = regionInfo;
-      this.targetServer = targetServer;
-      this.movedRegions = movedRegions;
-      this.sourceServer = sourceServer;
-    }
-
-    @Override
-    public Boolean call() {
-      try {
-        LOG.info("Moving region:" + region.getEncodedName() + " from " + sourceServer + " to "
-            + targetServer);
-        admin.move(region.getEncodedNameAsBytes(), targetServer);
-        LOG.info("Moved " + region.getEncodedName() + " from " + sourceServer + " to "
-            + targetServer);
-      } catch (Exception e) {
-        LOG.error("Error Moving Region:" + region.getEncodedName(), e);
-      } finally {
-        // we add region to the moved regions list in No Ack Mode since this is best effort
-        movedRegions.add(region);
-      }
-      return true;
-    }
-  }
-
-  /**
    * Loads the specified {@link #hostname} with regions listed in the {@link #filename} RegionMover
    * Object has to be created using {@link #RegionMover(RegionMoverBuilder)}
    * @return true if loading succeeded, false otherwise
@@ -371,12 +269,12 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         "Moving " + regionsToMove.size() + " regions to " + server + " using " + this.maxthreads
             + " threads.Ack mode:" + this.ack);
 
-    ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
+    final ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
     List<Future<Boolean>> taskList = new ArrayList<>();
     int counter = 0;
     while (counter < regionsToMove.size()) {
       RegionInfo region = regionsToMove.get(counter);
-      ServerName currentServer = getServerNameForRegion(region);
+      ServerName currentServer = MoveWithAck.getServerNameForRegion(region, admin, conn);
       if (currentServer == null) {
         LOG.warn(
             "Could not get server for Region:" + region.getRegionNameAsString() + " moving on");
@@ -389,12 +287,12 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         continue;
       }
       if (ack) {
-        Future<Boolean> task =
-            moveRegionsPool.submit(new MoveWithAck(region, currentServer, server, movedRegions));
+        Future<Boolean> task = moveRegionsPool
+          .submit(new MoveWithAck(conn, region, currentServer, server, movedRegions));
         taskList.add(task);
       } else {
-        Future<Boolean> task =
-            moveRegionsPool.submit(new MoveWithoutAck(region, currentServer, server, movedRegions));
+        Future<Boolean> task = moveRegionsPool
+          .submit(new MoveWithoutAck(admin, region, currentServer, server, movedRegions));
         taskList.add(task);
       }
       counter++;
@@ -469,26 +367,23 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         LOG.info("No Regions to move....Quitting now");
         break;
       }
-      int counter = 0;
-      LOG.info("Moving " + regionsToMove.size() + " regions from " + this.hostname + " to "
-          + regionServers.size() + " servers using " + this.maxthreads + " threads .Ack Mode:"
-          + ack);
-      ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
+      LOG.info("Moving {} regions from {} to {} servers using {} threads .Ack Mode: {}",
+        regionsToMove.size(), this.hostname, regionServers.size(), this.maxthreads, ack);
+      final ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
       List<Future<Boolean>> taskList = new ArrayList<>();
       int serverIndex = 0;
-      while (counter < regionsToMove.size()) {
+      for (RegionInfo regionToMove : regionsToMove) {
         if (ack) {
           Future<Boolean> task = moveRegionsPool.submit(
-              new MoveWithAck(regionsToMove.get(counter), server, regionServers.get(serverIndex),
-                  movedRegions));
+            new MoveWithAck(conn, regionToMove, server, regionServers.get(serverIndex),
+              movedRegions));
           taskList.add(task);
         } else {
           Future<Boolean> task = moveRegionsPool.submit(
-              new MoveWithoutAck(regionsToMove.get(counter), server, regionServers.get(serverIndex),
-                  movedRegions));
+            new MoveWithoutAck(admin, regionToMove, server, regionServers.get(serverIndex),
+              movedRegions));
           taskList.add(task);
         }
-        counter++;
         serverIndex = (serverIndex + 1) % regionServers.size();
       }
       moveRegionsPool.shutdown();
@@ -544,14 +439,33 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         LOG.error("Interrupted while waiting for Thread to Complete " + e.getMessage(), e);
         throw e;
       } catch (ExecutionException e) {
-        LOG.error("Got Exception From Thread While moving region " + e.getMessage(), e);
-        throw e;
+        boolean ignoreFailure = ignoreRegionMoveFailure(e);
+        if (ignoreFailure) {
+          LOG.debug("Ignore region move failure, it might have been split/merged.", e);
+        } else {
+          LOG.error("Got Exception From Thread While moving region {}", e.getMessage(), e);
+          throw e;
+        }
       } catch (CancellationException e) {
         LOG.error("Thread for moving region cancelled. Timeout for cancellation:" + timeoutInSeconds
             + "secs", e);
         throw e;
       }
     }
+  }
+
+  private boolean ignoreRegionMoveFailure(ExecutionException e) {
+    boolean ignoreFailure = false;
+    if (e.getCause() instanceof UnknownRegionException) {
+      // region does not exist anymore
+      ignoreFailure = true;
+    } else if (e.getCause() instanceof DoNotRetryRegionException
+        && e.getCause().getMessage() != null && e.getCause().getMessage()
+        .contains(AssignmentManager.UNEXPECTED_STATE_REGION + "state=SPLIT,")) {
+      // region is recently split
+      ignoreFailure = true;
+    }
+    return ignoreFailure;
   }
 
   private ServerName getTargetServer() throws Exception {
@@ -691,54 +605,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       }
     }
     return null;
-  }
-
-  /**
-   * Tries to scan a row from passed region
-   */
-  private void isSuccessfulScan(RegionInfo region) throws IOException {
-    Scan scan = new Scan().withStartRow(region.getStartKey()).setRaw(true).setOneRowLimit()
-        .setMaxResultSize(1L).setCaching(1).setFilter(new FirstKeyOnlyFilter())
-        .setCacheBlocks(false);
-    try (Table table = conn.getTable(region.getTable());
-        ResultScanner scanner = table.getScanner(scan)) {
-      scanner.next();
-    } catch (IOException e) {
-      LOG.error("Could not scan region:" + region.getEncodedName(), e);
-      throw e;
-    }
-  }
-
-  /**
-   * Returns true if passed region is still on serverName when we look at hbase:meta.
-   * @return true if region is hosted on serverName otherwise false
-   */
-  private boolean isSameServer(RegionInfo region, ServerName serverName)
-      throws IOException {
-    ServerName serverForRegion = getServerNameForRegion(region);
-    if (serverForRegion != null && serverForRegion.equals(serverName)) {
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Get servername that is up in hbase:meta hosting the given region. this is hostname + port +
-   * startcode comma-delimited. Can return null
-   * @return regionServer hosting the given region
-   */
-  private ServerName getServerNameForRegion(RegionInfo region) throws IOException {
-    if (!admin.isTableEnabled(region.getTable())) {
-      return null;
-    }
-    HRegionLocation loc =
-      conn.getRegionLocator(region.getTable()).getRegionLocation(region.getStartKey(),
-        region.getReplicaId(),true);
-    if (loc != null) {
-      return loc.getServerName();
-    } else {
-      return null;
-    }
   }
 
   @Override
