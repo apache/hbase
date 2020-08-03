@@ -150,6 +150,7 @@ public class AssignmentManager {
   public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD =
       "hbase.metrics.rit.stuck.warning.threshold";
   private static final int DEFAULT_RIT_STUCK_WARNING_THRESHOLD = 60 * 1000;
+  public static final String UNEXPECTED_STATE_REGION = "Unexpected state for ";
 
   private final ProcedureEvent<?> metaAssignEvent = new ProcedureEvent<>("meta assign");
   private final ProcedureEvent<?> metaLoadEvent = new ProcedureEvent<>("meta load");
@@ -588,7 +589,7 @@ public class AssignmentManager {
       throw new HBaseIOException(regionNode + " is currently in transition");
     }
     if (!regionNode.isInState(expectedStates)) {
-      throw new DoNotRetryRegionException("Unexpected state for " + regionNode);
+      throw new DoNotRetryRegionException(UNEXPECTED_STATE_REGION + regionNode);
     }
     if (isTableDisabled(regionNode.getTable())) {
       throw new DoNotRetryIOException(regionNode.getTable() + " is disabled for " + regionNode);
