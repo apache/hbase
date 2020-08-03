@@ -85,11 +85,13 @@ public class TestDependentColumnFilter {
   public void setUp() throws Exception {
     testVals = makeTestVals();
 
-    TableDescriptor tableDescriptor = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(this.getClass().getSimpleName())).setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[0]).setMaxVersions(3).build()).setColumnFamily(
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(this.getClass().getSimpleName()))
+        .setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[0]).setMaxVersions(3).build())
+        .setColumnFamily(
           ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[1]).setMaxVersions(3).build())
-      .build();
+        .build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), tableDescriptor);

@@ -576,7 +576,7 @@ public class TableDescriptorBuilder {
     return new ModifyableTableDescriptor(desc);
   }
 
-  private static class ModifyableTableDescriptor
+  private static final class ModifyableTableDescriptor
     implements TableDescriptor, Comparable<ModifyableTableDescriptor> {
 
     private final TableName name;

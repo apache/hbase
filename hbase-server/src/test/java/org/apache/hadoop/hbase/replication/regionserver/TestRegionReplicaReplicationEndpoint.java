@@ -397,9 +397,10 @@ public class TestRegionReplicaReplicationEndpoint {
     // entries and further edits after the edits from dropped/disabled table can be replicated
     // without problems.
     int regionReplication = 3;
-    TableDescriptor htd = HTU.createModifyableTableDescriptor(
-      name.getMethodName() + "_drop_" + dropTable + "_disabledReplication_" + disableReplication)
-    .setRegionReplication(regionReplication).build();
+    TableDescriptor htd = HTU
+      .createModifyableTableDescriptor(
+        name.getMethodName() + "_drop_" + dropTable + "_disabledReplication_" + disableReplication)
+      .setRegionReplication(regionReplication).build();
     final TableName tableName = htd.getTableName();
     HTU.deleteTableIfAny(tableName);
 

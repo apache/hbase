@@ -458,13 +458,13 @@ public class TestReplicaWithCluster {
   public void testBulkLoad() throws IOException {
     // Create table then get the single region for our new table.
     LOG.debug("Creating test table");
-    TableDescriptorBuilder builder = HTU.createModifyableTableDescriptor(TableName.valueOf("testBulkLoad"),
-      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+    TableDescriptorBuilder builder = HTU.createModifyableTableDescriptor(
+      TableName.valueOf("testBulkLoad"), ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3,
+      HConstants.FOREVER, ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     builder.setRegionReplication(NB_SERVERS);
     builder.setCoprocessor(SlowMeCopro.class.getName());
     TableDescriptor hdt = builder.build();
-    Table table = HTU.createTable(hdt, new byte[][]{f}, null);
+    Table table = HTU.createTable(hdt, new byte[][] { f }, null);
 
     // create hfiles to load.
     LOG.debug("Creating test data");

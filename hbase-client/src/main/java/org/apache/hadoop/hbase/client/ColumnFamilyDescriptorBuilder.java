@@ -588,7 +588,7 @@ public class ColumnFamilyDescriptorBuilder {
    *
    * It is used as input when creating a table or adding a column.
    */
-  private static class ModifyableColumnFamilyDescriptor
+  private static final class ModifyableColumnFamilyDescriptor
       implements ColumnFamilyDescriptor, Comparable<ModifyableColumnFamilyDescriptor> {
 
     // Column family name

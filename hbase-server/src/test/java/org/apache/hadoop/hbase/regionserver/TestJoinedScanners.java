@@ -115,8 +115,8 @@ public class TestJoinedScanners {
     TableDescriptorBuilder builder =
       TableDescriptorBuilder.newBuilder(tableName);
     for (byte[] family : families) {
-      ColumnFamilyDescriptor familyDescriptor =
-         ColumnFamilyDescriptorBuilder.newBuilder(family).setDataBlockEncoding(blockEncoding).build();
+      ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setDataBlockEncoding(blockEncoding).build();
       builder.setColumnFamily(familyDescriptor);
     }
     TableDescriptor tableDescriptor = builder.build();

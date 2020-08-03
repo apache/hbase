@@ -137,9 +137,10 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     assertFalse(currentHTD.hasColumnFamily(CF2));
     assertTrue(currentHTD.hasColumnFamily(CF3));
     assertTrue(currentHTD.hasColumnFamily(CF4));
-    assertNotEquals(currentHTD.getColumnFamilyNames().size(), snapshotHTD.getColumnFamilies().length);
-    SnapshotTestingUtils.verifyRowCount(
-      UTIL, snapshotTableName, rowCountCF1 + rowCountCF3 + rowCountCF4 + rowCountCF1addition);
+    assertNotEquals(currentHTD.getColumnFamilyNames().size(),
+      snapshotHTD.getColumnFamilies().length);
+    SnapshotTestingUtils.verifyRowCount(UTIL, snapshotTableName,
+      rowCountCF1 + rowCountCF3 + rowCountCF4 + rowCountCF1addition);
     admin.disableTable(snapshotTableName);
   }
 

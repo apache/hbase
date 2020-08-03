@@ -706,8 +706,12 @@ public abstract class AbstractTestWALReplay {
     List<Cell> results = new ArrayList<>();
     while (true) {
       boolean existMore = scanner.next(results);
-      if (!results.isEmpty()) scannedCount++;
-      if (!existMore) break;
+      if (!results.isEmpty()) {
+        scannedCount++;
+      }
+      if (!existMore) {
+        break;
+      }
       results.clear();
     }
     return scannedCount;
