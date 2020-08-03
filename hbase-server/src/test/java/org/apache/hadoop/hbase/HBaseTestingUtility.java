@@ -191,7 +191,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     * HBaseTestingUtility*/
   private Path dataTestDirOnTestFS = null;
 
-  private final AtomicReference<Connection> connection = new AtomicReference<>();
+  private final AtomicReference<Connection> connectionRef = new AtomicReference<>();
 
   /**
    * System property key to get test directory value.
@@ -3017,17 +3017,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public Connection getConnection() throws IOException {
-    Connection connection = this.connection.get();
+    Connection connection = this.connectionRef.get();
     while (connection == null) {
       connection = ConnectionFactory.createConnection(this.conf);
-      if (! this.connection.compareAndSet(null, connection)) {
+      if (! this.connectionRef.compareAndSet(null, connection)) {
         try {
           connection.close();
         } catch (IOException exception) {
           LOG.debug("Ignored failure while closing connection on contended connection creation.",
               exception);
         }
-        connection = this.connection.get();
+        connection = this.connectionRef.get();
       }
     }
     return connection;
@@ -3077,7 +3077,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       }
       hbaseAdmin = null;
     }
-    Connection connection = this.connection.getAndSet(null);
+    Connection connection = this.connectionRef.getAndSet(null);
     if (connection != null) {
       try {
         connection.close();
