@@ -78,7 +78,7 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public void loadFiles(List<HStoreFile> storeFiles) {
+  public void loadFiles(List<HStoreFile> storeFiles) throws IOException {
     this.storefiles = ImmutableList.sortedCopyOf(storeFileComparator, storeFiles);
   }
 
@@ -111,7 +111,7 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public Collection<HStoreFile> clearCompactedFiles() {
+  public Collection<HStoreFile> clearCompactedFiles() throws IOException {
     List<HStoreFile> result = compactedfiles;
     compactedfiles = ImmutableList.of();
     return result;
@@ -129,7 +129,7 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public void addCompactionResults(Collection<HStoreFile> newCompactedfiles,
-      Collection<HStoreFile> results) {
+      Collection<HStoreFile> results) throws IOException {
     this.storefiles = ImmutableList.sortedCopyOf(storeFileComparator, Iterables
         .concat(Iterables.filter(storefiles, sf -> !newCompactedfiles.contains(sf)), results));
     // Mark the files as compactedAway once the storefiles and compactedfiles list is finalized
@@ -212,6 +212,22 @@ class DefaultStoreFileManager implements StoreFileManager {
   @Override
   public Comparator<HStoreFile> getStoreFileComparator() {
     return storeFileComparator;
+  }
+
+  void setStorefiles(ImmutableList<HStoreFile> storefiles) {
+    this.storefiles = storefiles;
+  }
+
+  void setCompactedfiles(ImmutableList<HStoreFile> compactedfiles) {
+    this.compactedfiles = compactedfiles;
+  }
+
+  HRegionFileSystem getRegionFs() {
+    return regionFs;
+  }
+
+  String getFamilyName() {
+    return familyName;
   }
 }
 

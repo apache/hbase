@@ -89,7 +89,7 @@ public interface StoreFileManager {
    * accessed single threaded.
    * @return The files compacted previously.
    */
-  Collection<HStoreFile> clearCompactedFiles();
+  Collection<HStoreFile> clearCompactedFiles() throws IOException;
 
   /**
    * Gets the snapshot of the store files currently in use. Can be used for things like metrics

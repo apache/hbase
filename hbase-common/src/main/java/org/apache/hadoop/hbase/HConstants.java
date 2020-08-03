@@ -1650,9 +1650,14 @@ public final class HConstants {
   /**
    * Configuration for storefile tracking feature
    */
-  public static final String STOREFILE_TABLE_INIT_TIMEOUT =
-      "hbase.master.storefiletable.init.timeout";
-  public static final long DEFAULT_STOREFILE_TABLE_INIT_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(5);
+  public static final String STOREFILE_TRACKING_PERSIST_ENABLED =
+    "hbase.storefile.tracking.persist.enabled";
+  public static final boolean DEFAULT_STOREFILE_TRACKING_PERSIST_ENABLED = false;
+
+  public static final String STOREFILE_TRACKING_INIT_TIMEOUT =
+    "hbase.storefile.tracking.init.timeout";
+  public static final long DEFAULT_STOREFILE_TRACKING_INIT_TIMEOUT =
+    TimeUnit.MINUTES.toMillis(5);
 
   private HConstants() {
     // Can't be instantiated with this ctor.

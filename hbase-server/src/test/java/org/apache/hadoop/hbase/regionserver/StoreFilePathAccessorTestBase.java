@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,9 +22,14 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -46,17 +51,16 @@ public abstract class StoreFilePathAccessorTestBase {
 
   protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected StoreFilePathAccessor storeFilePathAccessor;
-  protected static String REGION_NAME = "r1";
-  protected static String STORE_NAME = "cf1";
+  protected static String REGION_NAME = UUID.randomUUID().toString().replaceAll("-", "");
+  protected static String STORE_NAME = UUID.randomUUID().toString();
   protected static List<Path> EMPTY_PATH = Collections.emptyList();
   protected static List<Path> INCLUDE_EXAMPLE_PATH =
-      Lists.newArrayList(new Path("hdfs://foo/bar1"), new Path("hdfs://foo/bar2"));
-  protected static List<Path> EXCLUDE_EXAMPLE_PATH =
-      Lists.newArrayList(new Path("hdfs://foo/bar3"), new Path("hdfs://foo/bar4"));
+    Lists.newArrayList(new Path("hdfs://foo/bar1"), new Path("hdfs://foo/bar2"));
+  protected static final String VALID_TABLE_NAME_CHARS = "_.";
 
   protected String tableName;
 
-  protected abstract StoreFilePathAccessor getStoreFilePathAccessor();
+  protected abstract StoreFilePathAccessor getStoreFilePathAccessor() throws IOException;
 
   @BeforeClass
   public static void setUpCluster() throws Exception {
@@ -70,9 +74,12 @@ public abstract class StoreFilePathAccessorTestBase {
 
   @Before
   public void setUp() throws Exception {
+    tableName = name.getMethodName() + VALID_TABLE_NAME_CHARS + UUID.randomUUID();
+    init();
     storeFilePathAccessor = getStoreFilePathAccessor();
-    tableName = name.getMethodName();
   }
+
+  abstract void init() throws Exception;
 
   @After
   public void after() throws Exception {
@@ -90,7 +97,7 @@ public abstract class StoreFilePathAccessorTestBase {
   // this will be implemented by each implementation of StoreFilePathAccessor
   abstract void verifyInitialize(MasterServices masterServices) throws Exception;
 
-  abstract Class getNotInitializedException();
+  abstract void verifyNotInitializedException();
 
   @Test
   public void testIncludedStoreFilePaths() throws Exception {
@@ -111,37 +118,42 @@ public abstract class StoreFilePathAccessorTestBase {
   }
 
   @Test
-  public void testIncludedStoreFilePathsWhenNotInitialized() throws Exception {
-    expectedException.expect(getNotInitializedException());
+  public void testWriteIncludedStoreFilePathsWhenNotInitialized() throws Exception {
+    verifyNotInitializedException();
     writeAndVerifyIncludedFilePaths(INCLUDE_EXAMPLE_PATH);
   }
 
   @Test
   public void testGetIncludedStoreFilePathsWhenNotInitialized() throws Exception {
-    expectedException.expect(getNotInitializedException());
+    verifyNotInitializedException();
     storeFilePathAccessor.getIncludedStoreFilePaths(tableName, REGION_NAME, STORE_NAME);
   }
 
   @Test
-  public void testExcludedStoreFilePaths() throws Exception {
+  public void testWriteIncludedStoreFilePathsWithEmptyList() throws Exception {
+    expectedException.expect(IllegalArgumentException.class);
     testInitialize();
-    // verify empty list before write
-    verifyExcludedFilePaths(EMPTY_PATH);
-    writeAndVerifyExcludedFilePaths(EXCLUDE_EXAMPLE_PATH);
-    // write and verify empty list
-    writeAndVerifyExcludedFilePaths(EMPTY_PATH);
+    // verify empty before write
+    verifyIncludedFilePaths(EMPTY_PATH);
+    // write and verify empty list fails
+    writeAndVerifyIncludedFilePaths(EMPTY_PATH);
   }
 
   @Test
-  public void testExcludedStoreFilePathsWhenNotInitialized() throws Exception {
-    expectedException.expect(getNotInitializedException());
-    writeAndVerifyExcludedFilePaths(EXCLUDE_EXAMPLE_PATH);
+  public void testWriteIncludedStoreFilePaths() throws Exception {
+    testInitialize();
+    verifyIncludedFilePaths(EMPTY_PATH);
+    writeAndVerifyIncludedFilePaths(INCLUDE_EXAMPLE_PATH);
   }
 
   @Test
-  public void testGetExcludedStoreFilePathsWhenNotInitialized() throws Exception {
-    expectedException.expect(getNotInitializedException());
-    storeFilePathAccessor.getExcludedStoreFilePaths(tableName, REGION_NAME, STORE_NAME);
+  public void testWriteIncludedStoreFilePathsWithNull() throws Exception {
+    expectedException.expect(NullPointerException.class);
+    testInitialize();
+    // verify empty before write
+    verifyIncludedFilePaths(EMPTY_PATH);
+    // write and verify empty list fails
+    writeAndVerifyIncludedFilePaths(null);
   }
 
   @Test
@@ -150,29 +162,11 @@ public abstract class StoreFilePathAccessorTestBase {
 
     // verify empty list before write
     verifyIncludedFilePaths(EMPTY_PATH);
-    verifyExcludedFilePaths(EMPTY_PATH);
-    // write some date to both included and excluded data set
+    // write some date to included:files data set
     writeAndVerifyIncludedFilePaths(INCLUDE_EXAMPLE_PATH);
-    writeAndVerifyExcludedFilePaths(EXCLUDE_EXAMPLE_PATH);
     // delete and verify both data set are empty
     storeFilePathAccessor.deleteStoreFilePaths(tableName, REGION_NAME, STORE_NAME);
     verifyIncludedFilePaths(EMPTY_PATH);
-    verifyExcludedFilePaths(EMPTY_PATH);
-  }
-
-  @Test
-  public void testDeleteStoreFilePathsWithEmptyList() throws Exception {
-    testInitialize();
-
-    // verify empty list before write
-    verifyIncludedFilePaths(EMPTY_PATH);
-    verifyExcludedFilePaths(EMPTY_PATH);
-    // write empty list to excluded
-    writeAndVerifyExcludedFilePaths(EMPTY_PATH);
-    // delete and verify both data set are empty
-    storeFilePathAccessor.deleteStoreFilePaths(tableName, REGION_NAME, STORE_NAME);
-    verifyIncludedFilePaths(EMPTY_PATH);
-    verifyExcludedFilePaths(EMPTY_PATH);
   }
 
   @Test
@@ -181,38 +175,25 @@ public abstract class StoreFilePathAccessorTestBase {
 
     // verify empty list before write
     verifyIncludedFilePaths(EMPTY_PATH);
-    verifyExcludedFilePaths(EMPTY_PATH);
     // delete and verify both data set are empty
     storeFilePathAccessor.deleteStoreFilePaths(tableName, REGION_NAME, STORE_NAME);
     verifyIncludedFilePaths(EMPTY_PATH);
-    verifyExcludedFilePaths(EMPTY_PATH);
   }
 
   @Test
   public void testDeleteStoreFilePathsWhenNotInitialized() throws Exception {
-    expectedException.expect(getNotInitializedException());
-    writeAndVerifyExcludedFilePaths(EXCLUDE_EXAMPLE_PATH);
+    expectedException.expectCause(Matchers.isA(TableNotFoundException.class));
+    storeFilePathAccessor.deleteStoreFilePaths(tableName, REGION_NAME, STORE_NAME);
   }
 
   protected void writeAndVerifyIncludedFilePaths(List<Path> paths) throws IOException {
-    storeFilePathAccessor.writeIncludedStoreFilePaths(tableName, REGION_NAME, STORE_NAME,
-        paths);
+    storeFilePathAccessor.writeStoreFilePaths(tableName, REGION_NAME, STORE_NAME,
+      StoreFilePathUpdate.builder().withStorePaths(paths).build());
     verifyIncludedFilePaths(paths);
-  }
-
-  protected void writeAndVerifyExcludedFilePaths(List<Path> paths) throws IOException {
-    storeFilePathAccessor.writeExcludedStoreFilePaths(tableName, REGION_NAME, STORE_NAME,
-        paths);
-    verifyExcludedFilePaths(paths);
   }
 
   protected void verifyIncludedFilePaths(List<Path> expectPaths) throws IOException {
     assertEquals(expectPaths, storeFilePathAccessor
-        .getIncludedStoreFilePaths(tableName, REGION_NAME, STORE_NAME));
-  }
-
-  protected void verifyExcludedFilePaths(List<Path> expectPaths) throws IOException {
-    assertEquals(expectPaths, storeFilePathAccessor
-        .getExcludedStoreFilePaths(tableName, REGION_NAME, STORE_NAME));
+      .getIncludedStoreFilePaths(tableName, REGION_NAME, STORE_NAME));
   }
 }

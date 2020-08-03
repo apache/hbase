@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -28,14 +29,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Helper class to interact with the hbase storefile tracking data persisted as off-memory data
  * from the {@link StoreFileManager}
  *
- * There are two set of tracking storefiles, 'included' and 'excluded'.
+ * There is only a set of tracking storefiles, 'included'.
  *
  * e.g. list of storefile paths in 'included' should be the identical copy of the in-memory
- * {@link HStoreFile}'s Path(s) and can be reused during region opens and region
- * reassignment.
- *
- * list of storefile paths in 'excluded' is used for tracking compacted storefiles
- *
+ * {@link HStoreFile}'s Path(s) and can be reused during region opens and region reassignment.
  */
 @InterfaceAudience.Private
 public interface StoreFilePathAccessor {
@@ -58,44 +55,19 @@ public interface StoreFilePathAccessor {
    * @throws IOException if a remote or network exception occurs during Get
    */
   List<Path> getIncludedStoreFilePaths(final String tableName, final String regionName,
-      final String storeName) throws IOException;
+    final String storeName) throws IOException;
 
   /**
-   * GET storefile paths from the 'excluded' data set
+   * Writes the specified updates to the tracking
    * @param tableName name of the current table in String
    * @param regionName name of the current region in String
    * @param storeName name of the column family in String, to be combined with regionName to make
    *                 the row key.
-   * @return list of StoreFile paths that should be excluded from reads in this store,
-   *         returns an empty list if the target cell is empty or doesn't exist.
-   * @throws IOException if a remote or network exception occurs during Get
+   * @param storeFilePathUpdate Updates to be persisted
+   * @throws IOException if a remote or network exception occurs during write
    */
-  List<Path> getExcludedStoreFilePaths(final String tableName, final String regionName,
-      final String storeName) throws IOException;
-
-  /**
-   * Write storefile paths to the 'included' data set
-   * @param tableName name of the current table in String
-   * @param regionName name of the current region in String
-   * @param storeName name of the column family in String, to be combined with regionName to make
-   *                 the row key.
-   * @param storeFilePaths list of StoreFile paths representing files to be included in reads
-   * @throws IOException if a remote or network exception occurs during Put
-   */
-  void writeIncludedStoreFilePaths(final String tableName, final String regionName,
-      final String storeName, final List<Path> storeFilePaths) throws IOException;
-
-  /**
-   * Write storefile paths to the 'excluded' data set
-   * @param tableName name of the current table in String
-   * @param regionName name of the current region in String
-   * @param storeName name of the column family in String, to be combined with regionName to make
-   *                 the row key.
-   * @param storeFilePaths list of StoreFile paths representing files to be excluded from reads
-   * @throws IOException if a remote or network exception occurs during Put
-   */
-  void writeExcludedStoreFilePaths(final String tableName, final String regionName,
-      final String storeName, final List<Path> storeFilePaths) throws IOException;
+  void writeStoreFilePaths(final String tableName, final String regionName,
+    final String storeName, final StoreFilePathUpdate storeFilePathUpdate) throws IOException;
 
   /**
    * Delete storefile paths for a tracking column family, normally used when a region-store is
@@ -107,6 +79,23 @@ public interface StoreFilePathAccessor {
    * @throws IOException if a remote or network exception occurs during delete
    */
   void deleteStoreFilePaths(final String tableName, final String regionName, final String storeName)
-      throws IOException;
+    throws IOException;
+
+  /**
+   * Returns the families being tracked in the storefile tracking data for the given
+   * table/region
+   * @param tableName Table for which families being tracked needs to be figured out
+   * @param regionName Region for which families being tracked needs to be figured out
+   * @return Set of families being tracked
+   * @throws IOException
+   */
+  Set<String> getTrackedFamilies(String tableName, String regionName) throws IOException;
+
+  /**
+   * Deletes the files tracked for all column families in the given region
+   * @param regionName Region whose tracking data needs to be wiped
+   * @throws IOException
+   */
+  void deleteRegion(final String regionName) throws IOException;
 
 }

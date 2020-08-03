@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,159 +15,169 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.filter.RegexStringComparator;
+import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Helper class to interact with the hbase:storefile system table
  *
  * <pre>
  *   ROW-KEY              FAMILY:QUALIFIER      DATA VALUE
- *   table-region-store   included:files        List<Path> filesIncludedInRead
- *   table-region-store   excluded:files        List<Path> filesExcludedFromRead/compactedFiles
+ *   region-store-table   included:files        List<Path> filesIncludedInRead
  * </pre>
+ *
+ * The region encoded name is set as prefix for region split loading balance, and we use the
+ * target table name as suffix such that operator can identify the records per table.
+ *
+ * included:files is used for persisting storefiles of StoreFileManager in the cases of store
+ * opens and store closes. Meanwhile compactedFiles of StoreFileManager isn't being tracked
+ * off-memory, because the updated included:files contains compactedFiles and the leftover
+ * compactedFiles are either archived when a store closes or opens.
+ *
+ * TODO we will need a followup change to introduce in-memory temporarily file, such that further
+ *      we can introduce a non-tracking temporarily storefiles left from a flush or compaction when
+ *      a regionserver crashes without closing the store properly
  */
 
 @InterfaceAudience.Private
 public class HTableStoreFilePathAccessor extends AbstractStoreFilePathAccessor {
 
-  private static final Logger LOG = LoggerFactory.getLogger(HTableStoreFilePathAccessor.class);
-
   public static final byte[] STOREFILE_FAMILY_INCLUDED = Bytes.toBytes(STOREFILE_INCLUDED_STR);
-  public static final byte[] STOREFILE_FAMILY_EXCLUDED = Bytes.toBytes(STOREFILE_EXCLUDED_STR);
 
   private static final String DASH_SEPARATOR = "-";
   private static final String STOREFILE_QUALIFIER_STR = "filepaths";
   private static final byte[] STOREFILE_QUALIFIER = Bytes.toBytes(STOREFILE_QUALIFIER_STR);
-  private static final long SLEEP_DELTA_MS = TimeUnit.MILLISECONDS.toMillis(100);
   private static final int STOREFILE_TABLE_VERSIONS = 3;
-  private static final TableDescriptor STOREFILE_TABLE_DESC =
-      TableDescriptorBuilder.newBuilder(TableName.STOREFILE_TABLE_NAME)
-          .setColumnFamily(
-              ColumnFamilyDescriptorBuilder.newBuilder(STOREFILE_FAMILY_INCLUDED)
-                  .setMaxVersions(STOREFILE_TABLE_VERSIONS)
-                  .setInMemory(true)
-                  .build())
-          .setColumnFamily(
-              ColumnFamilyDescriptorBuilder.newBuilder(STOREFILE_FAMILY_EXCLUDED)
-                  .setMaxVersions(STOREFILE_TABLE_VERSIONS)
-                  .setInMemory(true)
-                  .build())
-          .build();
+
+  // TODO find a way for system table to support region split at table creation or remove this
+  //  comment when we merge into hbase:meta table
+  public static final TableDescriptor STOREFILE_TABLE_DESC =
+    TableDescriptorBuilder.newBuilder(TableName.STOREFILE_TABLE_NAME)
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(STOREFILE_FAMILY_INCLUDED)
+          .setMaxVersions(STOREFILE_TABLE_VERSIONS)
+          .setInMemory(true)
+          .build())
+      .setRegionSplitPolicyClassName(BusyRegionSplitPolicy.class.getName())
+      .build();
 
   private Connection connection;
 
-  public HTableStoreFilePathAccessor(Configuration conf) {
+  public HTableStoreFilePathAccessor(Configuration conf, Connection connection) {
     super(conf);
+    Preconditions.checkNotNull(connection, "connection cannot be null");
+    this.connection = connection;
   }
 
   @Override
   public void initialize(final MasterServices masterServices) throws IOException {
-    if (MetaTableAccessor.getTableState(getConnection(), TableName.STOREFILE_TABLE_NAME) != null) {
-      LOG.info("{} table not found. Creating...", TableName.STOREFILE_TABLE_NAME);
-      masterServices.createSystemTable(STOREFILE_TABLE_DESC);
-    }
-    waitForStoreFileTableOnline(masterServices);
+    StorefileTrackingUtils.init(masterServices);
   }
 
   @Override
-  public List<Path> getIncludedStoreFilePaths(final String tableName, final String regionName,
-      final String storeName) throws IOException {
-    validate(tableName, regionName, storeName);
-    return getStoreFilePaths(tableName, regionName, storeName, STOREFILE_FAMILY_INCLUDED);
-  }
-
-  @Override
-  public List<Path> getExcludedStoreFilePaths(final String tableName, final String regionName,
-      final String storeName) throws IOException {
-    validate(tableName, regionName, storeName);
-    return getStoreFilePaths(tableName, regionName, storeName, STOREFILE_FAMILY_EXCLUDED);
-  }
-
-  private List<Path> getStoreFilePaths(final String tableName, final String regionName,
-      final String storeName, final byte[] colFamily) throws IOException {
+  List<Path> getStoreFilePaths(final String tableName, final String regionName,
+    final String storeName, final String colFamily) throws IOException {
+    validate(tableName, regionName, storeName, colFamily);
+    byte[] colFamilyBytes = Bytes.toBytes(colFamily);
     Get get =
-        new Get(Bytes.toBytes(getKey(tableName, regionName, storeName)));
-    get.addColumn(colFamily, STOREFILE_QUALIFIER);
+      new Get(Bytes.toBytes(getKey(tableName, regionName, storeName)));
+    get.addColumn(colFamilyBytes, STOREFILE_QUALIFIER);
     Result result = doGet(get);
     if (result == null || result.isEmpty()) {
       return new ArrayList<>();
     }
-    return byteToStoreFileList(result.getValue(colFamily, STOREFILE_QUALIFIER));
+    return byteToStoreFileList(result.getValue(colFamilyBytes, STOREFILE_QUALIFIER));
   }
 
   @Override
-  public void writeIncludedStoreFilePaths(final String tableName, final String regionName,
-      final String storeName, final List<Path> storeFilePaths) throws IOException {
-    validate(tableName, regionName, storeName);
-    Preconditions.checkArgument(CollectionUtils.isNotEmpty(storeFilePaths),
-        "Storefile paths should not be empty when writing to " + STOREFILE_INCLUDED_STR
-            + " data set");
-    writeStoreFilePaths(tableName, regionName, storeName, STOREFILE_FAMILY_INCLUDED, storeFilePaths);
-  }
-
-  @Override
-  public void writeExcludedStoreFilePaths(final String tableName, final String regionName,
-      final String storeName, final List<Path> storeFilePaths) throws IOException {
-    validate(tableName, regionName, storeName);
-    writeStoreFilePaths(tableName, regionName, storeName, STOREFILE_FAMILY_EXCLUDED, storeFilePaths);
-  }
-
-  private void writeStoreFilePaths(final String tableName, final String regionName,
-      final String storeName, final byte[] colFamily, final List<Path> storeFilePaths)
-      throws IOException {
-    if (storeFilePaths == null) {
-      return;
-    }
-    // we allow write with empty list for a newly created region or store with no files.
-    Put put =
-        new Put(Bytes.toBytes(getKey(tableName, regionName, storeName)));
-    put.addColumn(colFamily, STOREFILE_QUALIFIER, storeFileListToByteArray(storeFilePaths));
+  public void writeStoreFilePaths(final String tableName, final String regionName,
+    final String storeName, StoreFilePathUpdate storeFilePathUpdate)
+    throws IOException {
+    validate(tableName, regionName, storeName, storeFilePathUpdate);
+    Put put = generatePutForStoreFilePaths(tableName, regionName, storeName, storeFilePathUpdate);
     doPut(put);
+  }
+
+
+  private Put generatePutForStoreFilePaths(final String tableName, final String regionName,
+    final String storeName, final StoreFilePathUpdate storeFilePathUpdate) {
+    Put put = new Put(Bytes.toBytes(getKey(tableName, regionName, storeName)));
+    if (storeFilePathUpdate.hasStoreFilesUpdate()) {
+      put.addColumn(Bytes.toBytes(STOREFILE_INCLUDED_STR), STOREFILE_QUALIFIER,
+        storeFileListToByteArray(storeFilePathUpdate.getStoreFiles()));
+    }
+    return put;
   }
 
   @Override
   public void deleteStoreFilePaths(final String tableName, final String regionName,
-      final String storeName) throws IOException {
+    final String storeName) throws IOException {
     validate(tableName, regionName, storeName);
     Delete delete = new Delete(
-        Bytes.toBytes(getKey(tableName, regionName, storeName)));
+      Bytes.toBytes(getKey(tableName, regionName, storeName)));
     delete.addColumns(STOREFILE_FAMILY_INCLUDED, STOREFILE_QUALIFIER);
-    delete.addColumns(STOREFILE_FAMILY_EXCLUDED, STOREFILE_QUALIFIER);
-    doDelete(delete);
+    doDelete(Lists.newArrayList(delete));
   }
 
   @Override
-  String getSeparator(){
+  public void deleteRegion(String regionName) throws IOException {
+    Scan scan = getScanWithFilter(regionName);
+    List<Delete> familiesToDelete = new ArrayList<>();
+    for (Result result : getResultScanner(scan)) {
+      String rowKey = Bytes.toString(result.getRow());
+      Delete delete = new Delete(Bytes.toBytes(rowKey));
+      familiesToDelete.add(delete);
+    }
+    doDelete(familiesToDelete);
+  }
+
+  @Override
+  public Set<String> getTrackedFamilies(String tableName, String regionName)
+    throws IOException {
+    // find all rows by regionName
+    Scan scan = getScanWithFilter(regionName);
+
+    Set<String> families = new HashSet<>();
+    for (Result result : getResultScanner(scan)) {
+      String rowKey = Bytes.toString(result.getRow());
+      String family =
+        StorefileTrackingUtils.getFamilyFromKey(rowKey, tableName, regionName, getSeparator());
+      families.add(family);
+    }
+    return families;
+  }
+
+  @Override
+  String getSeparator() {
     return DASH_SEPARATOR;
   }
 
@@ -183,50 +193,35 @@ public class HTableStoreFilePathAccessor extends AbstractStoreFilePathAccessor {
     }
   }
 
-  private void doDelete(final Delete delete) throws IOException {
+  private void doDelete(final List<Delete> delete) throws IOException {
     try (Table table = getConnection().getTable(TableName.STOREFILE_TABLE_NAME)) {
       table.delete(delete);
     }
   }
 
+  private ResultScanner getResultScanner(final Scan scan) throws IOException {
+    try (Table table = getConnection().getTable(TableName.STOREFILE_TABLE_NAME)) {
+      return table.getScanner(scan);
+    }
+  }
+
   private Connection getConnection() throws IOException {
-    // singleton support and don't expect multi-threads have access to the same connection
     if (connection == null) {
-      connection = ConnectionFactory.createConnection(conf);
+      throw new IOException("Connection should be provided by region server "
+        + "and should not be null after initialized.");
     }
     return connection;
   }
 
-  @Override
-  public void close() throws IOException {
-    if (connection != null) {
-      connection.close();
-    }
+
+  private Scan getScanWithFilter(String regionName) {
+    Scan scan = new Scan();
+    String regexPattern = "^" + regionName + getSeparator();
+    RowFilter rowFilter = new RowFilter(CompareOperator.EQUAL,
+      new RegexStringComparator(regexPattern));
+    scan.setFilter(rowFilter);
+    scan.addColumn(STOREFILE_FAMILY_INCLUDED, STOREFILE_QUALIFIER);
+    return scan;
   }
 
-  private void waitForStoreFileTableOnline(MasterServices masterServices) throws IOException {
-    try {
-      long startTime = EnvironmentEdgeManager.currentTime();
-      long timeout = conf.getLong(HConstants.STOREFILE_TABLE_INIT_TIMEOUT,
-          HConstants.DEFAULT_STOREFILE_TABLE_INIT_TIMEOUT_MS);
-      while (!isStoreFileTableAssignedAndEnabled(masterServices)) {
-        if (EnvironmentEdgeManager.currentTime() - startTime + SLEEP_DELTA_MS > timeout) {
-          throw new IOException("Time out " + timeout + " ms waiting for hbase:storefile table to "
-              + "be assigned and enabled: " + masterServices.getTableStateManager()
-              .getTableState(TableName.STOREFILE_TABLE_NAME));
-        }
-        Thread.sleep(SLEEP_DELTA_MS);
-      }
-    } catch (InterruptedException e) {
-      throw new IOException("Interrupted when wait for " + TableName.STOREFILE_TABLE_NAME
-          + " to be assigned and enabled", e);
-    }
-  }
-
-  boolean isStoreFileTableAssignedAndEnabled(MasterServices masterServices)
-      throws IOException {
-    return masterServices.getAssignmentManager().getRegionStates()
-        .hasTableRegionStates(TableName.STOREFILE_TABLE_NAME) && masterServices
-        .getTableStateManager().getTableState(TableName.STOREFILE_TABLE_NAME).isEnabled();
-  }
 }

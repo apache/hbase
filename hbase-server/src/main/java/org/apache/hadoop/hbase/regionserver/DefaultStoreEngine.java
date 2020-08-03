@@ -68,9 +68,13 @@ public class DefaultStoreEngine extends StoreEngine<
     createCompactor(conf, store);
     createCompactionPolicy(conf, store);
     createStoreFlusher(conf, store);
-    storeFileManager =
-        new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
-            compactionPolicy.getConf(), store.getRegionFileSystem(), store.getColumnFamilyName());
+    createStoreFileManager(conf, store, kvComparator);
+  }
+
+  protected void createStoreFileManager(Configuration conf, HStore store,
+    CellComparator kvComparator) {
+    storeFileManager = new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
+      compactionPolicy.getConf(), store.getRegionFileSystem(), store.getColumnFamilyName());
   }
 
   protected void createCompactor(Configuration conf, HStore store) throws IOException {

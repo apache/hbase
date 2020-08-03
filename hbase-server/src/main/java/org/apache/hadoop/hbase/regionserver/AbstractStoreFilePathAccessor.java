@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
@@ -31,10 +31,9 @@ import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
-public abstract class AbstractStoreFilePathAccessor implements StoreFilePathAccessor, Closeable {
+public abstract class AbstractStoreFilePathAccessor implements StoreFilePathAccessor {
 
   public static final String STOREFILE_INCLUDED_STR = "included";
-  public static final String STOREFILE_EXCLUDED_STR = "excluded";
 
   protected static final String LIST_SEPARATOR = ";";
   protected final Configuration conf;
@@ -44,6 +43,20 @@ public abstract class AbstractStoreFilePathAccessor implements StoreFilePathAcce
   }
 
   abstract String getSeparator();
+
+  abstract List<Path> getStoreFilePaths(final String tableName, final String regionName,
+    final String storeName, final String columnName) throws IOException;
+
+  @Override
+  public abstract void writeStoreFilePaths(final String tableName, final String regionName,
+    final String storeName, StoreFilePathUpdate storeFilePathUpdate)
+    throws IOException;
+
+  @Override
+  public List<Path> getIncludedStoreFilePaths(final String tableName, final String regionName,
+    final String storeName) throws IOException {
+    return getStoreFilePaths(tableName, regionName, storeName, STOREFILE_INCLUDED_STR);
+  }
 
   protected static byte[] storeFileListToByteArray(List<Path> storeFilePaths) {
     return Bytes.toBytes(Joiner.on(LIST_SEPARATOR).join(storeFilePaths));
@@ -61,17 +74,39 @@ public abstract class AbstractStoreFilePathAccessor implements StoreFilePathAcce
     return paths;
   }
 
-  protected String getKey(String tableName, String regionName, String storeName) {
-    return Joiner.on(getSeparator()).join(tableName, regionName, storeName);
+  /**
+   * Get a rowkey in the order of regionName-storeName-tablename
+   *
+   * @param tableName
+   * @param regionName
+   * @param storeName
+   * @return a joint rowkey in the form of regionName-storeName-tablename
+   */
+  protected String getKey(final String tableName, final String regionName, final String storeName) {
+    return Joiner.on(getSeparator()).join(regionName, storeName, tableName);
   }
 
-  protected static void validate(final String tableName, final String regionName,
-      final String storeName) {
+  protected void validate(final String tableName, final String regionName,
+    final String storeName, final String columnName) {
+    validate(tableName, regionName, storeName);
+    Preconditions.checkArgument(StringUtils.isNotBlank(columnName),
+      "column name cannot be null or empty");
+  }
+
+  protected void validate(final String tableName, final String regionName,
+    final String storeName) {
     Preconditions
-        .checkArgument(StringUtils.isNotBlank(tableName), "table name cannot be null or empty");
+      .checkArgument(StringUtils.isNotBlank(tableName), "table name cannot be null or empty");
     Preconditions
-        .checkArgument(StringUtils.isNotBlank(regionName), "region name cannot be null or empty");
+      .checkArgument(StringUtils.isNotBlank(regionName), "region name cannot be null or empty");
     Preconditions
-        .checkArgument(StringUtils.isNotBlank(storeName), "store name cannot be null or empty");
+      .checkArgument(StringUtils.isNotBlank(storeName), "store name cannot be null or empty");
+  }
+
+  protected void validate(final String tableName, final String regionName, final String storeName,
+    final StoreFilePathUpdate storeFilePathUpdate) {
+    validate(tableName, regionName, storeName);
+    Preconditions.checkArgument(storeFilePathUpdate.hasStoreFilesUpdate(),
+      "Must have storefile or compacted files to be updated");
   }
 }
