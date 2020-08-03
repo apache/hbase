@@ -222,7 +222,7 @@ public class HFileOutputFormat2
       private final Map<byte[], WriterLength> writers = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       private final Map<byte[], byte[]> previousRows = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       private final long now = EnvironmentEdgeManager.currentTime();
-      private byte[] tableNameBytes = Bytes.toBytes(writeTableNames);
+      private byte[] tableNameBytes = writeMultipleTables ? null : Bytes.toBytes(writeTableNames);
 
       @Override
       public void write(ImmutableBytesWritable row, V cell) throws IOException {
@@ -276,7 +276,8 @@ public class HFileOutputFormat2
             String tableName = Bytes.toString(tableNameBytes);
             if (tableName != null) {
               try (Connection connection = ConnectionFactory.createConnection(conf);
-                RegionLocator locator = connection.getRegionLocator(TableName.valueOf(tableName))) {
+                  RegionLocator locator =
+                      connection.getRegionLocator(TableName.valueOf(tableName))) {
                 loc = locator.getRegionLocation(rowKey);
               } catch (Throwable e) {
                 LOG.warn("Something wrong locating rowkey {} in {}", Bytes.toString(rowKey),
@@ -294,7 +295,7 @@ public class HFileOutputFormat2
                 LOG.trace("Failed resolve address {}, use default writer", loc.getHostnamePort());
               } else {
                 LOG.debug("Use favored nodes writer: {}", initialIsa.getHostString());
-                favoredNodes = new InetSocketAddress[] { initialIsa};
+                favoredNodes = new InetSocketAddress[] { initialIsa };
               }
             }
           }
