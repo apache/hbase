@@ -20,8 +20,11 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.OptionalLong;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -48,12 +52,6 @@ import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.regionserver.RecoveredReplicationSource;
-import org.apache.hadoop.hbase.replication.regionserver.RecoveredReplicationSourceShipper;
-import org.apache.hadoop.hbase.replication.regionserver.Replication;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -168,11 +166,11 @@ public class TestReplicationSource {
       }
     };
     replicationEndpoint.start();
-    ReplicationPeer mockPeer = Mockito.mock(ReplicationPeer.class);
+    ReplicationPeer mockPeer = mock(ReplicationPeer.class);
     Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
     Configuration testConf = HBaseConfiguration.create();
     testConf.setInt("replication.source.maxretriesmultiplier", 1);
-    ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
+    ReplicationSourceManager manager = mock(ReplicationSourceManager.class);
     Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
     source.init(testConf, null, manager, null, mockPeer, null, "testPeer", null,
       p -> OptionalLong.empty(), null);
@@ -192,6 +190,41 @@ public class TestReplicationSource {
         return future.isDone();
       }
     });
+  }
+
+  @Test
+  public void testTerminateClearsBuffer() throws Exception {
+    ReplicationSource source = new ReplicationSource();
+    ReplicationSourceManager mockManager = mock(ReplicationSourceManager.class);
+    AtomicLong buffer = new AtomicLong();
+    Mockito.when(mockManager.getTotalBufferUsed()).thenReturn(buffer);
+    ReplicationPeer mockPeer = mock(ReplicationPeer.class);
+    Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
+    Configuration testConf = HBaseConfiguration.create();
+    source.init(testConf, null, mockManager, null, mockPeer, null, "testPeer", null,
+      p -> OptionalLong.empty(), mock(MetricsSource.class));
+    ReplicationSourceWALReader reader = new ReplicationSourceWALReader(null, conf, null, 0, null, source);
+    ReplicationSourceShipper shipper = new ReplicationSourceShipper(conf, null, null, source);
+    shipper.entryReader = reader;
+    source.workerThreads.put("testPeer", shipper);
+    WALEntryBatch batch = new WALEntryBatch(10, logDir);
+    WAL.Entry mockEntry = mock(WAL.Entry.class);
+    WALEdit mockEdit = mock(WALEdit.class);
+    WALKeyImpl mockKey = mock(WALKeyImpl.class);
+    when(mockEntry.getEdit()).thenReturn(mockEdit);
+    when(mockEdit.isEmpty()).thenReturn(false);
+    when(mockEntry.getKey()).thenReturn(mockKey);
+    when(mockKey.estimatedSerializedSizeOf()).thenReturn(1000L);
+    when(mockEdit.heapSize()).thenReturn(10000L);
+    when(mockEdit.size()).thenReturn(0);
+    ArrayList<Cell> cells = new ArrayList<>();
+    KeyValue kv = new KeyValue(Bytes.toBytes("0001"), Bytes.toBytes("f"), Bytes.toBytes("1"), Bytes.toBytes("v1") );
+    cells.add(kv);
+    when(mockEdit.getCells()).thenReturn(cells);
+    reader.addEntryToBatch(batch, mockEntry);
+    reader.entryBatchQueue.put(batch);
+    source.terminate("test");
+    assertEquals(0, source.getSourceManager().getTotalBufferUsed().get());
   }
 
   /**
@@ -303,12 +336,12 @@ public class TestReplicationSource {
     ServerName deadServer = ServerName.valueOf("www.deadServer.com", 12006, 1524679704419L);
     PriorityBlockingQueue<Path> queue = new PriorityBlockingQueue<>();
     queue.put(new Path("/www/html/test"));
-    RecoveredReplicationSource source = Mockito.mock(RecoveredReplicationSource.class);
-    Server server = Mockito.mock(Server.class);
+    RecoveredReplicationSource source = mock(RecoveredReplicationSource.class);
+    Server server = mock(Server.class);
     Mockito.when(server.getServerName()).thenReturn(serverName);
     Mockito.when(source.getServer()).thenReturn(server);
     Mockito.when(source.getServerWALsBelongTo()).thenReturn(deadServer);
-    ReplicationQueueStorage storage = Mockito.mock(ReplicationQueueStorage.class);
+    ReplicationQueueStorage storage = mock(ReplicationQueueStorage.class);
     Mockito.when(storage.getWALPosition(Mockito.eq(serverName), Mockito.any(), Mockito.any()))
         .thenReturn(1001L);
     Mockito.when(storage.getWALPosition(Mockito.eq(deadServer), Mockito.any(), Mockito.any()))

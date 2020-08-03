@@ -61,7 +61,8 @@ class ReplicationSourceWALReader extends Thread {
   private final WALEntryFilter filter;
   private final ReplicationSource source;
 
-  private final BlockingQueue<WALEntryBatch> entryBatchQueue;
+  @InterfaceAudience.Private
+  final BlockingQueue<WALEntryBatch> entryBatchQueue;
   // max (heap) size of each batch - multiply by number of batches in queue to get total
   private final long replicationBatchSizeCapacity;
   // max count of each batch - multiply by number of batches in queue to get total
@@ -307,6 +308,16 @@ class ReplicationSourceWALReader extends Thread {
 
   public WALEntryBatch poll(long timeout) throws InterruptedException {
     return entryBatchQueue.poll(timeout, TimeUnit.MILLISECONDS);
+  }
+
+  public void clearWALEntryBatch() {
+    entryBatchQueue.forEach( w -> {
+      entryBatchQueue.remove(w);
+      w.getWalEntries().forEach( e -> {
+        long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(e);
+        totalBufferUsed.addAndGet(-entrySizeExcludeBulkLoad);
+      });
+    });
   }
 
   private long getEntrySizeIncludeBulkLoad(Entry entry) {
