@@ -29,7 +29,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import sun.misc.Unsafe;
+
 
 /**
  * Class for determining the "size" of a class, an attempt to calculate the
@@ -211,13 +211,13 @@ public class ClassSize {
     int oopSize() {
       // Unsafe.addressSize() returns 8, even with CompressedOops. This is how many bytes each
       // element is allocated in an Object[].
-      return Unsafe.ARRAY_OBJECT_INDEX_SCALE;
+      return UnsafeAccess.theUnsafe.ARRAY_OBJECT_INDEX_SCALE;
     }
 
     @Override
     @SuppressWarnings("static-access")
     long sizeOfByteArray(int len) {
-      return align(ARRAY + len * Unsafe.ARRAY_BYTE_INDEX_SCALE);
+      return align(ARRAY + len * UnsafeAccess.theUnsafe.ARRAY_BYTE_INDEX_SCALE);
     }
   }
 
