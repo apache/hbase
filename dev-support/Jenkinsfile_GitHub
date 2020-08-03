@@ -64,10 +64,7 @@ pipeline {
                 withCredentials(
                     [usernamePassword(credentialsId: 'apache-hbase-at-github.com',
                                   passwordVariable: 'GITHUB_PASSWORD',
-                                  usernameVariable: 'GITHUB_USER'),
-                    usernamePassword(credentialsId: 'hbaseqa-at-asf-jira',
-                                        passwordVariable: 'JIRA_PASSWORD',
-                                        usernameVariable: 'JIRA_USER')]) {
+                                  usernameVariable: 'GITHUB_USER')]) {
                         sh '''#!/usr/bin/env bash
                         set -e
                         TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
