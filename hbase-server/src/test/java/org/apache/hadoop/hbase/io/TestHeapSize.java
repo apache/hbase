@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.regionserver.CompactionPipeline;
 import org.apache.hadoop.hbase.regionserver.DefaultMemStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreContext;
 import org.apache.hadoop.hbase.regionserver.ImmutableSegment;
 import org.apache.hadoop.hbase.regionserver.MemStoreCompactor;
 import org.apache.hadoop.hbase.regionserver.MutableSegment;
@@ -606,7 +607,7 @@ public class TestHeapSize  {
   @Test
   public void testAutoCalcFixedOverHead() {
     Class[] classList = new Class[] { HFileContext.class, HRegion.class, BlockCacheKey.class,
-        HFileBlock.class, HStore.class, LruBlockCache.class };
+        HFileBlock.class, HStore.class, LruBlockCache.class, HStoreContext.class };
     for (Class cl : classList) {
       // do estimate in advance to ensure class is loaded
       ClassSize.estimateBase(cl, false);
