@@ -25,12 +25,15 @@ public interface MetricsReplicationGlobalSourceSource extends MetricsReplication
   public static final String SOURCE_WAL_READER_EDITS_BUFFER = "source.walReaderEditsBufferUsage";
 
   /**
-   * Sets the total usage of memory used by edits in memory read from WALs.
+   * Sets the total usage of memory used by edits in memory read from WALs. The memory represented
+   * by this usage measure is across peers/sources. For example, we may batch the same WAL edits
+   * multiple times for the sake of replicating them to multiple peers..
    * @param usage The memory used by edits in bytes
    */
   void setWALReaderEditsBufferBytes(long usage);
+
   /**
-   * Returns the size, in bytes, of edits held in memory to be replicated.
+   * Returns the size, in bytes, of edits held in memory to be replicated across all peers.
    */
   long getWALReaderEditsBufferBytes();
 }

@@ -274,8 +274,8 @@ class ReplicationSourceWALReader extends Thread {
   private boolean checkQuota() {
     // try not to go over total quota
     if (totalBufferUsed.get() > totalBufferQuota) {
-      LOG.warn("Can't read more edits from WAL as buffer usage {}B exceeds limit {}B",
-          totalBufferUsed.get(), totalBufferQuota);
+      LOG.warn("peer={}, can't read more edits from WAL as buffer usage {}B exceeds limit {}B",
+          this.source.getPeerId(), totalBufferUsed.get(), totalBufferQuota);
       Threads.sleep(sleepForRetries);
       return false;
     }
