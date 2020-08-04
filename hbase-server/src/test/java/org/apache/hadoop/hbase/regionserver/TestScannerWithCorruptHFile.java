@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -88,11 +89,9 @@ public class TestScannerWithCorruptHFile {
   @Test(expected = DoNotRetryIOException.class)
   public void testScanOnCorruptHFile() throws IOException {
     TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    tableDescriptor.setCoprocessor(CorruptHFileCoprocessor.class.getName());
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setCoprocessor(CorruptHFileCoprocessor.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME)).build();
     Table table = TEST_UTIL.createTable(tableDescriptor, null);
     try {
       loadTable(table, 1);

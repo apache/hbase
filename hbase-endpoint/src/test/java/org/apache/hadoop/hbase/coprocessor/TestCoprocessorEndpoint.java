@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -101,11 +102,9 @@ public class TestCoprocessorEndpoint {
     util.startMiniCluster(2);
     Admin admin = util.getAdmin();
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TEST_TABLE);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
-    admin.createTable(tableDescriptor, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TABLE)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
+    admin.createTable(tableDescriptor, new byte[][] { ROWS[rowSeperator1], ROWS[rowSeperator2] });
     util.waitUntilAllRegionsAssigned(TEST_TABLE);
 
     Table table = util.getConnection().getTable(TEST_TABLE);

@@ -286,7 +286,6 @@ public final class Constraints {
    * Write the configuration to a String
    * @param conf to write
    * @return String representation of that configuration
-   * @throws IOException
    */
   private static String serializeConfiguration(Configuration conf) throws IOException {
     // write the configuration out to the data stream

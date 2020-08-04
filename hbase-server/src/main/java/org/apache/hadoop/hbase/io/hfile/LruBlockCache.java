@@ -50,46 +50,41 @@ import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * A block cache implementation that is memory-aware using {@link HeapSize},
- * memory-bound using an LRU eviction algorithm, and concurrent: backed by a
- * {@link ConcurrentHashMap} and with a non-blocking eviction thread giving
- * constant-time {@link #cacheBlock} and {@link #getBlock} operations.<p>
- *
+ * A block cache implementation that is memory-aware using {@link HeapSize}, memory-bound using an
+ * LRU eviction algorithm, and concurrent: backed by a {@link ConcurrentHashMap} and with a
+ * non-blocking eviction thread giving constant-time {@link #cacheBlock} and {@link #getBlock}
+ * operations.
+ * </p>
  * Contains three levels of block priority to allow for scan-resistance and in-memory families
- * {@link org.apache.hadoop.hbase.HColumnDescriptor#setInMemory(boolean)} (An in-memory column
- * family is a column family that should be served from memory if possible):
- * single-access, multiple-accesses, and in-memory priority.
- * A block is added with an in-memory priority flag if
- * {@link org.apache.hadoop.hbase.HColumnDescriptor#isInMemory()}, otherwise a block becomes a
- * single access priority the first time it is read into this block cache.  If a block is
- * accessed again while in cache, it is marked as a multiple access priority block.  This
- * delineation of blocks is used to prevent scans from thrashing the cache adding a
- * least-frequently-used element to the eviction algorithm.<p>
- *
- * Each priority is given its own chunk of the total cache to ensure
- * fairness during eviction.  Each priority will retain close to its maximum
- * size, however, if any priority is not using its entire chunk the others
- * are able to grow beyond their chunk size.<p>
- *
- * Instantiated at a minimum with the total size and average block size.
- * All sizes are in bytes.  The block size is not especially important as this
- * cache is fully dynamic in its sizing of blocks.  It is only used for
- * pre-allocating data structures and in initial heap estimation of the map.<p>
- *
- * The detailed constructor defines the sizes for the three priorities (they
- * should total to the <code>maximum size</code> defined).  It also sets the levels that
- * trigger and control the eviction thread.<p>
- *
- * The <code>acceptable size</code> is the cache size level which triggers the eviction
- * process to start.  It evicts enough blocks to get the size below the
- * minimum size specified.<p>
- *
- * Eviction happens in a separate thread and involves a single full-scan
- * of the map.  It determines how many bytes must be freed to reach the minimum
- * size, and then while scanning determines the fewest least-recently-used
- * blocks necessary from each of the three priorities (would be 3 times bytes
- * to free).  It then uses the priority chunk sizes to evict fairly according
- * to the relative sizes and usage.
+ * {@link org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder#setInMemory(boolean)} (An
+ * in-memory column family is a column family that should be served from memory if possible):
+ * single-access, multiple-accesses, and in-memory priority. A block is added with an in-memory
+ * priority flag if {@link org.apache.hadoop.hbase.client.ColumnFamilyDescriptor#isInMemory()},
+ * otherwise a block becomes a single access priority the first time it is read into this block
+ * cache. If a block is accessed again while in cache, it is marked as a multiple access priority
+ * block. This delineation of blocks is used to prevent scans from thrashing the cache adding a
+ * least-frequently-used element to the eviction algorithm.
+ * <p/>
+ * Each priority is given its own chunk of the total cache to ensure fairness during eviction. Each
+ * priority will retain close to its maximum size, however, if any priority is not using its entire
+ * chunk the others are able to grow beyond their chunk size.
+ * <p/>
+ * Instantiated at a minimum with the total size and average block size. All sizes are in bytes. The
+ * block size is not especially important as this cache is fully dynamic in its sizing of blocks. It
+ * is only used for pre-allocating data structures and in initial heap estimation of the map.
+ * <p/>
+ * The detailed constructor defines the sizes for the three priorities (they should total to the
+ * <code>maximum size</code> defined). It also sets the levels that trigger and control the eviction
+ * thread.
+ * <p/>
+ * The <code>acceptable size</code> is the cache size level which triggers the eviction process to
+ * start. It evicts enough blocks to get the size below the minimum size specified.
+ * <p/>
+ * Eviction happens in a separate thread and involves a single full-scan of the map. It determines
+ * how many bytes must be freed to reach the minimum size, and then while scanning determines the
+ * fewest least-recently-used blocks necessary from each of the three priorities (would be 3 times
+ * bytes to free). It then uses the priority chunk sizes to evict fairly according to the relative
+ * sizes and usage.
  */
 @InterfaceAudience.Private
 public class LruBlockCache implements FirstLevelBlockCache {

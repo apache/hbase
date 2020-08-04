@@ -400,30 +400,30 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * Create an HTableDescriptor from provided TestOptions.
    */
   protected static TableDescriptor getTableDescriptor(TestOptions opts) {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(opts.tableName));
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(opts.tableName));
 
     for (int family = 0; family < opts.families; family++) {
       byte[] familyName = Bytes.toBytes(FAMILY_NAME_BASE + family);
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDesc =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyName);
-      familyDesc.setDataBlockEncoding(opts.blockEncoding);
-      familyDesc.setCompressionType(opts.compression);
-      familyDesc.setBloomFilterType(opts.bloomType);
-      familyDesc.setBlocksize(opts.blockSize);
+      ColumnFamilyDescriptorBuilder cfBuilder =
+        ColumnFamilyDescriptorBuilder.newBuilder(familyName);
+      cfBuilder.setDataBlockEncoding(opts.blockEncoding);
+      cfBuilder.setCompressionType(opts.compression);
+      cfBuilder.setBloomFilterType(opts.bloomType);
+      cfBuilder.setBlocksize(opts.blockSize);
       if (opts.inMemoryCF) {
-        familyDesc.setInMemory(true);
+        cfBuilder.setInMemory(true);
       }
-      familyDesc.setInMemoryCompaction(opts.inMemoryCompaction);
-      tableDescriptor.setColumnFamily(familyDesc);
+      cfBuilder.setInMemoryCompaction(opts.inMemoryCompaction);
+      builder.setColumnFamily(cfBuilder.build());
     }
     if (opts.replicas != DEFAULT_OPTS.replicas) {
-      tableDescriptor.setRegionReplication(opts.replicas);
+      builder.setRegionReplication(opts.replicas);
     }
     if (opts.splitPolicy != null && !opts.splitPolicy.equals(DEFAULT_OPTS.splitPolicy)) {
-      tableDescriptor.setRegionSplitPolicyClassName(opts.splitPolicy);
+      builder.setRegionSplitPolicyClassName(opts.splitPolicy);
     }
-    return tableDescriptor;
+    return builder.build();
   }
 
   /**
@@ -692,7 +692,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     int randomSleep = 0;
     boolean inMemoryCF = false;
     int presplitRegions = 0;
-    int replicas = HTableDescriptor.DEFAULT_REGION_REPLICATION;
+    int replicas = TableDescriptorBuilder.DEFAULT_REGION_REPLICATION;
     String splitPolicy = null;
     Compression.Algorithm compression = Compression.Algorithm.NONE;
     BloomType bloomType = BloomType.ROW;

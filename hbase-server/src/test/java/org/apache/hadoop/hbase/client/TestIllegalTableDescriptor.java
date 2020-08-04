@@ -26,7 +26,6 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -84,107 +83,104 @@ public class TestIllegalTableDescriptor {
 
   @Test
   public void testIllegalTableDescriptor() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(name.getMethodName()));
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
 
     // create table with 0 families
-    checkTableIsIllegal(tableDescriptor);
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    checkTableIsLegal(tableDescriptor);
+    checkTableIsIllegal(builder.build());
+    checkTableIsLegal(builder.setColumnFamily(cfBuilder.build()).build());
 
-    tableDescriptor.setMaxFileSize(1024); // 1K
-    checkTableIsIllegal(tableDescriptor);
-    tableDescriptor.setMaxFileSize(0);
-    checkTableIsIllegal(tableDescriptor);
-    tableDescriptor.setMaxFileSize(1024 * 1024 * 1024); // 1G
-    checkTableIsLegal(tableDescriptor);
+    builder.setMaxFileSize(1024); // 1K
+    checkTableIsIllegal(builder.build());
+    builder.setMaxFileSize(0);
+    checkTableIsIllegal(builder.build());
+    builder.setMaxFileSize(1024 * 1024 * 1024); // 1G
+    checkTableIsLegal(builder.build());
 
-    tableDescriptor.setMemStoreFlushSize(1024);
-    checkTableIsIllegal(tableDescriptor);
-    tableDescriptor.setMemStoreFlushSize(0);
-    checkTableIsIllegal(tableDescriptor);
-    tableDescriptor.setMemStoreFlushSize(128 * 1024 * 1024); // 128M
-    checkTableIsLegal(tableDescriptor);
+    builder.setMemStoreFlushSize(1024);
+    checkTableIsIllegal(builder.build());
+    builder.setMemStoreFlushSize(0);
+    checkTableIsIllegal(builder.build());
+    builder.setMemStoreFlushSize(128 * 1024 * 1024); // 128M
+    checkTableIsLegal(builder.build());
 
-    tableDescriptor.setRegionSplitPolicyClassName("nonexisting.foo.class");
-    checkTableIsIllegal(tableDescriptor);
-    tableDescriptor.setRegionSplitPolicyClassName(null);
-    checkTableIsLegal(tableDescriptor);
+    builder.setRegionSplitPolicyClassName("nonexisting.foo.class");
+    checkTableIsIllegal(builder.build());
+    builder.setRegionSplitPolicyClassName(null);
+    checkTableIsLegal(builder.build());
 
-    tableDescriptor.setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, "nonexisting.foo.class");
-    checkTableIsIllegal(tableDescriptor);
-    tableDescriptor.removeValue(Bytes.toBytes(HConstants.HBASE_REGION_SPLIT_POLICY_KEY));
-    checkTableIsLegal(tableDescriptor);
+    builder.setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, "nonexisting.foo.class");
+    checkTableIsIllegal(builder.build());
+    builder.removeValue(Bytes.toBytes(HConstants.HBASE_REGION_SPLIT_POLICY_KEY));
+    checkTableIsLegal(builder.build());
 
-    familyDescriptor.setBlocksize(0);
-    checkTableIsIllegal(tableDescriptor);
-    familyDescriptor.setBlocksize(1024 * 1024 * 128); // 128M
-    checkTableIsIllegal(tableDescriptor);
-    familyDescriptor.setBlocksize(1024);
-    checkTableIsLegal(tableDescriptor);
+    cfBuilder.setBlocksize(0);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setBlocksize(1024 * 1024 * 128); // 128M
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setBlocksize(1024);
+    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
-    familyDescriptor.setTimeToLive(0);
-    checkTableIsIllegal(tableDescriptor);
-    familyDescriptor.setTimeToLive(-1);
-    checkTableIsIllegal(tableDescriptor);
-    familyDescriptor.setTimeToLive(1);
-    checkTableIsLegal(tableDescriptor);
+    cfBuilder.setTimeToLive(0);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setTimeToLive(-1);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setTimeToLive(1);
+    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
-    familyDescriptor.setMinVersions(-1);
-    checkTableIsIllegal(tableDescriptor);
-    familyDescriptor.setMinVersions(3);
+    cfBuilder.setMinVersions(-1);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setMinVersions(3);
     try {
-      familyDescriptor.setMaxVersions(2);
+      cfBuilder.setMaxVersions(2);
       fail();
     } catch (IllegalArgumentException ex) {
       // expected
-      familyDescriptor.setMaxVersions(10);
+      cfBuilder.setMaxVersions(10);
     }
-    checkTableIsLegal(tableDescriptor);
+    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
     // HBASE-13776 Setting illegal versions for HColumnDescriptor
     //  does not throw IllegalArgumentException
     // finally, minVersions must be less than or equal to maxVersions
-    familyDescriptor.setMaxVersions(4);
-    familyDescriptor.setMinVersions(5);
-    checkTableIsIllegal(tableDescriptor);
-    familyDescriptor.setMinVersions(3);
+    cfBuilder.setMaxVersions(4);
+    cfBuilder.setMinVersions(5);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setMinVersions(3);
 
-    familyDescriptor.setScope(-1);
-    checkTableIsIllegal(tableDescriptor);
-    familyDescriptor.setScope(0);
-    checkTableIsLegal(tableDescriptor);
+    cfBuilder.setScope(-1);
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setScope(0);
+    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
-    familyDescriptor.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "INVALID");
-    checkTableIsIllegal(tableDescriptor);
-    familyDescriptor.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "NONE");
-    checkTableIsLegal(tableDescriptor);
+    cfBuilder.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "INVALID");
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
+    cfBuilder.setValue(ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION, "NONE");
+    checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
     try {
-      familyDescriptor.setDFSReplication((short) -1);
+      cfBuilder.setDFSReplication((short) -1);
       fail("Illegal value for setDFSReplication did not throw");
     } catch (IllegalArgumentException e) {
       // pass
     }
     // set an illegal DFS replication value by hand
-    familyDescriptor.setValue(ColumnFamilyDescriptorBuilder.DFS_REPLICATION, "-1");
-    checkTableIsIllegal(tableDescriptor);
+    cfBuilder.setValue(ColumnFamilyDescriptorBuilder.DFS_REPLICATION, "-1");
+    checkTableIsIllegal(builder.modifyColumnFamily(cfBuilder.build()).build());
     try {
-      familyDescriptor.setDFSReplication((short) -1);
+      cfBuilder.setDFSReplication((short) -1);
       fail("Should throw exception if an illegal value is explicitly being set");
     } catch (IllegalArgumentException e) {
       // pass
     }
 
     // check the conf settings to disable sanity checks
-    tableDescriptor.setMemStoreFlushSize(0);
+    builder.setMemStoreFlushSize(0);
 
     // Check that logs warn on invalid table but allow it.
-    tableDescriptor.setValue(TableDescriptorChecker.TABLE_SANITY_CHECKS, Boolean.FALSE.toString());
-    checkTableIsLegal(tableDescriptor);
+    builder.setValue(TableDescriptorChecker.TABLE_SANITY_CHECKS, Boolean.FALSE.toString());
+    checkTableIsLegal(builder.build());
 
     verify(LOGGER).warn(contains("MEMSTORE_FLUSHSIZE for table "
         + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "

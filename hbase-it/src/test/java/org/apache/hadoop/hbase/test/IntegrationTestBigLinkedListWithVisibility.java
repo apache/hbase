@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
@@ -147,14 +148,13 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     private void createTable(Admin admin, TableName tableName, boolean setVersion,
         boolean acl) throws IOException {
       if (!admin.tableExists(tableName)) {
-        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-          new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-        ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME);
+        ColumnFamilyDescriptorBuilder cfBuilder =
+          ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_NAME);
         if (setVersion) {
-          familyDescriptor.setMaxVersions(DEFAULT_TABLES_COUNT);
+          cfBuilder.setMaxVersions(DEFAULT_TABLES_COUNT);
         }
-        tableDescriptor.setColumnFamily(familyDescriptor);
+        TableDescriptor tableDescriptor =
+          TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(cfBuilder.build()).build();
         admin.createTable(tableDescriptor);
         if (acl) {
           LOG.info("Granting permissions for user " + USER.getShortName());

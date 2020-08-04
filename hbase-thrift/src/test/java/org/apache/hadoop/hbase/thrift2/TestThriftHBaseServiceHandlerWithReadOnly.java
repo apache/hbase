@@ -33,7 +33,9 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -76,13 +78,9 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
   private static byte[] qualifierBname = Bytes.toBytes("qualifierB");
   private static byte[] valueAname = Bytes.toBytes("valueA");
   private static byte[] valueBname = Bytes.toBytes("valueB");
-  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[] families =
-    new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[]{
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyAname)
-        .setMaxVersions(3),
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyBname)
-        .setMaxVersions(2)
-    };
+  private static ColumnFamilyDescriptor[] families = new ColumnFamilyDescriptor[] {
+    ColumnFamilyDescriptorBuilder.newBuilder(familyAname).setMaxVersions(3).build(),
+    ColumnFamilyDescriptorBuilder.newBuilder(familyBname).setMaxVersions(2).build() };
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -90,11 +88,8 @@ public class TestThriftHBaseServiceHandlerWithReadOnly {
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
     UTIL.startMiniCluster();
     Admin admin = UTIL.getAdmin();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableAname));
-    for (ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor family : families) {
-      tableDescriptor.setColumnFamily(family);
-    }
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
     admin.createTable(tableDescriptor);
     admin.close();
   }

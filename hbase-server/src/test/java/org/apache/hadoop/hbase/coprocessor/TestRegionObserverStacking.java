@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -119,16 +120,14 @@ public class TestRegionObserverStacking extends TestCase {
     }
   }
 
-  HRegion initHRegion (byte [] tableName, String callingMethod,
-      Configuration conf, byte [] ... families) throws IOException {
-
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
-
+  HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
+    byte[]... families) throws IOException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
     for (byte[] family : families) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
+    TableDescriptor tableDescriptor = builder.build();
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     Path path = new Path(DIR + callingMethod);

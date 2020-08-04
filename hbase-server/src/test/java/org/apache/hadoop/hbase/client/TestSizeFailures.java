@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -60,7 +59,6 @@ public class TestSizeFailures {
     //((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
     //((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
     //((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
-    Configuration conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster(SLAVES);
 
     // Write a bunch of data
@@ -70,12 +68,8 @@ public class TestSizeFailures {
       qualifiers.add(Bytes.toBytes(Integer.toString(i)));
     }
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLENAME);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLENAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     byte[][] splits = new byte[9][2];
     for (int i = 1; i < 10; i++) {
       int split = 48 + i;

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -160,23 +161,18 @@ public class TestOpenTableInCoprocessor {
     runCoprocessorConnectionToRemoteTable(CustomThreadPoolCoprocessor.class, completedWithPool);
   }
 
-  private void runCoprocessorConnectionToRemoteTable(Class clazz, boolean[] completeCheck)
+  private void runCoprocessorConnectionToRemoteTable(Class<?> clazz, boolean[] completeCheck)
       throws Throwable {
     // Check if given class implements RegionObserver.
-    assert(RegionObserver.class.isAssignableFrom(clazz));
-    TableDescriptorBuilder.ModifyableTableDescriptor primaryDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(primaryTable);
-
-    primaryDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    assert (RegionObserver.class.isAssignableFrom(clazz));
     // add our coprocessor
-    primaryDescriptor.setCoprocessor(clazz.getName());
+    TableDescriptor primaryDescriptor = TableDescriptorBuilder.newBuilder(primaryTable)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCoprocessor(clazz.getName())
+      .build();
 
-    TableDescriptorBuilder.ModifyableTableDescriptor otherDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(otherTable);
 
-    otherDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    TableDescriptor otherDescriptor = TableDescriptorBuilder.newBuilder(otherTable)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
 
 
     Admin admin = UTIL.getAdmin();

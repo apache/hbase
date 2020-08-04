@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -44,7 +46,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -204,13 +205,10 @@ public class TestAccessController3 extends SecureTestUtil {
   }
 
   private static void setUpTableAndUserPermissions() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TEST_TABLE);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
-    familyDescriptor.setMaxVersions(100);
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    tableDescriptor.setOwner(USER_OWNER);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TABLE)
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build())
+      .setOwner(USER_OWNER).build();
     createTable(TEST_UTIL, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
@@ -281,11 +279,9 @@ public class TestAccessController3 extends SecureTestUtil {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-          new TableDescriptorBuilder.ModifyableTableDescriptor(
-            TableName.valueOf(name.getMethodName()));
-        tableDescriptor.setColumnFamily(
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+        TableDescriptor tableDescriptor =
+          TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
         ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
           tableDescriptor, null);
         return null;

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -85,7 +86,7 @@ public class TestMultiSlaveReplication {
   private static final byte[] row3 = Bytes.toBytes("row3");
   private static final byte[] noRepfamName = Bytes.toBytes("norep");
 
-  private static TableDescriptorBuilder.ModifyableTableDescriptor table;
+  private static TableDescriptor table;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -123,14 +124,10 @@ public class TestMultiSlaveReplication {
     utility3.setZkCluster(miniZK);
     new ZKWatcher(conf3, "cluster3", null, true);
 
-    table = new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(famName);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.setColumnFamily(familyDescriptor);
-    familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(noRepfamName);
-    table.setColumnFamily(familyDescriptor);
+    table = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
   }
 
   @Test

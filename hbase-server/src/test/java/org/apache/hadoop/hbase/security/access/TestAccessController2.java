@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
@@ -186,10 +188,9 @@ public class TestAccessController2 extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-          new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
-        tableDescriptor.setColumnFamily(
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+        TableDescriptor tableDescriptor =
+          TableDescriptorBuilder.newBuilder(testTable.getTableName())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
         try (Connection connection =
             ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), testUser)) {
           try (Admin admin = connection.getAdmin()) {
@@ -221,10 +222,9 @@ public class TestAccessController2 extends SecureTestUtil {
       AccessTestAction createAction = new AccessTestAction() {
         @Override
         public Object run() throws Exception {
-          TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-            new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
-          tableDescriptor.setColumnFamily(
-            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+          TableDescriptor tableDescriptor =
+            TableDescriptorBuilder.newBuilder(testTable.getTableName())
+              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
           try (Connection connection =
               ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
             try (Admin admin = connection.getAdmin()) {
@@ -511,10 +511,8 @@ public class TestAccessController2 extends SecureTestUtil {
 
     final TableName table = TableName.valueOf(ns, "testACLZNodeDeletionTable");
     final byte[] family = Bytes.toBytes("f1");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(table);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(table)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
     createTable(TEST_UTIL, tableDescriptor);
 
     // Namespace needs this, as they follow the lazy creation of ACL znode.

@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -98,15 +99,11 @@ public class TestMultiVersions {
    */
   @Test
   public void testTimestamps() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(name.getMethodName()));
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        TimestampTestBase.FAMILY_NAME);
-
-    familyDescriptor.setMaxVersions(3);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(TimestampTestBase.FAMILY_NAME)
+          .setMaxVersions(3).build())
+        .build();
     this.admin.createTable(tableDescriptor);
     Table table = UTIL.getConnection().getTable(tableDescriptor.getTableName());
     // TODO: Remove these deprecated classes or pull them in here if this is
@@ -144,14 +141,11 @@ public class TestMultiVersions {
     final byte [] value2 = Bytes.toBytes("value2");
     final long timestamp1 = 100L;
     final long timestamp2 = 200L;
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(name.getMethodName()));
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(contents);
-
-    familyDescriptor.setMaxVersions(3);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(contents)
+          .setMaxVersions(3).build())
+        .build();
     this.admin.createTable(tableDescriptor);
     Put put = new Put(row, timestamp1);
     put.addColumn(contents, contents, value1);
@@ -205,21 +199,14 @@ public class TestMultiVersions {
    * crazyness.
    *
    * <p>Tests five cases of scans and timestamps.
-   * @throws Exception
    */
   @Test
   public void testScanMultipleVersions() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
 
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        HConstants.CATALOG_FAMILY));
-    final byte [][] rows = new byte[][] {
-      Bytes.toBytes("row_0200"),
-      Bytes.toBytes("row_0800")
-    };
+    final byte[][] rows = new byte[][] { Bytes.toBytes("row_0200"), Bytes.toBytes("row_0800") };
     final byte [][] splitRows = new byte[][] {Bytes.toBytes("row_0500")};
     final long [] timestamp = new long[] {100L, 1000L};
     this.admin.createTable(tableDescriptor, splitRows);

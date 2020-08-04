@@ -37,17 +37,14 @@ import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -60,6 +57,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
@@ -603,21 +601,18 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   }
 
   @Override
-  public void createTable(ByteBuffer in_tableName,
-      List<ColumnDescriptor> columnFamilies) throws IOError, IllegalArgument, AlreadyExists {
+  public void createTable(ByteBuffer in_tableName, List<ColumnDescriptor> columnFamilies)
+    throws IOError, IllegalArgument, AlreadyExists {
     TableName tableName = getTableName(in_tableName);
     try {
       if (getAdmin().tableExists(tableName)) {
         throw new AlreadyExists("table name already in use");
       }
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+      TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
       for (ColumnDescriptor col : columnFamilies) {
-        ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-          ThriftUtilities.colDescFromThrift(col);
-        tableDescriptor.setColumnFamily(familyDescriptor);
+        builder.setColumnFamily(ThriftUtilities.colDescFromThrift(col));
       }
-      getAdmin().createTable(tableDescriptor);
+      getAdmin().createTable(builder.build());
     } catch (IOException e) {
       LOG.warn(e.getMessage(), e);
       throw getIOError(e);
@@ -1091,9 +1086,9 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
       TreeMap<ByteBuffer, ColumnDescriptor> columns = new TreeMap<>();
 
       table = getTable(tableName);
-      HTableDescriptor desc = new HTableDescriptor(table.getDescriptor());
+      TableDescriptor desc = table.getDescriptor();
 
-      for (HColumnDescriptor e : desc.getFamilies()) {
+      for (ColumnFamilyDescriptor e : desc.getColumnFamilies()) {
         ColumnDescriptor col = ThriftUtilities.colDescFromHbase(e);
         columns.put(col.name, col);
       }

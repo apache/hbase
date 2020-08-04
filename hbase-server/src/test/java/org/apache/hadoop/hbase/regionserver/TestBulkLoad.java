@@ -256,21 +256,18 @@ public class TestBulkLoad {
     return new Pair<>(new byte[]{0x00, 0x01, 0x02}, getNotExistFilePath());
   }
 
-
   private HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,
     byte[]... families) throws IOException {
     RegionInfo hRegionInfo = RegionInfoBuilder.newBuilder(tableName).build();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
     for (byte[] family : families) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     // TODO We need a way to do this without creating files
     return HRegion.createHRegion(hRegionInfo, new Path(testFolder.newFolder().toURI()), conf,
-      tableDescriptor, log);
+      builder.build(), log);
   }
 
   private HRegion testRegionWithFamilies(byte[]... families) throws IOException {

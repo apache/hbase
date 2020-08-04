@@ -55,18 +55,15 @@ public class TestIntraRowPagination {
     byte [][] FAMILIES = HTestConst.makeNAscii(HTestConst.DEFAULT_CF_BYTES, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(HTestConst.DEFAULT_QUALIFIER_BYTES, 10);
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(HTestConst.DEFAULT_TABLE_BYTES));
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(HTestConst.DEFAULT_TABLE_BYTES));
 
     RegionInfo info = RegionInfoBuilder.newBuilder(HTestConst.DEFAULT_TABLE).build();
     for (byte[] family : FAMILIES) {
-      ColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), tableDescriptor);
+        TEST_UTIL.getConfiguration(), builder.build());
     try {
       Put put;
       Scan scan;

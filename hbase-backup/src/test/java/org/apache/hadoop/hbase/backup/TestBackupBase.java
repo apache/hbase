@@ -47,13 +47,13 @@ import org.apache.hadoop.hbase.backup.impl.IncrementalTableBackupClient;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner;
@@ -84,7 +84,7 @@ public class TestBackupBase {
   protected static Configuration conf2;
 
   protected static TableName table1 = TableName.valueOf("table1");
-  protected static TableDescriptorBuilder.ModifyableTableDescriptor table1Desc;
+  protected static TableDescriptor table1Desc;
   protected static TableName table2 = TableName.valueOf("table2");
   protected static TableName table3 = TableName.valueOf("table3");
   protected static TableName table4 = TableName.valueOf("table4");
@@ -428,11 +428,8 @@ public class TestBackupBase {
     ha.createNamespace(desc3);
     ha.createNamespace(desc4);
 
-    TableDescriptorBuilder.ModifyableTableDescriptor desc =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(table1);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(famName);
-    desc.setColumnFamily(familyDescriptor);
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(table1)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName)).build();
     ha.createTable(desc);
     table1Desc = desc;
     Connection conn = ConnectionFactory.createConnection(conf1);
@@ -440,8 +437,8 @@ public class TestBackupBase {
     loadTable(table);
     table.close();
     table2 = TableName.valueOf("ns2:test-" + tid + 1);
-    desc = new TableDescriptorBuilder.ModifyableTableDescriptor(table2);
-    desc.setColumnFamily(familyDescriptor);
+    desc = TableDescriptorBuilder.newBuilder(table2)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(famName)).build();
     ha.createTable(desc);
     table = conn.getTable(table2);
     loadTable(table);

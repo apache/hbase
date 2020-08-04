@@ -2240,13 +2240,9 @@ public class TestFromClientSide5 extends FromClientSideBase {
   @Test
   public void testCellSizeLimit() throws IOException {
     final TableName tableName = name.getTableName();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
-        .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(10 * 1024));
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(10 * 1024))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     try (Admin admin = TEST_UTIL.getAdmin()) {
       admin.createTable(tableDescriptor);
     }
@@ -2279,12 +2275,9 @@ public class TestFromClientSide5 extends FromClientSideBase {
   @Test
   public void testCellSizeNoLimit() throws IOException {
     final TableName tableName = name.getTableName();
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
-        .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(0));
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(0))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
 
     try (Admin admin = TEST_UTIL.getAdmin()) {
       admin.createTable(tableDescriptor);
