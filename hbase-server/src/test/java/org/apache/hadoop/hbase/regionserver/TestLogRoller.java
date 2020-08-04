@@ -36,6 +36,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -88,6 +89,7 @@ public class TestLogRoller {
     for (int i = 1; i <= 3; i++) {
       FSHLog wal = new FSHLog(FS, ROOT_DIR, LOG_DIR, ARCHIVE_DIR, CONF, null,
           true, WAL_PREFIX, "." + i);
+      wal.rollWriter(true);
       wals.put(wal, wal.getCurrentFileName());
       ROLLER.addWAL(wal);
       Thread.sleep(1000);
