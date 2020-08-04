@@ -27,6 +27,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -38,7 +40,12 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
@@ -81,7 +88,9 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.stubbing.Answer;
 
 @RunWith(MockitoJUnitRunner.class)
 @Category({ ReplicationTests.class, LargeTests.class })
@@ -359,10 +368,12 @@ public class TestWALEntryStream {
 
     // start up a batcher
     ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+    when(source.isPeerEnabled()).thenReturn(true);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     ReplicationSourceWALReaderThread batcher =
             new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(),walQueue, 0,
-                    fs, conf, getDummyFilter(), new MetricsSource("1"));
+                    fs, conf, getDummyFilter(), new MetricsSource("1"), source);
     Path walPath = walQueue.peek();
     batcher.start();
     WALEntryBatch entryBatch = batcher.take();
@@ -398,10 +409,13 @@ public class TestWALEntryStream {
     }
 
     ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+    when(source.isPeerEnabled()).thenReturn(true);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     ReplicationSourceWALReaderThread reader =
             new ReplicationSourceWALReaderThread(mockSourceManager, getRecoveredQueueInfo(),
-                    walQueue, 0, fs, conf, getDummyFilter(), new MetricsSource("1"));
+              walQueue, 0, fs, conf, getDummyFilter(),
+              new MetricsSource("1"), source);
     Path walPath = walQueue.toArray(new Path[2])[1];
     reader.start();
     WALEntryBatch entryBatch = reader.take();
@@ -456,10 +470,12 @@ public class TestWALEntryStream {
     appendEntriesToLog(2);
 
     ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+    when(source.isPeerEnabled()).thenReturn(true);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     final ReplicationSourceWALReaderThread reader =
             new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), walQueue,
-                    0, fs, conf, filter, new MetricsSource("1"));
+                    0, fs, conf, filter, new MetricsSource("1"), source);
     reader.start();
 
     WALEntryBatch entryBatch = reader.take();
@@ -490,10 +506,12 @@ public class TestWALEntryStream {
     final long eof = getPosition(firstWAL);
 
     ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+    when(source.isPeerEnabled()).thenReturn(true);
     when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     final ReplicationSourceWALReaderThread reader =
             new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), walQueue,
-                    0, fs, conf, filter, new MetricsSource("1"));
+                    0, fs, conf, filter, new MetricsSource("1"), source);
     reader.start();
 
     // reader won't put any batch, even if EOF reached.
@@ -612,5 +630,66 @@ public class TestWALEntryStream {
       walQueue.add(newPath);
       currentPath = newPath;
     }
+  }
+
+  @Test
+  public void testReplicationSourceWALReaderDisabled()
+    throws IOException, InterruptedException, ExecutionException {
+    for(int i=0; i<3; i++) {
+      //append and sync
+      appendToLog("key" + i);
+    }
+    // get ending position
+    long position;
+    try (WALEntryStream entryStream =
+      new WALEntryStream(walQueue, fs, conf, 0, new MetricsSource("1"))) {
+      entryStream.next();
+      entryStream.next();
+      entryStream.next();
+      position = entryStream.getPosition();
+    }
+
+    // start up a reader
+    Path walPath = walQueue.peek();
+    ReplicationSource source = Mockito.mock(ReplicationSource.class);
+    when(source.getSourceMetrics()).thenReturn(new MetricsSource("1"));
+
+    final AtomicBoolean enabled = new AtomicBoolean(false);
+    when(source.isPeerEnabled()).thenAnswer(new Answer<Boolean>() {
+      @Override
+      public Boolean answer(InvocationOnMock invocationOnMock) throws Throwable {
+        return enabled.get();
+      }
+    });
+
+    ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
+    final ReplicationSourceWALReaderThread reader =
+      new ReplicationSourceWALReaderThread(mockSourceManager, getQueueInfo(), walQueue,
+        0, fs, conf, getDummyFilter(), new MetricsSource("1"), source);
+
+    reader.start();
+    Future<WALEntryBatch> future =
+      Executors.newSingleThreadExecutor().submit(new Callable<WALEntryBatch>() {
+        @Override
+        public WALEntryBatch call() throws Exception {
+          return reader.take();
+        }
+      });
+
+    // make sure that the isPeerEnabled has been called several times
+    verify(source, timeout(30000).atLeast(5)).isPeerEnabled();
+    // confirm that we can read nothing if the peer is disabled
+    assertFalse(future.isDone());
+    // then enable the peer, we should get the batch
+    enabled.set(true);
+    WALEntryBatch entryBatch = future.get();
+
+    // should've batched up our entries
+    assertNotNull(entryBatch);
+    assertEquals(3, entryBatch.getWalEntries().size());
+    assertEquals(position, entryBatch.getLastWalPosition());
+    assertEquals(walPath, entryBatch.getLastWalPath());
+    assertEquals(3, entryBatch.getNbRowKeys());
   }
 }
