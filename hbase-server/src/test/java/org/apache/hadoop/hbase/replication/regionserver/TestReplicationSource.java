@@ -172,8 +172,8 @@ public class TestReplicationSource {
     testConf.setInt("replication.source.maxretriesmultiplier", 1);
     ReplicationSourceManager manager = mock(ReplicationSourceManager.class);
     Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
-    source.init(testConf, null, manager, null, mockPeer, null, "testPeer", null,
-      p -> OptionalLong.empty(), null);
+    source.init(testConf, null, manager, null, mockPeer, null,
+      "testPeer", null, p -> OptionalLong.empty(), null);
     ExecutorService executor = Executors.newSingleThreadExecutor();
     Future<?> future = executor.submit(new Runnable() {
 
@@ -182,7 +182,8 @@ public class TestReplicationSource {
         source.terminate("testing source termination");
       }
     });
-    long sleepForRetries = testConf.getLong("replication.source.sleepforretries", 1000);
+    long sleepForRetries =
+      testConf.getLong("replication.source.sleepforretries", 1000);
     Waiter.waitFor(testConf, sleepForRetries * 2, new Predicate<Exception>() {
 
       @Override

@@ -311,9 +311,9 @@ class ReplicationSourceWALReader extends Thread {
   }
 
   public void clearWALEntryBatch() {
-    entryBatchQueue.forEach( w -> {
+    entryBatchQueue.forEach(w -> {
       entryBatchQueue.remove(w);
-      w.getWalEntries().forEach( e -> {
+      w.getWalEntries().forEach(e -> {
         long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(e);
         totalBufferUsed.addAndGet(-entrySizeExcludeBulkLoad);
       });
