@@ -192,7 +192,8 @@ public class TestCatalogJanitorCluster {
       setStartKey("a".getBytes()).
       setEndKey("cc".getBytes()).build();
     Put putForT4 = MetaTableAccessor.makePutFromRegionInfo(newRiT4, System.currentTimeMillis());
-    MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(putForT4));
+    MetaTableAccessor.putsToCatalogTable(TEST_UTIL.getConnection(),
+      TableName.META_TABLE_NAME, Arrays.asList(putForT4));
 
     janitor.scan();
     report = janitor.getLastReport();
@@ -215,7 +216,8 @@ public class TestCatalogJanitorCluster {
       setStartKey("a".getBytes()).
       setEndKey("g".getBytes()).build();
     Put putForT5 = MetaTableAccessor.makePutFromRegionInfo(newRiT5, System.currentTimeMillis());
-    MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Arrays.asList(putForT5));
+    MetaTableAccessor.putsToCatalogTable(TEST_UTIL.getConnection(),
+      TableName.META_TABLE_NAME, Arrays.asList(putForT5));
 
     janitor.scan();
     report = janitor.getLastReport();

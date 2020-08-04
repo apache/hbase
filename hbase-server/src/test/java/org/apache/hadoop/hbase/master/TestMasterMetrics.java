@@ -137,7 +137,7 @@ public class TestMasterMetrics {
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
     metricsHelper.assertGauge( "numRegionServers",1 + (tablesOnMaster? 1: 0), masterSource);
-    metricsHelper.assertGauge( "averageLoad", 1 + (tablesOnMaster? 0: 1), masterSource);
+    metricsHelper.assertGauge( "averageLoad", 1 + (tablesOnMaster? 0: 2), masterSource);
     metricsHelper.assertGauge( "numDeadRegionServers", 0, masterSource);
 
     metricsHelper.assertGauge("masterStartTime", master.getMasterStartTime(), masterSource);

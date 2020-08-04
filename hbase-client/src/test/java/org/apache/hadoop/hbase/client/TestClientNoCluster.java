@@ -220,7 +220,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     this.conf.set("hbase.client.connection.impl",
       RegionServerStoppedOnScannerOpenConnection.class.getName());
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      MetaTableAccessor.fullScanRegions(connection);
+      MetaTableAccessor.fullScanRegions(connection, TableName.ROOT_TABLE_NAME, null);
     }
   }
 
@@ -427,14 +427,14 @@ public class TestClientNoCluster extends Configured implements Tool {
    */
   static class FakeServer implements ClientService.BlockingInterface {
     private AtomicInteger multiInvocationsCount = new AtomicInteger(0);
-    private final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta;
+    private final SortedMap<byte [], Pair<HRegionInfo, ServerName>> root;
     private final AtomicLong sequenceids;
     private final long multiPause;
     private final int tooManyMultiRequests;
 
-    FakeServer(final Configuration c, final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,
+    FakeServer(final Configuration c, final SortedMap<byte [], Pair<HRegionInfo, ServerName>> root,
         final AtomicLong sequenceids) {
-      this.meta = meta;
+      this.root = root;
       this.sequenceids = sequenceids;
 
       // Pause to simulate the server taking time applying the edits.  This will drive up the
@@ -446,12 +446,12 @@ public class TestClientNoCluster extends Configured implements Tool {
     @Override
     public GetResponse get(RpcController controller, GetRequest request)
     throws ServiceException {
-      boolean metaRegion = isMetaRegion(request.getRegion().getValue().toByteArray(),
+      boolean rootRegion = isRootRegion(request.getRegion().getValue().toByteArray(),
         request.getRegion().getType());
-      if (!metaRegion) {
+      if (!rootRegion) {
         return doGetResponse(request);
       }
-      return doMetaGetResponse(meta, request);
+      return doRootGetResponse(root, request);
     }
 
     private GetResponse doGetResponse(GetRequest request) {
@@ -474,7 +474,7 @@ public class TestClientNoCluster extends Configured implements Tool {
         ScanRequest request) throws ServiceException {
       // Presume it is a scan of meta for now. Not all scans provide a region spec expecting
       // the server to keep reference by scannerid.  TODO.
-      return doMetaScanResponse(meta, sequenceids, request);
+      return doRootScanResponse(root, sequenceids, request);
     }
 
     @Override
@@ -501,7 +501,7 @@ public class TestClientNoCluster extends Configured implements Tool {
            concurrentInvocations));
         }
         Threads.sleep(multiPause);
-        return doMultiResponse(meta, sequenceids, request);
+        return doMultiResponse(root, sequenceids, request);
       } finally {
         this.multiInvocationsCount.decrementAndGet();
       }
@@ -526,7 +526,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     }
   }
 
-  static ScanResponse doMetaScanResponse(final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,
+  static ScanResponse doRootScanResponse(final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,
       final AtomicLong sequenceids, final ScanRequest request) {
     ScanResponse.Builder builder = ScanResponse.newBuilder();
     int max = request.getNumberOfRows();
@@ -555,7 +555,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     return builder.build();
   }
 
-  static GetResponse doMetaGetResponse(final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,
+  static GetResponse doRootGetResponse(final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,
       final GetRequest request) {
     ClientProtos.Result.Builder resultBuilder = ClientProtos.Result.newBuilder();
     ByteString row = request.getGet().getRow();
@@ -575,12 +575,12 @@ public class TestClientNoCluster extends Configured implements Tool {
    * @param type
    * @return True if we are dealing with a hbase:meta region.
    */
-  static boolean isMetaRegion(final byte [] name, final RegionSpecifierType type) {
+  static boolean isRootRegion(final byte [] name, final RegionSpecifierType type) {
     switch (type) {
     case REGION_NAME:
-      return Bytes.equals(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), name);
+      return Bytes.equals(HRegionInfo.ROOT_REGIONINFO.getRegionName(), name);
     case ENCODED_REGION_NAME:
-      return Bytes.equals(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(), name);
+      return Bytes.equals(HRegionInfo.ROOT_REGIONINFO.getEncodedNameAsBytes(), name);
     default: throw new UnsupportedOperationException();
     }
   }

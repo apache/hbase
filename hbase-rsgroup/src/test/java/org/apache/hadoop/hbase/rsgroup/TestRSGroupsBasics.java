@@ -88,8 +88,8 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     assertEquals(NUM_SLAVES_BASE, defaultInfo.getServers().size());
     // Assignment of meta, namespace and rsgroup regions.
     int count = master.getAssignmentManager().getRegionStates().getRegionAssignments().size();
-    // 3 (meta, namespace and rsgroup)
-    assertEquals(3, count);
+    // 4 (room,t meta, namespace and rsgroup)
+    assertEquals(4, count);
   }
 
   @Test

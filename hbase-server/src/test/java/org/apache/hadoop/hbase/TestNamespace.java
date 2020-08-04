@@ -119,6 +119,7 @@ public class TestNamespace {
 
     //verify existence of system tables
     Set<TableName> systemTables = Sets.newHashSet(
+        TableName.ROOT_TABLE_NAME,
         TableName.META_TABLE_NAME,
         TableName.NAMESPACE_TABLE_NAME);
     HTableDescriptor[] descs =

@@ -103,7 +103,8 @@ public class TestReportRegionStateTransitionFromDeadServer {
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
         ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       if (ARRIVE_REPORT != null && req.getTransitionList().stream()
-        .allMatch(t -> !ProtobufUtil.toRegionInfo(t.getRegionInfo(0)).isMetaRegion())) {
+        .allMatch(t -> !ProtobufUtil.toRegionInfo(t.getRegionInfo(0)).isRootRegion() &&
+          !ProtobufUtil.toRegionInfo(t.getRegionInfo(0)).isMetaRegion())) {
         ARRIVE_REPORT.countDown();
         try {
           RESUME_REPORT.await();

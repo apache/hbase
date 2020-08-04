@@ -283,7 +283,8 @@ public class TestClientClusterMetrics {
     waitForUsersMetrics(1);
     long writeMetaMetricForUserFoo =
         getMetaMetrics().getWriteRequestCount() - writeMetaMetricBeforeNextuser;
-    long readMetaMetricBeforeNextuser = getMetaMetrics().getReadRequestCount();
+    long readMetaMetricBeforeNextuser =
+      getRootMetrics().getReadRequestCount() + getMetaMetrics().getReadRequestCount();
     userBar.runAs(new PrivilegedAction<Void>() {
       @Override public Void run() {
         try {
@@ -296,7 +297,8 @@ public class TestClientClusterMetrics {
     });
     waitForUsersMetrics(2);
     long readMetaMetricForUserBar =
-        getMetaMetrics().getReadRequestCount() - readMetaMetricBeforeNextuser;
+        getRootMetrics().getReadRequestCount() +
+          getMetaMetrics().getReadRequestCount() - readMetaMetricBeforeNextuser;
     long filteredMetaReqeust = getMetaMetrics().getFilteredReadRequestCount();
     userTest.runAs(new PrivilegedAction<Void>() {
       @Override public Void run() {
@@ -343,6 +345,20 @@ public class TestClientClusterMetrics {
       }
     }
     UTIL.deleteTable(TABLE_NAME);
+  }
+
+
+  private RegionMetrics getRootMetrics() throws IOException {
+    for (ServerMetrics serverMetrics : ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+      .getLiveServerMetrics().values()) {
+      RegionMetrics rootMetrics = serverMetrics.getRegionMetrics()
+        .get(RegionInfoBuilder.ROOT_REGIONINFO.getRegionName());
+      if (rootMetrics != null) {
+        return rootMetrics;
+      }
+    }
+    Assert.fail("Should have find root metrics");
+    return null;
   }
 
   private RegionMetrics getMetaMetrics() throws IOException {

@@ -503,18 +503,18 @@ public abstract class AbstractTestDLS {
     blockUntilNoRIT();
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     LOG.debug("Verifying only catalog and namespace regions are assigned\n");
-    if (regions.size() != 2) {
+    if (regions.size() != 3) {
       for (String oregion : regions)
         LOG.debug("Region still online: " + oregion);
     }
-    assertEquals(2 + existingRegions, regions.size());
+    assertEquals(3 + existingRegions, regions.size());
     LOG.debug("Enabling table\n");
     TEST_UTIL.getAdmin().enableTable(tableName);
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT();
     LOG.debug("Verifying there are " + numRegions + " assigned on cluster\n");
     regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
-    assertEquals(numRegions + 2 + existingRegions, regions.size());
+    assertEquals(numRegions + 3 + existingRegions, regions.size());
     return table;
   }
 

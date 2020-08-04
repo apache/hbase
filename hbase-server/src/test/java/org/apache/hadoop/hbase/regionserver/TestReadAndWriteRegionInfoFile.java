@@ -71,7 +71,7 @@ public class TestReadAndWriteRegionInfoFile {
     RegionInfo ri = RegionInfoBuilder.FIRST_META_REGIONINFO;
     // Create a region. That'll write the .regioninfo file.
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(FS, ROOT_DIR);
-    FSTableDescriptors.tryUpdateMetaTableDescriptor(CONF, FS, ROOT_DIR, null);
+    FSTableDescriptors.tryUpdateCatalogTableDescriptor(CONF, FS, ROOT_DIR, null);
     HRegion r = HBaseTestingUtility.createRegionAndWAL(ri, ROOT_DIR, CONF,
       fsTableDescriptors.get(TableName.META_TABLE_NAME));
     // Get modtime on the file.

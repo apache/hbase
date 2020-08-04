@@ -354,7 +354,8 @@ public class TestMetaFixer {
       setStartKey(overlapRegion.getStartKey()).
       build();
 
-    Table meta = MetaTableAccessor.getMetaHTable(TEST_UTIL.getConnection());
+    Table meta =
+      MetaTableAccessor.getCatalogHTable(TEST_UTIL.getConnection(), TableName.META_TABLE_NAME);
     Put putOfMerged = MetaTableAccessor.makePutFromRegionInfo(overlapRegion,
       HConstants.LATEST_TIMESTAMP);
     String qualifier = String.format(HConstants.MERGE_QUALIFIER_PREFIX_STR + "%04d", 0);

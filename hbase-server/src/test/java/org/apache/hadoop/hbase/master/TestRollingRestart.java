@@ -116,10 +116,10 @@ public class TestRollingRestart {
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     log("Verifying only catalog and namespace regions are assigned\n");
-    if (regions.size() != 2) {
+    if (regions.size() != 3) {
       for (String oregion : regions) log("Region still online: " + oregion);
     }
-    assertEquals(2, regions.size());
+    assertEquals(3, regions.size());
     log("Enabling table\n");
     TEST_UTIL.getAdmin().enableTable(tableName);
     log("Waiting for no more RIT\n");

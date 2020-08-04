@@ -240,7 +240,7 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testRegionCount() throws Exception {
-    metricsHelper.assertGauge("regionCount", TABLES_ON_MASTER? 1: 3, serverSource);
+    metricsHelper.assertGauge("regionCount", TABLES_ON_MASTER? 1: 4, serverSource);
   }
 
   @Test
@@ -350,7 +350,7 @@ public class TestRegionServerMetrics {
     TEST_UTIL.getAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    assertGauge("storeCount", TABLES_ON_MASTER ? 1 : 5);
+    assertGauge("storeCount", TABLES_ON_MASTER ? 1 : 8);
     assertGauge("storeFileCount", 1);
   }
 
