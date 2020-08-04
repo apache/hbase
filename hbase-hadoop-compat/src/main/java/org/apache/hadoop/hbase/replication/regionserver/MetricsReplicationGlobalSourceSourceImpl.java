@@ -24,7 +24,8 @@ import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class MetricsReplicationGlobalSourceSourceImpl implements MetricsReplicationGlobalSourceSource {
+public class MetricsReplicationGlobalSourceSourceImpl
+    implements MetricsReplicationGlobalSourceSource {
   private static final String KEY_PREFIX = "source.";
 
   private final MetricsReplicationSourceImpl rms;
@@ -86,7 +87,8 @@ public class MetricsReplicationGlobalSourceSourceImpl implements MetricsReplicat
     failedRecoveryQueue = rms.getMetricsRegistry()
             .getCounter(SOURCE_FAILED_RECOVERY_QUEUES, 0L);
 
-    walReaderBufferUsageBytes = rms.getMetricsRegistry().getGauge(SOURCE_WAL_READER_EDITS_BUFFER, 0L);
+    walReaderBufferUsageBytes = rms.getMetricsRegistry()
+        .getGauge(SOURCE_WAL_READER_EDITS_BUFFER, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {

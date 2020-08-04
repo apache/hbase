@@ -126,8 +126,8 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
       throw new IOException("Could not read cluster id", ke);
     }
     SyncReplicationPeerMappingManager mapping = new SyncReplicationPeerMappingManager();
-    this.globalMetricsSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
-        .getGlobalSource();
+    this.globalMetricsSource = CompatibilitySingletonFactory
+        .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers,
         replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId,
         walProvider != null ? walProvider.getWALFileLengthProvider() : p -> OptionalLong.empty(),
