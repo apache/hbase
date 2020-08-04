@@ -162,7 +162,7 @@ public class TestAssignmentManagerMetrics {
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 1,
         amSource);
       METRICS_HELPER.assertCounter(MetricsAssignmentManagerSource.ASSIGN_METRIC_PREFIX
-        + "SubmittedCount", 3, amSource);
+        + "SubmittedCount", 4, amSource);
     }
   }
 }
