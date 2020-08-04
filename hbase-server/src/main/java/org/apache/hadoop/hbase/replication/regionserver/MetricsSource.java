@@ -51,7 +51,7 @@ public class MetricsSource implements BaseSource {
   private long timeStampNextToReplicate;
 
   private final MetricsReplicationSourceSource singleSourceSource;
-  private final MetricsReplicationSourceSource globalSourceSource;
+  private final MetricsReplicationGlobalSourceSource globalSourceSource;
   private Map<String, MetricsReplicationTableSource> singleSourceSourceByTable;
 
   /**
@@ -75,7 +75,7 @@ public class MetricsSource implements BaseSource {
    * @param globalSourceSource Class to monitor global-scoped metrics
    */
   public MetricsSource(String id, MetricsReplicationSourceSource singleSourceSource,
-                       MetricsReplicationSourceSource globalSourceSource,
+                       MetricsReplicationGlobalSourceSource globalSourceSource,
                        Map<String, MetricsReplicationTableSource> singleSourceSourceByTable) {
     this.id = id;
     this.singleSourceSource = singleSourceSource;

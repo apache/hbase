@@ -171,6 +171,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final int maxRetriesMultiplier;
   // Total buffer size on this RegionServer for holding batched edits to be shipped.
   private final long totalBufferLimit;
+  private final MetricsReplicationGlobalSourceSource globalMetrics;
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
@@ -188,7 +189,8 @@ public class ReplicationSourceManager implements ReplicationListener {
       ReplicationPeers replicationPeers, ReplicationTracker replicationTracker, Configuration conf,
       Server server, FileSystem fs, Path logDir, Path oldLogDir, UUID clusterId,
       WALFileLengthProvider walFileLengthProvider,
-      SyncReplicationPeerMappingManager syncReplicationPeerMappingManager) throws IOException {
+      SyncReplicationPeerMappingManager syncReplicationPeerMappingManager,
+      MetricsReplicationGlobalSourceSource globalMetrics) throws IOException {
     this.sources = new ConcurrentHashMap<>();
     this.queueStorage = queueStorage;
     this.replicationPeers = replicationPeers;
@@ -226,6 +228,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       this.conf.getInt("replication.source.sync.maxretriesmultiplier", 60);
     this.totalBufferLimit = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
         HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
+    this.globalMetrics = globalMetrics;
   }
 
   /**
@@ -1146,5 +1149,9 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   int activeFailoverTaskCount() {
     return executor.getActiveCount();
+  }
+
+  MetricsReplicationGlobalSourceSource getGlobalMetrics() {
+    return this.globalMetrics;
   }
 }

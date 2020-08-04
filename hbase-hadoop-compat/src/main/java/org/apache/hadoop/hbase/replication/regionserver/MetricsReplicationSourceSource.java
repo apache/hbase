@@ -49,7 +49,6 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   public static final String SOURCE_COMPLETED_LOGS = "source.completedLogs";
   public static final String SOURCE_COMPLETED_RECOVERY_QUEUES = "source.completedRecoverQueues";
   public static final String SOURCE_FAILED_RECOVERY_QUEUES = "source.failedRecoverQueues";
-  public static final String SOURCE_WAL_READER_EDITS_BUFFER = "source.walReaderEditsBufferUsage";
 
   void setLastShippedAge(long age);
   void incrSizeOfLogQueue(int size);
@@ -77,13 +76,4 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   long getWALEditsRead();
   long getShippedOps();
   long getEditsFiltered();
-  /**
-   * Sets the total usage of memory used by edits in memory read from WALs.
-   * @param usage The memory used by edits in bytes
-   */
-  void setWALReaderEditsBufferBytes(long usage);
-  /**
-   * Returns the size, in bytes, of edits held in memory to be replicated.
-   */
-  long getWALReaderEditsBufferBytes();
 }

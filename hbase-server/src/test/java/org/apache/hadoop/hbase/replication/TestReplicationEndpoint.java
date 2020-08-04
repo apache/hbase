@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationGlobalSourceSource;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationGlobalSourceSourceImpl;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceImpl;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceSource;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceSourceImpl;
@@ -329,9 +330,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
     MetricsReplicationSourceSource singleSourceSource =
       new MetricsReplicationSourceSourceImpl(singleRms, id);
-    MetricsReplicationSourceSource globalSourceSource =
-      new MetricsReplicationGlobalSourceSource(globalRms);
-    MetricsReplicationSourceSource spyglobalSourceSource = spy(globalSourceSource);
+    MetricsReplicationGlobalSourceSource globalSourceSource =
+      new MetricsReplicationGlobalSourceSourceImpl(globalRms);
+    MetricsReplicationGlobalSourceSource spyglobalSourceSource = spy(globalSourceSource);
     doNothing().when(spyglobalSourceSource).incrFailedRecoveryQueue();
 
     Map<String, MetricsReplicationTableSource> singleSourceSourceByTable =
@@ -497,6 +498,16 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
   }
 
+  /**
+   * Not used by unit tests, helpful for manual testing with replication.
+   * <p>
+   * Snippet for `hbase shell`:
+   * <pre>
+   * create 't', 'f'
+   * add_peer '1', ENDPOINT_CLASSNAME => 'org.apache.hadoop.hbase.replication.TestReplicationEndpoint$SleepingReplicationEndpointForTest'
+   * alter 't', {NAME=>'f', REPLICATION_SCOPE=>1}
+   * </pre>
+   */
   public static class SleepingReplicationEndpointForTest extends ReplicationEndpointForTest {
     private long duration;
     public SleepingReplicationEndpointForTest() {
@@ -508,7 +519,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       super.init(context);
       if (this.ctx != null) {
         duration = this.ctx.getConfiguration().getLong(
-            "test.sleep.replication.endpoint.duration.millis", 5000L);
+            "hbase.test.sleep.replication.endpoint.duration.millis", 5000L);
       }
     }
 
