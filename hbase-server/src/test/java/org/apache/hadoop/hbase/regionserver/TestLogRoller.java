@@ -35,11 +35,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestLogRoller {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -53,7 +54,8 @@ public class TestLogRoller {
   private static Path ROOT_DIR;
   private static FileSystem FS;
 
-  @Before public void setup() throws Exception {
+  @Before
+  public void setup() throws Exception {
     CONF = TEST_UTIL.getConfiguration();
     CONF.setInt("hbase.regionserver.logroll.period", LOG_ROLL_PERIOD);
     CONF.setInt(HConstants.THREAD_WAKE_FREQUENCY, 300);
@@ -66,7 +68,8 @@ public class TestLogRoller {
     ROLLER.start();
   }
 
-  @After public void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     ROLLER.interrupt();
     FS.close();
     TEST_UTIL.shutdownMiniCluster();
@@ -75,12 +78,14 @@ public class TestLogRoller {
   /**
    * verify that each wal roll separately
    */
-  @Test public void testRequestRollWithMultiWal() throws Exception {
+  @Test
+  public void testRequestRollWithMultiWal() throws Exception {
     // add multiple wal
     Map<FSHLog, Path> wals = new HashMap<FSHLog, Path>();
     for (int i = 1; i <= 3; i++) {
       FSHLog wal = new FSHLog(FS, ROOT_DIR, LOG_DIR, ARCHIVE_DIR, CONF, null,
-        true, WAL_PREFIX, "." + i);
+          true, WAL_PREFIX, "." + i);
+      wal.rollWriter(true);
       wals.put(wal, wal.getCurrentFileName());
       ROLLER.addWAL(wal);
       Thread.sleep(1000);
