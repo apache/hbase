@@ -454,4 +454,19 @@ public class MetricsSource implements BaseSource {
   public Map<String, MetricsReplicationTableSource> getSingleSourceSourceByTable() {
     return singleSourceSourceByTable;
   }
+
+  /**
+   * Sets the amount of memory in bytes used in this RegionServer by edits pending replication.
+   */
+  public void setWALReaderEditsBufferUsage(long usageInBytes) {
+    globalSourceSource.setWALReaderEditsBufferBytes(usageInBytes);
+  }
+
+  /**
+   * Returns the amount of memory in bytes used in this RegionServer by edits pending replication.
+   * @return
+   */
+  public long getWALReaderEditsBufferUsage() {
+    return globalSourceSource.getWALReaderEditsBufferBytes();
+  }
 }

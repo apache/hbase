@@ -314,4 +314,15 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   @Override public long getEditsFiltered() {
     return this.walEditsFilteredCounter.value();
   }
+
+  @Override
+  public void setWALReaderEditsBufferBytes(long usage) {
+    //noop. Global limit, tracked globally. Do not need per-source metrics
+  }
+
+  @Override
+  public long getWALReaderEditsBufferBytes() {
+    //noop. Global limit, tracked globally. Do not need per-source metrics
+    return 0L;
+  }
 }

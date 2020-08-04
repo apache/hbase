@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
@@ -76,6 +77,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   private int statsThreadPeriod;
   // ReplicationLoad to access replication metrics
   private ReplicationLoad replicationLoad;
+  private MetricsReplicationSourceSource globalMetricsSource;
 
   private PeerProcedureHandler peerProcedureHandler;
 
@@ -150,6 +152,8 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
               p.getSyncReplicationState(), p.getNewSyncReplicationState(), 0));
       }
     }
+    this.globalMetricsSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
+        .getGlobalSource();
     this.statsThreadPeriod =
         this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
     LOG.debug("Replication stats-in-log period={} seconds",  this.statsThreadPeriod);
@@ -214,7 +218,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     this.replicationManager.init();
     this.replicationSink = new ReplicationSink(this.conf);
     this.scheduleThreadPool.scheduleAtFixedRate(
-      new ReplicationStatisticsTask(this.replicationSink, this.replicationManager),
+      new ReplicationStatisticsTask(this.replicationSink, this.replicationManager, this.globalMetricsSource),
       statsThreadPeriod, statsThreadPeriod, TimeUnit.SECONDS);
     LOG.info("{} started", this.server.toString());
   }
@@ -244,17 +248,22 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
 
     private final ReplicationSink replicationSink;
     private final ReplicationSourceManager replicationManager;
+    private final MetricsReplicationSourceSource globalMetricsSource;
 
     public ReplicationStatisticsTask(ReplicationSink replicationSink,
-        ReplicationSourceManager replicationManager) {
+        ReplicationSourceManager replicationManager, MetricsReplicationSourceSource globalMetricsSource) {
       this.replicationManager = replicationManager;
       this.replicationSink = replicationSink;
+      this.globalMetricsSource = globalMetricsSource;
     }
 
     @Override
     public void run() {
       printStats(this.replicationManager.getStats());
       printStats(this.replicationSink.getStats());
+
+      // Report how much data we've read off disk which is pending replication, across all sources
+      globalMetricsSource.setWALReaderEditsBufferBytes(replicationManager.getTotalBufferUsed().get());
     }
 
     private void printStats(String stats) {

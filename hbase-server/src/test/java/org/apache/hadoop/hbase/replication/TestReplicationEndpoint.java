@@ -497,6 +497,33 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
   }
 
+  public static class SleepingReplicationEndpointForTest extends ReplicationEndpointForTest {
+    private long duration;
+    public SleepingReplicationEndpointForTest() {
+      super();
+    }
+
+    @Override
+    public void init(Context context) throws IOException {
+      super.init(context);
+      if (this.ctx != null) {
+        duration = this.ctx.getConfiguration().getLong(
+            "test.sleep.replication.endpoint.duration.millis", 5000L);
+      }
+    }
+
+    @Override
+    public boolean replicate(ReplicateContext context) {
+      try {
+        Thread.sleep(duration);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return false;
+      }
+      return super.replicate(context);
+    }
+  }
+
   public static class InterClusterReplicationEndpointForTest
       extends HBaseInterClusterReplicationEndpoint {
 

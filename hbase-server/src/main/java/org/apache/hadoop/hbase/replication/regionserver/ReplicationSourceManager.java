@@ -169,6 +169,8 @@ public class ReplicationSourceManager implements ReplicationListener {
   // Maximum number of retries before taking bold actions when deleting remote wal files for sync
   // replication peer.
   private final int maxRetriesMultiplier;
+  // Total buffer size on this RegionServer for holding batched edits to be shipped.
+  private final long totalBufferLimit;
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
@@ -222,6 +224,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.sleepForRetries = this.conf.getLong("replication.source.sync.sleepforretries", 1000);
     this.maxRetriesMultiplier =
       this.conf.getInt("replication.source.sync.maxretriesmultiplier", 60);
+    this.totalBufferLimit = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
+        HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
   }
 
   /**
@@ -1070,6 +1074,14 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   /**
+   * Returns the maximum size in bytes of edits held in memory which are pending replication
+   * across all sources inside this RegionServer.
+   */
+  public long getTotalBufferLimit() {
+    return totalBufferLimit;
+  }
+
+  /**
    * Get the directory where wals are archived
    * @return the directory where wals are archived
    */
@@ -1106,6 +1118,10 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   public String getStats() {
     StringBuilder stats = new StringBuilder();
+    // Print stats that apply across all Replication Sources
+    stats.append("Global stats: ");
+    stats.append("WAL Edits Buffer Used=").append(getTotalBufferUsed().get()).append("B, Limit=")
+        .append(getTotalBufferLimit()).append("B\n");
     for (ReplicationSourceInterface source : this.sources.values()) {
       stats.append("Normal source for cluster " + source.getPeerId() + ": ");
       stats.append(source.getStats() + "\n");

@@ -47,6 +47,7 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   private final MutableFastCounter completedWAL;
   private final MutableFastCounter completedRecoveryQueue;
   private final MutableFastCounter failedRecoveryQueue;
+  private final MutableGaugeLong walReaderBufferUsageBytes;
 
   public MetricsReplicationGlobalSourceSource(MetricsReplicationSourceImpl rms) {
     this.rms = rms;
@@ -84,6 +85,8 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
             .getCounter(SOURCE_COMPLETED_RECOVERY_QUEUES, 0L);
     failedRecoveryQueue = rms.getMetricsRegistry()
             .getCounter(SOURCE_FAILED_RECOVERY_QUEUES, 0L);
+
+    walReaderBufferUsageBytes = rms.getMetricsRegistry().getGauge(SOURCE_WAL_READER_EDITS_BUFFER, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -249,5 +252,15 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   @Override
   public long getEditsFiltered() {
     return this.walEditsFilteredCounter.value();
+  }
+
+  @Override
+  public void setWALReaderEditsBufferBytes(long usage) {
+    this.walReaderBufferUsageBytes.set(usage);
+  }
+
+  @Override
+  public long getWALReaderEditsBufferBytes() {
+    return this.walReaderBufferUsageBytes.value();
   }
 }
