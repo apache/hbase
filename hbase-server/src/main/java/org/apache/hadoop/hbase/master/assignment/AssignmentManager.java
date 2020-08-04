@@ -229,7 +229,7 @@ public class AssignmentManager {
     // Start the Assignment Thread
     startAssignmentThread();
 
-    // load meta region state
+    // load root region state
     ZKWatcher zkw = master.getZooKeeper();
     // it could be null in some tests
     if (zkw != null) {
@@ -247,7 +247,7 @@ public class AssignmentManager {
       if (regionState.getServerName() != null) {
         regionStates.addRegionToServer(regionNode);
       }
-      setMetaAssigned(regionState.getRegion(), regionState.getState() == State.OPEN);
+      setRootAssigned(regionState.getRegion(), regionState.getState() == State.OPEN);
     }
   }
 
@@ -1578,7 +1578,14 @@ public class AssignmentManager {
   // ============================================================================================
   //  TODO: Master load/bootstrap
   // ============================================================================================
-  public void joinCluster() throws IOException {
+  public void joinCluster(boolean loadRoot) throws IOException {
+    joinCluster(loadRoot, true, true);
+  }
+
+  @VisibleForTesting
+  public void joinCluster(boolean loadRoot, boolean shouldWaitForRootOnline,
+    boolean shouldWaitForMetaOnline)
+    throws IOException {
     long startTime = System.nanoTime();
     LOG.debug("Joining cluster...");
 
@@ -1592,15 +1599,18 @@ public class AssignmentManager {
 
 
     LOG.debug("Waiting for hbase:root to be online.");
-    if (!waitForRootOnline()) {
+    if (shouldWaitForRootOnline && !waitForRootOnline()) {
       throw new IOException("Waited too long for hbase:root to be online");
     }
 
-    //load hbase:root to build regionstate for hbase:meta regions
-    loadRoot();
+    //could have been run in initrootproc already
+    if (loadRoot) {
+      //load hbase:root to build regionstate for hbase:meta regions
+      loadRoot();
+    }
 
     LOG.debug("Waiting for hbase:meta to be online.");
-    if (!waitForMetaOnline()) {
+    if (shouldWaitForMetaOnline && !waitForMetaOnline()) {
       throw new IOException("Waited too long for hbase:meta to be online");
     }
 
@@ -1726,27 +1736,26 @@ public class AssignmentManager {
   }
 
   public void loadRoot() throws IOException {
-    //TODO francis is the the right monitor lock to synchronize on?
-    synchronized (rootLoadEvent) {
-      if (!isRootLoaded()) {
-        // TODO: use a thread pool
-        LOG.debug("Loaded hbase:root");
-        regionStateStore.visitCatalogTable(TableName.ROOT_TABLE_NAME,
-            new RegionCatalogLoadingVisitor());
-        wakeRootLoadedEvent();
-      } else {
-        LOG.debug("Not loading hbase:root, already loaded");
-      }
+    if (!isRootLoaded()) {
+      // TODO: use a thread pool
+      LOG.debug("Loading hbase:root");
+      regionStateStore.visitCatalogTable(TableName.ROOT_TABLE_NAME,
+          new RegionCatalogLoadingVisitor());
+      wakeRootLoadedEvent();
+      LOG.debug("Loaded hbase:root");
+    } else {
+      LOG.debug("Not loading hbase:root, already loaded");
     }
   }
 
   private void loadMeta() throws IOException {
     // TODO: use a thread pool
-    LOG.debug("Loaded hbase:meta");
+    LOG.debug("Loading hbase:meta");
     regionStateStore.visitCatalogTable(TableName.META_TABLE_NAME,
         new RegionCatalogLoadingVisitor());
     // every assignment is blocked until meta is loaded.
     wakeMetaLoadedEvent();
+    LOG.debug("Loaded hbase:meta");
   }
 
   /**

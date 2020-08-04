@@ -405,7 +405,7 @@ public class ModifyTableProcedure
           newReplicaCount,
           oldReplicaCount - newReplicaCount,
           connection,
-          newTableDescriptor.getTableName());
+          TableName.META_TABLE_NAME);
       }
     }
     if (newReplicaCount > oldReplicaCount) {

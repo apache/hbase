@@ -60,6 +60,6 @@ public class TestSCPWithReplicasWithRSGroup extends TestSCPBase {
     HMaster master = util.getHBaseCluster().getMaster();
     util.waitFor(60000, (Predicate<Exception>) () ->
         master.isInitialized() && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
-    testRecoveryAndDoubleExecution(false, false);
+    testRecoveryAndDoubleExecution(false, false, false);
   }
 }

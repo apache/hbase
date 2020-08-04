@@ -473,9 +473,10 @@ message ReopenTableRegionsStateData {
 }
 
 enum InitRootState{
-  INIT_ROOT_ASSIGN_ROOT = 1;
-  INIT_ROOT_LOAD_ROOT = 2;
-  INIT_ROOT_INIT_META = 3;
+  INIT_ROOT_WRITE_FS_LAYOUT = 1;
+  INIT_ROOT_ASSIGN_ROOT = 2;
+  INIT_ROOT_LOAD_ROOT = 3;
+  INIT_ROOT_INIT_META = 4;
 }
 
 message InitRootStateData {

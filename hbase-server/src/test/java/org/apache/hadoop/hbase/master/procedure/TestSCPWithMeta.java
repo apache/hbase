@@ -32,7 +32,12 @@ public class TestSCPWithMeta extends TestSCPBase {
     HBaseClassTestRule.forClass(TestSCPWithMeta.class);
 
   @Test
-  public void testRecoveryAndDoubleExecutionOnRsWithMeta() throws Exception {
-    testRecoveryAndDoubleExecution(true, true);
+  public void testRecoveryAndDoubleExecutionOnRsWithRoot() throws Exception {
+    testRecoveryAndDoubleExecution(true, false, true);
   }
+
+//  @Test(timeout = 900000 )
+//  public void testRecoveryAndDoubleExecutionOnRsWithMeta() throws Exception {
+//    testRecoveryAndDoubleExecution(false, true, true);
+//  }
 }

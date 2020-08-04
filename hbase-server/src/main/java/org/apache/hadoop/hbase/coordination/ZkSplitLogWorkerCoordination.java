@@ -405,17 +405,27 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
       int rootOffset = -1;
       for (int i = 0; i < paths.size(); i++) {
         if (AbstractFSWALProvider.isRootFile(paths.get(i))) {
-          offset = rootOffset;
+          rootOffset = i;
         }
         if (AbstractFSWALProvider.isMetaFile(paths.get(i))) {
-          offset = metaOffset;
+          metaOffset = i;
         }
       }
+      int seqIndex = 0;
+      int seq[] = new int[paths.size()];
       if (rootOffset != -1) {
-        offset = rootOffset;
+        seq[seqIndex] = rootOffset;
+        seqIndex++;
       }
       if (metaOffset != -1) {
-        offset = metaOffset;
+        seq[seqIndex] = metaOffset;
+        seqIndex++;
+      }
+      for (int i=0; i < seq.length; i++) {
+        if (i != rootOffset && i != metaOffset) {
+          seq[seqIndex] = i;
+          seqIndex++;
+        }
       }
       int numTasks = paths.size();
       boolean taskGrabbed = false;
@@ -426,7 +436,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
               LOG.trace("Current region server " + server.getServerName()
                 + " is ready to take more tasks, will get task list and try grab tasks again.");
             }
-            int idx = (i + offset) % paths.size();
+            int idx = seq[i];
             // don't call ZKSplitLog.getNodeName() because that will lead to
             // double encoding of the path name
             taskGrabbed |= grabTask(ZNodePaths.joinZNode(

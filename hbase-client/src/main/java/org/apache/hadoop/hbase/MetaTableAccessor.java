@@ -1957,7 +1957,9 @@ public class MetaTableAccessor {
       prevCatalogTableName = currCatalogTableName;
       prevRegionInfo = hri;
     }
-    deleteFromCatalogTable(connection, prevCatalogTableName,  deletes);
+    if (deletes.size() > 0) {
+      deleteFromCatalogTable(connection, prevCatalogTableName, deletes);
+    }
     LOG.info("Deleted {} regions from {}", regionsInfo.size(), prevCatalogTableName);
     LOG.debug("Deleted regions: {}", regionsInfo);
   }

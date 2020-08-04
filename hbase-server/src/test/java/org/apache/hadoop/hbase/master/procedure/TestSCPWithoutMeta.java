@@ -33,6 +33,6 @@ public class TestSCPWithoutMeta extends TestSCPBase {
 
   @Test
   public void testRecoveryAndDoubleExecutionOnRsWithoutMeta() throws Exception {
-    testRecoveryAndDoubleExecution(false, true);
+    testRecoveryAndDoubleExecution(false, false,true);
   }
 }

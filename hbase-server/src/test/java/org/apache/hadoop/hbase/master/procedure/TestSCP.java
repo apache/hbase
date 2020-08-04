@@ -48,7 +48,7 @@ public class TestSCP extends TestSCPBase {
 
   @Test
   public void testCrashTargetRs() throws Exception {
-    testRecoveryAndDoubleExecution(false, false);
+    testRecoveryAndDoubleExecution(false, false,false);
   }
 
   @Test

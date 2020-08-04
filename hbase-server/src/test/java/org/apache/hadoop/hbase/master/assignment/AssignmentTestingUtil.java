@@ -109,6 +109,20 @@ public final class AssignmentTestingUtil {
     return serverName;
   }
 
+  public static boolean isServerHoldingRoot(final HBaseTestingUtility util,
+    final ServerName serverName) throws Exception {
+    for (RegionInfo hri: getRootRegions(util)) {
+      if (serverName.equals(getServerHoldingRegion(util, hri))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static Set<RegionInfo> getRootRegions(final HBaseTestingUtility util) {
+    return getMaster(util).getAssignmentManager().getRootRegionSet();
+  }
+
   public static boolean isServerHoldingMeta(final HBaseTestingUtility util,
       final ServerName serverName) throws Exception {
     for (RegionInfo hri: getMetaRegions(util)) {
