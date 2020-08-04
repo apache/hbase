@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -137,8 +137,8 @@ public class TestAsyncTableGetMultiThreaded {
     LOG.info("====== Test started ======");
     int numThreads = 7;
     AtomicBoolean stop = new AtomicBoolean(false);
-    ExecutorService executor =
-      Executors.newFixedThreadPool(numThreads, Threads.newDaemonThreadFactory("TestAsyncGet-"));
+    ExecutorService executor = Executors.newFixedThreadPool(numThreads,
+      new ThreadFactoryBuilder().setNameFormat("TestAsyncGet-pool-%d").build());
     List<Future<?>> futures = new ArrayList<>();
     IntStream.range(0, numThreads).forEach(i -> futures.add(executor.submit(() -> {
       run(stop);

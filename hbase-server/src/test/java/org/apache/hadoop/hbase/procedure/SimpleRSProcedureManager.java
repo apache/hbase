@@ -33,10 +33,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,9 +125,8 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
 
     public SimpleSubprocedurePool(String name, Configuration conf) {
       this.name = name;
-      executor = new ThreadPoolExecutor(1, 1, 500,
-          TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
-          Threads.newDaemonThreadFactory("rs(" + name + ")-procedure"));
+      executor = new ThreadPoolExecutor(1, 1, 500, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+        new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-procedure-pool-%d").build());
       taskPool = new ExecutorCompletionService<>(executor);
     }
 

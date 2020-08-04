@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -517,8 +518,9 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   synchronized void start(UncaughtExceptionHandler eh) {
-    ThreadFactory flusherThreadFactory = Threads.newDaemonThreadFactory(
-        server.getServerName().toShortString() + "-MemStoreFlusher", eh);
+    ThreadFactory flusherThreadFactory = new ThreadFactoryBuilder()
+      .setNameFormat(server.getServerName().toShortString() + "-MemStoreFlusher-pool-%d")
+      .setUncaughtExceptionHandler(eh).build();
     for (int i = 0; i < flushHandlers.length; i++) {
       flushHandlers[i] = new FlushHandler("MemStoreFlusher." + i);
       flusherThreadFactory.newThread(flushHandlers[i]);

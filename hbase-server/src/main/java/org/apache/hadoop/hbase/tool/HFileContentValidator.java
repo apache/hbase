@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,7 +108,7 @@ public class HFileContentValidator extends AbstractHBaseTool {
     int availableProcessors = Runtime.getRuntime().availableProcessors();
     int numThreads = conf.getInt("hfilevalidator.numthreads", availableProcessors);
     return Executors.newFixedThreadPool(numThreads,
-        Threads.newDaemonThreadFactory("hfile-validator"));
+      new ThreadFactoryBuilder().setNameFormat("hfile-validator-pool-%d").build());
   }
 
   @Override
