@@ -514,7 +514,8 @@ public interface Admin extends Abortable, Closeable {
   void flush(TableName tableName) throws IOException;
 
   /**
-   * Flush a table with specified column family. Synchronous operation.
+   * Flush the specified column family stores on all regions of the passed table.
+   * This runs as a synchronous operation.
    *
    * @param tableName table to flush
    * @param columnFamily column family within a table
