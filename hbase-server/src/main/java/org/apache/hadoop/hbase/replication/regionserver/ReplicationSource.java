@@ -858,7 +858,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         new ClusterMarkingEntryFilter(clusterId, peerClusterId, replicationEndpoint));
       ChainWALEntryFilter readerFilter = new ChainWALEntryFilter(filters);
       entryReader = new ReplicationSourceWALReaderThread(manager, replicationQueueInfo, queue,
-          startPosition, fs, conf, readerFilter, metrics);
+          startPosition, fs, conf, readerFilter, metrics, ReplicationSource.this);
       Threads.setDaemonThreadRunning(entryReader, threadName
           + ".replicationSource.replicationWALReaderThread." + walGroupId + "," + peerClusterZnode,
         handler);

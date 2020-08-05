@@ -80,6 +80,8 @@ public class ReplicationSourceWALReaderThread extends Thread {
   private AtomicLong totalBufferUsed;
   private long totalBufferQuota;
 
+  private ReplicationSource source;
+
   /**
    * Creates a reader worker for a given WAL queue. Reads WAL entries off a given queue, batches the
    * entries, and puts them on a batch queue.
@@ -94,8 +96,8 @@ public class ReplicationSourceWALReaderThread extends Thread {
    */
   public ReplicationSourceWALReaderThread(ReplicationSourceManager manager,
       ReplicationQueueInfo replicationQueueInfo, PriorityBlockingQueue<Path> logQueue,
-      long startPosition,
-      FileSystem fs, Configuration conf, WALEntryFilter filter, MetricsSource metrics) {
+      long startPosition, FileSystem fs, Configuration conf, WALEntryFilter filter,
+      MetricsSource metrics, ReplicationSource source) {
     this.replicationQueueInfo = replicationQueueInfo;
     this.logQueue = logQueue;
     this.lastReadPath = logQueue.peek();
@@ -118,6 +120,7 @@ public class ReplicationSourceWALReaderThread extends Thread {
         this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5 minutes @ 1 sec per
     this.metrics = metrics;
     this.entryBatchQueue = new LinkedBlockingQueue<>(batchCount);
+    this.source = source;
     LOG.info("peerClusterZnode=" + replicationQueueInfo.getPeerClusterZnode()
         + ", ReplicationSourceWALReaderThread : " + replicationQueueInfo.getPeerId()
         + " inited, replicationBatchSizeCapacity=" + replicationBatchSizeCapacity
@@ -132,6 +135,10 @@ public class ReplicationSourceWALReaderThread extends Thread {
       try (WALEntryStream entryStream =
           new WALEntryStream(logQueue, fs, conf, lastReadPosition, metrics)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
+          if (!source.isPeerEnabled()) {
+            Threads.sleep(sleepForRetries);
+            continue;
+          }
           if (!checkQuota()) {
             continue;
           }
