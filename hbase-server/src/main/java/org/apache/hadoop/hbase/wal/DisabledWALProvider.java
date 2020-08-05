@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -141,6 +142,10 @@ class DisabledWALProvider implements WALProvider {
     @Override
     public Map<byte[], List<byte[]>> rollWriter(boolean force) {
       return rollWriter();
+    }
+
+    @Override
+    public void archive(RegionServerServices services) {
     }
 
     @Override

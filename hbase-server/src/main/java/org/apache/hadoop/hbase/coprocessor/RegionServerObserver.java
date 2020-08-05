@@ -77,6 +77,24 @@ public interface RegionServerObserver {
       throws IOException {}
 
   /**
+   * This will be called before executing user request to archive earliest log
+   * file of a region server.
+   * @param ctx the environment to interact with the framework and region server.
+   */
+  default void preArchiveWALRequest(
+    final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+    throws IOException {}
+
+  /**
+   * This will be called after executing user request to archive earliest log
+   * file of a region server.
+   * @param ctx the environment to interact with the framework and region server.
+   */
+  default void postArchiveWALRequest(
+    final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+    throws IOException {}
+
+  /**
    * This will be called after the replication endpoint is instantiated.
    * @param ctx the environment to interact with the framework and region server.
    * @param endpoint - the base endpoint for replication

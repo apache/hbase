@@ -72,6 +72,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ArchiveWALRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
@@ -881,6 +882,20 @@ public final class RequestConverter {
    */
   public static RollWALWriterRequest buildRollWALWriterRequest() {
     return ROLL_WAL_WRITER_REQUEST;
+  }
+
+  /**
+   * @see #buildArchiveWALRequest()
+   */
+  private static ArchiveWALRequest ARCHIVE_WAL_REQUEST = ArchiveWALRequest.newBuilder()
+    .build();
+
+  /**
+   * Get the static ArchiveWALRequest instance
+   * @return a ArchiveWALRequest
+   */
+  public static ArchiveWALRequest buildArchiveWALRequest() {
+    return ARCHIVE_WAL_REQUEST;
   }
 
   /**

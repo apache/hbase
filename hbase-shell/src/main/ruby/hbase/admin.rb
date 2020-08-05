@@ -173,6 +173,12 @@ module Hbase
     alias hlog_roll wal_roll
 
     #----------------------------------------------------------------------------------------------
+    # Requests a regionserver's WAL to archive earliest log file
+    def wal_archive(server_name)
+      @admin.archiveEarliestWAL(ServerName.valueOf(server_name))
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Requests a table or region split
     def split(table_or_region_name, split_point = nil)
       split_point_bytes = nil

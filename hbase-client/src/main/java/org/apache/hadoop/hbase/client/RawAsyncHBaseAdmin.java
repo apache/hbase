@@ -121,6 +121,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Has
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ArchiveWALRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ArchiveWALResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
@@ -2911,6 +2913,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             controller, stub, RequestConverter.buildRollWALWriterRequest(),
             (s, c, req, done) -> s.rollWALWriter(controller, req, done), resp -> null))
         .serverName(serverName).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> archiveEarliestWAL(ServerName serverName) {
+    return this
+      .<Void> newAdminCaller()
+      .action(
+        (controller, stub) -> this.<ArchiveWALRequest, ArchiveWALResponse, Void> adminCall(
+          controller, stub, RequestConverter.buildArchiveWALRequest(),
+          (s, c, req, done) -> s.archiveEarliestWAL(controller, req, done), resp -> null))
+      .serverName(serverName).call();
   }
 
   @Override

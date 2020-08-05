@@ -1323,6 +1323,14 @@ public interface Admin extends Abortable, Closeable {
   void rollWALWriter(ServerName serverName) throws IOException, FailedLogCloseException;
 
   /**
+   * Archive the earliest log file.
+   *
+   * @param serverName The servername of the regionserver.
+   * @throws IOException if a remote or network exception occurs
+   */
+  void archiveEarliestWAL(ServerName serverName) throws IOException;
+
+  /**
    * Helper that delegates to getClusterMetrics().getMasterCoprocessorNames().
    * @return an array of master coprocessors
    * @see org.apache.hadoop.hbase.ClusterMetrics#getMasterCoprocessorNames()

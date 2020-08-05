@@ -1128,6 +1128,13 @@ public interface AsyncAdmin {
   CompletableFuture<Void> rollWALWriter(ServerName serverName);
 
   /**
+   * Archive the earliest log file.
+   *
+   * @param serverName The servername of the region server.
+   */
+  CompletableFuture<Void> archiveEarliestWAL(ServerName serverName);
+
+  /**
    * Clear compacting queues on a region server.
    * @param serverName
    * @param queues the set of queue name

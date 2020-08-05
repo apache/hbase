@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -97,6 +98,14 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
         controller.requestRoll();
       }
       notifyAll();
+    }
+  }
+
+  public void requestArchive() throws IOException {
+    synchronized (this) {
+      for (WAL wal : wals.keySet()) {
+        wal.archive((RegionServerServices) this.abortable);
+      }
     }
   }
 

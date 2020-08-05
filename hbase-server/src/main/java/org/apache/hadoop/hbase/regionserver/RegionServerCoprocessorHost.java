@@ -150,6 +150,24 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
+  public void preArchiveWALRequest() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.preArchiveWALRequest(this);
+      }
+    });
+  }
+
+  public void postArchiveWALRequest() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.postArchiveWALRequest(this);
+      }
+    });
+  }
+
   public void preReplicateLogEntries()
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {

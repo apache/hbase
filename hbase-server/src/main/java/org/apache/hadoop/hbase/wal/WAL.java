@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
@@ -82,6 +83,11 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    *         region names as returned by {@link RegionInfo#getEncodedName()}
    */
   Map<byte[], List<byte[]>> rollWriter(boolean force) throws IOException;
+
+  /**
+   * Archive the earliest log file.
+   */
+  void archive(RegionServerServices services) throws IOException;
 
   /**
    * Stop accepting new writes. If we have unsynced writes still in buffer, sync them.

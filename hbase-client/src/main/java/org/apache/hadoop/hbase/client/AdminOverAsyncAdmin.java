@@ -589,6 +589,11 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void archiveEarliestWAL(ServerName serverName) throws IOException {
+    get(admin.archiveEarliestWAL(serverName));
+  }
+
+  @Override
   public CompactionState getCompactionState(TableName tableName) throws IOException {
     return get(admin.getCompactionState(tableName));
   }

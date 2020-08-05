@@ -794,6 +794,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public void archiveEarliestWAL(ServerName serverName) {
+    throw new NotImplementedException("archiveEarliestWAL not supported in ThriftAdmin");
+  }
+
+  @Override
   public CompactionState getCompactionState(TableName tableName) {
     throw new NotImplementedException("getCompactionState not supported in ThriftAdmin");
   }
