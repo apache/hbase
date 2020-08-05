@@ -202,10 +202,12 @@ public class TestReplicationSource {
     ReplicationPeer mockPeer = mock(ReplicationPeer.class);
     Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
     Configuration testConf = HBaseConfiguration.create();
-    source.init(testConf, null, mockManager, null, mockPeer, null, "testPeer", null,
-      p -> OptionalLong.empty(), mock(MetricsSource.class));
-    ReplicationSourceWALReader reader = new ReplicationSourceWALReader(null, conf, null, 0, null, source);
-    ReplicationSourceShipper shipper = new ReplicationSourceShipper(conf, null, null, source);
+    source.init(testConf, null, mockManager, null, mockPeer, null,
+      "testPeer", null, p -> OptionalLong.empty(), mock(MetricsSource.class));
+    ReplicationSourceWALReader reader = new ReplicationSourceWALReader(null,
+      conf, null, 0, null, source);
+    ReplicationSourceShipper shipper =
+      new ReplicationSourceShipper(conf, null, null, source);
     shipper.entryReader = reader;
     source.workerThreads.put("testPeer", shipper);
     WALEntryBatch batch = new WALEntryBatch(10, logDir);
@@ -219,7 +221,8 @@ public class TestReplicationSource {
     when(mockEdit.heapSize()).thenReturn(10000L);
     when(mockEdit.size()).thenReturn(0);
     ArrayList<Cell> cells = new ArrayList<>();
-    KeyValue kv = new KeyValue(Bytes.toBytes("0001"), Bytes.toBytes("f"), Bytes.toBytes("1"), Bytes.toBytes("v1") );
+    KeyValue kv = new KeyValue(Bytes.toBytes("0001"), Bytes.toBytes("f"),
+      Bytes.toBytes("1"), Bytes.toBytes("v1"));
     cells.add(kv);
     when(mockEdit.getCells()).thenReturn(cells);
     reader.addEntryToBatch(batch, mockEntry);
