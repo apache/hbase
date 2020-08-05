@@ -270,6 +270,9 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   @Override
   public String prettyPrintJournal() {
+    if (!journalEnabled) {
+      return "";
+    }
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < journal.size(); i++) {
       StatusJournalEntry je = journal.get(i);
