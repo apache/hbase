@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.util.GsonUtil;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
@@ -271,7 +270,20 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   @Override
   public String prettyPrintJournal() {
-    return StringUtils.join("\n\t", getStatusJournal());
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < journal.size(); i++) {
+      StatusJournalEntry je = journal.get(i);
+      sb.append(je.toString());
+      if (i != 0) {
+        StatusJournalEntry jep = journal.get(i-1);
+        long delta = je.getTimeStamp() - jep.getTimeStamp();
+        if (delta != 0) {
+          sb.append(" (+" + delta + " ms)");
+        }
+      }
+      sb.append("\n");
+    }
+    return sb.toString();
   }
 
 }
