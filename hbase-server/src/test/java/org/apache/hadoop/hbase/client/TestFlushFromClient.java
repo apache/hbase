@@ -167,11 +167,7 @@ public class TestFlushFromClient {
   }
 
   private List<HRegion> getRegionInfo() {
-    return TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
-      .map(JVMClusterUtil.RegionServerThread::getRegionServer)
-      .flatMap(r -> r.getRegions().stream())
-      .filter(r -> r.getTableDescriptor().getTableName().equals(tableName))
-      .collect(Collectors.toList());
+    return TEST_UTIL.getHBaseCluster().getRegions(tableName);
   }
 
   private List<HRegion> getRegionInfo(HRegionServer rs) {
