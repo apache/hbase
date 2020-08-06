@@ -8456,12 +8456,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return cells;
   }
 
-  public static final long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT +
-      56 * ClassSize.REFERENCE +
-      3 * Bytes.SIZEOF_INT +
-      14 * Bytes.SIZEOF_LONG +
-      3 * Bytes.SIZEOF_BOOLEAN);
+  public static final long FIXED_OVERHEAD = ClassSize.estimateBase(HRegion.class, false);
 
   // woefully out of date - currently missing:
   // 1 x HashMap - coprocessorServiceHandlers
