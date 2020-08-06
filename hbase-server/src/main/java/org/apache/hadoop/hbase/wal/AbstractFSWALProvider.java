@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -308,7 +307,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * Construct the directory name for all old WALs on a given server. The default old WALs dir looks
    * like: <code>hbase/oldWALs</code>. If you config hbase.separate.oldlogdir.by.regionserver to
    * true, it looks like <code>hbase//oldWALs/kalashnikov.att.net,61634,1486865297088</code>.
-   * @param conf
    * @param serverName Server name formatted as described in {@link ServerName}
    * @return the relative WAL directory name
    */
@@ -414,11 +412,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return isMetaFile(p.getName());
   }
 
+  /**
+   * @return True if String ends in {@link #META_WAL_PROVIDER_ID}
+   */
   public static boolean isMetaFile(String p) {
-    if (p != null && p.endsWith(META_WAL_PROVIDER_ID)) {
-      return true;
-    }
-    return false;
+    return p != null && p.endsWith(META_WAL_PROVIDER_ID);
   }
 
   public static boolean isArchivedLogFile(Path p) {
@@ -461,12 +459,9 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @param path path to WAL file
    * @param conf configuration
    * @return WAL Reader instance
-   * @throws IOException
    */
   public static org.apache.hadoop.hbase.wal.WAL.Reader openReader(Path path, Configuration conf)
-      throws IOException
-
-  {
+      throws IOException {
     long retryInterval = 2000; // 2 sec
     int maxAttempts = 30;
     int attempt = 0;
