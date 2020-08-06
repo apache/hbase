@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.security.NettyHBaseRpcConnectionHeaderHandler;
 import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -77,8 +78,8 @@ class NettyRpcConnection extends RpcConnection {
   private static final Logger LOG = LoggerFactory.getLogger(NettyRpcConnection.class);
 
   private static final ScheduledExecutorService RELOGIN_EXECUTOR = Executors
-    .newSingleThreadScheduledExecutor(
-      new ThreadFactoryBuilder().setNameFormat("Relogin-pool-%d").build());
+      .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat("Relogin-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   private final NettyRpcClient rpcClient;
 
@@ -168,6 +169,7 @@ class NettyRpcConnection extends RpcConnection {
     if (error instanceof FallbackDisallowedException) {
       return;
     }
+    LOG.trace("Try scheduleRelogin.");
     if (!provider.canRetry()) {
       LOG.trace("SASL Provider does not support retries");
       return;
