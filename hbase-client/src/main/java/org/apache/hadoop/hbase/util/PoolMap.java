@@ -228,7 +228,7 @@ public class PoolMap<K, V> implements Map<K, V> {
   }
 
   public enum PoolType {
-    Reusable, ThreadLocal, RoundRobin;
+    ThreadLocal, RoundRobin;
 
     public static PoolType valueOf(String poolTypeName,
         PoolType defaultPoolType, PoolType... allowedPoolTypes) {
@@ -270,59 +270,12 @@ public class PoolMap<K, V> implements Map<K, V> {
 
   protected Pool<V> createPool() {
     switch (poolType) {
-    case Reusable:
-      return new ReusablePool<>(poolMaxSize);
     case RoundRobin:
       return new RoundRobinPool<>(poolMaxSize);
     case ThreadLocal:
       return new ThreadLocalPool<>();
     }
     return null;
-  }
-
-  /**
-   * The <code>ReusablePool</code> represents a {@link PoolMap.Pool} that builds
-   * on the {@link java.util.LinkedList} class. It essentially allows resources to be
-   * checked out, at which point it is removed from this pool. When the resource
-   * is no longer required, it should be returned to the pool in order to be
-   * reused.
-   *
-   * <p>
-   * If {@link #maxSize} is set to {@link Integer#MAX_VALUE}, then the size of
-   * the pool is unbounded. Otherwise, it caps the number of consumers that can
-   * check out a resource from this pool to the (non-zero positive) value
-   * specified in {@link #maxSize}.
-   * </p>
-   *
-   * @param <R>
-   *          the type of the resource
-   */
-  @SuppressWarnings("serial")
-  public static class ReusablePool<R> extends ConcurrentLinkedQueue<R> implements Pool<R> {
-    private int maxSize;
-
-    public ReusablePool(int maxSize) {
-      this.maxSize = maxSize;
-
-    }
-
-    @Override
-    public R get() {
-      return poll();
-    }
-
-    @Override
-    public R put(R resource) {
-      if (super.size() < maxSize) {
-        add(resource);
-      }
-      return null;
-    }
-
-    @Override
-    public Collection<R> values() {
-      return this;
-    }
   }
 
   /**
