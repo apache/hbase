@@ -115,6 +115,11 @@ public class TestFIFOCompactionPolicy {
     EnvironmentEdgeManager.injectEdge(ee);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
+    // Expired store file deletion during compaction optimization interferes with the FIFO
+    // compaction policy. The race causes changes to in-flight-compaction files resulting in a
+    // non-deterministic number of files selected by compaction policy. Disables that optimization
+    // for this test run.
+    conf.setBoolean("hbase.store.delete.expired.storefile", false);
     TEST_UTIL.startMiniCluster(1);
   }
 
