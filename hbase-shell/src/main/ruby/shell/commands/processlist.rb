@@ -27,10 +27,10 @@ Show regionserver task list.
 
   hbase> processlist
   hbase> processlist 'all'
-  hbase> processlist 'general'
-  hbase> processlist 'handler'
-  hbase> processlist 'rpc'
-  hbase> processlist 'operation'
+  hbase> processlist 'general'     //non-RPC Tasks, such as compact, flush etc
+  hbase> processlist 'handler'     //RPC Handler Tasks
+  hbase> processlist 'rpc'         //RPC Handler Tasks which state is RUNNING
+  hbase> processlist 'operation'   //RPC Handler Tasks which state is RUNNING and from client
   hbase> processlist 'all','host187.example.com'
   hbase> processlist 'all','host187.example.com,16020'
   hbase> processlist 'all','host187.example.com,16020,1289493121758'
