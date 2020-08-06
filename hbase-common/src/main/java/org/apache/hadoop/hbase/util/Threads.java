@@ -198,12 +198,6 @@ public class Threads {
     return boundedCachedThreadPool;
   }
 
-  public static ThreadPoolExecutor getBoundedCachedThreadPool(int maxCachedThread, long timeout,
-      TimeUnit unit, String prefix) {
-    return getBoundedCachedThreadPool(maxCachedThread, timeout, unit,
-      new ThreadFactoryBuilder().setNameFormat(prefix + "-pool-%d").build());
-  }
-
   /** Sets an UncaughtExceptionHandler for the thread which logs the
    * Exception stack if the thread dies.
    */

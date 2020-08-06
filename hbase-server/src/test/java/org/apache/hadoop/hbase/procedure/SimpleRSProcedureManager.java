@@ -24,10 +24,10 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -115,17 +115,17 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
     }
   }
 
-  public class SimpleSubprocedurePool implements Closeable, Abortable {
+  public static class SimpleSubprocedurePool implements Closeable, Abortable {
 
     private final ExecutorCompletionService<Void> taskPool;
-    private final ThreadPoolExecutor executor;
+    private final ExecutorService executor;
     private volatile boolean aborted;
     private final List<Future<Void>> futures = new ArrayList<>();
     private final String name;
 
     public SimpleSubprocedurePool(String name, Configuration conf) {
       this.name = name;
-      executor = new ThreadPoolExecutor(1, 1, 500, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+      executor = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-procedure-pool-%d").build());
       taskPool = new ExecutorCompletionService<>(executor);
     }
