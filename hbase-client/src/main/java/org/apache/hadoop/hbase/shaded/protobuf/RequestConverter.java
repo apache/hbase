@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionCoprocessorServiceExec;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -1476,8 +1477,18 @@ public final class RequestConverter {
    *
    * @return a NormalizeRequest
    */
-  public static NormalizeRequest buildNormalizeRequest() {
-    return NormalizeRequest.newBuilder().build();
+  public static NormalizeRequest buildNormalizeRequest(NormalizeTableFilterParams ntfp) {
+    final NormalizeRequest.Builder builder = NormalizeRequest.newBuilder();
+    if (ntfp.getTableNames() != null) {
+      builder.addAllTableNames(ProtobufUtil.toProtoTableNameList(ntfp.getTableNames()));
+    }
+    if (ntfp.getRegex() != null) {
+      builder.setRegex(ntfp.getRegex());
+    }
+    if (ntfp.getNamespace() != null) {
+      builder.setNamespace(ntfp.getNamespace());
+    }
+    return builder.build();
   }
 
   /**
