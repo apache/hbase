@@ -104,7 +104,8 @@ public class SplitLogWorker implements Runnable {
     // encountered a bad non-retry-able persistent error.
     try {
       SplitLogWorkerCoordination splitLogWorkerCoordination =
-        server.getCoordinatedStateManager().getSplitLogWorkerCoordination();
+         server.getCoordinatedStateManager() == null ? null
+             : server.getCoordinatedStateManager().getSplitLogWorkerCoordination();
       if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)), fs, conf,
           p, sequenceIdChecker, splitLogWorkerCoordination, factory, server)) {
         return Status.PREEMPTED;

@@ -197,8 +197,6 @@ public class WALSplitter {
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
       SplitLogWorkerCoordination splitLogWorkerCoordination, WALFactory factory,
       RegionServerServices rsServices) throws IOException {
-    Preconditions.checkNotNull(splitLogWorkerCoordination,
-      "Can't be null; needed to propagate WAL corruption if any found");
     Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem rootFS = rootDir.getFileSystem(conf);
     WALSplitter splitter = new WALSplitter(factory, conf, walDir, walFS, rootDir, rootFS, idChecker,
