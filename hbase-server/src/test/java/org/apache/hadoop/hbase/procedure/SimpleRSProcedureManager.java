@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -114,10 +115,10 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
     }
   }
 
-  public class SimpleSubprocedurePool implements Closeable, Abortable {
+  public static class SimpleSubprocedurePool implements Closeable, Abortable {
 
     private final ExecutorCompletionService<Void> taskPool;
-    private final ThreadPoolExecutor executor;
+    private final ExecutorService executor;
     private volatile boolean aborted;
     private final List<Future<Void>> futures = new ArrayList<>();
     private final String name;

@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Ignore;
@@ -803,7 +804,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     // Have them all share the same connection so they all share the same instance of
     // ManyServersManyRegionsConnection so I can keep an eye on how many requests by server.
     final ExecutorService pool = Executors.newCachedThreadPool(
-        Threads.newDaemonThreadFactory("p"));
+      new ThreadFactoryBuilder().setNameFormat("p-pool-%d").build());
       // Executors.newFixedThreadPool(servers * 10, Threads.getNamedThreadFactory("p"));
     // Share a connection so I can keep counts in the 'server' on concurrency.
     final Connection sharedConnection = ConnectionFactory.createConnection(getConf()/*, pool*/);

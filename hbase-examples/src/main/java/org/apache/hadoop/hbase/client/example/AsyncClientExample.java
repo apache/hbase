@@ -34,9 +34,9 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,7 +130,7 @@ public class AsyncClientExample extends Configured implements Tool {
     TableName tableName = TableName.valueOf(args[0]);
     int numOps = args.length > 1 ? Integer.parseInt(args[1]) : DEFAULT_NUM_OPS;
     ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE,
-      Threads.newDaemonThreadFactory("AsyncClientExample"));
+      new ThreadFactoryBuilder().setNameFormat("AsyncClientExample-pool-%d").build());
     // We use AsyncTable here so we need to provide a separated thread pool. RawAsyncTable does not
     // need a thread pool and may have a better performance if you use it correctly as it can save
     // some context switches. But if you use RawAsyncTable incorrectly, you may have a very bad

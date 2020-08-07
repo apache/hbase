@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -101,8 +102,9 @@ public class TestOpenTableInCoprocessor {
       int maxThreads = 1;
       long keepAliveTime = 60;
       ThreadPoolExecutor pool =
-          new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
-              new SynchronousQueue<>(), Threads.newDaemonThreadFactory("hbase-table"));
+        new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
+          new SynchronousQueue<>(),
+          new ThreadFactoryBuilder().setNameFormat("hbase-table-pool-%d").build());
       pool.allowCoreThreadTimeOut(true);
       return pool;
     }
