@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationGlobalSourceSource;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationGlobalSourceSourceImpl;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceImpl;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceSource;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceSourceImpl;
@@ -330,9 +331,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
     MetricsReplicationSourceSource singleSourceSource =
       new MetricsReplicationSourceSourceImpl(singleRms, id);
-    MetricsReplicationSourceSource globalSourceSource =
-      new MetricsReplicationGlobalSourceSource(globalRms);
-    MetricsReplicationSourceSource spyglobalSourceSource = spy(globalSourceSource);
+    MetricsReplicationGlobalSourceSource globalSourceSource =
+      new MetricsReplicationGlobalSourceSourceImpl(globalRms);
+    MetricsReplicationGlobalSourceSource spyglobalSourceSource = spy(globalSourceSource);
     doNothing().when(spyglobalSourceSource).incrFailedRecoveryQueue();
 
     Map<String, MetricsReplicationTableSource> singleSourceSourceByTable =
@@ -490,6 +491,44 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     protected void doStop() {
       stoppedCount.incrementAndGet();
       notifyStopped();
+    }
+  }
+
+  /**
+   * Not used by unit tests, helpful for manual testing with replication.
+   * <p>
+   * Snippet for `hbase shell`:
+   * <pre>
+   * create 't', 'f'
+   * add_peer '1', ENDPOINT_CLASSNAME =&gt; 'org.apache.hadoop.hbase.replication.' + \
+   *    'TestReplicationEndpoint$SleepingReplicationEndpointForTest'
+   * alter 't', {NAME=&gt;'f', REPLICATION_SCOPE=&gt;1}
+   * </pre>
+   */
+  public static class SleepingReplicationEndpointForTest extends ReplicationEndpointForTest {
+    private long duration;
+    public SleepingReplicationEndpointForTest() {
+      super();
+    }
+
+    @Override
+    public void init(Context context) throws IOException {
+      super.init(context);
+      if (this.ctx != null) {
+        duration = this.ctx.getConfiguration().getLong(
+            "hbase.test.sleep.replication.endpoint.duration.millis", 5000L);
+      }
+    }
+
+    @Override
+    public boolean replicate(ReplicateContext context) {
+      try {
+        Thread.sleep(duration);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return false;
+      }
+      return super.replicate(context);
     }
   }
 

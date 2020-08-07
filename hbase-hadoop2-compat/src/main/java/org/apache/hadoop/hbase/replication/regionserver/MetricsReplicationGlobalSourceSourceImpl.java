@@ -24,7 +24,8 @@ import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class MetricsReplicationGlobalSourceSource implements MetricsReplicationSourceSource{
+public class MetricsReplicationGlobalSourceSourceImpl
+    implements MetricsReplicationGlobalSourceSource {
   private static final String KEY_PREFIX = "source.";
 
   private final MetricsReplicationSourceImpl rms;
@@ -53,8 +54,9 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   private final MutableFastCounter completedWAL;
   private final MutableFastCounter completedRecoveryQueue;
   private final MutableFastCounter failedRecoveryQueue;
+  private final MutableGaugeLong walReaderBufferUsageBytes;
 
-  public MetricsReplicationGlobalSourceSource(MetricsReplicationSourceImpl rms) {
+  public MetricsReplicationGlobalSourceSourceImpl(MetricsReplicationSourceImpl rms) {
     this.rms = rms;
 
     ageOfLastShippedOpHist = rms.getMetricsRegistry().getHistogram(SOURCE_AGE_OF_LAST_SHIPPED_OP);
@@ -92,6 +94,8 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
             .getCounter(SOURCE_COMPLETED_RECOVERY_QUEUES, 0L);
     failedRecoveryQueue = rms.getMetricsRegistry()
             .getCounter(SOURCE_FAILED_RECOVERY_QUEUES, 0L);
+    walReaderBufferUsageBytes = rms.getMetricsRegistry()
+        .getGauge(SOURCE_WAL_READER_EDITS_BUFFER, 0L);
   }
 
   @Override public void setLastShippedAge(long age) {
@@ -259,5 +263,15 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   @Override
   public String getMetricsName() {
     return rms.getMetricsName();
+  }
+
+  @Override
+  public void setWALReaderEditsBufferBytes(long usage) {
+    this.walReaderBufferUsageBytes.set(usage);
+  }
+
+  @Override
+  public long getWALReaderEditsBufferBytes() {
+    return this.walReaderBufferUsageBytes.value();
   }
 }
