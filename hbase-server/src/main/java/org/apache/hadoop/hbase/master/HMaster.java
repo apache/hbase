@@ -31,6 +31,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -194,6 +195,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -1886,6 +1888,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    *   or normalization is globally disabled).
    */
   public boolean normalizeRegions() throws IOException {
+    final long startTime = EnvironmentEdgeManager.currentTime();
     if (regionNormalizerTracker == null || !regionNormalizerTracker.isNormalizerOn()) {
       LOG.debug("Region normalization is disabled, don't run region normalizer.");
       return false;
@@ -1903,6 +1906,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       return true;
     }
 
+    int affectedTables = 0;
     try {
       final List<TableName> allEnabledTables =
         new ArrayList<>(tableStateManager.getTablesInStates(TableState.State.ENABLED));
@@ -1931,6 +1935,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           continue;
         }
 
+        affectedTables++;
         // as of this writing, `plan.submit()` is non-blocking and uses Async Admin APIs to
         // submit task , so there's no artificial rate-
         // limiting of merge/split requests due to this serial loop.
@@ -1944,11 +1949,10 @@ public class HMaster extends HRegionServer implements MasterServices {
           }
         }
       }
-      int totalPlansSubmitted = submittedPlanProcIds.size();
-      if (totalPlansSubmitted > 0 && LOG.isDebugEnabled()) {
-        LOG.debug("Normalizer plans submitted. Total plans count: {} , procID list: {}",
-            totalPlansSubmitted, submittedPlanProcIds);
-      }
+      final long endTime = EnvironmentEdgeManager.currentTime();
+      LOG.info("Normalizer ran successfully in {}. Submitted {} plans, affecting {} tables.",
+        Duration.ofMillis(endTime - startTime), submittedPlanProcIds.size(), affectedTables);
+      LOG.debug("Normalizer submitted procID list: {}", submittedPlanProcIds);
     } finally {
       normalizationInProgressLock.unlock();
     }
