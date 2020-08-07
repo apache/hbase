@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
@@ -38,6 +37,7 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -80,9 +80,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
@@ -226,14 +226,13 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
@@ -1902,14 +1901,18 @@ public class HMaster extends HRegionServer implements MasterServices {
     return this.normalizer;
   }
 
+  public boolean normalizeRegions() throws IOException {
+    return normalizeRegions(new NormalizeTableFilterParams.Builder().build());
+  }
+
   /**
-   * Perform normalization of cluster (invoked by {@link RegionNormalizerChore}).
+   * Perform normalization of cluster.
    *
    * @return true if an existing normalization was already in progress, or if a new normalization
    *   was performed successfully; false otherwise (specifically, if HMaster finished initializing
    *   or normalization is globally disabled).
    */
-  public boolean normalizeRegions() throws IOException {
+  public boolean normalizeRegions(final NormalizeTableFilterParams ntfp) throws IOException {
     final long startTime = EnvironmentEdgeManager.currentTime();
     if (regionNormalizerTracker == null || !regionNormalizerTracker.isNormalizerOn()) {
       LOG.debug("Region normalization is disabled, don't run region normalizer.");
@@ -1930,12 +1933,19 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     int affectedTables = 0;
     try {
-      final List<TableName> allEnabledTables =
-        new ArrayList<>(tableStateManager.getTablesInStates(TableState.State.ENABLED));
-      Collections.shuffle(allEnabledTables);
+      final Set<TableName> matchingTables = getTableDescriptors(new LinkedList<>(),
+        ntfp.getNamespace(), ntfp.getRegex(), ntfp.getTableNames(), false)
+        .stream()
+        .map(TableDescriptor::getTableName)
+        .collect(Collectors.toSet());
+      final Set<TableName> allEnabledTables =
+        tableStateManager.getTablesInStates(TableState.State.ENABLED);
+      final List<TableName> targetTables =
+        new ArrayList<>(Sets.intersection(matchingTables, allEnabledTables));
+      Collections.shuffle(targetTables);
 
       final List<Long> submittedPlanProcIds = new ArrayList<>();
-      for (TableName table : allEnabledTables) {
+      for (TableName table : targetTables) {
         if (table.isSystemTable()) {
           continue;
         }
@@ -3399,9 +3409,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * @return list of table table descriptors after filtering by regex and whether to include system
-   *    tables, etc.
-   * @throws IOException
+   * Return a list of table table descriptors after applying any provided filter parameters. Note
+   * that the user-facing description of this filter logic is presented on the class-level javadoc
+   * of {@link NormalizeTableFilterParams}.
    */
   private List<TableDescriptor> getTableDescriptors(final List<TableDescriptor> htds,
       final String namespace, final String regex, final List<TableName> tableNameList,
