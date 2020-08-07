@@ -32,6 +32,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -172,13 +175,17 @@ public class TestReplicationSource {
       TEST_UTIL.waitFor(30000, () -> rs.getWalEntryFilter() != null);
       WALEntryFilter wef = rs.getWalEntryFilter();
       // Test non-system WAL edit.
+      WALEdit we = new WALEdit().add(CellBuilderFactory.create(CellBuilderType.DEEP_COPY).
+        setRow(HConstants.EMPTY_START_ROW).
+        setFamily(HConstants.CATALOG_FAMILY).
+        setType(Cell.Type.Put).build());
       WAL.Entry e = new WAL.Entry(new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY,
-        TableName.valueOf("test"), -1), new WALEdit());
+        TableName.valueOf("test"), -1, -1, uuid), we);
       assertTrue(wef.filter(e) == e);
       // Test system WAL edit.
       e = new WAL.Entry(
-        new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TableName.META_TABLE_NAME, -1),
-        new WALEdit());
+        new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TableName.META_TABLE_NAME, -1, -1, uuid),
+          we);
       assertNull(wef.filter(e));
     } finally {
       rs.terminate("Done");
@@ -382,6 +389,10 @@ public class TestReplicationSource {
     @Override
     protected void doStop() {
       notifyStopped();
+    }
+
+    @Override public boolean canReplicateToSameCluster() {
+      return true;
     }
   }
 
