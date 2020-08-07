@@ -918,6 +918,15 @@ public class AssignmentManager {
 
   @VisibleForTesting
   static int compare(TransitRegionStateProcedure left, TransitRegionStateProcedure right) {
+    //TODO this is broken once we have more meta entries
+    if (left.getRegion().isRootRegion()) {
+      if (right.getRegion().isRootRegion()) {
+        return RegionInfo.COMPARATOR.compare(left.getRegion(), right.getRegion());
+      }
+      return -1;
+    } else if (right.getRegion().isRootRegion()) {
+      return +1;
+    }
     if (left.getRegion().isMetaRegion()) {
       if (right.getRegion().isMetaRegion()) {
         return RegionInfo.COMPARATOR.compare(left.getRegion(), right.getRegion());

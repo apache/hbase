@@ -195,8 +195,8 @@ class AsyncClientScanner {
   }
 
   private long getPrimaryTimeoutNs() {
-    return TableName.isMetaTableName(tableName) ? conn.connConf.getPrimaryMetaScanTimeoutNs()
-      : conn.connConf.getPrimaryScanTimeoutNs();
+    return TableName.isRootTableName(tableName) || TableName.isMetaTableName(tableName) ?
+      conn.connConf.getPrimaryMetaScanTimeoutNs() : conn.connConf.getPrimaryScanTimeoutNs();
   }
 
   private void openScanner() {

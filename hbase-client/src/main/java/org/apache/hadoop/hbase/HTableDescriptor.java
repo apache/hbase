@@ -131,7 +131,11 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @return always return the false
    */
   public boolean isRootRegion() {
-    return false;
+    return delegatee.isRootRegion();
+  }
+
+  public boolean isRootTable() {
+    return delegatee.isRootTable();
   }
 
   /**

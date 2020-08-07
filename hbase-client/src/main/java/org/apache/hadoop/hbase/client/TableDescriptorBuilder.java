@@ -642,6 +642,27 @@ public class TableDescriptorBuilder {
      * @return true if this table is <code> hbase:meta </code> region
      */
     @Override
+    public boolean isRootRegion() {
+      //TODO should we add a IS_ROOT key or rename/keep IS_META to mean IS_CATALOG
+      return getTableName().equals(TableName.ROOT_TABLE_NAME);
+    }
+
+    /**
+     * Checks if the table is a <code>hbase:meta</code> table
+     *
+     * @return true if table is <code> hbase:meta </code> region.
+     */
+    @Override
+    public boolean isRootTable() {
+      return isRootRegion();
+    }
+
+    /**
+     * Checks if this table is <code> hbase:meta </code> region.
+     *
+     * @return true if this table is <code> hbase:meta </code> region
+     */
+    @Override
     public boolean isMetaRegion() {
       return getOrDefault(IS_META_KEY, Boolean::valueOf, false);
     }

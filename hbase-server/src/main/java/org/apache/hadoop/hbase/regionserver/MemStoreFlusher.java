@@ -548,7 +548,8 @@ class MemStoreFlusher implements FlushRequester {
    */
   private boolean flushRegion(final FlushRegionEntry fqe) {
     HRegion region = fqe.region;
-    if (!region.getRegionInfo().isMetaRegion() && isTooManyStoreFiles(region)) {
+    if (!region.getRegionInfo().isRootRegion() && !region.getRegionInfo().isMetaRegion()
+      && isTooManyStoreFiles(region)) {
       if (fqe.isMaximumWait(this.blockingWaitTime)) {
         LOG.info("Waited " + (EnvironmentEdgeManager.currentTime() - fqe.createTime) +
           "ms on a compaction to clean up 'too many store files'; waited " +

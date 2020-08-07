@@ -203,7 +203,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     HFileContext hFileContext = new HFileContextBuilder().
       withChecksumType(HStore.getChecksumType(walSplitter.conf)).
       withBytesPerCheckSum(HStore.getBytesPerChecksum(walSplitter.conf)).
-      withCellComparator(isMetaTable?
+      withCellComparator(isRootTable? CellComparatorImpl.ROOT_COMPARATOR : isMetaTable?
         CellComparatorImpl.META_COMPARATOR: CellComparatorImpl.COMPARATOR).build();
     return writerBuilder.withFileContext(hFileContext).build();
   }

@@ -350,8 +350,12 @@ public class ServerCrashProcedure
     if (regionsOnCrashedServer == null) {
       return false;
     }
-    regionsOnCrashedServer.removeIf(this::isDefaultMetaRegion);
+    regionsOnCrashedServer.removeIf((x) -> isDefaultMetaRegion(x) || isDefaultRootRegion(x));
     return !regionsOnCrashedServer.isEmpty();
+  }
+
+  private boolean isDefaultRootRegion(RegionInfo hri) {
+    return hri.isRootRegion() && RegionReplicaUtil.isDefaultReplica(hri);
   }
 
   private boolean isDefaultMetaRegion(RegionInfo hri) {

@@ -132,9 +132,17 @@ abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
    * @param regionName RegionName. If hbase:meta, we'll set high priority.
    */
   void setPriority(final byte[] regionName) {
+    if (isRootRegion(regionName)) {
+      setPriority(TableName.ROOT_TABLE_NAME);
+    }
     if (isMetaRegion(regionName)) {
       setPriority(TableName.META_TABLE_NAME);
     }
+  }
+
+  private static boolean isRootRegion(final byte[] regionName) {
+    return Bytes.equals(regionName, RegionInfoBuilder.ROOT_REGIONINFO.getRegionName()) ||
+      Bytes.equals(regionName, RegionInfoBuilder.ROOT_REGIONINFO.getEncodedNameAsBytes());
   }
 
   private static boolean isMetaRegion(final byte[] regionName) {

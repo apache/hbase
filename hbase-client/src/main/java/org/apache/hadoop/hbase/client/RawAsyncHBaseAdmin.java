@@ -480,7 +480,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Boolean> tableExists(TableName tableName) {
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName) || TableName.isMetaTableName(tableName)) {
       return CompletableFuture.completedFuture(true);
     }
     return AsyncMetaTableAccessor.tableExists(metaTable, tableName);
@@ -692,7 +692,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Boolean> isTableEnabled(TableName tableName) {
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName) || TableName.isMetaTableName(tableName)) {
       return CompletableFuture.completedFuture(true);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
@@ -705,7 +705,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Boolean> isTableDisabled(TableName tableName) {
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName) || TableName.isMetaTableName(tableName)) {
       return CompletableFuture.completedFuture(false);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
@@ -730,7 +730,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private CompletableFuture<Boolean> isTableAvailable(TableName tableName,
       Optional<byte[][]> splitKeys) {
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName) || TableName.isMetaTableName(tableName)) {
       return connection.registry.getMetaRegionLocations().thenApply(locs -> Stream
         .of(locs.getRegionLocations()).allMatch(loc -> loc != null && loc.getServerName() != null));
     }

@@ -115,7 +115,7 @@ public class SplitWALManager {
     return splitWALs(crashedServer, SplitType.USER);
   }
 
-  public List<Procedure> splitWALs(ServerName crashedServer, SplitType splitType)
+  public List<Procedure>  splitWALs(ServerName crashedServer, SplitType splitType)
       throws IOException {
     try {
       // 1. list all splitting files

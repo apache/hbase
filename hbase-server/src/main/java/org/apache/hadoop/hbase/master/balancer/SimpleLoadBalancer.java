@@ -396,7 +396,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
           balanceInfo == null ? 0 : balanceInfo.getNextRegionForUnload();
         if (idx >= server.getValue().size()) break;
         RegionInfo region = server.getValue().get(idx);
-        if (region.isMetaRegion()) continue; // Don't move meta regions.
+        if (region.isRootRegion() || region.isMetaRegion()) continue; // Don't move meta regions.
         regionsToMove.add(new RegionPlan(region, server.getKey().getServerName(), null));
         balanceInfo.setNumRegionsAdded(balanceInfo.getNumRegionsAdded() - 1);
         balanceInfo.setNextRegionForUnload(balanceInfo.getNextRegionForUnload() + 1);

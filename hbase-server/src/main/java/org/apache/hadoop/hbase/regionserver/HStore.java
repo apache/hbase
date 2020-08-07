@@ -2130,7 +2130,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     this.lock.readLock().lock();
     try {
       // Should already be enforced by the split policy!
-      assert !this.getRegionInfo().isMetaRegion();
+      assert !this.getRegionInfo().isRootRegion() && !this.getRegionInfo().isMetaRegion();
       // Not split-able if we find a reference store file present in the store.
       if (hasReferences()) {
         LOG.trace("Not splittable; has references: {}", this);

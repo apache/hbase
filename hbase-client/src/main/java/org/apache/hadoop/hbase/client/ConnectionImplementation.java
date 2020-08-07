@@ -661,6 +661,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         LOG.debug("Table {} not enabled", tableName);
         return false;
       }
+      if (TableName.isRootTableName(tableName)) {
+        // meta table is always available
+        return true;
+      }
       if (TableName.isMetaTableName(tableName)) {
         // meta table is always available
         return true;
@@ -735,7 +739,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   public List<HRegionLocation> locateRegions(TableName tableName, boolean useCache,
       boolean offlined) throws IOException {
     List<RegionInfo> regions;
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName)) {
+      regions = Collections.singletonList(RegionInfoBuilder.ROOT_REGIONINFO);
+    } else  if (TableName.isMetaTableName(tableName)) {
       regions = Collections.singletonList(RegionInfoBuilder.FIRST_META_REGIONINFO);
     } else {
       regions = MetaTableAccessor.getTableRegions(this, tableName, !offlined);

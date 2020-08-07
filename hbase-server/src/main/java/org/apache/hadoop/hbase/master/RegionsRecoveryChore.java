@@ -155,7 +155,7 @@ public class RegionsRecoveryChore extends ScheduledChore {
 
     final RegionInfo regionInfo = hMaster.getAssignmentManager().getRegionInfo(regionName);
     final TableName tableName = regionInfo.getTable();
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName) || TableName.isMetaTableName(tableName)) {
       // Do not reopen regions of meta table even if it has
       // high store file reference count
       return;

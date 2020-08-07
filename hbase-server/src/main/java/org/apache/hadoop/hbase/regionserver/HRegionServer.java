@@ -119,7 +119,6 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
@@ -136,6 +135,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
+import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
@@ -160,7 +160,6 @@ import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1118,13 +1117,13 @@ public class HRegionServer extends Thread implements
     }
 
     // Closing the compactSplit thread before closing meta regions
-    if (!this.killed && containsMetaTableRegions()) {
+    if (!this.killed && containsCatalogTableRegions()) {
       if (!abortRequested.get() || this.dataFsOk) {
         if (this.compactSplitThread != null) {
           this.compactSplitThread.join();
           this.compactSplitThread = null;
         }
-        closeMetaTableRegions(abortRequested.get());
+        closeCatalogTableRegions(abortRequested.get());
       }
     }
 
@@ -1190,16 +1189,17 @@ public class HRegionServer extends Thread implements
     LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
   }
 
-  //TODO francis update this
-  private boolean containsMetaTableRegions() {
-    return onlineRegions.containsKey(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
+  private boolean containsCatalogTableRegions() {
+    return onlineRegions.containsKey(RegionInfoBuilder.ROOT_REGIONINFO.getEncodedName()) ||
+      onlineRegions.containsKey(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
   }
 
   private boolean areAllUserRegionsOffline() {
     if (getNumberOfOnlineRegions() > 2) return false;
     boolean allUserRegionsOffline = true;
     for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
-      if (!e.getValue().getRegionInfo().isMetaRegion()) {
+      if (!e.getValue().getRegionInfo().isRootRegion() ||
+        !e.getValue().getRegionInfo().isMetaRegion()) {
         allUserRegionsOffline = false;
         break;
       }
@@ -2328,7 +2328,7 @@ public class HRegionServer extends Thread implements
 
     if (code == TransitionCode.OPENED) {
       Preconditions.checkArgument(hris != null && hris.length == 1);
-      if (hris[0].isMetaRegion()) {
+      if (hris[0].isRootRegion()) {
         try {
           MetaTableLocator.setMetaLocation(getZooKeeper(), serverName,
               hris[0].getReplicaId(), RegionState.State.OPEN);
@@ -2821,20 +2821,25 @@ public class HRegionServer extends Thread implements
    * Close meta region if we carry it
    * @param abort Whether we're running an abort.
    */
-  private void closeMetaTableRegions(final boolean abort) {
+  private void closeCatalogTableRegions(final boolean abort) {
+    HRegion root = null;
     HRegion meta = null;
     this.onlineRegionsLock.writeLock().lock();
     try {
       for (Map.Entry<String, HRegion> e: onlineRegions.entrySet()) {
         RegionInfo hri = e.getValue().getRegionInfo();
+        if (hri.isRootRegion()) {
+          root = e.getValue();
+        }
         if (hri.isMetaRegion()) {
           meta = e.getValue();
         }
-        if (meta != null) break;
+        if (root != null && meta != null) break;
       }
     } finally {
       this.onlineRegionsLock.writeLock().unlock();
     }
+    if (root != null) closeRegionIgnoreErrors(root.getRegionInfo(), abort);
     if (meta != null) closeRegionIgnoreErrors(meta.getRegionInfo(), abort);
   }
 
@@ -2849,7 +2854,8 @@ public class HRegionServer extends Thread implements
     try {
       for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
-        if (!r.getRegionInfo().isMetaRegion() && r.isAvailable()) {
+        if (!r.getRegionInfo().isRootRegion() && !r.getRegionInfo().isMetaRegion()
+          && r.isAvailable()) {
           // Don't update zk with this close transition; pass false.
           closeRegionIgnoreErrors(r.getRegionInfo(), abort);
         }
@@ -3294,7 +3300,9 @@ public class HRegionServer extends Thread implements
 
     CloseRegionHandler crh;
     final RegionInfo hri = actualRegion.getRegionInfo();
-    if (hri.isMetaRegion()) {
+    if (hri.isRootRegion()) {
+      crh = new CloseRootHandler(this, this, hri, abort);
+    } else if (hri.isMetaRegion()) {
       crh = new CloseMetaHandler(this, this, hri, abort);
     } else {
       crh = new CloseRegionHandler(this, this, hri, abort, destination);

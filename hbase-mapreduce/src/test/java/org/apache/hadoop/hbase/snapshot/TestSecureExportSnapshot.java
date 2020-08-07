@@ -32,7 +32,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Reruns TestExportSnapshot using ExportSnapshot in secure mode.
  */
-@Ignore
+//@Ignore
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestSecureExportSnapshot extends TestExportSnapshot {
 

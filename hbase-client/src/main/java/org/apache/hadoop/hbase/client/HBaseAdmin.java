@@ -424,7 +424,9 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public List<RegionInfo> getRegions(TableName tableName) throws IOException {
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName)) {
+      return Arrays.asList(RegionInfoBuilder.ROOT_REGIONINFO);
+    } else if (TableName.isMetaTableName(tableName)) {
       return Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO);
     } else {
       return MetaTableAccessor.getTableRegions(connection, tableName, true);

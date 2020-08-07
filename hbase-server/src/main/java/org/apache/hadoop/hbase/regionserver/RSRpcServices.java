@@ -641,7 +641,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     throws IOException {
     int countOfCompleteMutation = 0;
     try {
-      if (!region.getRegionInfo().isMetaRegion()) {
+      if (!region.getRegionInfo().isRootRegion() && !region.getRegionInfo().isMetaRegion()) {
         regionServer.getMemStoreFlusher().reclaimMemStoreMemory();
       }
       RowMutations rm = null;
@@ -1080,7 +1080,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         quota.addMutation(mutation);
       }
 
-      if (!region.getRegionInfo().isMetaRegion()) {
+      if (!region.getRegionInfo().isRootRegion() && !region.getRegionInfo().isMetaRegion()) {
         regionServer.getMemStoreFlusher().reclaimMemStoreMemory();
       }
 
@@ -1211,7 +1211,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       }
       requestCount.increment();
-      if (!region.getRegionInfo().isMetaRegion()) {
+      if (!region.getRegionInfo().isRootRegion() && !region.getRegionInfo().isMetaRegion()) {
         regionServer.getMemStoreFlusher().reclaimMemStoreMemory();
       }
       return region.batchReplay(mutations.toArray(
@@ -3059,7 +3059,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       region = getRegion(request.getRegion());
       MutateResponse.Builder builder = MutateResponse.newBuilder();
       MutationProto mutation = request.getMutation();
-      if (!region.getRegionInfo().isMetaRegion()) {
+      if (!region.getRegionInfo().isRootRegion() && !region.getRegionInfo().isMetaRegion()) {
         regionServer.getMemStoreFlusher().reclaimMemStoreMemory();
       }
       long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
