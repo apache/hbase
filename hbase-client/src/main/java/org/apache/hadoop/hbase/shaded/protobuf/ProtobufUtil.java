@@ -2251,6 +2251,13 @@ public final class ProtobufUtil {
         .setQualifier(UnsafeByteOperations.unsafeWrap(tableName.getQualifier())).build();
   }
 
+  public static List<HBaseProtos.TableName> toProtoTableNameList(List<TableName> tableNameList) {
+    if (tableNameList == null) {
+      return new ArrayList<>();
+    }
+    return tableNameList.stream().map(ProtobufUtil::toProtoTableName).collect(Collectors.toList());
+  }
+
   public static List<TableName> toTableNameList(List<HBaseProtos.TableName> tableNamesList) {
     if (tableNamesList == null) {
       return new ArrayList<>();

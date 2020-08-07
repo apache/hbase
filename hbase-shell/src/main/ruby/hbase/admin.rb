@@ -234,9 +234,54 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests region normalization for all configured tables in the cluster
-    # Returns true if normalizer ran successfully
-    def normalize
-      @admin.normalize
+    # Returns true if normalize request was successfully submitted
+    def normalize(*args)
+      builder = org.apache.hadoop.hbase.client.NormalizeTableFilterParams::Builder.new
+      args.each do |arg|
+        unless arg.is_a?(String) || arg.is_a?(Hash)
+          raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash or String type")
+        end
+
+        if arg.key?(TABLE_NAME)
+          table_name = arg.delete(TABLE_NAME)
+          unless table_name.is_a?(String)
+            raise(ArgumentError, "#{TABLE_NAME} must be of type String")
+          end
+
+          builder.tableNames(java.util.Collections.singletonList(TableName.valueOf(table_name)))
+        elsif arg.key?(TABLE_NAMES)
+          table_names = arg.delete(TABLE_NAMES)
+          unless table_names.is_a?(Array)
+            raise(ArgumentError, "#{TABLE_NAMES} must be of type Array")
+          end
+
+          table_name_list = java.util.LinkedList.new
+          table_names.each do |tn|
+            unless tn.is_a?(String)
+              raise(ArgumentError, "#{TABLE_NAMES} value #{tn} must be of type String")
+            end
+
+            table_name_list.add(TableName.valueOf(tn))
+          end
+          builder.tableNames(table_name_list)
+        elsif arg.key?(REGEX)
+          regex = arg.delete(REGEX)
+          raise(ArgumentError, "#{REGEX} must be of type String") unless regex.is_a?(String)
+
+          builder.regex(regex)
+        elsif arg.key?(NAMESPACE)
+          namespace = arg.delete(NAMESPACE)
+          unless namespace.is_a?(String)
+            raise(ArgumentError, "#{NAMESPACE} must be of type String")
+          end
+
+          builder.namespace(namespace)
+        else
+          raise(ArgumentError, "Unrecognized argument #{arg}")
+        end
+      end
+      ntfp = builder.build
+      @admin.normalize(ntfp)
     end
 
     #----------------------------------------------------------------------------------------------
