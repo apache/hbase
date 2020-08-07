@@ -353,6 +353,9 @@ message IsSplitOrMergeEnabledResponse {
 }
 
 message NormalizeRequest {
+  repeated TableName table_names = 1;
+  optional string regex = 2;
+  optional string namespace = 3;
 }
 
 message NormalizeResponse {

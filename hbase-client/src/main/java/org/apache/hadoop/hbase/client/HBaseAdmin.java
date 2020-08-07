@@ -1557,18 +1557,13 @@ public class HBaseAdmin implements Admin {
     }
   }
 
-  /**
-   * Invoke region normalizer. Can NOT run for various reasons.  Check logs.
-   *
-   * @return True if region normalizer ran, false otherwise.
-   */
   @Override
-  public boolean normalize() throws IOException {
+  public boolean normalize(NormalizeTableFilterParams ntfp) throws IOException {
     return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Boolean rpcCall() throws Exception {
         return master.normalize(getRpcController(),
-            RequestConverter.buildNormalizeRequest()).getNormalizerRan();
+            RequestConverter.buildNormalizeRequest(ntfp)).getNormalizerRan();
       }
     });
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -704,8 +704,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> normalize() {
-    return wrap(rawAdmin.normalize());
+  public CompletableFuture<Boolean> normalize(NormalizeTableFilterParams ntfp) {
+    return wrap(rawAdmin.normalize(ntfp));
   }
 
   @Override

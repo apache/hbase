@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.LogQueryFilter;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
@@ -796,7 +796,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public boolean normalize() {
+  public boolean normalize(NormalizeTableFilterParams ntfp) {
     throw new NotImplementedException("normalize not supported in ThriftAdmin");
   }
 
