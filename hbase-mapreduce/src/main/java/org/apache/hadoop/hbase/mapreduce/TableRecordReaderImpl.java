@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -30,7 +29,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.StringUtils;
@@ -61,7 +59,6 @@ public class TableRecordReaderImpl {
   private ImmutableBytesWritable key = null;
   private Result value = null;
   private TaskAttemptContext context = null;
-  private Method getCounter = null;
   private long numRestarts = 0;
   private long numStale = 0;
   private long timestamp;
@@ -98,25 +95,6 @@ public class TableRecordReaderImpl {
   }
 
   /**
-   * In new mapreduce APIs, TaskAttemptContext has two getCounter methods
-   * Check if getCounter(String, String) method is available.
-   * @return The getCounter method or null if not available.
-   */
-  protected static Method retrieveGetCounterWithStringsParams(TaskAttemptContext context)
-      throws IOException {
-    Method m = null;
-    try {
-      m = context.getClass().getMethod("getCounter",
-        new Class [] {String.class, String.class});
-    } catch (SecurityException e) {
-      throw new IOException("Failed test for getCounter", e);
-    } catch (NoSuchMethodException e) {
-      // Ignore
-    }
-    return m;
-  }
-
-  /**
    * Sets the HBase table.
    * @param htable The table to scan.
    */
@@ -144,7 +122,6 @@ public class TableRecordReaderImpl {
       InterruptedException {
     if (context != null) {
       this.context = context;
-      getCounter = retrieveGetCounterWithStringsParams(context);
     }
     restart(scan.getStartRow());
   }
@@ -282,35 +259,30 @@ public class TableRecordReaderImpl {
    * If hbase runs on old version of mapreduce, it won't be able to get
    * access to counters and TableRecorderReader can't update counter values.
    */
-  private void updateCounters() throws IOException {
+  private void updateCounters() {
     ScanMetrics scanMetrics = scanner.getScanMetrics();
     if (scanMetrics == null) {
       return;
     }
 
-    updateCounters(scanMetrics, numRestarts, getCounter, context, numStale);
+    updateCounters(scanMetrics, numRestarts, context, numStale);
   }
 
   protected static void updateCounters(ScanMetrics scanMetrics, long numScannerRestarts,
-      Method getCounter, TaskAttemptContext context, long numStale) {
+      TaskAttemptContext context, long numStale) {
     // we can get access to counters only if hbase uses new mapreduce APIs
-    if (getCounter == null) {
+    if (context == null) {
       return;
     }
-
-    try {
-      for (Map.Entry<String, Long> entry:scanMetrics.getMetricsMap().entrySet()) {
-        Counter ct = (Counter)getCounter.invoke(context,
-            HBASE_COUNTER_GROUP_NAME, entry.getKey());
-
-        ct.increment(entry.getValue());
-      }
-      ((Counter) getCounter.invoke(context, HBASE_COUNTER_GROUP_NAME,
-          "NUM_SCANNER_RESTARTS")).increment(numScannerRestarts);
-      ((Counter) getCounter.invoke(context, HBASE_COUNTER_GROUP_NAME,
-          "NUM_SCAN_RESULTS_STALE")).increment(numStale);
-    } catch (Exception e) {
-      LOG.debug("can't update counter." + StringUtils.stringifyException(e));
+    for (Map.Entry<String, Long> entry : scanMetrics.getMetricsMap().entrySet()) {
+      context.getCounter(HBASE_COUNTER_GROUP_NAME, entry.getKey()).increment(entry.getValue());
+    }
+    if (numScannerRestarts != 0L) {
+      context.getCounter(HBASE_COUNTER_GROUP_NAME, "NUM_SCANNER_RESTARTS")
+          .increment(numScannerRestarts);
+    }
+    if (numStale != 0L) {
+      context.getCounter(HBASE_COUNTER_GROUP_NAME, "NUM_SCAN_RESULTS_STALE").increment(numStale);
     }
   }
 
