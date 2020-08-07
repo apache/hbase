@@ -245,6 +245,11 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void flush(TableName tableName, byte[] columnFamily) throws IOException {
+    get(admin.flush(tableName, columnFamily));
+  }
+
+  @Override
   public void flushRegion(byte[] regionName) throws IOException {
     get(admin.flushRegion(regionName));
   }

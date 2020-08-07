@@ -893,9 +893,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           locs -> locs.stream().map(HRegionLocation::getRegion).collect(Collectors.toList()));
     }
   }
-
   @Override
   public CompletableFuture<Void> flush(TableName tableName) {
+    return flush(tableName, null);
+  }
+
+  @Override
+  public CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(tableExists(tableName), (exists, err) -> {
       if (err != null) {
@@ -909,8 +913,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           } else if (!tableEnabled) {
             future.completeExceptionally(new TableNotEnabledException(tableName));
           } else {
+            Map<String, String> props = new HashMap<>();
+            if (columnFamily != null) {
+              props.put(HConstants.FAMILY_KEY_STR, Bytes.toString(columnFamily));
+            }
             addListener(execProcedure(FLUSH_TABLE_PROCEDURE_SIGNATURE, tableName.getNameAsString(),
-              new HashMap<>()), (ret, err3) -> {
+              props), (ret, err3) -> {
                 if (err3 != null) {
                   future.completeExceptionally(err3);
                 } else {
