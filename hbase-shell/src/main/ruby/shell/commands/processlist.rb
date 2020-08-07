@@ -27,7 +27,6 @@ Show regionserver task list.
 
   hbase> processlist
   hbase> processlist 'all'
-
   # list non-RPC Tasks, such as compact, flush etc
   hbase> processlist 'general'
   # list RPC Handler Tasks
