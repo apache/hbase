@@ -33,8 +33,8 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.security.NettyHBaseRpcConnectionHeaderHandler;
 import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,8 +76,9 @@ class NettyRpcConnection extends RpcConnection {
 
   private static final Logger LOG = LoggerFactory.getLogger(NettyRpcConnection.class);
 
-  private static final ScheduledExecutorService RELOGIN_EXECUTOR =
-    Executors.newSingleThreadScheduledExecutor(Threads.newDaemonThreadFactory("Relogin"));
+  private static final ScheduledExecutorService RELOGIN_EXECUTOR = Executors
+    .newSingleThreadScheduledExecutor(
+      new ThreadFactoryBuilder().setNameFormat("Relogin-pool-%d").build());
 
   private final NettyRpcClient rpcClient;
 

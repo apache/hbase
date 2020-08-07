@@ -27,7 +27,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,8 +86,9 @@ public class ProcedureMember implements Closeable {
   public static ThreadPoolExecutor defaultPool(String memberName, int procThreads,
       long keepAliveMillis) {
     return new ThreadPoolExecutor(1, procThreads, keepAliveMillis, TimeUnit.MILLISECONDS,
-        new SynchronousQueue<>(),
-        Threads.newDaemonThreadFactory("member: '" + memberName + "' subprocedure"));
+      new SynchronousQueue<>(),
+      new ThreadFactoryBuilder().setNameFormat("member: '" + memberName + "' subprocedure-pool-%d")
+        .build());
   }
 
   /**

@@ -45,8 +45,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
 import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
@@ -245,8 +245,9 @@ public class ClusterStatusPublisher extends ScheduledChore {
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   public static class MulticastPublisher implements Publisher {
     private DatagramChannel channel;
-    private final EventLoopGroup group = new NioEventLoopGroup(
-        1, Threads.newDaemonThreadFactory("hbase-master-clusterStatusPublisher"));
+    private final EventLoopGroup group = new NioEventLoopGroup(1,
+      new ThreadFactoryBuilder().setNameFormat("hbase-master-clusterStatusPublisher-pool-%d")
+        .build());
 
     public MulticastPublisher() {
     }
