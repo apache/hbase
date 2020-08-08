@@ -163,11 +163,6 @@ public interface MetricsMasterWrapper {
   long getSplitProcedureRequestCount();
 
   /**
-   * Get the number of split procedure requests which failed during procedure execution.
-   */
-  long getSplitProcedureFailureCount();
-
-  /**
    * Get the number of split procedure requests which were successful.
    */
   long getSplitProcedureSuccessCount();

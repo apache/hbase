@@ -72,7 +72,6 @@ public class TestMetricsMasterProcSourceImpl {
   @Test
   public void testSplitProcedureMetrics() {
     HELPER.assertGauge(MetricsMasterProcSource.NUM_SPLIT_PROCEDURE_REQUEST_NAME, 32, masterProcSource);
-    HELPER.assertGauge(MetricsMasterProcSource.NUM_SPLIT_PROCEDURE_FAILED_NAME, 8, masterProcSource);
     HELPER.assertGauge(MetricsMasterProcSource.NUM_SPLIT_PROCEDURE_SUCCESS_NAME, 24, masterProcSource);
     HELPER.assertGauge("SplitProcedureTime_max", 2082, masterProcSource);
     HELPER.assertGauge("SplitProcedureTime_min", 2082, masterProcSource);

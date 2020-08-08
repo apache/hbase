@@ -227,12 +227,6 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   }
 
   @Override
-  public long getSplitProcedureFailureCount() {
-    return master.getAssignmentManager().getAssignmentManagerMetrics().getSplitProcMetrics()
-      .getFailedCounter().getCount();
-  }
-
-  @Override
   public long getSplitProcedureSuccessCount() {
     ProcedureMetrics splitProcMetrics =
       master.getAssignmentManager().getAssignmentManagerMetrics().getSplitProcMetrics();

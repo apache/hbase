@@ -110,10 +110,6 @@ public class MetricsMasterWrapperStub implements MetricsMasterWrapper {
     return 32;
   }
 
-  @Override public long getSplitProcedureFailureCount() {
-    return 8;
-  }
-
   @Override public long getSplitProcedureSuccessCount() {
     return 24;
   }
