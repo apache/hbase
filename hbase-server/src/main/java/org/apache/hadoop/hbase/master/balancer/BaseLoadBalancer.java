@@ -1585,7 +1585,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     ArrayListMultimap<String, ServerName> serversByHostname = ArrayListMultimap.create();
     for (ServerName server : servers) {
       assignments.put(server, new ArrayList<HRegionInfo>());
-      serversByHostname.put(server.getHostname(), server);
+      serversByHostname.put(server.getHostname().toLowerCase(), server);
     }
 
     // Collection of the hostnames that used to have regions
@@ -1604,13 +1604,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       ServerName oldServerName = entry.getValue();
       List<ServerName> localServers = new ArrayList<ServerName>();
       if (oldServerName != null) {
-        localServers = serversByHostname.get(oldServerName.getHostname());
+        localServers = serversByHostname.get(oldServerName.getHostname().toLowerCase());
       }
       if (localServers.isEmpty()) {
         // No servers on the new cluster match up with this hostname, assign randomly, later.
         randomAssignRegions.add(region);
         if (oldServerName != null) {
-          oldHostsNoLongerPresent.add(oldServerName.getHostname());
+          oldHostsNoLongerPresent.add(oldServerName.getHostname().toLowerCase());
         }
       } else if (localServers.size() == 1) {
         // the usual case - one new server on same host
