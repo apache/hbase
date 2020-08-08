@@ -21,15 +21,15 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.ipc.MetricsHBaseServer;
 import org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapperStub;
@@ -125,14 +125,15 @@ public class TestRSStatusServlet {
 
   @Test
   public void testWithRegions() throws IOException, ServiceException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     List<RegionInfo> regions = Lists.newArrayList(
       RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(Bytes.toBytes("a"))
-          .setEndKey(Bytes.toBytes("d")).build(),
+        .setEndKey(Bytes.toBytes("d")).build(),
       RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(Bytes.toBytes("d"))
-          .setEndKey(Bytes.toBytes("z")).build());
-    Mockito.doReturn(ResponseConverter.buildGetOnlineRegionResponse(regions)).when(rpcServices)
-        .getOnlineRegion(Mockito.any(), Mockito.any());
+        .setEndKey(Bytes.toBytes("z")).build());
+    Mockito.doReturn(ResponseConverter.buildGetOnlineRegionResponse(regions))
+      .when(rpcServices)   .getOnlineRegion(Mockito.any(), Mockito.any());
     new RSStatusTmpl().render(new StringWriter(), rs);
   }
 }

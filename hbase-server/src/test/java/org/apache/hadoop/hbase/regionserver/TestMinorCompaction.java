@@ -26,15 +26,15 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,8 +46,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test minor compactions
@@ -60,12 +58,11 @@ public class TestMinorCompaction {
       HBaseClassTestRule.forClass(TestMinorCompaction.class);
 
   @Rule public TestName name = new TestName();
-  private static final Logger LOG = LoggerFactory.getLogger(TestMinorCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
-  private HTableDescriptor htd = null;
+  private TableDescriptor htd = null;
   private int compactionThreshold;
   private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
   final private byte[] col1, col2;
@@ -93,8 +90,8 @@ public class TestMinorCompaction {
   @Before
   public void setUp() throws Exception {
     this.htd = UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
+      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     this.r = UTIL.createLocalHRegion(htd, null, null);
   }
 

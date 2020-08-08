@@ -32,7 +32,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.namespace.QName;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -71,9 +70,9 @@ public class SchemaResource extends ResourceBase {
     this.tableResource = tableResource;
   }
 
-  private HTableDescriptor getTableSchema() throws IOException, TableNotFoundException {
+  private TableDescriptor getTableSchema() throws IOException, TableNotFoundException {
     try (Table table = servlet.getTable(tableResource.getName())) {
-      return new HTableDescriptor(table.getDescriptor());
+      return table.getDescriptor();
     }
   }
 

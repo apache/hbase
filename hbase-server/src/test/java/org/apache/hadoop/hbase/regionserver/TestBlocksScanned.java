@@ -75,34 +75,25 @@ public class TestBlocksScanned {
 
   @Test
   public void testBlocksScanned() throws Exception {
-    byte [] tableName = Bytes.toBytes("TestBlocksScanned");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
-
-    tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
-        .setMaxVersions(10)
-        .setBlockCacheEnabled(true)
-        .setBlocksize(BLOCK_SIZE)
-        .setCompressionType(Compression.Algorithm.NONE)
-        );
+    byte[] tableName = Bytes.toBytes("TestBlocksScanned");
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(10)
+          .setBlockCacheEnabled(true).setBlocksize(BLOCK_SIZE)
+          .setCompressionType(Compression.Algorithm.NONE).build())
+        .build();
     _testBlocksScanned(tableDescriptor);
   }
 
   @Test
   public void testBlocksScannedWithEncoding() throws Exception {
-    byte [] tableName = Bytes.toBytes("TestBlocksScannedWithEncoding");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
-
-    tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
-        .setMaxVersions(10)
-        .setBlockCacheEnabled(true)
-        .setDataBlockEncoding(DataBlockEncoding.FAST_DIFF)
-        .setBlocksize(BLOCK_SIZE)
-        .setCompressionType(Compression.Algorithm.NONE)
-        );
+    byte[] tableName = Bytes.toBytes("TestBlocksScannedWithEncoding");
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(10)
+          .setBlockCacheEnabled(true).setDataBlockEncoding(DataBlockEncoding.FAST_DIFF)
+          .setBlocksize(BLOCK_SIZE).setCompressionType(Compression.Algorithm.NONE).build())
+        .build();
     _testBlocksScanned(tableDescriptor);
   }
 

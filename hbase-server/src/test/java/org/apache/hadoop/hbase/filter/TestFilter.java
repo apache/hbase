@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -150,23 +151,15 @@ public class TestFilter {
 
   @Before
   public void setUp() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf("TestFilter"));
-
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor family0 =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES[0])
-        .setVersions(100, 100);
-    tableDescriptor.setColumnFamily(family0);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES[1]));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES_1[0]));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES_1[1]));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(NEW_FAMILIES[0]));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(NEW_FAMILIES[1]));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf("TestFilter"))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[0]).setMinVersions(100)
+        .setMaxVersions(100).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILIES[1]))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILIES_1[0]))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILIES_1[1]))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NEW_FAMILIES[0]))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NEW_FAMILIES[1])).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), tableDescriptor);
@@ -1519,12 +1512,9 @@ public class TestFilter {
   public void testFilterListWithPrefixFilter() throws IOException {
     byte[] family = Bytes.toBytes("f1");
     byte[] qualifier = Bytes.toBytes("q1");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(name.getMethodName()));
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
       TEST_UTIL.getConfiguration(), tableDescriptor);
@@ -2293,12 +2283,9 @@ public class TestFilter {
   @Ignore("TODO: intentionally disabled?")
   public void testNestedFilterListWithSCVF() throws IOException {
     byte[] columnStatus = Bytes.toBytes("S");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(name.getMethodName()));
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES[0]));
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILIES[0])).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), tableDescriptor);

@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -119,9 +118,9 @@ public class TestSnapshotFromClient {
   }
 
   protected void createTable() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
-    htd.setRegionReplication(getNumReplicas());
-    UTIL.createTable(htd, new byte[][]{TEST_FAM}, null);
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(getNumReplicas()).build();
+    UTIL.createTable(htd, new byte[][] { TEST_FAM }, null);
   }
 
   protected int getNumReplicas() {
@@ -321,7 +320,7 @@ public class TestSnapshotFromClient {
     try {
       admin = UTIL.getAdmin();
 
-      HTableDescriptor htd = new HTableDescriptor(tableName);
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName).build();
       UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
 
       String table1Snapshot1 = "Table1Snapshot1";
@@ -406,7 +405,7 @@ public class TestSnapshotFromClient {
     try {
       admin = UTIL.getAdmin();
 
-      HTableDescriptor htd = new HTableDescriptor(tableName);
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName).build();
       UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
 
       String table1Snapshot1 = "Table1Snapshot1";

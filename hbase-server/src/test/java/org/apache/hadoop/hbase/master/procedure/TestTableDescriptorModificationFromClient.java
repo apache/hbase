@@ -25,11 +25,10 @@ import java.util.Set;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -91,11 +90,8 @@ public class TestTableDescriptorModificationFromClient {
   public void testModifyTable() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_0));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0)).build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -103,13 +99,9 @@ public class TestTableDescriptorModificationFromClient {
       verifyTableDescriptor(TABLE_NAME, FAMILY_0);
 
       // Modify the table adding another family and verify the descriptor
-      TableDescriptorBuilder.ModifyableTableDescriptor modifiedtableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-
-      modifiedtableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_0));
-      modifiedtableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_1));
+      TableDescriptor modifiedtableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_1)).build();
       admin.modifyTable(modifiedtableDescriptor);
       verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
     } finally {
@@ -121,11 +113,8 @@ public class TestTableDescriptorModificationFromClient {
   public void testAddColumn() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with two families
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_0));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0)).build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -133,8 +122,7 @@ public class TestTableDescriptorModificationFromClient {
       verifyTableDescriptor(TABLE_NAME, FAMILY_0);
 
       // Modify the table removing one family and verify the descriptor
-      admin.addColumnFamily(TABLE_NAME,
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_1));
+      admin.addColumnFamily(TABLE_NAME, ColumnFamilyDescriptorBuilder.of(FAMILY_1));
       verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
     } finally {
       admin.deleteTable(TABLE_NAME);
@@ -145,11 +133,8 @@ public class TestTableDescriptorModificationFromClient {
   public void testAddSameColumnFamilyTwice() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one families
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_0));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0)).build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -157,14 +142,12 @@ public class TestTableDescriptorModificationFromClient {
       verifyTableDescriptor(TABLE_NAME, FAMILY_0);
 
       // Modify the table removing one family and verify the descriptor
-      admin.addColumnFamily(TABLE_NAME,
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_1));
+      admin.addColumnFamily(TABLE_NAME, ColumnFamilyDescriptorBuilder.of(FAMILY_1));
       verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
 
       try {
         // Add same column family again - expect failure
-        admin.addColumnFamily(TABLE_NAME,
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_1));
+        admin.addColumnFamily(TABLE_NAME, ColumnFamilyDescriptorBuilder.of(FAMILY_1));
         Assert.fail("Delete a non-exist column family should fail");
       } catch (InvalidFamilyOperationException e) {
         // Expected.
@@ -179,14 +162,11 @@ public class TestTableDescriptorModificationFromClient {
   public void testModifyColumnFamily() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
 
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor cfDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_0);
+    ColumnFamilyDescriptor cfDescriptor = ColumnFamilyDescriptorBuilder.of(FAMILY_0);
     int blockSize = cfDescriptor.getBlocksize();
     // Create a table with one families
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-
-    tableDescriptor.setColumnFamily(cfDescriptor);
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(cfDescriptor).build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -194,13 +174,14 @@ public class TestTableDescriptorModificationFromClient {
       verifyTableDescriptor(TABLE_NAME, FAMILY_0);
 
       int newBlockSize = 2 * blockSize;
-      cfDescriptor.setBlocksize(newBlockSize);
+      cfDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(cfDescriptor).setBlocksize(newBlockSize).build();
 
       // Modify colymn family
       admin.modifyColumnFamily(TABLE_NAME, cfDescriptor);
 
-      HTableDescriptor htd = new HTableDescriptor(admin.getDescriptor(TABLE_NAME));
-      HColumnDescriptor hcfd = htd.getFamily(FAMILY_0);
+      TableDescriptor htd = admin.getDescriptor(TABLE_NAME);
+      ColumnFamilyDescriptor hcfd = htd.getColumnFamily(FAMILY_0);
       assertTrue(hcfd.getBlocksize() == newBlockSize);
     } finally {
       admin.deleteTable(TABLE_NAME);
@@ -211,15 +192,11 @@ public class TestTableDescriptorModificationFromClient {
   public void testModifyNonExistingColumnFamily() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
 
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor cfDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_1);
+    ColumnFamilyDescriptor cfDescriptor = ColumnFamilyDescriptorBuilder.of(FAMILY_1);
     int blockSize = cfDescriptor.getBlocksize();
     // Create a table with one families
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_0));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0)).build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -227,7 +204,8 @@ public class TestTableDescriptorModificationFromClient {
       verifyTableDescriptor(TABLE_NAME, FAMILY_0);
 
       int newBlockSize = 2 * blockSize;
-      cfDescriptor.setBlocksize(newBlockSize);
+      cfDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(cfDescriptor).setBlocksize(newBlockSize).build();
 
       // Modify a column family that is not in the table.
       try {
@@ -246,13 +224,9 @@ public class TestTableDescriptorModificationFromClient {
   public void testDeleteColumn() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with two families
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_0));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_1));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_1)).build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -271,13 +245,9 @@ public class TestTableDescriptorModificationFromClient {
   public void testDeleteSameColumnFamilyTwice() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     // Create a table with two families
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_0));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_1));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_1)).build();
     admin.createTable(tableDescriptor);
     admin.disableTable(TABLE_NAME);
     try {
@@ -305,7 +275,7 @@ public class TestTableDescriptorModificationFromClient {
     Admin admin = TEST_UTIL.getAdmin();
 
     // Verify descriptor from master
-    HTableDescriptor htd = new HTableDescriptor(admin.getDescriptor(tableName));
+    TableDescriptor htd = admin.getDescriptor(tableName);
     verifyTableDescriptor(htd, tableName, families);
 
     // Verify descriptor from HDFS

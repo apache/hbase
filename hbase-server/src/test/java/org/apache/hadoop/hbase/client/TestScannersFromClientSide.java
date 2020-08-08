@@ -768,8 +768,7 @@ public class TestScannersFromClientSide {
       table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, ts, value));
       assertArrayEquals(value, table.get(new Get(ROW)).getValue(FAMILY, QUALIFIER));
       TEST_UTIL.getAdmin().modifyColumnFamily(tableName,
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
-          .setTimeToLive(5));
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setTimeToLive(5).build());
       try (ResultScanner scanner = table.getScanner(FAMILY)) {
         assertNull(scanner.next());
       }

@@ -23,22 +23,22 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
-
-import java.util.concurrent.CopyOnWriteArrayList;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class creates a single process HBase cluster. One thread is created for
@@ -451,23 +451,18 @@ public class LocalHBaseCluster {
 
   /**
    * Test things basically work.
-   * @param args
-   * @throws IOException
    */
   public static void main(String[] args) throws IOException {
     Configuration conf = HBaseConfiguration.create();
     LocalHBaseCluster cluster = new LocalHBaseCluster(conf);
     cluster.startup();
-    Connection connection = ConnectionFactory.createConnection(conf);
-    Admin admin = connection.getAdmin();
-    try {
-      HTableDescriptor htd =
-        new HTableDescriptor(TableName.valueOf(cluster.getClass().getName()));
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+      Admin admin = connection.getAdmin()) {
+      TableDescriptor htd =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(cluster.getClass().getName())).build();
       admin.createTable(htd);
     } finally {
-      admin.close();
+      cluster.shutdown();
     }
-    connection.close();
-    cluster.shutdown();
   }
 }

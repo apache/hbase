@@ -22,13 +22,13 @@ import java.util.Optional;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -92,11 +92,10 @@ public class TestSettingTimeoutOnBlockingPoint {
 
   @Test
   public void testRowLock() throws IOException {
-    TableName tableName = TableName.valueOf(testName.getMethodName());
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(tableName);
-    hdt.addCoprocessor(SleepCoprocessor.class.getName());
-    TEST_UTIL.createTable(hdt, new byte[][]{FAM}, TEST_UTIL.getConfiguration());
-
+    TableDescriptor hdt = TEST_UTIL.createModifyableTableDescriptor(testName.getMethodName())
+      .setCoprocessor(SleepCoprocessor.class.getName()).build();
+    TEST_UTIL.createTable(hdt, new byte[][] { FAM }, TEST_UTIL.getConfiguration());
+    TableName tableName = hdt.getTableName();
     Thread incrementThread = new Thread(() -> {
       try {
         try( Table table = TEST_UTIL.getConnection().getTable(tableName)) {

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +77,7 @@ abstract class OutputSink {
     this.controller = controller;
     this.entryBuffers = entryBuffers;
     this.closeThreadPool = Threads.getBoundedCachedThreadPool(numThreads, 30L, TimeUnit.SECONDS,
-        Threads.newDaemonThreadFactory("split-log-closeStream-"));
+      new ThreadFactoryBuilder().setNameFormat("split-log-closeStream-pool-%d").build());
     this.closeCompletionService = new ExecutorCompletionService<>(closeThreadPool);
   }
 

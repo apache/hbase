@@ -25,10 +25,10 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -81,13 +81,9 @@ public class TestCoprocessorTableEndpoint {
   public void testCoprocessorTableEndpoint() throws Throwable {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
-
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    tableDescriptor.setCoprocessor(ColumnAggregationEndpoint.class.getName());
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
+      .setCoprocessor(ColumnAggregationEndpoint.class.getName()).build();
 
     createTable(tableDescriptor);
     verifyTable(tableName);
@@ -97,16 +93,12 @@ public class TestCoprocessorTableEndpoint {
   public void testDynamicCoprocessorTableEndpoint() throws Throwable {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
-
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
     createTable(tableDescriptor);
 
-    tableDescriptor.setCoprocessor(ColumnAggregationEndpoint.class.getName());
-    updateTable(tableDescriptor);
+    updateTable(TableDescriptorBuilder.newBuilder(tableDescriptor)
+      .setCoprocessor(ColumnAggregationEndpoint.class.getName()).build());
 
     verifyTable(tableName);
   }
@@ -142,10 +134,9 @@ public class TestCoprocessorTableEndpoint {
       });
   }
 
-  private static final void createTable(
-      final TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor) throws Exception {
+  private static final void createTable(final TableDescriptor tableDescriptor) throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    admin.createTable(tableDescriptor, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
+    admin.createTable(tableDescriptor, new byte[][] { ROWS[rowSeperator1], ROWS[rowSeperator2] });
     TEST_UTIL.waitUntilAllRegionsAssigned(tableDescriptor.getTableName());
     Table table = TEST_UTIL.getConnection().getTable(tableDescriptor.getTableName());
     try {
@@ -159,8 +150,7 @@ public class TestCoprocessorTableEndpoint {
     }
   }
 
-  private static void updateTable(
-      final TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor) throws Exception {
+  private static void updateTable(TableDescriptor tableDescriptor) throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     admin.disableTable(tableDescriptor.getTableName());
     admin.modifyTable(tableDescriptor);

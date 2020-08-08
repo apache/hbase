@@ -581,6 +581,9 @@ public final class HConstants {
    */
   public static final byte [] META_VERSION_QUALIFIER = Bytes.toBytes("v");
 
+  /** The family str as a key in map*/
+  public static final String FAMILY_KEY_STR = "family";
+
   /**
    * The current version of the meta table.
    * - pre-hbase 0.92.  There is no META_VERSION column in the root table
@@ -1447,9 +1450,18 @@ public final class HConstants {
   public static final String HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL =
     "hbase.client.fast.fail.interceptor.impl";
 
+  /**
+   * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+   *   distributed WAL splitter; see SplitWALManager.
+   */
+  @Deprecated
   public static final String HBASE_SPLIT_WAL_COORDINATED_BY_ZK = "hbase.split.wal.zk.coordinated";
 
-  public static final boolean DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK = true;
+  /**
+   * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0.
+   */
+  @Deprecated
+  public static final boolean DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK = false;
 
   public static final String HBASE_SPLIT_WAL_MAX_SPLITTER = "hbase.regionserver.wal.max.splitters";
 
@@ -1582,6 +1594,16 @@ public final class HConstants {
   public static final String SLOW_LOG_SYS_TABLE_ENABLED_KEY =
     "hbase.regionserver.slowlog.systable.enabled";
   public static final boolean DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY = false;
+
+  /**
+   * Number of rows in a batch operation above which a warning will be logged.
+   */
+  public static final String BATCH_ROWS_THRESHOLD_NAME = "hbase.rpc.rows.warning.threshold";
+
+  /**
+   * Default value of {@link #BATCH_ROWS_THRESHOLD_NAME}
+   */
+  public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
   private HConstants() {
     // Can't be instantiated with this ctor.

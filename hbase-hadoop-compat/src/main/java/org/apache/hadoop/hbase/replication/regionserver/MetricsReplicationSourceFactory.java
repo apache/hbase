@@ -25,5 +25,5 @@ public interface MetricsReplicationSourceFactory {
   public MetricsReplicationSinkSource getSink();
   public MetricsReplicationSourceSource getSource(String id);
   public MetricsReplicationTableSource getTableSource(String tableName);
-  public MetricsReplicationSourceSource getGlobalSource();
+  public MetricsReplicationGlobalSourceSourceImpl getGlobalSource();
 }

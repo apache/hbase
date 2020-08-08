@@ -365,10 +365,8 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     IntegrationTestingUtility.setUseDistributedCluster(getConf());
     int numPresplits = getConf().getInt("loadmapper.numPresplits", 5);
     // create HTableDescriptor for specified table
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(getTablename());
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(getTablename())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
 
     try (Connection conn = ConnectionFactory.createConnection(getConf());
         Admin admin = conn.getAdmin()) {

@@ -398,12 +398,11 @@ public class TestCoprocessorMetrics {
   public void testRegionObserverSingleRegion() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-         Admin admin = connection.getAdmin()) {
-      admin.createTable(
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
-          .setColumnFamily(new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
-          // add the coprocessor for the region
-          .setCoprocessor(CustomRegionObserver.class.getName()));
+      Admin admin = connection.getAdmin()) {
+      admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(foo))
+        // add the coprocessor for the region
+        .setCoprocessor(CustomRegionObserver.class.getName()).build());
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
         table.get(new Get(foo)); // 2 gets
@@ -418,12 +417,10 @@ public class TestCoprocessorMetrics {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
-      admin.createTable(
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
-          .setColumnFamily(
-            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
-          // add the coprocessor for the region
-          .setCoprocessor(CustomRegionObserver.class.getName()), new byte[][]{foo});
+      admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(foo))
+        // add the coprocessor for the region
+        .setCoprocessor(CustomRegionObserver.class.getName()).build(), new byte[][] { foo });
       // create with 2 regions
       try (Table table = connection.getTable(tableName);
            RegionLocator locator = connection.getRegionLocator(tableName)) {
@@ -444,18 +441,14 @@ public class TestCoprocessorMetrics {
     final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
-      admin.createTable(
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName1)
-          .setColumnFamily(
-            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
-          // add the coprocessor for the region
-          .setCoprocessor(CustomRegionObserver.class.getName()));
-      admin.createTable(
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName2)
-          .setColumnFamily(
-            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
-          // add the coprocessor for the region
-          .setCoprocessor(CustomRegionObserver.class.getName()));
+      admin.createTable(TableDescriptorBuilder.newBuilder(tableName1)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(foo))
+        // add the coprocessor for the region
+        .setCoprocessor(CustomRegionObserver.class.getName()).build());
+      admin.createTable(TableDescriptorBuilder.newBuilder(tableName2)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(foo))
+        // add the coprocessor for the region
+        .setCoprocessor(CustomRegionObserver.class.getName()).build());
       try (Table table1 = connection.getTable(tableName1);
            Table table2 = connection.getTable(tableName2)) {
         table1.get(new Get(bar));
@@ -470,13 +463,11 @@ public class TestCoprocessorMetrics {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
-      admin.createTable(
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
-          .setColumnFamily(
-            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
-          // add the coprocessor for the region. We add two different coprocessors
-          .setCoprocessor(CustomRegionObserver.class.getName())
-          .setCoprocessor(CustomRegionObserver2.class.getName()));
+      admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(foo))
+        // add the coprocessor for the region. We add two different coprocessors
+        .setCoprocessor(CustomRegionObserver.class.getName())
+        .setCoprocessor(CustomRegionObserver2.class.getName()).build());
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
         table.get(new Get(foo)); // 2 gets
@@ -493,12 +484,10 @@ public class TestCoprocessorMetrics {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
-      admin.createTable(
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
-          .setColumnFamily(
-            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
-          // add the coprocessor for the region
-          .setCoprocessor(CustomRegionObserver.class.getName()), new byte[][]{foo});
+      admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(foo))
+        // add the coprocessor for the region
+        .setCoprocessor(CustomRegionObserver.class.getName()).build(), new byte[][] { foo });
       // create with 2 regions
       try (Table table = connection.getTable(tableName)) {
         table.get(new Get(foo));
@@ -538,12 +527,10 @@ public class TestCoprocessorMetrics {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
-      admin.createTable(
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
-          .setColumnFamily(
-            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(foo))
-          // add the coprocessor for the region
-          .setCoprocessor(CustomRegionEndpoint.class.getName()));
+      admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(foo))
+        // add the coprocessor for the region
+        .setCoprocessor(CustomRegionEndpoint.class.getName()).build());
 
       try (Table table = connection.getTable(tableName)) {
         List<Mutation> mutations = Lists.newArrayList(new Put(foo), new Put(bar));

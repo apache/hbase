@@ -22,7 +22,7 @@ module Shell
   module Commands
     class AppendPeerNamespaces < Command
       def help
-        <<-EOF
+        <<~EOF
   Append some namespaces to be replicable for the specified peer.
 
   Set a namespace in the peer config means that all tables in this

@@ -43,10 +43,8 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -308,8 +306,8 @@ public class TestFromClientSide3 {
 
         // change the compaction.min config option for this table to 5
         LOG.info("hbase.hstore.compaction.min should now be 5");
-        HTableDescriptor htd = new HTableDescriptor(table.getDescriptor());
-        htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
+        TableDescriptor htd = TableDescriptorBuilder.newBuilder(table.getDescriptor())
+          .setValue("hbase.hstore.compaction.min", String.valueOf(5)).build();
         admin.modifyTable(htd);
         LOG.info("alter status finished");
 
@@ -327,9 +325,10 @@ public class TestFromClientSide3 {
 
         // change an individual CF's config option to 2 & online schema update
         LOG.info("hbase.hstore.compaction.min should now be 2");
-        HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
-        hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
-        htd.modifyFamily(hcd);
+        htd = TableDescriptorBuilder.newBuilder(htd)
+          .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(htd.getColumnFamily(FAMILY))
+            .setValue("hbase.hstore.compaction.min", String.valueOf(2)).build())
+          .build();
         admin.modifyTable(htd);
         LOG.info("alter status finished");
 
@@ -356,9 +355,10 @@ public class TestFromClientSide3 {
         // Finally, ensure that we can remove a custom config value after we made it
         LOG.info("Removing CF config value");
         LOG.info("hbase.hstore.compaction.min should now be 5");
-        hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
-        hcd.setValue("hbase.hstore.compaction.min", null);
-        htd.modifyFamily(hcd);
+        htd = TableDescriptorBuilder.newBuilder(htd)
+          .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(htd.getColumnFamily(FAMILY))
+            .setValue("hbase.hstore.compaction.min", null).build())
+          .build();
         admin.modifyTable(htd);
         LOG.info("alter status finished");
         assertNull(table.getDescriptor().getColumnFamily(FAMILY)
@@ -735,14 +735,10 @@ public class TestFromClientSide3 {
     });
   }
 
-  private void testPreBatchMutate(TableName tableName, Runnable rn)throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-
-    tableDescriptor.setCoprocessor(WaitingForScanObserver.class.getName());
-    tableDescriptor.setColumnFamily(familyDescriptor);
+  private void testPreBatchMutate(TableName tableName, Runnable rn) throws Exception {
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+      .setCoprocessor(WaitingForScanObserver.class.getName()).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     // Don't use waitTableAvailable(), because the scanner will mess up the co-processor
 
@@ -774,14 +770,10 @@ public class TestFromClientSide3 {
 
   @Test
   public void testLockLeakWithDelta() throws Exception, Throwable {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-
-    tableDescriptor.setCoprocessor(WaitingForMultiMutationsObserver.class.getName());
-    tableDescriptor.setValue("hbase.rowlock.wait.duration", String.valueOf(5000));
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+      .setCoprocessor(WaitingForMultiMutationsObserver.class.getName())
+      .setValue("hbase.rowlock.wait.duration", String.valueOf(5000)).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
@@ -833,15 +825,11 @@ public class TestFromClientSide3 {
 
   @Test
   public void testMultiRowMutations() throws Exception, Throwable {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-
-    tableDescriptor.setCoprocessor(MultiRowMutationEndpoint.class.getName());
-    tableDescriptor.setCoprocessor(WaitingForMultiMutationsObserver.class.getName());
-    tableDescriptor.setValue("hbase.rowlock.wait.duration", String.valueOf(5000));
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+      .setCoprocessor(MultiRowMutationEndpoint.class.getName())
+      .setCoprocessor(WaitingForMultiMutationsObserver.class.getName())
+      .setValue("hbase.rowlock.wait.duration", String.valueOf(5000)).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 

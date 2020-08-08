@@ -303,6 +303,14 @@ public interface AsyncAdmin {
   CompletableFuture<Void> flush(TableName tableName);
 
   /**
+   * Flush the specified column family stores on all regions of the passed table.
+   * This runs as a synchronous operation.
+   * @param tableName table to flush
+   * @param columnFamily column family within a table
+   */
+  CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily);
+
+  /**
    * Flush an individual region.
    * @param regionName region to flush
    */

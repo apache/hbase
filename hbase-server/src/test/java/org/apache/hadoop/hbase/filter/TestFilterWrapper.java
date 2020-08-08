@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,6 +45,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -149,13 +153,8 @@ public class TestFilterWrapper {
   private static void createTable() {
     assertNotNull("HBaseAdmin is not initialized successfully.", admin);
     if (admin != null) {
-
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(name);
-
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(Bytes.toBytes("f1"));
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(name)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("f1"))).build();
 
       try {
         admin.createTable(tableDescriptor);
@@ -163,7 +162,6 @@ public class TestFilterWrapper {
       } catch (IOException e) {
         assertNull("Exception found while creating table", e);
       }
-
     }
   }
 

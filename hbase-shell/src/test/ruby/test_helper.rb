@@ -119,7 +119,7 @@ module Hbase
     def create_test_table_with_region_replicas(name, num_of_replicas, splits)
       # Create the table if needed
       unless admin.exists?(name)
-        command(:create, name, 'f1', { REGION_REPLICATION => num_of_replicas },
+        command(:create, name, 'f1', { ::HBaseConstants::REGION_REPLICATION => num_of_replicas },
                 splits)
       end
 

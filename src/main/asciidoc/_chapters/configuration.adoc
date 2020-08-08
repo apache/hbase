@@ -1384,6 +1384,7 @@ Here are those configurations:
 | hbase.master.balancer.stochastic.regionCountCost
 | hbase.master.balancer.stochastic.primaryRegionCountCost
 | hbase.master.balancer.stochastic.moveCost
+| hbase.master.balancer.stochastic.moveCost.offpeak
 | hbase.master.balancer.stochastic.maxMovePercent
 | hbase.master.balancer.stochastic.tableSkewCost
 | hbase.master.regions.recovery.check.interval

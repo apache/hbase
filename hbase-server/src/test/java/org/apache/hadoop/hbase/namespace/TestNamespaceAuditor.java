@@ -344,10 +344,8 @@ public class TestNamespaceAuditor {
     ADMIN.createNamespace(nspDesc);
     final TableName tableTwo = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table2");
     byte[] columnFamily = Bytes.toBytes("info");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableTwo);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(columnFamily));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableTwo)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(columnFamily)).build();
     ADMIN.createTable(tableDescriptor, Bytes.toBytes("0"), Bytes.toBytes("9"), initialRegions);
     Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
     try (Table table = connection.getTable(tableTwo)) {
@@ -442,11 +440,8 @@ public class TestNamespaceAuditor {
     ADMIN.createNamespace(nspDesc);
     final TableName tableOne = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table1");
     byte[] columnFamily = Bytes.toBytes("info");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableOne);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(columnFamily));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableOne)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(columnFamily)).build();
     MasterSyncObserver.throwExceptionInPreCreateTableAction = true;
     try {
       try {

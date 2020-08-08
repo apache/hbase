@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
@@ -520,10 +521,9 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-          new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TEST_TABLE));
-        tableDescriptor.setColumnFamily(
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+        TableDescriptor tableDescriptor =
+          TableDescriptorBuilder.newBuilder(TableName.valueOf(TEST_TABLE))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
         ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
           tableDescriptor, null);
         return null;

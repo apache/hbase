@@ -74,26 +74,24 @@ public class TestWalAndCompactingMemStoreFlush {
 
   private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
     int i = 0;
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLENAME);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLENAME);
     for (byte[] family : FAMILIES) {
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
+      ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(family);
       // even column families are going to have compacted memstore
       if (i % 2 == 0) {
-        familyDescriptor.setInMemoryCompaction(MemoryCompactionPolicy
-            .valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY)));
+        cfBuilder.setInMemoryCompaction(MemoryCompactionPolicy
+          .valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY)));
       } else {
-        familyDescriptor.setInMemoryCompaction(MemoryCompactionPolicy.NONE);
+        cfBuilder.setInMemoryCompaction(MemoryCompactionPolicy.NONE);
       }
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      builder.setColumnFamily(cfBuilder.build());
       i++;
     }
 
     RegionInfo info = RegionInfoBuilder.newBuilder(TABLENAME).build();
     Path path = new Path(DIR, callingMethod);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, path, conf,
-      tableDescriptor, false);
+    HRegion region =
+      HBaseTestingUtility.createRegionAndWAL(info, path, conf, builder.build(), false);
     region.regionServicesForStores = Mockito.spy(region.regionServicesForStores);
     ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
     Mockito.when(region.regionServicesForStores.getInMemoryCompactionPool()).thenReturn(pool);

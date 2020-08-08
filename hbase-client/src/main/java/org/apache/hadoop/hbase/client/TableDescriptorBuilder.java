@@ -32,11 +32,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -380,6 +380,10 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public boolean hasCoprocessor(String classNameToMatch) {
+    return desc.hasCoprocessor(classNameToMatch);
+  }
+
   public TableDescriptorBuilder setColumnFamily(final ColumnFamilyDescriptor family) {
     desc.setColumnFamily(Objects.requireNonNull(family));
     return this;
@@ -408,6 +412,16 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder removeValue(byte[] key) {
     desc.removeValue(key);
+    return this;
+  }
+
+  public TableDescriptorBuilder removeValue(BiPredicate<Bytes, Bytes> predicate) {
+    List<Bytes> toRemove =
+      desc.getValues().entrySet().stream().filter(e -> predicate.test(e.getKey(), e.getValue()))
+        .map(Map.Entry::getKey).collect(Collectors.toList());
+    for (Bytes key : toRemove) {
+      removeValue(key);
+    }
     return this;
   }
 
@@ -531,6 +545,10 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public String getValue(String key) {
+    return desc.getValue(key);
+  }
+
   /**
    * Sets replication scope all & only the columns already in the builder. Columns added later won't
    * be backfilled with replication scope.
@@ -558,12 +576,8 @@ public class TableDescriptorBuilder {
     return new ModifyableTableDescriptor(desc);
   }
 
-  /**
-   * TODO: make this private after removing the HTableDescriptor
-   */
-  @InterfaceAudience.Private
-  public static class ModifyableTableDescriptor
-          implements TableDescriptor, Comparable<ModifyableTableDescriptor> {
+  private static final class ModifyableTableDescriptor
+    implements TableDescriptor, Comparable<ModifyableTableDescriptor> {
 
     private final TableName name;
 
@@ -584,11 +598,9 @@ public class TableDescriptorBuilder {
      * Construct a table descriptor specifying a TableName object
      *
      * @param name Table name.
-     * TODO: make this private after removing the HTableDescriptor
      */
-    @InterfaceAudience.Private
-    public ModifyableTableDescriptor(final TableName name) {
-      this(name, Collections.EMPTY_LIST, Collections.EMPTY_MAP);
+    private ModifyableTableDescriptor(final TableName name) {
+      this(name, Collections.emptyList(), Collections.emptyMap());
     }
 
     private ModifyableTableDescriptor(final TableDescriptor desc) {
@@ -602,11 +614,8 @@ public class TableDescriptorBuilder {
      * Makes a deep copy of the supplied descriptor.
      * @param name The new name
      * @param desc The descriptor.
-     * TODO: make this private after removing the HTableDescriptor
      */
-    @InterfaceAudience.Private
-    @Deprecated // only used by HTableDescriptor. remove this method if HTD is removed
-    public ModifyableTableDescriptor(final TableName name, final TableDescriptor desc) {
+    private ModifyableTableDescriptor(final TableName name, final TableDescriptor desc) {
       this(name, Arrays.asList(desc.getColumnFamilies()), desc.getValues());
     }
 
@@ -676,19 +685,6 @@ public class TableDescriptorBuilder {
     public Map<Bytes, Bytes> getValues() {
       // shallow pointer copy
       return Collections.unmodifiableMap(values);
-    }
-
-    /**
-     * Getter for fetching an unmodifiable map.
-     */
-    public Map<String, String> getConfiguration() {
-      return getValues().entrySet().stream()
-        .collect(Collectors.toMap(
-          e -> Bytes.toString(e.getKey().get(), e.getKey().getOffset(),
-            e.getKey().getLength()),
-          e -> Bytes.toString(e.getValue().get(), e.getValue().getOffset(),
-            e.getValue().getLength())
-        ));
     }
 
     /**

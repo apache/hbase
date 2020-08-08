@@ -551,12 +551,8 @@ public class TestRegionPlacement {
       splitKeys[i - 1] = new byte[] { splitKey, splitKey, splitKey };
     }
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        HConstants.CATALOG_FAMILY));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     admin.createTable(tableDescriptor, splitKeys);
 
     try (RegionLocator r = CONNECTION.getRegionLocator(tableName)) {
