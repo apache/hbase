@@ -145,19 +145,17 @@ public class ServerCrashProcedure
       case SERVER_CRASH_ASSIGN_ROOT:
         break;
 
+      //Don't block hbase:meta processing states on hbase:meta being loaded
       case SERVER_CRASH_CHECK_CARRYING_META:
+      case SERVER_CRASH_SPLIT_META_LOGS:
+      case SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR:
+      case SERVER_CRASH_ASSIGN_META:
         // If hbase:root is not loaded, we can't do the check so yield
         if (env.getAssignmentManager().waitRootLoaded(this)) {
           LOG.info("pid="+getProcId()+", waiting for root loaded: "+state+
             ", carryingRoot="+carryingRoot+", carryingMeta="+carryingMeta);
           throw new ProcedureSuspendedException();
         }
-        break;
-
-      //Don't block hbase:meta processing states on hbase:meta being loaded
-      case SERVER_CRASH_SPLIT_META_LOGS:
-      case SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR:
-      case SERVER_CRASH_ASSIGN_META:
         break;
 
       default:
