@@ -129,8 +129,8 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
    * Because this gets the local list of regions to flush and not the set the master had,
    * there is a possibility of a race where regions may be missed.
    *
-   * @param table
-   * @param family
+   * @param table table to flush
+   * @param family column family within a table
    * @return Subprocedure to submit to the ProcedureMemeber.
    */
   public Subprocedure buildSubprocedure(String table, String family) {
