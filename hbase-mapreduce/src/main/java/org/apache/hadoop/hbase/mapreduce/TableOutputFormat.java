@@ -155,10 +155,11 @@ implements Configurable {
    * @param context  The current task context.
    * @return The newly created writer instance.
    * @throws IOException When creating the writer fails.
+   * @throws InterruptedException When the job is cancelled.
    */
   @Override
   public RecordWriter<KEY, Mutation> getRecordWriter(TaskAttemptContext context)
-    throws IOException {
+      throws IOException, InterruptedException {
     return new TableRecordWriter();
   }
 
@@ -167,11 +168,11 @@ implements Configurable {
    *
    * @param context  The current context.
    * @throws IOException When the check fails.
+   * @throws InterruptedException When the job is aborted.
    * @see OutputFormat#checkOutputSpecs(JobContext)
    */
   @Override
-  public void checkOutputSpecs(JobContext context)
-    throws IOException {
+  public void checkOutputSpecs(JobContext context) throws IOException, InterruptedException {
     Configuration hConf = getConf();
     if (hConf == null) {
       hConf = context.getConfiguration();
