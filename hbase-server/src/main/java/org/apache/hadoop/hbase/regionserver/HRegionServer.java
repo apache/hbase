@@ -2385,6 +2385,7 @@ public class HRegionServer extends Thread implements
     // Time to pause if master says 'please hold'. Make configurable if needed.
     final long initPauseTime = 1000;
     int tries = 0;
+    int pausedTries = 0;
     long pauseTime;
     // Keep looping till we get an error. We want to send reports even though server is going down.
     // Only go down if clusterConnection is null. It is set to null almost as last thing as the
@@ -2416,12 +2417,15 @@ public class HRegionServer extends Thread implements
                 || ioe instanceof CallQueueTooBigException;
         if (pause) {
           // Do backoff else we flood the Master with requests.
-          pauseTime = ConnectionUtils.getPauseTime(initPauseTime, tries);
+          pauseTime = ConnectionUtils.getPauseTime(initPauseTime, pausedTries);
+          pausedTries++;
         } else {
           pauseTime = initPauseTime; // Reset.
+          pausedTries = 0;
         }
         LOG.info("Failed report transition " +
           TextFormat.shortDebugString(request) + "; retry (#" + tries + ")" +
+            "; paused retry (#" + pausedTries + ")" +
             (pause?
                 " after " + pauseTime + "ms delay (Master is coming online...).":
                 " immediately."),
