@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -68,14 +69,11 @@ public class TestInvocationRecordFilter {
 
   @Before
   public void setUp() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor htd =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TABLE_NAME_BYTES));
-
-    htd.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME_BYTES));
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME_BYTES))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME_BYTES)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+      TEST_UTIL.getConfiguration(), htd);
 
     Put put = new Put(ROW_BYTES);
     for (int i = 0; i < 10; i += 2) {

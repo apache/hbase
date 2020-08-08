@@ -22,7 +22,7 @@ module Shell
     # Recommission a region server, optionally load a list of passed regions
     class RecommissionRegionserver < Command
       def help
-        <<-EOF
+        <<~EOF
   Remove decommission marker from a region server to allow regions assignments.
 
   Optionally, load regions onto the server by passing a list of encoded region names.

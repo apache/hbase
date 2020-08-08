@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -675,10 +676,9 @@ public abstract class TestVisibilityLabels {
     } catch (Exception e) {
     }
     try {
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-          VisibilityConstants.LABELS_TABLE_FAMILY);
-      familyDescriptor.setBloomFilterType(BloomType.ROWCOL);
+      ColumnFamilyDescriptor familyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(VisibilityConstants.LABELS_TABLE_FAMILY)
+          .setBloomFilterType(BloomType.ROWCOL).build();
       admin.modifyColumnFamily(LABELS_TABLE_NAME, familyDescriptor);
       fail("Lables table should not get altered by user.");
     } catch (Exception e) {
@@ -707,16 +707,11 @@ public abstract class TestVisibilityLabels {
     final byte[] fam2 = Bytes.toBytes("info2");
     final byte[] qual2 = Bytes.toBytes("qual2");
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
     // Default max versions is 1.
-
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam2);
-    familyDescriptor.setMaxVersions(5);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam2).setMaxVersions(5).build())
+      .build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(r1);
@@ -798,11 +793,8 @@ public abstract class TestVisibilityLabels {
   public void testMutateRow() throws Exception {
     final byte[] qual2 = Bytes.toBytes("qual2");
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)){
       Put p1 = new Put(row1);
@@ -836,11 +828,8 @@ public abstract class TestVisibilityLabels {
   public void testFlushedFileWithVisibilityTags() throws Exception {
     final byte[] qual2 = Bytes.toBytes("qual2");
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put p1 = new Put(row1);

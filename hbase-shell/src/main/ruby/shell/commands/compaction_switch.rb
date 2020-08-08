@@ -22,7 +22,7 @@ module Shell
     # Switch compaction for a region server
     class CompactionSwitch < Command
       def help
-        <<-EOF
+        <<~EOF
           Turn the compaction on or off on regionservers. Disabling compactions will also interrupt
           any currently ongoing compactions. This state is ephemeral. The setting will be lost on
           restart of the server. Compaction can also be enabled/disabled by modifying configuration

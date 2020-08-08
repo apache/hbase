@@ -20,11 +20,10 @@
 require 'hbase_constants'
 require 'shell'
 
-include HBaseConstants
-
 module Hbase
   class ListProceduresTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     def setup
       setup_hbase

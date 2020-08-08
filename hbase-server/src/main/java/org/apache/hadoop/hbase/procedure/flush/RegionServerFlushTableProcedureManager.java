@@ -46,11 +46,13 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.zookeeper.KeeperException;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
  * This manager class handles flushing of the regions for table on a {@link HRegionServer}.
@@ -129,9 +131,10 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
    * there is a possibility of a race where regions may be missed.
    *
    * @param table
+   * @param family
    * @return Subprocedure to submit to the ProcedureMemeber.
    */
-  public Subprocedure buildSubprocedure(String table) {
+  public Subprocedure buildSubprocedure(String table, String family) {
 
     // don't run the subprocedure if the parent is stop(ping)
     if (rss.isStopping() || rss.isStopped()) {
@@ -162,7 +165,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
     FlushTableSubprocedurePool taskManager =
         new FlushTableSubprocedurePool(rss.getServerName().toString(), conf, rss);
     return new FlushTableSubprocedure(member, exnDispatcher, wakeMillis,
-      timeoutMillis, involvedRegions, table, taskManager);
+      timeoutMillis, involvedRegions, table, family, taskManager);
   }
 
   /**
@@ -183,8 +186,19 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
 
     @Override
     public Subprocedure buildSubprocedure(String name, byte[] data) {
+      String family = null;
+      // Currently we do not put other data except family, so it is ok to
+      // judge by length that if family was specified
+      if (data.length > 0) {
+        try {
+          HBaseProtos.NameStringPair nsp = HBaseProtos.NameStringPair.parseFrom(data);
+          family = nsp.getValue();
+        } catch (Exception e) {
+          LOG.error("fail to get family by parsing from data", e);
+        }
+      }
       // The name of the procedure instance from the master is the table name.
-      return RegionServerFlushTableProcedureManager.this.buildSubprocedure(name);
+      return RegionServerFlushTableProcedureManager.this.buildSubprocedure(name, family);
     }
 
   }
@@ -214,7 +228,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
       int threads = conf.getInt(CONCURENT_FLUSH_TASKS_KEY, DEFAULT_CONCURRENT_FLUSH_TASKS);
       this.name = name;
       executor = Threads.getBoundedCachedThreadPool(threads, keepAlive, TimeUnit.MILLISECONDS,
-          "rs(" + name + ")-flush-proc");
+        new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-flush-proc-pool-%d").build());
       taskPool = new ExecutorCompletionService<>(executor);
     }
 

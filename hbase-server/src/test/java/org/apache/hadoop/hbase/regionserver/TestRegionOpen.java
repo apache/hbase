@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -88,12 +89,9 @@ public class TestRegionOpen {
         .getExecutorThreadPool(ExecutorType.RS_OPEN_PRIORITY_REGION);
     long completed = exec.getCompletedTaskCount();
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    tableDescriptor.setPriority(HConstants.HIGH_QOS);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        HConstants.CATALOG_FAMILY));
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(tableName).setPriority(HConstants.HIGH_QOS)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
         Admin admin = connection.getAdmin()) {
       admin.createTable(tableDescriptor);
@@ -111,10 +109,8 @@ public class TestRegionOpen {
     Configuration conf = HTU.getConfiguration();
     Path rootDir = HTU.getDataTestDirOnTestFS();
 
-    TableDescriptorBuilder.ModifyableTableDescriptor htd =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    htd.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILYNAME));
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYNAME)).build();
     admin.createTable(htd);
     HTU.waitUntilNoRegionsInTransition(60000);
 

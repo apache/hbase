@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -68,6 +67,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -79,7 +80,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
@@ -88,10 +88,7 @@ import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
-import org.apache.hadoop.hbase.filter.ByteArrayComparable;
-import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -293,15 +290,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * Default value of {@link RSRpcServices#REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA}
    */
   private static final long DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA = 10;
-
-  /**
-   * Number of rows in a batch operation above which a warning will be logged.
-   */
-  static final String BATCH_ROWS_THRESHOLD_NAME = "hbase.rpc.rows.warning.threshold";
-  /**
-   * Default value of {@link RSRpcServices#BATCH_ROWS_THRESHOLD_NAME}
-   */
-  static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
   /*
    * Whether to reject rows with size > threshold defined by
@@ -633,62 +621,55 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  /**
-   * Mutate a list of rows atomically.
-   * @param cellScanner if non-null, the mutation data -- the Cell content.
-   */
-  private boolean checkAndRowMutate(final HRegion region, final List<ClientProtos.Action> actions,
-    final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
-    CompareOperator op, ByteArrayComparable comparator, Filter filter, TimeRange timeRange,
-    RegionActionResult.Builder builder, ActivePolicyEnforcement spaceQuotaEnforcement)
+  private CheckAndMutateResult checkAndMutate(HRegion region, List<ClientProtos.Action> actions,
+    CellScanner cellScanner, Condition condition,ActivePolicyEnforcement spaceQuotaEnforcement)
     throws IOException {
     int countOfCompleteMutation = 0;
     try {
       if (!region.getRegionInfo().isMetaRegion()) {
         regionServer.getMemStoreFlusher().reclaimMemStoreMemory();
       }
-      RowMutations rm = null;
-      int i = 0;
-      ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
-        ClientProtos.ResultOrException.newBuilder();
+      List<Mutation> mutations = new ArrayList<>();
       for (ClientProtos.Action action: actions) {
         if (action.hasGet()) {
           throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
             action.getGet());
         }
         MutationType type = action.getMutation().getMutateType();
-        if (rm == null) {
-          rm = new RowMutations(action.getMutation().getRow().toByteArray(), actions.size());
-        }
         switch (type) {
           case PUT:
             Put put = ProtobufUtil.toPut(action.getMutation(), cellScanner);
             ++countOfCompleteMutation;
             checkCellSizeLimit(region, put);
             spaceQuotaEnforcement.getPolicyEnforcement(region).check(put);
-            rm.add(put);
+            mutations.add(put);
             break;
           case DELETE:
             Delete del = ProtobufUtil.toDelete(action.getMutation(), cellScanner);
             ++countOfCompleteMutation;
             spaceQuotaEnforcement.getPolicyEnforcement(region).check(del);
-            rm.add(del);
+            mutations.add(del);
             break;
           default:
             throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
         }
-        // To unify the response format with doNonAtomicRegionMutation and read through client's
-        // AsyncProcess we have to add an empty result instance per operation
-        resultOrExceptionOrBuilder.clear();
-        resultOrExceptionOrBuilder.setIndex(i++);
-        builder.addResultOrException(
-          resultOrExceptionOrBuilder.build());
       }
 
-      if (filter != null) {
-        return region.checkAndRowMutate(row, filter, timeRange, rm);
+      if (mutations.size() == 0) {
+        return new CheckAndMutateResult(true, null);
       } else {
-        return region.checkAndRowMutate(row, family, qualifier, op, comparator, timeRange, rm);
+        CheckAndMutate checkAndMutate = ProtobufUtil.toCheckAndMutate(condition, mutations);
+        CheckAndMutateResult result = null;
+        if (region.getCoprocessorHost() != null) {
+          result = region.getCoprocessorHost().preCheckAndMutate(checkAndMutate);
+        }
+        if (result == null) {
+          result = region.checkAndMutate(checkAndMutate);
+          if (region.getCoprocessorHost() != null) {
+            result = region.getCoprocessorHost().postCheckAndMutate(checkAndMutate, result);
+          }
+        }
+        return result;
       }
     } finally {
       // Currently, the checkAndMutate isn't supported by batch so it won't mess up the cell scanner
@@ -1265,7 +1246,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     final Configuration conf = rs.getConfiguration();
     this.ld = ld;
     regionServer = rs;
-    rowSizeWarnThreshold = conf.getInt(BATCH_ROWS_THRESHOLD_NAME, BATCH_ROWS_THRESHOLD_DEFAULT);
+    rowSizeWarnThreshold = conf.getInt(
+      HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     rejectRowsWithSizeOverThreshold =
       conf.getBoolean(REJECT_BATCH_ROWS_OVER_THRESHOLD, DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD);
 
@@ -2864,26 +2846,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
 
         try {
-          Condition condition = request.getCondition();
-          byte[] row = condition.getRow().toByteArray();
-          byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
-          byte[] qualifier =
-            condition.hasQualifier() ? condition.getQualifier().toByteArray() : null;
-          CompareOperator op = condition.hasCompareType() ?
-            CompareOperator.valueOf(condition.getCompareType().name()) :
-            null;
-          ByteArrayComparable comparator = condition.hasComparator() ?
-            ProtobufUtil.toComparator(condition.getComparator()) : null;
-          Filter filter =
-            condition.hasFilter() ? ProtobufUtil.toFilter(condition.getFilter()) : null;
-          TimeRange timeRange = condition.hasTimeRange() ?
-            ProtobufUtil.toTimeRange(condition.getTimeRange()) :
-            TimeRange.allTime();
-          boolean processed =
-            checkAndRowMutate(region, regionAction.getActionList(), cellScanner, row, family,
-              qualifier, op, comparator, filter, timeRange, regionActionResultBuilder,
-              spaceQuotaEnforcement);
-          responseBuilder.setProcessed(processed);
+          CheckAndMutateResult result = checkAndMutate(region, regionAction.getActionList(),
+            cellScanner, request.getCondition(), spaceQuotaEnforcement);
+          responseBuilder.setProcessed(result.isSuccess());
+          ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
+            ClientProtos.ResultOrException.newBuilder();
+          for (int i = 0; i < regionAction.getActionCount(); i++) {
+            // To unify the response format with doNonAtomicRegionMutation and read through
+            // client's AsyncProcess we have to add an empty result instance per operation
+            resultOrExceptionOrBuilder.clear();
+            resultOrExceptionOrBuilder.setIndex(i);
+            regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder.build());
+          }
         } catch (IOException e) {
           rpcServer.getMetrics().exception(e);
           // As it's an atomic operation with a condition, we may expect it's a global failure.
@@ -2936,80 +2910,24 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
 
           try {
-            Condition condition = regionAction.getCondition();
-            byte[] row = condition.getRow().toByteArray();
-            byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
-            byte[] qualifier = condition.hasQualifier() ?
-              condition.getQualifier().toByteArray() : null;
-            CompareOperator op = condition.hasCompareType() ?
-              CompareOperator.valueOf(condition.getCompareType().name()) : null;
-            ByteArrayComparable comparator = condition.hasComparator() ?
-              ProtobufUtil.toComparator(condition.getComparator()) : null;
-            Filter filter = condition.hasFilter() ?
-              ProtobufUtil.toFilter(condition.getFilter()) : null;
-            TimeRange timeRange = condition.hasTimeRange() ?
-              ProtobufUtil.toTimeRange(condition.getTimeRange()) : TimeRange.allTime();
-
-            boolean processed;
-            if (regionAction.hasAtomic() && regionAction.getAtomic()) {
-              // RowMutations
-              processed =
-                checkAndRowMutate(region, regionAction.getActionList(), cellScanner, row, family,
-                  qualifier, op, comparator, filter, timeRange, regionActionResultBuilder,
-                  spaceQuotaEnforcement);
-            } else {
-              if (regionAction.getActionList().isEmpty()) {
-                // If the region action list is empty, do nothing.
-                regionActionResultBuilder.setProcessed(true);
+            CheckAndMutateResult result = checkAndMutate(region, regionAction.getActionList(),
+              cellScanner, regionAction.getCondition(), spaceQuotaEnforcement);
+            regionActionResultBuilder.setProcessed(result.isSuccess());
+            ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
+              ClientProtos.ResultOrException.newBuilder();
+            for (int i = 0; i < regionAction.getActionCount(); i++) {
+              if (i == 0 && result.getResult() != null) {
+                resultOrExceptionOrBuilder.setIndex(i);
+                regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder
+                  .setResult(ProtobufUtil.toResult(result.getResult())).build());
                 continue;
               }
-              Action action = regionAction.getAction(0);
-              if (action.hasGet()) {
-                throw new DoNotRetryIOException("CheckAndMutate doesn't support GET="
-                  + action.getGet());
-              }
-              MutationProto mutation = action.getMutation();
-              switch (mutation.getMutateType()) {
-                case PUT:
-                  Put put = ProtobufUtil.toPut(mutation, cellScanner);
-                  checkCellSizeLimit(region, put);
-                  // Throws an exception when violated
-                  spaceQuotaEnforcement.getPolicyEnforcement(region).check(put);
-                  quota.addMutation(put);
-
-                  if (filter != null) {
-                    processed = region.checkAndMutate(row, filter, timeRange, put);
-                  } else {
-                    processed = region.checkAndMutate(row, family, qualifier, op, comparator,
-                      timeRange, put);
-                  }
-                  break;
-
-                case DELETE:
-                  Delete delete = ProtobufUtil.toDelete(mutation, cellScanner);
-                  checkCellSizeLimit(region, delete);
-                  spaceQuotaEnforcement.getPolicyEnforcement(region).check(delete);
-                  quota.addMutation(delete);
-
-                  if (filter != null) {
-                    processed = region.checkAndMutate(row, filter, timeRange, delete);
-                  } else {
-                    processed = region.checkAndMutate(row, family, qualifier, op, comparator,
-                      timeRange, delete);
-                  }
-                  break;
-
-                default:
-                  throw new DoNotRetryIOException("CheckAndMutate doesn't support "
-                    + mutation.getMutateType());
-              }
-
               // To unify the response format with doNonAtomicRegionMutation and read through
               // client's AsyncProcess we have to add an empty result instance per operation
-              regionActionResultBuilder.addResultOrException(
-                ClientProtos.ResultOrException.newBuilder().setIndex(0).build());
+              resultOrExceptionOrBuilder.clear();
+              resultOrExceptionOrBuilder.setIndex(i);
+              regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder.build());
             }
-            regionActionResultBuilder.setProcessed(processed);
           } catch (IOException e) {
             rpcServer.getMetrics().exception(e);
             // As it's an atomic operation with a condition, we may expect it's a global failure.
@@ -3125,10 +3043,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     CellScanner cellScanner = controller != null ? controller.cellScanner() : null;
     OperationQuota quota = null;
     RpcCallContext context = RpcServer.getCurrentCall().orElse(null);
-    ActivePolicyEnforcement spaceQuotaEnforcement = null;
-    MutationType type = null;
-    HRegion region = null;
-    long before = EnvironmentEdgeManager.currentTime();
     // Clear scanner so we are not holding on to reference across call.
     if (controller != null) {
       controller.setCellScanner(null);
@@ -3137,7 +3051,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
       rpcMutateRequestCount.increment();
-      region = getRegion(request.getRegion());
+      HRegion region = getRegion(request.getRegion());
       rejectIfInStandByState(region);
       MutateResponse.Builder builder = MutateResponse.newBuilder();
       MutationProto mutation = request.getMutation();
@@ -3145,136 +3059,51 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         regionServer.getMemStoreFlusher().reclaimMemStoreMemory();
       }
       long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
-      Result r = null;
-      Boolean processed = null;
-      type = mutation.getMutateType();
-
       quota = getRpcQuotaManager().checkQuota(region, OperationQuota.OperationType.MUTATE);
-      spaceQuotaEnforcement = getSpaceQuotaManager().getActiveEnforcements();
+      ActivePolicyEnforcement spaceQuotaEnforcement = getSpaceQuotaManager()
+        .getActiveEnforcements();
 
-      switch (type) {
-        case APPEND:
-          // TODO: this doesn't actually check anything.
-          r = append(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
-          break;
-        case INCREMENT:
-          // TODO: this doesn't actually check anything.
-          r = increment(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
-          break;
-        case PUT:
-          Put put = ProtobufUtil.toPut(mutation, cellScanner);
-          checkCellSizeLimit(region, put);
-          // Throws an exception when violated
-          spaceQuotaEnforcement.getPolicyEnforcement(region).check(put);
-          quota.addMutation(put);
-          if (request.hasCondition()) {
-            Condition condition = request.getCondition();
-            byte[] row = condition.getRow().toByteArray();
-            byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
-            byte[] qualifier = condition.hasQualifier() ?
-              condition.getQualifier().toByteArray() : null;
-            CompareOperator op = condition.hasCompareType() ?
-              CompareOperator.valueOf(condition.getCompareType().name()) : null;
-            ByteArrayComparable comparator = condition.hasComparator() ?
-              ProtobufUtil.toComparator(condition.getComparator()) : null;
-            Filter filter = condition.hasFilter() ?
-              ProtobufUtil.toFilter(condition.getFilter()) : null;
-            TimeRange timeRange = condition.hasTimeRange() ?
-              ProtobufUtil.toTimeRange(condition.getTimeRange()) :
-              TimeRange.allTime();
-            if (region.getCoprocessorHost() != null) {
-              if (filter != null) {
-                processed = region.getCoprocessorHost().preCheckAndPut(row, filter, put);
-              } else {
-                processed = region.getCoprocessorHost()
-                  .preCheckAndPut(row, family, qualifier, op, comparator, put);
-              }
-            }
-            if (processed == null) {
-              boolean result;
-              if (filter != null) {
-                result = region.checkAndMutate(row, filter, timeRange, put);
-              } else {
-                result = region.checkAndMutate(row, family, qualifier, op, comparator, timeRange,
-                  put);
-              }
-              if (region.getCoprocessorHost() != null) {
-                if (filter != null) {
-                  result = region.getCoprocessorHost().postCheckAndPut(row, filter, put, result);
-                } else {
-                  result = region.getCoprocessorHost()
-                    .postCheckAndPut(row, family, qualifier, op, comparator, put, result);
-                }
-              }
-              processed = result;
-            }
-          } else {
-            region.put(put);
+      if (request.hasCondition()) {
+        CheckAndMutateResult result = checkAndMutate(region, quota, mutation, cellScanner,
+          request.getCondition(), spaceQuotaEnforcement);
+        builder.setProcessed(result.isSuccess());
+        boolean clientCellBlockSupported = isClientCellBlockSupport(context);
+        addResult(builder, result.getResult(), controller, clientCellBlockSupported);
+        if (clientCellBlockSupported) {
+          addSize(context, result.getResult(), null);
+        }
+      } else {
+        Result r = null;
+        Boolean processed = null;
+        MutationType type = mutation.getMutateType();
+        switch (type) {
+          case APPEND:
+            // TODO: this doesn't actually check anything.
+            r = append(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
+            break;
+          case INCREMENT:
+            // TODO: this doesn't actually check anything.
+            r = increment(region, quota, mutation, cellScanner, nonceGroup, spaceQuotaEnforcement);
+            break;
+          case PUT:
+            put(region, quota, mutation, cellScanner, spaceQuotaEnforcement);
             processed = Boolean.TRUE;
-          }
-          break;
-        case DELETE:
-          Delete delete = ProtobufUtil.toDelete(mutation, cellScanner);
-          checkCellSizeLimit(region, delete);
-          spaceQuotaEnforcement.getPolicyEnforcement(region).check(delete);
-          quota.addMutation(delete);
-          if (request.hasCondition()) {
-            Condition condition = request.getCondition();
-            byte[] row = condition.getRow().toByteArray();
-            byte[] family = condition.hasFamily() ? condition.getFamily().toByteArray() : null;
-            byte[] qualifier = condition.hasQualifier() ?
-              condition.getQualifier().toByteArray() : null;
-            CompareOperator op = condition.hasCompareType() ?
-              CompareOperator.valueOf(condition.getCompareType().name()) : null;
-            ByteArrayComparable comparator = condition.hasComparator() ?
-              ProtobufUtil.toComparator(condition.getComparator()) : null;
-            Filter filter = condition.hasFilter() ?
-              ProtobufUtil.toFilter(condition.getFilter()) : null;
-            TimeRange timeRange = condition.hasTimeRange() ?
-              ProtobufUtil.toTimeRange(condition.getTimeRange()) :
-              TimeRange.allTime();
-            if (region.getCoprocessorHost() != null) {
-              if (filter != null) {
-                processed = region.getCoprocessorHost().preCheckAndDelete(row, filter, delete);
-              } else {
-                processed = region.getCoprocessorHost()
-                  .preCheckAndDelete(row, family, qualifier, op, comparator, delete);
-              }
-            }
-            if (processed == null) {
-              boolean result;
-              if (filter != null) {
-                result = region.checkAndMutate(row, filter, timeRange, delete);
-              } else {
-                result = region.checkAndMutate(row, family, qualifier, op, comparator, timeRange,
-                  delete);
-              }
-              if (region.getCoprocessorHost() != null) {
-                if (filter != null) {
-                  result = region.getCoprocessorHost().postCheckAndDelete(row, filter, delete,
-                    result);
-                } else {
-                  result = region.getCoprocessorHost()
-                    .postCheckAndDelete(row, family, qualifier, op, comparator, delete, result);
-                }
-              }
-              processed = result;
-            }
-          } else {
-            region.delete(delete);
+            break;
+          case DELETE:
+            delete(region, quota, mutation, cellScanner, spaceQuotaEnforcement);
             processed = Boolean.TRUE;
-          }
-          break;
-        default:
-          throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
-      }
-      if (processed != null) {
-        builder.setProcessed(processed.booleanValue());
-      }
-      boolean clientCellBlockSupported = isClientCellBlockSupport(context);
-      addResult(builder, r, controller, clientCellBlockSupported);
-      if (clientCellBlockSupported) {
-        addSize(context, r, null);
+            break;
+          default:
+            throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
+        }
+        if (processed != null) {
+          builder.setProcessed(processed);
+        }
+        boolean clientCellBlockSupported = isClientCellBlockSupport(context);
+        addResult(builder, r, controller, clientCellBlockSupported);
+        if (clientCellBlockSupported) {
+          addSize(context, r, null);
+        }
       }
       return builder.build();
     } catch (IOException ie) {
@@ -3284,32 +3113,79 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (quota != null) {
         quota.close();
       }
-      // Update metrics
-      final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
-      if (metricsRegionServer != null && type != null) {
-        long after = EnvironmentEdgeManager.currentTime();
-        switch (type) {
-        case DELETE:
-          if (request.hasCondition()) {
-            metricsRegionServer.updateCheckAndDelete(after - before);
-          } else {
-            metricsRegionServer.updateDelete(
-                region == null ? null : region.getRegionInfo().getTable(), after - before);
-          }
-          break;
+    }
+  }
+
+  private void put(HRegion region, OperationQuota quota, MutationProto mutation,
+    CellScanner cellScanner, ActivePolicyEnforcement spaceQuota) throws IOException {
+    long before = EnvironmentEdgeManager.currentTime();
+    Put put = ProtobufUtil.toPut(mutation, cellScanner);
+    checkCellSizeLimit(region, put);
+    spaceQuota.getPolicyEnforcement(region).check(put);
+    quota.addMutation(put);
+    region.put(put);
+
+    MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+    if (metricsRegionServer != null) {
+      long after = EnvironmentEdgeManager.currentTime();
+      metricsRegionServer.updatePut(region.getRegionInfo().getTable(), after - before);
+    }
+  }
+
+  private void delete(HRegion region, OperationQuota quota, MutationProto mutation,
+    CellScanner cellScanner, ActivePolicyEnforcement spaceQuota) throws IOException {
+    long before = EnvironmentEdgeManager.currentTime();
+    Delete delete = ProtobufUtil.toDelete(mutation, cellScanner);
+    checkCellSizeLimit(region, delete);
+    spaceQuota.getPolicyEnforcement(region).check(delete);
+    quota.addMutation(delete);
+    region.delete(delete);
+
+    MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+    if (metricsRegionServer != null) {
+      long after = EnvironmentEdgeManager.currentTime();
+      metricsRegionServer.updateDelete(region.getRegionInfo().getTable(), after - before);
+    }
+  }
+
+  private CheckAndMutateResult checkAndMutate(HRegion region, OperationQuota quota,
+    MutationProto mutation, CellScanner cellScanner, Condition condition,
+    ActivePolicyEnforcement spaceQuota) throws IOException {
+    long before = EnvironmentEdgeManager.currentTime();
+    CheckAndMutate checkAndMutate = ProtobufUtil.toCheckAndMutate(condition, mutation,
+      cellScanner);
+    checkCellSizeLimit(region, (Mutation) checkAndMutate.getAction());
+    spaceQuota.getPolicyEnforcement(region).check((Mutation) checkAndMutate.getAction());
+    quota.addMutation((Mutation) checkAndMutate.getAction());
+
+    CheckAndMutateResult result = null;
+    if (region.getCoprocessorHost() != null) {
+      result = region.getCoprocessorHost().preCheckAndMutate(checkAndMutate);
+    }
+    if (result == null) {
+      result = region.checkAndMutate(checkAndMutate);
+      if (region.getCoprocessorHost() != null) {
+        result = region.getCoprocessorHost().postCheckAndMutate(checkAndMutate, result);
+      }
+    }
+    MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
+    if (metricsRegionServer != null) {
+      long after = EnvironmentEdgeManager.currentTime();
+      metricsRegionServer.updateCheckAndMutate(after - before);
+
+      MutationType type = mutation.getMutateType();
+      switch (type) {
         case PUT:
-          if (request.hasCondition()) {
-            metricsRegionServer.updateCheckAndPut(after - before);
-          } else {
-            metricsRegionServer.updatePut(
-                region == null ? null : region.getRegionInfo().getTable(),after - before);
-          }
+          metricsRegionServer.updateCheckAndPut(after - before);
+          break;
+        case DELETE:
+          metricsRegionServer.updateCheckAndDelete(after - before);
           break;
         default:
           break;
-        }
       }
     }
+    return result;
   }
 
   // This is used to keep compatible with the old client implementation. Consider remove it if we

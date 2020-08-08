@@ -151,7 +151,11 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     this.cleanersChain = new LinkedList<>();
     String[] logCleaners = conf.getStrings(confKey);
     if (logCleaners != null) {
-      for (String className : logCleaners) {
+      for (String className: logCleaners) {
+        className = className.trim();
+        if (className.isEmpty()) {
+          continue;
+        }
         T logCleaner = newFileCleaner(className, conf);
         if (logCleaner != null) {
           LOG.info("Initialize cleaner={}", className);

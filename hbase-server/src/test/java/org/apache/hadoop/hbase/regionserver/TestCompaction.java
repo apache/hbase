@@ -52,11 +52,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -99,7 +101,7 @@ public class TestCompaction {
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
-  private TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor = null;
+  private TableDescriptor tableDescriptor = null;
   private static final byte [] COLUMN_FAMILY = fam1;
   private final byte [] STARTROW = Bytes.toBytes(START_KEY);
   private static final byte [] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
@@ -129,17 +131,16 @@ public class TestCompaction {
 
   @Before
   public void setUp() throws Exception {
-    this.tableDescriptor = UTIL.createModifyableTableDescriptor(name.getMethodName());
+    TableDescriptorBuilder builder = UTIL.createModifyableTableDescriptor(name.getMethodName());
     if (name.getMethodName().equals("testCompactionSeqId")) {
       UTIL.getConfiguration().set("hbase.hstore.compaction.kv.max", "10");
-      UTIL.getConfiguration().set(
-          DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY,
-          DummyCompactor.class.getName());
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-      familyDescriptor.setMaxVersions(65536);
-      this.tableDescriptor.setColumnFamily(familyDescriptor);
+      UTIL.getConfiguration().set(DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY,
+        DummyCompactor.class.getName());
+      ColumnFamilyDescriptor familyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(65536).build();
+      builder.setColumnFamily(familyDescriptor);
     }
+    this.tableDescriptor = builder.build();
     this.r = UTIL.createLocalHRegion(tableDescriptor, null, null);
   }
 

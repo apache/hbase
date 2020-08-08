@@ -31,10 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -195,11 +193,12 @@ public class TestReplicasClient {
     HTU.startMiniCluster(option);
 
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor(
+    TableDescriptorBuilder builder = HTU.createModifyableTableDescriptor(
       TableName.valueOf(TestReplicasClient.class.getSimpleName()),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
-    hdt.addCoprocessor(SlowMeCopro.class.getName());
+      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+    builder.setCoprocessor(SlowMeCopro.class.getName());
+    TableDescriptor hdt = builder.build();
     HTU.createTable(hdt, new byte[][]{f}, null);
     TABLE_NAME = hdt.getTableName();
     try (RegionLocator locator = HTU.getConnection().getRegionLocator(hdt.getTableName())) {

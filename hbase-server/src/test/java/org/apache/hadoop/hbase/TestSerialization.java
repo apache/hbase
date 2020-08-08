@@ -141,9 +141,9 @@ public class TestSerialization {
   @Test
   public void testTableDescriptor() throws Exception {
     final String name = "testTableDescriptor";
-    HTableDescriptor htd = createTableDescriptor(name);
-    byte[] mb = htd.toByteArray();
-    HTableDescriptor deserializedHtd = HTableDescriptor.parseFrom(mb);
+    TableDescriptor htd = createTableDescriptor(name);
+    byte[] mb = TableDescriptorBuilder.toByteArray(htd);
+    TableDescriptor deserializedHtd = TableDescriptorBuilder.parseFrom(mb);
     assertEquals(htd.getTableName(), deserializedHtd.getTableName());
   }
 
@@ -296,7 +296,7 @@ public class TestSerialization {
    * @param name Name to give table.
    * @return Column descriptor.
    */
-  protected HTableDescriptor createTableDescriptor(final String name) {
+  protected TableDescriptor createTableDescriptor(final String name) {
     return createTableDescriptor(name, MAXVERSIONS);
   }
 
@@ -306,18 +306,15 @@ public class TestSerialization {
    * @param versions How many versions to allow per column.
    * @return Column descriptor.
    */
-  protected HTableDescriptor createTableDescriptor(final String name, final int versions) {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(name));
-    tableDescriptor
-      .setColumnFamily(new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam1)
-        .setMaxVersions(versions).setBlockCacheEnabled(false));
-    tableDescriptor
-      .setColumnFamily(new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam2)
-        .setMaxVersions(versions).setBlockCacheEnabled(false));
-    tableDescriptor
-      .setColumnFamily(new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam3)
-        .setMaxVersions(versions).setBlockCacheEnabled(false));
-    return new HTableDescriptor(tableDescriptor);
+  protected TableDescriptor createTableDescriptor(final String name, final int versions) {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name));
+    builder
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam1).setMaxVersions(versions)
+        .setBlockCacheEnabled(false).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam2).setMaxVersions(versions)
+        .setBlockCacheEnabled(false).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam3).setMaxVersions(versions)
+        .setBlockCacheEnabled(false).build());
+    return builder.build();
   }
 }

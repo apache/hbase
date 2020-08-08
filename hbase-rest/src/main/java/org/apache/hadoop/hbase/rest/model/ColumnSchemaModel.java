@@ -19,21 +19,18 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import javax.xml.bind.annotation.XmlAnyAttribute;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.namespace.QName;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Representation of a column family schema.
@@ -49,12 +46,12 @@ import com.fasterxml.jackson.annotation.JsonAnySetter;
 @InterfaceAudience.Private
 public class ColumnSchemaModel implements Serializable {
   private static final long serialVersionUID = 1L;
-  private static QName BLOCKCACHE = new QName(HColumnDescriptor.BLOCKCACHE);
-  private static QName BLOCKSIZE = new QName(HColumnDescriptor.BLOCKSIZE);
-  private static QName BLOOMFILTER = new QName(HColumnDescriptor.BLOOMFILTER);
-  private static QName COMPRESSION = new QName(HColumnDescriptor.COMPRESSION);
+  private static QName BLOCKCACHE = new QName(ColumnFamilyDescriptorBuilder.BLOCKCACHE);
+  private static QName BLOCKSIZE = new QName(ColumnFamilyDescriptorBuilder.BLOCKSIZE);
+  private static QName BLOOMFILTER = new QName(ColumnFamilyDescriptorBuilder.BLOOMFILTER);
+  private static QName COMPRESSION = new QName(ColumnFamilyDescriptorBuilder.COMPRESSION);
   private static QName IN_MEMORY = new QName(HConstants.IN_MEMORY);
-  private static QName TTL = new QName(HColumnDescriptor.TTL);
+  private static QName TTL = new QName(ColumnFamilyDescriptorBuilder.TTL);
   private static QName VERSIONS = new QName(HConstants.VERSIONS);
 
   private String name;
@@ -138,8 +135,8 @@ public class ColumnSchemaModel implements Serializable {
    */
   public boolean __getBlockcache() {
     Object o = attrs.get(BLOCKCACHE);
-    return o != null ? 
-      Boolean.parseBoolean(o.toString()) : HColumnDescriptor.DEFAULT_BLOCKCACHE;
+    return o != null ? Boolean.parseBoolean(o.toString()) :
+      ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKCACHE;
   }
 
   /**
@@ -147,8 +144,8 @@ public class ColumnSchemaModel implements Serializable {
    */
   public int __getBlocksize() {
     Object o = attrs.get(BLOCKSIZE);
-    return o != null ? 
-      Integer.parseInt(o.toString()) : HColumnDescriptor.DEFAULT_BLOCKSIZE;
+    return o != null ? Integer.parseInt(o.toString()) :
+      ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKSIZE;
   }
 
   /**
@@ -156,7 +153,7 @@ public class ColumnSchemaModel implements Serializable {
    */
   public String __getBloomfilter() {
     Object o = attrs.get(BLOOMFILTER);
-    return o != null ? o.toString() : HColumnDescriptor.DEFAULT_BLOOMFILTER;
+    return o != null ? o.toString() : ColumnFamilyDescriptorBuilder.DEFAULT_BLOOMFILTER.name();
   }
 
   /**
@@ -164,7 +161,7 @@ public class ColumnSchemaModel implements Serializable {
    */
   public String __getCompression() {
     Object o = attrs.get(COMPRESSION);
-    return o != null ? o.toString() : HColumnDescriptor.DEFAULT_COMPRESSION;
+    return o != null ? o.toString() : ColumnFamilyDescriptorBuilder.DEFAULT_COMPRESSION.name();
   }
 
   /**
@@ -173,7 +170,7 @@ public class ColumnSchemaModel implements Serializable {
   public boolean __getInMemory() {
     Object o = attrs.get(IN_MEMORY);
     return o != null ? 
-      Boolean.parseBoolean(o.toString()) : HColumnDescriptor.DEFAULT_IN_MEMORY;
+      Boolean.parseBoolean(o.toString()) : ColumnFamilyDescriptorBuilder.DEFAULT_IN_MEMORY;
   }
 
   /**
@@ -181,8 +178,7 @@ public class ColumnSchemaModel implements Serializable {
    */
   public int __getTTL() {
     Object o = attrs.get(TTL);
-    return o != null ? 
-      Integer.parseInt(o.toString()) : HColumnDescriptor.DEFAULT_TTL;
+    return o != null ? Integer.parseInt(o.toString()) : ColumnFamilyDescriptorBuilder.DEFAULT_TTL;
   }
 
   /**
@@ -190,8 +186,8 @@ public class ColumnSchemaModel implements Serializable {
    */
   public int __getVersions() {
     Object o = attrs.get(VERSIONS);
-    return o != null ? 
-      Integer.parseInt(o.toString()) : HColumnDescriptor.DEFAULT_VERSIONS;
+    return o != null ? Integer.parseInt(o.toString()) :
+      ColumnFamilyDescriptorBuilder.DEFAULT_MAX_VERSIONS;
   }
 
   /**

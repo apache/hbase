@@ -40,8 +40,11 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * Methods required for task life circle: <BR>
  * {@link #checkTaskStillAvailable(String)} Check that task is still there <BR>
  * {@link #checkTasks()} check for unassigned tasks and resubmit them
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *   distributed WAL splitter, see SplitWALManager
  */
 @InterfaceAudience.Private
+@Deprecated
 public interface SplitLogManagerCoordination {
   /**
    * Detail class that shares data between coordination and split log manager

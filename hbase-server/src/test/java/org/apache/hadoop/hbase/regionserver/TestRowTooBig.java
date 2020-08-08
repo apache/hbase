@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RowTooBigException;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -52,9 +53,8 @@ public class TestRowTooBig {
 
   private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static Path rootRegionDir;
-  private static final TableDescriptorBuilder.ModifyableTableDescriptor TEST_TD =
-    new TableDescriptorBuilder.ModifyableTableDescriptor(
-      TableName.valueOf(TestRowTooBig.class.getSimpleName()));
+  private static final TableDescriptor TEST_TD = TableDescriptorBuilder
+    .newBuilder(TableName.valueOf(TestRowTooBig.class.getSimpleName())).build();
 
   @BeforeClass
   public static void before() throws Exception {
@@ -78,21 +78,14 @@ public class TestRowTooBig {
    * OOME happened before we actually get to reading results, but
    * during seeking, as each StoreFile gets it's own scanner,
    * and each scanner seeks after the first KV.
-   * @throws IOException
    */
   @Test(expected = RowTooBigException.class)
   public void testScannersSeekOnFewLargeCells() throws IOException {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] fam1 = Bytes.toBytes("fam1");
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor = TEST_TD;
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam1);
-    if (tableDescriptor.hasColumnFamily(familyDescriptor.getName())) {
-      tableDescriptor.modifyColumnFamily(familyDescriptor);
-    } else {
-      tableDescriptor.setColumnFamily(familyDescriptor);
-    }
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TD)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
 
     final RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir,
@@ -131,14 +124,8 @@ public class TestRowTooBig {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] fam1 = Bytes.toBytes("fam1");
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor = TEST_TD;
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor hcd =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam1);
-    if (tableDescriptor.hasColumnFamily(hcd.getName())) {
-      tableDescriptor.modifyColumnFamily(hcd);
-    } else {
-      tableDescriptor.setColumnFamily(hcd);
-    }
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TD)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
 
     final RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir,

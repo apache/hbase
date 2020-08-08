@@ -113,18 +113,18 @@ public class TestFromClientSide extends FromClientSideBase {
    */
   @Test
   public void testDuplicateAppend() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor mtd = TEST_UTIL
+    TableDescriptorBuilder builder = TEST_UTIL
       .createModifyableTableDescriptor(name.getTableName(),
         ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
         ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     Map<String, String> kvs = new HashMap<>();
     kvs.put(SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
-    mtd.setCoprocessor(CoprocessorDescriptorBuilder
+    builder.setCoprocessor(CoprocessorDescriptorBuilder
       .newBuilder(SleepAtFirstRpcCall.class.getName())
       .setPriority(1)
       .setProperties(kvs)
       .build());
-    TEST_UTIL.createTable(mtd, new byte[][] { ROW }).close();
+    TEST_UTIL.createTable(builder.build(), new byte[][] { ROW }).close();
 
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     c.setInt(HConstants.HBASE_CLIENT_PAUSE, 50);
@@ -156,18 +156,18 @@ public class TestFromClientSide extends FromClientSideBase {
    */
   @Test
   public void testDuplicateBatchAppend() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor mtd = TEST_UTIL
+    TableDescriptorBuilder builder = TEST_UTIL
       .createModifyableTableDescriptor(name.getTableName(),
         ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
         ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     Map<String, String> kvs = new HashMap<>();
     kvs.put(SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
-    mtd.setCoprocessor(CoprocessorDescriptorBuilder
+    builder.setCoprocessor(CoprocessorDescriptorBuilder
       .newBuilder(SleepAtFirstRpcCall.class.getName())
       .setPriority(1)
       .setProperties(kvs)
       .build());
-    TEST_UTIL.createTable(mtd, new byte[][] { ROW }).close();
+    TEST_UTIL.createTable(builder.build(), new byte[][] { ROW }).close();
 
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     c.setInt(HConstants.HBASE_CLIENT_PAUSE, 50);
@@ -200,7 +200,8 @@ public class TestFromClientSide extends FromClientSideBase {
   /**
    * Basic client side validation of HBASE-4536
    */
-  @Test public void testKeepDeletedCells() throws Exception {
+  @Test
+  public void testKeepDeletedCells() throws Exception {
     final TableName tableName = name.getTableName();
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] C0 = Bytes.toBytes("c0");
@@ -208,13 +209,11 @@ public class TestFromClientSide extends FromClientSideBase {
     final byte[] T1 = Bytes.toBytes("T1");
     final byte[] T2 = Bytes.toBytes("T2");
     final byte[] T3 = Bytes.toBytes("T3");
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
-        .setKeepDeletedCells(KeepDeletedCells.TRUE).setMaxVersions(3);
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY)
+        .setKeepDeletedCells(KeepDeletedCells.TRUE).setMaxVersions(3).build())
+      .build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     try (Table h = TEST_UTIL.getConnection().getTable(tableName)) {
       long ts = System.currentTimeMillis();

@@ -158,6 +158,28 @@ public class SpaceQuotaHelperForTests {
     return tn;
   }
 
+
+  TableName writeUntilViolationAndVerifyViolationInNamespace(
+          String ns, SpaceViolationPolicy policyToViolate, Mutation m) throws Exception {
+    final TableName tn = writeUntilViolationInNamespace(ns, policyToViolate);
+    verifyViolation(policyToViolate, tn, m);
+    return tn;
+  }
+
+  TableName writeUntilViolationInNamespace(String ns, SpaceViolationPolicy policyToViolate) throws Exception {
+    TableName tn = createTableWithRegions(ns,10);
+
+    setQuotaLimit(ns, policyToViolate, 4L);
+
+    // Write more data than should be allowed and flush it to disk
+    writeData(tn, 5L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
+
+    // This should be sufficient time for the chores to run and see the change.
+    Thread.sleep(5000);
+
+    return tn;
+  }
+
   /**
    * Verifies that the given policy on the given table has been violated
    */
@@ -261,6 +283,19 @@ public class SpaceQuotaHelperForTests {
   }
 
   /**
+   * Verifies that table usage snapshot exists for the table
+   */
+  void verifyTableUsageSnapshotForSpaceQuotaExist(TableName tn) throws Exception {
+    boolean sawUsageSnapshot = false;
+    try (Table quotaTable = testUtil.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      Scan s = QuotaTableUtil.makeQuotaSnapshotScanForTable(tn);
+      ResultScanner rs = quotaTable.getScanner(s);
+      sawUsageSnapshot = (rs.next() != null);
+    }
+    assertTrue("Expected to succeed in getting table usage snapshots for space quota", sawUsageSnapshot);
+  }
+
+  /**
    * Sets the given quota (policy & limit) on the passed table.
    */
   void setQuotaLimit(final TableName tn, SpaceViolationPolicy policy, long sizeInMBs)
@@ -272,12 +307,33 @@ public class SpaceQuotaHelperForTests {
   }
 
   /**
+   * Sets the given quota (policy & limit) on the passed namespace.
+   */
+  void setQuotaLimit(String ns, SpaceViolationPolicy policy, long sizeInMBs)
+          throws Exception {
+    final long sizeLimit = sizeInMBs * SpaceQuotaHelperForTests.ONE_MEGABYTE;
+    QuotaSettings settings = QuotaSettingsFactory.limitNamespaceSpace(ns, sizeLimit, policy);
+    testUtil.getAdmin().setQuota(settings);
+    LOG.debug("Quota limit set for namespace = {}, limit = {}", ns, sizeLimit);
+  }
+
+  /**
    * Removes the space quota from the given table
    */
   void removeQuotaFromtable(final TableName tn) throws Exception {
     QuotaSettings removeQuota = QuotaSettingsFactory.removeTableSpaceLimit(tn);
     testUtil.getAdmin().setQuota(removeQuota);
     LOG.debug("Space quota settings removed from the table ", tn);
+  }
+
+  /**
+   * Removes the space quota from the given namespace
+   */
+  void removeQuotaFromNamespace(String ns) throws Exception {
+    QuotaSettings removeQuota = QuotaSettingsFactory.removeNamespaceSpaceLimit(ns);
+    Admin admin = testUtil.getAdmin();
+    admin.setQuota(removeQuota);
+    LOG.debug("Space quota settings removed from the namespace ", ns);
   }
 
   /**
@@ -411,7 +467,13 @@ public class SpaceQuotaHelperForTests {
   }
 
   NamespaceDescriptor createNamespace() throws Exception {
-    NamespaceDescriptor nd = NamespaceDescriptor.create("ns" + counter.getAndIncrement()).build();
+    return createNamespace(null);
+  }
+
+  NamespaceDescriptor createNamespace(String namespace) throws Exception {
+    if (namespace == null || namespace.trim().isEmpty())
+      namespace = "ns" + counter.getAndIncrement();
+    NamespaceDescriptor nd = NamespaceDescriptor.create(namespace).build();
     testUtil.getAdmin().createNamespace(nd);
     return nd;
   }

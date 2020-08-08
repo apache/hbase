@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
+import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -149,27 +150,29 @@ public class TestClearRegionBlockCache {
 
   @Test
   public void testClearBlockCacheFromAsyncAdmin() throws Exception {
-    AsyncAdmin admin =
-        ConnectionFactory.createAsyncConnection(HTU.getConfiguration()).get().getAdmin();
+    try (AsyncConnection conn = ConnectionFactory.createAsyncConnection(HTU.getConfiguration())
+      .get()) {
+      AsyncAdmin admin = conn.getAdmin();
 
-    BlockCache blockCache1 = rs1.getBlockCache().get();
-    BlockCache blockCache2 = rs2.getBlockCache().get();
-    long initialBlockCount1 = blockCache1.getBlockCount();
-    long initialBlockCount2 = blockCache2.getBlockCount();
+      BlockCache blockCache1 = rs1.getBlockCache().get();
+      BlockCache blockCache2 = rs2.getBlockCache().get();
+      long initialBlockCount1 = blockCache1.getBlockCount();
+      long initialBlockCount2 = blockCache2.getBlockCount();
 
-    // scan will cause blocks to be added in BlockCache
-    scanAllRegionsForRS(rs1);
-    assertEquals(blockCache1.getBlockCount() - initialBlockCount1,
+      // scan will cause blocks to be added in BlockCache
+      scanAllRegionsForRS(rs1);
+      assertEquals(blockCache1.getBlockCount() - initialBlockCount1,
         HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY));
-    scanAllRegionsForRS(rs2);
-    assertEquals(blockCache2.getBlockCount() - initialBlockCount2,
+      scanAllRegionsForRS(rs2);
+      assertEquals(blockCache2.getBlockCount() - initialBlockCount2,
         HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
 
-    CacheEvictionStats stats = admin.clearBlockCache(TABLE_NAME).get();
-    assertEquals(stats.getEvictedBlocks(), HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY) + HTU
+      CacheEvictionStats stats = admin.clearBlockCache(TABLE_NAME).get();
+      assertEquals(stats.getEvictedBlocks(), HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY) + HTU
         .getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
-    assertEquals(initialBlockCount1, blockCache1.getBlockCount());
-    assertEquals(initialBlockCount2, blockCache2.getBlockCount());
+      assertEquals(initialBlockCount1, blockCache1.getBlockCount());
+      assertEquals(initialBlockCount2, blockCache2.getBlockCount());
+    }
   }
 
   private void scanAllRegionsForRS(HRegionServer rs) throws IOException {

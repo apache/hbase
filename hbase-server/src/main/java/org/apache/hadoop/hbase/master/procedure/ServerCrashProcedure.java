@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,10 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.procedure;
-
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,7 +45,6 @@ import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ServerCrashState;
@@ -154,8 +151,8 @@ public class ServerCrashProcedure
           break;
         case SERVER_CRASH_SPLIT_META_LOGS:
           if (env.getMasterConfiguration().getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
-            DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
-            splitMetaLogs(env);
+              DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+            zkCoordinatedSplitMetaLogs(env);
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_META);
           } else {
             am.getRegionStates().metaLogSplitting(serverName);
@@ -164,8 +161,7 @@ public class ServerCrashProcedure
           }
           break;
         case SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR:
-          if(isSplittingDone(env, true)){
-            cleanupSplitDir(env);
+          if (isSplittingDone(env, true)) {
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_META);
             am.getRegionStates().metaLogSplit(serverName);
           } else {
@@ -195,7 +191,7 @@ public class ServerCrashProcedure
         case SERVER_CRASH_SPLIT_LOGS:
           if (env.getMasterConfiguration().getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
             DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
-            splitLogs(env);
+            zkCoordinatedSplitLogs(env);
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
           } else {
             am.getRegionStates().logSplitting(this.serverName);
@@ -256,19 +252,27 @@ public class ServerCrashProcedure
   private void cleanupSplitDir(MasterProcedureEnv env) {
     SplitWALManager splitWALManager = env.getMasterServices().getSplitWALManager();
     try {
+      if (!this.carryingMeta) {
+        // If we are NOT carrying hbase:meta, check if any left-over hbase:meta WAL files from an
+        // old hbase:meta tenancy on this server; clean these up if any before trying to remove the
+        // WAL directory of this server or we will fail. See archiveMetaLog comment for more details
+        // on this condition.
+        env.getMasterServices().getMasterWalManager().archiveMetaLog(this.serverName);
+      }
       splitWALManager.deleteWALDir(serverName);
     } catch (IOException e) {
-      LOG.warn("Remove WAL directory of server {} failed, ignore...", serverName, e);
+      LOG.warn("Remove WAL directory for {} failed, ignore...{}", serverName, e.getMessage());
     }
   }
 
   private boolean isSplittingDone(MasterProcedureEnv env, boolean splitMeta) {
-    LOG.debug("check if splitting WALs of {} done? isMeta: {}", serverName, splitMeta);
     SplitWALManager splitWALManager = env.getMasterServices().getSplitWALManager();
     try {
-      return splitWALManager.getWALsToSplit(serverName, splitMeta).size() == 0;
+      int wals = splitWALManager.getWALsToSplit(serverName, splitMeta).size();
+      LOG.debug("Check if {} WAL splitting is done? wals={}, meta={}", serverName, wals, splitMeta);
+      return wals == 0;
     } catch (IOException e) {
-      LOG.warn("get filelist of serverName {} failed, retry...", serverName, e);
+      LOG.warn("Get WALs of {} failed, retry...", serverName, e);
       return false;
     }
   }
@@ -293,7 +297,12 @@ public class ServerCrashProcedure
     return hri.isMetaRegion() && RegionReplicaUtil.isDefaultReplica(hri);
   }
 
-  private void splitMetaLogs(MasterProcedureEnv env) throws IOException {
+  /**
+   * Split hbase:meta logs using 'classic' zk-based coordination.
+   * Superceded by procedure-based WAL splitting.
+   * @see #createSplittingWalProcedures(MasterProcedureEnv, boolean)
+   */
+  private void zkCoordinatedSplitMetaLogs(MasterProcedureEnv env) throws IOException {
     LOG.debug("Splitting meta WALs {}", this);
     MasterWalManager mwm = env.getMasterServices().getMasterWalManager();
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
@@ -303,7 +312,12 @@ public class ServerCrashProcedure
     LOG.debug("Done splitting meta WALs {}", this);
   }
 
-  private void splitLogs(final MasterProcedureEnv env) throws IOException {
+  /**
+   * Split logs using 'classic' zk-based coordination.
+   * Superceded by procedure-based WAL splitting.
+   * @see #createSplittingWalProcedures(MasterProcedureEnv, boolean)
+   */
+  private void zkCoordinatedSplitLogs(final MasterProcedureEnv env) throws IOException {
     LOG.debug("Splitting WALs {}", this);
     MasterWalManager mwm = env.getMasterServices().getMasterWalManager();
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
@@ -333,14 +347,12 @@ public class ServerCrashProcedure
       currentRunningState = getCurrentState();
     }
     int childrenLatch = getChildrenLatch();
-    status.setStatus(msg + " current State " + currentRunningState
-        + (childrenLatch > 0 ? "; remaining num of running child procedures = " + childrenLatch
-            : ""));
+    status.setStatus(msg + " current State " + currentRunningState + (childrenLatch > 0?
+      "; remaining num of running child procedures = " + childrenLatch: ""));
   }
 
   @Override
-  protected void rollbackState(MasterProcedureEnv env, ServerCrashState state)
-  throws IOException {
+  protected void rollbackState(MasterProcedureEnv env, ServerCrashState state) throws IOException {
     // Can't rollback.
     throw new UnsupportedOperationException("unhandled state=" + state);
   }
@@ -424,7 +436,8 @@ public class ServerCrashProcedure
     int size = state.getRegionsOnCrashedServerCount();
     if (size > 0) {
       this.regionsOnCrashedServer = new ArrayList<>(size);
-      for (org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo ri: state.getRegionsOnCrashedServerList()) {
+      for (org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo ri:
+          state.getRegionsOnCrashedServerList()) {
         this.regionsOnCrashedServer.add(ProtobufUtil.toRegionInfo(ri));
       }
     }

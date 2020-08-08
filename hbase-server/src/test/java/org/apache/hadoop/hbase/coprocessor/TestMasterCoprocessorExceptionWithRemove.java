@@ -196,11 +196,9 @@ public class TestMasterCoprocessorExceptionWithRemove {
         BuggyMasterObserver.class.getName();
     assertTrue(HMaster.getLoadedCoprocessors().contains(coprocessorName));
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor1 =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TEST_TABLE1));
-
-    tableDescriptor1.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY1));
+    TableDescriptor tableDescriptor1 =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(TEST_TABLE1))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY1)).build();
 
     boolean threwDNRE = false;
     try {
@@ -229,10 +227,9 @@ public class TestMasterCoprocessorExceptionWithRemove {
 
     // Verify that BuggyMasterObserver has been removed due to its misbehavior
     // by creating another table: should not have a problem this time.
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor2 =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TEST_TABLE2));
-    tableDescriptor2.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY2));
+    TableDescriptor tableDescriptor2 =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(TEST_TABLE2))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY2)).build();
     Admin admin = UTIL.getAdmin();
     try {
       admin.createTable(tableDescriptor2);

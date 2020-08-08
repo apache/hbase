@@ -185,12 +185,13 @@ public class TestRegionObserverScannerOpenHook {
 
   HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
       byte[]... families) throws IOException {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
     for (byte[] family : families) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+      builder.setColumnFamily(
+        ColumnFamilyDescriptorBuilder.of(family));
     }
+    TableDescriptor tableDescriptor = builder.build();
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     Path path = new Path(DIR + callingMethod);
@@ -307,24 +308,16 @@ public class TestRegionObserverScannerOpenHook {
     UTIL.startMiniCluster();
     byte[] ROW = Bytes.toBytes("testRow");
     byte[] A = Bytes.toBytes("A");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(name.getMethodName()));
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(A));
-    tableDescriptor.setCoprocessor(
-      CoprocessorDescriptorBuilder.newBuilder(EmptyRegionObsever.class.getName())
-        .setJarPath(null)
-        .setPriority(Coprocessor.PRIORITY_USER)
-        .setProperties(Collections.emptyMap())
-        .build());
-    tableDescriptor.setCoprocessor(
-      CoprocessorDescriptorBuilder.newBuilder(NoDataFromCompaction.class.getName())
-        .setJarPath(null)
-        .setPriority(Coprocessor.PRIORITY_HIGHEST)
-        .setProperties(Collections.emptyMap())
-        .build());
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(A))
+        .setCoprocessor(CoprocessorDescriptorBuilder
+          .newBuilder(EmptyRegionObsever.class.getName()).setJarPath(null)
+          .setPriority(Coprocessor.PRIORITY_USER).setProperties(Collections.emptyMap()).build())
+        .setCoprocessor(CoprocessorDescriptorBuilder
+          .newBuilder(NoDataFromCompaction.class.getName()).setJarPath(null)
+          .setPriority(Coprocessor.PRIORITY_HIGHEST).setProperties(Collections.emptyMap()).build())
+        .build();
 
     Admin admin = UTIL.getAdmin();
     admin.createTable(tableDescriptor);

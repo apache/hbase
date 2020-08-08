@@ -96,8 +96,8 @@ public class TestMobStoreCompaction {
   private Configuration conf = null;
 
   private HRegion region = null;
-  private TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor = null;
-  private ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor = null;
+  private TableDescriptor tableDescriptor = null;
+  private ColumnFamilyDescriptor familyDescriptor = null;
   private long mobCellThreshold = 1000;
 
   private FileSystem fs;
@@ -112,13 +112,10 @@ public class TestMobStoreCompaction {
     HBaseTestingUtility UTIL = new HBaseTestingUtility(conf);
 
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
-    tableDescriptor = UTIL.createModifyableTableDescriptor(name.getMethodName());
-    familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_FAMILY);
-    familyDescriptor.setMobEnabled(true);
-    familyDescriptor.setMobThreshold(mobThreshold);
-    familyDescriptor.setMaxVersions(1);
-    tableDescriptor.modifyColumnFamily(familyDescriptor);
+    familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY).setMobEnabled(true)
+      .setMobThreshold(mobThreshold).setMaxVersions(1).build();
+    tableDescriptor = UTIL.createModifyableTableDescriptor(name.getMethodName())
+      .modifyColumnFamily(familyDescriptor).build();
 
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     region = HBaseTestingUtility.createRegionAndWAL(regionInfo,

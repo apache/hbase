@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -140,12 +141,9 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     rpc.setClusterKey(TEST_UTIL1.getClusterKey());
     admin.addReplicationPeer("2", rpc);
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(fam).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
     try (Admin hBaseAdmin = TEST_UTIL.getAdmin()) {
       hBaseAdmin.createTable(tableDescriptor);
     }

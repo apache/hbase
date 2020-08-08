@@ -153,6 +153,7 @@ public class TestMetricsRegionServer {
       rsm.updateDelete(null, 17);
       rsm.updateCheckAndDelete(17);
       rsm.updateCheckAndPut(17);
+      rsm.updateCheckAndMutate(17);
     }
 
     HELPER.assertCounter("appendNumOps", 24, serverSource);
@@ -164,7 +165,7 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("deleteNumOps", 17, serverSource);
     HELPER.assertCounter("checkAndDeleteNumOps", 17, serverSource);
     HELPER.assertCounter("checkAndPutNumOps", 17, serverSource);
-
+    HELPER.assertCounter("checkAndMutateNumOps", 17, serverSource);
 
     HELPER.assertCounter("slowAppendCount", 12, serverSource);
     HELPER.assertCounter("slowDeleteCount", 13, serverSource);

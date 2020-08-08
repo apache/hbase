@@ -191,10 +191,6 @@
       <artifactId>commons-validator</artifactId>
       <scope>compile</scope>
     </dependency>
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-    </dependency>
     <!-- tracing Dependencies -->
     <dependency>
       <groupId>org.apache.htrace</groupId>

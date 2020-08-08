@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -575,14 +573,15 @@ public class TestBlockEvictionFromClient {
     Table table = null;
     try {
       final TableName tableName = TableName.valueOf(name.getMethodName());
-      HTableDescriptor desc = TEST_UTIL.createTableDescriptor(tableName);
+      TableDescriptor desc = TEST_UTIL.createTableDescriptor(tableName);
       // This test expects rpc refcount of cached data blocks to be 0 after split. After split,
       // two daughter regions are opened and a compaction is scheduled to get rid of reference
       // of the parent region hfiles. Compaction will increase refcount of cached data blocks by 1.
       // It is flakey since compaction can kick in anytime. To solve this issue, table is created
       // with compaction disabled.
-      desc.setCompactionEnabled(false);
-      table = TEST_UTIL.createTable(desc, FAMILIES_1, null, BloomType.ROW, 1024, null);
+      table = TEST_UTIL.createTable(
+        TableDescriptorBuilder.newBuilder(desc).setCompactionEnabled(false).build(), FAMILIES_1,
+        null, BloomType.ROW, 1024, null);
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
