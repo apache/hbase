@@ -245,7 +245,7 @@ public class Replication extends WALActionsListener.Base implements
       } catch (ReplicationException e) {
         throw new IOException(e);
       }
-      this.replicationSink = new ReplicationSink(this.conf, this.server);
+      this.replicationSink = new ReplicationSink(this.conf);
       this.scheduleThreadPool.scheduleAtFixedRate(
         new ReplicationStatisticsThread(this.replicationSink, this.replicationManager),
         statsThreadPeriod, statsThreadPeriod, TimeUnit.SECONDS);

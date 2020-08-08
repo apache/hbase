@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,6 +46,10 @@ public class MoveRegionsOfTableAction extends Action {
     this(-1, MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, tableName);
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   public MoveRegionsOfTableAction(long sleepTime, long maxSleepTime, TableName tableName) {
     this.sleepTime = sleepTime;
     this.tableName = tableName;
@@ -62,10 +66,10 @@ public class MoveRegionsOfTableAction extends Action {
     Collection<ServerName> serversList = admin.getClusterStatus().getServers();
     ServerName[] servers = serversList.toArray(new ServerName[serversList.size()]);
 
-    LOG.info("Performing action: Move regions of table " + tableName);
+    getLogger().info("Performing action: Move regions of table " + tableName);
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
     if (regions == null || regions.isEmpty()) {
-      LOG.info("Table " + tableName + " doesn't have regions to move");
+      getLogger().info("Table " + tableName + " doesn't have regions to move");
       return;
     }
 
@@ -82,10 +86,10 @@ public class MoveRegionsOfTableAction extends Action {
       try {
         String destServerName =
           servers[RandomUtils.nextInt(servers.length)].getServerName();
-        LOG.debug("Moving " + regionInfo.getRegionNameAsString() + " to " + destServerName);
+        getLogger().debug("Moving " + regionInfo.getRegionNameAsString() + " to " + destServerName);
         admin.move(regionInfo.getEncodedNameAsBytes(), Bytes.toBytes(destServerName));
       } catch (Exception ex) {
-        LOG.warn("Move failed, might be caused by other chaos: " + ex.getMessage());
+        getLogger().warn("Move failed, might be caused by other chaos: " + ex.getMessage());
       }
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);

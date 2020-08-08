@@ -18,10 +18,13 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import com.google.common.collect.Lists;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +43,6 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -91,15 +93,20 @@ public class ReplicationSink {
   private SourceFSConfigurationProvider provider;
 
   /**
+   * Row size threshold for multi requests above which a warning is logged
+   */
+  private final int rowSizeWarnThreshold;
+
+  /**
    * Create a sink for replication
-   *
-   * @param conf                conf object
-   * @param stopper             boolean to tell this thread to stop
+   * @param conf conf object
    * @throws IOException thrown when HDFS goes bad or bad file name
    */
-  public ReplicationSink(Configuration conf, Stoppable stopper)
+  public ReplicationSink(Configuration conf)
       throws IOException {
     this.conf = HBaseConfiguration.create(conf);
+    rowSizeWarnThreshold = conf.getInt(
+      HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     decorateConf();
     this.metrics = new MetricsSink();
 
@@ -215,7 +222,7 @@ public class ReplicationSink {
       if (!rowMap.isEmpty()) {
         LOG.debug("Started replicating mutations.");
         for (Entry<TableName, Map<List<UUID>, List<Row>>> entry : rowMap.entrySet()) {
-          batch(entry.getKey(), entry.getValue().values());
+          batch(entry.getKey(), entry.getValue().values(), rowSizeWarnThreshold);
         }
         LOG.debug("Finished replicating mutations.");
       }
@@ -380,9 +387,10 @@ public class ReplicationSink {
    * Do the changes and handle the pool
    * @param tableName table to insert into
    * @param allRows list of actions
-   * @throws IOException
+   * @param batchRowSizeThreshold rowSize threshold for batch mutation
    */
-  protected void batch(TableName tableName, Collection<List<Row>> allRows) throws IOException {
+  private void batch(TableName tableName, Collection<List<Row>> allRows, int batchRowSizeThreshold)
+      throws IOException {
     if (allRows.isEmpty()) {
       return;
     }
@@ -391,7 +399,15 @@ public class ReplicationSink {
       Connection connection = getConnection();
       table = connection.getTable(tableName);
       for (List<Row> rows : allRows) {
-        table.batch(rows);
+        List<List<Row>> batchRows;
+        if (rows.size() > batchRowSizeThreshold) {
+          batchRows = Lists.partition(rows, batchRowSizeThreshold);
+        } else {
+          batchRows = Collections.singletonList(rows);
+        }
+        for (List<Row> rowList : batchRows) {
+          table.batch(rowList);
+        }
       }
     } catch (RetriesExhaustedWithDetailsException rewde) {
       for (Throwable ex : rewde.getCauses()) {

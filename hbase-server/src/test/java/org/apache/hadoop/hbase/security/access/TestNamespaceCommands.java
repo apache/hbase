@@ -303,14 +303,9 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction listAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Connection unmanagedConnection =
-            ConnectionFactory.createConnection(UTIL.getConfiguration());
-        Admin admin = unmanagedConnection.getAdmin();
-        try {
+        try (Connection conn = ConnectionFactory.createConnection(UTIL.getConfiguration());
+            Admin admin = conn.getAdmin()) {
           return Arrays.asList(admin.listNamespaceDescriptors());
-        } finally {
-          admin.close();
-          unmanagedConnection.close();
         }
       }
     };

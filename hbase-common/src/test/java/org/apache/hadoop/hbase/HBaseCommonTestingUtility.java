@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.Path;
 public class HBaseCommonTestingUtility {
   protected static final Log LOG = LogFactory.getLog(HBaseCommonTestingUtility.class);
 
-  protected Configuration conf;
+  protected final Configuration conf;
 
   public HBaseCommonTestingUtility() {
     this(null);

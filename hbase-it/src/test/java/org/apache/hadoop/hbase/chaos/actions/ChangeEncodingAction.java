@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,6 +44,10 @@ public class ChangeEncodingAction extends Action {
     this.random = new Random();
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void init(ActionContext context) throws IOException {
     super.init(context);
@@ -59,13 +63,13 @@ public class ChangeEncodingAction extends Action {
       return;
     }
 
-    LOG.debug("Performing action: Changing encodings on " + tableName);
+    getLogger().debug("Performing action: Changing encodings on " + tableName);
     // possible DataBlockEncoding id's
     int[] possibleIds = {0, 2, 3, 4, 6};
     for (HColumnDescriptor descriptor : columnDescriptors) {
       short id = (short) possibleIds[random.nextInt(possibleIds.length)];
       descriptor.setDataBlockEncoding(DataBlockEncoding.getEncodingById(id));
-      LOG.debug("Set encoding of column family " + descriptor.getNameAsString()
+      getLogger().debug("Set encoding of column family " + descriptor.getNameAsString()
         + " to: " + descriptor.getDataBlockEncoding());
     }
 

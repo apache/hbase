@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,9 +34,13 @@ public class RestartRandomZKNodeAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart random zookeeper node");
+    getLogger().info("Performing action: Restart random zookeeper node");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(
         ZKServerTool.readZKNodes(getConf()));
     restartZKNode(server, sleepTime);

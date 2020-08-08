@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,12 +39,11 @@ import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A (possibly mischievous) action that the ChaosMonkey can perform.
  */
-public class Action {
+public abstract class Action {
 
   public static final String KILL_MASTER_TIMEOUT_KEY =
     "hbase.chaosmonkey.action.killmastertimeout";
@@ -64,8 +63,6 @@ public class Action {
       "hbase.chaosmonkey.action.killnamenodetimeout";
   public static final String START_NAMENODE_TIMEOUT_KEY =
       "hbase.chaosmonkey.action.startnamenodetimeout";
-
-  private static final Logger LOG = LoggerFactory.getLogger(Action.class);
 
   protected static final long KILL_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
   protected static final long START_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
@@ -121,6 +118,11 @@ public class Action {
         cluster.getConf().getLong(START_NAMENODE_TIMEOUT_KEY, START_NAMENODE_TIMEOUT_DEFAULT);
   }
 
+  /**
+   * Retrieve the instance's {@link Logger}, for use throughout the class hierarchy.
+   */
+  protected abstract Logger getLogger();
+
   public void perform() throws Exception { }
 
   /** Returns current region servers - active master */
@@ -138,110 +140,110 @@ public class Action {
     ArrayList<ServerName> tmp = new ArrayList<>(count);
     tmp.addAll(regionServers);
     tmp.removeAll(masters);
-    return tmp.toArray(new ServerName[tmp.size()]);
+    return tmp.toArray(new ServerName[0]);
   }
 
   protected void killMaster(ServerName server) throws IOException {
-    LOG.info("Killing master:" + server);
+    getLogger().info("Killing master:" + server);
     cluster.killMaster(server);
     cluster.waitForMasterToStop(server, killMasterTimeout);
-    LOG.info("Killed master server:" + server);
+    getLogger().info("Killed master server:" + server);
   }
 
   protected void startMaster(ServerName server) throws IOException {
-    LOG.info("Starting master:" + server.getHostname());
+    getLogger().info("Starting master:" + server.getHostname());
     cluster.startMaster(server.getHostname(), server.getPort());
     cluster.waitForActiveAndReadyMaster(startMasterTimeout);
-    LOG.info("Started master: " + server);
+    getLogger().info("Started master: " + server);
   }
 
   protected void stopRs(ServerName server) throws IOException {
-    LOG.info("Stopping regionserver " + server);
+    getLogger().info("Stopping regionserver " + server);
     cluster.stopRegionServer(server);
     cluster.waitForRegionServerToStop(server, killRsTimeout);
-    LOG.info(String.format("Stopping regionserver %s. Reported num of rs: %s", server,
+    getLogger().info(String.format("Stopping regionserver %s. Reported num of rs: %s", server,
         cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
   protected void suspendRs(ServerName server) throws IOException {
-    LOG.info("Suspending regionserver %s" + server);
+    getLogger().info("Suspending regionserver %s" + server);
     cluster.suspendRegionServer(server);
     if(!(cluster instanceof MiniHBaseCluster)){
       cluster.waitForRegionServerToStop(server, killRsTimeout);
     }
-    LOG.info(String.format("Suspending regionserver %s. Reported num of rs: %s", server,
+    getLogger().info(String.format("Suspending regionserver %s. Reported num of rs: %s", server,
         cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
   protected void resumeRs(ServerName server) throws IOException {
-    LOG.info("Resuming regionserver " + server);
+    getLogger().info("Resuming regionserver " + server);
     cluster.resumeRegionServer(server);
     if(!(cluster instanceof MiniHBaseCluster)){
       cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
     }
-    LOG.info(String.format("Resuming regionserver %s. Reported num of rs: %s", server,
+    getLogger().info(String.format("Resuming regionserver %s. Reported num of rs: %s", server,
         cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
   protected void killRs(ServerName server) throws IOException {
-    LOG.info("Killing regionserver " + server);
+    getLogger().info("Killing regionserver " + server);
     cluster.killRegionServer(server);
     cluster.waitForRegionServerToStop(server, killRsTimeout);
-    LOG.info(String.format("Killed regionserver %s. Reported num of rs: %s", server,
+    getLogger().info(String.format("Killed regionserver %s. Reported num of rs: %s", server,
         cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
   protected void startRs(ServerName server) throws IOException {
-    LOG.info("Starting regionserver " + server.getAddress());
+    getLogger().info("Starting regionserver " + server.getAddress());
     cluster.startRegionServer(server.getHostname(), server.getPort());
     cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
-    LOG.info(String.format("Started regionserver %s. Reported num of rs: %s", server.getAddress(),
-      cluster.getClusterStatus().getLiveServersLoad().size()));
+    getLogger().info(String.format("Started regionserver %s. Reported num of rs: %s",
+      server.getAddress(), cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
   protected void killZKNode(ServerName server) throws IOException {
-    LOG.info("Killing zookeeper node " + server);
+    getLogger().info("Killing zookeeper node " + server);
     cluster.killZkNode(server);
     cluster.waitForZkNodeToStop(server, killZkNodeTimeout);
-    LOG.info(String.format("Killed zookeeper node %s. Reported num of rs: %s", server,
+    getLogger().info(String.format("Killed zookeeper node %s. Reported num of rs: %s", server,
         cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
   protected void startZKNode(ServerName server) throws IOException {
-    LOG.info("Starting zookeeper node " + server.getHostname());
+    getLogger().info("Starting zookeeper node " + server.getHostname());
     cluster.startZkNode(server.getHostname(), server.getPort());
     cluster.waitForZkNodeToStart(server, startZkNodeTimeout);
-    LOG.info("Started zookeeper node " + server);
+    getLogger().info("Started zookeeper node " + server);
   }
 
   protected void killDataNode(ServerName server) throws IOException {
-    LOG.info("Killing datanode " + server);
+    getLogger().info("Killing datanode " + server);
     cluster.killDataNode(server);
     cluster.waitForDataNodeToStop(server, killDataNodeTimeout);
-    LOG.info(String.format("Killed datanode %s. Reported num of rs: %s", server,
+    getLogger().info(String.format("Killed datanode %s. Reported num of rs: %s", server,
         cluster.getClusterStatus().getLiveServersLoad().size()));
   }
 
   protected void startDataNode(ServerName server) throws IOException {
-    LOG.info("Starting datanode " + server.getHostname());
+    getLogger().info("Starting datanode " + server.getHostname());
     cluster.startDataNode(server);
     cluster.waitForDataNodeToStart(server, startDataNodeTimeout);
-    LOG.info("Started datanode " + server);
+    getLogger().info("Started datanode " + server);
   }
 
   protected void killNameNode(ServerName server) throws IOException {
-    LOG.info("Killing namenode : " + server.getHostname());
+    getLogger().info("Killing namenode : " + server.getHostname());
     cluster.killNameNode(server);
     cluster.waitForNameNodeToStop(server, killNameNodeTimeout);
-    LOG.info("Killed namenode: " + server + ". Reported num of rs:"
+    getLogger().info("Killed namenode: " + server + ". Reported num of rs:"
         + cluster.getClusterStatus().getServersSize());
   }
 
   protected void startNameNode(ServerName server) throws IOException {
-    LOG.info("Starting Namenode : " + server.getHostname());
+    getLogger().info("Starting Namenode : " + server.getHostname());
     cluster.startNameNode(server);
     cluster.waitForNameNodeToStart(server, startNameNodeTimeout);
-    LOG.info("Started namenode: " +  server);
+    getLogger().info("Started namenode: " +  server);
   }
 
   protected void unbalanceRegions(ClusterStatus clusterStatus,
@@ -253,7 +255,8 @@ public class Action {
       // Ugh.
       List<byte[]> regions = new LinkedList<byte[]>(serverLoad.getRegionsLoad().keySet());
       int victimRegionCount = (int)Math.ceil(fractionOfRegions * regions.size());
-      LOG.debug("Removing " + victimRegionCount + " regions from " + server.getServerName());
+      getLogger().debug("Removing " + victimRegionCount + " regions from "
+        + server.getServerName());
       for (int i = 0; i < victimRegionCount; ++i) {
         int victimIx = RandomUtils.nextInt(regions.size());
         String regionId = HRegionInfo.encodeRegionName(regions.remove(victimIx));
@@ -261,7 +264,7 @@ public class Action {
       }
     }
 
-    LOG.info("Moving " + victimRegions.size() + " regions from " + fromServers.size()
+    getLogger().info("Moving " + victimRegions.size() + " regions from " + fromServers.size()
         + " servers to " + toServers.size() + " different servers");
     Admin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
     for (byte[] victimRegion : victimRegions) {
@@ -281,10 +284,10 @@ public class Action {
     try {
       result = admin.balancer();
     } catch (Exception e) {
-      LOG.warn("Got exception while doing balance ", e);
+      getLogger().warn("Got exception while doing balance ", e);
     }
     if (!result) {
-      LOG.error("Balancer didn't succeed");
+      getLogger().error("Balancer didn't succeed");
     }
   }
 
@@ -293,7 +296,7 @@ public class Action {
     try {
       admin.setBalancerRunning(onOrOff, synchronous);
     } catch (Exception e) {
-      LOG.warn("Got exception while switching balance ", e);
+      getLogger().warn("Got exception while switching balance ", e);
     }
   }
 

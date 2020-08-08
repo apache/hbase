@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,9 +51,13 @@ public class RestartActiveNameNodeAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info("Performing action: Restart active namenode");
+    getLogger().info("Performing action: Restart active namenode");
     Configuration conf = FSUtils.getRootDir(getConf()).getFileSystem(getConf()).getConf();
     String nameServiceID = DFSUtil.getNamenodeNameServiceId(conf);
     if (!HAUtil.isHAEnabled(conf, nameServiceID)) {
@@ -85,9 +89,9 @@ public class RestartActiveNameNodeAction extends RestartActionBaseAction {
     if (activeNamenode == null) {
       throw new Exception("No active Name node found in zookeeper under " + hadoopHAZkNode);
     }
-    LOG.info("Found active namenode host:" + activeNamenode);
+    getLogger().info("Found active namenode host:" + activeNamenode);
     ServerName activeNNHost = ServerName.valueOf(activeNamenode, -1, -1);
-    LOG.info("Restarting Active NameNode :" + activeNamenode);
+    getLogger().info("Restarting Active NameNode :" + activeNamenode);
     restartNameNode(activeNNHost, sleepTime);
   }
 }

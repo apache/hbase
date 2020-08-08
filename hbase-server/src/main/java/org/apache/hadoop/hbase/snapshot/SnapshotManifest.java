@@ -23,11 +23,15 @@ import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
@@ -427,43 +431,69 @@ public final class SnapshotManifest {
           workingDir, desc);
       v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, workingDirFs,
           workingDir, desc, manifestSizeLimit);
+
+      SnapshotDataManifest.Builder dataManifestBuilder = SnapshotDataManifest.newBuilder();
+      dataManifestBuilder.setTableSchema(htd.convert());
+
+      if (v1Regions != null && v1Regions.size() > 0) {
+        dataManifestBuilder.addAllRegionManifests(v1Regions);
+      }
+      if (v2Regions != null && v2Regions.size() > 0) {
+        dataManifestBuilder.addAllRegionManifests(v2Regions);
+      }
+
+      // Write the v2 Data Manifest.
+      // Once the data-manifest is written, the snapshot can be considered complete.
+      // Currently snapshots are written in a "temporary" directory and later
+      // moved to the "complated" snapshot directory.
+      setStatusMsg("Writing data manifest for " + this.desc.getName());
+      SnapshotDataManifest dataManifest = dataManifestBuilder.build();
+      writeDataManifest(dataManifest);
+      this.regionManifests = dataManifest.getRegionManifestsList();
+
+      // Remove the region manifests. Everything is now in the data-manifest.
+      // The delete operation is "relaxed", unless we get an exception we keep going.
+      // The extra files in the snapshot directory will not give any problem,
+      // since they have the same content as the data manifest, and even by re-reading
+      // them we will get the same information.
+      int totalDeletes = 0;
+      ExecutorCompletionService<Void> completionService = new ExecutorCompletionService<>(tpool);
+      if (v1Regions != null) {
+        for (final SnapshotRegionManifest regionManifest: v1Regions) {
+          ++totalDeletes;
+          completionService.submit(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+              SnapshotManifestV1.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
+              return null;
+            }
+          });
+        }
+      }
+      if (v2Regions != null) {
+        for (final SnapshotRegionManifest regionManifest: v2Regions) {
+          ++totalDeletes;
+          completionService.submit(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+              SnapshotManifestV2.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
+              return null;
+            }
+          });
+        }
+      }
+      // Wait for the deletes to finish.
+      for (int i = 0; i < totalDeletes; i++) {
+        try {
+          completionService.take().get();
+        } catch (InterruptedException ie) {
+          throw new InterruptedIOException(ie.getMessage());
+        } catch (ExecutionException e) {
+          throw new IOException("Error deleting region manifests", e.getCause());
+        }
+      }
     } finally {
       tpool.shutdown();
-    }
-
-    SnapshotDataManifest.Builder dataManifestBuilder = SnapshotDataManifest.newBuilder();
-    dataManifestBuilder.setTableSchema(htd.convert());
-
-    if (v1Regions != null && v1Regions.size() > 0) {
-      dataManifestBuilder.addAllRegionManifests(v1Regions);
-    }
-    if (v2Regions != null && v2Regions.size() > 0) {
-      dataManifestBuilder.addAllRegionManifests(v2Regions);
-    }
-
-    // Write the v2 Data Manifest.
-    // Once the data-manifest is written, the snapshot can be considered complete.
-    // Currently snapshots are written in a "temporary" directory and later
-    // moved to the "complated" snapshot directory.
-    setStatusMsg("Writing data manifest for " + this.desc.getName());
-    SnapshotDataManifest dataManifest = dataManifestBuilder.build();
-    writeDataManifest(dataManifest);
-    this.regionManifests = dataManifest.getRegionManifestsList();
-
-    // Remove the region manifests. Everything is now in the data-manifest.
-    // The delete operation is "relaxed", unless we get an exception we keep going.
-    // The extra files in the snapshot directory will not give any problem,
-    // since they have the same content as the data manifest, and even by re-reading
-    // them we will get the same information.
-    if (v1Regions != null && v1Regions.size() > 0) {
-      for (SnapshotRegionManifest regionManifest: v1Regions) {
-        SnapshotManifestV1.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
-      }
-    }
-    if (v2Regions != null && v2Regions.size() > 0) {
-      for (SnapshotRegionManifest regionManifest: v2Regions) {
-        SnapshotManifestV2.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
-      }
     }
   }
 

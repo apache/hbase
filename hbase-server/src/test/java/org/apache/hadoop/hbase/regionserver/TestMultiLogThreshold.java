@@ -24,6 +24,7 @@ import java.util.List;
 import org.junit.Before;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -75,8 +76,8 @@ public class TestMultiLogThreshold {
     final TableName tableName = TableName.valueOf("tableName");
     TEST_UTIL = HBaseTestingUtility.createLocalHTU();
     CONF = TEST_UTIL.getConfiguration();
-    THRESHOLD = CONF.getInt(RSRpcServices.BATCH_ROWS_THRESHOLD_NAME,
-      RSRpcServices.BATCH_ROWS_THRESHOLD_DEFAULT);
+    THRESHOLD = CONF.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME,
+      HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     CONF.setBoolean("hbase.rpc.rows.size.threshold.reject", rejectLargeBatchOp);
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.createTable(tableName, TEST_FAM);

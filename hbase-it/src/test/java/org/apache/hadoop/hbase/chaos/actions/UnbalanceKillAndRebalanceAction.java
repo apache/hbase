@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,6 +56,10 @@ public class UnbalanceKillAndRebalanceAction extends Action {
     this.killMetaRs = killMetaRs;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     ClusterStatus status = this.cluster.getClusterStatus();
@@ -86,7 +90,7 @@ public class UnbalanceKillAndRebalanceAction extends Action {
       }
 
       if (!killMetaRs && targetServer.equals(metaServer)) {
-        LOG.info("Not killing server because it holds hbase:meta.");
+        getLogger().info("Not killing server because it holds hbase:meta.");
       } else {
         killRs(targetServer);
         killedServers.add(targetServer);

@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.http;
 
+import com.google.common.net.HostAndPort;
+
 import java.io.IOException;
 import java.net.URI;
 
@@ -27,6 +29,7 @@ import javax.servlet.http.HttpServlet;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -60,8 +63,8 @@ public class InfoServer {
       new org.apache.hadoop.hbase.http.HttpServer.Builder();
 
       builder.setName(name).addEndpoint(URI.create(httpConfig.getSchemePrefix() +
-        bindAddress + ":" +
-        port)).setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
+        HostAndPort.fromParts(bindAddress, port).toString()))
+          .setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
       String logDir = System.getProperty("hbase.log.dir");
       if (logDir != null) {
         builder.setLogDir(logDir);

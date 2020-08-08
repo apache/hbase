@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,6 +46,10 @@ public class ChangeCompressionAction extends Action {
     this.random = new Random();
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void init(ActionContext context) throws IOException {
     super.init(context);
@@ -82,12 +86,12 @@ public class ChangeCompressionAction extends Action {
         algo.returnCompressor(c);
         break;
       } catch (Throwable t) {
-        LOG.info("Performing action: Changing compression algorithms to " + algo +
+        getLogger().info("Performing action: Changing compression algorithms to " + algo +
                 " is not supported, pick another one");
       }
     } while (true);
 
-    LOG.debug("Performing action: Changing compression algorithms on "
+    getLogger().debug("Performing action: Changing compression algorithms on "
       + tableName.getNameAsString() + " to " + algo);
     for (HColumnDescriptor descriptor : columnDescriptors) {
       if (random.nextBoolean()) {

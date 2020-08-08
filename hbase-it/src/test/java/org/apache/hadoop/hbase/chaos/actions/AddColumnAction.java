@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,6 +40,10 @@ public class AddColumnAction extends Action {
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void init(ActionContext context) throws IOException {
     super.init(context);
@@ -61,7 +65,7 @@ public class AddColumnAction extends Action {
       return;
     }
 
-    LOG.debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
+    getLogger().debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
 
     tableDescriptor.addFamily(columnDescriptor);
     admin.modifyTable(tableName, tableDescriptor);

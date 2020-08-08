@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,9 +58,14 @@ public class RollingBatchSuspendResumeRsAction extends Action {
     SUSPEND, RESUME
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info(String.format("Performing action: Rolling batch restarting %d%% of region servers",
+    getLogger().info(
+      String.format("Performing action: Rolling batch restarting %d%% of region servers",
         (int) (ratio * 100)));
     List<ServerName> selectedServers = selectServers();
 
@@ -91,7 +96,8 @@ public class RollingBatchSuspendResumeRsAction extends Action {
           try {
             suspendRs(server);
           } catch (Shell.ExitCodeException e) {
-            LOG.warn("Problem suspending but presume successful; code=" + e.getExitCode(), e);
+            getLogger().warn("Problem suspending but presume successful; code="
+              + e.getExitCode(), e);
           }
           suspendedServers.add(server);
           break;
@@ -100,7 +106,7 @@ public class RollingBatchSuspendResumeRsAction extends Action {
           try {
             resumeRs(server);
           } catch (Shell.ExitCodeException e) {
-            LOG.info("Problem resuming, will retry; code= " + e.getExitCode(), e);
+            getLogger().info("Problem resuming, will retry; code= " + e.getExitCode(), e);
           }
           break;
         default:
@@ -108,7 +114,7 @@ public class RollingBatchSuspendResumeRsAction extends Action {
               "Encountered unexpected action type: " + action.name());
       }
 
-      LOG.info("Sleeping for: " + sleepTime);
+      getLogger().info("Sleeping for: " + sleepTime);
       Threads.sleep(sleepTime);
     }
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,11 +33,11 @@ import org.slf4j.LoggerFactory;
  * Region that queues a compaction of a random region from the table.
  */
 public class CompactRandomRegionOfTableAction extends Action {
+  private static final Logger LOG = LoggerFactory.getLogger(CompactRandomRegionOfTableAction.class);
+
   private final int majorRatio;
   private final long sleepTime;
   private final TableName tableName;
-  private static final Logger LOG =
-      LoggerFactory.getLogger(CompactRandomRegionOfTableAction.class);
 
   public CompactRandomRegionOfTableAction(
       TableName tableName, float majorRatio) {
@@ -51,33 +51,37 @@ public class CompactRandomRegionOfTableAction extends Action {
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getHBaseAdmin();
     boolean major = RandomUtils.nextInt(100) < majorRatio;
 
-    LOG.info("Performing action: Compact random region of table "
+    getLogger().info("Performing action: Compact random region of table "
       + tableName + ", major=" + major);
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
     if (regions == null || regions.isEmpty()) {
-      LOG.info("Table " + tableName + " doesn't have regions to compact");
+      getLogger().info("Table " + tableName + " doesn't have regions to compact");
       return;
     }
 
     HRegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-      regions.toArray(new HRegionInfo[regions.size()]));
+      regions.toArray(new HRegionInfo[0]));
 
     try {
       if (major) {
-        LOG.debug("Major compacting region " + region.getRegionNameAsString());
+        getLogger().debug("Major compacting region " + region.getRegionNameAsString());
         admin.majorCompactRegion(region.getRegionName());
       } else {
-        LOG.debug("Compacting region " + region.getRegionNameAsString());
+        getLogger().debug("Compacting region " + region.getRegionNameAsString());
         admin.compactRegion(region.getRegionName());
       }
     } catch (Exception ex) {
-      LOG.warn("Compaction failed, might be caused by other chaos: " + ex.getMessage());
+      getLogger().warn("Compaction failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);
