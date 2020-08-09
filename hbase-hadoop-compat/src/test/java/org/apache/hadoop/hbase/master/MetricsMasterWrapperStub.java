@@ -179,7 +179,7 @@ public class MetricsMasterWrapperStub implements MetricsMasterWrapper {
           }
 
           @Override public long getMax() {
-            return 2082;
+            return 3011;
           }
 
           @Override public long getMean() {
