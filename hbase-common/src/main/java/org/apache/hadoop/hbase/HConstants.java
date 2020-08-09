@@ -1494,7 +1494,7 @@ public final class HConstants {
    * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0.
    */
   @Deprecated
-  public static final boolean DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK = false;
+  public static final boolean DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK = true;
 
   public static final String HBASE_SPLIT_WAL_MAX_SPLITTER = "hbase.regionserver.wal.max.splitters";
 
