@@ -43,6 +43,11 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   private final RpcExecutor replicationExecutor;
 
   /**
+   * Executor for root region only.
+   */
+  private final RpcExecutor rootTransitionExecutor;
+
+  /**
    * This executor is only for meta transition
    */
   private final RpcExecutor metaTransitionExecutor;
@@ -122,6 +127,9 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
             RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxPriorityQueueLength, priority, conf,
             abortable) :
         null;
+    this.rootTransitionExecutor = new FastPathBalancedQueueRpcExecutor("rootPriority.FPBQ", 1,
+        RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxPriorityQueueLength, priority, conf,
+        abortable);
   }
 
   public SimpleRpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
@@ -142,6 +150,9 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     }
     if (replicationExecutor != null) {
       replicationExecutor.resizeQueues(conf);
+    }
+    if (rootTransitionExecutor != null) {
+      rootTransitionExecutor.resizeQueues(conf);
     }
     if (metaTransitionExecutor != null) {
       metaTransitionExecutor.resizeQueues(conf);
@@ -168,10 +179,12 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     if (replicationExecutor != null) {
       replicationExecutor.start(port);
     }
+    if (rootTransitionExecutor != null) {
+      rootTransitionExecutor.start(port);
+    }
     if (metaTransitionExecutor != null) {
       metaTransitionExecutor.start(port);
     }
-
   }
 
   @Override
@@ -186,7 +199,9 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     if (metaTransitionExecutor != null) {
       metaTransitionExecutor.stop();
     }
-
+    if (rootTransitionExecutor != null) {
+      rootTransitionExecutor.stop();
+    }
   }
 
   @Override
@@ -197,7 +212,10 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     if (level == HConstants.PRIORITY_UNSET) {
       level = HConstants.NORMAL_QOS;
     }
-    if (metaTransitionExecutor != null &&
+    if (rootTransitionExecutor != null &&
+      level == MasterAnnotationReadingPriorityFunction.ROOT_TRANSITION_QOS) {
+      return rootTransitionExecutor.dispatch(callTask);
+    } else if (metaTransitionExecutor != null &&
       level == MasterAnnotationReadingPriorityFunction.META_TRANSITION_QOS) {
       return metaTransitionExecutor.dispatch(callTask);
     } else if (priorityExecutor != null && level > highPriorityLevel) {
@@ -208,7 +226,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       return callExecutor.dispatch(callTask);
     }
   }
-
+  
   @Override
   public int getMetaPriorityQueueLength() {
     return metaTransitionExecutor == null ? 0 : metaTransitionExecutor.getQueueLength();
@@ -324,6 +342,13 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       callQueueInfo.setCallMethodCount(queueName,
           metaTransitionExecutor.getCallQueueCountsSummary());
       callQueueInfo.setCallMethodSize(queueName, metaTransitionExecutor.getCallQueueSizeSummary());
+    }
+
+    if (null != rootTransitionExecutor) {
+      queueName = "ROOT Transition Queue";
+      callQueueInfo.setCallMethodCount(queueName,
+        rootTransitionExecutor.getCallQueueCountsSummary());
+      callQueueInfo.setCallMethodSize(queueName, rootTransitionExecutor.getCallQueueSizeSummary());
     }
 
     return callQueueInfo;
