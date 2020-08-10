@@ -584,8 +584,12 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           Throwable lastException = null;
           try {
             TraceUtil.addTimelineAnnotation("syncing writer");
+            long unSyncedFlushSeq = highestUnsyncedTxid;
             writer.sync(takeSyncFuture.isForceSync());
             TraceUtil.addTimelineAnnotation("writer synced");
+            if (unSyncedFlushSeq > currentSequence) {
+              currentSequence = unSyncedFlushSeq;
+            }
             currentSequence = updateHighestSyncedSequence(currentSequence);
           } catch (IOException e) {
             LOG.error("Error syncing, request close of WAL", e);
