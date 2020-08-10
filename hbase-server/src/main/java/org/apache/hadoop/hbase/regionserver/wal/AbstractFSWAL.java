@@ -468,8 +468,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public void completeCacheFlush(byte[] encodedRegionName) {
-    this.sequenceIdAccounting.completeCacheFlush(encodedRegionName);
+  public void completeCacheFlush(byte[] encodedRegionName, long maxFlushedSeqId) {
+    this.sequenceIdAccounting.completeCacheFlush(encodedRegionName, maxFlushedSeqId);
   }
 
   @Override
