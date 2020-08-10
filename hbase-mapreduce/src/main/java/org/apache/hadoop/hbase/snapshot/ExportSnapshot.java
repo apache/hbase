@@ -111,6 +111,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   private static final String CONF_OUTPUT_ROOT = "snapshot.export.output.root";
   private static final String CONF_INPUT_ROOT = "snapshot.export.input.root";
   private static final String CONF_BUFFER_SIZE = "snapshot.export.buffer.size";
+  private static final String CONF_REPORT_SIZE = "snapshot.export.report.size";
   private static final String CONF_MAP_GROUP = "snapshot.export.default.map.group";
   private static final String CONF_BANDWIDTH_MB = "snapshot.export.map.bandwidth.mb";
   private static final String CONF_MR_JOB_NAME = "mapreduce.job.name";
@@ -171,6 +172,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     private String filesUser;
     private short filesMode;
     private int bufferSize;
+    private int reportSize;
 
     private FileSystem outputFs;
     private Path outputArchive;
@@ -218,6 +220,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       int defaultBlockSize = Math.max((int) outputFs.getDefaultBlockSize(outputRoot), BUFFER_SIZE);
       bufferSize = conf.getInt(CONF_BUFFER_SIZE, defaultBlockSize);
       LOG.info("Using bufferSize=" + StringUtils.humanReadableInt(bufferSize));
+      reportSize = conf.getInt(CONF_REPORT_SIZE, REPORT_SIZE);
 
       for (Counter c : Counter.values()) {
         context.getCounter(c).increment(0);
@@ -422,7 +425,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
           totalBytesWritten += bytesRead;
           reportBytes += bytesRead;
 
-          if (reportBytes >= REPORT_SIZE) {
+          if (reportBytes >= reportSize) {
             context.getCounter(Counter.BYTES_COPIED).increment(reportBytes);
             context.setStatus(String.format(statusMessage,
                               StringUtils.humanReadableInt(totalBytesWritten),
