@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -178,7 +179,7 @@ public class TestFSHLogProvider {
    */
   protected void flushRegion(WAL wal, byte[] regionEncodedName, Set<byte[]> flushedFamilyNames) {
     wal.startCacheFlush(regionEncodedName, flushedFamilyNames);
-    wal.completeCacheFlush(regionEncodedName);
+    wal.completeCacheFlush(regionEncodedName, HConstants.NO_SEQNUM);
   }
 
   @Test
@@ -230,7 +231,7 @@ public class TestFSHLogProvider {
       // archived. We need to append something or writer won't be rolled.
       addEdits(log, hri2, htd2, 1, scopes2);
       log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
-      log.completeCacheFlush(hri.getEncodedNameAsBytes());
+      log.completeCacheFlush(hri.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
       log.rollWriter();
       int count = AbstractFSWALProvider.getNumRolledLogFiles(log);
       assertEquals(2, count);
@@ -240,7 +241,7 @@ public class TestFSHLogProvider {
       // flush information
       addEdits(log, hri2, htd2, 1, scopes2);
       log.startCacheFlush(hri2.getEncodedNameAsBytes(), htd2.getColumnFamilyNames());
-      log.completeCacheFlush(hri2.getEncodedNameAsBytes());
+      log.completeCacheFlush(hri2.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
       log.rollWriter();
       assertEquals(0, AbstractFSWALProvider.getNumRolledLogFiles(log));
     } finally {

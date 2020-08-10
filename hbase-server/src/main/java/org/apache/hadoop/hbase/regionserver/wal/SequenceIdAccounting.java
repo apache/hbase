@@ -350,9 +350,36 @@ class SequenceIdAccounting {
     return lowestUnflushedInRegion;
   }
 
-  void completeCacheFlush(final byte[] encodedRegionName) {
+  void completeCacheFlush(byte[] encodedRegionName, long maxFlushedSeqId) {
+    // This is a simple hack to avoid maxFlushedSeqId go backwards.
+    // The system works fine normally, but if we make use of Durability.ASYNC_WAL and we are going
+    // to flush all the stores, the maxFlushedSeqId will be next seq id of the region, but we may
+    // still have some unsynced WAL entries in the ringbuffer after we call startCacheFlush, and
+    // then it will be recorded as the lowestUnflushedSeqId by the above update method, which is
+    // less than the current maxFlushedSeqId. And if next time we only flush the family with this
+    // unusual lowestUnflushedSeqId, the maxFlushedSeqId will go backwards.
+    // This is an unexpected behavior so we should fix it, otherwise it may cause unexpected
+    // behavior in other area.
+    // The solution here is a bit hack but fine. Just replace the lowestUnflushedSeqId with
+    // maxFlushedSeqId + 1 if it is lesser. The meaning of maxFlushedSeqId is that, all edits less
+    // than or equal to it have been flushed, i.e, persistent to HFile, so set
+    // lowestUnflushedSequenceId to maxFlushedSeqId + 1 will not cause data loss.
+    // And technically, using +1 is fine here. If the maxFlushesSeqId is just the flushOpSeqId, it
+    // means we have flushed all the stores so the seq id for actual data should be at least plus 1.
+    // And if we do not flush all the stores, then the maxFlushedSeqId is calculated by
+    // lowestUnflushedSeqId - 1, so here let's plus the 1 back.
+    Long wrappedSeqId = Long.valueOf(maxFlushedSeqId + 1);
     synchronized (tieLock) {
       this.flushingSequenceIds.remove(encodedRegionName);
+      Map<ImmutableByteArray, Long> unflushed = lowestUnflushedSequenceIds.get(encodedRegionName);
+      if (unflushed == null) {
+        return;
+      }
+      for (Map.Entry<ImmutableByteArray, Long> e : unflushed.entrySet()) {
+        if (e.getValue().longValue() <= maxFlushedSeqId) {
+          e.setValue(wrappedSeqId);
+        }
+      }
     }
   }
 
