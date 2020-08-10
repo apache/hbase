@@ -48,6 +48,7 @@ public final class ImmutableByteArray {
     return new ImmutableByteArray(b);
   }
 
+  @Override
   public String toString() {
     return Bytes.toStringBinary(b);
   }
