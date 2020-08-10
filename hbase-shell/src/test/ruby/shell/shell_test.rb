@@ -134,7 +134,6 @@ class ShellTest < Test::Unit::TestCase
 
   define_test 'Shell::Shell#exception_handler should hide traceback' do
     class TestException < RuntimeError; end
-    hide_traceback = true
     # When hide_traceback is true, exception_handler should replace exceptions
     # with SystemExit so that the traceback is not printed.
     assert_raises(SystemExit) do
@@ -144,7 +143,6 @@ class ShellTest < Test::Unit::TestCase
 
   define_test 'Shell::Shell#exception_handler should show traceback' do
     class TestException < RuntimeError; end
-    hide_traceback = false
     # When hide_traceback is false, exception_handler should re-raise Exceptions
     assert_raises(TestException) do
       ::Shell::Shell.exception_handler(false) { raise TestException, 'Custom Exception' }
