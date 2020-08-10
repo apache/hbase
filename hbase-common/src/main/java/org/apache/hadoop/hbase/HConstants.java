@@ -616,6 +616,9 @@ public final class HConstants {
    */
   public static final byte [] META_VERSION_QUALIFIER = Bytes.toBytes("v");
 
+  /** The family str as a key in map*/
+  public static final String FAMILY_KEY_STR = "family";
+
   /**
    * The current version of the meta table.
    * - pre-hbase 0.92.  There is no META_VERSION column in the root table

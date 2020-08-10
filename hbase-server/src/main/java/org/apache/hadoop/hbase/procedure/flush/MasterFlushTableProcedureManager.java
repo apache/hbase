@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -51,6 +52,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -149,11 +151,19 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
 
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getInstance());
 
+    HBaseProtos.NameStringPair family = null;
+    for (HBaseProtos.NameStringPair nsp : desc.getConfigurationList()) {
+      if (HConstants.FAMILY_KEY_STR.equals(nsp.getName())) {
+        family = nsp;
+      }
+    }
+    byte[] procArgs = family != null ? family.toByteArray() : new byte[0];
+
     // Kick of the global procedure from the master coordinator to the region servers.
     // We rely on the existing Distributed Procedure framework to prevent any concurrent
     // procedure with the same name.
     Procedure proc = coordinator.startProcedure(monitor, desc.getInstance(),
-      new byte[0], Lists.newArrayList(regionServers));
+      procArgs, Lists.newArrayList(regionServers));
     monitor.rethrowException();
     if (proc == null) {
       String msg = "Failed to submit distributed procedure " + desc.getSignature() + " for '"
