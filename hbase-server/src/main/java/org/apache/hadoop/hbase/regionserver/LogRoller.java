@@ -76,7 +76,7 @@ public class LogRoller extends HasThread {
             RollController controller = wals.get(wal);
             if (controller == null) {
               controller = new RollController(wal);
-              wals.putIfAbsent(wal, controller);
+              wals.put(wal, controller);
             }
             controller.requestRoll();
             rollLog.set(true);
