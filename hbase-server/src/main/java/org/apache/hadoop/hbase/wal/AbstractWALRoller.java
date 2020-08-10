@@ -229,10 +229,8 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    * Wait until all wals have been rolled after calling {@link #requestRollAll()}.
    */
   public void waitUntilWalRollFinished() throws InterruptedException {
-    synchronized (RollController.class) {
-      while (!walRollFinished()) {
-        RollController.class.wait();
-      }
+    while (!walRollFinished()) {
+      Thread.sleep(100);
     }
   }
 
@@ -272,9 +270,6 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
         return wal.rollWriter(true);
       } finally {
         this.isRolling = false;
-        synchronized (RollController.class) {
-          RollController.class.notifyAll();
-        }
       }
     }
 
