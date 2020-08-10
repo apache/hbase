@@ -1579,6 +1579,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public static final long MAX_FLUSH_PER_CHANGES = 1000000000; // 1G
 
+  public Map<byte[], List<HStoreFile>> close(boolean abort) throws IOException {
+    return close(abort, false);
+  }
+
   /**
    * Close down this HRegion.  Flush the cache unless abort parameter is true,
    * Shut down each HStore, don't service any more calls.
@@ -1587,6 +1591,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * time-sensitive thread.
    *
    * @param abort true if server is aborting (only during testing)
+   * @param ignoreStatus true if ignore the status (wont be showed on task list)
    * @return Vector of all the storage files that the HRegion's component
    * HStores make use of.  It's a list of StoreFile objects.  Can be null if
    * we are not to close at this time or we are already closed.
@@ -1596,12 +1601,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * because a Snapshot was not properly persisted. The region is put in closing mode, and the
    * caller MUST abort after this.
    */
-  public Map<byte[], List<HStoreFile>> close(boolean abort) throws IOException {
+  public Map<byte[], List<HStoreFile>> close(boolean abort, boolean ignoreStatus)
+      throws IOException {
     // Only allow one thread to close at a time. Serialize them so dual
     // threads attempting to close will run up against each other.
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Closing region " + this.getRegionInfo().getEncodedName() +
-        (abort ? " due to abort" : ""));
+        (abort ? " due to abort" : ""), ignoreStatus);
     status.enableStatusJournal(true);
     status.setStatus("Waiting for close lock");
     try {
