@@ -29,11 +29,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,16 +44,9 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class Threads {
   private static final Logger LOG = LoggerFactory.getLogger(Threads.class);
-  private static final AtomicInteger poolNumber = new AtomicInteger(1);
 
   public static final UncaughtExceptionHandler LOGGING_EXCEPTION_HANDLER =
-    new UncaughtExceptionHandler() {
-    @Override
-    public void uncaughtException(Thread t, Throwable e) {
-      LOG.warn("Thread:" + t + " exited with Exception:"
-          + StringUtils.stringifyException(e));
-    }
-  };
+    (t, e) -> LOG.warn("Thread:{} exited with Exception:{}", t, StringUtils.stringifyException(e));
 
   /**
    * Utility method that sets name, daemon status and starts passed thread.
