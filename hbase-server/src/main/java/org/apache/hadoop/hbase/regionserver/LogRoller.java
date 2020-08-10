@@ -71,14 +71,19 @@ public class LogRoller extends HasThread {
       wal.registerWALActionsListener(new WALActionsListener.Base() {
         @Override
         public void logRollRequested(WALActionsListener.RollRequestReason reason) {
+          RollController controller = wals.get(wal);
+          if (controller == null) {
+            synchronized(wals) {
+              controller = wals.get(wal);
+              if (controller == null) {
+                controller = new RollController(wal);
+                wals.put(wal, controller);
+              }
+            }
+          }
+          controller.requestRoll();
           // TODO logs will contend with each other here, replace with e.g. DelayedQueue
           synchronized(rollLog) {
-            RollController controller = wals.get(wal);
-            if (controller == null) {
-              controller = new RollController(wal);
-              wals.put(wal, controller);
-            }
-            controller.requestRoll();
             rollLog.set(true);
             rollLog.notifyAll();
           }
