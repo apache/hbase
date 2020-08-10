@@ -101,7 +101,7 @@ pipeline {
                                   passwordVariable: 'GITHUB_PASSWORD',
                                   usernameVariable: 'GITHUB_USER'
                                 )]) {
-                                sh label: 'test-patch', script: '''
+                                sh label: 'test-patch', script: '''#!/bin/bash -e
                                     hostname -a ; pwd ; ls -la
                                     printenv 2>&1 | sort
                                     echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
@@ -128,7 +128,7 @@ pipeline {
                         // Jenkins pipeline jobs fill slaves on PRs without this :(
                         cleanup() {
                             script {
-                                sh label: 'Cleanup workspace', script: '''
+                                sh label: 'Cleanup workspace', script: '''#!/bin/bash -e
                                     # See YETUS-764
                                     if [ -f "${PATCHDIR}/pidfile.txt" ]; then
                                       echo "test-patch process appears to still be running: killing"
@@ -187,7 +187,7 @@ pipeline {
                                 passwordVariable: 'GITHUB_PASSWORD',
                                 usernameVariable: 'GITHUB_USER'
                               )]) {
-                                sh label: 'test-patch', script: '''
+                                sh label: 'test-patch', script: '''#!/bin/bash -e
                                     hostname -a ; pwd ; ls -la
                                     printenv 2>&1 | sort
                                     echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
@@ -199,7 +199,7 @@ pipeline {
                     post {
                         always {
                             junit testResults: "${WORKDIR_REL}/${SRC_REL}/**/target/**/TEST-*.xml", allowEmptyResults: true
-                            sh label: 'zip surefire reports', script: '''
+                            sh label: 'zip surefire reports', script: '''#!/bin/bash -e
                                 if [ -d "${PATCHDIR}/archiver" ]; then
                                   count=$(find "${PATCHDIR}/archiver" -type f | wc -l)
                                   if [[ 0 -ne ${count} ]]; then
@@ -228,7 +228,7 @@ pipeline {
                         // Jenkins pipeline jobs fill slaves on PRs without this :(
                         cleanup() {
                             script {
-                                sh label: 'Cleanup workspace', script: '''
+                                sh label: 'Cleanup workspace', script: '''#!/bin/bash -e
                                     # See YETUS-764
                                     if [ -f "${PATCHDIR}/pidfile.txt" ]; then
                                       echo "test-patch process appears to still be running: killing"
@@ -288,7 +288,7 @@ pipeline {
                                 passwordVariable: 'GITHUB_PASSWORD',
                                 usernameVariable: 'GITHUB_USER'
                               )]) {
-                                sh label: 'test-patch', script: '''
+                                sh label: 'test-patch', script: '''#!/bin/bash -e
                                     hostname -a ; pwd ; ls -la
                                     printenv 2>&1 | sort
                                     echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
@@ -300,7 +300,7 @@ pipeline {
                     post {
                         always {
                             junit testResults: "${WORKDIR_REL}/${SRC_REL}/**/target/**/TEST-*.xml", allowEmptyResults: true
-                            sh label: 'zip surefire reports', script: '''
+                            sh label: 'zip surefire reports', script: '''#!/bin/bash -e
                                 if [ -d "${PATCHDIR}/archiver" ]; then
                                   count=$(find "${PATCHDIR}/archiver" -type f | wc -l)
                                   if [[ 0 -ne ${count} ]]; then
@@ -329,7 +329,7 @@ pipeline {
                         // Jenkins pipeline jobs fill slaves on PRs without this :(
                         cleanup() {
                             script {
-                                sh label: 'Cleanup workspace', script: '''
+                                sh label: 'Cleanup workspace', script: '''#!/bin/bash -e
                                     # See YETUS-764
                                     if [ -f "${PATCHDIR}/pidfile.txt" ]; then
                                       echo "test-patch process appears to still be running: killing"
@@ -358,7 +358,7 @@ pipeline {
         // Jenkins pipeline jobs fill slaves on PRs without this :(
         cleanup() {
             script {
-                sh label: 'Cleanup workspace', script: '''
+                sh label: 'Cleanup workspace', script: '''#!/bin/bash -e
                     # See HADOOP-13951
                     chmod -R u+rxw "${WORKSPACE}"
                     '''
