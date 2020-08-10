@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -308,7 +310,11 @@ public interface Region extends ConfigurationObserver {
    * @param comparator the expected value
    * @param mutation data to put if check succeeds
    * @return true if mutation was applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   default boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
     ByteArrayComparable comparator, Mutation mutation) throws IOException {
     return checkAndMutate(row, family, qualifier, op, comparator, TimeRange.allTime(), mutation);
@@ -327,7 +333,11 @@ public interface Region extends ConfigurationObserver {
    * @param mutation data to put if check succeeds
    * @param timeRange time range to check
    * @return true if mutation was applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
       ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException;
 
@@ -338,7 +348,11 @@ public interface Region extends ConfigurationObserver {
    * @param filter the filter
    * @param mutation data to put if check succeeds
    * @return true if mutation was applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   default boolean checkAndMutate(byte [] row, Filter filter, Mutation mutation)
     throws IOException {
     return checkAndMutate(row, filter, TimeRange.allTime(), mutation);
@@ -352,7 +366,11 @@ public interface Region extends ConfigurationObserver {
    * @param mutation data to put if check succeeds
    * @param timeRange time range to check
    * @return true if mutation was applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   boolean checkAndMutate(byte [] row, Filter filter, TimeRange timeRange, Mutation mutation)
     throws IOException;
 
@@ -368,7 +386,11 @@ public interface Region extends ConfigurationObserver {
    * @param comparator the expected value
    * @param mutations data to put if check succeeds
    * @return true if mutations were applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   default boolean checkAndRowMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
     ByteArrayComparable comparator, RowMutations mutations) throws IOException {
     return checkAndRowMutate(row, family, qualifier, op, comparator, TimeRange.allTime(),
@@ -388,7 +410,11 @@ public interface Region extends ConfigurationObserver {
    * @param mutations data to put if check succeeds
    * @param timeRange time range to check
    * @return true if mutations were applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
       ByteArrayComparable comparator, TimeRange timeRange, RowMutations mutations)
       throws IOException;
@@ -401,7 +427,11 @@ public interface Region extends ConfigurationObserver {
    * @param filter the filter
    * @param mutations data to put if check succeeds
    * @return true if mutations were applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   default boolean checkAndRowMutate(byte[] row, Filter filter, RowMutations mutations)
     throws IOException {
     return checkAndRowMutate(row, filter, TimeRange.allTime(), mutations);
@@ -416,9 +446,23 @@ public interface Region extends ConfigurationObserver {
    * @param mutations data to put if check succeeds
    * @param timeRange time range to check
    * @return true if mutations were applied, false otherwise
+   *
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
    */
+  @Deprecated
   boolean checkAndRowMutate(byte [] row, Filter filter, TimeRange timeRange,
     RowMutations mutations) throws IOException;
+
+  /**
+   * Atomically checks if a row matches the conditions and if it does, it performs the actions.
+   * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
+   * time.
+   * @param checkAndMutate the CheckAndMutate object
+   * @return true if mutations were applied, false otherwise
+   * @throws IOException if an error occurred in this method
+   */
+  CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException;
 
   /**
    * Deletes the specified cells/row.
