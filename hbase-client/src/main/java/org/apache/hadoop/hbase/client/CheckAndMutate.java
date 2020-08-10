@@ -214,7 +214,7 @@ public final class CheckAndMutate extends Mutation {
     this.op = op;
     this.value = value;
     this.filter = null;
-    this.timeRange = timeRange;
+    this.timeRange = timeRange != null ? timeRange : TimeRange.allTime();
     this.action = action;
   }
 
@@ -225,7 +225,7 @@ public final class CheckAndMutate extends Mutation {
     this.op = null;
     this.value = null;
     this.filter = filter;
-    this.timeRange = timeRange;
+    this.timeRange = timeRange != null ? timeRange : TimeRange.allTime();
     this.action = action;
   }
 
@@ -262,6 +262,13 @@ public final class CheckAndMutate extends Mutation {
    */
   public Filter getFilter() {
     return filter;
+  }
+
+  /**
+   * @return whether this has a filter or not
+   */
+  public boolean hasFilter() {
+    return filter != null;
   }
 
   /**
