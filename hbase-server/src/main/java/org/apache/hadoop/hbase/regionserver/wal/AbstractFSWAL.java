@@ -717,8 +717,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
     if (logsToArchive != null) {
       for (Pair<Path, Long> logAndSize : logsToArchive) {
-        this.totalLogSize.addAndGet(-logAndSize.getSecond());
         archiveLogFile(logAndSize.getFirst());
+        this.totalLogSize.addAndGet(-logAndSize.getSecond());
         this.walFile2Props.remove(logAndSize.getFirst());
       }
     }
