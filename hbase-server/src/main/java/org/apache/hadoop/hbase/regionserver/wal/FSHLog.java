@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -242,7 +243,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     // spinning as other strategies do.
     this.disruptor = new Disruptor<>(RingBufferTruck::new,
       getPreallocatedEventCount(),
-      new ThreadFactoryBuilder().setNameFormat(hostingThreadName + ".append-pool-%d").build(),
+      new ThreadFactoryBuilder().setNameFormat(hostingThreadName + ".append-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
       ProducerType.MULTI, new BlockingWaitStrategy());
     // Advance the ring buffer sequence so that it starts from 1 instead of 0,
     // because SyncFuture.NOT_DONE = 0.

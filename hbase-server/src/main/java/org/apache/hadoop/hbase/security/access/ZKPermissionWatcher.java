@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.security.access;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -69,7 +70,8 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
     String aclZnodeParent = conf.get("zookeeper.znode.acl.parent", ACL_NODE);
     this.aclZNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, aclZnodeParent);
     executor = Executors.newSingleThreadExecutor(
-      new ThreadFactoryBuilder().setNameFormat("zk-permission-watcher-pool-%d").build());
+      new ThreadFactoryBuilder().setNameFormat("zk-permission-watcher-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   public void start() throws KeeperException {

@@ -77,7 +77,8 @@ abstract class OutputSink {
     this.controller = controller;
     this.entryBuffers = entryBuffers;
     this.closeThreadPool = Threads.getBoundedCachedThreadPool(numThreads, 30L, TimeUnit.SECONDS,
-      new ThreadFactoryBuilder().setNameFormat("split-log-closeStream-pool-%d").build());
+      new ThreadFactoryBuilder().setNameFormat("split-log-closeStream-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     this.closeCompletionService = new ExecutorCompletionService<>(closeThreadPool);
   }
 
