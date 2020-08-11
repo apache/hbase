@@ -49,7 +49,7 @@ pipeline {
             mvn_args=("${mvn_args[@]}" -X)
             set -x
           fi
-          curl "${curl_args[@]}" -o includes.txt "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/includes"
+          curl "${curl_args[@]}" -o includes.txt "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/includes"
           if [ -s includes.txt ]; then
             rm -rf local-repository/org/apache/hbase
             mvn clean "${mvn_args[@]}"
