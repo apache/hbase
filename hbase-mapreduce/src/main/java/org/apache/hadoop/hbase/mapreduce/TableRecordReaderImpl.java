@@ -189,8 +189,7 @@ public class TableRecordReaderImpl {
           rowcount ++;
           if (rowcount >= logPerRowCount) {
             long now = System.currentTimeMillis();
-            LOG.info("Mapper took " + (now-timestamp)
-              + "ms to process " + rowcount + " rows");
+            LOG.info("Mapper took {}ms to process {} rows", (now - timestamp), rowcount);
             timestamp = now;
             rowcount = 0;
           }
@@ -242,8 +241,7 @@ public class TableRecordReaderImpl {
       updateCounters();
       if (logScannerActivity) {
         long now = System.currentTimeMillis();
-        LOG.info("Mapper took " + (now-timestamp)
-          + "ms to process " + rowcount + " rows");
+        LOG.info("Mapper took {}ms to process {} rows", (now - timestamp), rowcount);
         LOG.info(ioe.toString(), ioe);
         String lastRow = lastSuccessfulRow == null ?
           "null" : Bytes.toStringBinary(lastSuccessfulRow);
