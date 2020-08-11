@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -333,8 +334,9 @@ public abstract class TestReplicationSourceManager {
     when(source.getQueueId()).thenReturn("1");
     when(source.isRecovered()).thenReturn(false);
     when(source.isSyncReplication()).thenReturn(false);
-    manager.logPositionAndCleanOldLogs(source,
-      new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath()));
+    WALEntryBatch batch = new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath());
+    source.setWALPosition(batch);
+    source.cleanOldWALs(batch.getLastWalPath().getName(), batch.isEndOfFile());
 
     wal.appendData(hri,
       new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
@@ -408,11 +410,10 @@ public abstract class TestReplicationSourceManager {
     assertEquals(1, manager.getWalsByIdRecoveredQueues().size());
     String id = "1-" + server.getServerName().getServerName();
     assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id).get(group));
-    ReplicationSourceInterface source = mock(ReplicationSourceInterface.class);
-    when(source.getQueueId()).thenReturn(id);
-    when(source.isRecovered()).thenReturn(true);
-    when(source.isSyncReplication()).thenReturn(false);
-    manager.cleanOldLogs(file2, false, source);
+    ReplicationSourceInterface source = new ReplicationSource();
+    source.init(conf, fs, null, manager, manager.getQueueStorage(), rp1.getPeer("1"),
+      manager.getServer(), id, null, p -> OptionalLong.empty(), null);
+    source.cleanOldWALs(file2, false);
     // log1 should be deleted
     assertEquals(Sets.newHashSet(file2), manager.getWalsByIdRecoveredQueues().get(id).get(group));
   }
@@ -589,19 +590,15 @@ public abstract class TestReplicationSourceManager {
     }
   }
 
-  private ReplicationSourceInterface mockReplicationSource(String peerId) {
-    ReplicationSourceInterface source = mock(ReplicationSourceInterface.class);
-    when(source.getPeerId()).thenReturn(peerId);
-    when(source.getQueueId()).thenReturn(peerId);
-    when(source.isRecovered()).thenReturn(false);
-    when(source.isSyncReplication()).thenReturn(true);
+  private ReplicationPeer mockReplicationPeerForSyncReplication(String peerId) {
     ReplicationPeerConfig config = mock(ReplicationPeerConfig.class);
     when(config.getRemoteWALDir())
       .thenReturn(remoteLogDir.makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString());
+    when(config.isSyncReplication()).thenReturn(true);
     ReplicationPeer peer = mock(ReplicationPeer.class);
     when(peer.getPeerConfig()).thenReturn(config);
-    when(source.getPeer()).thenReturn(peer);
-    return source;
+    when(peer.getId()).thenReturn(peerId);
+    return peer;
   }
 
   @Test
@@ -630,13 +627,19 @@ public abstract class TestReplicationSourceManager {
       manager.preLogRoll(wal);
       manager.postLogRoll(wal);
 
-      ReplicationSourceInterface source = mockReplicationSource(peerId2);
-      manager.cleanOldLogs(walName, true, source);
+      ReplicationSourceInterface source = new ReplicationSource();
+      source.init(conf, fs, null, manager, manager.getQueueStorage(),
+        mockReplicationPeerForSyncReplication(peerId2), manager.getServer(), peerId2, null,
+        p -> OptionalLong.empty(), null);
+      source.cleanOldWALs(walName, true);
       // still there if peer id does not match
       assertTrue(fs.exists(remoteWAL));
 
-      source = mockReplicationSource(slaveId);
-      manager.cleanOldLogs(walName, true, source);
+      source = new ReplicationSource();
+      source.init(conf, fs, null, manager, manager.getQueueStorage(),
+        mockReplicationPeerForSyncReplication(slaveId), manager.getServer(), slaveId, null,
+        p -> OptionalLong.empty(), null);
+      source.cleanOldWALs(walName, true);
       assertFalse(fs.exists(remoteWAL));
     } finally {
       removePeerAndWait(peerId2);
@@ -813,11 +816,10 @@ public abstract class TestReplicationSourceManager {
 
   static class FailInitializeDummyReplicationSource extends ReplicationSourceDummy {
 
-    @Override
-    public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-        ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
-        UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
-        throws IOException {
+    @Override public void init(Configuration conf, FileSystem fs, Path walDir,
+      ReplicationSourceManager manager, ReplicationQueueStorage rq, ReplicationPeer rp,
+      Server server, String peerClusterId, UUID clusterId,
+      WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
       throw new IOException("Failing deliberately");
     }
   }

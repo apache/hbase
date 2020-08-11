@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -59,14 +57,11 @@ import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
-import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -324,7 +319,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     MetricsSource metrics = new MetricsSource(queueId);
     sourceMetrics.put(queueId, metrics);
     // init replication source
-    src.init(conf, fs, this, queueStorage, replicationPeer, server, queueId, clusterId,
+    src.init(conf, fs, logDir, this, queueStorage, replicationPeer, server, queueId, clusterId,
       walFileLengthProvider, metrics);
     return src;
   }
@@ -528,29 +523,6 @@ public class ReplicationSourceManager implements ReplicationListener {
     void exec() throws ReplicationException;
   }
 
-  /**
-   * Refresh replication source will terminate the old source first, then the source thread will be
-   * interrupted. Need to handle it instead of abort the region server.
-   */
-  private void interruptOrAbortWhenFail(ReplicationQueueOperation op) {
-    try {
-      op.exec();
-    } catch (ReplicationException e) {
-      if (e.getCause() != null && e.getCause() instanceof KeeperException.SystemErrorException
-          && e.getCause().getCause() != null && e.getCause()
-          .getCause() instanceof InterruptedException) {
-        // ReplicationRuntimeException(a RuntimeException) is thrown out here. The reason is
-        // that thread is interrupted deep down in the stack, it should pass the following
-        // processing logic and propagate to the most top layer which can handle this exception
-        // properly. In this specific case, the top layer is ReplicationSourceShipper#run().
-        throw new ReplicationRuntimeException(
-          "Thread is interrupted, the replication source may be terminated",
-          e.getCause().getCause());
-      }
-      server.abort("Failed to operate on replication queue", e);
-    }
-  }
-
   private void abortWhenFail(ReplicationQueueOperation op) {
     try {
       op.exec();
@@ -573,107 +545,6 @@ public class ReplicationSourceManager implements ReplicationListener {
     } catch (ReplicationException e) {
       server.abort("Failed to operate on replication queue", e);
       throw new IOException(e);
-    }
-  }
-
-  /**
-   * This method will log the current position to storage. And also clean old logs from the
-   * replication queue.
-   * @param source the replication source
-   * @param entryBatch the wal entry batch we just shipped
-   */
-  public void logPositionAndCleanOldLogs(ReplicationSourceInterface source,
-      WALEntryBatch entryBatch) {
-    String fileName = entryBatch.getLastWalPath().getName();
-    interruptOrAbortWhenFail(() -> this.queueStorage.setWALPosition(server.getServerName(),
-      source.getQueueId(), fileName, entryBatch.getLastWalPosition(), entryBatch.getLastSeqIds()));
-    cleanOldLogs(fileName, entryBatch.isEndOfFile(), source);
-  }
-
-  /**
-   * Cleans a log file and all older logs from replication queue. Called when we are sure that a log
-   * file is closed and has no more entries.
-   * @param log Path to the log
-   * @param inclusive whether we should also remove the given log file
-   * @param source the replication source
-   */
-  @VisibleForTesting
-  void cleanOldLogs(String log, boolean inclusive,
-    ReplicationSourceInterface source) {
-    NavigableSet<String> walsToRemove;
-    synchronized (this.latestPaths) {
-      walsToRemove = getWalsToRemove(source.getQueueId(), log, inclusive);
-    }
-    if (walsToRemove.isEmpty()) {
-      return;
-    }
-    // cleanOldLogs may spend some time, especially for sync replication where we may want to
-    // remove remote wals as the remote cluster may have already been down, so we do it outside
-    // the lock to avoid block preLogRoll
-    cleanOldLogs(walsToRemove, source);
-  }
-
-  private void removeRemoteWALs(String peerId, String remoteWALDir, Collection<String> wals)
-      throws IOException {
-    Path remoteWALDirForPeer = ReplicationUtils.getPeerRemoteWALDir(remoteWALDir, peerId);
-    FileSystem fs = ReplicationUtils.getRemoteWALFileSystem(conf, remoteWALDir);
-    for (String wal : wals) {
-      Path walFile = new Path(remoteWALDirForPeer, wal);
-      try {
-        if (!fs.delete(walFile, false) && fs.exists(walFile)) {
-          throw new IOException("Can not delete " + walFile);
-        }
-      } catch (FileNotFoundException e) {
-        // Just ignore since this means the file has already been deleted.
-        // The javadoc of the FileSystem.delete methods does not specify the behavior of deleting an
-        // inexistent file, so here we deal with both, i.e, check the return value of the
-        // FileSystem.delete, and also catch FNFE.
-        LOG.debug("The remote wal {} has already been deleted?", walFile, e);
-      }
-    }
-  }
-
-  private void cleanOldLogs(NavigableSet<String> wals, ReplicationSourceInterface source) {
-    LOG.debug("Removing {} logs in the list: {}", wals.size(), wals);
-    // The intention here is that, we want to delete the remote wal files ASAP as it may effect the
-    // failover time if you want to transit the remote cluster from S to A. And the infinite retry
-    // is not a problem, as if we can not contact with the remote HDFS cluster, then usually we can
-    // not contact with the HBase cluster either, so the replication will be blocked either.
-    if (source.isSyncReplication()) {
-      String peerId = source.getPeerId();
-      String remoteWALDir = source.getPeer().getPeerConfig().getRemoteWALDir();
-      // Filter out the wals need to be removed from the remote directory. Its name should be the
-      // special format, and also, the peer id in its name should match the peer id for the
-      // replication source.
-      List<String> remoteWals = wals.stream().filter(w -> SyncReplicationWALProvider
-        .getSyncReplicationPeerIdFromWALName(w).map(peerId::equals).orElse(false))
-        .collect(Collectors.toList());
-      LOG.debug("Removing {} logs from remote dir {} in the list: {}", remoteWals.size(),
-        remoteWALDir, remoteWals);
-      if (!remoteWals.isEmpty()) {
-        for (int sleepMultiplier = 0;;) {
-          try {
-            removeRemoteWALs(peerId, remoteWALDir, remoteWals);
-            break;
-          } catch (IOException e) {
-            LOG.warn("Failed to delete remote wals from remote dir {} for peer {}", remoteWALDir,
-              peerId);
-          }
-          if (!source.isSourceActive()) {
-            // skip the following operations
-            return;
-          }
-          if (ReplicationUtils.sleepForRetries("Failed to delete remote wals", sleepForRetries,
-            sleepMultiplier, maxRetriesMultiplier)) {
-            sleepMultiplier++;
-          }
-        }
-      }
-    }
-    String queueId = source.getQueueId();
-    for (String wal : wals) {
-      interruptOrAbortWhenFail(
-        () -> this.queueStorage.removeWAL(server.getServerName(), queueId, wal));
     }
   }
 
@@ -1092,10 +963,6 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
   }
 
-  public void cleanUpHFileRefs(String peerId, List<String> files) {
-    interruptOrAbortWhenFail(() -> this.queueStorage.removeHFileRefs(peerId, files));
-  }
-
   int activeFailoverTaskCount() {
     return executor.getActiveCount();
   }
@@ -1104,20 +971,13 @@ public class ReplicationSourceManager implements ReplicationListener {
     return this.globalMetrics;
   }
 
-  private NavigableSet<String> getWalsToRemove(String queueId, String log, boolean inclusive) {
-    NavigableSet<String> walsToRemove = new TreeSet<>();
-    String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log);
-    try {
-      this.queueStorage.getWALsInQueue(this.server.getServerName(), queueId).forEach(wal -> {
-        String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
-        if (walPrefix.equals(logPrefix)) {
-          walsToRemove.add(wal);
-        }
-      });
-    } catch (ReplicationException e) {
-      // Just log the exception here, as the recovered replication source will try to cleanup again.
-      LOG.warn("Failed to read wals in queue {}", queueId, e);
-    }
-    return walsToRemove.headSet(log, inclusive);
+  @InterfaceAudience.Private
+  Server getServer() {
+    return this.server;
+  }
+
+  @InterfaceAudience.Private
+  ReplicationQueueStorage getQueueStorage() {
+    return this.queueStorage;
   }
 }
