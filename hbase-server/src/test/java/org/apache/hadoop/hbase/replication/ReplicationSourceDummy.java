@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
+import org.apache.hadoop.hbase.replication.regionserver.WALEntryBatch;
 import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
@@ -38,7 +39,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
  */
 public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
-  private ReplicationSourceManager manager;
   private ReplicationPeer replicationPeer;
   private String peerClusterId;
   private Path currentPath;
@@ -47,11 +47,10 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   private AtomicBoolean startup = new AtomicBoolean(false);
 
   @Override
-  public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
-      UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
-      throws IOException {
-    this.manager = manager;
+  public void init(Configuration conf, FileSystem fs, Path walDir, ReplicationSourceManager manager,
+    ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
+    UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
+    throws IOException {
     this.peerClusterId = peerClusterId;
     this.metrics = metrics;
     this.walFileLengthProvider = walFileLengthProvider;
@@ -133,11 +132,6 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
-  public ReplicationSourceManager getSourceManager() {
-    return manager;
-  }
-
-  @Override
   public void tryThrottle(int batchSize) throws InterruptedException {
   }
 
@@ -153,6 +147,14 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   @Override
   public ServerName getServerWALsBelongTo() {
     return null;
+  }
+
+  @Override
+  public void setWALPosition(WALEntryBatch entryBatch) {
+  }
+
+  @Override
+  public void cleanOldWALs(String walName, boolean inclusive) {
   }
 
   @Override
