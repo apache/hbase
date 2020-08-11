@@ -2403,7 +2403,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  public ArchiveWALResponse archiveEarliestWAL(final RpcController controller,
+  public ArchiveWALResponse archiveWAL(final RpcController controller,
     final ArchiveWALRequest request) throws ServiceException {
     try {
       checkOpen();

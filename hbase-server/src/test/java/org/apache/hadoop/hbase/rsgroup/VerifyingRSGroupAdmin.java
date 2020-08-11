@@ -497,8 +497,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.rollWALWriter(serverName);
   }
 
-  public void archiveEarliestWAL(ServerName serverName) throws IOException {
-    admin.archiveEarliestWAL(serverName);
+  public void archiveWAL(ServerName serverName) throws IOException {
+    admin.archiveWAL(serverName);
   }
 
   public CompactionState getCompactionState(TableName tableName) throws IOException {

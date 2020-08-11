@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
@@ -888,16 +889,15 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         String encodedRegionName = Bytes.toString(entry.getKey());
         HRegion r = (HRegion) services.getRegion(encodedRegionName);
         if (r == null) {
-          LOG.warn("Failed to flush of {} when archive manually, because it is not online on us",
-            encodedRegionName);
-          return;
+          throw new RegionException("Failed to flush of " + encodedRegionName +
+            " when archive manually, because it is not online on rs");
         }
         r.flushcache(entry.getValue(), false, FlushLifeCycleTracker.DUMMY);
       }
     }
     // move the log file to archive dir
-    this.totalLogSize.addAndGet(-firstWALEntry.getValue().logSize);
     moveLogFileToArchiveDir(firstWALEntry.getKey());
+    this.totalLogSize.addAndGet(-firstWALEntry.getValue().logSize);
     this.walFile2Props.remove(firstWALEntry.getKey());
   }
 

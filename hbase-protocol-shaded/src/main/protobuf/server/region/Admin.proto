@@ -357,7 +357,7 @@ service AdminService {
   rpc RollWALWriter(RollWALWriterRequest)
     returns(RollWALWriterResponse);
 
-  rpc archiveEarliestWAL(ArchiveWALRequest)
+  rpc ArchiveWAL(ArchiveWALRequest)
   returns(ArchiveWALResponse);
 
   rpc GetServerInfo(GetServerInfoRequest)

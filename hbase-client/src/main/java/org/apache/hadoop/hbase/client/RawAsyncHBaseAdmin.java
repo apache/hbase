@@ -2916,13 +2916,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> archiveEarliestWAL(ServerName serverName) {
+  public CompletableFuture<Void> archiveWAL(ServerName serverName) {
     return this
       .<Void> newAdminCaller()
       .action(
         (controller, stub) -> this.<ArchiveWALRequest, ArchiveWALResponse, Void> adminCall(
           controller, stub, RequestConverter.buildArchiveWALRequest(),
-          (s, c, req, done) -> s.archiveEarliestWAL(controller, req, done), resp -> null))
+          (s, c, req, done) -> s.archiveWAL(controller, req, done), resp -> null))
       .serverName(serverName).call();
   }
 

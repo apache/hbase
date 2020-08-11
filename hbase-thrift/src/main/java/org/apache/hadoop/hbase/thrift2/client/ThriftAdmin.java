@@ -794,8 +794,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void archiveEarliestWAL(ServerName serverName) {
-    throw new NotImplementedException("archiveEarliestWAL not supported in ThriftAdmin");
+  public void archiveWAL(ServerName serverName) {
+    throw new NotImplementedException("archiveWAL not supported in ThriftAdmin");
   }
 
   @Override

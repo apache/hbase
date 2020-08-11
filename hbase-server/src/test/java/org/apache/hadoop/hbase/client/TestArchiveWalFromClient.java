@@ -99,7 +99,7 @@ public class TestArchiveWalFromClient {
       // do not use admin.rollWALWriter here, since it is async call
       wal.rollWriter();
       assertEquals(1, wal.getNumRolledLogFiles());
-      admin.archiveEarliestWAL(rs.getServerName());
+      admin.archiveWAL(rs.getServerName());
       assertEquals(0, wal.getNumRolledLogFiles());
       // the region should be flushed after archive
       assertFalse(getRegionInfo().get(0).getMemStoreDataSize() > 0);

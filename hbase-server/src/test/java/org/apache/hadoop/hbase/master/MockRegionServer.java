@@ -518,7 +518,7 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public ArchiveWALResponse archiveEarliestWAL(RpcController controller,
+  public ArchiveWALResponse archiveWAL(RpcController controller,
     ArchiveWALRequest request) throws ServiceException {
     return null;
   }

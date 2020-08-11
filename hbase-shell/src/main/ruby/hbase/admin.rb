@@ -175,7 +175,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Requests a regionserver's WAL to archive earliest log file
     def wal_archive(server_name)
-      @admin.archiveEarliestWAL(ServerName.valueOf(server_name))
+      @admin.archiveWAL(ServerName.valueOf(server_name))
     end
 
     #----------------------------------------------------------------------------------------------

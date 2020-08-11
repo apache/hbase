@@ -1132,7 +1132,7 @@ public interface AsyncAdmin {
    *
    * @param serverName The servername of the region server.
    */
-  CompletableFuture<Void> archiveEarliestWAL(ServerName serverName);
+  CompletableFuture<Void> archiveWAL(ServerName serverName);
 
   /**
    * Clear compacting queues on a region server.

@@ -589,8 +589,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public void archiveEarliestWAL(ServerName serverName) throws IOException {
-    get(admin.archiveEarliestWAL(serverName));
+  public void archiveWAL(ServerName serverName) throws IOException {
+    get(admin.archiveWAL(serverName));
   }
 
   @Override

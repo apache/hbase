@@ -636,8 +636,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> archiveEarliestWAL(ServerName serverName) {
-    return wrap(rawAdmin.archiveEarliestWAL(serverName));
+  public CompletableFuture<Void> archiveWAL(ServerName serverName) {
+    return wrap(rawAdmin.archiveWAL(serverName));
   }
 
   @Override

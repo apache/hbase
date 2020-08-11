@@ -1328,7 +1328,7 @@ public interface Admin extends Abortable, Closeable {
    * @param serverName The servername of the regionserver.
    * @throws IOException if a remote or network exception occurs
    */
-  void archiveEarliestWAL(ServerName serverName) throws IOException;
+  void archiveWAL(ServerName serverName) throws IOException;
 
   /**
    * Helper that delegates to getClusterMetrics().getMasterCoprocessorNames().
