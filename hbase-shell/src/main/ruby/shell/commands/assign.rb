@@ -23,6 +23,7 @@ module Shell
       def help
         <<-EOF
 Assign a region. It could be executed only when region in expected state(CLOSED, OFFLINE).
+In addition, you can use "assigns" which supported by hbck2 to skip the state check.
 Use with caution. For experts only.
 Examples:
 

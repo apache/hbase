@@ -23,6 +23,7 @@ module Shell
       def help
         <<-EOF
 Unassign a region. It could be executed only when region in expected state(OPEN).
+In addition, you can use "unassigns" which supported by hbck2 to skip the state check.
 Pass 'true' to force the unassignment ('force' will clear
 all in-memory state in master before the reassign. If results in
 double assignment use hbck -fix to resolve. To be used by experts).
