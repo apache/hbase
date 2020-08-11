@@ -27,6 +27,7 @@ import com.lmax.disruptor.dsl.ProducerType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -65,7 +66,7 @@ public class NamedQueueRecorder {
     this.disruptor = new Disruptor<>(RingBufferEnvelope::new,
       getEventCount(eventCount),
       new ThreadFactoryBuilder().setNameFormat(hostingThreadName + ".slowlog.append-pool-%d")
-        .build(),
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
       ProducerType.MULTI,
       new BlockingWaitStrategy());
     this.disruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler());

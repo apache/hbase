@@ -139,7 +139,8 @@ public class MultiHConnection {
               HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
     ThreadPoolExecutor tpe =
       new ThreadPoolExecutor(maxThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
-        new ThreadFactoryBuilder().setNameFormat("MultiHConnection" + "-shared-pool-%d").build());
+        new ThreadFactoryBuilder().setNameFormat("MultiHConnection" + "-shared-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     tpe.allowCoreThreadTimeOut(true);
     this.batchPool = tpe;
   }

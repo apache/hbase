@@ -103,8 +103,8 @@ public class TestOpenTableInCoprocessor {
       long keepAliveTime = 60;
       ThreadPoolExecutor pool =
         new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
-          new SynchronousQueue<>(),
-          new ThreadFactoryBuilder().setNameFormat("hbase-table-pool-%d").build());
+          new SynchronousQueue<>(), new ThreadFactoryBuilder().setNameFormat("hbase-table-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       pool.allowCoreThreadTimeOut(true);
       return pool;
     }

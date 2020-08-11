@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.EntryBuffers;
 import org.apache.hadoop.hbase.wal.EntryBuffers.RegionEntryBuffer;
 import org.apache.hadoop.hbase.wal.OutputSink;
@@ -201,7 +202,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     ThreadPoolExecutor tpe =
       new ThreadPoolExecutor(maxThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
         new ThreadFactoryBuilder()
-          .setNameFormat(this.getClass().getSimpleName() + "-rpc-shared-pool-%d").build());
+          .setNameFormat(this.getClass().getSimpleName() + "-rpc-shared-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     tpe.allowCoreThreadTimeOut(true);
     return tpe;
   }

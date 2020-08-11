@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -867,7 +868,8 @@ public final class MobUtils {
     }
     final SynchronousQueue<Runnable> queue = new SynchronousQueue<>();
     ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, 60, TimeUnit.SECONDS, queue,
-      new ThreadFactoryBuilder().setNameFormat("MobCompactor-pool-%d").build(), (r, executor) -> {
+      new ThreadFactoryBuilder().setNameFormat("MobCompactor-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(), (r, executor) -> {
       try {
         // waiting for a thread to pick up instead of throwing exceptions.
         queue.put(r);

@@ -140,7 +140,8 @@ public class TestAsyncProcess {
   static class CountingThreadFactory implements ThreadFactory {
     final AtomicInteger nbThreads;
     ThreadFactory realFactory =
-      new ThreadFactoryBuilder().setNameFormat("test-TestAsyncProcess-pool-%d").build();
+      new ThreadFactoryBuilder().setNameFormat("test-TestAsyncProcess-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build();
     @Override
     public Thread newThread(Runnable r) {
       nbThreads.incrementAndGet();

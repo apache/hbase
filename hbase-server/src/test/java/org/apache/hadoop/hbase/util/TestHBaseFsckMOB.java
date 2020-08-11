@@ -68,7 +68,8 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
 
     tableExecutorService =
       new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS, new SynchronousQueue<>(),
-        new ThreadFactoryBuilder().setNameFormat("testhbck-pool-%d").build());
+        new ThreadFactoryBuilder().setNameFormat("testhbck-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 

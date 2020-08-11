@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PoolMap;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -91,12 +92,14 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   public static final Logger LOG = LoggerFactory.getLogger(AbstractRpcClient.class);
 
   protected static final HashedWheelTimer WHEEL_TIMER = new HashedWheelTimer(
-    new ThreadFactoryBuilder().setNameFormat("RpcClient-timer-pool-%d").build(), 10,
+    new ThreadFactoryBuilder().setNameFormat("RpcClient-timer-pool-%d")
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(), 10,
     TimeUnit.MILLISECONDS);
 
   private static final ScheduledExecutorService IDLE_CONN_SWEEPER = Executors
     .newScheduledThreadPool(1,
-      new ThreadFactoryBuilder().setNameFormat("Idle-Rpc-Conn-Sweeper-pool-%d").build());
+      new ThreadFactoryBuilder().setNameFormat("Idle-Rpc-Conn-Sweeper-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   protected boolean running = true; // if client runs
 

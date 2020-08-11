@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -1032,7 +1033,8 @@ public class TestMobCompactor {
     final SynchronousQueue<Runnable> queue = new SynchronousQueue<>();
     ThreadPoolExecutor pool =
       new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS, queue,
-        new ThreadFactoryBuilder().setNameFormat("MobFileCompactionChore-pool-%d").build(),
+        new ThreadFactoryBuilder().setNameFormat("MobFileCompactionChore-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
         (r, executor) -> {
           try {
             // waiting for a thread to pick up instead of throwing exceptions.

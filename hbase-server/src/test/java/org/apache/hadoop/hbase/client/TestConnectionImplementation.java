@@ -139,7 +139,8 @@ public class TestConnectionImplementation {
   public void testClusterConnection() throws IOException {
     ThreadPoolExecutor otherPool =
       new ThreadPoolExecutor(1, 1, 5, TimeUnit.SECONDS, new SynchronousQueue<>(),
-        new ThreadFactoryBuilder().setNameFormat("test-hcm-pool-%d").build());
+        new ThreadFactoryBuilder().setNameFormat("test-hcm-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     Connection con1 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     Connection con2 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), otherPool);

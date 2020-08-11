@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -96,7 +97,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   // It is ok to do it in a single thread because the Zookeeper ClientCnxn already serializes the
   // requests using a single while loop and hence there is no performance degradation.
   private final ExecutorService zkEventProcessor = Executors.newSingleThreadExecutor(
-    new ThreadFactoryBuilder().setNameFormat("zk-event-processor-pool-%d").build());
+    new ThreadFactoryBuilder().setNameFormat("zk-event-processor-pool-%d")
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   private final Configuration conf;
 
