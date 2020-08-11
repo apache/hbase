@@ -22,8 +22,8 @@ module Shell
     class Assign < Command
       def help
         <<-EOF
-Assign a region. Use with caution. If region already assigned,
-this command will do a force reassign. For experts only.
+Assign a region. It could be executed only when region in expected state(CLOSED, OFFLINE).
+Use with caution. For experts only.
 Examples:
 
   hbase> assign 'REGIONNAME'
