@@ -881,7 +881,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
     // get the earliest log of this WAL instance
     Map.Entry<Path, WalProps> firstWALEntry = this.walFile2Props.firstEntry();
-    // flush reigons if necessary
+    // flush regions if necessary
     Map<byte[], List<byte[]>> regions =
       this.sequenceIdAccounting.findLower(firstWALEntry.getValue().encodedName2HighestSequenceId);
     if (regions != null) {
