@@ -41,15 +41,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ReplicationSourceInterface {
   /**
    * Initializer for the source
-   * @param conf the configuration to use
-   * @param fs the file system to use
-   * @param manager the manager to use
+   *
+   * @param conf   the configuration to use
+   * @param fs     the file system to use
    * @param server the server for this region server
    */
-  void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-      String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-      MetricsSource metrics) throws IOException;
+  void init(Configuration conf, FileSystem fs, Path walDir, ReplicationSourceManager manager,
+    ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
+    String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
+    MetricsSource metrics) throws IOException;
 
   /**
    * Add a log to the list of logs to replicate
@@ -146,11 +146,6 @@ public interface ReplicationSourceInterface {
   ReplicationEndpoint getReplicationEndpoint();
 
   /**
-   * @return the replication source manager
-   */
-  ReplicationSourceManager getSourceManager();
-
-  /**
    * @return the wal file length provider
    */
   WALFileLengthProvider getWALFileLengthProvider();
@@ -196,14 +191,16 @@ public interface ReplicationSourceInterface {
   ReplicationQueueStorage getReplicationQueueStorage();
 
   /**
-   * Log the current position to storage. Also clean old logs from the replication queue.
-   * Use to bypass the default call to
-   * {@link ReplicationSourceManager#logPositionAndCleanOldLogs(ReplicationSourceInterface,
-   * WALEntryBatch)} whem implementation does not need to persist state to backing storage.
-   * @param entryBatch the wal entry batch we just shipped
-   * @return The instance of queueStorage used by this ReplicationSource.
+   * Set the current position of WAL to {@link ReplicationQueueStorage}
+   * @param entryBatch a batch of WAL entries to replicate
    */
-  default void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
-    getSourceManager().logPositionAndCleanOldLogs(this, entryBatch);
-  }
+  void setWALPosition(WALEntryBatch entryBatch);
+
+  /**
+   * Cleans a WAL and all older WALs from replication queue. Called when we are sure that a WAL is
+   * closed and has no more entries.
+   * @param walName the name of WAL
+   * @param inclusive whether we should also remove the given WAL
+   */
+  void cleanOldWALs(String walName, boolean inclusive);
 }

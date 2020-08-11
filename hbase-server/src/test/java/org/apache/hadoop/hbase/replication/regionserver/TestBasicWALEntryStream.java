@@ -265,21 +265,25 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
   }
 
   private ReplicationSource mockReplicationSource(boolean recovered, Configuration conf) {
-    ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
-    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
-    when(mockSourceManager.getTotalBufferLimit())
-      .thenReturn((long) HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
     Server mockServer = Mockito.mock(Server.class);
     ReplicationSource source = Mockito.mock(ReplicationSource.class);
-    when(source.getSourceManager()).thenReturn(mockSourceManager);
     when(source.getSourceMetrics()).thenReturn(new MetricsSource("1"));
     when(source.getWALFileLengthProvider()).thenReturn(log);
     when(source.getServer()).thenReturn(mockServer);
     when(source.isRecovered()).thenReturn(recovered);
+    source.manager = mockReplicationSourceManager();
+    return source;
+  }
+
+  private ReplicationSourceManager mockReplicationSourceManager() {
+    ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
     MetricsReplicationGlobalSourceSource globalMetrics =
       Mockito.mock(MetricsReplicationGlobalSourceSource.class);
     when(mockSourceManager.getGlobalMetrics()).thenReturn(globalMetrics);
-    return source;
+    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
+    when(mockSourceManager.getTotalBufferLimit())
+      .thenReturn((long) HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
+    return mockSourceManager;
   }
 
   private ReplicationSourceWALReader createReader(boolean recovered, Configuration conf) {
