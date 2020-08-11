@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -44,15 +45,18 @@ public class RecoveredReplicationSource extends ReplicationSource {
 
   private static final Logger LOG = LoggerFactory.getLogger(RecoveredReplicationSource.class);
 
+  private Path walDir;
+
   private String actualPeerId;
 
   @Override
-  public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-      String peerClusterZnode, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-      MetricsSource metrics) throws IOException {
-    super.init(conf, fs, manager, queueStorage, replicationPeer, server, peerClusterZnode,
+  public void init(Configuration conf, FileSystem fs, Path walDir, ReplicationSourceManager manager,
+    ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
+    String peerClusterZnode, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
+    MetricsSource metrics) throws IOException {
+    super.init(conf, fs, walDir, manager, queueStorage, replicationPeer, server, peerClusterZnode,
       clusterId, walFileLengthProvider, metrics);
+    this.walDir = walDir;
     this.actualPeerId = this.replicationQueueInfo.getPeerId();
   }
 
@@ -93,7 +97,7 @@ public class RecoveredReplicationSource extends ReplicationSource {
               deadRsDirectory.suffix(AbstractFSWALProvider.SPLITTING_EXT), path.getName()) };
           for (Path possibleLogLocation : locs) {
             LOG.info("Possible location " + possibleLogLocation.toUri().toString());
-            if (manager.getFs().exists(possibleLogLocation)) {
+            if (this.fs.exists(possibleLogLocation)) {
               // We found the right new location
               LOG.info("Log " + path + " still exists at " + possibleLogLocation);
               newPaths.add(possibleLogLocation);
@@ -126,7 +130,7 @@ public class RecoveredReplicationSource extends ReplicationSource {
   // N.B. the ReplicationSyncUp tool sets the manager.getWALDir to the root of the wal
   // area rather than to the wal area for a particular region server.
   private Path getReplSyncUpPath(Path path) throws IOException {
-    FileStatus[] rss = fs.listStatus(manager.getLogDir());
+    FileStatus[] rss = fs.listStatus(walDir);
     for (FileStatus rs : rss) {
       Path p = rs.getPath();
       FileStatus[] logs = fs.listStatus(p);

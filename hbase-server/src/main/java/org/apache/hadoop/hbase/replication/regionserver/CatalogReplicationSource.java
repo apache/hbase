@@ -35,7 +35,18 @@ class CatalogReplicationSource extends ReplicationSource {
   }
 
   @Override
-  public void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
+  public void setWALPosition(WALEntryBatch entryBatch) {
+    // Noop. This CatalogReplicationSource implementation does not persist state to backing storage
+    // nor does it keep its WALs in a general map up in ReplicationSourceManager --
+    // CatalogReplicationSource is used by the Catalog Read Replica feature which resets everytime
+    // the WAL source process crashes. Skip calling through to the default implementation.
+    // See "4.1 Skip maintaining zookeeper replication queue (offsets/WALs)" in the
+    // design doc attached to HBASE-18070 'Enable memstore replication for meta replica for detail'
+    // for background on why no need to keep WAL state.
+  }
+
+  @Override
+  public void cleanOldWALs(String log, boolean inclusive) {
     // Noop. This CatalogReplicationSource implementation does not persist state to backing storage
     // nor does it keep its WALs in a general map up in ReplicationSourceManager --
     // CatalogReplicationSource is used by the Catalog Read Replica feature which resets everytime
