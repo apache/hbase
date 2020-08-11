@@ -240,12 +240,6 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   private void cleanUpHFileRefs(WALEdit edit) throws IOException {
-    String peerId = source.getPeerId();
-    if (peerId.contains("-")) {
-      // peerClusterZnode will be in the form peerId + "-" + rsZNode.
-      // A peerId will not have "-" in its name, see HBASE-11394
-      peerId = peerId.split("-")[0];
-    }
     List<Cell> cells = edit.getCells();
     int totalCells = cells.size();
     for (int i = 0; i < totalCells; i++) {
@@ -256,7 +250,7 @@ public class ReplicationSourceShipper extends Thread {
         int totalStores = stores.size();
         for (int j = 0; j < totalStores; j++) {
           List<String> storeFileList = stores.get(j).getStoreFileList();
-          source.getSourceManager().cleanUpHFileRefs(peerId, storeFileList);
+          source.cleanUpHFileRefs(storeFileList);
           source.getSourceMetrics().decrSizeOfHFileRefsQueue(storeFileList.size());
         }
       }
@@ -268,10 +262,11 @@ public class ReplicationSourceShipper extends Thread {
     // if end of file is true, then the logPositionAndCleanOldLogs method will remove the file
     // record on zk, so let's call it. The last wal position maybe zero if end of file is true and
     // there is no entry in the batch. It is OK because that the queue storage will ignore the zero
-    // position and the file will be removed soon in cleanOldLogs.
-    if (batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath) ||
-      batch.getLastWalPosition() != currentPosition) {
-      source.getSourceManager().logPositionAndCleanOldLogs(source, batch);
+    // position and the file will be removed soon in cleanOldWALs.
+    if (batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath)
+      || batch.getLastWalPosition() != currentPosition) {
+      source.setWALPosition(batch);
+      source.cleanOldWALs(batch.getLastWalPath().getName(), batch.isEndOfFile());
       updated = true;
     }
     // if end of file is true, then we can just skip to the next file in queue.
