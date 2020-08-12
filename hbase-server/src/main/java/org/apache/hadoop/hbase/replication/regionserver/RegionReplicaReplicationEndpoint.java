@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.wal.OutputSink;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -198,13 +199,11 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         new LinkedBlockingQueue<>(maxThreads *
             conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
               HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
-    ThreadPoolExecutor tpe = new ThreadPoolExecutor(
-      maxThreads,
-      maxThreads,
-      keepAliveTime,
-      TimeUnit.SECONDS,
-      workQueue,
-      Threads.newDaemonThreadFactory(this.getClass().getSimpleName() + "-rpc-shared-"));
+    ThreadPoolExecutor tpe =
+      new ThreadPoolExecutor(maxThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
+        new ThreadFactoryBuilder()
+          .setNameFormat(this.getClass().getSimpleName() + "-rpc-shared-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     tpe.allowCoreThreadTimeOut(true);
     return tpe;
   }

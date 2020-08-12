@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -82,7 +83,9 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    GROUP = new NioEventLoopGroup(1, Threads.newDaemonThreadFactory("TestAsyncFSWAL"));
+    GROUP = new NioEventLoopGroup(1,
+      new ThreadFactoryBuilder().setNameFormat("TestAsyncFSWAL-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     CHANNEL_CLASS = NioSocketChannel.class;
     AbstractTestFSWAL.setUpBeforeClass();
   }

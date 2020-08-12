@@ -33,7 +33,6 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -93,6 +92,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -1031,18 +1031,16 @@ public class TestMobCompactor {
     int maxThreads = 10;
     long keepAliveTime = 60;
     final SynchronousQueue<Runnable> queue = new SynchronousQueue<>();
-    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads,
-        keepAliveTime, TimeUnit.SECONDS, queue,
-        Threads.newDaemonThreadFactory("MobFileCompactionChore"),
-        new RejectedExecutionHandler() {
-          @Override
-          public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-            try {
-              // waiting for a thread to pick up instead of throwing exceptions.
-              queue.put(r);
-            } catch (InterruptedException e) {
-              throw new RejectedExecutionException(e);
-            }
+    ThreadPoolExecutor pool =
+      new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS, queue,
+        new ThreadFactoryBuilder().setNameFormat("MobFileCompactionChore-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+        (r, executor) -> {
+          try {
+            // waiting for a thread to pick up instead of throwing exceptions.
+            queue.put(r);
+          } catch (InterruptedException e) {
+            throw new RejectedExecutionException(e);
           }
         });
     pool.allowCoreThreadTimeOut(true);

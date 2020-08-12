@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -136,10 +137,10 @@ public class TestConnectionImplementation {
 
   @Test
   public void testClusterConnection() throws IOException {
-    ThreadPoolExecutor otherPool = new ThreadPoolExecutor(1, 1,
-        5, TimeUnit.SECONDS,
-        new SynchronousQueue<>(),
-        Threads.newDaemonThreadFactory("test-hcm"));
+    ThreadPoolExecutor otherPool =
+      new ThreadPoolExecutor(1, 1, 5, TimeUnit.SECONDS, new SynchronousQueue<>(),
+        new ThreadFactoryBuilder().setNameFormat("test-hcm-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     Connection con1 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     Connection con2 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), otherPool);

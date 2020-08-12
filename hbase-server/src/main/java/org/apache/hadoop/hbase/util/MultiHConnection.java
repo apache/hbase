@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,8 +138,9 @@ public class MultiHConnection {
             * conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
               HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
     ThreadPoolExecutor tpe =
-        new ThreadPoolExecutor(maxThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
-            Threads.newDaemonThreadFactory("MultiHConnection" + "-shared-"));
+      new ThreadPoolExecutor(maxThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
+        new ThreadFactoryBuilder().setNameFormat("MultiHConnection" + "-shared-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     tpe.allowCoreThreadTimeOut(true);
     this.batchPool = tpe;
   }

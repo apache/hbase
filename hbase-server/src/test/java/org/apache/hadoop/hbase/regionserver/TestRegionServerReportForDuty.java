@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Layout;
 import org.apache.log4j.PatternLayout;
@@ -232,8 +233,9 @@ public class TestRegionServerReportForDuty {
    */
   @Test
   public void testReportForDutyWithRSRpcRetry() throws Exception {
-    ScheduledThreadPoolExecutor scheduledThreadPoolExecutor =
-        new ScheduledThreadPoolExecutor(1, Threads.newDaemonThreadFactory("RSDelayedStart"));
+    ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1,
+      new ThreadFactoryBuilder().setNameFormat("RSDelayedStart-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     // Start a master and wait for it to become the active/primary master.
     // Use a random unique port
