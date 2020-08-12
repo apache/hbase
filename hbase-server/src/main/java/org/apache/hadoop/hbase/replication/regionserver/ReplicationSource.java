@@ -602,8 +602,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
         }
       } else {
         //If worker is already stopped but there was still entries batched,
-        //wee need to clear buffer used for non processed entries
-        worker.entryReader.clearWALEntryBatch();
+        //we need to clear buffer used for non processed entries
+        worker.clearWALEntryBatch();
       }
     }
 

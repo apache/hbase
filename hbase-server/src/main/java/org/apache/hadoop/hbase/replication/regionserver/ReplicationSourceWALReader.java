@@ -310,16 +310,6 @@ class ReplicationSourceWALReader extends Thread {
     return entryBatchQueue.poll(timeout, TimeUnit.MILLISECONDS);
   }
 
-  public void clearWALEntryBatch() {
-    entryBatchQueue.forEach(w -> {
-      entryBatchQueue.remove(w);
-      w.getWalEntries().forEach(e -> {
-        long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(e);
-        totalBufferUsed.addAndGet(-entrySizeExcludeBulkLoad);
-      });
-    });
-  }
-
   private long getEntrySizeIncludeBulkLoad(Entry entry) {
     WALEdit edit = entry.getEdit();
     return  getEntrySizeExcludeBulkLoad(entry) + sizeOfStoreFilesIncludeBulkLoad(edit);

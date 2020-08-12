@@ -23,6 +23,8 @@ import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetri
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.atomic.LongAccumulator;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -323,5 +325,40 @@ public class ReplicationSourceShipper extends Thread {
 
   public boolean isFinished() {
     return state == WorkerState.FINISHED;
+  }
+
+  /**
+   * Attempts to properly update <code>ReplicationSourceManager.totalBufferUser</code>,
+   * in case there were unprocessed entries batched by the reader to the shipper,
+   * but the shipper didn't manage to ship those because the replication source is being terminated.
+   * In that case, it iterates through the batched entries and decrease the pending
+   * entries size from <code>ReplicationSourceManager.totalBufferUser</code>
+   * <p/>
+   * <b>NOTE</b> This method should be only called upon replication source termination.
+   * It blocks waiting for both shipper and reader threads termination,
+   * to make sure no race conditions
+   * when updating <code>ReplicationSourceManager.totalBufferUser</code>.
+   */
+  void clearWALEntryBatch() {
+    while(this.isAlive() || this.entryReader.isAlive()){
+      try {
+        // Wait worker to stop
+        Thread.sleep(this.sleepForRetries);
+      } catch (InterruptedException e) {
+        LOG.info("{} Interrupted while waiting {} to stop on clearWALEntryBatch",
+          this.source.getPeerId(), this.getName());
+        Thread.currentThread().interrupt();
+      }
+    }
+    LongAccumulator totalToDecrement = new LongAccumulator((a,b) -> a + b, 0);
+    entryReader.entryBatchQueue.forEach(w -> {
+      entryReader.entryBatchQueue.remove(w);
+      w.getWalEntries().forEach(e -> {
+        long entrySizeExcludeBulkLoad = entryReader.getEntrySizeExcludeBulkLoad(e);
+        totalToDecrement.accumulate(entrySizeExcludeBulkLoad);
+      });
+    });
+
+    source.getSourceManager().getTotalBufferUsed().addAndGet(-totalToDecrement.longValue());
   }
 }
