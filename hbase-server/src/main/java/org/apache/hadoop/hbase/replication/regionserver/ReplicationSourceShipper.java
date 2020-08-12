@@ -342,7 +342,7 @@ public class ReplicationSourceShipper extends Thread {
   void clearWALEntryBatch() {
     while(this.isAlive() || this.entryReader.isAlive()){
       try {
-        // Wait worker to stop
+        // Wait both shipper and reader threads to stop
         Thread.sleep(this.sleepForRetries);
       } catch (InterruptedException e) {
         LOG.info("{} Interrupted while waiting {} to stop on clearWALEntryBatch",
