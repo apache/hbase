@@ -290,7 +290,22 @@ public class ReplicationSourceShipper extends Thread {
   public void startup(UncaughtExceptionHandler handler) {
     String name = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this,
-      name + ".replicationSource.shipper" + walGroupId + "," + source.getQueueId(), handler);
+      name + ".replicationSource.shipper" + walGroupId + "," + source.getQueueId(),
+      (t,e) -> {
+        handler.uncaughtException(t, e);
+        while (true) {
+          try {
+            LOG.info("Refreshing replication sources now due " +
+              "to previous error on shipper thread.");
+            this.source.getSourceManager().refreshSources(this.source.getPeerId());
+            break;
+          } catch (IOException e1) {
+            LOG.error("Replication sources refresh failed.", e1);
+            sleepForRetries("Sleeping before try refreshing sources again",
+              sleepForRetries, 1, maxRetriesMultiplier);
+          }
+        }
+      });
   }
 
   Path getCurrentPath() {

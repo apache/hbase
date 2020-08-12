@@ -35,6 +35,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import org.apache.commons.lang3.StringUtils;
@@ -119,6 +121,13 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private int logQueueWarnThreshold;
   // ReplicationEndpoint which will handle the actual replication
   private volatile ReplicationEndpoint replicationEndpoint;
+
+  private AtomicBoolean retryStartup = new AtomicBoolean(false);
+
+  private AtomicBoolean startupOngoing = new AtomicBoolean(false);
+
+  private boolean abortOnError;
+
 
   /**
    * A filter (or a chain of filters) for WAL entries; filters out edits.
@@ -217,6 +226,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
     this.totalBufferUsed = manager.getTotalBufferUsed();
     this.walFileLengthProvider = walFileLengthProvider;
+
+    this.abortOnError = this.conf.getBoolean("replication.source.regionserver.abort",
+      true);
+
     LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
       replicationPeer.getId(), this.currentBandwidth);
   }
@@ -373,7 +386,21 @@ public class ReplicationSource implements ReplicationSourceInterface {
         Threads.setDaemonThreadRunning(
             walReader, Thread.currentThread().getName()
                 + ".replicationSource.wal-reader." + walGroupId + "," + queueId,
-            this::uncaughtException);
+                (t,e) -> {
+                  this.uncaughtException(t,e);
+                  while (true) {
+                    try {
+                      LOG.info("Refreshing replication sources now due " +
+                        "to previous error on reader thread.");
+                      this.manager.refreshSources(this.getPeerId());
+                      break;
+                    } catch (IOException e1) {
+                      LOG.error("Replication sources refresh failed.", e1);
+                      sleepForRetries("Sleeping before try refreshing sources again",
+                        maxRetriesMultiplier);
+                    }
+                  }
+                });
         worker.setWALReader(walReader);
         worker.startup(this::uncaughtException);
         return worker;
@@ -454,7 +481,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
     RSRpcServices.exitIfOOME(e);
     LOG.error("Unexpected exception in {} currentPath={}",
       t.getName(), getCurrentPath(), e);
-    server.abort("Unexpected exception in " + t.getName(), e);
+    if(abortOnError){
+      server.abort("Unexpected exception in " + t.getName(), e);
+    }
   }
 
   @Override
@@ -549,6 +578,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if (!this.isSourceActive()) {
+      this.startupOngoing.set(false);
       return;
     }
 
@@ -571,6 +601,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if(!this.isSourceActive()) {
+      this.startupOngoing.set(false);
       return;
     }
     LOG.info("{} Source: {}, is now replicating from cluster: {}; to peer cluster: {};",
@@ -583,16 +614,27 @@ public class ReplicationSource implements ReplicationSourceInterface {
       PriorityBlockingQueue<Path> queue = entry.getValue();
       tryStartNewShipper(walGroupId, queue);
     }
+    this.startupOngoing.set(false);
   }
 
   @Override
   public void startup() {
     // mark we are running now
     this.sourceRunning = true;
-    initThread = new Thread(this::initialize);
-    Threads.setDaemonThreadRunning(initThread,
-      Thread.currentThread().getName() + ".replicationSource," + this.queueId,
-      this::uncaughtException);
+    this.retryStartup.set(true);
+    do {
+      if(retryStartup.get()) {
+        retryStartup.set(false);
+        startupOngoing.set(true);
+        initThread = new Thread(this::initialize);
+        Threads.setDaemonThreadRunning(initThread,
+          Thread.currentThread().getName() + ".replicationSource," + this.queueId,
+          (t,e) -> {
+          uncaughtException(t, e);
+          retryStartup.set(true);
+        });
+      }
+    } while (startupOngoing.get());
   }
 
   @Override
