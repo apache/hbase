@@ -27,7 +27,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -230,27 +229,8 @@ public class PoolMap<K, V> implements Map<K, V> {
   public enum PoolType {
     ThreadLocal, RoundRobin;
 
-    public static PoolType valueOf(String poolTypeName,
-        PoolType defaultPoolType, PoolType... allowedPoolTypes) {
+    public static PoolType valueOf(String poolTypeName, PoolType defaultPoolType) {
       PoolType poolType = PoolType.fuzzyMatch(poolTypeName);
-      if (poolType != null) {
-        boolean allowedType = false;
-        if (poolType.equals(defaultPoolType)) {
-          allowedType = true;
-        } else {
-          if (allowedPoolTypes != null) {
-            for (PoolType allowedPoolType : allowedPoolTypes) {
-              if (poolType.equals(allowedPoolType)) {
-                allowedType = true;
-                break;
-              }
-            }
-          }
-        }
-        if (!allowedType) {
-          poolType = null;
-        }
-      }
       return (poolType != null) ? poolType : defaultPoolType;
     }
 
