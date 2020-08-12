@@ -37,8 +37,8 @@ public class TestReplicationKillMasterRSCompressedWithMultipleWAL extends
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    conf1.set(WALFactory.WAL_PROVIDER, "multiwal");
-    conf1.set(RegionGroupingProvider.DELEGATE_PROVIDER, "filesystem");
+    CONF1.set(WALFactory.WAL_PROVIDER, "multiwal");
+    CONF1.set(RegionGroupingProvider.DELEGATE_PROVIDER, "filesystem");
     TestReplicationKillMasterRSCompressed.setUpBeforeClass();
   }
 }

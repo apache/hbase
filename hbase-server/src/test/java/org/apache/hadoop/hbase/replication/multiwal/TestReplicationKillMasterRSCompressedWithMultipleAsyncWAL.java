@@ -37,8 +37,8 @@ public class TestReplicationKillMasterRSCompressedWithMultipleAsyncWAL extends
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    conf1.set(WALFactory.WAL_PROVIDER, "multiwal");
-    conf1.set(RegionGroupingProvider.DELEGATE_PROVIDER, "asyncfs");
+    CONF1.set(WALFactory.WAL_PROVIDER, "multiwal");
+    CONF1.set(RegionGroupingProvider.DELEGATE_PROVIDER, "asyncfs");
     TestReplicationKillMasterRSCompressed.setUpBeforeClass();
   }
 }

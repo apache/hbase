@@ -63,14 +63,14 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
   public void setUpBase() throws Exception {
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
-    for (JVMClusterUtil.RegionServerThread r : utility1.getHBaseCluster()
+    for (JVMClusterUtil.RegionServerThread r : UTIL1.getHBaseCluster()
         .getRegionServerThreads()) {
-      utility1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
+      UTIL1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
     // Initialize the peer after wal rolling, so that we will abandon the stuck WALs.
     super.setUpBase();
-    int rowCount = utility1.countRows(tableName);
-    utility1.deleteTableData(tableName);
+    int rowCount = UTIL1.countRows(tableName);
+    UTIL1.deleteTableData(tableName);
     // truncating the table will send one Delete per row to the slave cluster
     // in an async fashion, which is why we cannot just call deleteTableData on
     // utility2 since late writes could make it to the slave in some way.
@@ -101,7 +101,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
     // when replicate at sink side, it'll apply to rs group by table name, so the WAL of test table
     // may apply first, and then test_dropped table, and we will believe that the replication is not
     // got stuck (HBASE-20475).
-    conf1.setInt(RpcServer.MAX_REQUEST_SIZE, 10 * 1024);
+    CONF1.setInt(RpcServer.MAX_REQUEST_SIZE, 10 * 1024);
   }
 
   @Test
@@ -121,11 +121,11 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
   @Test
   public void testEditsDroppedWithDroppedTableNS() throws Exception {
     // also try with a namespace
-    Connection connection1 = ConnectionFactory.createConnection(conf1);
+    Connection connection1 = ConnectionFactory.createConnection(CONF1);
     try (Admin admin1 = connection1.getAdmin()) {
       admin1.createNamespace(NamespaceDescriptor.create("NS").build());
     }
-    Connection connection2 = ConnectionFactory.createConnection(conf2);
+    Connection connection2 = ConnectionFactory.createConnection(CONF2);
     try (Admin admin2 = connection2.getAdmin()) {
       admin2.createNamespace(NamespaceDescriptor.create("NS").build());
     }
@@ -143,13 +143,13 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
   }
 
   private void testEditsBehindDroppedTable(boolean allowProceeding, String tName) throws Exception {
-    conf1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, allowProceeding);
-    conf1.setInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY, 1);
+    CONF1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, allowProceeding);
+    CONF1.setInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY, 1);
 
     // make sure we have a single region server only, so that all
     // edits for all tables go there
-    utility1.shutdownMiniHBaseCluster();
-    utility1.startMiniHBaseCluster();
+    UTIL1.shutdownMiniHBaseCluster();
+    UTIL1.startMiniHBaseCluster();
 
     TableName tablename = TableName.valueOf(tName);
     byte[] familyName = Bytes.toBytes("fam");
@@ -161,16 +161,16 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
                 .newBuilder(familyName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
             .build();
 
-    Connection connection1 = ConnectionFactory.createConnection(conf1);
-    Connection connection2 = ConnectionFactory.createConnection(conf2);
+    Connection connection1 = ConnectionFactory.createConnection(CONF1);
+    Connection connection2 = ConnectionFactory.createConnection(CONF2);
     try (Admin admin1 = connection1.getAdmin()) {
       admin1.createTable(table);
     }
     try (Admin admin2 = connection2.getAdmin()) {
       admin2.createTable(table);
     }
-    utility1.waitUntilAllRegionsAssigned(tablename);
-    utility2.waitUntilAllRegionsAssigned(tablename);
+    UTIL1.waitUntilAllRegionsAssigned(tablename);
+    UTIL2.waitUntilAllRegionsAssigned(tablename);
 
     // now suspend replication
     try (Admin admin1 = connection1.getAdmin()) {
@@ -213,18 +213,18 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
       verifyReplicationStuck();
     }
     // just to be safe
-    conf1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
+    CONF1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
   }
 
   @Test
   public void testEditsBehindDroppedTableTiming() throws Exception {
-    conf1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, true);
-    conf1.setInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY, 1);
+    CONF1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, true);
+    CONF1.setInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY, 1);
 
     // make sure we have a single region server only, so that all
     // edits for all tables go there
-    utility1.shutdownMiniHBaseCluster();
-    utility1.startMiniHBaseCluster();
+    UTIL1.shutdownMiniHBaseCluster();
+    UTIL1.startMiniHBaseCluster();
 
     TableName tablename = TableName.valueOf("testdroppedtimed");
     byte[] familyName = Bytes.toBytes("fam");
@@ -236,16 +236,16 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
                 .newBuilder(familyName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
             .build();
 
-    Connection connection1 = ConnectionFactory.createConnection(conf1);
-    Connection connection2 = ConnectionFactory.createConnection(conf2);
+    Connection connection1 = ConnectionFactory.createConnection(CONF1);
+    Connection connection2 = ConnectionFactory.createConnection(CONF2);
     try (Admin admin1 = connection1.getAdmin()) {
       admin1.createTable(table);
     }
     try (Admin admin2 = connection2.getAdmin()) {
       admin2.createTable(table);
     }
-    utility1.waitUntilAllRegionsAssigned(tablename);
-    utility2.waitUntilAllRegionsAssigned(tablename);
+    UTIL1.waitUntilAllRegionsAssigned(tablename);
+    UTIL2.waitUntilAllRegionsAssigned(tablename);
 
     // now suspend replication
     try (Admin admin1 = connection1.getAdmin()) {
@@ -290,7 +290,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
       verifyReplicationProceeded();
     }
     // just to be safe
-    conf1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
+    CONF1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
   }
 
   private boolean peerHasAllNormalRows() throws IOException {
