@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -679,7 +680,8 @@ public class SplitTableRegionProcedure
     LOG.info("pid=" + getProcId() + " splitting " + nbFiles + " storefiles, region=" +
         getParentRegion().getShortNameToLog() + ", threads=" + maxThreads);
     final ExecutorService threadPool = Executors.newFixedThreadPool(maxThreads,
-      Threads.newDaemonThreadFactory("StoreFileSplitter-%1$d"));
+      new ThreadFactoryBuilder().setNameFormat("StoreFileSplitter-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     final List<Future<Pair<Path, Path>>> futures = new ArrayList<Future<Pair<Path, Path>>>(nbFiles);
 
     // Split each store file.

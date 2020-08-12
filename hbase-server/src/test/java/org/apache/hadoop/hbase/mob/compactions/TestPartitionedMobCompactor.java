@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -76,6 +75,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -904,20 +904,19 @@ public class TestPartitionedMobCompactor {
     int maxThreads = 10;
     long keepAliveTime = 60;
     final SynchronousQueue<Runnable> queue = new SynchronousQueue<>();
-    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime,
-      TimeUnit.SECONDS, queue, Threads.newDaemonThreadFactory("MobFileCompactionChore"),
-      new RejectedExecutionHandler() {
-        @Override
-        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+    ThreadPoolExecutor pool =
+      new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS, queue,
+        new ThreadFactoryBuilder().setNameFormat("MobFileCompactionChore-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+        (r, executor) -> {
           try {
             // waiting for a thread to pick up instead of throwing exceptions.
             queue.put(r);
           } catch (InterruptedException e) {
             throw new RejectedExecutionException(e);
           }
-        }
-      });
-    ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
+        });
+    pool.allowCoreThreadTimeOut(true);
     return pool;
   }
 

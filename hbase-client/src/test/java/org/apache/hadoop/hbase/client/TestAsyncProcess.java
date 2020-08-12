@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -138,7 +139,9 @@ public class TestAsyncProcess {
 
   static class CountingThreadFactory implements ThreadFactory {
     final AtomicInteger nbThreads;
-    ThreadFactory realFactory =  Threads.newDaemonThreadFactory("test-TestAsyncProcess");
+    ThreadFactory realFactory =
+      new ThreadFactoryBuilder().setNameFormat("test-TestAsyncProcess-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build();
     @Override
     public Thread newThread(Runnable r) {
       nbThreads.incrementAndGet();

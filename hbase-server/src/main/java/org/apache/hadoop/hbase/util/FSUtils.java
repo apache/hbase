@@ -84,6 +84,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1637,7 +1638,8 @@ public final class FSUtils {
 
     // run in multiple threads
     final ExecutorService tpe = Executors.newFixedThreadPool(threadPoolSize,
-      Threads.newDaemonThreadFactory("FSRegionQuery"));
+      new ThreadFactoryBuilder().setNameFormat("FSRegionQuery-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     try {
       // ignore all file status items that are not of interest
       for (FileStatus regionStatus : statusList) {

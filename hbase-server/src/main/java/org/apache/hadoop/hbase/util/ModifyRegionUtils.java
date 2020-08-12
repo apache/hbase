@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -232,7 +233,8 @@ public abstract class ModifyRegionUtils {
         "hbase.hregion.open.and.init.threads.max", 16));
     ThreadPoolExecutor regionOpenAndInitThreadPool = Threads.
       getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-        Threads.newDaemonThreadFactory(threadNamePrefix));
+        new ThreadFactoryBuilder().setNameFormat(threadNamePrefix + "-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     return regionOpenAndInitThreadPool;
   }
 }
