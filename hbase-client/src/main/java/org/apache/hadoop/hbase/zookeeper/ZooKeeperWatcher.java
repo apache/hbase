@@ -824,11 +824,12 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
    */
   @Override
   public void close() {
-    zkEventProcessor.shutdownNow();
     try {
       recoverableZooKeeper.close();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+    } finally {
+      zkEventProcessor.shutdownNow();
     }
   }
 
