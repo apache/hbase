@@ -26,7 +26,7 @@ Unassign a region. It could be executed only when region in expected state(OPEN)
 Pass 'true' to force the unassignment ('force' will clear all in-memory state in
 master before the reassign. If results in double assignment use hbck -fix to resolve.
 To be used by experts).
-In addition, you can use "unassigns" which supported by HBCK2 to skip the state check.
+In addition, you can use "unassigns" command available on HBCK2 tool to skip the state check.
 (For more info on HBCK2: https://github.com/apache/hbase-operator-tools/blob/master/hbase-hbck2/README.md)
 Use with caution. For experts only.
 Examples:

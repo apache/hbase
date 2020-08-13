@@ -23,7 +23,7 @@ module Shell
       def help
         <<-EOF
 Assign a region. It could be executed only when region in expected state(CLOSED, OFFLINE).
-In addition, you can use "assigns" which supported by HBCK2 to skip the state check.
+In addition, you can use "assigns" command available on HBCK2 tool to skip the state check.
 (For more info on HBCK2: https://github.com/apache/hbase-operator-tools/blob/master/hbase-hbck2/README.md)
 Use with caution. For experts only.
 Examples:
