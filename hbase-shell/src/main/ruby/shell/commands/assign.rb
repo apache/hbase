@@ -22,8 +22,10 @@ module Shell
     class Assign < Command
       def help
         <<-EOF
-Assign a region. Use with caution. If region already assigned,
-this command will do a force reassign. For experts only.
+Assign a region. It could be executed only when region in expected state(CLOSED, OFFLINE).
+In addition, you can use "assigns" command available on HBCK2 tool to skip the state check.
+(For more info on HBCK2: https://github.com/apache/hbase-operator-tools/blob/master/hbase-hbck2/README.md)
+Use with caution. For experts only.
 Examples:
 
   hbase> assign 'REGIONNAME'
