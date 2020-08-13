@@ -66,7 +66,6 @@ public class TestReplicationStatus extends TestReplicationBase {
    * create a ClusterStatus instance 'status' from HBaseAdmin
    * test : status.getLoad(server).getReplicationLoadSourceList()
    * test : status.getLoad(server).getReplicationLoadSink()
-   * * @throws Exception
    */
   @Test
   public void testReplicationStatus() throws Exception {
