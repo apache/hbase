@@ -1072,14 +1072,12 @@ public final class RequestConverter {
    * Creates a protocol buffer UnassignRegionRequest
    *
    * @param regionName
-   * @param force
    * @return an UnassignRegionRequest
    */
   public static UnassignRegionRequest buildUnassignRegionRequest(
-      final byte [] regionName, final boolean force) {
+      final byte [] regionName) {
     UnassignRegionRequest.Builder builder = UnassignRegionRequest.newBuilder();
     builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME,regionName));
-    builder.setForce(force);
     return builder.build();
   }
 

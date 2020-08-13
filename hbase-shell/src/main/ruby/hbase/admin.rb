@@ -537,8 +537,8 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Unassign a region
-    def unassign(region_name, force)
-      @admin.unassign(region_name.to_java_bytes, java.lang.Boolean.valueOf(force))
+    def unassign(region_name)
+      @admin.unassign(region_name.to_java_bytes)
     end
 
     #----------------------------------------------------------------------------------------------

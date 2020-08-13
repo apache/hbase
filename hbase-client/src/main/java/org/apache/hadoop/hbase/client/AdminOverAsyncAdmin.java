@@ -360,8 +360,13 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public void unassign(byte[] regionName) throws IOException {
+    get(admin.unassign(regionName));
+  }
+
+  @Override
   public void unassign(byte[] regionName, boolean force) throws IOException {
-    get(admin.unassign(regionName, force));
+    unassign(regionName);
   }
 
   @Override
