@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.token;
 
 import static org.junit.Assert.assertArrayEquals;
+
 import java.util.Arrays;
 import java.util.Collection;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.ipc.NettyRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
@@ -103,10 +105,8 @@ public class TestDelegationTokenWithEncryption extends SecureTestCluster {
     byte[] value = Bytes.toBytes("data");
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
       Admin admin = conn.getAdmin();
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
       admin.createTable(tableDescriptor);
       try (Table table = conn.getTable(tableName)) {
         table.put(new Put(row).addColumn(family, qualifier, value));

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,12 +18,12 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getArchivedLogPath;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +36,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -63,16 +64,15 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Class that handles the source of a replication stream.
- * Currently does not handle more than 1 slave
+ * Currently does not handle more than 1 slave cluster.
  * For each slave cluster it selects a random number of peers
  * using a replication ratio. For example, if replication ration = 0.1
  * and slave cluster has 100 region servers, 10 will be selected.
@@ -119,8 +119,12 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private int logQueueWarnThreshold;
   // ReplicationEndpoint which will handle the actual replication
   private volatile ReplicationEndpoint replicationEndpoint;
-  // A filter (or a chain of filters) for the WAL entries.
+
+  /**
+   * A filter (or a chain of filters) for WAL entries; filters out edits.
+   */
   protected volatile WALEntryFilter walEntryFilter;
+
   // throttler
   private ReplicationThrottler throttler;
   private long defaultBandwidth;
@@ -138,6 +142,39 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private int waitOnEndpointSeconds = -1;
 
   private Thread initThread;
+
+  /**
+   * WALs to replicate.
+   * Predicate that returns 'true' for WALs to replicate and false for WALs to skip.
+   */
+  private final Predicate<Path> filterInWALs;
+
+  /**
+   * Base WALEntry filters for this class. Unmodifiable. Set on construction.
+   * Filters *out* edits we do not want replicated, passed on to replication endpoints.
+   * This is the basic set. Down in #initializeWALEntryFilter this set is added to the end of
+   * the WALEntry filter chain. These are put after those that we pick up from the configured
+   * endpoints and other machinations to create the final {@link #walEntryFilter}.
+   * @see WALEntryFilter
+   */
+  private final List<WALEntryFilter> baseFilterOutWALEntries;
+
+  ReplicationSource() {
+    // Default, filters *in* all WALs but meta WALs & filters *out* all WALEntries of System Tables.
+    this(p -> !AbstractFSWALProvider.isMetaFile(p),
+      Lists.newArrayList(new SystemTableWALEntryFilter()));
+  }
+
+  /**
+   * @param replicateWAL Pass a filter to run against WAL Path; filter *in* WALs to Replicate;
+   *   i.e. return 'true' if you want to replicate the content of the WAL.
+   * @param baseFilterOutWALEntries Base set of filters you want applied always; filters *out*
+   *   WALEntries so they never make it out of this ReplicationSource.
+   */
+  ReplicationSource(Predicate<Path> replicateWAL, List<WALEntryFilter> baseFilterOutWALEntries) {
+    this.filterInWALs = replicateWAL;
+    this.baseFilterOutWALEntries = Collections.unmodifiableList(baseFilterOutWALEntries);
+  }
 
   /**
    * Instantiation method used by region servers
@@ -192,30 +229,34 @@ public class ReplicationSource implements ReplicationSourceInterface {
   }
 
   @Override
-  public void enqueueLog(Path log) {
-    String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log.getName());
+  public void enqueueLog(Path wal) {
+    if (!this.filterInWALs.test(wal)) {
+      LOG.trace("NOT replicating {}", wal);
+      return;
+    }
+    String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal.getName());
     PriorityBlockingQueue<Path> queue = queues.get(logPrefix);
     if (queue == null) {
       queue = new PriorityBlockingQueue<>(queueSizePerGroup, new LogsComparator());
       // make sure that we do not use an empty queue when setting up a ReplicationSource, otherwise
       // the shipper may quit immediately
-      queue.put(log);
+      queue.put(wal);
       queues.put(logPrefix, queue);
       if (this.isSourceActive() && this.walEntryFilter != null) {
         // new wal group observed after source startup, start a new worker thread to track it
-        // notice: it's possible that log enqueued when this.running is set but worker thread
+        // notice: it's possible that wal enqueued when this.running is set but worker thread
         // still not launched, so it's necessary to check workerThreads before start the worker
         tryStartNewShipper(logPrefix, queue);
       }
     } else {
-      queue.put(log);
+      queue.put(wal);
     }
     if (LOG.isTraceEnabled()) {
-      LOG.trace("{} Added log file {} to queue of source {}.", logPeerId(), logPrefix,
+      LOG.trace("{} Added wal {} to queue of source {}.", logPeerId(), logPrefix,
         this.replicationQueueInfo.getQueueId());
     }
     this.metrics.incrSizeOfLogQueue();
-    // This will log a warning for each new log that gets created above the warn threshold
+    // This will wal a warning for each new wal that gets created above the warn threshold
     int queueSize = queue.size();
     if (queueSize > this.logQueueWarnThreshold) {
       LOG.warn("{} WAL group {} queue size: {} exceeds value of "
@@ -304,8 +345,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   private void initializeWALEntryFilter(UUID peerClusterId) {
     // get the WALEntryFilter from ReplicationEndpoint and add it to default filters
-    ArrayList<WALEntryFilter> filters =
-      Lists.<WALEntryFilter> newArrayList(new SystemTableWALEntryFilter());
+    List<WALEntryFilter> filters = new ArrayList<>(this.baseFilterOutWALEntries);
     WALEntryFilter filterFromEndpoint = this.replicationEndpoint.getWALEntryfilter();
     if (filterFromEndpoint != null) {
       filters.add(filterFromEndpoint);
@@ -398,6 +438,16 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return replicationPeer.getPeerConfig().isSerial()
       ? new SerialReplicationSourceWALReader(fs, conf, queue, startPosition, walEntryFilter, this)
       : new ReplicationSourceWALReader(fs, conf, queue, startPosition, walEntryFilter, this);
+  }
+
+  /**
+   * Call after {@link #initializeWALEntryFilter(UUID)} else it will be null.
+   * @return The WAL Entry Filter Chain this ReplicationSource will use on WAL files filtering
+   * out WALEntry edits.
+   */
+  @VisibleForTesting
+  WALEntryFilter getWalEntryFilter() {
+    return walEntryFilter;
   }
 
   protected final void uncaughtException(Thread t, Throwable e) {
@@ -626,7 +676,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
       }
     }
     if (clearMetrics) {
-      this.metrics.clear();
+      // Can be null in test context.
+      if (this.metrics != null) {
+        this.metrics.clear();
+      }
     }
   }
 
@@ -649,10 +702,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   @Override
   public boolean isSourceActive() {
     return !this.server.isStopped() && this.sourceRunning;
-  }
-
-  public UUID getPeerClusterUUID(){
-    return this.clusterId;
   }
 
   /**
@@ -726,7 +775,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
       throttler.addPushSize(batchSize);
     }
     totalReplicatedEdits.addAndGet(entries.size());
-    totalBufferUsed.addAndGet(-batchSize);
+    long newBufferUsed = totalBufferUsed.addAndGet(-batchSize);
+    // Record the new buffer usage
+    this.manager.getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
   }
 
   @Override

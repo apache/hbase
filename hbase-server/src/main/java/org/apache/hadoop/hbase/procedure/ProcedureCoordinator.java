@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,8 +113,9 @@ public class ProcedureCoordinator {
   public static ThreadPoolExecutor defaultPool(String coordName, int opThreads,
       long keepAliveMillis) {
     return new ThreadPoolExecutor(1, opThreads, keepAliveMillis, TimeUnit.MILLISECONDS,
-        new SynchronousQueue<>(),
-        Threads.newDaemonThreadFactory("(" + coordName + ")-proc-coordinator"));
+      new SynchronousQueue<>(),
+      new ThreadFactoryBuilder().setNameFormat("(" + coordName + ")-proc-coordinator-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   /**

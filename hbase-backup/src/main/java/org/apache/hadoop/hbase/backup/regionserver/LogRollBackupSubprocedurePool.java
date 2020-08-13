@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,10 +63,10 @@ public class LogRollBackupSubprocedurePool implements Closeable, Abortable {
           LogRollRegionServerProcedureManager.BACKUP_TIMEOUT_MILLIS_DEFAULT);
     int threads = conf.getInt(CONCURENT_BACKUP_TASKS_KEY, DEFAULT_CONCURRENT_BACKUP_TASKS);
     this.name = name;
-    executor =
-        new ThreadPoolExecutor(1, threads, keepAlive, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),
-            Threads.newDaemonThreadFactory("rs(" + name + ")-backup"));
+    executor = new ThreadPoolExecutor(1, threads, keepAlive, TimeUnit.SECONDS,
+      new LinkedBlockingQueue<>(),
+      new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-backup-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     taskPool = new ExecutorCompletionService<>(executor);
   }
 

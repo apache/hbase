@@ -24,29 +24,27 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.mob.FaultyMobStoreCompactor;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFileCleanerChore;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
-
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -98,8 +96,8 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
       .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
 
   private static Configuration conf;
-  private static TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
-  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor;
+  private static TableDescriptor tableDescriptor;
+  private static ColumnFamilyDescriptor familyDescriptor;
   private static Admin admin;
   private static Table table = null;
   private static MobFileCleanerChore chore;
@@ -126,12 +124,10 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
 
   private void createTestTable() throws IOException {
     // Create test table
-    tableDescriptor = util.createModifyableTableDescriptor("testMobCompactTable");
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-    familyDescriptor.setMobEnabled(true);
-    familyDescriptor.setMobThreshold(mobLen);
-    familyDescriptor.setMaxVersions(1);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
+      .setMobThreshold(mobLen).setMaxVersions(1).build();
+    tableDescriptor = util.createModifyableTableDescriptor("testMobCompactTable")
+      .setColumnFamily(familyDescriptor).build();
     table = util.createTable(tableDescriptor, null);
   }
 

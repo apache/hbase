@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -110,9 +108,9 @@ import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -1046,20 +1044,6 @@ public final class ThriftUtilities {
     }
     return builder.build();
   }
-
-  public static HTableDescriptor hTableDescriptorFromThrift(TTableDescriptor in) {
-    return new HTableDescriptor(tableDescriptorFromThrift(in));
-  }
-
-  public static HTableDescriptor[] hTableDescriptorsFromThrift(List<TTableDescriptor> in) {
-    HTableDescriptor[] out = new HTableDescriptor[in.size()];
-    int index = 0;
-    for (TTableDescriptor tTableDescriptor : in) {
-      out[index++] = hTableDescriptorFromThrift(tTableDescriptor);
-    }
-    return out;
-  }
-
 
   public static List<TableDescriptor> tableDescriptorsFromThrift(List<TTableDescriptor> in) {
     List<TableDescriptor> out = new ArrayList<>();

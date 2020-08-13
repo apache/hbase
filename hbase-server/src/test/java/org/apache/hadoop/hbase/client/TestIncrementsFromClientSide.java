@@ -101,16 +101,16 @@ public class TestIncrementsFromClientSide {
    */
   @Test
   public void testDuplicateIncrement() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor mtd =
+    TableDescriptorBuilder builder =
       TEST_UTIL.createModifyableTableDescriptor(name.getMethodName());
     Map<String, String> kvs = new HashMap<>();
     kvs.put(SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
-    mtd.setCoprocessor(CoprocessorDescriptorBuilder
+    builder.setCoprocessor(CoprocessorDescriptorBuilder
       .newBuilder(SleepAtFirstRpcCall.class.getName())
       .setPriority(1)
       .setProperties(kvs)
       .build());
-    TEST_UTIL.createTable(mtd, new byte[][] { ROW }).close();
+    TEST_UTIL.createTable(builder.build(), new byte[][] { ROW }).close();
 
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     c.setInt(HConstants.HBASE_CLIENT_PAUSE, 50);
@@ -141,16 +141,16 @@ public class TestIncrementsFromClientSide {
    */
   @Test
   public void testDuplicateBatchIncrement() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor mtd =
+    TableDescriptorBuilder builder =
       TEST_UTIL.createModifyableTableDescriptor(name.getMethodName());
     Map<String, String> kvs = new HashMap<>();
     kvs.put(SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
-    mtd.setCoprocessor(CoprocessorDescriptorBuilder
+    builder.setCoprocessor(CoprocessorDescriptorBuilder
       .newBuilder(SleepAtFirstRpcCall.class.getName())
       .setPriority(1)
       .setProperties(kvs)
       .build());
-    TEST_UTIL.createTable(mtd, new byte[][] { ROW }).close();
+    TEST_UTIL.createTable(builder.build(), new byte[][] { ROW }).close();
 
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     c.setInt(HConstants.HBASE_CLIENT_PAUSE, 50);

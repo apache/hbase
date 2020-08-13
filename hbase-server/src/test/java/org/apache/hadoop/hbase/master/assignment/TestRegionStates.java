@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
 
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorCompletionService;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -63,13 +63,9 @@ public class TestRegionStates {
   @BeforeClass
   public static void setUp() throws Exception {
     threadPool = Threads.getBoundedCachedThreadPool(32, 60L, TimeUnit.SECONDS,
-      Threads.newDaemonThreadFactory("ProcedureDispatcher",
-        new UncaughtExceptionHandler() {
-          @Override
-          public void uncaughtException(Thread t, Throwable e) {
-            LOG.warn("Failed thread " + t.getName(), e);
-          }
-        }));
+      new ThreadFactoryBuilder().setNameFormat("ProcedureDispatcher-pool-%d")
+        .setUncaughtExceptionHandler((t, e) -> LOG.warn("Failed thread " + t.getName(), e))
+        .build());
     executorService = new ExecutorCompletionService(threadPool);
   }
 

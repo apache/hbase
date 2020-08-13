@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
@@ -115,21 +117,15 @@ public class TestScanEarlyTermination extends SecureTestUtil {
   @Before
   public void setUp() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
-    tableDescriptor.setOwner(USER_OWNER);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY1);
-    familyDescriptor.setMaxVersions(10);
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY2);
-    familyDescriptor.setMaxVersions(10);
-    tableDescriptor.setColumnFamily(familyDescriptor);
-
-    // Enable backwards compatible early termination behavior in the HTD. We
-    // want to confirm that the per-table configuration is properly picked up.
-    tableDescriptor.setValue(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, "true");
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(testTable.getTableName()).setOwner(USER_OWNER)
+        .setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY1).setMaxVersions(10).build())
+        .setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY2).setMaxVersions(10).build())
+        // Enable backwards compatible early termination behavior in the HTD. We
+        // want to confirm that the per-table configuration is properly picked up.
+        .setValue(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, "true").build();
 
     admin.createTable(tableDescriptor);
     TEST_UTIL.waitUntilAllRegionsAssigned(testTable.getTableName());

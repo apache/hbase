@@ -18,14 +18,11 @@
  */
 package org.apache.hadoop.hbase.mob;
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
   * Mob file compaction chore in a generational non-batch mode test.
@@ -42,11 +39,9 @@ import org.slf4j.LoggerFactory;
   * 11 Verifies that number of MOB files in a mob directory is 20.
   * 12 Runs scanner and checks all 3 * 1000 rows.
  */
-@SuppressWarnings("deprecation")
 @Category(LargeTests.class)
 public class TestMobCompactionOptMode extends TestMobCompactionWithDefaults {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestMobCompactionOptMode.class);
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMobCompactionOptMode.class);

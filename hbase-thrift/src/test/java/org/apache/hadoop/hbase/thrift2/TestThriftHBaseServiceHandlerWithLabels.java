@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -35,9 +36,11 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -93,12 +96,9 @@ public class TestThriftHBaseServiceHandlerWithLabels {
   private static byte[] qualifierBname = Bytes.toBytes("qualifierB");
   private static byte[] valueAname = Bytes.toBytes("valueA");
   private static byte[] valueBname = Bytes.toBytes("valueB");
-  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[] families =
-    new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[]{
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyAname)
-        .setMaxVersions(3),
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyBname)
-        .setMaxVersions(2)};
+  private static ColumnFamilyDescriptor[] families = new ColumnFamilyDescriptor[] {
+    ColumnFamilyDescriptorBuilder.newBuilder(familyAname).setMaxVersions(3).build(),
+    ColumnFamilyDescriptorBuilder.newBuilder(familyBname).setMaxVersions(2).build() };
 
   private final static String TOPSECRET = "topsecret";
   private final static String PUBLIC = "public";
@@ -145,11 +145,8 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
     createLabels();
     Admin admin = UTIL.getAdmin();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableAname));
-    for (ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor family : families) {
-      tableDescriptor.setColumnFamily(family);
-    }
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
     admin.createTable(tableDescriptor);
     admin.close();
     setAuths();

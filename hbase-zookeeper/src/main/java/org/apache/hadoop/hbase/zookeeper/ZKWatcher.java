@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -95,8 +96,9 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   // and further prevents deadlocks if the process method itself makes other zookeeper calls.
   // It is ok to do it in a single thread because the Zookeeper ClientCnxn already serializes the
   // requests using a single while loop and hence there is no performance degradation.
-  private final ExecutorService zkEventProcessor =
-      Executors.newSingleThreadExecutor(Threads.getNamedThreadFactory("zk-event-processor"));
+  private final ExecutorService zkEventProcessor = Executors.newSingleThreadExecutor(
+    new ThreadFactoryBuilder().setNameFormat("zk-event-processor-pool-%d")
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   private final Configuration conf;
 
@@ -692,11 +694,12 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    */
   @Override
   public void close() {
-    zkEventProcessor.shutdownNow();
     try {
       recoverableZooKeeper.close();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+    } finally {
+      zkEventProcessor.shutdownNow();
     }
   }
 

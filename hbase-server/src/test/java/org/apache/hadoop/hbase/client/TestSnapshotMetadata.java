@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -91,7 +90,7 @@ public class TestSnapshotMetadata {
 
   private Admin admin;
   private String originalTableDescription;
-  private HTableDescriptor originalTableDescriptor;
+  private TableDescriptor originalTableDescriptor;
   TableName originalTableName;
 
   private static FileSystem fs;
@@ -155,35 +154,26 @@ public class TestSnapshotMetadata {
     originalTableName = TableName.valueOf(sourceTableNameAsString);
 
     // enable replication on a column family
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor maxVersionsColumn =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(MAX_VERSIONS_FAM);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor bloomFilterColumn =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(BLOOMFILTER_FAM);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor dataBlockColumn =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COMPRESSED_FAM);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor blockSizeColumn =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(BLOCKSIZE_FAM);
+    ColumnFamilyDescriptor maxVersionsColumn = ColumnFamilyDescriptorBuilder
+      .newBuilder(MAX_VERSIONS_FAM).setMaxVersions(MAX_VERSIONS).build();
+    ColumnFamilyDescriptor bloomFilterColumn = ColumnFamilyDescriptorBuilder
+      .newBuilder(BLOOMFILTER_FAM).setBloomFilterType(BLOOM_TYPE).build();
+    ColumnFamilyDescriptor dataBlockColumn = ColumnFamilyDescriptorBuilder
+      .newBuilder(COMPRESSED_FAM).setDataBlockEncoding(DATA_BLOCK_ENCODING_TYPE).build();
+    ColumnFamilyDescriptor blockSizeColumn =
+      ColumnFamilyDescriptorBuilder.newBuilder(BLOCKSIZE_FAM).setBlocksize(BLOCK_SIZE).build();
 
-    maxVersionsColumn.setMaxVersions(MAX_VERSIONS);
-    bloomFilterColumn.setBloomFilterType(BLOOM_TYPE);
-    dataBlockColumn.setDataBlockEncoding(DATA_BLOCK_ENCODING_TYPE);
-    blockSizeColumn.setBlocksize(BLOCK_SIZE);
-
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(sourceTableNameAsString));
-    tableDescriptor.setColumnFamily(maxVersionsColumn);
-    tableDescriptor.setColumnFamily(bloomFilterColumn);
-    tableDescriptor.setColumnFamily(dataBlockColumn);
-    tableDescriptor.setColumnFamily(blockSizeColumn);
-    tableDescriptor.setValue(TEST_CUSTOM_VALUE, TEST_CUSTOM_VALUE);
-    tableDescriptor.setValue(TEST_CONF_CUSTOM_VALUE, TEST_CONF_CUSTOM_VALUE);
-    assertTrue(tableDescriptor.getConfiguration().size() > 0);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(sourceTableNameAsString)).setColumnFamily(maxVersionsColumn)
+      .setColumnFamily(bloomFilterColumn).setColumnFamily(dataBlockColumn)
+      .setColumnFamily(blockSizeColumn).setValue(TEST_CUSTOM_VALUE, TEST_CUSTOM_VALUE)
+      .setValue(TEST_CONF_CUSTOM_VALUE, TEST_CONF_CUSTOM_VALUE).build();
+    assertTrue(tableDescriptor.getValues().size() > 0);
 
     admin.createTable(tableDescriptor);
     Table original = UTIL.getConnection().getTable(originalTableName);
     originalTableName = TableName.valueOf(sourceTableNameAsString);
-    originalTableDescriptor = new HTableDescriptor(admin.getDescriptor(originalTableName));
+    originalTableDescriptor = admin.getDescriptor(originalTableName);
     originalTableDescription = originalTableDescriptor.toStringCustomizedValues();
 
     original.close();
@@ -212,7 +202,7 @@ public class TestSnapshotMetadata {
 
     admin.cloneSnapshot(snapshotName, clonedTableName);
     Table clonedTable = UTIL.getConnection().getTable(clonedTableName);
-    HTableDescriptor cloneHtd = new HTableDescriptor(admin.getDescriptor(clonedTableName));
+    TableDescriptor cloneHtd = admin.getDescriptor(clonedTableName);
     assertEquals(
       originalTableDescription.replace(originalTableName.getNameAsString(),clonedTableNameAsString),
       cloneHtd.toStringCustomizedValues());
@@ -220,12 +210,9 @@ public class TestSnapshotMetadata {
     // Verify the custom fields
     assertEquals(originalTableDescriptor.getValues().size(),
                         cloneHtd.getValues().size());
-    assertEquals(originalTableDescriptor.getConfiguration().size(),
-                        cloneHtd.getConfiguration().size());
     assertEquals(TEST_CUSTOM_VALUE, cloneHtd.getValue(TEST_CUSTOM_VALUE));
-    assertEquals(TEST_CONF_CUSTOM_VALUE, cloneHtd.getConfigurationValue(TEST_CONF_CUSTOM_VALUE));
+    assertEquals(TEST_CONF_CUSTOM_VALUE, cloneHtd.getValue(TEST_CONF_CUSTOM_VALUE));
     assertEquals(originalTableDescriptor.getValues(), cloneHtd.getValues());
-    assertEquals(originalTableDescriptor.getConfiguration(), cloneHtd.getConfiguration());
 
     admin.enableTable(originalTableName);
     clonedTable.close();
@@ -304,8 +291,7 @@ public class TestSnapshotMetadata {
       final byte[] newFamilyName = Bytes.toBytes(newFamilyNameAsString);
 
       admin.disableTable(originalTableName);
-      ColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(newFamilyName);
+      ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of(newFamilyName);
       admin.addColumnFamily(originalTableName, familyDescriptor);
       assertTrue("New column family was not added.",
         admin.getDescriptor(originalTableName).toString().contains(newFamilyNameAsString));
@@ -321,9 +307,8 @@ public class TestSnapshotMetadata {
 
     // verify that the descrption is reverted
     try (Table original = UTIL.getConnection().getTable(originalTableName)) {
-      assertEquals(originalTableDescriptor,
-        new HTableDescriptor(admin.getDescriptor(originalTableName)));
-      assertEquals(originalTableDescriptor, new HTableDescriptor(original.getDescriptor()));
+      assertEquals(originalTableDescriptor, admin.getDescriptor(originalTableName));
+      assertEquals(originalTableDescriptor, original.getDescriptor());
     }
   }
 }

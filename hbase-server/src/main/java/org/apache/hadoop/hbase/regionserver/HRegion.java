@@ -2341,7 +2341,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } finally {
       if (requestNeedsCancellation) store.cancelRequestedCompaction(compaction);
       if (status != null) {
-        LOG.debug("Compaction status journal for {}:\n\t{}", this.getRegionInfo().getEncodedName(),
+        LOG.debug("Compaction status journal for {}:\n{}", this.getRegionInfo().getEncodedName(),
           status.prettyPrintJournal());
         status.cleanup();
       }
@@ -2506,7 +2506,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     } finally {
       lock.readLock().unlock();
-      LOG.debug("Flush status journal for {}:\n\t{}", this.getRegionInfo().getEncodedName(),
+      LOG.debug("Flush status journal for {}:\n{}", this.getRegionInfo().getEncodedName(),
         status.prettyPrintJournal());
       status.cleanup();
     }
@@ -2986,7 +2986,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // If we get to here, the HStores have been written.
     if (wal != null) {
-      wal.completeCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
+      wal.completeCacheFlush(this.getRegionInfo().getEncodedNameAsBytes(), flushedSeqId);
     }
 
     // Record latest flush time
@@ -8456,12 +8456,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return cells;
   }
 
-  public static final long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT +
-      56 * ClassSize.REFERENCE +
-      3 * Bytes.SIZEOF_INT +
-      14 * Bytes.SIZEOF_LONG +
-      3 * Bytes.SIZEOF_BOOLEAN);
+  public static final long FIXED_OVERHEAD = ClassSize.estimateBase(HRegion.class, false);
 
   // woefully out of date - currently missing:
   // 1 x HashMap - coprocessorServiceHandlers

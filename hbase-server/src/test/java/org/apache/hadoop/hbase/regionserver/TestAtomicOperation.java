@@ -296,19 +296,18 @@ public class TestAtomicOperation {
     initHRegion(tableName, callingMethod, null, families);
   }
 
-  private void initHRegion (byte [] tableName, String callingMethod, int [] maxVersions,
-    byte[] ... families)
-  throws IOException {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
+  private void initHRegion(byte[] tableName, String callingMethod, int[] maxVersions,
+    byte[]... families) throws IOException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
 
-    int i=0;
-    for(byte [] family : families) {
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
-      familyDescriptor.setMaxVersions(maxVersions != null ? maxVersions[i++] : 1);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+    int i = 0;
+    for (byte[] family : families) {
+      ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setMaxVersions(maxVersions != null ? maxVersions[i++] : 1).build();
+      builder.setColumnFamily(familyDescriptor);
     }
+    TableDescriptor tableDescriptor = builder.build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     region = TEST_UTIL.createLocalHRegion(info, tableDescriptor);
   }

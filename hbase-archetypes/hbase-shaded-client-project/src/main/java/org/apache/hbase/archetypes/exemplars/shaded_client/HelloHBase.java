@@ -110,10 +110,8 @@ public final class HelloHBase {
               + "], with one Column Family ["
               + Bytes.toString(MY_COLUMN_FAMILY_NAME) + "].");
 
-      admin.createTable(new TableDescriptorBuilder.ModifyableTableDescriptor(MY_TABLE_NAME)
-        .setColumnFamily(
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-            MY_COLUMN_FAMILY_NAME)));
+      admin.createTable(TableDescriptorBuilder.newBuilder(MY_TABLE_NAME)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(MY_COLUMN_FAMILY_NAME)).build());
     }
   }
 

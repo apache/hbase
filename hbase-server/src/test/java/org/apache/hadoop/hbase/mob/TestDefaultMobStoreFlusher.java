@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,86 +47,74 @@ public class TestDefaultMobStoreFlusher {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDefaultMobStoreFlusher.class);
+    HBaseClassTestRule.forClass(TestDefaultMobStoreFlusher.class);
 
- private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
- private final static byte [] row1 = Bytes.toBytes("row1");
- private final static byte [] row2 = Bytes.toBytes("row2");
- private final static byte [] family = Bytes.toBytes("family");
- private final static byte [] qf1 = Bytes.toBytes("qf1");
- private final static byte [] qf2 = Bytes.toBytes("qf2");
- private final static byte [] value1 = Bytes.toBytes("value1");
- private final static byte [] value2 = Bytes.toBytes("value2");
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static byte[] row1 = Bytes.toBytes("row1");
+  private final static byte[] row2 = Bytes.toBytes("row2");
+  private final static byte[] family = Bytes.toBytes("family");
+  private final static byte[] qf1 = Bytes.toBytes("qf1");
+  private final static byte[] qf2 = Bytes.toBytes("qf2");
+  private final static byte[] value1 = Bytes.toBytes("value1");
+  private final static byte[] value2 = Bytes.toBytes("value2");
 
- @Rule
- public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
- @BeforeClass
- public static void setUpBeforeClass() throws Exception {
-   TEST_UTIL.startMiniCluster(1);
- }
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(1);
+  }
 
- @AfterClass
- public static void tearDownAfterClass() throws Exception {
-   TEST_UTIL.shutdownMiniCluster();
- }
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
 
   @Test
   public void testFlushNonMobFile() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
-    familyDescriptor.setMaxVersions(4);
-    tableDescriptor.setColumnFamily(familyDescriptor);
-
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(4).build())
+      .build();
     testFlushFile(tableDescriptor);
   }
 
   @Test
   public void testFlushMobFile() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor hcd =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(3L);
-    hcd.setMaxVersions(4);
-    tableDescriptor.setColumnFamily(hcd);
-
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true)
+        .setMobThreshold(3L).setMaxVersions(4).build())
+      .build();
     testFlushFile(tableDescriptor);
   }
 
-  private void testFlushFile(TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor)
-      throws Exception {
+  private void testFlushFile(TableDescriptor tableDescriptor) throws Exception {
     Table table = null;
     try {
       table = TEST_UTIL.createTable(tableDescriptor, null);
 
-      //put data
+      // put data
       Put put0 = new Put(row1);
       put0.addColumn(family, qf1, 1, value1);
       table.put(put0);
 
-      //put more data
+      // put more data
       Put put1 = new Put(row2);
       put1.addColumn(family, qf2, 1, value2);
       table.put(put1);
 
-      //flush
+      // flush
       TEST_UTIL.flush(tableDescriptor.getTableName());
 
-      //Scan
+      // Scan
       Scan scan = new Scan();
       scan.addColumn(family, qf1);
       scan.readVersions(4);
       ResultScanner scanner = table.getScanner(scan);
 
-      //Compare
+      // Compare
       int size = 0;
       for (Result result : scanner) {
         size++;

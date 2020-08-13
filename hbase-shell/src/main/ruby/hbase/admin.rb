@@ -67,7 +67,11 @@ module Hbase
     rescue java.lang.IllegalArgumentException, org.apache.hadoop.hbase.UnknownRegionException
       # Unknown region. Try table.
       begin
-        @admin.flush(TableName.valueOf(name))
+        if family_bytes.nil?
+          @admin.flush(TableName.valueOf(name))
+        else
+          @admin.flush(TableName.valueOf(name), family_bytes)
+        end
       rescue java.lang.IllegalArgumentException
         # Unknown table. Try region server.
         @admin.flushRegionServer(ServerName.valueOf(name))

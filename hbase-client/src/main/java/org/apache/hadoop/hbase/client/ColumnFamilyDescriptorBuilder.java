@@ -587,10 +587,8 @@ public class ColumnFamilyDescriptorBuilder {
    * number of versions, compression settings, etc.
    *
    * It is used as input when creating a table or adding a column.
-   * TODO: make this package-private after removing the HColumnDescriptor
    */
-  @InterfaceAudience.Private
-  public static class ModifyableColumnFamilyDescriptor
+  private static final class ModifyableColumnFamilyDescriptor
       implements ColumnFamilyDescriptor, Comparable<ModifyableColumnFamilyDescriptor> {
 
     // Column family name
@@ -690,15 +688,6 @@ public class ColumnFamilyDescriptorBuilder {
         values.put(key, value);
       }
       return this;
-    }
-
-    /**
-     *
-     * @param key Key whose key and value we're to remove from HCD parameters.
-     * @return this (for chained invocation)
-     */
-    public ModifyableColumnFamilyDescriptor removeValue(final Bytes key) {
-      return setValue(key, (Bytes) null);
     }
 
     private static <T> Bytes toBytesOrNull(T t, Function<T, byte[]> f) {

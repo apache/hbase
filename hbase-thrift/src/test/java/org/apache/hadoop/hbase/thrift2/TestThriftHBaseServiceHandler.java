@@ -31,6 +31,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetAddress;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
@@ -130,6 +132,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
@@ -155,13 +158,9 @@ public class TestThriftHBaseServiceHandler {
   private static byte[] qualifierBname = Bytes.toBytes("qualifierB");
   private static byte[] valueAname = Bytes.toBytes("valueA");
   private static byte[] valueBname = Bytes.toBytes("valueB");
-  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[] families =
-    new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[]{
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyAname)
-        .setMaxVersions(3),
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyBname)
-        .setMaxVersions(2)
-    };
+  private static ColumnFamilyDescriptor[] families = new ColumnFamilyDescriptor[] {
+    ColumnFamilyDescriptorBuilder.newBuilder(familyAname).setMaxVersions(3).build(),
+    ColumnFamilyDescriptorBuilder.newBuilder(familyBname).setMaxVersions(2).build() };
 
 
   private static final MetricsAssertHelper metricsHelper =
@@ -202,11 +201,8 @@ public class TestThriftHBaseServiceHandler {
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
     UTIL.getConfiguration().setBoolean("hbase.regionserver.slowlog.buffer.enabled", true);
     UTIL.startMiniCluster();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableAname));
-    for (ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor family : families) {
-      tableDescriptor.setColumnFamily(family);
-    }
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
     try (Admin admin = UTIL.getAdmin()) {
       admin.createTable(tableDescriptor);
     }
@@ -1267,11 +1263,9 @@ public class TestThriftHBaseServiceHandler {
     byte[] col = Bytes.toBytes("c");
     // create a table which will throw exceptions for requests
     TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDesc =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    tableDesc.setCoprocessor(ErrorThrowingGetObserver.class.getName());
-    tableDesc.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+      .setCoprocessor(ErrorThrowingGetObserver.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
 
     Table table = UTIL.createTable(tableDesc, null);
     table.put(new Put(rowkey).addColumn(family, col, Bytes.toBytes("val1")));
@@ -1340,11 +1334,9 @@ public class TestThriftHBaseServiceHandler {
     byte[] col = Bytes.toBytes("c");
     // create a table which will throw exceptions for requests
     TableName tableName = TableName.valueOf("testMetricsPrecision");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    tableDescriptor.setCoprocessor(DelayingRegionObserver.class.getName());
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setCoprocessor(DelayingRegionObserver.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
 
     Table table = null;
     try {

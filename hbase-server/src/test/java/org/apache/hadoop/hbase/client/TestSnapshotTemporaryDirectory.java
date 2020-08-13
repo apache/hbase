@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
@@ -128,8 +127,8 @@ public class TestSnapshotTemporaryDirectory {
 
   @Before
   public void setup() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
-    htd.setRegionReplication(getNumReplicas());
+    TableDescriptor htd =
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(getNumReplicas()).build();
     UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
   }
 
@@ -426,7 +425,7 @@ public class TestSnapshotTemporaryDirectory {
     Admin admin = UTIL.getAdmin();
     TableName tableName2 = TableName.valueOf("testListTableSnapshots");
     try {
-      HTableDescriptor htd = new HTableDescriptor(tableName2);
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName2).build();
       UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
 
       String table1Snapshot1 = "Table1Snapshot1";

@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -102,14 +103,11 @@ public class TestScannerSelectionUsingKeyRange {
   public void testScannerSelection() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.hstore.compactionThreshold", 10000);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_BYTES)
-        .setBlockCacheEnabled(true)
-        .setBloomFilterType(bloomType);
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES)
+        .setBlockCacheEnabled(true).setBloomFilterType(bloomType).build())
+      .build();
 
-    tableDescriptor.setColumnFamily(familyDescriptor);
     RegionInfo info = RegionInfoBuilder.newBuilder(TABLE).build();
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf,
       tableDescriptor);
