@@ -46,7 +46,7 @@ ENV FINDBUGS_HOME /usr
 ###
 RUN mkdir -p /opt/shellcheck && \
     curl -L -s -S \
-        https://storage.googleapis.com/shellcheck/shellcheck-stable.linux.x86_64.tar.xz \
+        https://github.com/koalaman/shellcheck/releases/download/stable/shellcheck-stable.linux.x86_64.tar.xz \
         -o /opt/shellcheck.tar.xz && \
     tar xJf /opt/shellcheck.tar.xz --strip-components 1 -C /opt/shellcheck && \
     ln -s /opt/shellcheck/shellcheck /usr/bin/shellcheck && \
