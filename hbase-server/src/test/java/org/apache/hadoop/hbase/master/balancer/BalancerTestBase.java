@@ -236,8 +236,13 @@ public class BalancerTestBase {
     int max = numRegions % numServers == 0 ? min : min + 1;
 
     for (ServerAndLoad server : servers) {
-      if (server.getLoad() < 0 || server.getLoad() > max + tablenum/2 + 1  || server.getLoad() < min - tablenum/2 - 1)
+      // The '5' in below is arbitrary.
+      if (server.getLoad() < 0 || server.getLoad() > max + (tablenum/2 + 5) ||
+          server.getLoad() < (min - tablenum/2 - 5)) {
+        LOG.warn("server={}, load={}, max={}, tablenum={}, min={}",
+            server.getServerName(), server.getLoad(), max, tablenum, min);
         return false;
+      }
     }
     return true;
   }

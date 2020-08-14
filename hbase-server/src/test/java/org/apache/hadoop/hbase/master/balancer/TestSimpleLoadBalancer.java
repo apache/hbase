@@ -133,7 +133,7 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
   public void testBalanceClusterOverall() throws Exception {
     Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad = new TreeMap<>();
     for (int[] mockCluster : clusterStateMocks) {
-      Map<ServerName, List<RegionInfo>> clusterServers = mockClusterServers(mockCluster, 50);
+      Map<ServerName, List<RegionInfo>> clusterServers = mockClusterServers(mockCluster, 30);
       List<ServerAndLoad> clusterList = convertToList(clusterServers);
       clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);
       HashMap<TableName, TreeMap<ServerName, List<RegionInfo>>> result =

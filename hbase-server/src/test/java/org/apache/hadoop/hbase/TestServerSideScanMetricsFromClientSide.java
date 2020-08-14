@@ -212,7 +212,8 @@ public class TestServerSideScanMetricsFromClientSide {
       scan = new Scan(baseScan);
       scan.withStartRow(ROWS[i - 1]);
       scan.withStopRow(ROWS[ROWS.length - 1]);
-      testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length - i);
+      testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME,
+          ROWS.length - i);
     }
 
     // The filter should filter out all rows, but we still expect to see every row.
@@ -318,8 +319,11 @@ public class TestServerSideScanMetricsFromClientSide {
   public void testRowsFilteredMetric(Scan baseScan, Filter filter, int expectedNumFiltered)
       throws Exception {
     Scan scan = new Scan(baseScan);
-    if (filter != null) scan.setFilter(filter);
-    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME, expectedNumFiltered);
+    if (filter != null) {
+      scan.setFilter(filter);
+    }
+    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME,
+        expectedNumFiltered);
   }
 
   /**
@@ -334,7 +338,7 @@ public class TestServerSideScanMetricsFromClientSide {
     ResultScanner scanner = TABLE.getScanner(scan);
     // Iterate through all the results
     while (scanner.next() != null) {
-
+      continue;
     }
     scanner.close();
     ScanMetrics metrics = scanner.getScanMetrics();

@@ -192,12 +192,19 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
   public synchronized boolean requestSplit(final Region r) {
     // don't split regions that are blocking
-    if (shouldSplitRegion() && ((HRegion)r).getCompactPriority() >= PRIORITY_USER) {
-      byte[] midKey = ((HRegion)r).checkSplit();
-      if (midKey != null) {
-        requestSplit(r, midKey);
-        return true;
+    HRegion hr = (HRegion) r;
+    try {
+      if (shouldSplitRegion() && hr.getCompactPriority() >= PRIORITY_USER) {
+        byte[] midKey = hr.checkSplit();
+        if (midKey != null) {
+          requestSplit(r, midKey);
+          return true;
+        }
       }
+    } catch (IndexOutOfBoundsException e) {
+      // We get this sometimes. Not sure why. Catch and return false; no split request.
+      LOG.warn("Catching out-of-bounds; region={}, policy={}", hr == null? null: hr.getRegionInfo(),
+          hr == null? "null": hr.getCompactPriority(), e);
     }
     return false;
   }
@@ -340,7 +347,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
     CompactionContext compaction;
     if (selectNow) {
-      Optional<CompactionContext> c = selectCompaction(region, store, priority, tracker, completeTracker, user);
+      Optional<CompactionContext> c =
+          selectCompaction(region, store, priority, tracker, completeTracker, user);
       if (!c.isPresent()) {
         // message logged inside
         return;
@@ -650,8 +658,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     @Override
     public void run() {
       Preconditions.checkNotNull(server);
-      if (server.isStopped()
-          || (region.getTableDescriptor() != null && !region.getTableDescriptor().isCompactionEnabled())) {
+      if (server.isStopped() || (region.getTableDescriptor() != null &&
+          !region.getTableDescriptor().isCompactionEnabled())) {
         region.decrementCompactionsQueuedCount();
         return;
       }

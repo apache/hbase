@@ -883,10 +883,11 @@ public class TestScannersFromClientSide {
   @Test
   public void testScanWithColumnsAndFilterAndVersion() throws IOException {
     TableName tableName = TableName.valueOf(name.getMethodName());
+    long now = System.currentTimeMillis();
     try (Table table = TEST_UTIL.createTable(tableName, FAMILY, 4)) {
       for (int i = 0; i < 4; i++) {
         Put put = new Put(ROW);
-        put.addColumn(FAMILY, QUALIFIER, VALUE);
+        put.addColumn(FAMILY, QUALIFIER, now + i, VALUE);
         table.put(put);
       }
 
