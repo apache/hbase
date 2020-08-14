@@ -802,7 +802,9 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public void interruptedException(InterruptedException ie) throws KeeperException {
     interruptedExceptionNoThrow(ie, true);
     // Throw a system error exception to let upper level handle it
-    throw new KeeperException.SystemErrorException();
+    KeeperException keeperException = new KeeperException.SystemErrorException();
+    keeperException.initCause(ie);
+    throw keeperException;
   }
 
   /**

@@ -141,6 +141,17 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       znode = ZKUtil.joinZNode(znode, filename);
       ZKUtil.deleteNode(this.zookeeper, znode);
     } catch (KeeperException e) {
+      if (e instanceof KeeperException.SystemErrorException
+          && e.getCause() != null && e
+          .getCause() instanceof InterruptedException) {
+        // ReplicationRuntimeException(a RuntimeException) is thrown out here. The reason is
+        // that thread is interrupted deep down in the stack, it should pass the following
+        // processing logic and propagate to the most top layer which can handle this exception
+        // properly. In this specific case, the top layer is ReplicationSourceShipper#run().
+        throw new ReplicationRuntimeException(
+            "Thread is interrupted, the replication source may be terminated",
+            e.getCause().getCause());
+      }
       this.abortable.abort("Failed to remove wal from queue (queueId=" + queueId + ", filename="
           + filename + ")", e);
     }
@@ -154,6 +165,17 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       // Why serialize String of Long and not Long as bytes?
       ZKUtil.setData(this.zookeeper, znode, ZKUtil.positionToByteArray(position));
     } catch (KeeperException e) {
+      if (e instanceof KeeperException.SystemErrorException
+          && e.getCause() != null && e
+          .getCause() instanceof InterruptedException) {
+        // ReplicationRuntimeException(a RuntimeException) is thrown out here. The reason is
+        // that thread is interrupted deep down in the stack, it should pass the following
+        // processing logic and propagate to the most top layer which can handle this exception
+        // properly. In this specific case, the top layer is ReplicationSourceShipper#run().
+        throw new ReplicationRuntimeException(
+            "Thread is interrupted, the replication source may be terminated",
+            e.getCause().getCause());
+      }
       this.abortable.abort("Failed to write replication wal position (filename=" + filename
           + ", position=" + position + ")", e);
     }
