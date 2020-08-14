@@ -275,8 +275,11 @@ public class TestReplicationSource {
   public void testTerminateClearsBuffer() throws Exception {
     ReplicationSource source = new ReplicationSource();
     ReplicationSourceManager mockManager = mock(ReplicationSourceManager.class);
+    MetricsReplicationGlobalSourceSource mockMetrics =
+      mock(MetricsReplicationGlobalSourceSource.class);
     AtomicLong buffer = new AtomicLong();
     Mockito.when(mockManager.getTotalBufferUsed()).thenReturn(buffer);
+    Mockito.when(mockManager.getGlobalMetrics()).thenReturn(mockMetrics);
     ReplicationPeer mockPeer = mock(ReplicationPeer.class);
     Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
     Configuration testConf = HBaseConfiguration.create();
