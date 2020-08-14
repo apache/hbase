@@ -1699,7 +1699,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (!stores.isEmpty()) {
         // initialize the thread pool for closing stores in parallel.
         ThreadPoolExecutor storeCloserThreadPool =
-          getStoreOpenAndCloseThreadPool("StoreCloserThread-" +
+          getStoreOpenAndCloseThreadPool("StoreCloser-" +
             getRegionInfo().getRegionNameAsString());
         CompletionService<Pair<byte[], Collection<HStoreFile>>> completionService =
           new ExecutorCompletionService<>(storeCloserThreadPool);
