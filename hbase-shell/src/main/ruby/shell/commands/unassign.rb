@@ -33,7 +33,8 @@ Examples:
 EOF
       end
 
-      def command(region_name)
+      # the force parameter is deprecated, if it is specified, will be ignored.
+      def command(region_name, force = nil)
         admin.unassign(region_name)
       end
     end

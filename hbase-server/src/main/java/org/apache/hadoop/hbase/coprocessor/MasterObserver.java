@@ -521,30 +521,6 @@ public interface MasterObserver {
     final RegionInfo regionInfo) throws IOException {}
 
   /**
-   * Called prior to unassigning a given region.
-   * @param ctx the environment to interact with the framework and master
-   * @param regionInfo region info
-   * @param force whether to force unassignment or not
-   * @deprecated since 2.4.0 and will be removed in 4.0.0.
-   *   Use {@link #preUnassign(ObserverContext, RegionInfo)} instead.
-   */
-  @Deprecated
-  default void preUnassign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-    final RegionInfo regionInfo, final boolean force) throws IOException {}
-
-  /**
-   * Called after the region unassignment has been requested.
-   * @param ctx the environment to interact with the framework and master
-   * @param regionInfo region info
-   * @param force whether to force unassignment or not
-   * @deprecated since 2.4.0 and will be removed in 4.0.0.
-   *   Use {@link #postUnassign(ObserverContext, RegionInfo)} instead.
-   */
-  @Deprecated
-  default void postUnassign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-    final RegionInfo regionInfo, final boolean force) throws IOException {}
-
-  /**
    * Called prior to marking a given region as offline.
    * @param ctx the environment to interact with the framework and master
    * @param regionInfo

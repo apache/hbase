@@ -601,7 +601,9 @@ public interface AsyncAdmin {
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-24875">HBASE-24875</a>
    */
   @Deprecated
-  CompletableFuture<Void> unassign(byte[] regionName, boolean forcible);
+  default CompletableFuture<Void> unassign(byte[] regionName, boolean forcible) {
+    return unassign(regionName);
+  }
 
   /**
    * Offline specified region from master's in-memory state. It will not attempt to reassign the

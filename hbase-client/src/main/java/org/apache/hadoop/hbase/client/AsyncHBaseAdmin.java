@@ -372,11 +372,6 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> unassign(byte[] regionName, boolean forcible) {
-    return unassign(regionName);
-  }
-
-  @Override
   public CompletableFuture<Void> offline(byte[] regionName) {
     return wrap(rawAdmin.offline(regionName));
   }

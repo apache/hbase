@@ -1553,11 +1553,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> unassign(byte[] regionName, boolean forcible) {
-    return unassign(regionName);
-  }
-
-  @Override
   public CompletableFuture<Void> unassign(byte[] regionName) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(getRegionInfo(regionName), (regionInfo, err) -> {

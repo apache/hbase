@@ -365,11 +365,6 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public void unassign(byte[] regionName, boolean force) throws IOException {
-    unassign(regionName);
-  }
-
-  @Override
   public void offline(byte[] regionName) throws IOException {
     get(admin.offline(regionName));
   }

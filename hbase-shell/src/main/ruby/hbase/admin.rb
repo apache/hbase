@@ -541,6 +541,12 @@ module Hbase
       @admin.unassign(region_name.to_java_bytes)
     end
 
+    # Unassign a region
+    # deprecated unassign API; if the force parameter specified, will be ignored.
+    def unassign(region_name, force = nil)
+      @admin.unassign(region_name.to_java_bytes)
+    end
+
     #----------------------------------------------------------------------------------------------
     # Move a region
     def move(encoded_region_name, server = nil)

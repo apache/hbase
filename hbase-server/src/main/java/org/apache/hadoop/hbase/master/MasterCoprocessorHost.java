@@ -683,13 +683,6 @@ public class MasterCoprocessorHost
         observer.preUnassign(this, regionInfo);
       }
     });
-    // for compatibility and should be removed in 4.0.0.
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.preUnassign(this, regionInfo, false);
-      }
-    });
   }
 
   public void postUnassign(final RegionInfo regionInfo) throws IOException {
@@ -697,13 +690,6 @@ public class MasterCoprocessorHost
       @Override
       public void call(MasterObserver observer) throws IOException {
         observer.postUnassign(this, regionInfo);
-      }
-    });
-    // for compatibility and should be removed in 4.0.0.
-    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
-      @Override
-      public void call(MasterObserver observer) throws IOException {
-        observer.postUnassign(this, regionInfo, false);
       }
     });
   }

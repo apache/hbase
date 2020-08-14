@@ -796,7 +796,9 @@ public interface Admin extends Abortable, Closeable {
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-24875">HBASE-24875</a>
    */
   @Deprecated
-  void unassign(byte[] regionName, boolean force) throws IOException;
+  default void unassign(byte[] regionName, boolean force) throws IOException {
+    unassign(regionName);
+  }
 
   /**
    * Offline specified region from master's in-memory state. It will not attempt to reassign the
