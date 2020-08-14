@@ -36,7 +36,6 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import org.apache.commons.lang3.StringUtils;
@@ -121,10 +120,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private int logQueueWarnThreshold;
   // ReplicationEndpoint which will handle the actual replication
   private volatile ReplicationEndpoint replicationEndpoint;
-
-  private AtomicBoolean retryStartup = new AtomicBoolean(false);
-
-  private AtomicBoolean startupOngoing = new AtomicBoolean(false);
+  //Flag that signalizes uncaught error happening while starting up the source
+  // and a retry should be attempted
+  private final AtomicBoolean retryStartup = new AtomicBoolean(false);
+  //This is needed for the startup loop to identify when there's already
+  // an initialization happening (but not finished yet),
+  // so that it doesn't try submit another initialize thread.
+  // NOTE: this should only be set to false at the end of initialize method, prior to return.
+  private final AtomicBoolean startupOngoing = new AtomicBoolean(false);
 
   private boolean abortOnError;
 
