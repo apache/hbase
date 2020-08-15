@@ -184,7 +184,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * being flushed; in other words, this is effectively same as a flush of all of the region
    * though we were passed a subset of regions. Otherwise, it returns the sequence id of the
    * oldest/lowest outstanding edit.
-   * @see #completeCacheFlush(byte[])
+   * @see #completeCacheFlush(byte[], long)
    * @see #abortCacheFlush(byte[])
    */
   Long startCacheFlush(final byte[] encodedRegionName, Set<byte[]> families);
@@ -194,10 +194,12 @@ public interface WAL extends Closeable, WALFileLengthProvider {
   /**
    * Complete the cache flush.
    * @param encodedRegionName Encoded region name.
+   * @param maxFlushedSeqId The maxFlushedSeqId for this flush. There is no edit in memory that is
+   *          less that this sequence id.
    * @see #startCacheFlush(byte[], Set)
    * @see #abortCacheFlush(byte[])
    */
-  void completeCacheFlush(final byte[] encodedRegionName);
+  void completeCacheFlush(final byte[] encodedRegionName, long maxFlushedSeqId);
 
   /**
    * Abort a cache flush. Call if the flush fails. Note that the only recovery

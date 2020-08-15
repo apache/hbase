@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -92,7 +93,8 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
 
     ThreadPoolExecutor tpe =
       new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
-        new ThreadFactoryBuilder().setNameFormat(toString() + "-shared-pool-%d").build());
+        new ThreadFactoryBuilder().setNameFormat(toString() + "-shared-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     tpe.allowCoreThreadTimeOut(true);
     return tpe;
   }

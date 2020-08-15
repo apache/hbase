@@ -749,7 +749,7 @@ public abstract class AbstractTestWALReplay {
 
     // Add a cache flush, shouldn't have any effect
     wal.startCacheFlush(regionName, familyNames);
-    wal.completeCacheFlush(regionName);
+    wal.completeCacheFlush(regionName, HConstants.NO_SEQNUM);
 
     // Add an edit to another family, should be skipped.
     WALEdit edit = new WALEdit();
@@ -847,7 +847,7 @@ public abstract class AbstractTestWALReplay {
     wal.doCompleteCacheFlush = true;
     // allow complete cache flush with the previous seq number got after first
     // set of edits.
-    wal.completeCacheFlush(hri.getEncodedNameAsBytes());
+    wal.completeCacheFlush(hri.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
     wal.shutdown();
     FileStatus[] listStatus = wal.getFiles();
     assertNotNull(listStatus);
@@ -1030,11 +1030,11 @@ public abstract class AbstractTestWALReplay {
     }
 
     @Override
-    public void completeCacheFlush(byte[] encodedRegionName) {
+    public void completeCacheFlush(byte[] encodedRegionName, long maxFlushedSeqId) {
       if (!doCompleteCacheFlush) {
         return;
       }
-      super.completeCacheFlush(encodedRegionName);
+      super.completeCacheFlush(encodedRegionName, maxFlushedSeqId);
     }
   }
 

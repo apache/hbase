@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.procedure.flush;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -102,7 +103,7 @@ public class FlushTableSubprocedure extends Subprocedure {
     List<byte[]> families = null;
     if (family != null) {
       LOG.debug("About to flush family {} on all regions for table {}", family, table);
-      families = Arrays.asList(Bytes.toBytes(family));
+      families = Collections.singletonList(Bytes.toBytes(family));
     }
     // Add all hfiles already existing in region.
     for (HRegion region : regions) {

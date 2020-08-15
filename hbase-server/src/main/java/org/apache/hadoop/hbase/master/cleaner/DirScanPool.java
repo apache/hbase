@@ -52,7 +52,8 @@ public class DirScanPool implements ConfigurationObserver {
 
   private static ThreadPoolExecutor initializePool(int size) {
     return Threads.getBoundedCachedThreadPool(size, 1, TimeUnit.MINUTES,
-      new ThreadFactoryBuilder().setNameFormat("dir-scan-pool-%d").build());
+      new ThreadFactoryBuilder().setNameFormat("dir-scan-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   /**

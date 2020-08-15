@@ -228,7 +228,8 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
       int threads = conf.getInt(CONCURENT_FLUSH_TASKS_KEY, DEFAULT_CONCURRENT_FLUSH_TASKS);
       this.name = name;
       executor = Threads.getBoundedCachedThreadPool(threads, keepAlive, TimeUnit.MILLISECONDS,
-        new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-flush-proc-pool-%d").build());
+        new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-flush-proc-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       taskPool = new ExecutorCompletionService<>(executor);
     }
 

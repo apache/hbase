@@ -233,7 +233,8 @@ public abstract class ModifyRegionUtils {
         "hbase.hregion.open.and.init.threads.max", 16));
     ThreadPoolExecutor regionOpenAndInitThreadPool = Threads.
       getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-        new ThreadFactoryBuilder().setNameFormat(threadNamePrefix + "-pool-%d").build());
+        new ThreadFactoryBuilder().setNameFormat(threadNamePrefix + "-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     return regionOpenAndInitThreadPool;
   }
 }
