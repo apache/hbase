@@ -459,13 +459,6 @@ public class Get extends Query implements Row {
     return map;
   }
 
-  //Row
-  @Override
-  public int compareTo(Row other) {
-    // TODO: This is wrong.  Can't have two gets the same just because on same row.
-    return Bytes.compareTo(this.getRow(), other.getRow());
-  }
-
   @Override
   public int hashCode() {
     // TODO: This is wrong.  Can't have two gets the same just because on same row.  But it
@@ -483,7 +476,7 @@ public class Get extends Query implements Row {
     }
     Row other = (Row) obj;
     // TODO: This is wrong.  Can't have two gets the same just because on same row.
-    return compareTo(other) == 0;
+    return Row.COMPARATOR.compare(this, other) == 0;
   }
 
   @Override
