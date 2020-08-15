@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalancerDecisionRecords;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -112,6 +113,7 @@ import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
@@ -119,6 +121,7 @@ import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -3615,4 +3618,23 @@ public final class ProtobufUtil {
       throw new DoNotRetryIOException(e.getMessage());
     }
   }
+
+  public static List<BalancerDecisionRecords> toBalancerDecisionResponse(
+      MasterProtos.BalancerDecisionResponse balancerDecisionResponse) {
+    List<RecentLogs.BalancerDecision> balancerDecisions =
+      balancerDecisionResponse.getBalancerDecisionList();
+    if (CollectionUtils.isEmpty(balancerDecisions)) {
+      return Collections.emptyList();
+    }
+    return balancerDecisions.stream()
+      .map(balancerDecision -> new BalancerDecisionRecords.Builder()
+        .setInitTotalCost(balancerDecision.getInitTotalCost())
+        .setInitialFunctionCosts(balancerDecision.getInitialFunctionCosts())
+        .setComputedTotalCost(balancerDecision.getComputedTotalCost())
+        .setFinalFunctionCosts(balancerDecision.getFinalFunctionCosts())
+        .setComputedSteps(balancerDecision.getComputedSteps())
+        .setRegionPlans(balancerDecision.getRegionPlansList()).build())
+      .collect(Collectors.toList());
+  }
+
 }

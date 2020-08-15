@@ -24,6 +24,7 @@ import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalancerDecisionRecords;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
@@ -835,6 +837,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
       throws IOException {
     admin.updateRSGroupConfig(groupName, configuration);
     verify();
+  }
+
+  @Override
+  public List<BalancerDecisionRecords> getBalancerDecisions() throws IOException {
+    return Collections.emptyList();
   }
 
   private void verify() throws IOException {

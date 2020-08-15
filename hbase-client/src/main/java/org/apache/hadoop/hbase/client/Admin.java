@@ -2458,4 +2458,11 @@ public interface Admin extends Abortable, Closeable {
    */
   void updateRSGroupConfig(String groupName, Map<String, String> configuration) throws IOException;
 
+  /**
+   * Retrieve recent balancer decision factors with region plans from HMaster in-memory ringbuffer
+   *
+   * @return list of balancer decision records
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<BalancerDecisionRecords> getBalancerDecisions() throws IOException;
 }

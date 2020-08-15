@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
@@ -4207,5 +4208,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
                 controller, stub, request.build(),
               (s, c, req, done) -> s.updateRSGroupConfig(c, req, done), resp -> null))
         ).call();
+  }
+
+  @Override
+  public CompletableFuture<List<BalancerDecisionRecords>> getBalancerDecisions() {
+    return this.<List<BalancerDecisionRecords>>newMasterCaller()
+      .action((controller, stub) ->
+        this.call(controller, stub,
+          MasterProtos.BalancerDecisionRequest.newBuilder().build(),
+          MasterService.Interface::getBalancerDecisions, ProtobufUtil::toBalancerDecisionResponse))
+      .call();
   }
 }

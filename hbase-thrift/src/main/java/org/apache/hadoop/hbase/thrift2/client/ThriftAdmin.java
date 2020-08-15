@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BalancerDecisionRecords;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
@@ -1276,5 +1277,10 @@ public class ThriftAdmin implements Admin {
   public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
       throws IOException {
     throw new NotImplementedException("updateRSGroupConfig not supported in ThriftAdmin");
+  }
+
+  @Override
+  public List<BalancerDecisionRecords> getBalancerDecisions() throws IOException {
+    throw new NotImplementedException("getBalancerDecisions not supported in ThriftAdmin");
   }
 }

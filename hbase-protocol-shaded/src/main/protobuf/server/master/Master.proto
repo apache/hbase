@@ -38,6 +38,7 @@ import "server/master/LockService.proto";
 import "server/master/Replication.proto";
 import "server/rsgroup/RSGroupAdmin.proto";
 import "server/coprocessor/AccessControl.proto";
+import "server/master/RecentLogs.proto";
 
 /* Column-level protobufs */
 
@@ -690,6 +691,13 @@ message SwitchExceedThrottleQuotaResponse {
   required bool previous_exceed_throttle_quota_enabled = 1;
 }
 
+message BalancerDecisionRequest {
+}
+
+message BalancerDecisionResponse {
+  repeated BalancerDecision balancer_decision = 1;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -1120,6 +1128,9 @@ service MasterService {
 
   rpc UpdateRSGroupConfig(UpdateRSGroupConfigRequest)
   returns (UpdateRSGroupConfigResponse);
+
+  rpc GetBalancerDecisions(BalancerDecisionRequest)
+    returns(BalancerDecisionResponse);
 }
 
 // HBCK Service definitions.

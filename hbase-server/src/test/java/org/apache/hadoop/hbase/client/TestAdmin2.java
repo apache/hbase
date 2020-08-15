@@ -827,9 +827,10 @@ public class TestAdmin2 extends TestAdminBase {
     LogQueryFilter logQueryFilter = new LogQueryFilter();
     List<OnlineLogRecord> onlineLogRecords = ADMIN.getSlowLogResponses(new HashSet<>(serverNames),
       logQueryFilter);
-
     // after cleanup of slowlog responses, total count of slowlog payloads should be 0
     Assert.assertEquals(onlineLogRecords.size(), 0);
+    List<BalancerDecisionRecords> balancerDecisionRecords = ADMIN.getBalancerDecisions();
+    Assert.assertEquals(balancerDecisionRecords.size(), 0);
   }
 
   @Test

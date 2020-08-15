@@ -33,10 +33,12 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalancerDecisionRecords;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -46,6 +48,8 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.AssignRe
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.LocalityType;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.SwapRegionsAction;
+import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -222,6 +226,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     curFunctionCosts= new Double[costFunctions.size()];
     tempFunctionCosts= new Double[costFunctions.size()];
+
+    boolean isBalancerDecisionEnabled = getConf()
+      .getBoolean(HConstants.BALANCER_DECISION_BUFFER_ENABLED,
+        HConstants.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
+    if (this.namedQueueRecorder == null && isBalancerDecisionEnabled) {
+      this.namedQueueRecorder = NamedQueueRecorder.getInstance(getConf());
+    }
+
     LOG.info("Loaded config; maxSteps=" + maxSteps + ", stepsPerRegion=" + stepsPerRegion +
             ", maxRunningTime=" + maxRunningTime + ", isByTable=" + isByTable + ", CostFunctions=" +
             Arrays.toString(getCostFunctionNames()) + " etc.");
@@ -433,6 +445,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     LOG.info("start StochasticLoadBalancer.balancer, initCost=" + currentCost + ", functionCost="
         + functionCost() + " computedMaxSteps: " + computedMaxSteps);
 
+    final String initFunctionTotalCosts = totalCostsPerFunc();
     // Perform a stochastic walk to see if we can get a good fit.
     long step;
 
@@ -481,12 +494,34 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         "{} regions; Going from a computed cost of {}" +
         " to a new cost of {}", java.time.Duration.ofMillis(endTime - startTime),
         step, plans.size(), initCost, currentCost);
+      sendRegionPlansToRingBuffer(plans, currentCost, initCost, initFunctionTotalCosts, step);
       return plans;
     }
     LOG.info("Could not find a better load balance plan.  Tried {} different configurations in " +
       "{}, and did not find anything with a computed cost less than {}", step,
       java.time.Duration.ofMillis(endTime - startTime), initCost);
     return null;
+  }
+
+  private void sendRegionPlansToRingBuffer(List<RegionPlan> plans, double currentCost,
+      double initCost, String initFunctionTotalCosts, long step) {
+    if (this.namedQueueRecorder != null) {
+      List<String> regionPlans = new ArrayList<>();
+      for (RegionPlan plan : plans) {
+        regionPlans.add(
+          "table: " + plan.getRegionInfo().getTable() + " , region: " + plan.getRegionName()
+            + " , source: " + plan.getSource() + " , destination: " + plan.getDestination());
+      }
+      BalancerDecisionRecords balancerDecisionRecords =
+        new BalancerDecisionRecords.Builder()
+          .setInitTotalCost(initCost)
+          .setInitialFunctionCosts(initFunctionTotalCosts)
+          .setComputedTotalCost(currentCost)
+          .setFinalFunctionCosts(totalCostsPerFunc())
+          .setComputedSteps(step)
+          .setRegionPlans(regionPlans).build();
+      namedQueueRecorder.addRecord(new BalancerDecisionDetails(balancerDecisionRecords));
+    }
   }
 
   /**
@@ -523,6 +558,23 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       builder.append(", ");
       builder.append(c.cost());
       builder.append("); ");
+    }
+    return builder.toString();
+  }
+
+  private String totalCostsPerFunc() {
+    StringBuilder builder = new StringBuilder();
+    for (CostFunction c : costFunctions) {
+      if (c.getMultiplier() * c.cost() > 0.0) {
+        builder.append(" ");
+        builder.append(c.getClass().getSimpleName());
+        builder.append(" : ");
+        builder.append(c.getMultiplier() * c.cost());
+        builder.append(";");
+      }
+    }
+    if (builder.length() > 0) {
+      builder.deleteCharAt(builder.length() - 1);
     }
     return builder.toString();
   }

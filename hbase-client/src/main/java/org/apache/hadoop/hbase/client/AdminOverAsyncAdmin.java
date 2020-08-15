@@ -1057,4 +1057,9 @@ class AdminOverAsyncAdmin implements Admin {
       throws IOException {
     get(admin.updateRSGroupConfig(groupName, configuration));
   }
+
+  @Override
+  public List<BalancerDecisionRecords> getBalancerDecisions() throws IOException {
+    return get(admin.getBalancerDecisions());
+  }
 }

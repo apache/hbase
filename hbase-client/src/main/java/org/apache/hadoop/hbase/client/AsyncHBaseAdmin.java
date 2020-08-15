@@ -934,4 +934,9 @@ class AsyncHBaseAdmin implements AsyncAdmin {
     updateRSGroupConfig(String groupName, Map<String, String> configuration) {
     return wrap(rawAdmin.updateRSGroupConfig(groupName, configuration));
   }
+
+  @Override
+  public CompletableFuture<List<BalancerDecisionRecords>> getBalancerDecisions() {
+    return wrap(rawAdmin.getBalancerDecisions());
+  }
 }

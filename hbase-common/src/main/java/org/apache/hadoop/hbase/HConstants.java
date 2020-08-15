@@ -1605,6 +1605,10 @@ public final class HConstants {
    */
   public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
+  public static final String BALANCER_DECISION_BUFFER_ENABLED =
+    "hbase.master.balancer.decision.buffer.enabled";
+  public static final boolean DEFAULT_BALANCER_DECISION_BUFFER_ENABLED = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

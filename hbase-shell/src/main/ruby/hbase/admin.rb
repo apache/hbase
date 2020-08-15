@@ -1640,6 +1640,18 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Retrieve latest balancer decisions made by LoadBalancers
+    def get_balancer_decisions
+      balancer_decisions_responses = @admin.getBalancerDecisions
+      balancer_decisions_resp_arr = []
+      balancer_decisions_responses.each { |balancer_dec_resp|
+        balancer_decisions_resp_arr << balancer_dec_resp.toJsonPrettyPrint
+      }
+      puts 'Retrieved BalancerDecision Responses from HMaster'
+      puts balancer_decisions_resp_arr
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Stop the active Master
     def stop_master
       @admin.stopMaster

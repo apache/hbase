@@ -25,6 +25,7 @@ import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -77,6 +78,10 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
+import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.LockType;
@@ -107,6 +112,7 @@ import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -3281,4 +3287,23 @@ public class MasterRpcServices extends RSRpcServices implements
     }
     return builder.build();
   }
+
+  @Override
+  public MasterProtos.BalancerDecisionResponse getBalancerDecisions(RpcController controller,
+      MasterProtos.BalancerDecisionRequest request) {
+    final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
+    if (namedQueueRecorder == null) {
+      return MasterProtos.BalancerDecisionResponse.newBuilder()
+        .addAllBalancerDecision(Collections.emptyList()).build();
+    }
+    final NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
+    namedQueueGetRequest.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.BALANCE_DECISION);
+    NamedQueueGetResponse namedQueueGetResponse =
+      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+    List<RecentLogs.BalancerDecision> balancerDecisions =
+      namedQueueGetResponse.getBalancerDecisions();
+    return MasterProtos.BalancerDecisionResponse.newBuilder()
+      .addAllBalancerDecision(balancerDecisions).build();
+  }
+
 }

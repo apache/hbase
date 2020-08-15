@@ -594,14 +594,7 @@ public class HRegionServer extends Thread implements
       this.abortRequested = new AtomicBoolean(false);
       this.stopped = false;
 
-      if (!(this instanceof HMaster)) {
-        final boolean isOnlineLogProviderEnabled = conf.getBoolean(
-          HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
-          HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
-        if (isOnlineLogProviderEnabled) {
-          this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
-        }
-      }
+      initNamedQueueRecorder(conf);
       rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
       String hostName =
@@ -677,6 +670,24 @@ public class HRegionServer extends Thread implements
       // cause of failed startup is lost.
       LOG.error("Failed construction RegionServer", t);
       throw t;
+    }
+  }
+
+  private void initNamedQueueRecorder(Configuration conf) {
+    if (!(this instanceof HMaster)) {
+      final boolean isOnlineLogProviderEnabled = conf.getBoolean(
+        HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
+        HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
+      if (isOnlineLogProviderEnabled) {
+        this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
+      }
+    } else {
+      final boolean isBalancerDecisionEnabled = conf
+        .getBoolean(HConstants.BALANCER_DECISION_BUFFER_ENABLED,
+          HConstants.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
+      if (isBalancerDecisionEnabled) {
+        this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
+      }
     }
   }
 
