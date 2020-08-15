@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.chaos.policies;
 
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -42,7 +43,8 @@ public class TwoConcurrentActionPolicy extends PeriodicPolicy {
     this.actionsOne = actionsOne;
     this.actionsTwo = actionsTwo;
     executor = Executors.newFixedThreadPool(2,
-      new ThreadFactoryBuilder().setNameFormat("TwoConcurrentAction-pool-%d").build());
+      new ThreadFactoryBuilder().setNameFormat("TwoConcurrentAction-pool-%d")
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   @Override

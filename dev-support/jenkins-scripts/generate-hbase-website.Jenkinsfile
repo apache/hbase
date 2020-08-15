@@ -17,33 +17,43 @@
 pipeline {
   agent {
     node {
-      label 'Hadoop'
+      label 'git-websites'
     }
   }
   triggers {
-    cron('@daily')
+    pollSCM('@daily')
   }
   options {
-    buildDiscarder(logRotator(numToKeepStr: '50'))
-    timeout (time: 15, unit: 'MINUTES')
+    buildDiscarder(logRotator(numToKeepStr: '30'))
+    timeout (time: 1, unit: 'HOURS')
     timestamps()
+    skipDefaultCheckout()
+    disableConcurrentBuilds()
   }
   parameters {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
+    booleanParam(name: 'FORCE_FAIL', defaultValue: false, description: 'force a failure to test notifications.')
   }
   stages {
-    stage ('build flaky report') {
+    stage ('generate hbase website') {
+      tools {
+        maven 'Maven (latest)'
+        // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
+        jdk "JDK 1.8 (latest)"
+      }
       steps {
+        dir('hbase') {
+          checkout scm
+        }
         sh '''#!/usr/bin/env bash
           set -e
           if [ "${DEBUG}" = "true" ]; then
             set -x
           fi
-          declare -a flaky_args
-          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase/job/HBase%20Nightly/job/${BRANCH_NAME}" --is-yetus True --max-builds 10)
-          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase/job/HBase-Flaky-Tests/job/${BRANCH_NAME}" --is-yetus False --max-builds 30)
-          docker build -t hbase-dev-support dev-support
-          docker run --ulimit nproc=12500 -v "${WORKSPACE}":/hbase --workdir=/hbase hbase-dev-support python dev-support/flaky-tests/report-flakies.py --mvn -v "${flaky_args[@]}"
+          if [ "${FORCE_FAIL}" = "true" ]; then
+            false
+          fi
+          bash hbase/dev-support/jenkins-scripts/generate-hbase-website.sh --working-dir "${WORKSPACE}" --publish hbase
 '''
       }
     }
@@ -51,16 +61,19 @@ pipeline {
   post {
     always {
       // Has to be relative to WORKSPACE.
-      archiveArtifacts artifacts: "includes,excludes,dashboard.html"
-      publishHTML target: [
-        allowMissing: true,
-        keepAll: true,
-        alwaysLinkToLastBuild: true,
-        // Has to be relative to WORKSPACE
-        reportDir: ".",
-        reportFiles: 'dashboard.html',
-        reportName: 'Flaky Test Report'
-      ]
+      archiveArtifacts artifacts: '*.patch.zip,hbase-*.txt'
+    }
+    failure {
+      mail to: 'dev@hbase.apache.org', replyTo: 'dev@hbase.apache.org', subject: "Failure: HBase Generate Website", body: """
+Build status: ${currentBuild.currentResult}
+
+The HBase website has not been updated to incorporate recent HBase changes.
+
+See ${env.BUILD_URL}console
+"""
+    }
+    cleanup {
+      deleteDir()
     }
   }
 }

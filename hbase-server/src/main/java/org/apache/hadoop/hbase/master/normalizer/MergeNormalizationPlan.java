@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,20 +19,20 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import java.io.IOException;
-
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Normalization plan to merge regions (smallest region in the table with its smallest neighbor).
  */
 @InterfaceAudience.Private
 public class MergeNormalizationPlan implements NormalizationPlan {
-  private static final Logger LOG = LoggerFactory.getLogger(MergeNormalizationPlan.class.getName());
 
   private final RegionInfo firstRegion;
   private final RegionInfo secondRegion;
@@ -47,7 +47,6 @@ public class MergeNormalizationPlan implements NormalizationPlan {
    */
   @Override
   public long submit(MasterServices masterServices) throws IOException {
-    LOG.info("Executing merging normalization plan: " + this);
     // Do not use force=true as corner cases can happen, non adjacent regions,
     // merge with a merged child region with no GC done yet, it is going to
     // cause all different issues.
@@ -71,10 +70,35 @@ public class MergeNormalizationPlan implements NormalizationPlan {
 
   @Override
   public String toString() {
-    return "MergeNormalizationPlan{" +
-      "firstRegion=" + firstRegion +
-      ", secondRegion=" + secondRegion +
-      '}';
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .append("firstRegion", firstRegion)
+      .append("secondRegion", secondRegion)
+      .toString();
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    MergeNormalizationPlan that = (MergeNormalizationPlan) o;
+
+    return new EqualsBuilder()
+      .append(firstRegion, that.firstRegion)
+      .append(secondRegion, that.secondRegion)
+      .isEquals();
+  }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder(17, 37)
+      .append(firstRegion)
+      .append(secondRegion)
+      .toHashCode();
+  }
 }

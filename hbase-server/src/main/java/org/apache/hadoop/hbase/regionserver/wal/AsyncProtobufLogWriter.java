@@ -59,7 +59,11 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   private final Class<? extends Channel> channelClass;
 
-  private AsyncFSOutput output;
+  private volatile AsyncFSOutput output;
+  /**
+   * Save {@link AsyncFSOutput#getSyncedLength()} when {@link #output} is closed.
+   */
+  private volatile long finalSyncedLength = -1;
 
   private static final class OutputStreamWrapper extends OutputStream
       implements ByteBufferWriter {
@@ -156,6 +160,13 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
       LOG.warn("normal close failed, try recover", e);
       output.recoverAndClose(null);
     }
+    /**
+     * We have to call {@link AsyncFSOutput#getSyncedLength()}
+     * after {@link AsyncFSOutput#close()} to get the final length
+     * synced to underlying filesystem because {@link AsyncFSOutput#close()}
+     * may also flush some data to underlying filesystem.
+     */
+    this.finalSyncedLength = this.output.getSyncedLength();
     this.output = null;
   }
 
@@ -234,6 +245,17 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   public long getSyncedLength() {
-    return this.output.getSyncedLength();
+   /**
+    * The statement "this.output = null;" in {@link AsyncProtobufLogWriter#close}
+    * is a sync point, if output is null, then finalSyncedLength must set,
+    * so we can return finalSyncedLength, else we return output.getSyncedLength
+    */
+    AsyncFSOutput outputToUse = this.output;
+    if(outputToUse == null) {
+        long finalSyncedLengthToUse = this.finalSyncedLength;
+        assert finalSyncedLengthToUse >= 0;
+        return finalSyncedLengthToUse;
+    }
+    return outputToUse.getSyncedLength();
   }
 }

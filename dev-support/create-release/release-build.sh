@@ -154,7 +154,6 @@ if [[ "$1" == "tag" ]]; then
     # Push changes
     git push origin "$RELEASE_TAG"
     git push origin "HEAD:$GIT_BRANCH"
-    wait_for_tag "$RELEASE_TAG"
     cd ..
     rm -rf "${PROJECT}"
   else

@@ -284,7 +284,8 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
       int threads = conf.getInt(CONCURENT_SNAPSHOT_TASKS_KEY, DEFAULT_CONCURRENT_SNAPSHOT_TASKS);
       this.name = name;
       executor = Threads.getBoundedCachedThreadPool(threads, keepAlive, TimeUnit.MILLISECONDS,
-        new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-snapshot-pool-%d").build());
+        new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-snapshot-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       taskPool = new ExecutorCompletionService<>(executor);
     }
 
