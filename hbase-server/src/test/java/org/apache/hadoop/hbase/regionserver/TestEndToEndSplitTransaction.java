@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -402,6 +403,17 @@ public class TestEndToEndSplitTransaction {
   public static void compactAndBlockUntilDone(Admin admin, HRegionServer rs, byte[] regionName)
       throws IOException, InterruptedException {
     log("Compacting region: " + Bytes.toStringBinary(regionName));
+    // Wait till its online before we do compact else it comes back with NoServerForRegionException
+    try {
+      TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+        @Override public boolean evaluate() throws Exception {
+          return rs.getServerName().equals(MetaTableAccessor.
+              getRegionLocation(admin.getConnection(), regionName).getServerName());
+        }
+      });
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
     admin.majorCompactRegion(regionName);
     log("blocking until compaction is complete: " + Bytes.toStringBinary(regionName));
     Threads.sleepWithoutInterrupt(500);

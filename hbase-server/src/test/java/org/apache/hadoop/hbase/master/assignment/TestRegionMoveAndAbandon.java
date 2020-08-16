@@ -112,6 +112,8 @@ public class TestRegionMoveAndAbandon {
     // Stop RS2
     LOG.info("Killing RS {}", rs2.getServerName());
     cluster.killRegionServer(rs2.getServerName());
+    UTIL.waitFor(30000, () -> rs2.isStopped() && !rs2.isAlive());
+    UTIL.waitFor(30000, () -> rs1.isStopped() && !rs1.isAlive());
     // Start up everything again
     LOG.info("Starting cluster");
     UTIL.getMiniHBaseCluster().startMaster();

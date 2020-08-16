@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
+import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -93,9 +95,27 @@ public class RSProcedureDispatcher
     if (!super.start()) {
       return false;
     }
-
-    master.getServerManager().registerListener(this);
-    procedureEnv = master.getMasterProcedureExecutor().getEnvironment();
+    if (master.isStopped()) {
+      LOG.debug("Stopped");
+      return false;
+    }
+    // Around startup, if failed, some of the below may be set back to null so NPE is possible.
+    ServerManager sm = master.getServerManager();
+    if (sm == null) {
+      LOG.debug("ServerManager is null");
+      return false;
+    }
+    sm.registerListener(this);
+    ProcedureExecutor<MasterProcedureEnv> pe = master.getMasterProcedureExecutor();
+    if (pe == null) {
+      LOG.debug("ProcedureExecutor is null");
+      return false;
+    }
+    this.procedureEnv = pe.getEnvironment();
+    if (this.procedureEnv == null) {
+      LOG.debug("ProcedureEnv is null; stopping={}", master.isStopping());
+      return false;
+    }
     for (ServerName serverName: master.getServerManager().getOnlineServersList()) {
       addNode(serverName);
     }

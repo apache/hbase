@@ -1903,40 +1903,41 @@ public class TestHRegion {
     // Setting up region
     this.region = initHRegion(tableName, method, CONF, fam1);
     // Putting data in key
+    long now = System.currentTimeMillis();
     Put put = new Put(row1);
-    put.addColumn(fam1, qf1, val1);
+    put.addColumn(fam1, qf1, now, val1);
     region.put(put);
 
     // checkAndPut with correct value
     boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL,
         new BinaryComparator(val1), put);
-    assertEquals(true, res);
+    assertEquals("First put", true, res);
 
     // checkAndDelete with correct value
-    Delete delete = new Delete(row1);
+    Delete delete = new Delete(row1, now + 1);
     delete.addColumn(fam1, qf1);
     res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val1),
         delete);
-    assertEquals(true, res);
+    assertEquals("First delete", true, res);
 
     // Putting data in key
     put = new Put(row1);
-    put.addColumn(fam1, qf1, Bytes.toBytes(bd1));
+    put.addColumn(fam1, qf1, now + 2, Bytes.toBytes(bd1));
     region.put(put);
 
     // checkAndPut with correct value
     res =
         region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
             bd1), put);
-    assertEquals(true, res);
+    assertEquals("Second put", true, res);
 
     // checkAndDelete with correct value
-    delete = new Delete(row1);
+    delete = new Delete(row1, now + 3);
     delete.addColumn(fam1, qf1);
     res =
         region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
             bd1), delete);
-    assertEquals(true, res);
+    assertEquals("Second delete", true, res);
   }
 
   @Test
