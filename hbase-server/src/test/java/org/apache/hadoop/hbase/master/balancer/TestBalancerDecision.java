@@ -82,8 +82,6 @@ public class TestBalancerDecision extends BalancerTestBase {
       List<BalancerDecisionRecords> balancerDecisionRecords =
         ProtobufUtil.toBalancerDecisionResponse(response);
       Assert.assertTrue(balancerDecisionRecords.size() > 160);
-      Assert.assertEquals(15, balancerDecisionRecords.get(85).getRegionPlans().size());
-      Assert.assertEquals(1, balancerDecisionRecords.get(0).getRegionPlans().size());
     } finally {
       // reset config
       conf.unset(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE);

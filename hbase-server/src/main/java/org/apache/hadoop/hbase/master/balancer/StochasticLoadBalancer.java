@@ -246,26 +246,21 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return;
     }
 
-    costFunctions.addAll(Arrays.stream(functionsNames)
-            .map(c -> {
-              Class<? extends CostFunction> klass = null;
-              try {
-                klass = (Class<? extends CostFunction>) Class.forName(c);
-              } catch (ClassNotFoundException e) {
-                LOG.warn("Cannot load class " + c + "': " + e.getMessage());
-              }
-              if (null == klass) {
-                return null;
-              }
-
-              CostFunction reflected = ReflectionUtils.newInstance(klass, conf);
-              LOG.info("Successfully loaded custom CostFunction '" +
-                      reflected.getClass().getSimpleName() + "'");
-
-              return reflected;
-            })
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList()));
+    costFunctions.addAll(Arrays.stream(functionsNames).map(c -> {
+      Class<? extends CostFunction> klass = null;
+      try {
+        klass = (Class<? extends CostFunction>) Class.forName(c);
+      } catch (ClassNotFoundException e) {
+        LOG.warn("Cannot load class " + c + "': " + e.getMessage());
+      }
+      if (null == klass) {
+        return null;
+      }
+      CostFunction reflected = ReflectionUtils.newInstance(klass, conf);
+      LOG.info(
+        "Successfully loaded custom CostFunction '" + reflected.getClass().getSimpleName() + "'");
+      return reflected;
+    }).filter(Objects::nonNull).collect(Collectors.toList()));
   }
 
   protected void setCandidateGenerators(List<CandidateGenerator> customCandidateGenerators) {
@@ -424,7 +419,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     curOverallCost = currentCost;
     System.arraycopy(tempFunctionCosts, 0, curFunctionCosts, 0, curFunctionCosts.length);
     double initCost = currentCost;
-    double newCost = currentCost;
+    double newCost;
 
     long computedMaxSteps;
     if (runMaxSteps) {
