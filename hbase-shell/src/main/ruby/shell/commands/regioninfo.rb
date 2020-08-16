@@ -16,6 +16,13 @@
 # limitations under the License.
 #
 
+include Java
+java_import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil
+java_import org.apache.hadoop.hbase.util.FutureUtils
+java_import org.apache.hadoop.hbase.client.ConnectionFactory
+java_import org.apache.hadoop.hbase.security.UserProvider
+java_import org.apache.hadoop.hbase.client.ClusterConnectionFactory
+
 module Shell
   module Commands
     class Regioninfo < Command
@@ -35,12 +42,20 @@ Below we pass first encoded region name and then full region name.
 EOF
       end
 
-      def command(regionname)
-        connection = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection()
-        admin = connection.getAdmin()
+      def command(region_name)
+        admin = @shell.hbase.connection.getAdmin()
         sn = admin.getMaster()
-        puts org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.getRegionInfo(nil,
-          connection.getAdmin(sn), regionname.to_java_bytes)
+
+        conf = @shell.hbase.configuration
+        user = UserProvider.instantiate(conf).getCurrent()
+        clusterConnection = ClusterConnectionFactory.createAsyncClusterConnection(conf, nil, user)
+        regionInfo = ProtobufUtil.toRegionInfo(FutureUtils.get(
+          clusterConnection.getRegionServerAdmin(sn).getRegionInfo(
+            ProtobufUtil.getGetRegionInfoRequest(region_name.to_java_bytes))).getRegionInfo())
+        if clusterConnection != nil
+          clusterConnection.close()
+        end
+        puts regionInfo
       end
     end
   end
