@@ -1155,7 +1155,7 @@ public class HRegionServer extends HasThread implements
     }
 
     if (!this.killed && this.fsOk) {
-      waitOnAllRegionsToClose(abortRequested);
+      waitOnAllRegionsToClose();
       LOG.info("stopping server " + this.serverName + "; all regions closed.");
     }
 
@@ -1443,7 +1443,7 @@ public class HRegionServer extends HasThread implements
   /**
    * Wait on regions close.
    */
-  private void waitOnAllRegionsToClose(final boolean abort) {
+  private void waitOnAllRegionsToClose() {
     // Wait till all regions are closed before going out.
     int lastCount = -1;
     long previousLogTime = 0;
@@ -1475,7 +1475,7 @@ public class HRegionServer extends HasThread implements
               !closedRegions.contains(hri.getEncodedName())) {
             closedRegions.add(hri.getEncodedName());
             // Don't update zk with this close transition; pass false.
-            closeRegionIgnoreErrors(hri, abort);
+            closeRegionIgnoreErrors(hri, abortRequested);
           }
         }
         // No regions in RIT, we could stop waiting now.
