@@ -26,6 +26,7 @@ java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder
+java_import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder
 java_import org.apache.hadoop.hbase.client.TableDescriptorBuilder
 java_import org.apache.hadoop.hbase.HConstants
 
@@ -587,7 +588,10 @@ module Hbase
 
     def get_table_attributes(table_name)
       tableExists(table_name)
-      @admin.getDescriptor(TableName.valueOf(table_name)).toStringTableAttributes
+      td = @admin.getDescriptor TableName.valueOf(table_name)
+      method = td.java_class.declared_method :toStringTableAttributes
+      method.accessible = true
+      method.invoke td
     end
 
     #----------------------------------------------------------------------------------------------
@@ -662,6 +666,40 @@ module Hbase
         sleep 1
       end while !table_region_status.nil? && table_region_status.getRegionsInTransition != 0
       puts 'Done.'
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Use our internal logic to convert from "spec string" format to a coprocessor descriptor
+    #
+    # Provided for backwards shell compatibility
+    #
+    # @param [String] spec_str
+    # @return [ColumnDescriptor]
+    def coprocessor_descriptor_from_spec_str(spec_str)
+      method = TableDescriptorBuilder.java_class.declared_method_smart :toCoprocessorDescriptor
+      method.accessible = true
+      result = method.invoke(nil, spec_str).to_java
+      # unpack java's Optional to be more rubonic
+      return result.isPresent ? result.get : nil
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Use CoprocessorDescriptorBuilder to convert a Hash to CoprocessorDescriptor
+    #
+    # @param [Hash] spec column descriptor specification
+    # @return [ColumnDescriptor]
+    def coprocessor_descriptor_from_hash(spec)
+      classname = spec['CLASSNAME']
+      jar_path = spec['JAR_PATH']
+      priority = spec['PRIORITY']
+      properties = spec['PROPERTIES']
+
+      builder = CoprocessorDescriptorBuilder.newBuilder classname
+      builder.setJarPath jar_path unless jar_path.nil?
+      builder.setPriority priority unless priority.nil?
+      properties&.each { |k, v| builder.setProperty(k, v.to_s) }
+
+      builder.build
     end
 
     #----------------------------------------------------------------------------------------------
@@ -773,13 +811,17 @@ module Hbase
           k.strip!
 
           next unless k =~ /coprocessor/i
-          v = String.new(value)
-          v.strip!
-          # TODO: We should not require user to config the coprocessor with our inner format.
-          # This is a roundabout approach, but will be replaced shortly since
-          # the setCoprocessorWithSpec method is marked for deprecation.
-          coprocessor_descriptors = tdb.build.setCoprocessorWithSpec(v).getCoprocessorDescriptors
-          tdb.setCoprocessors(coprocessor_descriptors)
+          if value.is_a? String
+            # Specifying a coprocessor by this "spec string" is here for backwards compatibility
+            v = String.new value
+            v.strip!
+            cp = coprocessor_descriptor_from_spec_str v
+          elsif value.is_a? Hash
+            cp = coprocessor_descriptor_from_hash value
+          else
+            raise ArgumentError.new 'coprocessor must be provided as a String or Hash'
+          end
+          tdb.setCoprocessor cp
           valid_coproc_keys << key
         end
 
