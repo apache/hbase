@@ -187,7 +187,6 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
-import org.apache.hadoop.hbase.replication.master.ReplicationPeerConfigUpgrader;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
@@ -1024,13 +1023,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
     zombieDetector.setDaemon(true);
     zombieDetector.start();
-
-    // This is for backwards compatibility
-    // See HBASE-11393
-    status.setStatus("Update TableCFs node in ZNode");
-    ReplicationPeerConfigUpgrader tableCFsUpdater =
-        new ReplicationPeerConfigUpgrader(zooKeeper, conf);
-    tableCFsUpdater.copyTableCFs();
 
     if (!maintenanceMode) {
       // Add the Observer to delete quotas on table deletion before starting all CPs by
