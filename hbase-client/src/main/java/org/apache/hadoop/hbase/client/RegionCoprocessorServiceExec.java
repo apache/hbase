@@ -72,9 +72,8 @@ public class RegionCoprocessorServiceExec implements Row {
     return request;
   }
 
-  @Override
   public int compareTo(Row o) {
-    int res = Bytes.compareTo(this.getRow(), o.getRow());
+    int res = Row.COMPARATOR.compare(this, o);
     if ((o instanceof RegionCoprocessorServiceExec) && res == 0) {
       RegionCoprocessorServiceExec exec = (RegionCoprocessorServiceExec) o;
       res = method.getFullName().compareTo(exec.getMethod().getFullName());

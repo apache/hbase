@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -125,41 +124,6 @@ public class RowMutations implements Row {
     }
     this.mutations.addAll(mutations);
     return this;
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link Row#COMPARATOR} instead
-   */
-  @Deprecated
-  @Override
-  public int compareTo(Row i) {
-    return Bytes.compareTo(this.getRow(), i.getRow());
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             No replacement
-   */
-  @Deprecated
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == this) return true;
-    if (obj instanceof RowMutations) {
-      RowMutations other = (RowMutations)obj;
-      return compareTo(other) == 0;
-    }
-    return false;
-  }
-
-  /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             No replacement
-   */
-  @Deprecated
-  @Override
-  public int hashCode(){
-    return Arrays.hashCode(row);
   }
 
   @Override
