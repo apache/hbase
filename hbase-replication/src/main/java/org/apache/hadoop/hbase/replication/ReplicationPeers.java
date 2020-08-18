@@ -144,6 +144,11 @@ public class ReplicationPeers {
     SyncReplicationState syncReplicationState = peerStorage.getPeerSyncReplicationState(peerId);
     SyncReplicationState newSyncReplicationState =
       peerStorage.getPeerNewSyncReplicationState(peerId);
+
+    // Only update peer configs when we have extra received from default.
+    if(peerConfig.addDefaultPeerConfigsIfNotPresent(this.conf)){
+      peerStorage.updatePeerConfig(peerId,peerConfig);
+    }
     return new ReplicationPeerImpl(ReplicationUtils.getPeerClusterConfiguration(peerConfig, conf),
       peerId, peerConfig, enabled, syncReplicationState, newSyncReplicationState);
   }

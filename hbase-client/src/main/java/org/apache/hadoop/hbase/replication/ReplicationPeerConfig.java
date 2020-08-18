@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -418,5 +419,44 @@ public class ReplicationPeerConfig {
       }
       return tableCFsMap != null && tableCFsMap.containsKey(table);
     }
+  }
+
+  /**
+   Sample Configuration
+   <property>
+   <name>hbase.replication.peer.default.configs</name>
+   <value>hbase.replication.source.custom.walentryfilters=x,y,z;hbase.xxx.custom_property=123</value>
+   </property>
+   */
+
+  /**
+   * Helper method to add default peer configs from HBase Configuration to ReplicationPeerConfig
+   * @param conf Configuration
+   * @return true if new configurations was added.
+   */
+  public boolean addDefaultPeerConfigsIfNotPresent(Configuration conf){
+
+    boolean isNewConfAdded = false;
+    String defaultPeerConfigs = conf.get("hbase.replication.peer.default.config");
+    Map<String,String> peerConfigurations = getConfiguration();
+
+    if(defaultPeerConfigs != null && defaultPeerConfigs.length() != 0){
+      String[] defaultPeerConfigList = defaultPeerConfigs.split(";");
+
+      for(String defaultPeerConfig :  defaultPeerConfigList){
+        String[] configSplit = defaultPeerConfig.split("=");
+        if(configSplit != null && configSplit.length == 2){
+          String configName = configSplit[0];
+          String configValue = configSplit[1];
+
+          // Only override if default property does not exist in existing peer configs or its value is different.
+          if(!peerConfigurations.containsKey(configName) || !peerConfigurations.get(configName).equalsIgnoreCase(configValue)){
+            peerConfigurations.put(configName,configValue);
+            isNewConfAdded = true;
+          }
+        }
+      }
+    }
+    return isNewConfAdded;
   }
 }

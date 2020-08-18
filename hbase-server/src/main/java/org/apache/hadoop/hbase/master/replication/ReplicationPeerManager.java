@@ -119,6 +119,7 @@ public class ReplicationPeerManager {
     if (peerId.contains("-")) {
       throw new DoNotRetryIOException("Found invalid peer name: " + peerId);
     }
+    peerConfig.addDefaultPeerConfigsIfNotPresent(conf);
     checkPeerConfig(peerConfig);
     if (peerConfig.isSyncReplication()) {
       checkSyncReplicationPeerConfigConflict(peerConfig);
