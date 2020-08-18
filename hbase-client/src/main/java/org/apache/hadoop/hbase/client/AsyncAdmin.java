@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -1533,9 +1534,17 @@ public interface AsyncAdmin {
    * @param serverNames Server names to get slowlog responses from
    * @param logQueryFilter filter to be used if provided
    * @return Online slowlog response list. The return value wrapped by a {@link CompletableFuture}
+   * @deprecated since 2.4.0 and will be removed in 4.0.0.
+   *   Use {@link #getLogEntries(LogRequest)} instead.
    */
-  CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(final Set<ServerName> serverNames,
-      final LogQueryFilter logQueryFilter);
+  default CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
+      final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
+    logQueryFilter.setServerNames(serverNames);
+    CompletableFuture<List<LogEntry>> logEntries = getLogEntries(logQueryFilter);
+    return logEntries.thenApply(
+      logEntryList -> logEntryList.stream().map(logEntry -> (OnlineLogRecord) logEntry)
+        .collect(Collectors.toList()));
+  }
 
   /**
    * Clears online slow RPC logs from the provided list of
@@ -1665,11 +1674,11 @@ public interface AsyncAdmin {
   CompletableFuture<Void> updateRSGroupConfig(String groupName, Map<String, String> configuration);
 
   /**
-   * Retrieve recent balancer decision factors with region plans from HMaster in-memory ringbuffer
+   * Retrieve recent online records from HMaster / RegionServers.
+   * Examples include slow/large RPC logs, balancer decisions by master.
    *
-   * @return list of balancer decision records
-   * @param balancerDecisionRequest request payload with filter attributes
+   * @param logRequest request payload with possible filters
+   * @return Log entries representing online records from servers
    */
-  CompletableFuture<List<BalancerDecision>> getBalancerDecisions(
-    BalancerDecisionRequest balancerDecisionRequest);
+  CompletableFuture<List<LogEntry>> getLogEntries(LogRequest logRequest);
 }

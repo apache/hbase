@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Balancer decision request payload with filter attributes
  */
 @InterfaceAudience.Private
-public class BalancerDecisionRequest {
+public class BalancerDecisionRequest extends LogRequest {
 
   private int limit = 250;
 

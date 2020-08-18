@@ -825,8 +825,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
-  public List<BalancerDecision> getBalancerDecisions(
-    BalancerDecisionRequest balancerDecisionRequest) throws IOException {
+  public List<LogEntry> getLogEntries(LogRequest logRequest) throws IOException {
     return Collections.emptyList();
   }
 

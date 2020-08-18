@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
@@ -3475,7 +3476,7 @@ public final class ProtobufUtil {
    * @param slowLogPayload SlowLog Payload protobuf instance
    * @return SlowLog Payload for client usecase
    */
-  private static OnlineLogRecord getSlowLogRecord(
+  private static LogEntry getSlowLogRecord(
       final TooSlowLog.SlowLogPayload slowLogPayload) {
     OnlineLogRecord onlineLogRecord = new OnlineLogRecord.OnlineLogRecordBuilder()
       .setCallDetails(slowLogPayload.getCallDetails())
@@ -3502,9 +3503,9 @@ public final class ProtobufUtil {
    * @param slowLogResponses slowlog response protobuf instance
    * @return list of SlowLog payloads for client usecase
    */
-  public static List<OnlineLogRecord> toSlowLogPayloads(
+  public static List<LogEntry> toSlowLogPayloads(
       final AdminProtos.SlowLogResponses slowLogResponses) {
-    List<OnlineLogRecord> onlineLogRecords = slowLogResponses.getSlowLogPayloadsList()
+    List<LogEntry> onlineLogRecords = slowLogResponses.getSlowLogPayloadsList()
       .stream().map(ProtobufUtil::getSlowLogRecord).collect(Collectors.toList());
     return onlineLogRecords;
   }
@@ -3619,7 +3620,7 @@ public final class ProtobufUtil {
     }
   }
 
-  public static List<BalancerDecision> toBalancerDecisionResponse(
+  public static List<LogEntry> toBalancerDecisionResponse(
       MasterProtos.BalancerDecisionResponse balancerDecisionResponse) {
     List<RecentLogs.BalancerDecision> balancerDecisions =
       balancerDecisionResponse.getBalancerDecisionList();

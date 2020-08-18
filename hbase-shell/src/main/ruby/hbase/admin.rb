@@ -1481,8 +1481,8 @@ module Hbase
       end
       filter_params = get_filter_params(args)
       filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::SLOW_LOG)
-      slow_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
-                                                      filter_params)
+      filter_params.setServerNames(java.util.HashSet.new(server_names))
+      slow_log_responses = @admin.getLogEntries(filter_params)
       slow_log_responses_arr = []
       for slow_log_response in slow_log_responses
         slow_log_responses_arr << slow_log_response.toJsonPrettyPrint
@@ -1540,8 +1540,8 @@ module Hbase
       end
       filter_params = get_filter_params(args)
       filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::LARGE_LOG)
-      large_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
-                                                       filter_params)
+      filter_params.setServerNames(java.util.HashSet.new(server_names))
+      large_log_responses = @admin.getLogEntries(filter_params)
       large_log_responses_arr = []
       for large_log_response in large_log_responses
         large_log_responses_arr << large_log_response.toJsonPrettyPrint
@@ -1645,7 +1645,7 @@ module Hbase
         limit = args['LIMIT']
         balancer_decisions_req.setLimit(limit)
       end
-      balancer_decisions_responses = @admin.getBalancerDecisions(balancer_decisions_req)
+      balancer_decisions_responses = @admin.getLogEntries(balancer_decisions_req)
       balancer_decisions_resp_arr = []
       balancer_decisions_responses.each { |balancer_dec_resp|
         balancer_decisions_resp_arr << balancer_dec_resp.toJsonPrettyPrint

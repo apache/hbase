@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.BalancerDecision;
+import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
@@ -80,7 +80,7 @@ public class TestBalancerDecision extends BalancerTestBase {
         MasterProtos.BalancerDecisionResponse.newBuilder()
           .addAllBalancerDecision(balancerDecisions)
           .build();
-      List<BalancerDecision> balancerDecisionRecords =
+      List<LogEntry> balancerDecisionRecords =
         ProtobufUtil.toBalancerDecisionResponse(response);
       Assert.assertTrue(balancerDecisionRecords.size() > 160);
     } finally {

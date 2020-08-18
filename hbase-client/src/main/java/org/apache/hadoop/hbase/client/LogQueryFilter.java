@@ -22,14 +22,17 @@ package org.apache.hadoop.hbase.client;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
+import java.util.Collections;
+import java.util.Set;
 
 /**
  * Slow/Large Log Query Filter with all filter and limit parameters
  * Used by Admin API: getSlowLogResponses
  */
 @InterfaceAudience.Private
-public class LogQueryFilter {
+public class LogQueryFilter extends LogRequest {
 
   private String regionName;
   private String clientAddress;
@@ -38,6 +41,7 @@ public class LogQueryFilter {
   private int limit = 10;
   private Type type = Type.SLOW_LOG;
   private FilterByOperator filterByOperator = FilterByOperator.OR;
+  private Set<ServerName> serverNames;
 
   public enum Type {
     SLOW_LOG,
@@ -105,6 +109,14 @@ public class LogQueryFilter {
     this.filterByOperator = filterByOperator;
   }
 
+  public Set<ServerName> getServerNames() {
+    return Collections.unmodifiableSet(serverNames);
+  }
+
+  public void setServerNames(Set<ServerName> serverNames) {
+    this.serverNames = serverNames;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -125,6 +137,7 @@ public class LogQueryFilter {
       .append(userName, that.userName)
       .append(type, that.type)
       .append(filterByOperator, that.filterByOperator)
+      .append(serverNames, that.serverNames)
       .isEquals();
   }
 
@@ -138,6 +151,7 @@ public class LogQueryFilter {
       .append(limit)
       .append(type)
       .append(filterByOperator)
+      .append(serverNames)
       .toHashCode();
   }
 
@@ -151,6 +165,8 @@ public class LogQueryFilter {
       .append("limit", limit)
       .append("type", type)
       .append("filterByOperator", filterByOperator)
+      .append("serverNames", serverNames)
       .toString();
   }
+
 }

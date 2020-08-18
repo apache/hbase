@@ -853,12 +853,6 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
-      final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
-    return wrap(rawAdmin.getSlowLogResponses(serverNames, logQueryFilter));
-  }
-
-  @Override
   public CompletableFuture<List<Boolean>> clearSlowLogResponses(Set<ServerName> serverNames) {
     return wrap(rawAdmin.clearSlowLogResponses(serverNames));
   }
@@ -936,8 +930,7 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<BalancerDecision>> getBalancerDecisions(
-      BalancerDecisionRequest balancerDecisionRequest) {
-    return wrap(rawAdmin.getBalancerDecisions(balancerDecisionRequest));
+  public CompletableFuture<List<LogEntry>> getLogEntries(LogRequest logRequest) {
+    return wrap(rawAdmin.getLogEntries(logRequest));
   }
 }

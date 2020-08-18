@@ -34,7 +34,7 @@ import org.apache.hbase.thirdparty.com.google.gson.JsonSerializer;
  * get_large_responses
  */
 @InterfaceAudience.Private
-final public class OnlineLogRecord {
+final public class OnlineLogRecord extends LogEntry {
 
   // used to convert object to pretty printed format
   // used by toJsonPrettyPrint()
@@ -293,6 +293,7 @@ final public class OnlineLogRecord {
       .toHashCode();
   }
 
+  @Override
   public String toJsonPrettyPrint() {
     return GSON.toJson(this);
   }

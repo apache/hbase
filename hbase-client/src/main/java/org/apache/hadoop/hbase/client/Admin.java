@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.util.FutureUtils.get;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -64,6 +66,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
@@ -2325,9 +2328,16 @@ public interface Admin extends Abortable, Closeable {
    * @param logQueryFilter filter to be used if provided (determines slow / large RPC logs)
    * @return online slowlog response list
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.4.0 and will be removed in 4.0.0.
+   *   Use {@link #getLogEntries(LogRequest)} instead.
    */
-  List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-      final LogQueryFilter logQueryFilter) throws IOException;
+  default List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter) throws IOException {
+    logQueryFilter.setServerNames(serverNames);
+    List<LogEntry> logEntries = getLogEntries(logQueryFilter);
+    return logEntries.stream().map(logEntry -> (OnlineLogRecord) logEntry)
+      .collect(Collectors.toList());
+  }
 
   /**
    * Clears online slow/large RPC logs from the provided list of
@@ -2459,12 +2469,12 @@ public interface Admin extends Abortable, Closeable {
   void updateRSGroupConfig(String groupName, Map<String, String> configuration) throws IOException;
 
   /**
-   * Retrieve recent balancer decision factors with region plans from HMaster in-memory ringbuffer
+   * Retrieve recent online records from HMaster / RegionServers.
+   * Examples include slow/large RPC logs, balancer decisions by master.
    *
-   * @return list of balancer decision records
+   * @param logRequest request payload with possible filters
+   * @return Log entries representing online records from servers
    * @throws IOException if a remote or network exception occurs
-   * @param balancerDecisionRequest request payload with filter attributes
    */
-  List<BalancerDecision> getBalancerDecisions(BalancerDecisionRequest balancerDecisionRequest)
-    throws IOException;
+  List<LogEntry> getLogEntries(LogRequest logRequest) throws IOException;
 }

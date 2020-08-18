@@ -975,12 +975,6 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-      final LogQueryFilter logQueryFilter) throws IOException {
-    return get(admin.getSlowLogResponses(serverNames, logQueryFilter));
-  }
-
-  @Override
   public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
       throws IOException {
     return get(admin.clearSlowLogResponses(serverNames));
@@ -1059,8 +1053,7 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<BalancerDecision> getBalancerDecisions(
-      BalancerDecisionRequest balancerDecisionRequest) throws IOException {
-    return get(admin.getBalancerDecisions(balancerDecisionRequest));
+  public List<LogEntry> getLogEntries(LogRequest logRequest) throws IOException {
+    return get(admin.getLogEntries(logRequest));
   }
 }

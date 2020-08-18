@@ -30,7 +30,7 @@ import java.util.List;
  * History of balancer decisions taken for region movements.
  */
 @InterfaceAudience.Private
-final public class BalancerDecision {
+final public class BalancerDecision extends LogEntry {
 
   private final String initialFunctionCosts;
   private final String finalFunctionCosts;
@@ -96,6 +96,7 @@ final public class BalancerDecision {
       .toString();
   }
 
+  @Override
   public String toJsonPrettyPrint() {
     return GSON.toJson(this);
   }

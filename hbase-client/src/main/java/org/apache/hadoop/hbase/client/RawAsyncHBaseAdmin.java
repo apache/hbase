@@ -3979,9 +3979,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .call();
   }
 
-  @Override
-  public CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
-      @Nullable final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
+  private CompletableFuture<List<LogEntry>> getSlowLogResponses(
+      final LogQueryFilter logQueryFilter) {
+    final Set<ServerName> serverNames = logQueryFilter.getServerNames();
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }
@@ -4003,9 +4003,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
   }
 
-  private CompletableFuture<List<OnlineLogRecord>> getSlowLogResponseFromServer(
+  private CompletableFuture<List<LogEntry>> getSlowLogResponseFromServer(
       final ServerName serverName, final LogQueryFilter logQueryFilter) {
-    return this.<List<OnlineLogRecord>>newAdminCaller()
+    return this.<List<LogEntry>>newAdminCaller()
       .action((controller, stub) -> this
         .adminCall(
           controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
@@ -4014,9 +4014,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .serverName(serverName).call();
   }
 
-  private CompletableFuture<List<OnlineLogRecord>> getLargeLogResponseFromServer(
+  private CompletableFuture<List<LogEntry>> getLargeLogResponseFromServer(
     final ServerName serverName, final LogQueryFilter logQueryFilter) {
-    return this.<List<OnlineLogRecord>>newAdminCaller()
+    return this.<List<LogEntry>>newAdminCaller()
       .action((controller, stub) -> this
         .adminCall(
           controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
@@ -4210,15 +4210,24 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         ).call();
   }
 
-  @Override
-  public CompletableFuture<List<BalancerDecision>> getBalancerDecisions(
+  private CompletableFuture<List<LogEntry>> getBalancerDecisions(
       BalancerDecisionRequest balancerDecisionRequest) {
-    return this.<List<BalancerDecision>>newMasterCaller()
+    return this.<List<LogEntry>>newMasterCaller()
       .action((controller, stub) ->
         this.call(controller, stub,
           MasterProtos.BalancerDecisionRequest.newBuilder()
             .setLimit(balancerDecisionRequest.getLimit()).build(),
           MasterService.Interface::getBalancerDecisions, ProtobufUtil::toBalancerDecisionResponse))
       .call();
+  }
+
+  @Override
+  public CompletableFuture<List<LogEntry>> getLogEntries(LogRequest logRequest) {
+    if (logRequest instanceof BalancerDecisionRequest) {
+      return getBalancerDecisions((BalancerDecisionRequest) logRequest);
+    } else if (logRequest instanceof LogQueryFilter) {
+      return getSlowLogResponses((LogQueryFilter) logRequest);
+    }
+    throw new UnsupportedOperationException("LogRequest type is not supported");
   }
 }
