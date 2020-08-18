@@ -284,7 +284,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
    */
   private static PoolMap.PoolType getPoolType(Configuration config) {
     return PoolMap.PoolType.valueOf(config.get(HConstants.HBASE_CLIENT_IPC_POOL_TYPE),
-      PoolMap.PoolType.RoundRobin, PoolMap.PoolType.ThreadLocal);
+      PoolMap.PoolType.RoundRobin);
   }
 
   /**
