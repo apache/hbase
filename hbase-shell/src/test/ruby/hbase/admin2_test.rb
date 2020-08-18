@@ -443,6 +443,10 @@ class CommissioningTest < Test::Unit::TestCase
 
     def setup
       setup_hbase
+      # Create test table if it does not exist
+      @test_name = "hbase_shell_regioninfo_test"
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
     end
 
     def teardown
@@ -456,14 +460,18 @@ class CommissioningTest < Test::Unit::TestCase
     end
 
     define_test 'Get region info with encoded region name' do
-      output = capture_stdout { command(:regioninfo, '1588230740') }
+      region = command(:locate_region, @test_name, '')
+      encodedRegionName = region.getRegion.getEncodedName
+      output = capture_stdout { command(:regioninfo, encodedRegionName) }
       puts "Region info output:\n#{output}"
       assert output.include? 'ENCODED'
       assert output.include? 'STARTKEY'
     end
 
     define_test 'Get region info with region name' do
-      output = capture_stdout { command(:regioninfo, 'hbase:meta,,1') }
+      region = command(:locate_region, @test_name, '')
+      regionName = region.getRegion.getRegionNameAsString
+      output = capture_stdout { command(:regioninfo, regionName) }
       puts "Region info output:\n#{output}"
       assert output.include? 'ENCODED'
       assert output.include? 'STARTKEY'
