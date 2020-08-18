@@ -1628,6 +1628,10 @@ public class TableDescriptorBuilder {
     }
   }
 
+  /**
+   * This method is mostly intended for internal use. However, it it also relied on by hbase-shell
+   * for backwards compatibility.
+   */
   private static Optional<CoprocessorDescriptor> toCoprocessorDescriptor(String spec) {
     Matcher matcher = CP_HTD_ATTR_VALUE_PATTERN.matcher(spec);
     if (matcher.matches()) {

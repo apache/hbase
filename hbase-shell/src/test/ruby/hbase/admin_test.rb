@@ -943,7 +943,7 @@ module Hbase
       assert_match(/12345678/, admin.describe(@test_name))
     end
 
-    define_test "alter should be able to change coprocessor attributes" do
+    define_test "alter should be able to specify coprocessor attributes with spec string" do
       drop_test_table(@test_name)
       create_test_table(@test_name)
 
@@ -956,8 +956,34 @@ module Hbase
       assert_no_match(eval("/" + class_name + "/"), admin.describe(@test_name))
       assert_no_match(eval("/" + cp_key + "/"), admin.describe(@test_name))
       command(:alter, @test_name, 'METHOD' => 'table_att', cp_key => cp_value)
-      assert_match(eval("/" + class_name + "/"), admin.describe(@test_name))
-      assert_match(eval("/" + cp_key + "\\$(\\d+)/"), admin.describe(@test_name))
+      describe_text = admin.describe(@test_name)
+      assert_match(eval("/" + class_name + "/"), describe_text)
+      assert_match(eval("/" + cp_key + "\\$(\\d+)/"), describe_text)
+      assert_match(/arg1=1,arg2=2/, describe_text)
+    end
+
+    define_test "alter should be able to change coprocessor attributes with hash" do
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+
+      cp_key = "coprocessor"
+      class_name = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver"
+
+      # eval() is used to convert a string to regex
+      assert_no_match(eval("/" + class_name + "/"), admin.describe(@test_name))
+      assert_no_match(eval("/" + cp_key + "/"), admin.describe(@test_name))
+      command(:alter, @test_name, 'METHOD' => 'table_att', cp_key => {
+          'CLASSNAME' => class_name,
+          'PRIORITY' => 15,
+          'PROPERTIES' => {
+              'arg1' => 4,
+              'arg2' => 9,
+          },
+      })
+      describe_text = admin.describe(@test_name)
+      assert_match(eval("/" + class_name + "/"), describe_text)
+      assert_match(eval("/" + cp_key + "\\$(\\d+)/"), describe_text)
+      assert_match(/arg1=4,arg2=9/, describe_text)
     end
 
     define_test "alter should be able to remove a table attribute" do
