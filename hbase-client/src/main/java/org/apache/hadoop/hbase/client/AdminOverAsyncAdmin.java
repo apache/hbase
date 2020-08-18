@@ -395,8 +395,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public boolean normalize() throws IOException {
-    return get(admin.normalize());
+  public boolean normalize(NormalizeTableFilterParams ntfp) throws IOException {
+    return get(admin.normalize(ntfp));
   }
 
   @Override

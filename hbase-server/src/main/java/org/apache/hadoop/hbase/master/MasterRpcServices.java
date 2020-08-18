@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -1926,7 +1927,14 @@ public class MasterRpcServices extends RSRpcServices implements
       NormalizeRequest request) throws ServiceException {
     rpcPreCheck("normalize");
     try {
-      return NormalizeResponse.newBuilder().setNormalizerRan(master.normalizeRegions()).build();
+      final NormalizeTableFilterParams ntfp = new NormalizeTableFilterParams.Builder()
+        .tableNames(ProtobufUtil.toTableNameList(request.getTableNamesList()))
+        .regex(request.hasRegex() ? request.getRegex() : null)
+        .namespace(request.hasNamespace() ? request.getNamespace() : null)
+        .build();
+      return NormalizeResponse.newBuilder()
+        .setNormalizerRan(master.normalizeRegions(ntfp))
+        .build();
     } catch (IOException ex) {
       throw new ServiceException(ex);
     }

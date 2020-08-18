@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -1280,7 +1280,17 @@ public interface AsyncAdmin {
    * @return true if region normalizer ran, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> normalize();
+  default CompletableFuture<Boolean> normalize() {
+    return normalize(new NormalizeTableFilterParams.Builder().build());
+  }
+
+  /**
+   * Invoke region normalizer. Can NOT run for various reasons. Check logs.
+   * @param ntfp limit to tables matching the specified filter.
+   * @return true if region normalizer ran, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> normalize(NormalizeTableFilterParams ntfp);
 
   /**
    * Turn the cleaner chore on/off.

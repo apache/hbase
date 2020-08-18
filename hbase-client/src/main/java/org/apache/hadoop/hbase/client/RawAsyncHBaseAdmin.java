@@ -3287,14 +3287,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> normalize() {
+  public CompletableFuture<Boolean> normalize(NormalizeTableFilterParams ntfp) {
+    return normalize(RequestConverter.buildNormalizeRequest(ntfp));
+  }
+
+  private CompletableFuture<Boolean> normalize(NormalizeRequest request) {
     return this
-        .<Boolean> newMasterCaller()
-        .action(
-          (controller, stub) -> this.<NormalizeRequest, NormalizeResponse, Boolean> call(
-            controller, stub, RequestConverter.buildNormalizeRequest(),
-            (s, c, req, done) -> s.normalize(c, req, done), (resp) -> resp.getNormalizerRan()))
-        .call();
+      .<Boolean> newMasterCaller()
+      .action(
+        (controller, stub) -> this.call(
+          controller, stub, request, MasterService.Interface::normalize,
+          NormalizeResponse::getNormalizerRan))
+      .call();
   }
 
   @Override

@@ -22,18 +22,24 @@ module Shell
     class Normalize < Command
       def help
         <<-EOF
-Trigger region normalizer for all tables which have NORMALIZATION_ENABLED flag set. Returns true
- if normalizer ran successfully, false otherwise. Note that this command has no effect
- if region normalizer is disabled (make sure it's turned on using 'normalizer_switch' command).
+Trigger the region normalizer. Without arguments, invokes the normalizer without a table filter.
+Any arguments are used to limit table selection. Returns true if the normalize request was
+submitted successfully, false otherwise. Note that this command has no effect if region normalizer
+is disabled (make sure it's turned on using 'normalizer_switch' command).
 
- Examples:
+Examples:
 
-   hbase> normalize
+  hbase> normalize
+  hbase> normalize TABLE_NAME => 'my_table'
+  hbase> normalize TABLE_NAMES => ['foo', 'bar', 'baz']
+  hbase> normalize REGEX => 'my_.*'
+  hbase> normalize NAMESPACE => 'ns1'
+  hbase> normalize NAMESPACE => 'ns', REGEX => '*._BIG_.*'
 EOF
       end
 
-      def command
-        did_normalize_run = !!admin.normalize
+      def command(*args)
+        did_normalize_run = !!admin.normalize(*args)
         formatter.row([did_normalize_run.to_s])
         did_normalize_run
       end
