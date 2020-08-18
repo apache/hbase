@@ -56,11 +56,11 @@ for example, to change the max size of a region to 128MB, do:
 You can add a table coprocessor by setting a table coprocessor attribute. Only the CLASSNAME is
 required in the coprocessor specification.
 
-  hbase> alter 't1', 'coprocessor' => {
-           'CLASSNAME' => 'org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver',
-           'JAR_PATH' => 'hdfs:///foo.jar'
-           'PRIORITY' => 12,
-           'PROPERTIES' => {'a' => '17' }
+  hbase> alter 't1', COPROCESSOR => {
+           CLASSNAME => 'org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver',
+           JAR_PATH => 'hdfs:///foo.jar',
+           PRIORITY => 12,
+           PROPERTIES => {'a' => '17' }
          }
 
 Since you can have multiple coprocessors configured for a table, a

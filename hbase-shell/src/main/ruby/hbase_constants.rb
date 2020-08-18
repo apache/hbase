@@ -39,12 +39,14 @@ module HBaseConstants
   BATCH = 'BATCH'.freeze
   CACHE = 'CACHE'.freeze
   CACHE_BLOCKS = 'CACHE_BLOCKS'.freeze
+  CLASSNAME = 'CLASSNAME'.freeze
   CLUSTER_KEY = 'CLUSTER_KEY'.freeze
   COLUMN = 'COLUMN'.freeze
   COLUMNS = 'COLUMNS'.freeze
   CONFIG = 'CONFIG'.freeze
   CONFIGURATION = org.apache.hadoop.hbase.HConstants::CONFIGURATION
   CONSISTENCY = 'CONSISTENCY'.freeze
+  COPROCESSOR = 'COPROCESSOR'.freeze
   DATA = 'DATA'.freeze
   ENDPOINT_CLASSNAME = 'ENDPOINT_CLASSNAME'.freeze
   FILTER = 'FILTER'.freeze
@@ -56,6 +58,7 @@ module HBaseConstants
   IN_MEMORY_COMPACTION = org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder::IN_MEMORY_COMPACTION
   ISOLATION_LEVEL = 'ISOLATION_LEVEL'.freeze
   IS_ROOT = 'IS_ROOT'.freeze
+  JAR_PATH = 'JAR_PATH'.freeze
   LIMIT = 'LIMIT'.freeze
   LOCALITY_THRESHOLD = 'LOCALITY_THRESHOLD'.freeze
   MAXLENGTH = 'MAXLENGTH'.freeze
@@ -69,6 +72,8 @@ module HBaseConstants
   NONE = 'NONE'.freeze
   NUMREGIONS = 'NUMREGIONS'.freeze
   POLICY = 'POLICY'.freeze
+  PRIORITY = 'PRIORITY'.freeze
+  PROPERTIES = 'PROPERTIES'.freeze
   RAW = 'RAW'.freeze
   READ_TYPE = 'READ_TYPE'.freeze
   REGIONSERVER = 'REGIONSERVER'.freeze

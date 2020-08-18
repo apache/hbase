@@ -589,6 +589,9 @@ module Hbase
     def get_table_attributes(table_name)
       tableExists(table_name)
       td = @admin.getDescriptor TableName.valueOf(table_name)
+      # toStringTableAttributes is a public method, but it is defined on the private class
+      # ModifiableTableDescriptor, so we need reflection to access it in JDK 11+.
+      # TODO Maybe move this to a utility class in the future?
       method = td.java_class.declared_method :toStringTableAttributes
       method.accessible = true
       method.invoke td
@@ -689,10 +692,11 @@ module Hbase
     # @param [Hash] spec column descriptor specification
     # @return [ColumnDescriptor]
     def coprocessor_descriptor_from_hash(spec)
-      classname = spec['CLASSNAME']
-      jar_path = spec['JAR_PATH']
-      priority = spec['PRIORITY']
-      properties = spec['PROPERTIES']
+      classname = spec[CLASSNAME]
+      raise ArgumentError.new "CLASSNAME must be provided in spec" if classname.nil?
+      jar_path = spec[JAR_PATH]
+      priority = spec[PRIORITY]
+      properties = spec[PROPERTIES]
 
       builder = CoprocessorDescriptorBuilder.newBuilder classname
       builder.setJarPath jar_path unless jar_path.nil?
@@ -810,7 +814,8 @@ module Hbase
           k = String.new(key) # prepare to strip
           k.strip!
 
-          next unless k =~ /coprocessor/i
+          # Uses insensitive matching so we can accept lowercase 'coprocessor' for compatibility
+          next unless k =~ /#{COPROCESSOR}/i
           if value.is_a? String
             # Specifying a coprocessor by this "spec string" is here for backwards compatibility
             v = String.new value
