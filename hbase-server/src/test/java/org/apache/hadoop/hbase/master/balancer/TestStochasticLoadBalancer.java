@@ -297,7 +297,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     //In offpeak hours, the multiplier of move cost should be lower
     conf.setInt("hbase.offpeak.start.hour",0);
-    conf.setInt("hbase.offpeak.end.hour",23);
+    conf.setInt("hbase.offpeak.end.hour",24);
     costFunction = new StochasticLoadBalancer.MoveCostFunction(conf);
     costFunction.init(cluster);
     costFunction.cost();
