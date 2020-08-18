@@ -581,7 +581,7 @@ public class TestFromClientSide3 {
   public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
     try (Table table = TEST_UTIL.createTable(
       tableName, new byte[][] { FAMILY },
-      1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255)) {
+      1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 10)) {
       TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
       Put put = new Put(ROW);
@@ -603,7 +603,7 @@ public class TestFromClientSide3 {
   public void testHTableExistsMethodMultipleRegionsMultipleGets() throws Exception {
     try (Table table = TEST_UTIL.createTable(
       tableName,
-      new byte[][] { FAMILY }, 1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255)) {
+      new byte[][] { FAMILY }, 1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 10)) {
       TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
       Put put = new Put(ROW);
