@@ -210,8 +210,11 @@ public class TestAsyncTableGetMultiThreaded {
       LOG.info("====== Move meta done ======");
       Thread.sleep(5000);
     }
-    List<BalancerDecisionRecords> balancerDecisionRecords = admin.getBalancerDecisions();
-    Assert.assertTrue(balancerDecisionRecords.size() > 0);
+    BalancerDecisionRequest balancerDecisionRequest = new BalancerDecisionRequest();
+    balancerDecisionRequest.setLimit(2);
+    List<BalancerDecision> balancerDecisionRecords =
+      admin.getBalancerDecisions(balancerDecisionRequest);
+    Assert.assertEquals(balancerDecisionRecords.size(), 2);
     LOG.info("====== Read test finished, shutdown thread pool ======");
     stop.set(true);
     executor.shutdown();

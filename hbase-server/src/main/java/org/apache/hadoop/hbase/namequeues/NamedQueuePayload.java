@@ -30,17 +30,38 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class NamedQueuePayload {
 
   public enum NamedQueueEvent {
-    SLOW_LOG,
-    BALANCE_DECISION
+    SLOW_LOG(0),
+    BALANCE_DECISION(1);
+
+    private final int value;
+
+    NamedQueueEvent(int i) {
+      this.value = i;
+    }
+
+    public static NamedQueueEvent getEventByOrdinal(int value){
+      switch (value) {
+        case 0: {
+          return SLOW_LOG;
+        }
+        case 1: {
+          return BALANCE_DECISION;
+        }
+        default: {
+          throw new IllegalArgumentException("Failed to retrieve NamedQueue Event");
+        }
+      }
+    }
+
+    public int getValue() {
+      return value;
+    }
   }
 
   private final NamedQueueEvent namedQueueEvent;
 
-  public NamedQueuePayload(NamedQueueEvent namedQueueEvent) {
-    if (namedQueueEvent == null) {
-      throw new RuntimeException("NamedQueuePayload with null namedQueueEvent");
-    }
-    this.namedQueueEvent = namedQueueEvent;
+  public NamedQueuePayload(int eventOrdinal) {
+    this.namedQueueEvent = NamedQueueEvent.getEventByOrdinal(eventOrdinal);
   }
 
   public NamedQueueEvent getNamedQueueEvent() {

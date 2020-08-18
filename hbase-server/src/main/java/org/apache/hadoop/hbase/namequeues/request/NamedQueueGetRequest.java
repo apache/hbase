@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.namequeues.request;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -36,6 +37,7 @@ public class NamedQueueGetRequest {
 
   private AdminProtos.SlowLogResponseRequest slowLogResponseRequest;
   private NamedQueuePayload.NamedQueueEvent namedQueueEvent;
+  private MasterProtos.BalancerDecisionRequest balancerDecisionRequest;
 
   public AdminProtos.SlowLogResponseRequest getSlowLogResponseRequest() {
     return slowLogResponseRequest;
@@ -46,12 +48,21 @@ public class NamedQueueGetRequest {
     this.slowLogResponseRequest = slowLogResponseRequest;
   }
 
+  public MasterProtos.BalancerDecisionRequest getBalancerDecisionRequest() {
+    return balancerDecisionRequest;
+  }
+
+  public void setBalancerDecisionRequest(
+      MasterProtos.BalancerDecisionRequest balancerDecisionRequest) {
+    this.balancerDecisionRequest = balancerDecisionRequest;
+  }
+
   public NamedQueuePayload.NamedQueueEvent getNamedQueueEvent() {
     return namedQueueEvent;
   }
 
-  public void setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent namedQueueEvent) {
-    this.namedQueueEvent = namedQueueEvent;
+  public void setNamedQueueEvent(int eventOrdinal) {
+    this.namedQueueEvent = NamedQueuePayload.NamedQueueEvent.getEventByOrdinal(eventOrdinal);
   }
 
   @Override
@@ -59,7 +70,7 @@ public class NamedQueueGetRequest {
     return new ToStringBuilder(this)
       .append("slowLogResponseRequest", slowLogResponseRequest)
       .append("namedQueueEvent", namedQueueEvent)
+      .append("balancerDecisionRequest", balancerDecisionRequest)
       .toString();
   }
-
 }

@@ -692,6 +692,7 @@ message SwitchExceedThrottleQuotaResponse {
 }
 
 message BalancerDecisionRequest {
+  optional uint32 limit = 5 [default = 250];
 }
 
 message BalancerDecisionResponse {

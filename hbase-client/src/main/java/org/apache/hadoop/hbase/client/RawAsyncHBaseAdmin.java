@@ -4211,11 +4211,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<BalancerDecisionRecords>> getBalancerDecisions() {
-    return this.<List<BalancerDecisionRecords>>newMasterCaller()
+  public CompletableFuture<List<BalancerDecision>> getBalancerDecisions(
+      BalancerDecisionRequest balancerDecisionRequest) {
+    return this.<List<BalancerDecision>>newMasterCaller()
       .action((controller, stub) ->
         this.call(controller, stub,
-          MasterProtos.BalancerDecisionRequest.newBuilder().build(),
+          MasterProtos.BalancerDecisionRequest.newBuilder()
+            .setLimit(balancerDecisionRequest.getLimit()).build(),
           MasterService.Interface::getBalancerDecisions, ProtobufUtil::toBalancerDecisionResponse))
       .call();
   }

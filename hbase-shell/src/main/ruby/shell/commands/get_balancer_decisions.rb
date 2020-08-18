@@ -27,13 +27,22 @@ Retrieve latest balancer decisions made by LoadBalancers.
 
 Examples:
 
-  hbase> get_balancer_decisions
+  hbase> get_balancer_decisions                       => Retrieve recent balancer decisions with
+                                                         region plans
+  hbase> get_balancer_decisions LIMIT => 10           => Retrieve 10 most recent balancer decisions
+                                                         with region plans
 
         EOF
       end
 
-      def command()
-        admin.get_balancer_decisions
+      def command(args = {})
+        unless args.is_a? Hash
+          raise 'Filter parameters are not Hash'
+        end
+
+        balancer_decisions_resp_arr = admin.get_balancer_decisions(args)
+        puts 'Retrieved BalancerDecision Responses'
+        puts balancer_decisions_resp_arr
       end
     end
   end

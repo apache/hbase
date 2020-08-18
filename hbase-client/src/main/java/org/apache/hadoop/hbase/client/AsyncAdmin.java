@@ -1668,6 +1668,8 @@ public interface AsyncAdmin {
    * Retrieve recent balancer decision factors with region plans from HMaster in-memory ringbuffer
    *
    * @return list of balancer decision records
+   * @param balancerDecisionRequest request payload with filter attributes
    */
-  CompletableFuture<List<BalancerDecisionRecords>> getBalancerDecisions();
+  CompletableFuture<List<BalancerDecision>> getBalancerDecisions(
+    BalancerDecisionRequest balancerDecisionRequest);
 }

@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.BalancerDecisionRecords;
+import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -507,15 +507,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
           "table: " + plan.getRegionInfo().getTable() + " , region: " + plan.getRegionName()
             + " , source: " + plan.getSource() + " , destination: " + plan.getDestination());
       }
-      BalancerDecisionRecords balancerDecisionRecords =
-        new BalancerDecisionRecords.Builder()
+      BalancerDecision balancerDecision =
+        new BalancerDecision.Builder()
           .setInitTotalCost(initCost)
           .setInitialFunctionCosts(initFunctionTotalCosts)
           .setComputedTotalCost(currentCost)
           .setFinalFunctionCosts(totalCostsPerFunc())
           .setComputedSteps(step)
           .setRegionPlans(regionPlans).build();
-      namedQueueRecorder.addRecord(new BalancerDecisionDetails(balancerDecisionRecords));
+      namedQueueRecorder.addRecord(new BalancerDecisionDetails(balancerDecision));
     }
   }
 

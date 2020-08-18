@@ -2463,6 +2463,8 @@ public interface Admin extends Abortable, Closeable {
    *
    * @return list of balancer decision records
    * @throws IOException if a remote or network exception occurs
+   * @param balancerDecisionRequest request payload with filter attributes
    */
-  List<BalancerDecisionRecords> getBalancerDecisions() throws IOException;
+  List<BalancerDecision> getBalancerDecisions(BalancerDecisionRequest balancerDecisionRequest)
+    throws IOException;
 }

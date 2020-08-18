@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.namequeues.impl;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.BalancerDecisionRecords;
+import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.namequeues.NamedQueueService;
@@ -88,7 +88,7 @@ public class BalancerDecisionQueueService implements NamedQueueService {
       return;
     }
     BalancerDecisionDetails balancerDecisionDetails = (BalancerDecisionDetails) namedQueuePayload;
-    BalancerDecisionRecords balancerDecisionRecords =
+    BalancerDecision balancerDecisionRecords =
       balancerDecisionDetails.getBalancerDecisionRecords();
     List<String> regionPlans = balancerDecisionRecords.getRegionPlans();
     List<List<String>> regionPlansList;
@@ -130,8 +130,11 @@ public class BalancerDecisionQueueService implements NamedQueueService {
         .collect(Collectors.toList());
     // latest records should be displayed first, hence reverse order sorting
     Collections.reverse(balancerDecisions);
+    int limit = Math.min(request.getBalancerDecisionRequest().getLimit(), balancerDecisions.size());
+    // filter limit if provided
+    balancerDecisions = balancerDecisions.subList(0, limit);
     final NamedQueueGetResponse namedQueueGetResponse = new NamedQueueGetResponse();
-    namedQueueGetResponse.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.BALANCE_DECISION);
+    namedQueueGetResponse.setNamedQueueEvent(1);
     namedQueueGetResponse.setBalancerDecisions(balancerDecisions);
     return namedQueueGetResponse;
   }

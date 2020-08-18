@@ -40,7 +40,7 @@ public class RpcLogDetails extends NamedQueuePayload {
 
   public RpcLogDetails(RpcCall rpcCall, Message param, String clientAddress, long responseSize,
       String className, boolean isSlowLog, boolean isLargeLog) {
-    super(NamedQueueEvent.SLOW_LOG);
+    super(0);
     this.rpcCall = rpcCall;
     this.param = param;
     this.clientAddress = clientAddress;

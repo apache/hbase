@@ -17,33 +17,48 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.namequeues;
+package org.apache.hadoop.hbase.client;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Balancer decision details that would be passed on to ring buffer for history
+ * Balancer decision request payload with filter attributes
  */
 @InterfaceAudience.Private
-public class BalancerDecisionDetails extends NamedQueuePayload {
+public class BalancerDecisionRequest {
 
-  private final BalancerDecision balancerDecision;
+  private int limit = 250;
 
-  public BalancerDecisionDetails(BalancerDecision balancerDecision) {
-    super(1);
-    this.balancerDecision = balancerDecision;
+  public int getLimit() {
+    return limit;
   }
 
-  public BalancerDecision getBalancerDecisionRecords() {
-    return balancerDecision;
+  public void setLimit(int limit) {
+    this.limit = limit;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    BalancerDecisionRequest that = (BalancerDecisionRequest) o;
+    return new EqualsBuilder().append(limit, that.limit).isEquals();
+  }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder(17, 37).append(limit).toHashCode();
   }
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
-      .append("balancerDecisionRecords", balancerDecision)
-      .toString();
+    return new ToStringBuilder(this).append("limit", limit).toString();
   }
 }

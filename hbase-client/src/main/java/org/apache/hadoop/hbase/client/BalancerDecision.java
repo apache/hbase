@@ -30,7 +30,7 @@ import java.util.List;
  * History of balancer decisions taken for region movements.
  */
 @InterfaceAudience.Private
-final public class BalancerDecisionRecords {
+final public class BalancerDecision {
 
   private final String initialFunctionCosts;
   private final String finalFunctionCosts;
@@ -43,13 +43,13 @@ final public class BalancerDecisionRecords {
   // used by toJsonPrettyPrint()
   private static final Gson GSON = GsonUtil.createGson()
     .setPrettyPrinting()
-    .registerTypeAdapter(OnlineLogRecord.class, (JsonSerializer<OnlineLogRecord>)
-      (slowLogPayload, type, jsonSerializationContext) -> {
+    .registerTypeAdapter(BalancerDecision.class, (JsonSerializer<BalancerDecision>)
+      (balancerDecision, type, jsonSerializationContext) -> {
         Gson gson = new Gson();
-        return gson.toJsonTree(slowLogPayload);
+        return gson.toJsonTree(balancerDecision);
       }).create();
 
-  private BalancerDecisionRecords(String initialFunctionCosts, String finalFunctionCosts,
+  private BalancerDecision(String initialFunctionCosts, String finalFunctionCosts,
       double initTotalCost, double computedTotalCost, List<String> regionPlans,
       long computedSteps) {
     this.initialFunctionCosts = initialFunctionCosts;
@@ -138,8 +138,8 @@ final public class BalancerDecisionRecords {
       return this;
     }
 
-    public BalancerDecisionRecords build() {
-      return new BalancerDecisionRecords(initialFunctionCosts, finalFunctionCosts,
+    public BalancerDecision build() {
+      return new BalancerDecision(initialFunctionCosts, finalFunctionCosts,
         initTotalCost, computedTotalCost, regionPlans, computedSteps);
     }
   }

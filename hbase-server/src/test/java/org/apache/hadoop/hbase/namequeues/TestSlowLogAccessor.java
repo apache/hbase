@@ -100,7 +100,7 @@ public class TestSlowLogAccessor {
   private List<TooSlowLog.SlowLogPayload> getSlowLogPayloads(
       AdminProtos.SlowLogResponseRequest request) {
     NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-    namedQueueGetRequest.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    namedQueueGetRequest.setNamedQueueEvent(0);
     namedQueueGetRequest.setSlowLogResponseRequest(request);
     NamedQueueGetResponse namedQueueGetResponse =
       namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);

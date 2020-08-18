@@ -1487,8 +1487,7 @@ module Hbase
       for slow_log_response in slow_log_responses
         slow_log_responses_arr << slow_log_response.toJsonPrettyPrint
       end
-      puts 'Retrieved SlowLog Responses from RegionServers'
-      puts slow_log_responses_arr
+      slow_log_responses_arr
     end
 
     def get_filter_params(args)
@@ -1547,8 +1546,7 @@ module Hbase
       for large_log_response in large_log_responses
         large_log_responses_arr << large_log_response.toJsonPrettyPrint
       end
-      puts 'Retrieved LargeLog Responses from RegionServers'
-      puts large_log_responses_arr
+      large_log_responses_arr
     end
 
     #----------------------------------------------------------------------------------------------
@@ -1641,14 +1639,18 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Retrieve latest balancer decisions made by LoadBalancers
-    def get_balancer_decisions
-      balancer_decisions_responses = @admin.getBalancerDecisions
+    def get_balancer_decisions(args)
+      balancer_decisions_req = org.apache.hadoop.hbase.client.BalancerDecisionRequest.new
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+        balancer_decisions_req.setLimit(limit)
+      end
+      balancer_decisions_responses = @admin.getBalancerDecisions(balancer_decisions_req)
       balancer_decisions_resp_arr = []
       balancer_decisions_responses.each { |balancer_dec_resp|
         balancer_decisions_resp_arr << balancer_dec_resp.toJsonPrettyPrint
       }
-      puts 'Retrieved BalancerDecision Responses from HMaster'
-      puts balancer_decisions_resp_arr
+      balancer_decisions_resp_arr
     end
 
     #----------------------------------------------------------------------------------------------

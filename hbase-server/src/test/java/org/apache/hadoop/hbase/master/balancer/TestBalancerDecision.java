@@ -22,10 +22,9 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.BalancerDecisionRecords;
+import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -70,7 +69,9 @@ public class TestBalancerDecision extends BalancerTestBase {
         }
       }
       final NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-      namedQueueGetRequest.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.BALANCE_DECISION);
+      namedQueueGetRequest.setNamedQueueEvent(1);
+      namedQueueGetRequest
+        .setBalancerDecisionRequest(MasterProtos.BalancerDecisionRequest.getDefaultInstance());
       NamedQueueGetResponse namedQueueGetResponse =
         loadBalancer.namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
       List<RecentLogs.BalancerDecision> balancerDecisions =
@@ -79,7 +80,7 @@ public class TestBalancerDecision extends BalancerTestBase {
         MasterProtos.BalancerDecisionResponse.newBuilder()
           .addAllBalancerDecision(balancerDecisions)
           .build();
-      List<BalancerDecisionRecords> balancerDecisionRecords =
+      List<BalancerDecision> balancerDecisionRecords =
         ProtobufUtil.toBalancerDecisionResponse(response);
       Assert.assertTrue(balancerDecisionRecords.size() > 160);
     } finally {

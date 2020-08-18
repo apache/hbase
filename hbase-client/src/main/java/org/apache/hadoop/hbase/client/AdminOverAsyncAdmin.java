@@ -1059,7 +1059,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<BalancerDecisionRecords> getBalancerDecisions() throws IOException {
-    return get(admin.getBalancerDecisions());
+  public List<BalancerDecision> getBalancerDecisions(
+      BalancerDecisionRequest balancerDecisionRequest) throws IOException {
+    return get(admin.getBalancerDecisions(balancerDecisionRequest));
   }
 }

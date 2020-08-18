@@ -91,7 +91,9 @@ echo "get_largelog_responses '*'" | hbase shell > xyz.out 2>&1
           raise 'Filter parameters are not Hash'
         end
 
-        admin.get_largelog_responses(server_names, args)
+        large_log_responses_arr = admin.get_largelog_responses(server_names, args)
+        puts 'Retrieved LargeLog Responses from RegionServers'
+        puts large_log_responses_arr
       end
     end
   end

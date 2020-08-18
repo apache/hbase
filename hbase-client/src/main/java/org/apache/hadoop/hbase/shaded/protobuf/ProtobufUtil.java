@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.BalancerDecisionRecords;
+import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -3619,7 +3619,7 @@ public final class ProtobufUtil {
     }
   }
 
-  public static List<BalancerDecisionRecords> toBalancerDecisionResponse(
+  public static List<BalancerDecision> toBalancerDecisionResponse(
       MasterProtos.BalancerDecisionResponse balancerDecisionResponse) {
     List<RecentLogs.BalancerDecision> balancerDecisions =
       balancerDecisionResponse.getBalancerDecisionList();
@@ -3627,7 +3627,7 @@ public final class ProtobufUtil {
       return Collections.emptyList();
     }
     return balancerDecisions.stream()
-      .map(balancerDecision -> new BalancerDecisionRecords.Builder()
+      .map(balancerDecision -> new BalancerDecision.Builder()
         .setInitTotalCost(balancerDecision.getInitTotalCost())
         .setInitialFunctionCosts(balancerDecision.getInitialFunctionCosts())
         .setComputedTotalCost(balancerDecision.getComputedTotalCost())

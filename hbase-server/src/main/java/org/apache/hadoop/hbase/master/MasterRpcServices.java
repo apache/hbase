@@ -3297,7 +3297,8 @@ public class MasterRpcServices extends RSRpcServices implements
         .addAllBalancerDecision(Collections.emptyList()).build();
     }
     final NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-    namedQueueGetRequest.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.BALANCE_DECISION);
+    namedQueueGetRequest.setNamedQueueEvent(1);
+    namedQueueGetRequest.setBalancerDecisionRequest(request);
     NamedQueueGetResponse namedQueueGetResponse =
       namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
     List<RecentLogs.BalancerDecision> balancerDecisions =

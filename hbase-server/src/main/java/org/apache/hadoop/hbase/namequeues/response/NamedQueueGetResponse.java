@@ -56,8 +56,8 @@ public class NamedQueueGetResponse {
     return namedQueueEvent;
   }
 
-  public void setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent namedQueueEvent) {
-    this.namedQueueEvent = namedQueueEvent;
+  public void setNamedQueueEvent(int eventOrdinal) {
+    this.namedQueueEvent = NamedQueuePayload.NamedQueueEvent.getEventByOrdinal(eventOrdinal);
   }
 
   @Override

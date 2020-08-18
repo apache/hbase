@@ -936,7 +936,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<BalancerDecisionRecords>> getBalancerDecisions() {
-    return wrap(rawAdmin.getBalancerDecisions());
+  public CompletableFuture<List<BalancerDecision>> getBalancerDecisions(
+      BalancerDecisionRequest balancerDecisionRequest) {
+    return wrap(rawAdmin.getBalancerDecisions(balancerDecisionRequest));
   }
 }
