@@ -90,14 +90,14 @@ public class TestMetaWithReplicasBasic extends MetaWithReplicasTestBase {
 
     final HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     master.stop("Restarting");
-    TEST_UTIL.waitFor(30000, () -> master.isStopped());
+    TEST_UTIL.waitFor(60000, () -> master.isStopped());
     TEST_UTIL.getMiniHBaseCluster().getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 1);
 
     JVMClusterUtil.MasterThread newMasterThread = TEST_UTIL.getMiniHBaseCluster().startMaster();
     final HMaster newMaster = newMasterThread.getMaster();
 
     //wait until new master finished meta replica assignment logic
-    TEST_UTIL.waitFor(30000, () -> newMaster.getMasterQuotaManager() != null);
+    TEST_UTIL.waitFor(60000, () -> newMaster.getMasterQuotaManager() != null);
     zkw = TEST_UTIL.getZooKeeperWatcher();
     metaReplicaZnodes = zkw.getMetaReplicaNodes();
     assertEquals(1, metaReplicaZnodes.size());
