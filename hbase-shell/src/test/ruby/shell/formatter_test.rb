@@ -66,3 +66,36 @@ class ShellFormatterTest < Test::Unit::TestCase
     formatter.footer()
   end
 end
+
+class ShellTableFormatterTest < Test::Unit::TestCase
+  include Hbase::TestHelpers
+
+  TableFormatter = ::Shell::Formatter::TableFormatter
+  JsonTableFormatter = ::Shell::Formatter::JsonTableFormatter
+
+  define_test 'TableFormatter::OptionsHash should allow dot-notation access' do
+    my_hash = TableFormatter::OptionsHash.new
+    my_hash[:foo] = 'bar'
+    assert_equal('bar', my_hash.foo)
+  end
+
+  define_test 'TableFormatter::TableScope should correctly determine child scope' do
+    table_scope = TableFormatter::TableScope.new
+    assert_equal(TableFormatter::TableScope::TABLE, table_scope.kind)
+
+    row_scope = TableFormatter::TableScope.new table_scope
+    assert_equal(TableFormatter::TableScope::ROW, row_scope.kind)
+
+    cell_scope = TableFormatter::TableScope.new row_scope
+    assert_equal(TableFormatter::TableScope::CELL, cell_scope.kind)
+
+    assert_raise(ArgumentError) { TableFormatter::TableScope.new cell_scope }
+  end
+
+  define_test 'JsonTableFormatter#single_value_table produces correct output' do
+    table_formatter = JsonTableFormatter.new
+    output = capture_stdout { table_formatter.single_value_table('FOO', 'BAR') }
+    parsed = JSON.load(output)
+    assert_equal('BAR', parsed['rows'][0]['FOO'])
+  end
+end

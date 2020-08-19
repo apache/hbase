@@ -30,7 +30,7 @@ EOF
 
       def command
         state = admin.in_maintenance_mode?
-        formatter.row([state.to_s])
+        table_formatter.single_value_table('IN_MAINTENANCE_MODE', state.to_s)
         state
       end
     end

@@ -17,10 +17,13 @@
 #
 
 require 'time'
+require 'shell/formatter/snapshot'
 
 module Shell
   module Commands
     class ListSnapshots < Command
+      include ::Shell::Formatter::SnapshotMixin
+
       def help
         <<-EOF
 List all snapshots taken (by printing the names and relative information).
@@ -34,15 +37,8 @@ EOF
       end
 
       def command(regex = '.*')
-        formatter.header(['SNAPSHOT', 'TABLE + CREATION TIME'])
-
         list = admin.list_snapshot(regex)
-        list.each do |snapshot|
-          creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
-          formatter.row([snapshot.getName, snapshot.getTableNameAsString + ' (' + creation_time + ')'])
-        end
-
-        formatter.footer(list.size)
+        print_snapshot_table list
         list.map(&:getName)
       end
     end

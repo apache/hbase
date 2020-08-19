@@ -1,3 +1,6 @@
+#
+# Copyright The Apache Software Foundation
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,30 +17,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+require 'shell/formatter/util'
 
 module Shell
-  module Commands
-    class ListLabels < Command
-      def help
-        <<-EOF
-List the visibility labels defined in the system.
-Optional regular expression parameter could be used to filter the labels being returned.
-Syntax : list_labels
-
-For example:
-
-    hbase> list_labels 'secret.*'
-    hbase> list_labels
-EOF
-      end
-
-      def command(regex = '.*')
-        list = visibility_labels_admin.list_labels(regex)
-        table_formatter.start_table({ num_cols: 1, headers: ["LABEL"] })
-        list.each do |label|
-          table_formatter.row([org.apache.hadoop.hbase.util.Bytes.toStringBinary(label.toByteArray)])
+  module Formatter
+    ##
+    # Mixin providing helper methods for snapshot commands
+    module SnapshotMixin
+      ##
+      # Print snapshots in a table
+      #
+      # Intended for reuse by other snapshot commands such as list_table_snapshots
+      def print_snapshot_table(snapshots)
+        table_formatter.start_table({ headers: %w[SNAPSHOT TABLE CREATION_TIME], widths: [nil, nil, ::Shell::Formatter::Util::ISO8601_WIDTH] })
+        snapshots.each do |snapshot|
+          creation_time = ::Shell::Formatter::Util.to_iso_8601 snapshot.getCreationTime
+          table_formatter.row([snapshot.getName, snapshot.getTableNameAsString, creation_time])
         end
         table_formatter.close_table
+
+        nil
       end
     end
   end

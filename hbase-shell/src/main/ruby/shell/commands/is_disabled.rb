@@ -25,12 +25,12 @@ module Shell
 Is named table disabled? For example:
   hbase> is_disabled 't1'
   hbase> is_disabled 'ns1:t1'
-EOF
+        EOF
       end
 
       def command(table)
         disabled = !!admin.disabled?(table)
-        formatter.row([disabled.to_s])
+        table_formatter.single_value_table('IS_DISABLED', disabled.to_s)
         disabled
       end
     end

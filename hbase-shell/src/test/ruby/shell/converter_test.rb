@@ -35,6 +35,8 @@ module Hbase
 
     def setup
       setup_hbase
+      # Use the unaligned formatter so that cell output will not be truncated
+      @shell.table_formatter_class = ::Shell::Formatter::UnalignedTableFormatter
     end
 
     def teardown

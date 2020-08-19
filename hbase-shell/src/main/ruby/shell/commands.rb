@@ -67,7 +67,12 @@ module Shell
       ensure
         # If end_time is not already set by the command, use current time.
         @end_time ||= Time.now
-        formatter.output_str(format('Took %.4f seconds', @end_time - @start_time))
+
+        # TODO Perhaps a cleaner separation of concerns is possible. We should probably avoid
+        # comparing against the current type of formatter.
+        unless table_formatter.class == ::Shell::Formatter::JsonTableFormatter
+          formatter.output_str(format('Took %.4f seconds', @end_time - @start_time))
+        end
       end
       # rubocop:enable Metrics/AbcSize
 
@@ -109,6 +114,10 @@ module Shell
       # Creates formatter instance first time and then reuses it.
       def formatter
         @formatter ||= ::Shell::Formatter::Console.new
+      end
+
+      def table_formatter
+        @table_formatter ||= @shell.table_formatter_class.new
       end
 
       # for testing purposes to catch the output of the commands

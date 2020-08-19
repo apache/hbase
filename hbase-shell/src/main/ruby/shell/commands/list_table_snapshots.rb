@@ -17,10 +17,13 @@
 #
 
 require 'time'
+require 'shell/formatter/snapshot'
 
 module Shell
   module Commands
     class ListTableSnapshots < Command
+      include ::Shell::Formatter::SnapshotMixin
+
       def help
         <<-EOF
 List all completed snapshots matching the table name regular expression and the
@@ -39,15 +42,8 @@ EOF
       end
 
       def command(tableNameRegex, snapshotNameRegex = '.*')
-        formatter.header(['SNAPSHOT', 'TABLE + CREATION TIME'])
-
         list = admin.list_table_snapshots(tableNameRegex, snapshotNameRegex)
-        list.each do |snapshot|
-          creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
-          formatter.row([snapshot.getName, snapshot.getTableNameAsString + ' (' + creation_time + ')'])
-        end
-
-        formatter.footer(list.size)
+        print_snapshot_table list
         list.map(&:getName)
       end
     end

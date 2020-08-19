@@ -18,6 +18,7 @@
 #
 require 'irb'
 require 'irb/workspace'
+require 'shell/formatter/table'
 
 #
 # Simple class to act as the main receiver for an IRB Workspace (and its respective ruby Binding)
@@ -95,6 +96,7 @@ module Shell
   class Shell
     attr_accessor :hbase
     attr_accessor :interactive
+    attr_accessor :table_formatter_class
     alias interactive? interactive
 
     @debug = false
@@ -103,6 +105,7 @@ module Shell
     def initialize(hbase, interactive = true)
       self.hbase = hbase
       self.interactive = interactive
+      self.table_formatter_class = ::Shell::Formatter::AlignedTableFormatter
     end
 
     # Returns Admin class from admin.rb
@@ -159,6 +162,16 @@ module Shell
       # Export help method
       target.send :define_singleton_method, :help, lambda { |command = nil|
         shell_inst.help(command)
+        nil
+      }
+      # Export set_formatter method
+      target.send :define_singleton_method, :set_formatter, lambda { |kind|
+        case kind
+        when :aligned then shell_inst.table_formatter_class = ::Shell::Formatter::AlignedTableFormatter
+        when :json then shell_inst.table_formatter_class = ::Shell::Formatter::JsonTableFormatter
+        when :unaligned then shell_inst.table_formatter_class = ::Shell::Formatter::UnalignedTableFormatter
+        else raise ArgumentError, 'unexpected kind of formatter'
+        end
         nil
       }
       # Export tools method for backwards compatibility

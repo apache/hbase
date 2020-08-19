@@ -30,7 +30,7 @@ EOF
 
       def command(table)
         enabled = admin.enabled?(table)
-        formatter.row([enabled ? 'true' : 'false'])
+        table_formatter.single_value_table('IS_ENABLED', enabled.to_s)
         enabled
       end
     end

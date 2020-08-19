@@ -174,7 +174,6 @@ def debug?
   nil
 end
 
-
 # For backwards compatibility, this will export all the HBase shell commands, constants, and
 # instance variables (@hbase and @shell) onto Ruby's top-level receiver object known as "main".
 @shell.export_all(self) if top_level_definitions

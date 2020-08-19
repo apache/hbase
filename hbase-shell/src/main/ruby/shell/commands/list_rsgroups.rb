@@ -32,44 +32,37 @@ EOF
       end
 
       def command(regex = '.*')
-        formatter.header(['NAME', 'SERVER / TABLE'])
+        table_formatter.start_table({
+                                      num_cols: 3,
+                                      headers: %w[GROUP_NAME KIND MEMBER],
+                                      widths: [nil, 6, nil]
+                                    })
 
         regex = /#{regex}/ unless regex.is_a?(Regexp)
         list = rsgroup_admin.list_rs_groups
         groups = 0
 
         list.each do |group|
-          next unless group.getName.match(regex)
+          group_name = group.getName
+          next unless group_name.match(regex)
 
           groups += 1
           group_name_printed = false
 
           group.getServers.each do |server|
-            if group_name_printed
-              group_name = ''
-            else
-              group_name = group.getName
-              group_name_printed = true
-            end
-
-            formatter.row([group_name, 'server ' + server.toString])
+            group_name_printed = true
+            table_formatter.row([group_name, 'server', server.toString])
           end
-          tables = rsgroup_admin.list_tables_in_rs_group(group.getName)
+          tables = rsgroup_admin.list_tables_in_rs_group(group_name)
           tables.each do |table|
-            if group_name_printed
-              group_name = ''
-            else
-              group_name = group.getName
-              group_name_printed = true
-            end
-
-            formatter.row([group_name, 'table ' + table.getNameAsString])
+            group_name_printed = true
+            table_formatter.row([group_name, 'table ', table.getNameAsString])
           end
 
-          formatter.row([group.getName, '']) unless group_name_printed
+          table_formatter.row([group.getName, '']) unless group_name_printed
         end
 
-        formatter.footer(groups)
+        table_formatter.close_table
       end
     end
   end

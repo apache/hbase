@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+require 'shell/formatter/util'
 
 include Java
 
@@ -27,7 +28,10 @@ java_import org.apache.hadoop.hbase.client.RegionReplicaUtil
 module Hbase
   # rubocop:disable Metrics/ClassLength
   class Table
+    extend Gem::Deprecate
     include HBaseConstants
+    FormatUtil = ::Shell::Formatter::Util
+
     @@thread_pool = nil
 
     # Add the command 'name' to table s.t. the shell command also called via 'name'
@@ -346,10 +350,15 @@ EOF
     end
 
     #----------------------------------------------------------------------------------------------
-    # Get from table
-    def _get_internal(row, *args)
+    # Get row from table
+    #
+    # Side effects:
+    # - Clears @converters and fills @converters with the converters for each cell
+    #
+    # @param [String] row
+    # @return [org.apache.hadoop.hbase.client.Result] result
+    def _get_internal_result(row, *args)
       get = org.apache.hadoop.hbase.client.Get.new(row.to_s.to_java_bytes)
-      maxlength = -1
       count = 0
       @converters.clear
 
@@ -368,14 +377,11 @@ EOF
       end
 
       # Get maxlength parameter if passed
-      maxlength = args.delete(MAXLENGTH) if args[MAXLENGTH]
       filter = args.delete(FILTER) if args[FILTER]
       attributes = args[ATTRIBUTES]
       authorizations = args[AUTHORIZATIONS]
       consistency = args.delete(CONSISTENCY) if args[CONSISTENCY]
       replicaId = args.delete(REGION_REPLICA_ID) if args[REGION_REPLICA_ID]
-      converter = args.delete(FORMATTER) || nil
-      converter_class = args.delete(FORMATTER_CLASS) || 'org.apache.hadoop.hbase.util.Bytes'
       unless args.empty?
         columns = args[COLUMN] || args[COLUMNS]
         vers = if args[VERSIONS]
@@ -446,13 +452,33 @@ EOF
       is_stale = result.isStale
       count += 1
 
-      # Print out results.  Result can be Cell or RowResult.
+      result
+    end
+
+    ##
+    # Yields or returns the cells in the requested row
+    #
+    # Provided for compatibility, but marked for possible deprecation in HBase
+    # 4. This pattern couples formatting with the scan itself.
+    def _get_internal(row, *args)
+
+      opts = {}
+      opts = args[0] if (args.length > 0) && args[0].is_a?(Hash)
+      maxlength = opts.delete(MAXLENGTH) || -1
+      converter = opts.delete(::HBaseConstants::FORMATTER) || nil
+      converter_class = opts.delete(::HBaseConstants::FORMATTER_CLASS) || 'org.apache.hadoop.hbase.util.Bytes'
+
+      result = _get_internal_result(row, *args)
+      return nil if result.nil?
+      is_stale = result.isStale
+      cells = result.listCells
+
       res = {}
-      result.listCells.each do |c|
+      cells.each do |c|
         # Get the family and qualifier of the cell without escaping non-printable characters. It is crucial that
         # column is constructed in this consistent way to that it can be used as a key.
         family_bytes =  org.apache.hadoop.hbase.util.Bytes.copy(c.getFamilyArray, c.getFamilyOffset, c.getFamilyLength)
-        qualifier_bytes =  org.apache.hadoop.hbase.util.Bytes.copy(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength)
+        qualifier_bytes = org.apache.hadoop.hbase.util.Bytes.copy(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength)
         column = "#{family_bytes}:#{qualifier_bytes}"
 
         value = to_string(column, c, maxlength, converter_class, converter)
@@ -470,8 +496,9 @@ EOF
       end
 
       # If block given, we've yielded all the results, otherwise just return them
-      (block_given? ? [count, is_stale] : res)
+      (block_given? ? [1, is_stale] : res)
     end
+    deprecate :_get_internal, '4.0.0', nil, nil
 
     #----------------------------------------------------------------------------------------------
     # Fetches and decodes a counter value from hbase
@@ -585,6 +612,11 @@ EOF
     end
 
     #----------------------------------------------------------------------------------------------
+    def _get_scanner_for_scan(args = {}, scan = nil)
+      @table.getScanner(scan)
+    end
+
+    #
     # Scans whole table or a range of keys and returns rows matching specific criteria
     def _scan_internal(args = {}, scan = nil)
       raise(ArgumentError, 'Args should be a Hash') unless args.is_a?(Hash)
@@ -750,8 +782,9 @@ EOF
       [spec.family, spec.qualifier]
     end
 
+    # provided for backwards compatibility
     def toISO8601(millis)
-      return java.time.Instant.ofEpochMilli(millis).toString
+      FormatUtil.to_iso_8601 millis
     end
 
     # Make a String of the passed kv
@@ -762,7 +795,7 @@ EOF
             column.start_with?('info:merge')
           hri = org.apache.hadoop.hbase.client.RegionInfo.parseFromOrNull(kv.getValueArray,
             kv.getValueOffset, kv.getValueLength)
-          return format('timestamp=%s, value=%s', toISO8601(kv.getTimestamp),
+          return format('timestamp=%s, value=%s', FormatUtil.to_iso_8601(kv.getTimestamp),
             hri.nil? ? '' : hri.toString)
         end
         if column == 'info:serverstartcode'
@@ -773,12 +806,12 @@ EOF
             str_val = org.apache.hadoop.hbase.util.Bytes.toStringBinary(kv.getValueArray,
                                                                         kv.getValueOffset, kv.getValueLength)
           end
-          return format('timestamp=%s, value=%s', toISO8601(kv.getTimestamp), str_val)
+          return format('timestamp=%s, value=%s', FormatUtil.to_iso_8601(kv.getTimestamp), str_val)
         end
       end
 
       if org.apache.hadoop.hbase.CellUtil.isDelete(kv)
-        val = "timestamp=#{toISO8601(kv.getTimestamp)}, type=#{org.apache.hadoop.hbase.KeyValue::Type.codeToType(kv.getTypeByte)}"
+        val = "timestamp=#{FormatUtil.to_iso_8601(kv.getTimestamp)}, type=#{org.apache.hadoop.hbase.KeyValue::Type.codeToType(kv.getTypeByte)}"
       else
         val = "timestamp=#{toISO8601(kv.getTimestamp)}, value=#{convert(column, kv, converter_class, converter)}"
       end
@@ -859,7 +892,9 @@ EOF
     # 1. return back normal column pair as usual, i.e., "cf:qualifier[:CONVERTER]" to "cf" and "qualifier" only
     # 2. register the CONVERTER information based on column spec - "cf:qualifier"
     #
-    # Deprecated for removal in 4.0.0
+    # Deprecated for removal in 4.0.0. This method used to be used for both parsing and updating
+    # the @converters. This has been separated more cleanly into two new methods,
+    # parse_column_format_spec and set_column_converter. Please use them instead.
     def set_converter(column)
       family = String.from_java_bytes(column[0])
       parts = org.apache.hadoop.hbase.CellUtil.parseColumn(column[1])
@@ -868,8 +903,7 @@ EOF
         column[1] = parts[0]
       end
     end
-    extend Gem::Deprecate
-    deprecate :set_converter, "4.0.0", nil, nil
+    deprecate :set_converter, '4.0.0', nil, nil
 
     #----------------------------------------------------------------------------------------------
     # Get the split points for the table
