@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.ServerLoca
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -297,7 +298,9 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     //In offpeak hours, the multiplier of move cost should be lower
     conf.setInt("hbase.offpeak.start.hour",0);
-    conf.setInt("hbase.offpeak.end.hour",24);
+    conf.setInt("hbase.offpeak.end.hour",23);
+    //Set a fixed time which hour is 14, so it will always in offpeak
+    EnvironmentEdgeManager.injectEdge(() -> 1597820400000l);
     costFunction = new StochasticLoadBalancer.MoveCostFunction(conf);
     costFunction.init(cluster);
     costFunction.cost();
