@@ -25,6 +25,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.NoServerForRegionException;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,11 +117,12 @@ public class RegionReplicaFlushHandler extends EventHandler {
         .getRegionInfoForDefaultReplica(region.getRegionInfo()).getEncodedName() + " of region "
        + region.getRegionInfo().getEncodedName() + " to trigger a flush");
     }
+    RegionInfo primaryRegion =
+        RegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo());
     while (!region.isClosing() && !region.isClosed()
         && !server.isAborted() && !server.isStopped()) {
-      FlushRegionCallable flushCallable = new FlushRegionCallable(
-        connection, rpcControllerFactory,
-        RegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo()), true);
+      FlushRegionCallable flushCallable =
+          new FlushRegionCallable(connection, rpcControllerFactory, primaryRegion, true);
 
       // TODO: flushRegion() is a blocking call waiting for the flush to complete. Ideally we
       // do not have to wait for the whole flush here, just initiate it.
@@ -131,6 +134,12 @@ public class RegionReplicaFlushHandler extends EventHandler {
         if (ex instanceof TableNotFoundException
             || connection.isTableDisabled(region.getRegionInfo().getTable())) {
           return;
+        }
+        // This may happen when create a table with region replica. And the CreateTableProcedure
+        // assign secondary regions firstly, then assign primary region. See HBASE-24897
+        if (ex instanceof NoServerForRegionException) {
+          LOG.warn("Primary region {} is not online, retry", primaryRegion, ex);
+          continue;
         }
         throw ex;
       }
