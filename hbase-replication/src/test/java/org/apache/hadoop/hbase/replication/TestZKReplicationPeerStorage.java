@@ -247,7 +247,6 @@ public class TestZKReplicationPeerStorage {
     ReplicationPeerConfig existingReplicationPeerConfig = ReplicationPeerConfig.newBuilder(getConfig(1))
       .putConfiguration(customPeerConfigKey,customPeerConfigValue).build();
 
-
     Configuration conf = UTIL.getConfiguration();
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_DEFAULT_CONFIG,
       customPeerConfigKey.concat("=").concat(customPeerConfigUpdatedValue));
