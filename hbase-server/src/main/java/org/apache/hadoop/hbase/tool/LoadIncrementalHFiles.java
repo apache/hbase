@@ -143,16 +143,16 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   // above. It is invalid family name.
   static final String TMP_DIR = ".tmp";
 
-  private final int maxFilesPerRegionPerFamily;
-  private final boolean assignSeqIds;
+  private int maxFilesPerRegionPerFamily;
+  private boolean assignSeqIds;
   private boolean bulkLoadByFamily;
 
   // Source delegation token
-  private final FsDelegationToken fsDelegationToken;
-  private final UserProvider userProvider;
-  private final int nrThreads;
+  private FsDelegationToken fsDelegationToken;
+  private UserProvider userProvider;
+  private int nrThreads;
   private AtomicInteger numRetries;
-  private final RpcControllerFactory rpcControllerFactory;
+  private RpcControllerFactory rpcControllerFactory;
 
   private String bulkToken;
 
@@ -181,7 +181,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   public LoadIncrementalHFiles(Configuration conf) {
     // make a copy, just to be sure we're not overriding someone else's config
     super(HBaseConfiguration.create(conf));
-    conf = getConf();
+    initialize();
+  }
+
+  public void initialize() {
+    Configuration conf = getConf();
     // disable blockcache for tool invocation, see HBASE-10500
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
     userProvider = UserProvider.instantiate(conf);
@@ -1248,10 +1252,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       usage();
       return -1;
     }
+    // Re-initialize to apply -D options from the command line parameters
+    initialize();
     String dirPath = args[0];
     TableName tableName = TableName.valueOf(args[1]);
-
-
     if (args.length == 2) {
       return !run(dirPath, tableName).isEmpty() ? 0 : -1;
     } else {
