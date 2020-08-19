@@ -28,8 +28,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Pattern;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -102,21 +102,6 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     Pattern pattern = Pattern.compile(tableName.getNameAsString() + ".*");
     cleanupTables(admin, pattern);
     cleanupTables(admin2, pattern);
-  }
-
-  private void cleanupTables(AsyncAdmin admin, Pattern pattern) {
-    admin.listTableNames(pattern, false).whenCompleteAsync((tables, err) -> {
-      if (tables != null) {
-        tables.forEach(table -> {
-          try {
-            admin.disableTable(table).join();
-          } catch (Exception e) {
-            LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
-          }
-          admin.deleteTable(table).join();
-        });
-      }
-    }, ForkJoinPool.commonPool()).join();
   }
 
   private void createTableWithDefaultConf(AsyncAdmin admin, TableName tableName) {

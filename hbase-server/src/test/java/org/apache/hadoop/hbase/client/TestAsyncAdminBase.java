@@ -103,22 +103,25 @@ public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration
 
   @After
   public void tearDown() throws Exception {
-    admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false)
-      .whenCompleteAsync((tables, err) -> {
-        if (tables != null) {
-          tables.forEach(table -> {
-            try {
-              admin.disableTable(table).join();
-            } catch (Exception e) {
-              LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
-            }
-            admin.deleteTable(table).join();
-          });
-        }
-      }, ForkJoinPool.commonPool()).join();
+    cleanupTables(admin, Pattern.compile(tableName.getNameAsString() + ".*"));
     if (!admin.isBalancerEnabled().join()) {
       admin.balancerSwitch(true, true);
     }
+  }
+
+  protected void cleanupTables(AsyncAdmin admin, Pattern pattern) {
+    admin.listTableNames(pattern, false).whenCompleteAsync((tables, err) -> {
+      if (tables != null) {
+        tables.forEach(table -> {
+          try {
+            admin.disableTable(table).join();
+          } catch (Exception e) {
+            LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
+          }
+          admin.deleteTable(table).join();
+        });
+      }
+    }, ForkJoinPool.commonPool()).join();
   }
 
   protected void createTableWithDefaultConf(TableName tableName) throws IOException {
