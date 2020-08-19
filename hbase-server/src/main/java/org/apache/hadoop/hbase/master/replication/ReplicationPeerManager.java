@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -119,7 +120,8 @@ public class ReplicationPeerManager {
     if (peerId.contains("-")) {
       throw new DoNotRetryIOException("Found invalid peer name: " + peerId);
     }
-    peerConfig.addDefaultPeerConfigsIfNotPresent(conf);
+    ReplicationPeerConfig updatedPeerConfig = ReplicationPeerConfigUtil.addDefaultPeerConfigsIfNotPresent(conf,peerConfig);
+    peerConfig = updatedPeerConfig;
     checkPeerConfig(peerConfig);
     if (peerConfig.isSyncReplication()) {
       checkSyncReplicationPeerConfigConflict(peerConfig);

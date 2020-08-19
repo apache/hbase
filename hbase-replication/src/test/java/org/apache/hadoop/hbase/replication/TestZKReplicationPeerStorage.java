@@ -34,9 +34,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Stream;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -214,5 +217,42 @@ public class TestZKReplicationPeerStorage {
       ZKUtil.checkExists(UTIL.getZooKeeperWatcher(), STORAGE.getSyncReplicationStateNode(peerId)));
     assertNotEquals(-1, ZKUtil.checkExists(UTIL.getZooKeeperWatcher(),
       STORAGE.getNewSyncReplicationStateNode(peerId)));
+  }
+
+  @Test
+  public void testDefaultReplicationPeerConfigIsAppliedIfNotAlreadySet(){
+    String customPeerConfigKey = "hbase.xxx.custom_config";
+    String customPeerConfigValue = "test";
+
+    ReplicationPeerConfig existingReplicationPeerConfig = getConfig(1);
+
+    // custom config not present
+    assertEquals(existingReplicationPeerConfig.getConfiguration().get(customPeerConfigKey), null);
+
+    Configuration conf = UTIL.getConfiguration();
+    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_DEFAULT_CONFIG,
+      customPeerConfigKey.concat("=").concat(customPeerConfigValue));
+
+    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.addDefaultPeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
+    assertEquals(customPeerConfigValue, updatedReplicationPeerConfig.getConfiguration().get(customPeerConfigKey));
+  }
+
+  @Test
+  public void testDefaultReplicationPeerConfigOverrideIfAlreadySet(){
+
+    String customPeerConfigKey = "hbase.xxx.custom_config";
+    String customPeerConfigValue = "test";
+    String customPeerConfigUpdatedValue = "test_updated";
+
+    ReplicationPeerConfig existingReplicationPeerConfig = ReplicationPeerConfig.newBuilder(getConfig(1))
+      .putConfiguration(customPeerConfigKey,customPeerConfigValue).build();
+
+
+    Configuration conf = UTIL.getConfiguration();
+    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_DEFAULT_CONFIG,
+      customPeerConfigKey.concat("=").concat(customPeerConfigUpdatedValue));
+
+    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.addDefaultPeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
+    assertEquals(customPeerConfigUpdatedValue, updatedReplicationPeerConfig.getConfiguration().get(customPeerConfigKey));
   }
 }
