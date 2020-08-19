@@ -213,7 +213,10 @@ if [[ "$1" == "publish-dist" ]]; then
   echo "Packaging release source tarballs"
   make_src_release "${PROJECT}" "${RELEASE_VERSION}"
 
-  make_binary_release "${PROJECT}" "${RELEASE_VERSION}"
+  # we do not have binary tarballs for hbase-thirdparty
+  if [[ "${PROJECT}" != "hbase-thirdparty" ]]; then
+    make_binary_release "${PROJECT}" "${RELEASE_VERSION}"
+  fi
 
   if [[ "$PROJECT" =~ ^hbase- ]]; then
     DEST_DIR_NAME="${PROJECT}-${package_version_name}"
