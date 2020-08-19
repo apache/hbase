@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -138,9 +139,10 @@ public class TestSCPBase {
   }
 
   protected Table createTable(final TableName tableName) throws IOException {
-    final Table t = this.util.createTable(tableName, HBaseTestingUtility.COLUMNS,
-      HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE, getRegionReplication());
-    return t;
+    int numRegions = 10;
+    byte[][] splitKeys = Bytes.split(Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), numRegions - 3);
+    return util
+        .createTable(tableName, HBaseTestingUtility.COLUMNS, splitKeys, getRegionReplication());
   }
 
   protected int getRegionReplication() {

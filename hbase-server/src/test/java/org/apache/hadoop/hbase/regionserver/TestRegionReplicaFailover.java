@@ -324,7 +324,7 @@ public class TestRegionReplicaFailover {
    */
   @Test
   public void testLotsOfRegionReplicas() throws IOException {
-    int numRegions = NB_SERVERS * 20;
+    int numRegions = NB_SERVERS * 5;
     int regionReplication = 10;
     String tableName = htd.getTableName().getNameAsString() + "2";
     htd = HTU.createTableDescriptor(tableName);

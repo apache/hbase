@@ -159,9 +159,7 @@ public class TestSnapshotTemporaryDirectory {
     TableName tableName = TableName.valueOf("testtb-" + tid);
     byte[] emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
     byte[] snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
-    byte[] snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
     int snapshot0Rows;
-    int snapshot1Rows;
 
     // create Table and disable it
     SnapshotTestingUtils.createTable(UTIL, tableName, getNumReplicas(), TEST_FAM);
@@ -177,20 +175,8 @@ public class TestSnapshotTemporaryDirectory {
       snapshot0Rows = UTIL.countRows(table);
     }
     admin.disableTable(tableName);
-
     // take a snapshot
     takeSnapshot(tableName, Bytes.toString(snapshotName0), true);
-
-    // enable table and insert more data
-    admin.enableTable(tableName);
-    SnapshotTestingUtils.loadData(UTIL, tableName, 500, TEST_FAM);
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
-      snapshot1Rows = UTIL.countRows(table);
-    }
-
-    SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshot1Rows);
-    admin.disableTable(tableName);
-    takeSnapshot(tableName, Bytes.toString(snapshotName1), true);
 
     // Restore from snapshot-0
     admin.restoreSnapshot(snapshotName0);
@@ -204,19 +190,6 @@ public class TestSnapshotTemporaryDirectory {
     admin.enableTable(tableName);
     SnapshotTestingUtils.verifyRowCount(UTIL, tableName, 0);
     SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
-
-    // Restore from snapshot-1
-    admin.disableTable(tableName);
-    admin.restoreSnapshot(snapshotName1);
-    admin.enableTable(tableName);
-    SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshot1Rows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
-
-    // Restore from snapshot-1
-    UTIL.deleteTable(tableName);
-    admin.restoreSnapshot(snapshotName1);
-    SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshot1Rows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
   }
 
   @Test
@@ -226,9 +199,7 @@ public class TestSnapshotTemporaryDirectory {
     TableName tableName = TableName.valueOf("testtb-" + tid);
     byte[] emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
     byte[] snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
-    byte[] snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
     int snapshot0Rows;
-    int snapshot1Rows;
 
     // create Table
     SnapshotTestingUtils.createTable(UTIL, tableName, getNumReplicas(), TEST_FAM);
@@ -241,18 +212,8 @@ public class TestSnapshotTemporaryDirectory {
     try (Table table = UTIL.getConnection().getTable(tableName)) {
       snapshot0Rows = UTIL.countRows(table);
     }
-
     // take a snapshot
     takeSnapshot(tableName, Bytes.toString(snapshotName0), false);
-
-    // Insert more data
-    SnapshotTestingUtils.loadData(UTIL, tableName, 500, TEST_FAM);
-    try (Table table = UTIL.getConnection().getTable(tableName)) {
-      snapshot1Rows = UTIL.countRows(table);
-    }
-
-    SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshot1Rows);
-    takeSnapshot(tableName, Bytes.toString(snapshotName1), false);
 
     // Restore from snapshot-0
     admin.disableTable(tableName);
@@ -266,19 +227,6 @@ public class TestSnapshotTemporaryDirectory {
     admin.restoreSnapshot(emptySnapshot);
     admin.enableTable(tableName);
     SnapshotTestingUtils.verifyRowCount(UTIL, tableName, 0);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
-
-    // Restore from snapshot-1
-    admin.disableTable(tableName);
-    admin.restoreSnapshot(snapshotName1);
-    admin.enableTable(tableName);
-    SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshot1Rows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
-
-    // Restore from snapshot-1
-    UTIL.deleteTable(tableName);
-    admin.restoreSnapshot(snapshotName1);
-    SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshot1Rows);
     SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
   }
 

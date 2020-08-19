@@ -15,33 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.tool;
+package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.BeforeClass;
+import org.jruby.embed.PathType;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-/**
- * Reruns TestLoadIncrementalHFiles using LoadIncrementalHFiles in secure mode. This suite is unable
- * to verify the security handoff/turnover as miniCluster is running as system user thus has root
- * privileges and delegation tokens don't seem to work on miniDFS.
- * <p>
- * Thus SecureBulkload can only be completely verified by running integration tests against a secure
- * cluster. This suite is still invaluable as it verifies the other mechanisms that need to be
- * supported as part of a LoadIncrementalFiles call.
- */
-@Category({ MiscTests.class, LargeTests.class })
-public class TestSecureLoadIncrementalHFiles extends TestLoadIncrementalHFiles {
+@Category({ ClientTests.class, LargeTests.class })
+public class TestAdminShell3 extends AbstractTestShell {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecureLoadIncrementalHFiles.class);
+    HBaseClassTestRule.forClass(TestAdminShell3.class);
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    TestLoadIncrementalHFilesBase.secureSetUpBeforeClass();
+  @Test
+  public void testRunShellTests() throws IOException {
+    System.setProperty("shell.test.include", "admin3_test.rb");
+    // Start all ruby tests
+    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
   }
 }

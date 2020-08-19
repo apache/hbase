@@ -34,11 +34,11 @@ import org.junit.experimental.categories.Category;
  * supported as part of a LoadIncrementalFiles call.
  */
 @Category({ MiscTests.class, LargeTests.class })
-public class TestSecureLoadIncrementalHFiles extends TestLoadIncrementalHFiles {
+public class TestSecureLoadIncrementalHFiles2 extends TestLoadIncrementalHFiles2 {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecureLoadIncrementalHFiles.class);
+      HBaseClassTestRule.forClass(TestSecureLoadIncrementalHFiles2.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

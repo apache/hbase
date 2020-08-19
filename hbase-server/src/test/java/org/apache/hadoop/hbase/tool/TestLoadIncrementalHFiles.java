@@ -21,24 +21,19 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -47,8 +42,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -57,64 +50,21 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Test cases for the "load" half of the HFileOutputFormat bulk load functionality. These tests run
  * faster than the full MR cluster tests in TestHFileOutputFormat
  */
 @Category({ MiscTests.class, LargeTests.class })
-public class TestLoadIncrementalHFiles {
+public class TestLoadIncrementalHFiles extends TestLoadIncrementalHFilesBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestLoadIncrementalHFiles.class);
-
-  @Rule
-  public TestName tn = new TestName();
-
-  private static final byte[] QUALIFIER = Bytes.toBytes("myqual");
-  private static final byte[] FAMILY = Bytes.toBytes("myfam");
-  private static final String NAMESPACE = "bulkNS";
-
-  static final String EXPECTED_MSG_FOR_NON_EXISTING_FAMILY = "Unmatched family names found";
-  static final int MAX_FILES_PER_REGION_PER_FAMILY = 4;
-
-  private static final byte[][] SPLIT_KEYS =
-      new byte[][] { Bytes.toBytes("ddd"), Bytes.toBytes("ppp") };
-
-  static HBaseTestingUtility util = new HBaseTestingUtility();
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
-    util.getConfiguration().setInt(LoadIncrementalHFiles.MAX_FILES_PER_REGION_PER_FAMILY,
-      MAX_FILES_PER_REGION_PER_FAMILY);
-    // change default behavior so that tag values are returned with normal rpcs
-    util.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
-      KeyValueCodecWithTags.class.getCanonicalName());
-    util.startMiniCluster();
-
-    setupNamespace();
-  }
-
-  protected static void setupNamespace() throws Exception {
-    util.getAdmin().createNamespace(NamespaceDescriptor.create(NAMESPACE).build());
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    util.shutdownMiniCluster();
-  }
 
   @Test
   public void testSimpleLoadWithMap() throws Exception {
@@ -145,36 +95,6 @@ public class TestLoadIncrementalHFiles {
   }
 
   /**
-   * Test case that creates some regions and loads HFiles that cross the boundaries of those regions
-   */
-  @Test
-  public void testRegionCrossingLoad() throws Exception {
-    runTest("testRegionCrossingLoad", BloomType.NONE,
-      new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
-  }
-
-  /**
-   * Test loading into a column family that has a ROW bloom filter.
-   */
-  @Test
-  public void testRegionCrossingRowBloom() throws Exception {
-    runTest("testRegionCrossingLoadRowBloom", BloomType.ROW,
-      new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
-  }
-
-  /**
-   * Test loading into a column family that has a ROWCOL bloom filter.
-   */
-  @Test
-  public void testRegionCrossingRowColBloom() throws Exception {
-    runTest("testRegionCrossingLoadRowColBloom", BloomType.ROWCOL,
-      new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
-  }
-
-  /**
    * Test case that creates some regions and loads HFiles that have different region boundaries than
    * the table pre-split.
    */
@@ -187,33 +107,6 @@ public class TestLoadIncrementalHFiles {
           new byte[][] { Bytes.toBytes("mmm"), Bytes.toBytes("zzz") }, });
   }
 
-  /**
-   * Test case that creates some regions and loads HFiles that cross the boundaries and have
-   * different region boundaries than the table pre-split.
-   */
-  @Test
-  public void testRegionCrossingHFileSplit() throws Exception {
-    testRegionCrossingHFileSplit(BloomType.NONE);
-  }
-
-  /**
-   * Test case that creates some regions and loads HFiles that cross the boundaries have a ROW bloom
-   * filter and a different region boundaries than the table pre-split.
-   */
-  @Test
-  public void testRegionCrossingHFileSplitRowBloom() throws Exception {
-    testRegionCrossingHFileSplit(BloomType.ROW);
-  }
-
-  /**
-   * Test case that creates some regions and loads HFiles that cross the boundaries have a ROWCOL
-   * bloom filter and a different region boundaries than the table pre-split.
-   */
-  @Test
-  public void testRegionCrossingHFileSplitRowColBloom() throws Exception {
-    testRegionCrossingHFileSplit(BloomType.ROWCOL);
-  }
-
   @Test
   public void testSplitALot() throws Exception {
     runTest("testSplitALot", BloomType.NONE,
@@ -224,187 +117,6 @@ public class TestLoadIncrementalHFiles {
           Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"), Bytes.toBytes("uuu"),
           Bytes.toBytes("vvv"), Bytes.toBytes("zzz"), },
       new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("zzz") }, });
-  }
-
-  private void testRegionCrossingHFileSplit(BloomType bloomType) throws Exception {
-    runTest("testHFileSplit" + bloomType + "Bloom", bloomType,
-      new byte[][] { Bytes.toBytes("aaa"), Bytes.toBytes("fff"), Bytes.toBytes("jjj"),
-          Bytes.toBytes("ppp"), Bytes.toBytes("uuu"), Bytes.toBytes("zzz"), },
-      new byte[][][] { new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
-          new byte[][] { Bytes.toBytes("fff"), Bytes.toBytes("zzz") }, });
-  }
-
-  private TableDescriptor buildHTD(TableName tableName, BloomType bloomType) {
-    return TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(
-          ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBloomFilterType(bloomType).build())
-        .build();
-  }
-
-  private void runTest(String testName, BloomType bloomType, byte[][][] hfileRanges)
-      throws Exception {
-    runTest(testName, bloomType, null, hfileRanges);
-  }
-
-  private void runTest(String testName, BloomType bloomType, byte[][][] hfileRanges, boolean useMap)
-      throws Exception {
-    runTest(testName, bloomType, null, hfileRanges, useMap);
-  }
-
-  private void runTest(String testName, BloomType bloomType, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges) throws Exception {
-    runTest(testName, bloomType, tableSplitKeys, hfileRanges, false);
-  }
-
-  private void runTest(String testName, BloomType bloomType, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges, boolean useMap) throws Exception {
-    final byte[] TABLE_NAME = Bytes.toBytes("mytable_" + testName);
-    final boolean preCreateTable = tableSplitKeys != null;
-
-    // Run the test bulkloading the table to the default namespace
-    final TableName TABLE_WITHOUT_NS = TableName.valueOf(TABLE_NAME);
-    runTest(testName, TABLE_WITHOUT_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges,
-      useMap, 2);
-
-
-    /* Run the test bulkloading the table from a depth of 3
-      directory structure is now
-      baseDirectory
-          -- regionDir
-            -- familyDir
-              -- storeFileDir
-    */
-    if (preCreateTable) {
-      runTest(testName + 2, TABLE_WITHOUT_NS, bloomType, true, tableSplitKeys, hfileRanges,
-          false, 3);
-    }
-
-    // Run the test bulkloading the table to the specified namespace
-    final TableName TABLE_WITH_NS = TableName.valueOf(Bytes.toBytes(NAMESPACE), TABLE_NAME);
-    runTest(testName, TABLE_WITH_NS, bloomType, preCreateTable, tableSplitKeys, hfileRanges,
-      useMap, 2);
-  }
-
-  private void runTest(String testName, TableName tableName, BloomType bloomType,
-      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges,
-      boolean useMap, int depth) throws Exception {
-    TableDescriptor htd = buildHTD(tableName, bloomType);
-    runTest(testName, htd, preCreateTable, tableSplitKeys, hfileRanges, useMap, false, depth);
-  }
-
-  public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtility util,
-      byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles,
-      int initRowCount, int factor) throws Exception {
-    return loadHFiles(testName, htd, util, fam, qual, preCreateTable, tableSplitKeys, hfileRanges,
-        useMap, deleteFile, copyFiles, initRowCount, factor, 2);
-  }
-
-  public static int loadHFiles(String testName, TableDescriptor htd, HBaseTestingUtility util,
-      byte[] fam, byte[] qual, boolean preCreateTable, byte[][] tableSplitKeys,
-      byte[][][] hfileRanges, boolean useMap, boolean deleteFile, boolean copyFiles,
-      int initRowCount, int factor, int depth) throws Exception {
-    Path baseDirectory = util.getDataTestDirOnTestFS(testName);
-    FileSystem fs = util.getTestFileSystem();
-    baseDirectory = baseDirectory.makeQualified(fs.getUri(), fs.getWorkingDirectory());
-    Path parentDir = baseDirectory;
-    if (depth == 3) {
-      assert !useMap;
-      parentDir = new Path(baseDirectory, "someRegion");
-    }
-    Path familyDir = new Path(parentDir, Bytes.toString(fam));
-
-    int hfileIdx = 0;
-    Map<byte[], List<Path>> map = null;
-    List<Path> list = null;
-    if (useMap || copyFiles) {
-      list = new ArrayList<>();
-    }
-    if (useMap) {
-      map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      map.put(fam, list);
-    }
-    Path last = null;
-    for (byte[][] range : hfileRanges) {
-      byte[] from = range[0];
-      byte[] to = range[1];
-      Path path = new Path(familyDir, "hfile_" + hfileIdx++);
-      HFileTestUtil.createHFile(util.getConfiguration(), fs, path, fam, qual, from, to, factor);
-      if (useMap) {
-        last = path;
-        list.add(path);
-      }
-    }
-    int expectedRows = hfileIdx * factor;
-
-    TableName tableName = htd.getTableName();
-    if (!util.getAdmin().tableExists(tableName) && (preCreateTable || map != null)) {
-      util.getAdmin().createTable(htd, tableSplitKeys);
-    }
-
-    Configuration conf = util.getConfiguration();
-    if (copyFiles) {
-      conf.setBoolean(LoadIncrementalHFiles.ALWAYS_COPY_FILES, true);
-    }
-    BulkLoadHFilesTool loader = new BulkLoadHFilesTool(conf);
-    List<String> args = Lists.newArrayList(baseDirectory.toString(), tableName.toString());
-    if (depth == 3) {
-      args.add("-loadTable");
-    }
-
-    if (useMap) {
-      if (deleteFile) {
-        fs.delete(last, true);
-      }
-      Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> loaded = loader.bulkLoad(tableName, map);
-      if (deleteFile) {
-        expectedRows -= 1000;
-        for (BulkLoadHFiles.LoadQueueItem item : loaded.keySet()) {
-          if (item.getFilePath().getName().equals(last.getName())) {
-            fail(last + " should be missing");
-          }
-        }
-      }
-    } else {
-      loader.run(args.toArray(new String[] {}));
-    }
-
-    if (copyFiles) {
-      for (Path p : list) {
-        assertTrue(p + " should exist", fs.exists(p));
-      }
-    }
-
-    Table table = util.getConnection().getTable(tableName);
-    try {
-      assertEquals(initRowCount + expectedRows, util.countRows(table));
-    } finally {
-      table.close();
-    }
-
-    return expectedRows;
-  }
-
-  private void runTest(String testName, TableDescriptor htd,
-      boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges, boolean useMap,
-      boolean copyFiles, int depth) throws Exception {
-    loadHFiles(testName, htd, util, FAMILY, QUALIFIER, preCreateTable, tableSplitKeys, hfileRanges,
-      useMap, true, copyFiles, 0, 1000, depth);
-
-    final TableName tableName = htd.getTableName();
-    // verify staging folder has been cleaned up
-    Path stagingBasePath =
-        new Path(FSUtils.getRootDir(util.getConfiguration()), HConstants.BULKLOAD_STAGING_DIR_NAME);
-    FileSystem fs = util.getTestFileSystem();
-    if (fs.exists(stagingBasePath)) {
-      FileStatus[] files = fs.listStatus(stagingBasePath);
-      for (FileStatus file : files) {
-        assertTrue("Folder=" + file.getPath() + " is not cleaned up.",
-          file.getPath().getName() != "DONOTERASE");
-      }
-    }
-
-    util.deleteTable(tableName);
   }
 
   /**
