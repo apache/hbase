@@ -300,7 +300,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     conf.setInt("hbase.offpeak.start.hour",0);
     conf.setInt("hbase.offpeak.end.hour",23);
     //Set a fixed time which hour is 14, so it will always in offpeak
-    EnvironmentEdgeManager.injectEdge(() -> 1597820400000l);
+    EnvironmentEdgeManager.injectEdge(() -> 1597820400000L);
     costFunction = new StochasticLoadBalancer.MoveCostFunction(conf);
     costFunction.init(cluster);
     costFunction.cost();
