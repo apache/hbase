@@ -923,7 +923,7 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.offpeak.end.hour</name>
     <value>-1</value>
-    <description>The end of off-peak hours, expressed as an integer between 0 and 23, inclusive. Set
+    <description>The end of off-peak hours, expressed as an integer between 0 and 23, exclusive. Set
       to -1 to disable off-peak.</description>
   </property>
   <property>

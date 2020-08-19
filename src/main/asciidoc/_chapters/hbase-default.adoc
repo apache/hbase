@@ -1113,7 +1113,7 @@ The start of off-peak hours, expressed as an integer between 0 and 23, inclusive
 *`hbase.offpeak.end.hour`*::
 +
 .Description
-The end of off-peak hours, expressed as an integer between 0 and 23, inclusive. Set
+The end of off-peak hours, expressed as an integer between 0 and 23, exclusive. Set
       to -1 to disable off-peak.
 +
 .Default
