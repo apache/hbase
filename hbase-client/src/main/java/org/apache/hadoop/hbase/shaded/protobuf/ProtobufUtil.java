@@ -3628,9 +3628,9 @@ public final class ProtobufUtil {
   }
 
   public static List<LogEntry> toBalancerDecisionResponse(
-      MasterProtos.BalancerDecisionResponse balancerDecisionResponse) {
+      MasterProtos.BalancerDecisionsResponse balancerDecisionsResponse) {
     List<RecentLogs.BalancerDecision> balancerDecisions =
-      balancerDecisionResponse.getBalancerDecisionList();
+      balancerDecisionsResponse.getBalancerDecisionList();
     if (CollectionUtils.isEmpty(balancerDecisions)) {
       return Collections.emptyList();
     }

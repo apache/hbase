@@ -4219,7 +4219,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return this.<List<LogEntry>>newMasterCaller()
       .action((controller, stub) ->
         this.call(controller, stub,
-          MasterProtos.BalancerDecisionRequest.newBuilder()
+          MasterProtos.BalancerDecisionsRequest.newBuilder()
             .setLimit(balancerDecisionRequest.getLimit()).build(),
           MasterService.Interface::getBalancerDecisions, ProtobufUtil::toBalancerDecisionResponse))
       .call();

@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -228,8 +227,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     tempFunctionCosts= new Double[costFunctions.size()];
 
     boolean isBalancerDecisionEnabled = getConf()
-      .getBoolean(HConstants.BALANCER_DECISION_BUFFER_ENABLED,
-        HConstants.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
+      .getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
+        BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
     if (this.namedQueueRecorder == null && isBalancerDecisionEnabled) {
       this.namedQueueRecorder = NamedQueueRecorder.getInstance(getConf());
     }

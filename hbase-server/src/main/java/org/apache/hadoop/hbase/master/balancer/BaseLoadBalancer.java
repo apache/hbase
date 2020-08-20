@@ -75,6 +75,11 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class BaseLoadBalancer implements LoadBalancer {
+
+  public static final String BALANCER_DECISION_BUFFER_ENABLED =
+    "hbase.master.balancer.decision.buffer.enabled";
+  public static final boolean DEFAULT_BALANCER_DECISION_BUFFER_ENABLED = false;
+
   protected static final int MIN_SERVER_BALANCE = 2;
   private volatile boolean stopped = false;
 

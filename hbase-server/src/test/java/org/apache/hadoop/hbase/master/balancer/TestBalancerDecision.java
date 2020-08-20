@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -69,15 +70,15 @@ public class TestBalancerDecision extends BalancerTestBase {
         }
       }
       final NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-      namedQueueGetRequest.setNamedQueueEvent(1);
+      namedQueueGetRequest.setNamedQueueEvent(BalancerDecisionDetails.BALANCER_DECISION_EVENT);
       namedQueueGetRequest
-        .setBalancerDecisionRequest(MasterProtos.BalancerDecisionRequest.getDefaultInstance());
+        .setBalancerDecisionsRequest(MasterProtos.BalancerDecisionsRequest.getDefaultInstance());
       NamedQueueGetResponse namedQueueGetResponse =
         loadBalancer.namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
       List<RecentLogs.BalancerDecision> balancerDecisions =
         namedQueueGetResponse.getBalancerDecisions();
-      MasterProtos.BalancerDecisionResponse response =
-        MasterProtos.BalancerDecisionResponse.newBuilder()
+      MasterProtos.BalancerDecisionsResponse response =
+        MasterProtos.BalancerDecisionsResponse.newBuilder()
           .addAllBalancerDecision(balancerDecisions)
           .build();
       List<LogEntry> balancerDecisionRecords =

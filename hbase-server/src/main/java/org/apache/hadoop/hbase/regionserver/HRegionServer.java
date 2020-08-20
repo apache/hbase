@@ -121,6 +121,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterRpcServicesVersionWrapper;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
@@ -683,8 +684,8 @@ public class HRegionServer extends Thread implements
       }
     } else {
       final boolean isBalancerDecisionEnabled = conf
-        .getBoolean(HConstants.BALANCER_DECISION_BUFFER_ENABLED,
-          HConstants.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
+        .getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
+          BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
       if (isBalancerDecisionEnabled) {
         this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
       }

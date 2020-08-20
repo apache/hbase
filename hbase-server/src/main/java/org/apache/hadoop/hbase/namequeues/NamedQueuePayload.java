@@ -48,7 +48,8 @@ public class NamedQueuePayload {
           return BALANCE_DECISION;
         }
         default: {
-          throw new IllegalArgumentException("Failed to retrieve NamedQueue Event");
+          throw new IllegalArgumentException(
+            "NamedQueue event with ordinal " + value + " not defined");
         }
       }
     }

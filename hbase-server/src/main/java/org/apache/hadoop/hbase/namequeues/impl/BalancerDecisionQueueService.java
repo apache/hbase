@@ -20,8 +20,8 @@
 package org.apache.hadoop.hbase.namequeues.impl;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.BalancerDecision;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.namequeues.NamedQueueService;
@@ -59,8 +59,8 @@ public class BalancerDecisionQueueService implements NamedQueueService {
   private final Queue<RecentLogs.BalancerDecision> balancerDecisionQueue;
 
   public BalancerDecisionQueueService(Configuration conf) {
-    isBalancerDecisionEnabled = conf.getBoolean(HConstants.BALANCER_DECISION_BUFFER_ENABLED,
-      HConstants.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
+    isBalancerDecisionEnabled = conf.getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
+      BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
     if (!isBalancerDecisionEnabled) {
       balancerDecisionQueue = null;
       return;
@@ -89,7 +89,7 @@ public class BalancerDecisionQueueService implements NamedQueueService {
     }
     BalancerDecisionDetails balancerDecisionDetails = (BalancerDecisionDetails) namedQueuePayload;
     BalancerDecision balancerDecisionRecords =
-      balancerDecisionDetails.getBalancerDecisionRecords();
+      balancerDecisionDetails.getBalancerDecision();
     List<String> regionPlans = balancerDecisionRecords.getRegionPlans();
     List<List<String>> regionPlansList;
     if (regionPlans.size() > REGION_PLANS_THRESHOLD_PER_BALANCER) {
@@ -130,11 +130,14 @@ public class BalancerDecisionQueueService implements NamedQueueService {
         .collect(Collectors.toList());
     // latest records should be displayed first, hence reverse order sorting
     Collections.reverse(balancerDecisions);
-    int limit = Math.min(request.getBalancerDecisionRequest().getLimit(), balancerDecisions.size());
+    int limit = balancerDecisions.size();
+    if (request.getBalancerDecisionsRequest().hasLimit()) {
+      limit = Math.min(request.getBalancerDecisionsRequest().getLimit(), balancerDecisions.size());
+    }
     // filter limit if provided
     balancerDecisions = balancerDecisions.subList(0, limit);
     final NamedQueueGetResponse namedQueueGetResponse = new NamedQueueGetResponse();
-    namedQueueGetResponse.setNamedQueueEvent(1);
+    namedQueueGetResponse.setNamedQueueEvent(BalancerDecisionDetails.BALANCER_DECISION_EVENT);
     namedQueueGetResponse.setBalancerDecisions(balancerDecisions);
     return namedQueueGetResponse;
   }

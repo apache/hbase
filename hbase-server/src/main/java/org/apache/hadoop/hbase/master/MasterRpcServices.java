@@ -79,7 +79,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
+import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
@@ -3297,21 +3297,21 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
-  public MasterProtos.BalancerDecisionResponse getBalancerDecisions(RpcController controller,
-      MasterProtos.BalancerDecisionRequest request) {
+  public MasterProtos.BalancerDecisionsResponse getBalancerDecisions(RpcController controller,
+      MasterProtos.BalancerDecisionsRequest request) {
     final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
     if (namedQueueRecorder == null) {
-      return MasterProtos.BalancerDecisionResponse.newBuilder()
+      return MasterProtos.BalancerDecisionsResponse.newBuilder()
         .addAllBalancerDecision(Collections.emptyList()).build();
     }
     final NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-    namedQueueGetRequest.setNamedQueueEvent(1);
-    namedQueueGetRequest.setBalancerDecisionRequest(request);
+    namedQueueGetRequest.setNamedQueueEvent(BalancerDecisionDetails.BALANCER_DECISION_EVENT);
+    namedQueueGetRequest.setBalancerDecisionsRequest(request);
     NamedQueueGetResponse namedQueueGetResponse =
       namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
     List<RecentLogs.BalancerDecision> balancerDecisions =
       namedQueueGetResponse.getBalancerDecisions();
-    return MasterProtos.BalancerDecisionResponse.newBuilder()
+    return MasterProtos.BalancerDecisionsResponse.newBuilder()
       .addAllBalancerDecision(balancerDecisions).build();
   }
 

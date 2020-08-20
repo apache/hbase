@@ -37,7 +37,7 @@ public class NamedQueueGetRequest {
 
   private AdminProtos.SlowLogResponseRequest slowLogResponseRequest;
   private NamedQueuePayload.NamedQueueEvent namedQueueEvent;
-  private MasterProtos.BalancerDecisionRequest balancerDecisionRequest;
+  private MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest;
 
   public AdminProtos.SlowLogResponseRequest getSlowLogResponseRequest() {
     return slowLogResponseRequest;
@@ -48,13 +48,13 @@ public class NamedQueueGetRequest {
     this.slowLogResponseRequest = slowLogResponseRequest;
   }
 
-  public MasterProtos.BalancerDecisionRequest getBalancerDecisionRequest() {
-    return balancerDecisionRequest;
+  public MasterProtos.BalancerDecisionsRequest getBalancerDecisionsRequest() {
+    return balancerDecisionsRequest;
   }
 
-  public void setBalancerDecisionRequest(
-      MasterProtos.BalancerDecisionRequest balancerDecisionRequest) {
-    this.balancerDecisionRequest = balancerDecisionRequest;
+  public void setBalancerDecisionsRequest(
+      MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest) {
+    this.balancerDecisionsRequest = balancerDecisionsRequest;
   }
 
   public NamedQueuePayload.NamedQueueEvent getNamedQueueEvent() {
@@ -70,7 +70,7 @@ public class NamedQueueGetRequest {
     return new ToStringBuilder(this)
       .append("slowLogResponseRequest", slowLogResponseRequest)
       .append("namedQueueEvent", namedQueueEvent)
-      .append("balancerDecisionRequest", balancerDecisionRequest)
+      .append("balancerDecisionsRequest", balancerDecisionsRequest)
       .toString();
   }
 }

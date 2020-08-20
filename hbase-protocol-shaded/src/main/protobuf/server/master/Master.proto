@@ -694,11 +694,11 @@ message SwitchExceedThrottleQuotaResponse {
   required bool previous_exceed_throttle_quota_enabled = 1;
 }
 
-message BalancerDecisionRequest {
-  optional uint32 limit = 5 [default = 250];
+message BalancerDecisionsRequest {
+  optional uint32 limit = 1;
 }
 
-message BalancerDecisionResponse {
+message BalancerDecisionsResponse {
   repeated BalancerDecision balancer_decision = 1;
 }
 
@@ -1133,8 +1133,8 @@ service MasterService {
   rpc UpdateRSGroupConfig(UpdateRSGroupConfigRequest)
   returns (UpdateRSGroupConfigResponse);
 
-  rpc GetBalancerDecisions(BalancerDecisionRequest)
-    returns(BalancerDecisionResponse);
+  rpc GetBalancerDecisions(BalancerDecisionsRequest)
+    returns(BalancerDecisionsResponse);
 }
 
 // HBCK Service definitions.

@@ -29,21 +29,23 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class BalancerDecisionDetails extends NamedQueuePayload {
 
+  public static final int BALANCER_DECISION_EVENT = 1;
+
   private final BalancerDecision balancerDecision;
 
   public BalancerDecisionDetails(BalancerDecision balancerDecision) {
-    super(1);
+    super(BALANCER_DECISION_EVENT);
     this.balancerDecision = balancerDecision;
   }
 
-  public BalancerDecision getBalancerDecisionRecords() {
+  public BalancerDecision getBalancerDecision() {
     return balancerDecision;
   }
 
   @Override
   public String toString() {
     return new ToStringBuilder(this)
-      .append("balancerDecisionRecords", balancerDecision)
+      .append("balancerDecision", balancerDecision)
       .toString();
   }
 }
