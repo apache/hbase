@@ -48,7 +48,7 @@ public class BalancerDecisionQueueService implements NamedQueueService {
 
   private static final Logger LOG = LoggerFactory.getLogger(BalancerDecisionQueueService.class);
 
-  private final boolean isBalancerDecisionEnabled;
+  private final boolean isBalancerDecisionRecording;
 
   private static final String BALANCER_DECISION_QUEUE_SIZE =
     "hbase.master.balancer.decision.queue.size";
@@ -59,9 +59,9 @@ public class BalancerDecisionQueueService implements NamedQueueService {
   private final Queue<RecentLogs.BalancerDecision> balancerDecisionQueue;
 
   public BalancerDecisionQueueService(Configuration conf) {
-    isBalancerDecisionEnabled = conf.getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
+    isBalancerDecisionRecording = conf.getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
       BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
-    if (!isBalancerDecisionEnabled) {
+    if (!isBalancerDecisionRecording) {
       balancerDecisionQueue = null;
       return;
     }
@@ -79,7 +79,7 @@ public class BalancerDecisionQueueService implements NamedQueueService {
 
   @Override
   public void consumeEventFromDisruptor(NamedQueuePayload namedQueuePayload) {
-    if (!isBalancerDecisionEnabled) {
+    if (!isBalancerDecisionRecording) {
       return;
     }
     if (!(namedQueuePayload instanceof BalancerDecisionDetails)) {
@@ -112,7 +112,7 @@ public class BalancerDecisionQueueService implements NamedQueueService {
 
   @Override
   public boolean clearNamedQueue() {
-    if (!isBalancerDecisionEnabled) {
+    if (!isBalancerDecisionRecording) {
       return false;
     }
     LOG.debug("Received request to clean up balancer decision queue.");
@@ -122,7 +122,7 @@ public class BalancerDecisionQueueService implements NamedQueueService {
 
   @Override
   public NamedQueueGetResponse getNamedQueueRecords(NamedQueueGetRequest request) {
-    if (!isBalancerDecisionEnabled) {
+    if (!isBalancerDecisionRecording) {
       return null;
     }
     List<RecentLogs.BalancerDecision> balancerDecisions =

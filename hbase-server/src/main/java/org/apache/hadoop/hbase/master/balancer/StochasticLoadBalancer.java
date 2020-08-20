@@ -226,10 +226,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     curFunctionCosts= new Double[costFunctions.size()];
     tempFunctionCosts= new Double[costFunctions.size()];
 
-    boolean isBalancerDecisionEnabled = getConf()
+    boolean isBalancerDecisionRecording = getConf()
       .getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
         BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
-    if (this.namedQueueRecorder == null && isBalancerDecisionEnabled) {
+    if (this.namedQueueRecorder == null && isBalancerDecisionRecording) {
       this.namedQueueRecorder = NamedQueueRecorder.getInstance(getConf());
     }
 

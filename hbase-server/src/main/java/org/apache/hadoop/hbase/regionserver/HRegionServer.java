@@ -683,10 +683,10 @@ public class HRegionServer extends Thread implements
         this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
       }
     } else {
-      final boolean isBalancerDecisionEnabled = conf
+      final boolean isBalancerDecisionRecording = conf
         .getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
           BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
-      if (isBalancerDecisionEnabled) {
+      if (isBalancerDecisionRecording) {
         this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
       }
     }
