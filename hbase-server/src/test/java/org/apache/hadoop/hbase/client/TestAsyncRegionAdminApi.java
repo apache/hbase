@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
@@ -53,6 +54,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.junit.After;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -70,6 +73,19 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAsyncRegionAdminApi.class);
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TestAsyncAdminBase.setUpBeforeClass();
+    // Turn off the balancer. So region will not be moved when test region admin api.
+    ASYNC_CONN.getAdmin().balancerSwitch(false).join();
+  }
+
+  @Override
+  @After
+  public void tearDown() throws Exception {
+    cleanupTables(admin, Pattern.compile(tableName.getNameAsString() + ".*"));
+  }
 
   @Test
   public void testAssignRegionAndUnassignRegion() throws Exception {
