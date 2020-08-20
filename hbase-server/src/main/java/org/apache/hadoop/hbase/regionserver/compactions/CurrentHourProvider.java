@@ -63,4 +63,8 @@ public class CurrentHourProvider {
     CurrentHourProvider.tick = tick = nextTick();
     return tick.currentHour;
   }
+
+  protected static void forceUpdateTickForTest() {
+    tick = nextTick();
+  }
 }

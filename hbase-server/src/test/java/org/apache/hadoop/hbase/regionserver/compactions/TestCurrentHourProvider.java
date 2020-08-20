@@ -37,9 +37,11 @@ public class TestCurrentHourProvider {
   public void testWithEnvironmentEdge() {
     // set 2020-08-20 11:52:41 should return 11
     EnvironmentEdgeManager.injectEdge(()->1597895561000L);
+    CurrentHourProvider.forceUpdateTickForTest();
     assertEquals(11, CurrentHourProvider.getCurrentHour());
     // set 2020-08-20 15:04:00 should return 15
     EnvironmentEdgeManager.injectEdge(()->1597907081000L);
+    CurrentHourProvider.forceUpdateTickForTest();
     assertEquals(15, CurrentHourProvider.getCurrentHour());
   }
 }
