@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.http.resource;
 import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
-
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -29,10 +28,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
-import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ajax.JSON;
 
 /**
  * A simple Jersey resource class TestHttpServer.
