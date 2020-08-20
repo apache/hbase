@@ -71,7 +71,9 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    */
   @Deprecated
   @InterfaceAudience.Private
-  RegionInfo UNDEFINED = RegionInfoBuilder.newBuilder(TableName.valueOf("__UNDEFINED__")).build();
+  // Not using RegionInfoBuilder intentionally to avoid a static loading deadlock: HBASE-24627
+  RegionInfo UNDEFINED = new MutableRegionInfo(0, TableName.valueOf("__UNDEFINED__"),
+    RegionInfo.DEFAULT_REPLICA_ID);
 
   /**
    * Separator used to demarcate the encodedName in a region name
@@ -588,8 +590,9 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @return the MOB {@link RegionInfo}.
    */
   static RegionInfo createMobRegionInfo(TableName tableName) {
-    return RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes(".mob")).
-      setRegionId(0).build();
+    // Skipping reference to RegionInfoBuilder in this class.
+    return new MutableRegionInfo(tableName, Bytes.toBytes(".mob"),
+      HConstants.EMPTY_END_ROW, false, 0, DEFAULT_REPLICA_ID, false);
   }
 
   /**
