@@ -39,6 +39,7 @@ public class CurrentHourProvider {
 
   private static Tick nextTick() {
     Calendar calendar = new GregorianCalendar();
+    calendar.setTimeInMillis(EnvironmentEdgeManager.currentTime());
     int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
     moveToNextHour(calendar);
     return new Tick(currentHour, calendar.getTimeInMillis());
