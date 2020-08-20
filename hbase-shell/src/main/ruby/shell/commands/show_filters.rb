@@ -39,7 +39,7 @@ EOF
         parseFilter = ParseFilter.new
         supportedFilters = parseFilter.getSupportedFilters
 
-        table_formatter.start_table({ num_cols: 1, headers: ['FORMATTER'] })
+        table_formatter.start_table({ headers: %w[FORMATTER] })
         supportedFilters.each do |filter|
           table_formatter.row([filter])
         end

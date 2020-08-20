@@ -38,7 +38,7 @@ EOF
       def command
         peers = replication_admin.list_peers
 
-        table_formatter.start_table({ num_cols: 11, headers: %w[PEER_ID CLUSTER_KEY ENDPOINT_CLASSNAME
+        table_formatter.start_table({ headers: %w[PEER_ID CLUSTER_KEY ENDPOINT_CLASSNAME
                             REMOTE_ROOT_DIR SYNC_REPLICATION_STATE STATE
                             REPLICATE_ALL NAMESPACES TABLE_CFS BANDWIDTH
                             SERIAL]})

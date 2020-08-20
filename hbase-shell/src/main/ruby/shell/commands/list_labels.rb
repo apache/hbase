@@ -33,7 +33,7 @@ EOF
 
       def command(regex = '.*')
         list = visibility_labels_admin.list_labels(regex)
-        table_formatter.start_table({ num_cols: 1, headers: ["LABEL"] })
+        table_formatter.start_table({ headers: %w[LABEL] })
         list.each do |label|
           table_formatter.row([org.apache.hadoop.hbase.util.Bytes.toStringBinary(label.toByteArray)])
         end

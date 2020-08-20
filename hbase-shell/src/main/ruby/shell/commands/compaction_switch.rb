@@ -43,7 +43,7 @@ module Shell
 
       def command(enable_disable, *server)
         prev_state = admin.compaction_switch(enable_disable, server)
-        table_formatter.start_table({ num_cols: 2, headers: %w[SERVER PREV_STATE], widths: [nil, 10] })
+        table_formatter.start_table({ headers: %w[SERVER PREV_STATE], widths: [nil, 10] })
         prev_state.each { |k, v| table_formatter.row([k.getServerName, java.lang.String.valueOf(v)]) }
         table_formatter.close_table
 

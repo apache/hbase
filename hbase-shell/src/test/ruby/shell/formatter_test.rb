@@ -71,6 +71,8 @@ class ShellTableFormatterTest < Test::Unit::TestCase
   include Hbase::TestHelpers
 
   TableFormatter = ::Shell::Formatter::TableFormatter
+  AlignedTableFormatter = ::Shell::Formatter::AlignedTableFormatter
+  UnalignedTableFormatter = ::Shell::Formatter::UnalignedTableFormatter
   JsonTableFormatter = ::Shell::Formatter::JsonTableFormatter
 
   define_test 'TableFormatter::OptionsHash should allow dot-notation access' do
@@ -92,10 +94,53 @@ class ShellTableFormatterTest < Test::Unit::TestCase
     assert_raise(ArgumentError) { TableFormatter::TableScope.new cell_scope }
   end
 
+  define_test 'AlignedTableFormatter#single_value_table produces correct output' do
+    expected_output = <<~EOF
+      +-----+
+      | FOO |
+      +-----+
+      | BAR |
+      +-----+
+    EOF
+    io = StringIO.new
+    f = AlignedTableFormatter.new
+    f.single_value_table('FOO', 'BAR', :output_stream => io)
+    assert_equal(expected_output, io.string)
+  end
+
+  define_test 'UnalignedTableFormatter#single_value_table produces correct output' do
+    io = StringIO.new
+    f = UnalignedTableFormatter.new
+    f.single_value_table('FOO', 'BAR', :output_stream => io)
+    assert_equal("FOO\nBAR\n", io.string)
+  end
+
   define_test 'JsonTableFormatter#single_value_table produces correct output' do
-    table_formatter = JsonTableFormatter.new
-    output = capture_stdout { table_formatter.single_value_table('FOO', 'BAR') }
+    io = StringIO.new
+    f = JsonTableFormatter.new
+    f.single_value_table('FOO', 'BAR', :output_stream => io)
+    output = io.string
     parsed = JSON.load(output)
     assert_equal('BAR', parsed['rows'][0]['FOO'])
+  end
+
+  define_test 'AlignedTableFormatter#single_value_table shows footer fields' do
+    io = StringIO.new
+    f = AlignedTableFormatter.new
+    f.start_table({ :output_stream => io, :headers => %w[FOO] })
+    f.row(['BAR'])
+    f.close_table({ 'CUSTOM FOOTER': 'VALUE'})
+    output = io.string
+    assert_match(/CUSTOM FOOTER: VALUE/, output)
+  end
+
+  define_test 'UnalignedTableFormatter#single_value_table shows footer fields' do
+    io = StringIO.new
+    f = AlignedTableFormatter.new
+    f.start_table({ :output_stream => io, :headers => %w[FOO] })
+    f.row(['BAR'])
+    f.close_table({ 'CUSTOM FOOTER': 'VALUE'})
+    output = io.string
+    assert_match(/CUSTOM FOOTER: VALUE/, output)
   end
 end

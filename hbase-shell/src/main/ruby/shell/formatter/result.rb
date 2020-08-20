@@ -78,7 +78,7 @@ module Shell
         converter ||= 'toStringBinary'
         converter_class ||= 'org.apache.hadoop.hbase.util.Bytes'
 
-        table_formatter.start_table({ num_cols: 3, headers: %w[ROW COLUMN TIMESTAMP VALUE], widths: [nil, nil, ::Shell::Formatter::Util::ISO8601_WIDTH, nil] })
+        table_formatter.start_table({ headers: %w[ROW COLUMN TIMESTAMP VALUE], widths: [nil, nil, ::Shell::Formatter::Util::ISO8601_WIDTH, nil] })
 
         cells.each do |c|
           # Get the family and qualifier of the cell without escaping non-printable characters. It is crucial that

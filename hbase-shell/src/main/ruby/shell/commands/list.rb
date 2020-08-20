@@ -33,14 +33,14 @@ EOF
       end
 
       def command(regex = '.*')
-        formatter.header(['TABLE'])
+        table_formatter.start_table({ headers: %w[TABLE]})
 
         list = admin.list(regex)
         list.each do |table|
-          formatter.row([table])
+          table_formatter.row([table])
         end
 
-        formatter.footer(list.size)
+        table_formatter.close_table({ 'NUM_ROWS': list.size })
         list
       end
     end

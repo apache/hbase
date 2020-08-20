@@ -102,10 +102,12 @@ module Shell
     @debug = false
     attr_accessor :debug
 
+    DEFAULT_TABLE_FORMATTER_CLASS = ::Shell::Formatter::UnalignedTableFormatter
+
     def initialize(hbase, interactive = true)
       self.hbase = hbase
       self.interactive = interactive
-      self.table_formatter_class = ::Shell::Formatter::AlignedTableFormatter
+      self.table_formatter_class = DEFAULT_TABLE_FORMATTER_CLASS
     end
 
     # Returns Admin class from admin.rb
@@ -297,6 +299,13 @@ double-quote'd hexadecimal representation. For example:
   hbase> get 't1', "key\\x03\\x3f\\xcd"
   hbase> get 't1', "key\\003\\023\\011"
   hbase> put 't1', "test\\xef\\xff", 'f1:', "\\x01\\x33\\x40"
+
+Many of the commands use a special formatter which supports multiple output
+formats. To change which formatter is used, try one of the following:
+
+  hbase> set_formatter :aligned
+  hbase> set_formatter :unaligned
+  hbase> set_formatter :json
 
 The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.
 For more on the HBase Shell, see http://hbase.apache.org/book.html

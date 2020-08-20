@@ -97,8 +97,8 @@ module Shell
       }.freeze
       @current_scope = nil
 
-      def initialize(opts = {})
-        reset(opts)
+      def initialize
+        reset
       end
 
       def reset(opts = {})
@@ -223,9 +223,9 @@ module Shell
       #
       # @param [String] title
       # @param [String] value
-      def single_value_table(title, value)
+      def single_value_table(title, value, **kwargs)
         w = [title.length, value.length].max
-        self.start_table({ num_cols: 1, headers: [title], widths: [w] })
+        self.start_table({ num_cols: 1, headers: [title], widths: [w] }.merge(kwargs))
         self.start_row
         self.cell(value)
         self.close_row
@@ -255,9 +255,11 @@ module Shell
         headers: [],
         widths: []
       }.freeze
-      DEFAULT_WIDTH = 10
+      # If we are not running in a TTY and cannot get the width of the terminal,
+      # NONTTY_TABLE_WIDTH will be used as the full width of the table.
+      NONTTY_TABLE_WIDTH = 100
 
-      def initialize(*args, **kwargs, &block)
+      def initialize
         super
       end
 
@@ -270,9 +272,14 @@ module Shell
       BORDER_HORIZONTAL = '-'.freeze
       BORDER_VERTICAL = '|'.freeze
 
+      ##
+      # Calculate the actual width of each output column. If :widths is not set in options, or if
+      # some widths are nil, this method will allocate the full width of the terminal to all the
+      # columns.
+      #
+      # @return [Array] column widths matching the length of :headers
       def refresh_column_widths
-        # arbitrary sensible default width for non-interactive sessions
-        max_width = 100
+        max_width = NONTTY_TABLE_WIDTH
         if $stdout.tty?
           begin
             max_width = Java.jline.TerminalFactory.get.getWidth
@@ -354,11 +361,11 @@ module Shell
         expect_scope TableScope::ROW
         footer_fields.each do |k, v|
           if k == :DURATION
-            puts format('Took %.4f seconds', v)
+            @out.puts format('Took %.4f seconds', v)
             next
           end
           name = FRIENDLY_FOOTER_NAMES.fetch(k, k)
-          puts "#{name}: #{v}"
+          @out.puts "#{name}: #{v}"
         end
         @current_scope = @current_scope.parent
         @current_scope.written += 1
@@ -368,7 +375,7 @@ module Shell
     class UnalignedTableFormatter < TableFormatter
       DEFAULT_OPTIONS = {
         output_stream: Kernel,
-        padding: 1,
+        padding: 0,
         num_cols: 0,
         headers: [],
         widths: [],
@@ -376,7 +383,7 @@ module Shell
         cell_separator: '|'
       }.freeze
 
-      def initialize(*args, **kwargs, &block)
+      def initialize
         super
       end
 
@@ -412,11 +419,11 @@ module Shell
         expect_scope TableScope::ROW
         footer_fields.each do |k, v|
           if k == "DURATION"
-            puts format('Took %.4f seconds', v)
+            @out.puts format('Took %.4f seconds', v)
             next
           end
           name = FRIENDLY_FOOTER_NAMES.fetch(k, k)
-          puts "#{name}: #{v}"
+          @out.puts "#{name}: #{v}"
         end
         @current_scope = @current_scope.parent
         @current_scope.written += 1
@@ -432,7 +439,7 @@ module Shell
           use_objects: true
       }.freeze
 
-      def initialize(*args, **kwargs, &block)
+      def initialize
         super
       end
 

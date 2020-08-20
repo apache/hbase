@@ -33,7 +33,6 @@ EOF
 
       def command(regex = '.*')
         table_formatter.start_table({
-                                      num_cols: 3,
                                       headers: %w[GROUP_NAME KIND MEMBER],
                                       widths: [nil, 6, nil]
                                     })
@@ -63,6 +62,7 @@ EOF
         end
 
         table_formatter.close_table
+        nil
       end
     end
   end

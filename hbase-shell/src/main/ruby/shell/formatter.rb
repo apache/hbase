@@ -199,56 +199,6 @@ module Shell
       end
     end
 
-    # Base abstract class for results formatting.
-    class TableFormatterAdapter < Base
-      # Takes an output stream and a print width.
-      def initialize(opts = {})
-        options = {
-            output_stream: Kernel,
-            table_formatter_class: TableFormatter
-        }.merge(opts)
-
-        @out = options[:output_stream]
-        @row_count = 0
-
-        # raise an error if the stream is not valid
-        raise(TypeError, "Type #{@out.class} of parameter #{@out} is not IO") unless is_valid_io?(@out)
-
-        @formatter = options[:table_formatter_class].new
-      end
-
-      def header(args = [], widths = [])
-        @formatter.reset({ :num_cols => args.length, :widths => widths, :headers => args })
-        @formatter.start_table
-        @row_count = 0
-      end
-
-      def row(args = [], inset = true, widths = [])
-        @formatter.start_row
-        args.each { |txt| @formatter.cell txt }
-        @formatter.close_row
-        @row_count += 1
-      end
-
-      def footer(row_count = nil, is_stale = false)
-        row_count ||= @row_count
-
-        @formatter.start_row
-        @formatter.cell(format('%d row(s)', row_count))
-        @formatter.close_row
-
-        @formatter.close_table
-      end
-
-      def method_missing(method_name, *args, &block)
-        if @formatter.respond_to? method_name
-          @formatter.send(method_name, *args, &block)
-        else
-          super
-        end
-      end
-    end
-
     class Console < Base
     end
 
