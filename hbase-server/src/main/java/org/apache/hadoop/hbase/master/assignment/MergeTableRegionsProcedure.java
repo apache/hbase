@@ -461,7 +461,7 @@ public class MergeTableRegionsProcedure
     if (!env.getMasterServices().isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
       String regionsStr = Arrays.deepToString(this.regionsToMerge);
       LOG.warn("Merge switch is off! skip merge of " + regionsStr);
-      super.setFailure(getClass().getSimpleName(),
+      setFailure(getClass().getSimpleName(),
           new IOException("Merge of " + regionsStr + " failed because merge switch is off"));
       return false;
     }
@@ -469,7 +469,7 @@ public class MergeTableRegionsProcedure
     if (!env.getMasterServices().getTableDescriptors().get(getTableName()).isMergeEnabled()) {
       String regionsStr = Arrays.deepToString(regionsToMerge);
       LOG.warn("Merge is disabled for the table! Skipping merge of {}", regionsStr);
-      super.setFailure(getClass().getSimpleName(), new IOException(
+      setFailure(getClass().getSimpleName(), new IOException(
           "Merge of " + regionsStr + " failed as region merge is disabled for the table"));
       return false;
     }
@@ -494,11 +494,15 @@ public class MergeTableRegionsProcedure
       // along with the failure, so we can see why regions are not mergeable at this time.
       try {
         if (!isMergeable(env, state)) {
+          setFailure(getClass().getSimpleName(),
+            new MergeRegionException(
+              "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge) +
+                ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", is not mergeable"));
           return false;
         }
       } catch (IOException e) {
         IOException ioe = new IOException(RegionInfo.getShortNameToLog(ri) + " NOT mergeable", e);
-        super.setFailure(getClass().getSimpleName(), ioe);
+        setFailure(getClass().getSimpleName(), ioe);
         return false;
       }
     }
