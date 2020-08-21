@@ -230,11 +230,14 @@ public class TestZKReplicationPeerStorage {
     assertEquals(existingReplicationPeerConfig.getConfiguration().get(customPeerConfigKey), null);
 
     Configuration conf = UTIL.getConfiguration();
-    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_DEFAULT_CONFIG,
+    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
       customPeerConfigKey.concat("=").concat(customPeerConfigValue));
 
-    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.addDefaultPeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
-    assertEquals(customPeerConfigValue, updatedReplicationPeerConfig.getConfiguration().get(customPeerConfigKey));
+    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
+      addBasePeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
+
+    assertEquals(customPeerConfigValue, updatedReplicationPeerConfig.getConfiguration().
+      get(customPeerConfigKey));
   }
 
   @Test
@@ -244,14 +247,17 @@ public class TestZKReplicationPeerStorage {
     String customPeerConfigValue = "test";
     String customPeerConfigUpdatedValue = "test_updated";
 
-    ReplicationPeerConfig existingReplicationPeerConfig = ReplicationPeerConfig.newBuilder(getConfig(1))
+    ReplicationPeerConfig existingReplicationPeerConfig = ReplicationPeerConfig.
+      newBuilder(getConfig(1))
       .putConfiguration(customPeerConfigKey,customPeerConfigValue).build();
 
     Configuration conf = UTIL.getConfiguration();
-    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_DEFAULT_CONFIG,
+    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
       customPeerConfigKey.concat("=").concat(customPeerConfigUpdatedValue));
 
-    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.addDefaultPeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
-    assertEquals(customPeerConfigUpdatedValue, updatedReplicationPeerConfig.getConfiguration().get(customPeerConfigKey));
+    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
+      addBasePeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
+    assertEquals(customPeerConfigUpdatedValue, updatedReplicationPeerConfig.
+      getConfiguration().get(customPeerConfigKey));
   }
 }

@@ -120,7 +120,7 @@ public class ReplicationPeerManager {
     if (peerId.contains("-")) {
       throw new DoNotRetryIOException("Found invalid peer name: " + peerId);
     }
-    ReplicationPeerConfig updatedPeerConfig = ReplicationPeerConfigUtil.addDefaultPeerConfigsIfNotPresent(conf,peerConfig);
+    ReplicationPeerConfig updatedPeerConfig = ReplicationPeerConfigUtil.addBasePeerConfigsIfNotPresent(conf,peerConfig);
     peerConfig = updatedPeerConfig;
     checkPeerConfig(peerConfig);
     if (peerConfig.isSyncReplication()) {
