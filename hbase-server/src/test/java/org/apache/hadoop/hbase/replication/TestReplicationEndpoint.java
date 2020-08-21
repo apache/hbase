@@ -233,7 +233,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
         null);
 
     final int numEdits = totEdits;
-    Waiter.waitFor(CONF1, 30000, new Waiter.ExplainingPredicate<Exception>() {
+    Waiter.waitFor(CONF1, 60000, new Waiter.ExplainingPredicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
         return InterClusterReplicationEndpointForTest.replicateCount.get() == numEdits;
