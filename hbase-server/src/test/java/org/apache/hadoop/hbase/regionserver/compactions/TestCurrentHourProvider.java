@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import java.util.TimeZone;
-
 import static org.junit.Assert.assertEquals;
+
+import java.util.TimeZone;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
