@@ -23,49 +23,38 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestCurrentHourProvider {
-
+  private static final Logger LOG = LoggerFactory.getLogger(TestCurrentHourProvider.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestCurrentHourProvider.class);
 
+  /**
+   * In timezone GMT+08:00, the unix time of 2020-08-20 11:52:41 is 1597895561000
+   * and the unix time of 2020-08-20 15:04:00 is 1597907081000,
+   * by calculating the delta time to get expected time in current timezone,
+   * then we can get special hour no matter which timezone it runs.
+   */
   @Test
   public void testWithEnvironmentEdge() {
-    // set 1597895561000 with timezone GMT+08:00, represent 2020-08-20 11:52:41, should return 11
-    EnvironmentEdge edgeForHour11 = new EnvironmentEdge() {
-      @Override
-      public long currentTime() {
-        return 1597895561000L;
-      }
-
-      @Override
-      public TimeZone currentTimeZone() {
-        return TimeZone.getTimeZone("GMT+08:00");
-      }
-    };
-    EnvironmentEdgeManager.injectEdge(edgeForHour11);
+    // set a time represent hour 11
+    long deltaFor11 = TimeZone.getDefault().getRawOffset() - 28800000;
+    long timeFor11 = 1597895561000L - deltaFor11;
+    EnvironmentEdgeManager.injectEdge(() -> timeFor11);
     assertEquals(11, CurrentHourProvider.getCurrentHour());
 
-    // set 1597907081000 with timezone GMT+08:00, represent 2020-08-20 15:04:00, should return 15
-    EnvironmentEdge edgeForHour15 = new EnvironmentEdge() {
-      @Override
-      public long currentTime() {
-        return 1597907081000L;
-      }
-
-      @Override
-      public TimeZone currentTimeZone() {
-        return TimeZone.getTimeZone("GMT+08:00");
-      }
-    };
-    EnvironmentEdgeManager.injectEdge(edgeForHour15);
+    // set a time represent hour 15
+    long deltaFor15 = TimeZone.getDefault().getRawOffset() - 28800000;
+    long timeFor15 = 1597907081000L - deltaFor15;
+    EnvironmentEdgeManager.injectEdge(() -> timeFor15);
     assertEquals(15, CurrentHourProvider.getCurrentHour());
   }
 }

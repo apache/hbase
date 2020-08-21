@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.util.TimeZone;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -36,13 +34,4 @@ public interface EnvironmentEdge {
    * @return Current time.
    */
   long currentTime();
-
-  /**
-   * Returns the currentTimeZone.
-   *
-   * @return Current timezone.
-   */
-  default TimeZone currentTimeZone() {
-    return TimeZone.getDefault();
-  }
 }
