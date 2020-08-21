@@ -192,6 +192,10 @@ class AsyncConnectionImpl implements AsyncConnection {
     if (closed) {
       return;
     }
+    LOG.info("Connection has been closed by {}.", Thread.currentThread().getName());
+    if(LOG.isDebugEnabled()){
+      logCallStack(Thread.currentThread().getStackTrace());
+    }
     IOUtils.closeQuietly(clusterStatusListener);
     IOUtils.closeQuietly(rpcClient);
     IOUtils.closeQuietly(registry);
@@ -200,6 +204,16 @@ class AsyncConnectionImpl implements AsyncConnection {
     }
     metrics.ifPresent(MetricsConnection::shutdown);
     closed = true;
+  }
+
+  private void logCallStack(StackTraceElement[] stackTraceElements) {
+    StringBuilder stackBuilder = new StringBuilder("Call stack:");
+    for (StackTraceElement element : stackTraceElements) {
+      stackBuilder.append("\n    at ");
+      stackBuilder.append(element);
+    }
+    stackBuilder.append("\n");
+    LOG.debug(stackBuilder.toString());
   }
 
   @Override
