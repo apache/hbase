@@ -224,6 +224,9 @@ public class TestZKReplicationPeerStorage {
     String customPeerConfigKey = "hbase.xxx.custom_config";
     String customPeerConfigValue = "test";
 
+    String customPeerConfigSecondKey = "hbase.xxx.custom_second_config";
+    String customPeerConfigSecondValue = "testSecond";
+
     ReplicationPeerConfig existingReplicationPeerConfig = getConfig(1);
 
     // custom config not present
@@ -231,13 +234,16 @@ public class TestZKReplicationPeerStorage {
 
     Configuration conf = UTIL.getConfiguration();
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
-      customPeerConfigKey.concat("=").concat(customPeerConfigValue));
+      customPeerConfigKey.concat("=").concat(customPeerConfigValue).concat(";").
+        concat(customPeerConfigSecondKey).concat("=").concat(customPeerConfigSecondValue));
 
     ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
       addBasePeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
 
     assertEquals(customPeerConfigValue, updatedReplicationPeerConfig.getConfiguration().
       get(customPeerConfigKey));
+    assertEquals(customPeerConfigSecondValue, updatedReplicationPeerConfig.getConfiguration().
+      get(customPeerConfigSecondKey));
   }
 
   @Test
