@@ -328,16 +328,12 @@ module Shell
           width_per_column = free_width / num_free_columns
         end
 
-        @column_widths = (0..@options.num_cols - 1).map { |i| @options.widths.fetch(i, width_per_column) || width_per_column }
-      end
-
-      def widths
-        @widths ||= refresh_column_widths
+        @widths = (0..@options.num_cols - 1).map { |i| @options.widths.fetch(i, width_per_column) || width_per_column }
       end
 
       private def hr
         between_cells = @options.vertical_borders ? BORDER_CORNER : ''
-        between_cells + widths.map { |n| BORDER_HORIZONTAL * (n + 2 * @options.padding) }.join(between_cells) + between_cells
+        between_cells + @widths.map { |n| BORDER_HORIZONTAL * (n + 2 * @options.padding) }.join(between_cells) + between_cells
       end
 
       private def print_hr
@@ -348,7 +344,7 @@ module Shell
       end
 
       private def print_cell(content)
-        width = widths.fetch @current_scope.written
+        width = @widths.fetch @current_scope.written
         @out.print BORDER_VERTICAL if @options.vertical_borders
         @out.print ' ' * @options.padding
         @out.print ::Shell::Formatter::Util.set_text_width(content, width, truncate: @options.truncate)
