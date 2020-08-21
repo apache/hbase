@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import java.util.TimeZone;
+
 import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -35,13 +38,34 @@ public class TestCurrentHourProvider {
 
   @Test
   public void testWithEnvironmentEdge() {
-    // set 2020-08-20 11:52:41 should return 11
-    EnvironmentEdgeManager.injectEdge(()->1597895561000L);
-    CurrentHourProvider.forceUpdateTickForTest();
+    // set 1597895561000 with timezone GMT+08:00, represent 2020-08-20 11:52:41, should return 11
+    EnvironmentEdge edgeForHour11 = new EnvironmentEdge() {
+      @Override
+      public long currentTime() {
+        return 1597895561000L;
+      }
+
+      @Override
+      public TimeZone currentTimeZone() {
+        return TimeZone.getTimeZone("GMT+08:00");
+      }
+    };
+    EnvironmentEdgeManager.injectEdge(edgeForHour11);
     assertEquals(11, CurrentHourProvider.getCurrentHour());
-    // set 2020-08-20 15:04:00 should return 15
-    EnvironmentEdgeManager.injectEdge(()->1597907081000L);
-    CurrentHourProvider.forceUpdateTickForTest();
+
+    // set 1597907081000 with timezone GMT+08:00, represent 2020-08-20 15:04:00, should return 15
+    EnvironmentEdge edgeForHour15 = new EnvironmentEdge() {
+      @Override
+      public long currentTime() {
+        return 1597907081000L;
+      }
+
+      @Override
+      public TimeZone currentTimeZone() {
+        return TimeZone.getTimeZone("GMT+08:00");
+      }
+    };
+    EnvironmentEdgeManager.injectEdge(edgeForHour15);
     assertEquals(15, CurrentHourProvider.getCurrentHour());
   }
 }
