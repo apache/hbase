@@ -103,22 +103,22 @@ class ShellTableFormatterTest < Test::Unit::TestCase
       +-----+
     EOF
     io = StringIO.new
-    f = AlignedTableFormatter.new
-    f.single_value_table('FOO', 'BAR', :output_stream => io)
+    f = AlignedTableFormatter.new(output_stream: io, border: AlignedTableFormatter::BORDER_MODE.FULL, padding: 1)
+    f.single_value_table('FOO', 'BAR')
     assert_equal(expected_output, io.string)
   end
 
   define_test 'UnalignedTableFormatter#single_value_table produces correct output' do
     io = StringIO.new
-    f = UnalignedTableFormatter.new
-    f.single_value_table('FOO', 'BAR', :output_stream => io)
+    f = UnalignedTableFormatter.new(output_stream: io, padding: 0)
+    f.single_value_table('FOO', 'BAR')
     assert_equal("FOO\nBAR\n", io.string)
   end
 
   define_test 'JsonTableFormatter#single_value_table produces correct output' do
     io = StringIO.new
-    f = JsonTableFormatter.new
-    f.single_value_table('FOO', 'BAR', :output_stream => io)
+    f = JsonTableFormatter.new(output_stream: io)
+    f.single_value_table('FOO', 'BAR')
     output = io.string
     parsed = JSON.load(output)
     assert_equal('BAR', parsed['rows'][0]['FOO'])
@@ -126,20 +126,20 @@ class ShellTableFormatterTest < Test::Unit::TestCase
 
   define_test 'AlignedTableFormatter#single_value_table shows footer fields' do
     io = StringIO.new
-    f = AlignedTableFormatter.new
-    f.start_table({ :output_stream => io, :headers => %w[FOO] })
+    f = AlignedTableFormatter.new(output_stream: io)
+    f.start_table({ headers: %w[FOO] })
     f.row(['BAR'])
-    f.close_table({ 'CUSTOM FOOTER': 'VALUE'})
+    f.close_table({ 'CUSTOM FOOTER': 'VALUE' })
     output = io.string
     assert_match(/CUSTOM FOOTER: VALUE/, output)
   end
 
   define_test 'UnalignedTableFormatter#single_value_table shows footer fields' do
     io = StringIO.new
-    f = AlignedTableFormatter.new
-    f.start_table({ :output_stream => io, :headers => %w[FOO] })
+    f = UnalignedTableFormatter.new(output_stream: io)
+    f.start_table({ headers: %w[FOO] })
     f.row(['BAR'])
-    f.close_table({ 'CUSTOM FOOTER': 'VALUE'})
+    f.close_table({ 'CUSTOM FOOTER': 'VALUE' })
     output = io.string
     assert_match(/CUSTOM FOOTER: VALUE/, output)
   end

@@ -24,7 +24,6 @@ module Shell
     ##
     # Mixin providing helper methods for commands that print cell-scannable results
     module ResultMixin
-
       private def get_row_bytes(c)
         org.apache.hadoop.hbase.util.Bytes.copy(c.getRowArray, c.getRowOffset, c.getRowLength)
       end
@@ -62,6 +61,7 @@ module Shell
           iter = result_scanner.iterator
           loop do
             break unless iter.hasNext
+
             yielder.yield iter.next
           end
         end

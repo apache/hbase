@@ -35,15 +35,21 @@ module Shell
       #
       # @param [String] text to truncate or pad
       # @param [Integer] width to match
+      # @param [Boolean] pad should this function pad text that is too short?
+      # @param [Boolean] truncate should this function truncate text that is too long?
       # @return [String] padded/truncated cell content
-      def self.set_text_width(text, width)
+      def self.set_text_width(text, width, pad: true, truncate: true)
         # TODO: Use unicode ellipses if the terminal emulator supports it
         num_too_short = width - text.length
         if num_too_short < 0
           # text is too long, so truncate
+          return text unless truncate
+
           text[0, [width - 3, 0].max] + '.' * [3, width].min
         else
           # text is requested width or too short, so right-pad with zero or more spaces
+          return text unless pad
+
           text + ' ' * num_too_short
         end
       end

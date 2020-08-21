@@ -96,18 +96,17 @@ module Shell
   class Shell
     attr_accessor :hbase
     attr_accessor :interactive
-    attr_accessor :table_formatter_class
+    attr_accessor :table_formatter
     alias interactive? interactive
 
     @debug = false
     attr_accessor :debug
 
-    DEFAULT_TABLE_FORMATTER_CLASS = ::Shell::Formatter::UnalignedTableFormatter
-
     def initialize(hbase, interactive = true)
       self.hbase = hbase
       self.interactive = interactive
-      self.table_formatter_class = DEFAULT_TABLE_FORMATTER_CLASS
+      # Configure the default table formatter
+      self.table_formatter = ::Shell::Formatter::AlignedTableFormatter.new
     end
 
     # Returns Admin class from admin.rb
@@ -167,11 +166,11 @@ module Shell
         nil
       }
       # Export set_formatter method
-      target.send :define_singleton_method, :set_formatter, lambda { |kind|
+      target.send :define_singleton_method, :set_formatter, lambda { |kind, **kwargs|
         case kind
-        when :aligned then shell_inst.table_formatter_class = ::Shell::Formatter::AlignedTableFormatter
-        when :json then shell_inst.table_formatter_class = ::Shell::Formatter::JsonTableFormatter
-        when :unaligned then shell_inst.table_formatter_class = ::Shell::Formatter::UnalignedTableFormatter
+        when :aligned then shell_inst.table_formatter = ::Shell::Formatter::AlignedTableFormatter.new(**kwargs)
+        when :json then shell_inst.table_formatter = ::Shell::Formatter::JsonTableFormatter.new(**kwargs)
+        when :unaligned then shell_inst.table_formatter = ::Shell::Formatter::UnalignedTableFormatter.new(**kwargs)
         else raise ArgumentError, 'unexpected kind of formatter'
         end
         nil
@@ -190,6 +189,10 @@ module Shell
       # add constants to class of target
       target.class.include ::HBaseConstants
       target.class.include ::HBaseQuotasConstants
+      # Export formatter constants. We can probably find a better place to put these, but we
+      # probably should not require that they get loaded in hbase_constants.rb.
+      target.class.const_set :BORDER, ::Shell::Formatter::AlignedTableFormatter::BORDER_MODE
+      target.class.const_set :OVERFLOW, ::Shell::Formatter::AlignedTableFormatter::OVERFLOW_MODE
       # add instance variables @hbase and @shell for backwards compatibility
       target.instance_variable_set :'@hbase', @hbase
       target.instance_variable_set :'@shell', self
@@ -304,7 +307,9 @@ Many of the commands use a special formatter which supports multiple output
 formats. To change which formatter is used, try one of the following:
 
   hbase> set_formatter :aligned
+  hbase> set_formatter :aligned, border: BORDER.FULL, overflow: OVERFLOW.TRUNCATE
   hbase> set_formatter :unaligned
+  hbase> set_formatter :unaligned, padding: 0, row_separator: "\\n", cell_separator: ','
   hbase> set_formatter :json
 
 The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.

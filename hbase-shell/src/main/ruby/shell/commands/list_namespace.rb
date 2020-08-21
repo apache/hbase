@@ -31,7 +31,7 @@ EOF
       end
 
       def command(regex = '.*')
-        table_formatter.start_table({ headers: %w[NAMESPACE]})
+        table_formatter.start_table({ headers: %w[NAMESPACE] })
 
         list = admin.list_namespace(regex)
         list.each do |table|

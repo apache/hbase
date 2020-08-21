@@ -68,7 +68,7 @@ module Shell
         # If end_time is not already set by the command, use current time.
         @end_time ||= Time.now
 
-        # TODO Perhaps a cleaner separation of concerns is possible. We should probably avoid
+        # TODO: Perhaps a cleaner separation of concerns is possible. We should probably avoid
         # comparing against the current type of formatter.
         unless table_formatter.class == ::Shell::Formatter::JsonTableFormatter
           formatter.output_str(format('Took %.4f seconds', @end_time - @start_time))
@@ -117,7 +117,7 @@ module Shell
       end
 
       def table_formatter
-        @table_formatter ||= @shell.table_formatter_class.new
+        @shell.table_formatter
       end
 
       # for testing purposes to catch the output of the commands

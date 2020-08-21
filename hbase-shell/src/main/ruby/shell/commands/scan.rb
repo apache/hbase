@@ -121,7 +121,6 @@ EOF
 
       # internal command that actually does the scanning
       def scan(table, args = {})
-
         converter = args.delete(::HBaseConstants::FORMATTER)
         converter_class = args.delete(::HBaseConstants::FORMATTER_CLASS)
         scan = table._hash_to_scan(args)

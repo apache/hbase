@@ -55,7 +55,7 @@ EOF
           tables = rsgroup_admin.list_tables_in_rs_group(group_name)
           tables.each do |table|
             group_name_printed = true
-            table_formatter.row([group_name, 'table ', table.getNameAsString])
+            table_formatter.row([group_name, 'table', table.getNameAsString])
           end
 
           table_formatter.row([group.getName, '']) unless group_name_printed

@@ -33,7 +33,7 @@ EOF
       end
 
       def command(regex = '.*')
-        table_formatter.start_table({ headers: %w[TABLE]})
+        table_formatter.start_table({ headers: %w[TABLE] })
 
         list = admin.list(regex)
         list.each do |table|

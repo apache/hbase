@@ -91,19 +91,28 @@ module Shell
         end
       end
 
-      DEFAULT_OPTIONS = {
-        output_stream: Kernel,
+      # DEFAULT_GLOBAL_OPTIONS should contain global options that are NOT reset when a new table is
+      # started
+      DEFAULT_GLOBAL_OPTIONS = {
+        output_stream: Kernel
+      }.freeze
+      # DEFAULT_TABLE_OPTIONS should contain options that MUST be reset when a new table is started
+      DEFAULT_TABLE_OPTIONS = {
+        num_cols: 0,
         headers: []
       }.freeze
       @current_scope = nil
 
-      def initialize
-        reset
+      def initialize(**kwargs)
+        @options ||= OptionsHash.from_hash self.class.const_get(:DEFAULT_GLOBAL_OPTIONS)
+        reset kwargs
       end
 
+      ##
+      # Reset the table scope and table-specific options
       def reset(opts = {})
         @current_scope = TableScope.new
-        @options = OptionsHash.from_hash self.class.const_get :DEFAULT_OPTIONS
+        @options = @options.merge self.class.const_get(:DEFAULT_TABLE_OPTIONS)
         configure(opts)
       end
 
@@ -180,8 +189,8 @@ module Shell
       end
 
       FRIENDLY_FOOTER_NAMES = {
-          "NUM_ROWS": "Number of row(s)"
-      }
+        "NUM_ROWS": 'Number of row(s)'
+      }.freeze
 
       ##
       # Close the table we are currently writing
@@ -248,23 +257,37 @@ module Shell
     end
 
     class AlignedTableFormatter < TableFormatter
-      DEFAULT_OPTIONS = {
-        output_stream: Kernel,
-        padding: 1,
-        num_cols: 0,
-        headers: [],
-        widths: []
-      }.freeze
+      BORDER_MODE = OptionsHash.from_hash({
+                                            NONE: 'NONE',
+                                            FULL: 'FULL'
+                                          })
+      OVERFLOW_MODE = OptionsHash.from_hash({
+                                              TRUNCATE: 'TRUNCATE',
+                                              OVERFLOW: 'OVERFLOW'
+                                            })
+      DEFAULT_GLOBAL_OPTIONS = DEFAULT_GLOBAL_OPTIONS.merge({
+                                                              padding: 1,
+                                                              border: BORDER_MODE.NONE,
+                                                              overflow: OVERFLOW_MODE.OVERFLOW
+                                                            }).freeze
+      DEFAULT_TABLE_OPTIONS = DEFAULT_TABLE_OPTIONS.merge({
+                                                            widths: []
+                                                          }).freeze
+
       # If we are not running in a TTY and cannot get the width of the terminal,
       # NONTTY_TABLE_WIDTH will be used as the full width of the table.
       NONTTY_TABLE_WIDTH = 100
 
-      def initialize
+      def initialize(*args, **kwargs, &block)
         super
       end
 
       def configure(*args, **kwargs, &block)
         super
+        # derive extra properties for fast access
+        @options[:vertical_borders] = @options[:border] == BORDER_MODE.FULL
+        @options[:horizontal_borders] = @options[:border] == BORDER_MODE.FULL
+        @options[:truncate] = @options[:overflow] == OVERFLOW_MODE.TRUNCATE
         refresh_column_widths
       end
 
@@ -313,18 +336,22 @@ module Shell
       end
 
       private def hr
-        BORDER_CORNER + widths.map { |n| BORDER_HORIZONTAL * (n + 2 * @options.padding) }.join(BORDER_CORNER) + BORDER_CORNER
+        between_cells = @options.vertical_borders ? BORDER_CORNER : ''
+        between_cells + widths.map { |n| BORDER_HORIZONTAL * (n + 2 * @options.padding) }.join(between_cells) + between_cells
       end
 
       private def print_hr
-        @out.print hr + "\n"
+        return unless @options.horizontal_borders
+
+        @out.print hr
+        @out.print "\n"
       end
 
       private def print_cell(content)
         width = widths.fetch @current_scope.written
-        @out.print BORDER_VERTICAL
+        @out.print BORDER_VERTICAL if @options.vertical_borders
         @out.print ' ' * @options.padding
-        @out.print ::Shell::Formatter::Util.set_text_width(content, width)
+        @out.print ::Shell::Formatter::Util.set_text_width(content, width, truncate: @options.truncate)
         @out.print ' ' * @options.padding
       end
 
@@ -351,7 +378,8 @@ module Shell
         expect_scope TableScope::CELL
         # print all the remaining cells
         cell('') while @current_scope.written < @options.num_cols
-        @out.print BORDER_VERTICAL + "\n"
+        @out.print BORDER_VERTICAL if @options.vertical_borders
+        @out.print "\n"
         print_hr
         @current_scope = @current_scope.parent
         @current_scope.written += 1
@@ -373,17 +401,16 @@ module Shell
     end
 
     class UnalignedTableFormatter < TableFormatter
-      DEFAULT_OPTIONS = {
-        output_stream: Kernel,
-        padding: 0,
-        num_cols: 0,
-        headers: [],
-        widths: [],
-        row_separator: "\n",
-        cell_separator: '|'
-      }.freeze
+      DEFAULT_GLOBAL_OPTIONS = DEFAULT_GLOBAL_OPTIONS.merge({
+                                                              padding: 1,
+                                                              row_separator: "\n",
+                                                              cell_separator: '|'
+                                                            }).freeze
+      DEFAULT_TABLE_OPTIONS = DEFAULT_TABLE_OPTIONS.merge({
+                                                            widths: []
+                                                          }).freeze
 
-      def initialize
+      def initialize(*args, **kwargs, &block)
         super
       end
 
@@ -418,7 +445,7 @@ module Shell
       def close_table(footer_fields = {})
         expect_scope TableScope::ROW
         footer_fields.each do |k, v|
-          if k == "DURATION"
+          if k == 'DURATION'
             @out.puts format('Took %.4f seconds', v)
             next
           end
@@ -431,15 +458,11 @@ module Shell
     end
 
     class JsonTableFormatter < TableFormatter
-      DEFAULT_OPTIONS = {
-          output_stream: Kernel,
-          num_cols: 0,
-          headers: [],
-          widths: [],
-          use_objects: true
-      }.freeze
+      DEFAULT_GLOBAL_OPTIONS = DEFAULT_GLOBAL_OPTIONS.merge({
+                                                              use_objects: true
+                                                            }).freeze
 
-      def initialize
+      def initialize(*args, **kwargs, &block)
         super
       end
 
@@ -464,7 +487,7 @@ module Shell
         # characters and ensuring that the output is valid JSON.
         if @options.use_objects
           key = @options.headers.fetch @current_scope.written, ''
-          @out.print key.to_json + ":"
+          @out.print key.to_json + ':'
         end
         @out.print content.to_json
         @current_scope.written += 1
