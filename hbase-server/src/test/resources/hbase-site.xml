@@ -30,6 +30,14 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.compaction.check.period</name>
+    <value>1000</value>
+  </property>
+  <property>
+    <name>hbase.regionserver.flush.check.period</name>
+    <value>1000</value>
+  </property>
+  <property>
     <name>hbase.defaults.for.version.skip</name>
     <value>true</value>
   </property>
