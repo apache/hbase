@@ -20,12 +20,14 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Abstract response class representing online logs response from ring-buffer use-cases
  * e.g slow/large RPC logs, balancer decision logs
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class LogEntry {
 
   /**

@@ -20,13 +20,15 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Abstract request payload to retrieve online logs from ring-buffer use-cases
  * e.g slow/large RPC logs, balancer decision logs
  * Extend this class for specific ring buffer use-cases
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class LogRequest {
   // empty
 }

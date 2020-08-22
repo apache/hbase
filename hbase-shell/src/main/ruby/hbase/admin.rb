@@ -1527,7 +1527,12 @@ module Hbase
       filter_params = get_filter_params(args)
       filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::SLOW_LOG)
       filter_params.setServerNames(java.util.HashSet.new(server_names))
-      slow_log_responses = @admin.getLogEntries(filter_params)
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+      else
+        limit = 10  # default limit at shell side
+      end
+      slow_log_responses = @admin.getLogEntries(filter_params, limit)
       slow_log_responses_arr = []
       for slow_log_response in slow_log_responses
         slow_log_responses_arr << slow_log_response.toJsonPrettyPrint
@@ -1552,10 +1557,6 @@ module Hbase
       if args.key? 'USER'
         user = args['USER']
         filter_params.setUserName(user)
-      end
-      if args.key? 'LIMIT'
-        limit = args['LIMIT']
-        filter_params.setLimit(limit)
       end
       if args.key? 'FILTER_BY_OP'
         filter_by_op = args['FILTER_BY_OP']
@@ -1586,7 +1587,12 @@ module Hbase
       filter_params = get_filter_params(args)
       filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::LARGE_LOG)
       filter_params.setServerNames(java.util.HashSet.new(server_names))
-      large_log_responses = @admin.getLogEntries(filter_params)
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+      else
+        limit = 10  # default limit at shell side
+      end
+      large_log_responses = @admin.getLogEntries(filter_params, limit)
       large_log_responses_arr = []
       for large_log_response in large_log_responses
         large_log_responses_arr << large_log_response.toJsonPrettyPrint
@@ -1688,9 +1694,10 @@ module Hbase
       balancer_decisions_req = org.apache.hadoop.hbase.client.BalancerDecisionRequest.new
       if args.key? 'LIMIT'
         limit = args['LIMIT']
-        balancer_decisions_req.setLimit(limit)
+      else
+        limit = 250  # default limit at shell side
       end
-      balancer_decisions_responses = @admin.getLogEntries(balancer_decisions_req)
+      balancer_decisions_responses = @admin.getLogEntries(balancer_decisions_req, limit)
       balancer_decisions_resp_arr = []
       balancer_decisions_responses.each { |balancer_dec_resp|
         balancer_decisions_resp_arr << balancer_dec_resp.toJsonPrettyPrint

@@ -3984,7 +3984,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<List<LogEntry>> getSlowLogResponses(
-      final LogQueryFilter logQueryFilter) {
+      final LogQueryFilter logQueryFilter, int limit) {
     final Set<ServerName> serverNames = logQueryFilter.getServerNames();
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
@@ -3993,14 +3993,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         || logQueryFilter.getType() == LogQueryFilter.Type.SLOW_LOG) {
       return CompletableFuture.supplyAsync(() -> serverNames.stream()
         .map((ServerName serverName) ->
-          getSlowLogResponseFromServer(serverName, logQueryFilter))
+          getSlowLogResponseFromServer(serverName, logQueryFilter, limit))
         .map(CompletableFuture::join)
         .flatMap(List::stream)
         .collect(Collectors.toList()));
     } else {
       return CompletableFuture.supplyAsync(() -> serverNames.stream()
         .map((ServerName serverName) ->
-          getLargeLogResponseFromServer(serverName, logQueryFilter))
+          getLargeLogResponseFromServer(serverName, logQueryFilter, limit))
         .map(CompletableFuture::join)
         .flatMap(List::stream)
         .collect(Collectors.toList()));
@@ -4008,22 +4008,22 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<List<LogEntry>> getSlowLogResponseFromServer(
-      final ServerName serverName, final LogQueryFilter logQueryFilter) {
+      final ServerName serverName, final LogQueryFilter logQueryFilter, int limit) {
     return this.<List<LogEntry>>newAdminCaller()
       .action((controller, stub) -> this
         .adminCall(
-          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
+          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter, limit),
           AdminService.Interface::getSlowLogResponses,
           ProtobufUtil::toSlowLogPayloads))
       .serverName(serverName).call();
   }
 
   private CompletableFuture<List<LogEntry>> getLargeLogResponseFromServer(
-    final ServerName serverName, final LogQueryFilter logQueryFilter) {
+      final ServerName serverName, final LogQueryFilter logQueryFilter, int limit) {
     return this.<List<LogEntry>>newAdminCaller()
       .action((controller, stub) -> this
         .adminCall(
-          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
+          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter, limit),
           AdminService.Interface::getLargeLogResponses,
           ProtobufUtil::toSlowLogPayloads))
       .serverName(serverName).call();
@@ -4215,22 +4215,26 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<List<LogEntry>> getBalancerDecisions(
-      BalancerDecisionRequest balancerDecisionRequest) {
+      BalancerDecisionRequest balancerDecisionRequest, int limit) {
+    // balancerDecisionRequest is unused for now, however with addition of any attributes
+    // or filters, we can expect some use-case in future
     return this.<List<LogEntry>>newMasterCaller()
       .action((controller, stub) ->
         this.call(controller, stub,
-          MasterProtos.BalancerDecisionsRequest.newBuilder()
-            .setLimit(balancerDecisionRequest.getLimit()).build(),
+          MasterProtos.BalancerDecisionsRequest.newBuilder().setLimit(limit).build(),
           MasterService.Interface::getBalancerDecisions, ProtobufUtil::toBalancerDecisionResponse))
       .call();
   }
 
   @Override
-  public CompletableFuture<List<LogEntry>> getLogEntries(LogRequest logRequest) {
+  public CompletableFuture<List<LogEntry>> getLogEntries(LogRequest logRequest, int limit) {
+    if (limit <= 0) {
+      throw new IllegalArgumentException("limit should be positive");
+    }
     if (logRequest instanceof BalancerDecisionRequest) {
-      return getBalancerDecisions((BalancerDecisionRequest) logRequest);
+      return getBalancerDecisions((BalancerDecisionRequest) logRequest, limit);
     } else if (logRequest instanceof LogQueryFilter) {
-      return getSlowLogResponses((LogQueryFilter) logRequest);
+      return getSlowLogResponses((LogQueryFilter) logRequest, limit);
     }
     throw new UnsupportedOperationException("LogRequest type is not supported");
   }

@@ -24,12 +24,14 @@ import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonSerializer;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import java.util.List;
 
 /**
  * History of balancer decisions taken for region movements.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 final public class BalancerDecision extends LogEntry {
 
   private final String initialFunctionCosts;

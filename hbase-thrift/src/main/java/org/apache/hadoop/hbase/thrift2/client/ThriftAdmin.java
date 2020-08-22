@@ -38,8 +38,6 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.BalancerDecision;
-import org.apache.hadoop.hbase.client.BalancerDecisionRequest;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
@@ -1283,7 +1281,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public List<LogEntry> getLogEntries(LogRequest logRequest) throws IOException {
+  public List<LogEntry> getLogEntries(LogRequest logRequest, int limit) throws IOException {
     throw new NotImplementedException("getLogEntries not supported in ThriftAdmin");
   }
 }

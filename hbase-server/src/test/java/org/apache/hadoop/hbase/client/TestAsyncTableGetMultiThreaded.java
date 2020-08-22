@@ -211,9 +211,8 @@ public class TestAsyncTableGetMultiThreaded {
       Thread.sleep(5000);
     }
     BalancerDecisionRequest balancerDecisionRequest = new BalancerDecisionRequest();
-    balancerDecisionRequest.setLimit(2);
     List<LogEntry> balancerDecisionRecords =
-      admin.getLogEntries(balancerDecisionRequest);
+      admin.getLogEntries(balancerDecisionRequest, 2);
     Assert.assertEquals(balancerDecisionRecords.size(), 2);
     LOG.info("====== Read test finished, shutdown thread pool ======");
     stop.set(true);

@@ -1798,10 +1798,11 @@ public final class RequestConverter {
    * Create a protocol buffer {@link SlowLogResponseRequest}
    *
    * @param logQueryFilter filter to use if provided
+   * @param limit
    * @return a protocol buffer SlowLogResponseRequest
    */
   public static SlowLogResponseRequest buildSlowLogResponseRequest(
-      final LogQueryFilter logQueryFilter) {
+      final LogQueryFilter logQueryFilter, int limit) {
     SlowLogResponseRequest.Builder builder = SlowLogResponseRequest.newBuilder();
     if (logQueryFilter == null) {
       return builder.build();
@@ -1833,7 +1834,7 @@ public final class RequestConverter {
     } else {
       builder.setLogType(SlowLogResponseRequest.LogType.LARGE_LOG);
     }
-    return builder.setLimit(logQueryFilter.getLimit()).build();
+    return builder.setLimit(limit).build();
   }
 
   /**

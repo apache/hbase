@@ -2341,12 +2341,12 @@ public interface Admin extends Abortable, Closeable {
    * @return online slowlog response list
    * @throws IOException if a remote or network exception occurs
    * @deprecated since 2.4.0 and will be removed in 4.0.0.
-   *   Use {@link #getLogEntries(LogRequest)} instead.
+   *   Use {@link #getLogEntries(LogRequest, int)} instead.
    */
   default List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
       final LogQueryFilter logQueryFilter) throws IOException {
     logQueryFilter.setServerNames(serverNames);
-    List<LogEntry> logEntries = getLogEntries(logQueryFilter);
+    List<LogEntry> logEntries = getLogEntries(logQueryFilter, 10);
     return logEntries.stream().map(logEntry -> (OnlineLogRecord) logEntry)
       .collect(Collectors.toList());
   }
@@ -2485,8 +2485,9 @@ public interface Admin extends Abortable, Closeable {
    * Examples include slow/large RPC logs, balancer decisions by master.
    *
    * @param logRequest request payload with possible filters
+   * @param limit limit the number of records that API returns
    * @return Log entries representing online records from servers
    * @throws IOException if a remote or network exception occurs
    */
-  List<LogEntry> getLogEntries(LogRequest logRequest) throws IOException;
+  List<LogEntry> getLogEntries(LogRequest logRequest, int limit) throws IOException;
 }
