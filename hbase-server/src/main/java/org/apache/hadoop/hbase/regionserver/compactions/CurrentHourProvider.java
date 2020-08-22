@@ -21,6 +21,7 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 @InterfaceAudience.Private
 public class CurrentHourProvider {
@@ -38,6 +39,7 @@ public class CurrentHourProvider {
 
   private static Tick nextTick() {
     Calendar calendar = new GregorianCalendar();
+    calendar.setTimeInMillis(EnvironmentEdgeManager.currentTime());
     int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
     moveToNextHour(calendar);
     return new Tick(currentHour, calendar.getTimeInMillis());
@@ -54,7 +56,7 @@ public class CurrentHourProvider {
 
   public static int getCurrentHour() {
     Tick tick = CurrentHourProvider.tick;
-    if(System.currentTimeMillis() < tick.expirationTimeInMillis) {
+    if (EnvironmentEdgeManager.currentTime() < tick.expirationTimeInMillis) {
       return tick.currentHour;
     }
 
