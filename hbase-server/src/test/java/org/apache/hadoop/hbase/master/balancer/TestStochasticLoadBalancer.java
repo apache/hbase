@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -296,11 +297,14 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertEquals(StochasticLoadBalancer.MoveCostFunction.DEFAULT_MOVE_COST,
       costFunction.getMultiplier(), 0.01);
 
-    //In offpeak hours, the multiplier of move cost should be lower
+    // In offpeak hours, the multiplier of move cost should be lower
     conf.setInt("hbase.offpeak.start.hour",0);
     conf.setInt("hbase.offpeak.end.hour",23);
-    //Set a fixed time which hour is 15, so it will always in offpeak
-    EnvironmentEdgeManager.injectEdge(() -> 1597820400000L);
+    // Set a fixed time which hour is 15, so it will always in offpeak
+    // See HBASE-24898 for more info of the calculation here
+    long deltaFor15 = TimeZone.getDefault().getRawOffset() - 28800000;
+    long timeFor15 = 1597907081000L - deltaFor15;
+    EnvironmentEdgeManager.injectEdge(() -> timeFor15);
     costFunction = new StochasticLoadBalancer.MoveCostFunction(conf);
     costFunction.init(cluster);
     costFunction.cost();
