@@ -146,7 +146,7 @@ public class ReplicationSourceShipper extends Thread {
   private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
     int totalSize = 0;
     for(Entry entry : entryBatch.getWalEntries()) {
-      totalSize += entryReader.getEntrySizeExcludeBulkLoad(entry);
+      totalSize += ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(entry);
     }
     return  totalSize;
   }

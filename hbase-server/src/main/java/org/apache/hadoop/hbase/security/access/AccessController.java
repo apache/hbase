@@ -2581,7 +2581,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           result = AuthResult.allow(request, "Self user validation allowed", caller, null, null,
             null, null);
         }
-        accessChecker.logResult(result);
+        AccessChecker.logResult(result);
       }
     }
   }
