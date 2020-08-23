@@ -24,7 +24,7 @@ pipeline {
     cron('@daily')
   }
   options {
-    buildDiscarder(logRotator(numToKeepStr: '50'))
+    buildDiscarder(logRotator(numToKeepStr: '5'))
     timeout (time: 15, unit: 'MINUTES')
     timestamps()
   }
