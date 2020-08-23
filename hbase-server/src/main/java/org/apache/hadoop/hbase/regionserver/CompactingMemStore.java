@@ -501,7 +501,7 @@ public class CompactingMemStore extends AbstractMemStore {
   @VisibleForTesting
   protected boolean shouldFlushInMemory(MutableSegment currActive, Cell cellToAdd,
       MemStoreSizing memstoreSizing) {
-    long cellSize = currActive.getCellLength(cellToAdd);
+    long cellSize = MutableSegment.getCellLength(cellToAdd);
     long segmentDataSize = currActive.getDataSize();
     while (segmentDataSize + cellSize < inmemoryFlushSize || inWalReplay) {
       // when replaying edits from WAL there is no need in in-memory flush regardless the size
