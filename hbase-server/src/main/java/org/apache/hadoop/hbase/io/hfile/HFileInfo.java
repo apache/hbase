@@ -384,7 +384,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
       .withHBaseCheckSum(true)
       .withHFileName(path.getName())
       .withCompression(trailer.getCompressionCodec())
-      .withCellComparator(trailer.createComparator(trailer.getComparatorClassName()));
+      .withCellComparator(FixedFileTrailer.createComparator(trailer.getComparatorClassName()));
     // Check for any key material available
     byte[] keyBytes = trailer.getEncryptionKey();
     if (keyBytes != null) {
