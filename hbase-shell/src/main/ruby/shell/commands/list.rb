@@ -33,14 +33,21 @@ EOF
       end
 
       def command(regex = '.*')
-        table_formatter.start_table({ headers: %w[TABLE] })
-
         list = admin.list(regex)
-        list.each do |table|
-          table_formatter.row([table])
+        if @shell.old_school
+          formatter.header(['TABLE'])
+          list.each do |table|
+            formatter.row([table])
+          end
+          formatter.footer(list.size)
+        else
+          table_formatter.start_table(headers: %w[TABLE])
+          list.each do |table|
+            table_formatter.row([table])
+          end
+          table_formatter.close_table(num_rows: list.size)
         end
 
-        table_formatter.close_table({ 'NUM_ROWS': list.size })
         list
       end
     end

@@ -38,12 +38,19 @@ EOF
       def command
         parseFilter = ParseFilter.new
         supportedFilters = parseFilter.getSupportedFilters
-
-        table_formatter.start_table({ headers: %w[FORMATTER] })
-        supportedFilters.each do |filter|
-          table_formatter.row([filter])
+        if @shell.old_school
+          supportedFilters.each do |filter|
+            formatter.row([filter])
+          end
+        else
+          table_formatter.start_table(headers: %w[FORMATTER])
+          supportedFilters.each do |filter|
+            table_formatter.row([filter])
+          end
+          table_formatter.close_table
         end
-        table_formatter.close_table
+
+        nil
       end
     end
   end

@@ -121,22 +121,30 @@ EOF
 
       # internal command that actually does the scanning
       def scan(table, args = {})
-        converter = args.delete(::HBaseConstants::FORMATTER)
-        converter_class = args.delete(::HBaseConstants::FORMATTER_CLASS)
         scan = table._hash_to_scan(args)
         # actually do the scanning
         @start_time = Time.now
 
-        cells = Enumerator.new do |yielder|
-          scanner = table._get_scanner_for_scan({}, scan)
-          result_iterator(scanner).each do |result|
-            cell_iterator(result).each do |cell|
-              yielder.yield cell
+        if @shell.old_school
+          formatter.header(['ROW', 'COLUMN+CELL'])
+          count, is_stale = table._scan_internal(args, scan) do |row, cells|
+            formatter.row([row, cells])
+          end
+          formatter.footer(count, is_stale)
+        else
+          converter = args.delete(::HBaseConstants::FORMATTER)
+          converter_class = args.delete(::HBaseConstants::FORMATTER_CLASS)
+          cells = Enumerator.new do |yielder|
+            scanner = table._get_scanner_for_scan({}, scan)
+            result_iterator(scanner).each do |result|
+              cell_iterator(result).each do |cell|
+                yielder.yield cell
+              end
             end
           end
-        end
 
-        print_result(cells, table, converter, converter_class)
+          print_result(cells, table, converter, converter_class)
+        end
 
         @end_time = Time.now
 

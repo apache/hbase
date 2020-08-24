@@ -29,12 +29,25 @@ module Shell
       #
       # Intended for reuse by other snapshot commands such as list_table_snapshots
       def print_snapshot_table(snapshots)
-        table_formatter.start_table({ headers: %w[SNAPSHOT TABLE CREATION_TIME], widths: [nil, nil, ::Shell::Formatter::Util::ISO8601_WIDTH] })
-        snapshots.each do |snapshot|
-          creation_time = ::Shell::Formatter::Util.to_iso_8601 snapshot.getCreationTime
-          table_formatter.row([snapshot.getName, snapshot.getTableNameAsString, creation_time])
+        if @shell.old_school
+          formatter.header(['SNAPSHOT', 'TABLE + CREATION TIME'])
+          snapshots.each do |snapshot|
+            creation_time = Time.at(snapshot.getCreationTime / 1000).to_s
+            formatter.row([snapshot.getName, snapshot.getTableNameAsString + ' (' + creation_time + ')'])
+            formatter.footer
+          end
+          formatter.footer(snapshots.size)
+        else
+          table_formatter.start_table(
+              headers: %w[SNAPSHOT TABLE CREATION_TIME],
+              widths: [nil, nil, ::Shell::Formatter::Util::ISO8601_WIDTH]
+          )
+          snapshots.each do |snapshot|
+            creation_time = ::Shell::Formatter::Util.to_iso_8601 snapshot.getCreationTime
+            table_formatter.row([snapshot.getName, snapshot.getTableNameAsString, creation_time])
+          end
+          table_formatter.close_table(num_rows: snapshots.size)
         end
-        table_formatter.close_table
 
         nil
       end

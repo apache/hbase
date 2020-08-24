@@ -168,8 +168,8 @@ module Shell
         @current_scope.written += 1
       end
 
-      def start_table(opts = {})
-        reset(opts)
+      def start_table(opts = {}, **kwargs)
+        reset(opts.merge(kwargs))
         start_child TableScope::TABLE
       end
 
@@ -200,7 +200,7 @@ module Shell
       # such as the number of rows retrieved or the amount of time to perform the operation.
       #
       # @param [Hash] footer_fields any additional key-value fields to show the user
-      def close_table(footer_fields = {})
+      def close_table(footer_fields = {}, **kwargs)
         expect_scope TableScope::ROW
         @current_scope = @current_scope.parent
         @current_scope.written += 1
@@ -381,9 +381,9 @@ module Shell
         @current_scope.written += 1
       end
 
-      def close_table(footer_fields = {})
+      def close_table(footer_fields = {}, **kwargs)
         expect_scope TableScope::ROW
-        footer_fields.each do |k, v|
+        footer_fields.merge(kwargs).each do |k, v|
           if k == :DURATION
             @out.puts format('Took %.4f seconds', v)
             next
@@ -499,10 +499,18 @@ module Shell
         @current_scope.written += 1
       end
 
-      def close_table(footer_fields = {})
+      def close_table(footer_fields = {}, **kwargs)
         expect_scope TableScope::ROW
-
-        @out.print "], \"row_count\": #{@current_scope.written}}"
+        footer_fields = footer_fields.merge(**kwargs)
+        footer_fields[:num_rows] = @current_scope.written unless footer_fields.has_key? :num_rows
+        @out.print '],'
+        first = true
+        footer_fields.each do |k, v|
+          @out.print ',' unless first
+          @out.print "\"#{k.to_s}\": #{v.to_json}"
+          first = false
+        end
+        @out.print '}'
         @current_scope = @current_scope.parent
         @current_scope.written += 1
       end

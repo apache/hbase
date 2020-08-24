@@ -97,6 +97,7 @@ module Shell
     attr_accessor :hbase
     attr_accessor :interactive
     attr_accessor :table_formatter
+    attr_accessor :old_school
     alias interactive? interactive
 
     @debug = false
@@ -107,6 +108,8 @@ module Shell
       self.interactive = interactive
       # Configure the default table formatter
       self.table_formatter = ::Shell::Formatter::AlignedTableFormatter.new
+      # Turn on old-school formatting for a few commands
+      self.old_school = true
     end
 
     # Returns Admin class from admin.rb
@@ -163,16 +166,6 @@ module Shell
       # Export help method
       target.send :define_singleton_method, :help, lambda { |command = nil|
         shell_inst.help(command)
-        nil
-      }
-      # Export set_formatter method
-      target.send :define_singleton_method, :set_formatter, lambda { |kind, **kwargs|
-        case kind
-        when :aligned then shell_inst.table_formatter = ::Shell::Formatter::AlignedTableFormatter.new(**kwargs)
-        when :json then shell_inst.table_formatter = ::Shell::Formatter::JsonTableFormatter.new(**kwargs)
-        when :unaligned then shell_inst.table_formatter = ::Shell::Formatter::UnalignedTableFormatter.new(**kwargs)
-        else raise ArgumentError, 'unexpected kind of formatter'
-        end
         nil
       }
       # Export tools method for backwards compatibility
@@ -398,6 +391,7 @@ Shell.load_command_group(
     table_help
     whoami
     processlist
+    set_formatter
   ]
 )
 

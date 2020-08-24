@@ -30,7 +30,11 @@ Is named table disabled? For example:
 
       def command(table)
         disabled = !!admin.disabled?(table)
-        table_formatter.single_value_table('IS_DISABLED', disabled.to_s)
+        if @shell.old_school
+          formatter.row([disabled.to_s])
+        else
+          table_formatter.single_value_table('IS_DISABLED', disabled.to_s)
+        end
         disabled
       end
     end

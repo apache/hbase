@@ -90,12 +90,20 @@ EOF
 
       def get(table, row, *args)
         @start_time = Time.now
-        opts = {}
-        opts = args[0] if (args.length > 0) && args[0].is_a?(Hash)
-        converter = opts.delete(::HBaseConstants::FORMATTER)
-        converter_class = opts.delete(::HBaseConstants::FORMATTER_CLASS)
-        result = table._get_internal_result(row, *args)
-        print_result(cell_iterator(result), table, converter, converter_class)
+        if @shell.old_school
+          formatter.header(%w[COLUMN CELL])
+          count, is_stale = table._get_internal(row, *args) do |column, value|
+            formatter.row([column, value])
+          end
+          formatter.footer(count, is_stale)
+        else
+          opts = {}
+          opts = args[0] if (args.length > 0) && args[0].is_a?(Hash)
+          converter = opts.delete(::HBaseConstants::FORMATTER)
+          converter_class = opts.delete(::HBaseConstants::FORMATTER_CLASS)
+          result = table._get_internal_result(row, *args)
+          print_result(cell_iterator(result), table, converter, converter_class)
+        end
       end
     end
   end

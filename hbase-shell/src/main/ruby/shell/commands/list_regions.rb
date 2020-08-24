@@ -196,7 +196,7 @@ module Shell
           headers.push param
           widths.push length
         end
-        table_formatter.start_table({ headers: headers, widths: widths })
+        table_formatter.start_table(headers: headers, widths: widths)
         results.each do |result|
           row = headers.map { |key| result.fetch key, nil }
           table_formatter.row row

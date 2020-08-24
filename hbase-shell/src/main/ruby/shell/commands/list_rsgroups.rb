@@ -32,10 +32,11 @@ EOF
       end
 
       def command(regex = '.*')
-        table_formatter.start_table({
-                                      headers: %w[GROUP_NAME KIND MEMBER],
-                                      widths: [nil, 6, nil]
-                                    })
+        if @shell.old_school
+          formatter.header(['NAME', 'SERVER / TABLE'])
+        else
+          table_formatter.start_table(headers: %w[GROUP_NAME KIND MEMBER], widths: [nil, 6, nil])
+        end
 
         regex = /#{regex}/ unless regex.is_a?(Regexp)
         list = rsgroup_admin.list_rs_groups
@@ -49,19 +50,38 @@ EOF
           group_name_printed = false
 
           group.getServers.each do |server|
+            if @shell.old_school
+              formatter.row([group_name, 'server ' + server.toString])
+              group_name = ''
+            else
+              table_formatter.row([group_name, 'server', server.toString])
+            end
             group_name_printed = true
-            table_formatter.row([group_name, 'server', server.toString])
           end
-          tables = rsgroup_admin.list_tables_in_rs_group(group_name)
+          tables = rsgroup_admin.list_tables_in_rs_group(group.getName)
           tables.each do |table|
+            if @shell.old_school
+              formatter.row([group_name, 'table ' + table.getNameAsString])
+              group_name = ''
+            else
+              table_formatter.row([group_name, 'table', table.getNameAsString])
+            end
             group_name_printed = true
-            table_formatter.row([group_name, 'table', table.getNameAsString])
           end
 
-          table_formatter.row([group.getName, '']) unless group_name_printed
+          if @shell.old_school
+            formatter.row([group.getName, '']) unless group_name_printed
+          else
+            table_formatter.row([group.getName, '']) unless group_name_printed
+          end
         end
 
-        table_formatter.close_table
+        if @shell.old_school
+          formatter.close_table
+        else
+          table_formatter.close_table
+        end
+
         nil
       end
     end

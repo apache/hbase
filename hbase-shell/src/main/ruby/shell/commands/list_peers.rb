@@ -38,10 +38,17 @@ EOF
       def command
         peers = replication_admin.list_peers
 
-        table_formatter.start_table({ headers: %w[PEER_ID CLUSTER_KEY ENDPOINT_CLASSNAME
+        if @shell.old_school
+          formatter.header(%w[PEER_ID CLUSTER_KEY ENDPOINT_CLASSNAME
+                             REMOTE_ROOT_DIR SYNC_REPLICATION_STATE STATE
+                             REPLICATE_ALL NAMESPACES TABLE_CFS BANDWIDTH
+                             SERIAL])
+        else
+          table_formatter.start_table(headers: %w[PEER_ID CLUSTER_KEY ENDPOINT_CLASSNAME
                                                   REMOTE_ROOT_DIR SYNC_REPLICATION_STATE STATE
                                                   REPLICATE_ALL NAMESPACES TABLE_CFS BANDWIDTH
-                                                  SERIAL] })
+                                                  SERIAL])
+        end
 
         peers.each do |peer|
           id = peer.getPeerId
@@ -66,13 +73,24 @@ EOF
           unless config.getRemoteWALDir.nil?
             remote_root_dir = config.getRemoteWALDir
           end
-          table_formatter.row([id, cluster_key, endpoint_classname,
+
+          row = [id, cluster_key, endpoint_classname,
                                remote_root_dir, peer.getSyncReplicationState, state,
                                config.replicateAllUserTables, namespaces, tableCFs,
-                               config.getBandwidth, config.isSerial].map { |v| v.to_s })
+                               config.getBandwidth, config.isSerial]
+          if @shell.old_school
+            formatter.row(row)
+          else
+            table_formatter.row(row.map { |v| v.to_s })
+          end
         end
 
-        table_formatter.close_table
+        if @shell.old_school
+          formatter.footer
+        else
+          table_formatter.close_table
+        end
+
         peers
       end
     end
