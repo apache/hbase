@@ -52,6 +52,10 @@ pipeline {
         WORKDIR_REL_GENERAL_CHECK = 'yetus-general-check'
         WORKDIR_REL_JDK8_HADOOP3_CHECK = 'yetus-jdk8-hadoop3-check'
         WORKDIR_REL_JDK11_HADOOP3_CHECK = 'yetus-jdk11-hadoop3-check'
+
+        // The asf-ci credentials on jenkins just contains the GitHub access token stored with 'Secret Text' type.
+        // Let's declare the GITHUB_USER here
+        GITHUB_USER = 'asf-ci'
     }
 
     parameters {
@@ -96,10 +100,9 @@ pipeline {
                         }
                         dir("${WORKDIR}") {
                             withCredentials([
-                                usernamePassword(
-                                  credentialsId: 'apache-hbase-at-github.com',
-                                  passwordVariable: 'GITHUB_PASSWORD',
-                                  usernameVariable: 'GITHUB_USER'
+                                string(
+                                  credentialsId: 'asf-ci',
+                                  variable: 'GITHUB_PASSWORD'
                                 )]) {
                                 sh label: 'test-patch', script: '''#!/bin/bash -e
                                     hostname -a ; pwd ; ls -la
@@ -182,10 +185,9 @@ pipeline {
                         }
                         dir("${WORKDIR}") {
                             withCredentials([
-                              usernamePassword(
-                                credentialsId: 'apache-hbase-at-github.com',
-                                passwordVariable: 'GITHUB_PASSWORD',
-                                usernameVariable: 'GITHUB_USER'
+                              string(
+                                credentialsId: 'asf-ci',
+                                variable: 'GITHUB_PASSWORD'
                               )]) {
                                 sh label: 'test-patch', script: '''#!/bin/bash -e
                                     hostname -a ; pwd ; ls -la
@@ -282,10 +284,9 @@ pipeline {
                         }
                         dir("${WORKDIR}") {
                             withCredentials([
-                              usernamePassword(
-                                credentialsId: 'apache-hbase-at-github.com',
-                                passwordVariable: 'GITHUB_PASSWORD',
-                                usernameVariable: 'GITHUB_USER'
+                              string(
+                                credentialsId: 'asf-ci',
+                                variable: 'GITHUB_PASSWORD'
                               )]) {
                                 sh label: 'test-patch', script: '''#!/bin/bash -e
                                     hostname -a ; pwd ; ls -la
