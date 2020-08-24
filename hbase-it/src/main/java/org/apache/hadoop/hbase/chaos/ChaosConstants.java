@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.hbase.chaos;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -5,8 +23,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 /***
  * ChaosConstant holds a bunch of Choas-related Constants
  */
-@InterfaceAudience.Private
-public class ChaosConstants {
+@InterfaceAudience.Public
+public final class ChaosConstants {
 
   /*Base ZNode for whole Chaos Testing*/
   public static final String CHAOS_TEST_ROOT_ZNODE = "/hbase";
@@ -15,10 +33,12 @@ public class ChaosConstants {
   public static final String ZNODE_PATH_SEPARATOR = "/";
 
   /*ZNode used for ChaosAgents registration.*/
-  public static final String CHAOS_AGENT_REGISTRATION_EPIMERAL_ZNODE = CHAOS_TEST_ROOT_ZNODE + ZNODE_PATH_SEPARATOR + "chaosAgents";
+  public static final String CHAOS_AGENT_REGISTRATION_EPIMERAL_ZNODE =
+    CHAOS_TEST_ROOT_ZNODE + ZNODE_PATH_SEPARATOR + "chaosAgents";
 
   /*ZNode used for getting status of tasks assigned*/
-  public static final String CHAOS_AGENT_STATUS_PERSISTENT_ZNODE = CHAOS_TEST_ROOT_ZNODE + ZNODE_PATH_SEPARATOR + "chaosAgentTaskStatus";
+  public static final String CHAOS_AGENT_STATUS_PERSISTENT_ZNODE =
+    CHAOS_TEST_ROOT_ZNODE + ZNODE_PATH_SEPARATOR + "chaosAgentTaskStatus";
 
   /*Config property for getting number of retries to execute a command*/
   public static final String RETRY_ATTEMPTS_KEY = "hbase.it.clustermanager.retry.attempts";

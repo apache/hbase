@@ -1,4 +1,26 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.hbase.chaos;
+
+import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -10,18 +32,12 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.UnknownHostException;
-import java.util.Arrays;
-import java.util.Collection;
 
 /**
  * Class used to start/stop Chaos related services (currently chaosagent)
  */
-@InterfaceAudience.Private
 public class ChaosService {
 
   private static final Logger LOG = LoggerFactory.getLogger(ChaosService.class.getName());
@@ -41,7 +57,8 @@ public class ChaosService {
             ChaosServiceStop();
           }
         } catch (IllegalArgumentException e) {
-          LOG.error("action passed:" + actionStr + " . Unexpected action. Please provide only start/stop.");
+          LOG.error("action passed:" + actionStr +
+            " . Unexpected action. Please provide only start/stop.");
           throw new RuntimeException(e);
         }
       } else {
@@ -57,11 +74,13 @@ public class ChaosService {
       case chaosagent:
         ChaosAgent.stopChaosAgent.set(false);
         try {
-          Thread t = new Thread(new ChaosAgent(conf, ChaosUtils.getZKQuorum(conf), ChaosUtils.getHostName()));
+          Thread t = new Thread(new ChaosAgent(conf,
+            ChaosUtils.getZKQuorum(conf), ChaosUtils.getHostName()));
           t.start();
           t.join();
         } catch (InterruptedException | UnknownHostException e) {
-          LOG.error("Failed while executing next task execution of ChaosAgent on : " + serviceName + " : " + e);
+          LOG.error("Failed while executing next task execution of ChaosAgent on : " +
+            serviceName + " : " + e);
         }
         break;
       default:
@@ -75,8 +94,10 @@ public class ChaosService {
 
   private static Options getOptions() {
     Options options = new Options();
-    options.addOption(new Option("c", ChaosServiceName.chaosagent.toString(), true, "expecting a start/stop argument"));
-    options.addOption(new Option("D", ChaosServiceName.GENERIC.toString(), true, "generic D param"));
+    options.addOption(new Option("c", ChaosServiceName.chaosagent.toString(),
+      true, "expecting a start/stop argument"));
+    options.addOption(new Option("D", ChaosServiceName.GENERIC.toString(),
+      true, "generic D param"));
     LOG.info(Arrays.toString(new Collection[] { options.getOptions() }));
     return options;
   }
@@ -89,7 +110,7 @@ public class ChaosService {
     ScheduledChore authChore = AuthUtil.getAuthChore(conf);
 
     try {
-      if (authChore != null) {
+      if (authChore != null){
         choreChaosService = new ChoreService(ChaosConstants.CHORE_SERVICE_PREFIX);
         choreChaosService.scheduleChore(authChore);
       }

@@ -1,4 +1,24 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.hbase;
+
+import java.io.IOException;
 
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -12,8 +32,6 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 
 @InterfaceAudience.Private
 public class ChaosZKClient {
@@ -61,8 +79,8 @@ public class ChaosZKClient {
 
   /**
    * Checks if ChaosAgent is running or not on target host by checking its ZNode.
-   * @param hostname
-   * @return
+   * @param hostname: hostname to check for chaosagent
+   * @return: true/false whether agent is running or not
    */
   private boolean isChaosAgentRunning(String hostname) {
     try {
@@ -87,13 +105,14 @@ public class ChaosZKClient {
   /**
    * Creates tasks for target hosts by creating ZNodes.
    * Waits for a limited amount of time to complete task to execute.
-   * @param taskObject
-   * @return
+   * @param taskObject: Object data represents command
+   * @return : returns status
    */
   public String submitTask(final TaskObject taskObject) {
     if (isChaosAgentRunning(taskObject.getTaskHostname())) {
       LOG.info("Creating task node");
-      zk.create(CHAOS_AGENT_STATUS_ZNODE + ZNODE_PATH_SEPARATOR + taskObject.getTaskHostname() + ZNODE_PATH_SEPARATOR + TASK_PREFIX,
+      zk.create(CHAOS_AGENT_STATUS_ZNODE + ZNODE_PATH_SEPARATOR +
+          taskObject.getTaskHostname() + ZNODE_PATH_SEPARATOR + TASK_PREFIX,
         taskObject.getCommand().getBytes(),
         ZooDefs.Ids.OPEN_ACL_UNSAFE,
         CreateMode.EPHEMERAL_SEQUENTIAL,
@@ -108,15 +127,15 @@ public class ChaosZKClient {
         Threads.sleep(500);
       }
     } else {
-      LOG.info("EHHHHH!  ZNODES don't exists!!");
+      LOG.info("EHHHHH!  ChaosAgent Not running");
     }
     return TASK_ERROR_STRING;
   }
 
   /**
    * To get status of task submitted
-   * @param path
-   * @param ctx
+   * @param path: path at which to get status
+   * @param ctx: path context
    */
   private void getStatus(String path , Object ctx) {
     LOG.info("Getting Status of task: " + path);
@@ -128,8 +147,8 @@ public class ChaosZKClient {
 
   /**
    * Set a watch on task submitted
-   * @param name
-   * @param taskObject
+   * @param name: ZNode name to set a watch
+   * @param taskObject: context for ZNode name
    */
   private void setStatusWatch(String name, TaskObject taskObject) {
     LOG.info("Checking for ZNode and Setting watch for task : " + name);
@@ -141,7 +160,7 @@ public class ChaosZKClient {
 
   /**
    * Delete task after getting its status
-   * @param path
+   * @param path: path to delete ZNode
    */
   private void deleteTask(String path) {
     LOG.info("Deleting task: " + path);
@@ -160,7 +179,7 @@ public class ChaosZKClient {
     @Override
     public void process(WatchedEvent watchedEvent) {
       LOG.info("Setting status watch for task: " + watchedEvent.getPath());
-      if( watchedEvent.getType() == Event.EventType.NodeDataChanged) {
+      if(watchedEvent.getType() == Event.EventType.NodeDataChanged) {
         assert watchedEvent.getPath().contains(TASK_PREFIX);
         getStatus(watchedEvent.getPath(), (Object) watchedEvent.getPath());
 
@@ -197,7 +216,7 @@ public class ChaosZKClient {
                 break;
 
               default:
-                LOG.warn("Status of task is undefined!! : Status --> " + status );
+                LOG.warn("Status of task is undefined!! : Status --> " + status);
             }
 
             deleteTask(path);
