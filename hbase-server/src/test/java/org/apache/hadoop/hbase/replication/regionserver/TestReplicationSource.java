@@ -484,7 +484,7 @@ public class TestReplicationSource {
 
   /**
    * Test ReplicationSource retries startup once an uncaught exception happens
-   * during initialization and <b>eplication.source.regionserver.abort</b> is set to false.
+   * during initialization and <b>replication.source.regionserver.abort</b> is set to false.
    */
   @Test
   public void testAbortTrueOnError() throws IOException {
@@ -507,6 +507,7 @@ public class TestReplicationSource {
       p -> OptionalLong.empty(), new MetricsSource(queueId));
     try {
       rs.startup();
+      Waiter.waitFor(conf, 1000, () -> FaultyReplicationEndpoint.count > 0);
       assertFalse(rs.isSourceActive());
       assertTrue(rss.isAborted());
     } finally {
