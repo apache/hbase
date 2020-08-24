@@ -1,0 +1,114 @@
+package org.apache.hadoop.hbase.chaos;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
+import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.Collection;
+
+/**
+ * Class used to start/stop Chaos related services (currently chaosagent)
+ */
+@InterfaceAudience.Private
+public class ChaosService {
+
+  private static final Logger LOG = LoggerFactory.getLogger(ChaosService.class.getName());
+
+  public static void execute(String[] args, Configuration conf) {
+    LOG.info("arguments : " + Arrays.toString(args));
+
+    try {
+      CommandLine cmdline = new GnuParser().parse(getOptions(), args);
+      if (cmdline.hasOption(ChaosServiceName.chaosagent.toString())) {
+        String actionStr = cmdline.getOptionValue(ChaosServiceName.chaosagent.toString());
+        try {
+          ExecutorAction action = ExecutorAction.valueOf(actionStr.toLowerCase());
+          if (action == ExecutorAction.start) {
+            ChaosServiceStart(conf, ChaosServiceName.chaosagent);
+          } else if (action == ExecutorAction.stop) {
+            ChaosServiceStop();
+          }
+        } catch (IllegalArgumentException e) {
+          LOG.error("action passed:" + actionStr + " . Unexpected action. Please provide only start/stop.");
+          throw new RuntimeException(e);
+        }
+      } else {
+        LOG.error("Invalid Options");
+      }
+    } catch (Exception e) {
+      LOG.error("Error while starting ChaosService : " + e);
+    }
+  }
+
+  private static void ChaosServiceStart(Configuration conf, ChaosServiceName serviceName) {
+    switch (serviceName) {
+      case chaosagent:
+        ChaosAgent.stopChaosAgent.set(false);
+        try {
+          Thread t = new Thread(new ChaosAgent(conf, ChaosUtils.getZKQuorum(conf), ChaosUtils.getHostName()));
+          t.start();
+          t.join();
+        } catch (InterruptedException | UnknownHostException e) {
+          LOG.error("Failed while executing next task execution of ChaosAgent on : " + serviceName + " : " + e);
+        }
+        break;
+      default:
+        LOG.error("Service Name not known : " + serviceName.toString());
+    }
+  }
+
+  private static void ChaosServiceStop() {
+    ChaosAgent.stopChaosAgent.set(true);
+  }
+
+  private static Options getOptions() {
+    Options options = new Options();
+    options.addOption(new Option("c", ChaosServiceName.chaosagent.toString(), true, "expecting a start/stop argument"));
+    options.addOption(new Option("D", ChaosServiceName.GENERIC.toString(), true, "generic D param"));
+    LOG.info(Arrays.toString(new Collection[] { options.getOptions() }));
+    return options;
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    new GenericOptionsParser(conf, args);
+
+    ChoreService choreChaosService = null;
+    ScheduledChore authChore = AuthUtil.getAuthChore(conf);
+
+    try {
+      if (authChore != null) {
+        choreChaosService = new ChoreService(ChaosConstants.CHORE_SERVICE_PREFIX);
+        choreChaosService.scheduleChore(authChore);
+      }
+
+      execute(args, conf);
+    } finally {
+      if (authChore != null)
+        choreChaosService.shutdown();
+    }
+  }
+
+  enum ChaosServiceName {
+    chaosagent,
+    GENERIC
+  }
+
+
+  enum ExecutorAction {
+    start,
+    stop
+  }
+}
