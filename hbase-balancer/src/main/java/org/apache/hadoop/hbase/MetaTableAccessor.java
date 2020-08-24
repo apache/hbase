@@ -291,6 +291,13 @@ public final class MetaTableAccessor {
   }
 
   /**
+   * Check whether the given {@code regionName} has any 'info:merge*' columns.
+   */
+  public static boolean hasMergeRegions(Connection conn, byte[] regionName) throws IOException {
+    return hasMergeRegions(getRegionResult(conn, regionName).rawCells());
+  }
+
+  /**
    * @return Deserialized values of &lt;qualifier,regioninfo&gt; pairs taken from column values that
    *         match the regex 'info:merge.*' in array of <code>cells</code>.
    */

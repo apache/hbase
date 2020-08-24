@@ -163,7 +163,8 @@ public class CatalogJanitor extends ScheduledChore {
    * garbage to collect.
    * @return How many items gc'd whether for merge or split.
    */
-  int scan() throws IOException {
+  @VisibleForTesting
+  public int scan() throws IOException {
     int gcs = 0;
     try {
       if (!alreadyRunning.compareAndSet(false, true)) {
@@ -411,26 +412,6 @@ public class CatalogJanitor extends ScheduledChore {
 
   private TableDescriptor getDescriptor(final TableName tableName) throws IOException {
     return this.services.getTableDescriptors().get(tableName);
-  }
-
-  /**
-   * Checks if the specified region has merge qualifiers, if so, try to clean them.
-   * @return true if no info:merge* columns; i.e. the specified region doesn't have
-   *   any merge qualifiers.
-   */
-  public boolean cleanMergeQualifier(final RegionInfo region) throws IOException {
-    // Get merge regions if it is a merged region and already has merge qualifier
-    List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(this.services.getConnection(),
-        region.getRegionName());
-    if (parents == null || parents.isEmpty()) {
-      // It doesn't have merge qualifier, no need to clean
-      return true;
-    }
-
-    // If a parent region is a merged child region and GC has not kicked in/finish its work yet,
-    // return false in this case to avoid kicking in a merge, trying later.
-    cleanMergeRegion(region, parents);
-    return false;
   }
 
   /**
