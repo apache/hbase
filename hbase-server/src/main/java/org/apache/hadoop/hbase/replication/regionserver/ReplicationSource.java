@@ -120,13 +120,13 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private int logQueueWarnThreshold;
   // ReplicationEndpoint which will handle the actual replication
   private volatile ReplicationEndpoint replicationEndpoint;
-  //This is needed for the startup loop to identify when there's already
-  // an initialization happening (but not finished yet),
-  // so that it doesn't try submit another initialize thread.
-  // NOTE: this should only be set to false at the end of initialize method, prior to return.
-//  private final AtomicBoolean startupOngoing = new AtomicBoolean(false);
 
   private boolean abortOnError;
+  //This is needed for the startup loop to identify when there's already
+  //an initialization happening (but not finished yet),
+  //so that it doesn't try submit another initialize thread.
+  //NOTE: this should only be set to false at the end of initialize method, prior to return.
+  private AtomicBoolean startupOngoing = new AtomicBoolean(false);
 
 
   /**
@@ -471,7 +471,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if(abortOnError){
       server.abort("Unexpected exception in " + t.getName(), e);
     }
-    if(manager!=null){
+    if(manager != null){
       while (true) {
         try {
           LOG.info("Refreshing replication sources now due to previous error on thread: {}",
@@ -579,6 +579,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if (!this.isSourceActive()) {
+      this.startupOngoing.set(false);
       return;
     }
 
@@ -601,6 +602,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if(!this.isSourceActive()) {
+      this.startupOngoing.set(false);
       return;
     }
     LOG.info("{} Source: {}, is now replicating from cluster: {}; to peer cluster: {};",
@@ -613,19 +615,20 @@ public class ReplicationSource implements ReplicationSourceInterface {
       PriorityBlockingQueue<Path> queue = entry.getValue();
       tryStartNewShipper(walGroupId, queue);
     }
+    this.startupOngoing.set(false);
   }
 
   @Override
   public void startup() {
     //Flag that signalizes uncaught error happening while starting up the source
     // and a retry should be attempted
-    AtomicBoolean retryStartup = new AtomicBoolean(false);
-    retryStartup.set(true);
+    AtomicBoolean retryStartup = new AtomicBoolean(true);
+    this.sourceRunning = true;
     do {
       if(retryStartup.get()) {
         retryStartup.set(false);
+        startupOngoing.set(true);
         // mark we are running now
-        this.sourceRunning = true;
         initThread = new Thread(this::initialize);
         Threads.setDaemonThreadRunning(initThread,
           Thread.currentThread().getName() + ".replicationSource," + this.queueId,
@@ -635,7 +638,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
           retryStartup.set(true);
         });
       }
-    } while (!this.sourceRunning);
+    } while (this.startupOngoing.get());
   }
 
   @Override
