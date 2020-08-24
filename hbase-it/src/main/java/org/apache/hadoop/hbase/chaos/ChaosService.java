@@ -28,16 +28,19 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Class used to start/stop Chaos related services (currently chaosagent)
  */
+@InterfaceAudience.Private
 public class ChaosService {
 
   private static final Logger LOG = LoggerFactory.getLogger(ChaosService.class.getName());
@@ -110,7 +113,7 @@ public class ChaosService {
     ScheduledChore authChore = AuthUtil.getAuthChore(conf);
 
     try {
-      if (authChore != null){
+      if (authChore != null) {
         choreChaosService = new ChoreService(ChaosConstants.CHORE_SERVICE_PREFIX);
         choreChaosService.scheduleChore(authChore);
       }

@@ -64,7 +64,7 @@ public class ChaosZKClient {
 
   /**
    * Creates connection with ZooKeeper
-   * @throws IOException
+   * @throws IOException when not able to create connection properly
    */
   public void createNewZKConnection() throws IOException {
     Watcher watcher = new Watcher() {
@@ -79,8 +79,8 @@ public class ChaosZKClient {
 
   /**
    * Checks if ChaosAgent is running or not on target host by checking its ZNode.
-   * @param hostname: hostname to check for chaosagent
-   * @return: true/false whether agent is running or not
+   * @param hostname hostname to check for chaosagent
+   * @return true/false whether agent is running or not
    */
   private boolean isChaosAgentRunning(String hostname) {
     try {
@@ -105,8 +105,8 @@ public class ChaosZKClient {
   /**
    * Creates tasks for target hosts by creating ZNodes.
    * Waits for a limited amount of time to complete task to execute.
-   * @param taskObject: Object data represents command
-   * @return : returns status
+   * @param taskObject Object data represents command
+   * @return returns status
    */
   public String submitTask(final TaskObject taskObject) {
     if (isChaosAgentRunning(taskObject.getTaskHostname())) {
@@ -134,8 +134,8 @@ public class ChaosZKClient {
 
   /**
    * To get status of task submitted
-   * @param path: path at which to get status
-   * @param ctx: path context
+   * @param path path at which to get status
+   * @param ctx path context
    */
   private void getStatus(String path , Object ctx) {
     LOG.info("Getting Status of task: " + path);
@@ -147,8 +147,8 @@ public class ChaosZKClient {
 
   /**
    * Set a watch on task submitted
-   * @param name: ZNode name to set a watch
-   * @param taskObject: context for ZNode name
+   * @param name ZNode name to set a watch
+   * @param taskObject context for ZNode name
    */
   private void setStatusWatch(String name, TaskObject taskObject) {
     LOG.info("Checking for ZNode and Setting watch for task : " + name);
@@ -160,7 +160,7 @@ public class ChaosZKClient {
 
   /**
    * Delete task after getting its status
-   * @param path: path to delete ZNode
+   * @param path path to delete ZNode
    */
   private void deleteTask(String path) {
     LOG.info("Deleting task: " + path);
@@ -224,7 +224,8 @@ public class ChaosZKClient {
           break;
 
         default:
-          LOG.error("ERROR while getting status of task: " + path + " ERROR: " + KeeperException.create(KeeperException.Code.get(rc)));
+          LOG.error("ERROR while getting status of task: " + path + " ERROR: " +
+            KeeperException.create(KeeperException.Code.get(rc)));
       }
     }
   };
@@ -246,7 +247,8 @@ public class ChaosZKClient {
           break;
 
         default:
-          LOG.error("ERROR while setting watch on task ZNode: " + path + " ERROR: " + KeeperException.create(KeeperException.Code.get(rc)));
+          LOG.error("ERROR while setting watch on task ZNode: " + path + " ERROR: " +
+            KeeperException.create(KeeperException.Code.get(rc)));
       }
     }
   };
@@ -267,7 +269,8 @@ public class ChaosZKClient {
           break;
 
         default:
-          LOG.error("Error submitting task: " + name + " ERROR:" + KeeperException.create(KeeperException.Code.get(rc)));
+          LOG.error("Error submitting task: " + name + " ERROR:" +
+            KeeperException.create(KeeperException.Code.get(rc)));
       }
     }
   };
@@ -293,7 +296,8 @@ public class ChaosZKClient {
           break;
 
         default:
-          LOG.error("ERROR while deleting task: " + path + " ERROR: " + KeeperException.create(KeeperException.Code.get(rc)));
+          LOG.error("ERROR while deleting task: " + path + " ERROR: " +
+            KeeperException.create(KeeperException.Code.get(rc)));
       }
     }
   };

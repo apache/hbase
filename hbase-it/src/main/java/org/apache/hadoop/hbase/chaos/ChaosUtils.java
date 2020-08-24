@@ -23,10 +23,12 @@ import java.net.UnknownHostException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ChaosUtils holds a bunch of useful functions like getting hostname and getting ZooKeeper quorum.
  */
+@InterfaceAudience.Private
 public class ChaosUtils {
 
   public static String getHostName() throws UnknownHostException {

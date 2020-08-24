@@ -73,7 +73,8 @@ public class ZNodeClusterManager extends Configured implements ClusterManager {
 
   private void createOpCommand(String hostname, ServiceType service,
     HBaseClusterManager.CommandProvider.Operation op) throws IOException{
-    createZNode(hostname, CmdType.exec.toString() + getCommandProvider(service).getCommand(service, op));
+    createZNode(hostname, CmdType.exec.toString() +
+      getCommandProvider(service).getCommand(service, op));
   }
 
   @Override

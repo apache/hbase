@@ -47,7 +47,8 @@ public final class ChaosConstants {
   public static final int DEFAULT_RETRY_ATTEMPTS = 5;
 
   /*Config property to sleep in between retries*/
-  public static final String RETRY_SLEEP_INTERVAL_KEY = "hbase.it.clustermanager.retry.sleep.interval";
+  public static final String RETRY_SLEEP_INTERVAL_KEY =
+    "hbase.it.clustermanager.retry.sleep.interval";
 
   /*Default Sleep time between each retry*/
   public static final int DEFAULT_RETRY_SLEEP_INTERVAL = 5000;

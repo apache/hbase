@@ -31,14 +31,14 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.util.Shell;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.AsyncCallback;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,9 +88,9 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
 
   /***
    * sets global params and initiates connection with ZooKeeper then does registration.
-   * @param conf: initial configuration to use
-   * @param quorum: ZK Quorum
-   * @param agentName: AgentName to use
+   * @param conf initial configuration to use
+   * @param quorum ZK Quorum
+   * @param agentName AgentName to use
    */
   private void initChaosAgent(Configuration conf, String quorum, String agentName) {
     this.conf = conf;
@@ -348,8 +348,8 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
 
   /***
    * Function to create PERSISTENT ZNODE with given path and data given as params
-   * @param path: Path at which ZNode to create
-   * @param data: Data to put under ZNode
+   * @param path Path at which ZNode to create
+   * @param data Data to put under ZNode
    */
   public void createZNode(String path, byte[] data) {
     zk.create(path,
@@ -362,8 +362,8 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
 
   /***
    * Function to create EPHEMERAL ZNODE with given path and data as params.
-   * @param path: Path at which Ephemeral ZNode to create
-   * @param data: Data to put under ZNode
+   * @param path Path at which Ephemeral ZNode to create
+   * @param data Data to put under ZNode
    */
   public void createEphemeralZNode(String path, byte[] data) {
     zk.create(path,
@@ -377,7 +377,7 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
   /**
    * Checks if given ZNode exists, if not creates a PERSISTENT ZNODE for same.
    *
-   * @param path: Path to check for ZNode
+   * @param path Path to check for ZNode
    */
   private void createIfZNodeNotExists(String path) {
     try {
@@ -393,8 +393,8 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
   /**
    * sets given Status for Task Znode
    *
-   * @param taskZNode: ZNode to set status
-   * @param status: Status value
+   * @param taskZNode ZNode to set status
+   * @param status Status value
    */
   public void setStatusOfTaskZNode(String taskZNode, String status) {
     LOG.info("Setting status of Task ZNode: " + taskZNode + " status : " + status);
@@ -421,7 +421,8 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
 
   /***
    * Gets tasks for execution, basically sets Watch on it's respective host's Znode and
-   * waits for tasks to be assigned, also has a getTasksForAgentCallback which handles execution of task.
+   * waits for tasks to be assigned, also has a getTasksForAgentCallback
+   * which handles execution of task.
    */
   private void getTasks() {
     LOG.info("Getting Tasks for Agent: " + agentName + "and setting watch for new Tasks");
@@ -436,10 +437,10 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
    * Below function executes command with retries with given user.
    * Uses LocalShell to execute a command.
    *
-   * @param user: user name, default none
-   * @param cmd: Command to execute
-   * @return: A pair of Exit Code and Shell output
-   * @throws IOException: Exception while executing shell command
+   * @param user user name, default none
+   * @param cmd Command to execute
+   * @return A pair of Exit Code and Shell output
+   * @throws IOException Exception while executing shell command
    */
   private Pair<Integer, String> execWithRetries(String user, String cmd) throws IOException {
     RetryCounter retryCounter = retryCounterFactory.create();
