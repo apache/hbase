@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -36,6 +38,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -115,8 +118,8 @@ public class TestCatalogJanitorCluster {
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
     assertEquals(1, report.getHoles().size());
-    assertTrue(report.getHoles().get(0).getFirst().getTable().equals(T1));
-    assertTrue(report.getHoles().get(0).getFirst().isLast());
+    assertTrue(
+      report.getHoles().get(0).getFirst().getTable().equals(RegionInfo.UNDEFINED.getTable()));
     assertTrue(report.getHoles().get(0).getSecond().getTable().equals(T2));
     assertEquals(0, report.getOverlaps().size());
     // Next, add overlaps to first row in t3
@@ -230,5 +233,87 @@ public class TestCatalogJanitorCluster {
     }
     row[row.length - 1] = (byte)(((int)row[row.length - 1]) + 1);
     return row;
+  }
+
+  @Test
+  public void testHoles() throws IOException {
+    CatalogJanitor janitor = TEST_UTIL.getHBaseCluster().getMaster().getCatalogJanitor();
+
+    CatalogJanitor.Report report = janitor.getLastReport();
+    // Assert no problems.
+    assertTrue(report.isEmpty());
+    //Verify start and end region holes
+    verifyCornerHoles(janitor, T1);
+    //Verify start and end region holes
+    verifyCornerHoles(janitor, T2);
+    verifyMiddleHole(janitor);
+    //verify total number of holes, 2 in t1 and t2 each and one in t3
+    janitor.scan();
+    assertEquals(5, janitor.getLastReport().getHoles().size());
+  }
+
+  private void verifyMiddleHole(CatalogJanitor janitor) throws IOException {
+    //Verify middle holes
+    RegionInfo firstRegion = getRegionInfo(T3, "".getBytes());
+    RegionInfo secondRegion = getRegionInfo(T3, "bbb".getBytes());
+    RegionInfo thirdRegion = getRegionInfo(T3, "ccc".getBytes());
+    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), secondRegion);
+    LinkedList<Pair<RegionInfo, RegionInfo>> holes = getHoles(janitor, T3);
+    Pair<RegionInfo, RegionInfo> regionInfoRegionInfoPair = holes.getFirst();
+    assertTrue(regionInfoRegionInfoPair.getFirst().getTable().equals(T3));
+    assertTrue(regionInfoRegionInfoPair.getSecond().getTable().equals(T3));
+    assertTrue(
+      regionInfoRegionInfoPair.getFirst().getEncodedName().equals(firstRegion.getEncodedName()));
+    assertTrue(
+      regionInfoRegionInfoPair.getSecond().getEncodedName().equals(thirdRegion.getEncodedName()));
+  }
+
+  private void verifyCornerHoles(CatalogJanitor janitor, TableName tableName) throws IOException {
+    RegionInfo firstRegion = getRegionInfo(tableName, "".getBytes());
+    RegionInfo secondRegion = getRegionInfo(tableName, "bbb".getBytes());
+    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), firstRegion);
+    LinkedList<Pair<RegionInfo, RegionInfo>> holes = getHoles(janitor, tableName);
+
+    assertEquals(1, holes.size());
+    Pair<RegionInfo, RegionInfo> regionInfoRegionInfoPair = holes.get(0);
+    assertTrue(
+      regionInfoRegionInfoPair.getFirst().getTable().equals(RegionInfo.UNDEFINED.getTable()));
+    assertTrue(regionInfoRegionInfoPair.getSecond().getTable().equals(tableName));
+    assertTrue(
+      regionInfoRegionInfoPair.getSecond().getEncodedName().equals(secondRegion.getEncodedName()));
+
+    RegionInfo lastRegion = getRegionInfo(tableName, "zzz".getBytes());
+    RegionInfo secondLastRegion = getRegionInfo(tableName, "yyy".getBytes());
+    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), lastRegion);
+    holes = getHoles(janitor, tableName);
+    assertEquals(2, holes.size());
+    regionInfoRegionInfoPair = holes.get(1);
+    assertTrue(regionInfoRegionInfoPair.getFirst().getEncodedName()
+      .equals(secondLastRegion.getEncodedName()));
+    assertTrue(
+      regionInfoRegionInfoPair.getSecond().getTable().equals(RegionInfo.UNDEFINED.getTable()));
+  }
+
+  //Get Holes filter by table
+  private LinkedList<Pair<RegionInfo, RegionInfo>> getHoles(CatalogJanitor janitor,
+    TableName tableName) throws IOException {
+    janitor.scan();
+    CatalogJanitor.Report lastReport = janitor.getLastReport();
+    assertFalse(lastReport.isEmpty());
+    LinkedList<Pair<RegionInfo, RegionInfo>> holes = new LinkedList<>();
+    for (Pair<RegionInfo, RegionInfo> hole : lastReport.getHoles()) {
+      if (hole.getFirst().getTable().equals(tableName) || hole.getSecond().getTable()
+        .equals(tableName)) {
+        holes.add(hole);
+      }
+    }
+    return holes;
+  }
+
+  private RegionInfo getRegionInfo(TableName tableName, byte[] row) throws IOException {
+    RegionInfo regionInfo =
+      TEST_UTIL.getConnection().getRegionLocator(tableName).getRegionLocation(row).getRegion();
+    assertNotNull(regionInfo);
+    return regionInfo;
   }
 }
