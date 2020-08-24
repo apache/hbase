@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
@@ -2559,30 +2560,40 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   /**
-   * A 'raw' version of assign that does bulk and skirts Master state checks (assigns can be made
-   * during Master startup). For use by Hbck2.
+   * @throws ServiceException If no MasterProcedureExecutor
    */
-  @Override
-  public MasterProtos.AssignsResponse assigns(RpcController controller,
-      MasterProtos.AssignsRequest request)
-    throws ServiceException {
+  private void checkMasterProcedureExecutor() throws ServiceException {
     if (this.master.getMasterProcedureExecutor() == null) {
       throw new ServiceException("Master's ProcedureExecutor not initialized; retry later");
     }
+  }
+
+  /**
+   * A 'raw' version of assign that does bulk and can skirt Master state checks if override
+   * is set; i.e. assigns can be forced during Master startup or if RegionState is unclean.
+   * Used by HBCK2.
+   */
+  @Override
+  public MasterProtos.AssignsResponse assigns(RpcController controller,
+      MasterProtos.AssignsRequest request) throws ServiceException {
+    checkMasterProcedureExecutor();
     MasterProtos.AssignsResponse.Builder responseBuilder =
-        MasterProtos.AssignsResponse.newBuilder();
+      MasterProtos.AssignsResponse.newBuilder();
     try {
       boolean override = request.getOverride();
       LOG.info("{} assigns, override={}", master.getClientIdAuditPrefix(), override);
       for (HBaseProtos.RegionSpecifier rs: request.getRegionList()) {
+        long pid = Procedure.NO_PROC_ID;
         RegionInfo ri = getRegionInfo(rs);
         if (ri == null) {
           LOG.info("Unknown={}", rs);
-          responseBuilder.addPid(Procedure.NO_PROC_ID);
-          continue;
+        } else {
+          Procedure p = this.master.getAssignmentManager().createOneAssignProcedure(ri, override);
+          if (p != null) {
+            pid = this.master.getMasterProcedureExecutor().submitProcedure(p);
+          }
         }
-        responseBuilder.addPid(this.master.getMasterProcedureExecutor().submitProcedure(this.master
-            .getAssignmentManager().createOneAssignProcedure(ri, override)));
+        responseBuilder.addPid(pid);
       }
       return responseBuilder.build();
     } catch (IOException ioe) {
@@ -2591,30 +2602,31 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   /**
-   * A 'raw' version of unassign that does bulk and skirts Master state checks (unassigns can be
-   * made during Master startup). For use by Hbck2.
+   * A 'raw' version of unassign that does bulk and can skirt Master state checks if override
+   * is set; i.e. unassigns can be forced during Master startup or if RegionState is unclean.
+   * Used by HBCK2.
    */
   @Override
   public MasterProtos.UnassignsResponse unassigns(RpcController controller,
-      MasterProtos.UnassignsRequest request)
-      throws ServiceException {
-    if (this.master.getMasterProcedureExecutor() == null) {
-      throw new ServiceException("Master's ProcedureExecutor not initialized; retry later");
-    }
+      MasterProtos.UnassignsRequest request) throws ServiceException {
+    checkMasterProcedureExecutor();
     MasterProtos.UnassignsResponse.Builder responseBuilder =
         MasterProtos.UnassignsResponse.newBuilder();
     try {
       boolean override = request.getOverride();
       LOG.info("{} unassigns, override={}", master.getClientIdAuditPrefix(), override);
       for (HBaseProtos.RegionSpecifier rs: request.getRegionList()) {
+        long pid = Procedure.NO_PROC_ID;
         RegionInfo ri = getRegionInfo(rs);
         if (ri == null) {
           LOG.info("Unknown={}", rs);
-          responseBuilder.addPid(Procedure.NO_PROC_ID);
-          continue;
+        } else {
+          Procedure p = this.master.getAssignmentManager().createOneUnassignProcedure(ri, override);
+          if (p != null) {
+            pid = this.master.getMasterProcedureExecutor().submitProcedure(p);
+          }
         }
-        responseBuilder.addPid(this.master.getMasterProcedureExecutor().submitProcedure(this.master
-            .getAssignmentManager().createOneUnassignProcedure(ri, override)));
+        responseBuilder.addPid(pid);
       }
       return responseBuilder.build();
     } catch (IOException ioe) {
