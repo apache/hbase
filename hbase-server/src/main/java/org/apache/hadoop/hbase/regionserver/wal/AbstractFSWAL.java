@@ -895,6 +895,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         r.flushcache(entry.getValue(), false, FlushLifeCycleTracker.DUMMY);
       }
     }
+
     // move the log file to archive dir
     moveLogFileToArchiveDir(firstWALEntry.getKey());
     this.totalLogSize.addAndGet(-firstWALEntry.getValue().logSize);
