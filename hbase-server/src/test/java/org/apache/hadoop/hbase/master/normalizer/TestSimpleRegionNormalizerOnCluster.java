@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
@@ -29,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -155,11 +156,11 @@ public class TestSimpleRegionNormalizerOnCluster {
       assertEquals(
         tn1 + " should have split.",
         tn1RegionCount + 1,
-        MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tn1));
+        getRegionCount(tn1));
       assertEquals(
         tn2 + " should not have split.",
         tn2RegionCount,
-        MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tn2));
+        getRegionCount(tn2));
       waitForTableRegionCount(tn3, tn3RegionCount);
     } finally {
       dropIfExists(tn1);
@@ -195,13 +196,13 @@ public class TestSimpleRegionNormalizerOnCluster {
         assertEquals(
           tableName + " should not have split.",
           currentRegionCount,
-          MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
+          getRegionCount(tableName));
       } else {
         waitForTableSplit(tableName, currentRegionCount + 1);
         assertEquals(
           tableName + " should have split.",
           currentRegionCount + 1,
-          MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
+          getRegionCount(tableName));
       }
     } finally {
       dropIfExists(tableName);
@@ -219,7 +220,7 @@ public class TestSimpleRegionNormalizerOnCluster {
       assertEquals(
         tableName + " should have merged.",
         currentRegionCount - 1,
-        MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
+        getRegionCount(tableName));
     } finally {
       dropIfExists(tableName);
     }
@@ -248,7 +249,7 @@ public class TestSimpleRegionNormalizerOnCluster {
       assertEquals(
         tn1 + " should have split.",
         tn1RegionCount + 1,
-        MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tn1));
+        getRegionCount(tn1));
       waitForTableRegionCount(tn2, tn2RegionCount);
     } finally {
       dropIfExists(tn1);
@@ -277,7 +278,7 @@ public class TestSimpleRegionNormalizerOnCluster {
       assertEquals(
         tn1 + " should have split.",
         tn1RegionCount + 1,
-        MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tn1));
+        getRegionCount(tn1));
       waitForTableRegionCount(tn2, tn2RegionCount);
     } finally {
       dropIfExists(tn1);
@@ -306,7 +307,7 @@ public class TestSimpleRegionNormalizerOnCluster {
       assertEquals(
         tn1 + " should have split.",
         tn1RegionCount + 1,
-        MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tn1));
+        getRegionCount(tn1));
       waitForTableRegionCount(tn2, tn2RegionCount);
     } finally {
       dropIfExists(tn1);
@@ -347,7 +348,7 @@ public class TestSimpleRegionNormalizerOnCluster {
       @Override
       public boolean evaluate() throws IOException {
         final int currentRegionCount =
-          MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName);
+          getRegionCount( tableName);
         return currentRegionCount == targetRegionCount;
       }
     });
@@ -361,7 +362,7 @@ public class TestSimpleRegionNormalizerOnCluster {
       }
       @Override public boolean evaluate() throws IOException {
         final int currentRegionCount =
-          MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName);
+          getRegionCount( tableName);
         return currentRegionCount >= targetRegionCount;
       }
     });
@@ -375,7 +376,7 @@ public class TestSimpleRegionNormalizerOnCluster {
       }
       @Override public boolean evaluate() throws IOException {
         final int currentRegionCount =
-          MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName);
+          getRegionCount( tableName);
         return currentRegionCount <= targetRegionCount;
       }
     });
@@ -443,7 +444,7 @@ public class TestSimpleRegionNormalizerOnCluster {
       final boolean normalizerEnabled, final boolean isMergeEnabled)
     throws Exception {
     final List<HRegion> generatedRegions = generateTestData(tableName, 1, 1, 2, 3, 5);
-    assertEquals(5, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
+    assertEquals(5, getRegionCount(tableName));
     admin.flush(tableName).get();
 
     final TableDescriptor td = TableDescriptorBuilder
@@ -481,7 +482,7 @@ public class TestSimpleRegionNormalizerOnCluster {
   private static int createTableBegsMerge(final TableName tableName) throws Exception {
     // create 5 regions with sizes to trigger merge of small regions
     final List<HRegion> generatedRegions = generateTestData(tableName, 1, 1, 3, 3, 5);
-    assertEquals(5, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
+    assertEquals(5, getRegionCount(tableName));
     admin.flush(tableName).get();
 
     final TableDescriptor td = TableDescriptorBuilder
@@ -513,6 +514,12 @@ public class TestSimpleRegionNormalizerOnCluster {
         admin.disableTable(tableName).get();
       }
       admin.deleteTable(tableName).get();
+    }
+  }
+
+  private static int getRegionCount(TableName tableName) throws IOException {
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      return locator.getAllRegionLocations().size();
     }
   }
 }
