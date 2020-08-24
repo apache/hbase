@@ -16,5 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# test
 echo "Replaced by ./dev-support/create-release/do-release-docker.sh script."
 echo "See http://hbase.apache.org/book.html#do-release-docker.sh"
