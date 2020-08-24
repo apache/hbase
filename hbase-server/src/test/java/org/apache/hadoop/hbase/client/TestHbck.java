@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -54,9 +54,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -75,7 +73,7 @@ public class TestHbck {
   @Rule
   public TestName name = new TestName();
 
-  @Parameter
+  @SuppressWarnings("checkstyle:VisibilityModifier") @Parameter
   public boolean async;
 
   private static final TableName TABLE_NAME = TableName.valueOf(TestHbck.class.getSimpleName());
@@ -181,6 +179,26 @@ public class TestHbck {
       List<Long> pids =
         hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
       waitOnPids(pids);
+      // Rerun the unassign. Should fail for all Regions since they already unassigned; failed
+      // unassign will manifest as all pids being -1 (ever since HBASE-24885).
+      pids =
+        hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+      waitOnPids(pids);
+      for (long pid: pids) {
+        assertEquals(Procedure.NO_PROC_ID, pid);
+      }
+      // If we pass override, then we should be able to unassign EVEN THOUGH Regions already
+      // unassigned.... makes for a mess but operator might want to do this at an extreme when
+      // doing fixup of broke cluster.
+      pids =
+        hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()),
+          true);
+      waitOnPids(pids);
+      for (long pid: pids) {
+        assertNotEquals(Procedure.NO_PROC_ID, pid);
+      }
+      // Clean-up by bypassing all the unassigns we just made so tests can continue.
+      hbck.bypassProcedure(pids, 10000, true, true);
       for (RegionInfo ri : regions) {
         RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .getRegionStates().getRegionState(ri.getEncodedName());
@@ -190,6 +208,13 @@ public class TestHbck {
       pids =
         hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
       waitOnPids(pids);
+      // Rerun the assign. Should fail for all Regions since they already assigned; failed
+      // assign will manifest as all pids being -1 (ever since HBASE-24885).
+      pids =
+        hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+      for (long pid: pids) {
+        assertEquals(Procedure.NO_PROC_ID, pid);
+      }
       for (RegionInfo ri : regions) {
         RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .getRegionStates().getRegionState(ri.getEncodedName());
@@ -200,7 +225,7 @@ public class TestHbck {
       pids = hbck.assigns(
         Arrays.stream(new String[] { "a", "some rubbish name" }).collect(Collectors.toList()));
       for (long pid : pids) {
-        assertEquals(org.apache.hadoop.hbase.procedure2.Procedure.NO_PROC_ID, pid);
+        assertEquals(Procedure.NO_PROC_ID, pid);
       }
     }
   }
