@@ -190,10 +190,11 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     return lastRegionLocation;
   }
 
-  public void setProcedure(TransitRegionStateProcedure proc) {
+  public TransitRegionStateProcedure setProcedure(TransitRegionStateProcedure proc) {
     assert this.procedure == null;
     this.procedure = proc;
     ritMap.put(regionInfo, this);
+    return proc;
   }
 
   public void unsetProcedure(TransitRegionStateProcedure proc) {
