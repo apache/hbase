@@ -404,12 +404,12 @@ public class ReplicationSourceManager implements ReplicationListener {
         }
       }
       for (String queueId : previousQueueIds) {
-        ReplicationSourceInterface replicationSource = createSource(queueId, peer);
-        this.oldsources.add(replicationSource);
+        ReplicationSourceInterface recoveredReplicationSource = createSource(queueId, peer);
+        this.oldsources.add(recoveredReplicationSource);
         for (SortedSet<String> walsByGroup : walsByIdRecoveredQueues.get(queueId).values()) {
-          walsByGroup.forEach(wal -> src.enqueueLog(new Path(wal)));
+          walsByGroup.forEach(wal -> recoveredReplicationSource.enqueueLog(new Path(wal)));
         }
-        toStartup.add(replicationSource);
+        toStartup.add(recoveredReplicationSource);
       }
     }
     for (ReplicationSourceInterface replicationSource : toStartup) {
