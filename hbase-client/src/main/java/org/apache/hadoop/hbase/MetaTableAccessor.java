@@ -37,10 +37,8 @@ import java.util.SortedMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -48,7 +46,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -1322,33 +1319,6 @@ public class MetaTableAccessor {
         return false;
       }
       return super.visit(rowResult);
-    }
-  }
-
-  /**
-   * Count regions in <code>hbase:meta</code> for passed table.
-   * @param c Configuration object
-   * @param tableName table name to count regions for
-   * @return Count or regions in table <code>tableName</code>
-   */
-  public static int getRegionCount(final Configuration c, final TableName tableName)
-      throws IOException {
-    try (Connection connection = ConnectionFactory.createConnection(c)) {
-      return getRegionCount(connection, tableName);
-    }
-  }
-
-  /**
-   * Count regions in <code>hbase:meta</code> for passed table.
-   * @param connection Connection object
-   * @param tableName table name to count regions for
-   * @return Count or regions in table <code>tableName</code>
-   */
-  public static int getRegionCount(final Connection connection, final TableName tableName)
-      throws IOException {
-    try (RegionLocator locator = connection.getRegionLocator(tableName)) {
-      List<HRegionLocation> locations = locator.getAllRegionLocations();
-      return locations == null ? 0 : locations.size();
     }
   }
 

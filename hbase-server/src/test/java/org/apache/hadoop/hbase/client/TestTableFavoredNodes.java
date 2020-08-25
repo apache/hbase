@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -247,7 +246,7 @@ public class TestTableFavoredNodes {
     LOG.info("regionA: " + regionA.getEncodedName() + " with FN: " + fnm.getFavoredNodes(regionA));
     LOG.info("regionB: " + regionA.getEncodedName() + " with FN: " + fnm.getFavoredNodes(regionB));
 
-    int countOfRegions = MetaTableAccessor.getRegionCount(TEST_UTIL.getConfiguration(), tableName);
+    int countOfRegions = TEST_UTIL.getMiniHBaseCluster().getRegions(tableName).size();
     admin.mergeRegionsAsync(regionA.getEncodedNameAsBytes(),
         regionB.getEncodedNameAsBytes(), false).get(60, TimeUnit.SECONDS);
 
@@ -393,7 +392,9 @@ public class TestTableFavoredNodes {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return MetaTableAccessor.getRegionCount(TEST_UTIL.getConfiguration(), tableName) == numRegions;
+        try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+          return locator.getAllRegionLocations().size() == numRegions;
+        }
       }
     });
   }
