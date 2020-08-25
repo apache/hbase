@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_READ_TIMEOUT_KEY;
+import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
 import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMagic;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
@@ -25,6 +28,8 @@ import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
@@ -34,7 +39,12 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -43,8 +53,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.LocateMetaRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
 /**
@@ -59,9 +73,29 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   private final ZNodePaths znodePaths;
 
-  ZKConnectionRegistry(Configuration conf) {
+  private final AtomicReference<ClientMetaService.Interface> cachedStub = new AtomicReference<>();
+
+  private final AtomicReference<CompletableFuture<ClientMetaService.Interface>> stubMakeFuture =
+    new AtomicReference<>();
+
+  // RPC client used to talk to the masters.
+  private final RpcClient rpcClient;
+  private final RpcControllerFactory rpcControllerFactory;
+  private final long readRpcTimeoutNs;
+  private final User user;
+
+  ZKConnectionRegistry(Configuration conf) throws IOException {
     this.znodePaths = new ZNodePaths(conf);
     this.zk = new ReadOnlyZKClient(conf);
+    // XXX: we pass cluster id as null here since we do not have a cluster id yet, we have to fetch
+    // this through the connection registry...
+    // This is a problem as we will use the cluster id to determine the authentication method
+    rpcClient = RpcClientFactory.createClient(conf, null);
+    rpcControllerFactory = RpcControllerFactory.instantiate(conf);
+    long rpcTimeoutMs = conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT);
+    this.readRpcTimeoutNs =
+      TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY, rpcTimeoutMs));
+    this.user = User.getCurrent();
   }
 
   private interface Converter<T> {
@@ -229,8 +263,48 @@ class ZKConnectionRegistry implements ConnectionRegistry {
       });
   }
 
+  private CompletableFuture<ClientMetaService.Interface> getStub() {
+    return ConnectionUtils.getMasterStub(this, cachedStub, stubMakeFuture, rpcClient, user,
+      readRpcTimeoutNs, TimeUnit.NANOSECONDS, ClientMetaService::newStub, "ClientMetaService");
+  }
+
+  @Override
+  public CompletableFuture<RegionLocations> locateMeta(byte[] row, RegionLocateType locateType) {
+    CompletableFuture<RegionLocations> future = new CompletableFuture<>();
+    addListener(getStub(), (stub, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      HBaseRpcController controller = rpcControllerFactory.newController();
+      stub.locateMetaRegion(controller,
+        LocateMetaRegionRequest.newBuilder().setRow(ByteString.copyFrom(row))
+          .setLocateType(ProtobufUtil.toProtoRegionLocateType(locateType)).build(),
+        resp -> {
+          if (controller.failed()) {
+            IOException ex = controller.getFailed();
+            ConnectionUtils.tryClearMasterStubCache(ex, stub, ZKConnectionRegistry.this.cachedStub);
+            future.completeExceptionally(ex);
+            return;
+          }
+          RegionLocations locs = new RegionLocations(resp.getMetaLocationsList().stream()
+            .map(ProtobufUtil::toRegionLocation).collect(Collectors.toList()));
+          future.complete(locs);
+        });
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<List<HRegionLocation>>
+    getAllMetaRegionLocations(boolean excludeOfflinedSplitParents) {
+    return ConnectionUtils.getAllMetaRegionLocations(excludeOfflinedSplitParents, getStub(),
+      cachedStub, rpcControllerFactory, -1);
+  }
+
   @Override
   public void close() {
+    rpcClient.close();
     zk.close();
   }
 }
