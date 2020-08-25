@@ -26,11 +26,13 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -79,6 +81,7 @@ import org.apache.hadoop.hbase.ipc.RegionServerCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
@@ -175,6 +178,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -5087,6 +5091,66 @@ public class HBaseAdmin implements Admin {
       }
     });
 
+  }
+
+  @Override
+  public List<OnlineLogRecord> getSlowLogResponses(Set<ServerName> serverNames,
+      LogQueryFilter logQueryFilter) throws IOException {
+    if (CollectionUtils.isEmpty(serverNames)) {
+      return Collections.emptyList();
+    }
+    List<OnlineLogRecord> logRecords = new ArrayList<>();
+    for (ServerName serverName : serverNames) {
+      try {
+        logRecords.addAll(getSlowLogs(serverName, logQueryFilter));
+      } catch (ServiceException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return logRecords;
+  }
+
+  private List<OnlineLogRecord> getSlowLogs(ServerName serverName, LogQueryFilter logQueryFilter)
+      throws IOException, ServiceException {
+    AdminService.BlockingInterface admin = this.connection.getAdmin(serverName);
+    HBaseRpcController controller = rpcControllerFactory.newController();
+    if (logQueryFilter.getType() == null
+        || logQueryFilter.getType() == LogQueryFilter.Type.SLOW_LOG) {
+      AdminProtos.SlowLogResponses slowLogResponses = admin.getSlowLogResponses(controller,
+        RequestConverter.buildSlowLogResponseRequest(logQueryFilter));
+      return ProtobufUtil.toSlowLogPayloads(slowLogResponses);
+    } else {
+      AdminProtos.SlowLogResponses slowLogResponses = admin.getLargeLogResponses(controller,
+        RequestConverter.buildSlowLogResponseRequest(logQueryFilter));
+      return ProtobufUtil.toSlowLogPayloads(slowLogResponses);
+    }
+  }
+
+  @Override
+  public List<Boolean> clearSlowLogResponses(Set<ServerName> serverNames)
+    throws IOException {
+    if (CollectionUtils.isEmpty(serverNames)) {
+      return Collections.emptyList();
+    }
+    List<Boolean> logsCleared = new ArrayList<>();
+    for (ServerName serverName : serverNames) {
+      try {
+        logsCleared.add(clearSlowLogsResponses(serverName));
+      } catch (ServiceException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return logsCleared;
+  }
+
+  private Boolean clearSlowLogsResponses(final ServerName serverName)
+      throws IOException, ServiceException {
+    AdminService.BlockingInterface admin = this.connection.getAdmin(serverName);
+    HBaseRpcController controller = rpcControllerFactory.newController();
+    AdminProtos.ClearSlowLogResponses clearSlowLogResponses =
+      admin.clearSlowLogsResponses(controller,
+        RequestConverter.buildClearSlowLogResponseRequest());
+    return ProtobufUtil.toClearSlowLogPayload(clearSlowLogResponses);
   }
 
 }

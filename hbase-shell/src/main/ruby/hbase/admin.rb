@@ -1176,6 +1176,115 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Retrieve SlowLog Responses from RegionServers
+    def get_slowlog_responses(server_names, args)
+      unless server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of Array/String type")
+      end
+      if server_names == '*'
+        server_names = getServerNames([])
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list)
+      end
+      filter_params = get_filter_params(args)
+      filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::SLOW_LOG)
+      slow_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
+                                                      filter_params)
+      slow_log_responses_arr = []
+      for slow_log_response in slow_log_responses
+        slow_log_responses_arr << slow_log_response.toJsonPrettyPrint
+      end
+      puts 'Retrieved SlowLog Responses from RegionServers'
+      puts slow_log_responses_arr
+    end
+
+    def get_filter_params(args)
+      filter_params = org.apache.hadoop.hbase.client.LogQueryFilter.new
+      if args.key? 'REGION_NAME'
+        region_name = args['REGION_NAME']
+        filter_params.setRegionName(region_name)
+      end
+      if args.key? 'TABLE_NAME'
+        table_name = args['TABLE_NAME']
+        filter_params.setTableName(table_name)
+      end
+      if args.key? 'CLIENT_IP'
+        client_ip = args['CLIENT_IP']
+        filter_params.setClientAddress(client_ip)
+      end
+      if args.key? 'USER'
+        user = args['USER']
+        filter_params.setUserName(user)
+      end
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+        filter_params.setLimit(limit)
+      end
+      if args.key? 'FILTER_BY_OP'
+        filter_by_op = args['FILTER_BY_OP']
+        if filter_by_op != 'OR' && filter_by_op != 'AND'
+          raise(ArgumentError, "FILTER_BY_OP should be either OR / AND")
+        end
+        if filter_by_op == 'AND'
+          filter_params.setFilterByOperator(
+              org.apache.hadoop.hbase.client.LogQueryFilter::FilterByOperator::AND)
+        end
+      end
+      filter_params
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Retrieve LargeLog Responses from RegionServers
+    def get_largelog_responses(server_names, args)
+      unless server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of Array/String type")
+      end
+      if server_names == '*'
+        server_names = getServerNames([])
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list)
+      end
+      filter_params = get_filter_params(args)
+      filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::LARGE_LOG)
+      large_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
+                                                       filter_params)
+      large_log_responses_arr = []
+      for large_log_response in large_log_responses
+        large_log_responses_arr << large_log_response.toJsonPrettyPrint
+      end
+      puts 'Retrieved LargeLog Responses from RegionServers'
+      puts large_log_responses_arr
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Clears SlowLog Responses from RegionServers
+    def clear_slowlog_responses(server_names)
+      unless server_names.nil? || server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of correct type")
+      end
+      if server_names.nil?
+        server_names = getServerNames([])
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list)
+      end
+      clear_log_responses = @admin.clearSlowLogResponses(java.util.HashSet.new(server_names))
+      clear_log_success_count = 0
+      clear_log_responses.each do |response|
+        if response
+          clear_log_success_count += 1
+        end
+      end
+      puts 'Cleared Slowlog responses from ' \
+           "#{clear_log_success_count}/#{clear_log_responses.size} RegionServers"
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Get security capabilities
     def get_security_capabilities
       @admin.getSecurityCapabilities
@@ -1226,6 +1335,16 @@ module Hbase
     # clear dead region servers
     def list_deadservers
       @admin.listDeadServers.to_a
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Get list of server names
+    def to_server_names(server_names)
+      if server_names.is_a?(Array)
+        server_names
+      else
+        java.util.Arrays.asList(server_names)
+      end
     end
 
     #----------------------------------------------------------------------------------------------

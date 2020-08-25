@@ -397,6 +397,24 @@ public class TestReplicator extends TestReplicationBase {
           UpdateConfigurationRequest request) throws ServiceException {
         return delegate.updateConfiguration(controller, request);
       }
+
+      @Override
+      public SlowLogResponses getSlowLogResponses(RpcController controller,
+          SlowLogResponseRequest request) throws ServiceException {
+        return delegate.getSlowLogResponses(controller, request);
+      }
+
+      @Override
+      public SlowLogResponses getLargeLogResponses(RpcController controller,
+         SlowLogResponseRequest request) throws ServiceException {
+        return delegate.getLargeLogResponses(controller, request);
+      }
+
+      @Override
+      public ClearSlowLogResponses clearSlowLogsResponses(RpcController controller,
+          ClearSlowLogResponseRequest request) throws ServiceException {
+        return delegate.clearSlowLogsResponses(controller, request);
+      }
     }
 
     public class FailureInjectingReplicatorForTest extends ReplicatorForTest {

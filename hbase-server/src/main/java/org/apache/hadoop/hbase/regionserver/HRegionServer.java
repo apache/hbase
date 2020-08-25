@@ -125,6 +125,8 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -417,6 +419,8 @@ public class HRegionServer extends HasThread implements
   private final int operationTimeout;
   private final int shortOperationTimeout;
 
+  private SlowLogTableOpsChore slowLogTableOpsChore = null;
+
   private final RegionServerAccounting regionServerAccounting;
 
   // Cache configuration and block cache reference
@@ -529,6 +533,11 @@ public class HRegionServer extends HasThread implements
   private volatile ThroughputController flushThroughputController;
 
   /**
+   * Provide online slow log responses from ringbuffer
+   */
+  private NamedQueueRecorder namedQueueRecorder = null;
+
+  /**
    * Starts a HRegionServer at the default location.
    */
   public HRegionServer(Configuration conf) throws IOException, InterruptedException {
@@ -580,6 +589,15 @@ public class HRegionServer extends HasThread implements
 
     this.abortRequested = new AtomicBoolean(false);
     this.stopped = false;
+
+    if (!(this instanceof HMaster)) {
+      final boolean isOnlineLogProviderEnabled = conf.getBoolean(
+        HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
+        HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
+      if (isOnlineLogProviderEnabled) {
+        this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
+      }
+    }
 
     rpcServices = createRpcServices();
     if (this instanceof HMaster) {
@@ -926,6 +944,14 @@ public class HRegionServer extends HasThread implements
     this.compactionChecker = new CompactionChecker(this, this.compactionCheckFrequency, this);
     this.periodicFlusher = new PeriodicMemstoreFlusher(this.flushCheckFrequency, this);
     this.leases = new Leases(this.threadWakeFrequency);
+
+    final boolean isSlowLogTableEnabled = conf.getBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY,
+      HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY);
+    if (isSlowLogTableEnabled) {
+      // default chore duration: 10 min
+      final int duration = conf.getInt("hbase.slowlog.systable.chore.duration", 10 * 60 * 1000);
+      slowLogTableOpsChore = new SlowLogTableOpsChore(this, duration, this.namedQueueRecorder);
+    }
 
     // Create the thread to clean the moved regions list
     movedRegionsCleaner = MovedRegionsCleaner.create(this);
@@ -1436,6 +1462,15 @@ public class HRegionServer extends HasThread implements
     }
   }
 
+  /**
+   * get NamedQueue Provider to add different logs to ringbuffer
+   *
+   * @return NamedQueueRecorder
+   */
+  public NamedQueueRecorder getNamedQueueRecorder() {
+    return this.namedQueueRecorder;
+  }
+
   /*
    * Run init. Sets up wal and starts up all server threads.
    *
@@ -1904,6 +1939,9 @@ public class HRegionServer extends HasThread implements
     if (this.movedRegionsCleaner != null) {
       choreService.scheduleChore(movedRegionsCleaner);
     }
+    if (this.slowLogTableOpsChore != null) {
+      choreService.scheduleChore(slowLogTableOpsChore);
+    }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -2357,6 +2395,7 @@ public class HRegionServer extends HasThread implements
       choreService.cancelChore(executorStatusChore);
       choreService.cancelChore(storefileRefresher);
       choreService.cancelChore(movedRegionsCleaner);
+      choreService.cancelChore(slowLogTableOpsChore);
       // clean up the remaining scheduled chores (in case we missed out any)
       choreService.shutdown();
     }

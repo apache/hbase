@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
@@ -1681,5 +1682,28 @@ public interface Admin extends Abortable, Closeable {
    */
   boolean isSnapshotCleanupEnabled() throws IOException;
 
+  /**
+   * Retrieves online slow/large RPC logs from the provided list of
+   * RegionServers
+   *
+   * @param serverNames Server names to get slowlog responses from
+   * @param logQueryFilter filter to be used if provided (determines slow / large RPC logs)
+   * @return online slowlog response list
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+    final LogQueryFilter logQueryFilter) throws IOException;
+
+  /**
+   * Clears online slow/large RPC logs from the provided list of
+   * RegionServers
+   *
+   * @param serverNames Set of Server names to clean slowlog responses from
+   * @return List of booleans representing if online slowlog response buffer is cleaned
+   *   from each RegionServer
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
+    throws IOException;
 
 }

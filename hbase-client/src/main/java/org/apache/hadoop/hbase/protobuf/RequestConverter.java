@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionCoprocessorServiceExec;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -57,6 +60,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.MergeRegionsReques
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
@@ -1879,6 +1883,57 @@ public final class RequestConverter {
    */
   public static IsSnapshotCleanupEnabledRequest buildIsSnapshotCleanupEnabledRequest() {
     return IsSnapshotCleanupEnabledRequest.newBuilder().build();
+  }
+
+  /**
+   * Create a protocol buffer {@link SlowLogResponseRequest}
+   *
+   * @param logQueryFilter filter to use if provided
+   * @return a protocol buffer SlowLogResponseRequest
+   */
+  public static SlowLogResponseRequest buildSlowLogResponseRequest(
+    final LogQueryFilter logQueryFilter) {
+    SlowLogResponseRequest.Builder builder = SlowLogResponseRequest.newBuilder();
+    if (logQueryFilter == null) {
+      return builder.build();
+    }
+    final String clientAddress = logQueryFilter.getClientAddress();
+    if (StringUtils.isNotEmpty(clientAddress)) {
+      builder.setClientAddress(clientAddress);
+    }
+    final String regionName = logQueryFilter.getRegionName();
+    if (StringUtils.isNotEmpty(regionName)) {
+      builder.setRegionName(regionName);
+    }
+    final String tableName = logQueryFilter.getTableName();
+    if (StringUtils.isNotEmpty(tableName)) {
+      builder.setTableName(tableName);
+    }
+    final String userName = logQueryFilter.getUserName();
+    if (StringUtils.isNotEmpty(userName)) {
+      builder.setUserName(userName);
+    }
+    LogQueryFilter.FilterByOperator filterByOperator = logQueryFilter.getFilterByOperator();
+    if (LogQueryFilter.FilterByOperator.AND.equals(filterByOperator)) {
+      builder.setFilterByOperator(SlowLogResponseRequest.FilterByOperator.AND);
+    } else {
+      builder.setFilterByOperator(SlowLogResponseRequest.FilterByOperator.OR);
+    }
+    if (LogQueryFilter.Type.SLOW_LOG.equals(logQueryFilter.getType())) {
+      builder.setLogType(SlowLogResponseRequest.LogType.SLOW_LOG);
+    } else {
+      builder.setLogType(SlowLogResponseRequest.LogType.LARGE_LOG);
+    }
+    return builder.setLimit(logQueryFilter.getLimit()).build();
+  }
+
+  /**
+   * Create a protocol buffer {@link ClearSlowLogResponseRequest}
+   *
+   * @return a protocol buffer ClearSlowLogResponseRequest
+   */
+  public static ClearSlowLogResponseRequest buildClearSlowLogResponseRequest() {
+    return ClearSlowLogResponseRequest.newBuilder().build();
   }
 
 }

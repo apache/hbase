@@ -97,6 +97,8 @@ import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo;
@@ -168,6 +170,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       = new CallQueueTooBigException();
 
   private final boolean authorize;
+  private final boolean isOnlineLogProviderEnabled;
   private boolean isSecurityEnabled;
 
   public static final byte CURRENT_VERSION = 0;
@@ -308,6 +311,12 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    * TODO try to figure out a better way and remove reference from regionserver package later.
    */
   private RSRpcServices rsRpcServices;
+
+
+  /**
+   * Use to add online slowlog responses
+   */
+  private NamedQueueRecorder namedQueueRecorder;
 
   /**
    * Datastructure that holds all necessary to a method invocation and then afterward, carries
@@ -2254,6 +2263,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
     initReconfigurable(conf);
 
+    this.isOnlineLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
+      HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
     this.scheduler = scheduler;
     this.scheduler.init(new RpcSchedulerContext(this));
   }
@@ -2433,13 +2444,19 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       boolean tooSlow = (processingTime > warnResponseTime && warnResponseTime > -1);
       boolean tooLarge = (responseSize > warnResponseSize && warnResponseSize > -1);
       if (tooSlow || tooLarge) {
+        final String userName = call.getRequestUserName() != null ? call.getRequestUserName() : "";
         // when tagging, we let TooLarge trump TooSmall to keep output simple
         // note that large responses will often also be slow.
-        logResponse(param,
-            md.getName(), md.getName() + "(" + param.getClass().getName() + ")",
-            (tooLarge ? "TooLarge" : "TooSlow"),
-            status.getClient(), startTime, processingTime, qTime,
-            responseSize);
+        logResponse(param, md.getName(), md.getName() + "(" + param.getClass().getName() + ")",
+          tooLarge, tooSlow, status.getClient(), startTime, processingTime, qTime, responseSize);
+        if (this.namedQueueRecorder != null && this.isOnlineLogProviderEnabled) {
+          // send logs to ring buffer owned by slowLogRecorder
+          final String className =
+            server == null ? "" : server.getClass().getSimpleName();
+          this.namedQueueRecorder.addRecord(
+            new RpcLogDetails(md, param, status.getClient(), responseSize, className, tooSlow,
+              tooLarge, receiveTime, startTime, userName));
+        }
       }
       return new Pair<Message, CellScanner>(result, controller.cellScanner());
     } catch (Throwable e) {
@@ -2470,18 +2487,18 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    * @param param The parameters received in the call.
    * @param methodName The name of the method invoked
    * @param call The string representation of the call
-   * @param tag  The tag that will be used to indicate this event in the log.
-   * @param clientAddress   The address of the client who made this call.
-   * @param startTime       The time that the call was initiated, in ms.
-   * @param processingTime  The duration that the call took to run, in ms.
-   * @param qTime           The duration that the call spent on the queue
-   *                        prior to being initiated, in ms.
-   * @param responseSize    The size in bytes of the response buffer.
+   * @param tooLarge To indicate if the event is tooLarge
+   * @param tooSlow To indicate if the event is tooSlow
+   * @param clientAddress The address of the client who made this call.
+   * @param startTime The time that the call was initiated, in ms.
+   * @param processingTime The duration that the call took to run, in ms.
+   * @param qTime The duration that the call spent on the queue
+   *   prior to being initiated, in ms.
+   * @param responseSize The size in bytes of the response buffer.
    */
-  void logResponse(Message param, String methodName, String call, String tag,
-      String clientAddress, long startTime, int processingTime, int qTime,
-      long responseSize)
-          throws IOException {
+  void logResponse(Message param, String methodName, String call, boolean tooLarge, boolean tooSlow,
+      String clientAddress, long startTime, int processingTime, int qTime, long responseSize)
+      throws IOException {
     // base information that is reported regardless of type of call
     Map<String, Object> responseInfo = new HashMap<String, Object>();
     responseInfo.put("starttimems", startTime);
@@ -2534,6 +2551,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       responseInfo.put("multi.mutations", numMutations);
       responseInfo.put("multi.servicecalls", numServiceCalls);
     }
+    final String tag = (tooLarge && tooSlow) ? "TooLarge & TooSlow"
+      : (tooSlow ? "TooSlow" : "TooLarge");
     LOG.warn("(response" + tag + "): " + GSON.toJson(responseInfo));
   }
 
@@ -2881,4 +2900,10 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   public void setRsRpcServices(RSRpcServices rsRpcServices) {
     this.rsRpcServices = rsRpcServices;
   }
+
+  @Override
+  public void setNamedQueueRecorder(NamedQueueRecorder namedQueueRecorder) {
+    this.namedQueueRecorder = namedQueueRecorder;
+  }
+
 }

@@ -128,6 +128,7 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
+import org.apache.hadoop.hbase.master.slowlog.SlowLogMasterService;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -923,6 +924,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     status.setStatus("Starting quota manager");
     initQuotaManager();
+
+    final SlowLogMasterService slowLogMasterService = new SlowLogMasterService(conf, this);
+    slowLogMasterService.init();
 
     // assign the meta replicas
     Set<ServerName> EMPTY_SET = new HashSet<ServerName>();

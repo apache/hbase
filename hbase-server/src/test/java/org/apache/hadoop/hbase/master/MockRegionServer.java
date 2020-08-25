@@ -654,6 +654,22 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
     return null;
   }
 
+  @Override public AdminProtos.SlowLogResponses getSlowLogResponses(RpcController controller,
+    AdminProtos.SlowLogResponseRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override public AdminProtos.SlowLogResponses getLargeLogResponses(RpcController controller,
+    AdminProtos.SlowLogResponseRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public AdminProtos.ClearSlowLogResponses clearSlowLogsResponses(RpcController controller,
+    AdminProtos.ClearSlowLogResponseRequest request) throws ServiceException {
+    return null;
+  }
+
   @Override
   public HeapMemoryManager getHeapMemoryManager() {
     return null;
