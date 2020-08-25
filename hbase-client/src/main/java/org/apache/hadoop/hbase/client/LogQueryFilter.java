@@ -29,8 +29,8 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
- * Slow/Large Log Query Filter with all filter and limit parameters
- * Used by Admin API: getSlowLogResponses
+ * Slow/Large Log Query Filter with all filter parameters
+ * Extends generic LogRequest used by Admin API getLogEntries
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
