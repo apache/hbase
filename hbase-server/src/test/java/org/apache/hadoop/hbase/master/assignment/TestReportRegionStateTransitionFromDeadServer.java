@@ -129,7 +129,6 @@ public class TestReportRegionStateTransitionFromDeadServer {
 
     @Override
     protected ServerManager createServerManager(MasterServices master) throws IOException {
-      setupClusterConnection();
       return new ServerManagerForTest(master);
     }
   }
