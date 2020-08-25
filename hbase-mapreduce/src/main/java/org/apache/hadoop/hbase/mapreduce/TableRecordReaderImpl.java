@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.StringUtils;
@@ -272,16 +273,25 @@ public class TableRecordReaderImpl {
     if (context == null) {
       return;
     }
-    for (Map.Entry<String, Long> entry : scanMetrics.getMetricsMap().entrySet()) {
-      context.getCounter(HBASE_COUNTER_GROUP_NAME, entry.getKey()).increment(entry.getValue());
-    }
-    if (numScannerRestarts != 0L) {
-      context.getCounter(HBASE_COUNTER_GROUP_NAME, "NUM_SCANNER_RESTARTS")
-          .increment(numScannerRestarts);
-    }
-    if (numStale != 0L) {
-      context.getCounter(HBASE_COUNTER_GROUP_NAME, "NUM_SCAN_RESULTS_STALE").increment(numStale);
-    }
+
+      for (Map.Entry<String, Long> entry : scanMetrics.getMetricsMap().entrySet()) {
+        Counter counter = context.getCounter(HBASE_COUNTER_GROUP_NAME, entry.getKey());
+        if (counter != null) {
+          counter.increment(entry.getValue());
+        }
+      }
+      if (numScannerRestarts != 0L) {
+        Counter counter = context.getCounter(HBASE_COUNTER_GROUP_NAME, "NUM_SCANNER_RESTARTS");
+        if (counter != null) {
+          counter.increment(numScannerRestarts);
+        }
+      }
+      if (numStale != 0L) {
+        Counter counter = context.getCounter(HBASE_COUNTER_GROUP_NAME, "NUM_SCAN_RESULTS_STALE");
+        if (counter != null) {
+          counter.increment(numStale);
+        }
+      }
   }
 
   /**
