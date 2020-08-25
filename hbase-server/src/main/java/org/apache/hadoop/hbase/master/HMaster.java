@@ -237,6 +237,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
@@ -379,12 +380,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   // manager of assignment nodes in zookeeper
   private AssignmentManager assignmentManager;
 
-
   /**
    * Cache for the meta region replica's locations. Also tracks their changes to avoid stale
    * cache entries.
    */
-  private final MetaRegionLocationCache metaRegionLocationCache;
+  private volatile MetaLocationCache metaLocationCache;
 
   private RSGroupInfoManager rsGroupInfoManager;
 
@@ -600,13 +600,11 @@ public class HMaster extends HRegionServer implements MasterServices {
           getChoreService().scheduleChore(clusterStatusPublisherChore);
         }
       }
-
+      this.metaLocationCache = new MetaLocationCache(this);
       // Some unit tests don't need a cluster, so no zookeeper at all
       if (!conf.getBoolean("hbase.testing.nocluster", false)) {
-        this.metaRegionLocationCache = new MetaRegionLocationCache(this.zooKeeper);
         this.activeMasterManager = createActiveMasterManager(zooKeeper, serverName, this);
       } else {
-        this.metaRegionLocationCache = null;
         this.activeMasterManager = null;
       }
       cachedClusterId = new CachedClusterId(this, conf);
@@ -637,6 +635,25 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public void run() {
     try {
+      // we have to do this in a background thread as for a fresh new cluster, we need to become
+      // active master first to set the cluster id so we can initialize the cluster connection.
+      // for backup master, we need to use async cluster connection to connect to active master for
+      // fetching the content of root table, to serve the locate meta requests from client.
+      Threads.setDaemonThreadRunning(new Thread(() -> {
+        for (;;) {
+          try {
+            if (!Strings.isNullOrEmpty(ZKClusterId.readClusterIdZNode(zooKeeper))) {
+              setupClusterConnection();
+              break;
+            } else {
+              LOG.trace("cluster id is still null, waiting...");
+            }
+          } catch (Throwable t) {
+            LOG.warn("failed to initialize cluster connection, retrying...");
+          }
+          Threads.sleep(1000);
+        }
+      }), getName() + ":initClusterConnection");
       if (!conf.getBoolean("hbase.testing.nocluster", false)) {
         Threads.setDaemonThreadRunning(new Thread(() -> {
           try {
@@ -999,9 +1016,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   private void finishActiveMasterInitialization(MonitoredTask status) throws IOException,
           InterruptedException, KeeperException, ReplicationException {
-    /*
-     * We are active master now... go initialize components we need to run.
-     */
+    // We are active master now... go initialize components we need to run.
     status.setStatus("Initializing Master file system");
 
     this.masterActiveTime = System.currentTimeMillis();
@@ -1045,6 +1060,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     status.setStatus("Initialize ServerManager and schedule SCP for crash servers");
     // The below two managers must be created before loading procedures, as they will be used during
     // loading.
+    setupClusterConnection();
     this.serverManager = createServerManager(this);
     this.syncReplicationReplayWALManager = new SyncReplicationReplayWALManager(this);
     if (!conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
@@ -1056,6 +1072,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     masterRegion = MasterRegionFactory.create(this);
 
     tryMigrateRootTableFromZooKeeper();
+
+    // stop meta location cache, as now we do not need sync from active master any more.
+    metaLocationCache.stop("we are active master now");
+    metaLocationCache = null;
 
     createProcedureExecutor();
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType =
@@ -1418,18 +1438,12 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * <p>
    * Create a {@link ServerManager} instance.
-   * </p>
-   * <p>
+   * <p/>
    * Will be overridden in tests.
-   * </p>
    */
   @VisibleForTesting
   protected ServerManager createServerManager(final MasterServices master) throws IOException {
-    // We put this out here in a method so can do a Mockito.spy and stub it out
-    // w/ a mocked up ServerManager.
-    setupClusterConnection();
     return new ServerManager(master);
   }
 
@@ -2332,16 +2346,14 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void startActiveMasterManager(int infoPort) throws KeeperException {
     String backupZNode = ZNodePaths.joinZNode(
       zooKeeper.getZNodePaths().backupMasterAddressesZNode, serverName.toString());
-    /*
-    * Add a ZNode for ourselves in the backup master directory since we
-    * may not become the active master. If so, we want the actual active
-    * master to know we are backup masters, so that it won't assign
-    * regions to us if so configured.
-    *
-    * If we become the active master later, ActiveMasterManager will delete
-    * this node explicitly.  If we crash before then, ZooKeeper will delete
-    * this node for us since it is ephemeral.
-    */
+    /**
+     * Add a ZNode for ourselves in the backup master directory since we may not become the active
+     * master. If so, we want the actual active master to know we are backup masters, so that it
+     * won't assign regions to us if so configured.
+     * <p/>
+     * If we become the active master later, ActiveMasterManager will delete this node explicitly.
+     * If we crash before then, ZooKeeper will delete this node for us since it is ephemeral.
+     */
     LOG.info("Adding backup master ZNode " + backupZNode);
     if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName, infoPort)) {
       LOG.warn("Failed create of " + backupZNode + " by " + serverName);
@@ -3980,8 +3992,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  public MetaRegionLocationCache getMetaRegionLocationCache() {
-    return this.metaRegionLocationCache;
+  public MetaLocationCache getMetaLocationCache() {
+    return this.metaLocationCache;
   }
 
   @Override

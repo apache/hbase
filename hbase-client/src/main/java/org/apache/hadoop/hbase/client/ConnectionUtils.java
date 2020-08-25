@@ -28,6 +28,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -35,20 +37,26 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -59,6 +67,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.io.netty.util.Timer;
@@ -68,6 +77,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetAllMetaRegionLocationsRequest;
 
 /**
  * Utility used by client connections.
@@ -114,7 +125,7 @@ public final class ConnectionUtils {
    * @param log Used to log what we set in here.
    */
   public static void setServerSideHConnectionRetriesConfig(final Configuration c, final String sn,
-      final Logger log) {
+    final Logger log) {
     // TODO: Fix this. Not all connections from server side should have 10 times the retries.
     int hcRetries = c.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
@@ -194,11 +205,18 @@ public final class ConnectionUtils {
     return Bytes.equals(row, EMPTY_END_ROW);
   }
 
+  private static int nanosToMillis(long nanos) {
+    return toIntNoOverflow(TimeUnit.NANOSECONDS.toMillis(nanos));
+  }
+
+  private static int toIntNoOverflow(long value) {
+    return (int) Math.min(Integer.MAX_VALUE, value);
+  }
+
   static void resetController(HBaseRpcController controller, long timeoutNs, int priority) {
     controller.reset();
     if (timeoutNs >= 0) {
-      controller.setCallTimeout(
-        (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(timeoutNs)));
+      controller.setCallTimeout(nanosToMillis(timeoutNs));
     }
     controller.setPriority(priority);
   }
@@ -355,7 +373,7 @@ public final class ConnectionUtils {
   }
 
   static void updateResultsMetrics(ScanMetrics scanMetrics, Result[] rrs,
-      boolean isRegionServerRemote) {
+    boolean isRegionServerRemote) {
     if (scanMetrics == null || rrs == null || rrs.length == 0) {
       return;
     }
@@ -398,7 +416,7 @@ public final class ConnectionUtils {
    * increase the hedge read related metrics.
    */
   private static <T> void connect(CompletableFuture<T> srcFuture, CompletableFuture<T> dstFuture,
-      Optional<MetricsConnection> metrics) {
+    Optional<MetricsConnection> metrics) {
     addListener(srcFuture, (r, e) -> {
       if (e != null) {
         dstFuture.completeExceptionally(e);
@@ -417,8 +435,8 @@ public final class ConnectionUtils {
   }
 
   private static <T> void sendRequestsToSecondaryReplicas(
-      Function<Integer, CompletableFuture<T>> requestReplica, RegionLocations locs,
-      CompletableFuture<T> future, Optional<MetricsConnection> metrics) {
+    Function<Integer, CompletableFuture<T>> requestReplica, RegionLocations locs,
+    CompletableFuture<T> future, Optional<MetricsConnection> metrics) {
     if (future.isDone()) {
       // do not send requests to secondary replicas if the future is done, i.e, the primary request
       // has already been finished.
@@ -432,9 +450,9 @@ public final class ConnectionUtils {
   }
 
   static <T> CompletableFuture<T> timelineConsistentRead(AsyncRegionLocator locator,
-      TableName tableName, Query query, byte[] row, RegionLocateType locateType,
-      Function<Integer, CompletableFuture<T>> requestReplica, long rpcTimeoutNs,
-      long primaryCallTimeoutNs, Timer retryTimer, Optional<MetricsConnection> metrics) {
+    TableName tableName, Query query, byte[] row, RegionLocateType locateType,
+    Function<Integer, CompletableFuture<T>> requestReplica, long rpcTimeoutNs,
+    long primaryCallTimeoutNs, Timer retryTimer, Optional<MetricsConnection> metrics) {
     if (query.getConsistency() != Consistency.TIMELINE) {
       return requestReplica.apply(RegionReplicaUtil.DEFAULT_REPLICA_ID);
     }
@@ -521,52 +539,8 @@ public final class ConnectionUtils {
     }
   }
 
-  static <T> CompletableFuture<T> getOrFetch(AtomicReference<T> cacheRef,
-      AtomicReference<CompletableFuture<T>> futureRef, boolean reload,
-      Supplier<CompletableFuture<T>> fetch, Predicate<T> validator, String type) {
-    for (;;) {
-      if (!reload) {
-        T value = cacheRef.get();
-        if (value != null && validator.test(value)) {
-          return CompletableFuture.completedFuture(value);
-        }
-      }
-      LOG.trace("{} cache is null, try fetching from registry", type);
-      if (futureRef.compareAndSet(null, new CompletableFuture<>())) {
-        LOG.debug("Start fetching {} from registry", type);
-        CompletableFuture<T> future = futureRef.get();
-        addListener(fetch.get(), (value, error) -> {
-          if (error != null) {
-            LOG.debug("Failed to fetch {} from registry", type, error);
-            futureRef.getAndSet(null).completeExceptionally(error);
-            return;
-          }
-          LOG.debug("The fetched {} is {}", type, value);
-          // Here we update cache before reset future, so it is possible that someone can get a
-          // stale value. Consider this:
-          // 1. update cacheRef
-          // 2. someone clears the cache and relocates again
-          // 3. the futureRef is not null so the old future is used.
-          // 4. we clear futureRef and complete the future in it with the value being
-          // cleared in step 2.
-          // But we do not think it is a big deal as it rarely happens, and even if it happens, the
-          // caller will retry again later, no correctness problems.
-          cacheRef.set(value);
-          futureRef.set(null);
-          future.complete(value);
-        });
-        return future;
-      } else {
-        CompletableFuture<T> future = futureRef.get();
-        if (future != null) {
-          return future;
-        }
-      }
-    }
-  }
-
   static void updateStats(Optional<ServerStatisticTracker> optStats,
-      Optional<MetricsConnection> optMetrics, ServerName serverName, MultiResponse resp) {
+    Optional<MetricsConnection> optMetrics, ServerName serverName, MultiResponse resp) {
     if (!optStats.isPresent() && !optMetrics.isPresent()) {
       // ServerStatisticTracker and MetricsConnection are both not present, just return
       return;
@@ -594,13 +568,13 @@ public final class ConnectionUtils {
   @FunctionalInterface
   interface RpcCall<RESP, REQ> {
     void call(ClientService.Interface stub, HBaseRpcController controller, REQ req,
-        RpcCallback<RESP> done);
+      RpcCallback<RESP> done);
   }
 
   static <REQ, PREQ, PRESP, RESP> CompletableFuture<RESP> call(HBaseRpcController controller,
-      HRegionLocation loc, ClientService.Interface stub, REQ req,
-      Converter<PREQ, byte[], REQ> reqConvert, RpcCall<PRESP, PREQ> rpcCall,
-      Converter<RESP, HBaseRpcController, PRESP> respConverter) {
+    HRegionLocation loc, ClientService.Interface stub, REQ req,
+    Converter<PREQ, byte[], REQ> reqConvert, RpcCall<PRESP, PREQ> rpcCall,
+    Converter<RESP, HBaseRpcController, PRESP> respConverter) {
     CompletableFuture<RESP> future = new CompletableFuture<>();
     try {
       rpcCall.call(stub, controller, reqConvert.convert(loc.getRegion().getRegionName(), req),
@@ -651,5 +625,161 @@ public final class ConnectionUtils {
     } else {
       controller.setFailed(error.toString());
     }
+  }
+
+  public static RegionLocations locateRow(NavigableMap<byte[], RegionLocations> cache,
+    TableName tableName, byte[] row, int replicaId) {
+    Map.Entry<byte[], RegionLocations> entry = cache.floorEntry(row);
+    if (entry == null) {
+      return null;
+    }
+    RegionLocations locs = entry.getValue();
+    HRegionLocation loc = locs.getRegionLocation(replicaId);
+    if (loc == null) {
+      return null;
+    }
+    byte[] endKey = loc.getRegion().getEndKey();
+    if (isEmptyStopRow(endKey) || Bytes.compareTo(row, endKey) < 0) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Found {} in cache for {}, row='{}', locateType={}, replicaId={}", loc, tableName,
+          Bytes.toStringBinary(row), RegionLocateType.CURRENT, replicaId);
+      }
+      return locs;
+    } else {
+      return null;
+    }
+  }
+
+  public static RegionLocations locateRowBefore(NavigableMap<byte[], RegionLocations> cache,
+    TableName tableName, byte[] row, int replicaId) {
+    boolean isEmptyStopRow = isEmptyStopRow(row);
+    Map.Entry<byte[], RegionLocations> entry =
+      isEmptyStopRow ? cache.lastEntry() : cache.lowerEntry(row);
+    if (entry == null) {
+      return null;
+    }
+    RegionLocations locs = entry.getValue();
+    HRegionLocation loc = locs.getRegionLocation(replicaId);
+    if (loc == null) {
+      return null;
+    }
+    if (isEmptyStopRow(loc.getRegion().getEndKey()) ||
+      (!isEmptyStopRow && Bytes.compareTo(loc.getRegion().getEndKey(), row) >= 0)) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Found {} in cache for {}, row='{}', locateType={}, replicaId={}", loc, tableName,
+          Bytes.toStringBinary(row), RegionLocateType.BEFORE, replicaId);
+      }
+      return locs;
+    } else {
+      return null;
+    }
+  }
+
+  public static void tryClearMasterStubCache(IOException error,
+    ClientMetaService.Interface currentStub, AtomicReference<ClientMetaService.Interface> stub) {
+    if (ClientExceptionsUtil.isConnectionException(error) ||
+      error instanceof ServerNotRunningYetException) {
+      stub.compareAndSet(currentStub, null);
+    }
+  }
+
+  public static <T> CompletableFuture<T> getMasterStub(ConnectionRegistry registry,
+    AtomicReference<T> stub, AtomicReference<CompletableFuture<T>> stubMakeFuture,
+    RpcClient rpcClient, User user, long rpcTimeout, TimeUnit unit,
+    Function<RpcChannel, T> stubMaker, String type) {
+    return getOrFetch(stub, stubMakeFuture, () -> {
+      CompletableFuture<T> future = new CompletableFuture<>();
+      addListener(registry.getActiveMaster(), (addr, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+        } else if (addr == null) {
+          future.completeExceptionally(new MasterNotRunningException(
+            "ZooKeeper available but no active master location found"));
+        } else {
+          LOG.debug("The fetched master address is {}", addr);
+          try {
+            future.complete(stubMaker.apply(
+              rpcClient.createRpcChannel(addr, user, toIntNoOverflow(unit.toMillis(rpcTimeout)))));
+          } catch (IOException e) {
+            future.completeExceptionally(e);
+          }
+        }
+
+      });
+      return future;
+    }, type);
+  }
+
+  private static <T> CompletableFuture<T> getOrFetch(AtomicReference<T> cachedRef,
+    AtomicReference<CompletableFuture<T>> futureRef, Supplier<CompletableFuture<T>> fetch,
+    String type) {
+    for (;;) {
+      T cachedValue = cachedRef.get();
+      if (cachedValue != null) {
+        return CompletableFuture.completedFuture(cachedValue);
+      }
+      LOG.trace("{} cache is null, try fetching from registry", type);
+      if (futureRef.compareAndSet(null, new CompletableFuture<>())) {
+        LOG.debug("Start fetching {} from registry", type);
+        CompletableFuture<T> future = futureRef.get();
+        addListener(fetch.get(), (value, error) -> {
+          if (error != null) {
+            LOG.debug("Failed to fetch {} from registry", type, error);
+            futureRef.getAndSet(null).completeExceptionally(error);
+            return;
+          }
+          LOG.debug("The fetched {} is {}", type, value);
+          // Here we update cache before reset future, so it is possible that someone can get a
+          // stale value. Consider this:
+          // 1. update cacheRef
+          // 2. someone clears the cache and relocates again
+          // 3. the futureRef is not null so the old future is used.
+          // 4. we clear futureRef and complete the future in it with the value being
+          // cleared in step 2.
+          // But we do not think it is a big deal as it rarely happens, and even if it happens, the
+          // caller will retry again later, no correctness problems.
+          cachedRef.set(value);
+          futureRef.set(null);
+          future.complete(value);
+        });
+        return future;
+      } else {
+        CompletableFuture<T> future = futureRef.get();
+        if (future != null) {
+          return future;
+        }
+      }
+    }
+  }
+
+  public static CompletableFuture<List<HRegionLocation>> getAllMetaRegionLocations(
+    boolean excludeOfflinedSplitParents,
+    CompletableFuture<ClientMetaService.Interface> getStubFuture,
+    AtomicReference<ClientMetaService.Interface> stubRef,
+    RpcControllerFactory rpcControllerFactory, int callTimeoutMs) {
+    CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
+    addListener(getStubFuture, (stub, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      HBaseRpcController controller = rpcControllerFactory.newController();
+      if (callTimeoutMs > 0) {
+        controller.setCallTimeout(callTimeoutMs);
+      }
+      stub.getAllMetaRegionLocations(controller, GetAllMetaRegionLocationsRequest.newBuilder()
+        .setExcludeOfflinedSplitParents(excludeOfflinedSplitParents).build(), resp -> {
+          if (controller.failed()) {
+            IOException ex = controller.getFailed();
+            tryClearMasterStubCache(ex, stub, stubRef);
+            future.completeExceptionally(ex);
+            return;
+          }
+          List<HRegionLocation> locs = resp.getMetaLocationsList().stream()
+            .map(ProtobufUtil::toRegionLocation).collect(Collectors.toList());
+          future.complete(locs);
+        });
+    });
+    return future;
   }
 }
