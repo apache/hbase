@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
@@ -472,12 +473,12 @@ public class MergeTableRegionsProcedure
       return false;
     }
 
-    CatalogJanitor catalogJanitor = env.getMasterServices().getCatalogJanitor();
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
-    for (RegionInfo ri: this.regionsToMerge) {
-      if (!catalogJanitor.cleanMergeQualifier(ri)) {
+    for (RegionInfo ri : this.regionsToMerge) {
+      if (MetaTableAccessor.hasMergeRegions(env.getMasterServices().getConnection(),
+        ri.getRegionName())) {
         String msg = "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge) +
-            ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier " +
+          ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier " +
           "(if a 'merge column' in parent, it was recently merged but still has outstanding " +
           "references to its parents that must be cleared before it can participate in merge -- " +
           "major compact it to hurry clearing of its references)";
