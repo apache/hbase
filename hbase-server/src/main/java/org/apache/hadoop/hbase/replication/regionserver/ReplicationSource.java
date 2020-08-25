@@ -38,6 +38,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
+
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -385,8 +387,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
             createNewWALReader(walGroupId, queue, worker.getStartPosition());
         Threads.setDaemonThreadRunning(
             walReader, Thread.currentThread().getName()
-                + ".replicationSource.wal-reader." + walGroupId + "," + queueId,
-                (t,e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
+            + ".replicationSource.wal-reader." + walGroupId + "," + queueId,
+          (t,e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
         worker.setWALReader(walReader);
         worker.startup((t,e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
         return worker;
@@ -622,21 +624,21 @@ public class ReplicationSource implements ReplicationSourceInterface {
   public void startup() {
     //Flag that signalizes uncaught error happening while starting up the source
     // and a retry should be attempted
-    AtomicBoolean retryStartup = new AtomicBoolean(true);
+    MutableBoolean retryStartup = new MutableBoolean(true);
     this.sourceRunning = true;
     do {
-      if(retryStartup.get()) {
-        retryStartup.set(false);
+      if(retryStartup.booleanValue()) {
+        retryStartup.setValue(false);
         startupOngoing.set(true);
         // mark we are running now
         initThread = new Thread(this::initialize);
         Threads.setDaemonThreadRunning(initThread,
           Thread.currentThread().getName() + ".replicationSource," + this.queueId,
           (t,e) -> {
-          sourceRunning = false;
-          uncaughtException(t, e, null, null);
-          retryStartup.set(true);
-        });
+            sourceRunning = false;
+            uncaughtException(t, e, null, null);
+            retryStartup.setValue(true);
+          });
       }
     } while (this.startupOngoing.get());
   }

@@ -402,7 +402,7 @@ public class TestReplicationSource {
    */
   public static class FaultyReplicationEndpoint extends DoNothingReplicationEndpoint {
 
-  static int count = 0;
+    static int count = 0;
 
     @Override
     public synchronized UUID getPeerUUID() {
