@@ -66,6 +66,14 @@ public class ServerCrashProcedure
   private static final Logger LOG = LoggerFactory.getLogger(ServerCrashProcedure.class);
 
   /**
+   * Configuration parameter to retain the region assignment during ServerCrashProcedure, see
+   * HBASE-24900 for more details.
+   */
+  public static final String SCP_RETAIN_ASSIGNMENT = "hbase.scp.retain.assignment";
+  /** Default value of {@link #SCP_RETAIN_ASSIGNMENT} */
+  public static final boolean DEFAULT_SCP_RETAIN_ASSIGNMENT = false;
+
+  /**
    * Name of the crashed server to process.
    */
   private ServerName serverName;
@@ -488,6 +496,8 @@ public class ServerCrashProcedure
    */
   private void assignRegions(MasterProcedureEnv env, List<RegionInfo> regions) throws IOException {
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
+    boolean retainAssignment = env.getMasterConfiguration().getBoolean(SCP_RETAIN_ASSIGNMENT,
+      DEFAULT_SCP_RETAIN_ASSIGNMENT);
     for (RegionInfo region : regions) {
       RegionStateNode regionNode = am.getRegionStates().getOrCreateRegionStateNode(region);
       regionNode.lock();
@@ -514,7 +524,8 @@ public class ServerCrashProcedure
         }
         if (regionNode.getProcedure() != null) {
           LOG.info("{} found RIT {}; {}", this, regionNode.getProcedure(), regionNode);
-          regionNode.getProcedure().serverCrashed(env, regionNode, getServerName());
+          regionNode.getProcedure().serverCrashed(env, regionNode, getServerName(),
+            !retainAssignment);
           continue;
         }
         if (env.getMasterServices().getTableStateManager()
@@ -533,9 +544,8 @@ public class ServerCrashProcedure
           LOG.warn("Found table disabled for region {}, procDetails: {}", regionNode, this);
           continue;
         }
-        // force to assign to a new candidate server, see HBASE-23035 for more details.
         TransitRegionStateProcedure proc =
-          TransitRegionStateProcedure.assign(env, region, true, null);
+            TransitRegionStateProcedure.assign(env, region, !retainAssignment, null);
         regionNode.setProcedure(proc);
         addChildProcedure(proc);
       } finally {

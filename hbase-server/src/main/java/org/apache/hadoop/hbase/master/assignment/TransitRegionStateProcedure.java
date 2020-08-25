@@ -416,13 +416,8 @@ public class TransitRegionStateProcedure
 
   // Should be called with RegionStateNode locked
   public void serverCrashed(MasterProcedureEnv env, RegionStateNode regionNode,
-      ServerName serverName) throws IOException {
-    // force to assign to a new candidate server
-    // AssignmentManager#regionClosedAbnormally will set region location to null
-    // TODO: the forceNewPlan flag not be persistent so if master crash then the flag will be lost.
-    // But assign to old server is not big deal because it not effect correctness.
-    // See HBASE-23035 for more details.
-    forceNewPlan = true;
+      ServerName serverName, boolean forceNewPlan) throws IOException {
+    this.forceNewPlan = forceNewPlan;
     if (remoteProc != null) {
       // this means we are waiting for the sub procedure, so wake it up
       remoteProc.serverCrashed(env, regionNode, serverName);
