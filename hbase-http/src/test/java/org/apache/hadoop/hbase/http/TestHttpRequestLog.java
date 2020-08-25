@@ -23,11 +23,12 @@ import static org.junit.Assert.assertNotNull;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.eclipse.jetty.server.RequestLog;
-import org.eclipse.jetty.server.Slf4jRequestLog;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Slf4jRequestLog;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestHttpRequestLog {
