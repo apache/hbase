@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -47,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -731,7 +731,7 @@ public class TableMapReduceUtil {
     job.setOutputValueClass(Writable.class);
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
-      int regions = MetaTableAccessor.getRegionCount(conf, TableName.valueOf(table));
+      int regions = getRegionCount(conf, TableName.valueOf(table));
       if (job.getNumReduceTasks() > regions) {
         job.setNumReduceTasks(regions);
       }
@@ -754,12 +754,11 @@ public class TableMapReduceUtil {
    * @param job  The current job to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public static void limitNumReduceTasks(String table, Job job)
-  throws IOException {
-    int regions =
-      MetaTableAccessor.getRegionCount(job.getConfiguration(), TableName.valueOf(table));
-    if (job.getNumReduceTasks() > regions)
+  public static void limitNumReduceTasks(String table, Job job) throws IOException {
+    int regions = getRegionCount(job.getConfiguration(), TableName.valueOf(table));
+    if (job.getNumReduceTasks() > regions) {
       job.setNumReduceTasks(regions);
+    }
   }
 
   /**
@@ -770,10 +769,8 @@ public class TableMapReduceUtil {
    * @param job  The current job to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public static void setNumReduceTasks(String table, Job job)
-  throws IOException {
-    job.setNumReduceTasks(MetaTableAccessor.getRegionCount(job.getConfiguration(),
-       TableName.valueOf(table)));
+  public static void setNumReduceTasks(String table, Job job) throws IOException {
+    job.setNumReduceTasks(getRegionCount(job.getConfiguration(), TableName.valueOf(table)));
   }
 
   /**
@@ -1056,5 +1053,12 @@ public class TableMapReduceUtil {
     }
 
     return ret;
+  }
+
+  private static int getRegionCount(Configuration conf, TableName tableName) throws IOException {
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+      RegionLocator locator = conn.getRegionLocator(tableName)) {
+      return locator.getAllRegionLocations().size();
+    }
   }
 }
