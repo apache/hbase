@@ -971,6 +971,45 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-jetty</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.eclipse.jetty:**</exclude>
+                  </excludes>
+                  <message>
+                    Use shaded jetty instead
+                  </message>
+                  <searchTransitive>false</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-jersey</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>>org.glassfish.jersey.containers:**</exclude>
+                    <exclude>>org.glassfish.jersey.core:**</exclude>
+                  </excludes>
+                  <message>
+                    Use shaded jersey instead
+                  </message>
+                  <searchTransitive>false</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <!-- must check after LICENSE is built at 'generate-resources' -->
             <phase>process-resources</phase>
@@ -1082,6 +1121,22 @@
                   <reason>Do not use htrace v3</reason>
                   <bannedImports>
                     <bannedImport>org.htrace.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Use shaded jetty in hbase-thirdparty</reason>
+                  <bannedImports>
+                    <bannedImport>org.eclipse.jetty.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Use shaded jersey in hbase-thirdparty</reason>
+                  <bannedImports>
+                    <bannedImport>org.glassfish.jersey.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
               </rules>
@@ -1370,12 +1425,9 @@
     <metrics-core.version>3.2.6</metrics-core.version>
     <jackson.version>2.10.1</jackson.version>
     <jackson.databind.version>2.10.1</jackson.databind.version>
-    <jaxb-api.version>2.2.12</jaxb-api.version>
-    <jetty.version>9.3.28.v20191105</jetty.version>
+    <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
-    <wx.rs.api.version>2.0.1</wx.rs.api.version>
-    <!-- Jersey 2.26 requires jetty 9.4 which breaks hadoop. Tread lightly. -->
-    <jersey.version>2.25.1</jersey.version>
+    <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
     <glassfish.el.version>3.0.1-b08</glassfish.el.version>
     <jruby.version>9.1.17.0</jruby.version>
@@ -1429,7 +1481,7 @@
     <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>3.3.0</hbase-thirdparty.version>
+    <hbase-thirdparty.version>3.4.0</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -1490,8 +1542,8 @@
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine}</argLine>
     <jacoco.version>0.7.5.201505241946</jacoco.version>
-    <extra.enforcer.version>1.0-beta-9</extra.enforcer.version>
-    <enforcer.version>3.0.0-M2</enforcer.version>
+    <extra.enforcer.version>1.3</extra.enforcer.version>
+    <enforcer.version>3.0.0-M3</enforcer.version>
     <restrict-imports.enforcer.version>0.14.0</restrict-imports.enforcer.version>
     <!-- Location of test resources -->
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
@@ -2014,75 +2066,9 @@
         <version>1.2</version>
       </dependency>
       <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-server</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-servlet</artifactId>
-        <version>${jetty.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>servlet-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-security</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-http</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-util</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-io</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-jmx</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-webapp</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-util-ajax</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <version>${external.protobuf.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jersey.containers</groupId>
-        <artifactId>jersey-container-servlet-core</artifactId>
-        <version>${jersey.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jersey.core</groupId>
-        <artifactId>jersey-client</artifactId>
-        <version>${jersey.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jersey.core</groupId>
-        <artifactId>jersey-server</artifactId>
-        <version>${jersey.version}</version>
       </dependency>
       <dependency>
         <!--This lib has JspC in it. Needed precompiling jsps in hbase-rest, etc.-->
@@ -2247,6 +2233,16 @@
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-protobuf</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-jetty</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-jersey</artifactId>
         <version>${hbase-thirdparty.version}</version>
       </dependency>
       <dependency>
