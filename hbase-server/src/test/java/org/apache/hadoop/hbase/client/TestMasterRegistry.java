@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -32,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -104,31 +102,6 @@ public class TestMasterRegistry {
         } else {
           assertEquals(1000 + (2 * i), sn.getPort());
         }
-      }
-    }
-  }
-
-  @Test
-  public void testRegistryRPCs() throws Exception {
-    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();
-    final int size =
-      activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get().size();
-    for (int numHedgedReqs = 1; numHedgedReqs <= size; numHedgedReqs++) {
-      conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
-      try (MasterRegistry registry = new MasterRegistry(conf)) {
-        // Add wait on all replicas being assigned before proceeding w/ test. Failed on occasion
-        // because not all replicas had made it up before test started.
-        RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL);
-        assertEquals(registry.getClusterId().get(), activeMaster.getClusterId());
-        assertEquals(registry.getActiveMaster().get(), activeMaster.getServerName());
-        List<HRegionLocation> metaLocations =
-          Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
-        List<HRegionLocation> actualMetaLocations =
-          activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get();
-        Collections.sort(metaLocations);
-        Collections.sort(actualMetaLocations);
-        assertEquals(actualMetaLocations, metaLocations);
       }
     }
   }
