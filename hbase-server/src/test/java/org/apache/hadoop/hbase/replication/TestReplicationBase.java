@@ -229,10 +229,10 @@ public class TestReplicationBase {
     Connection connection1 = ConnectionFactory.createConnection(CONF1);
     Connection connection2 = ConnectionFactory.createConnection(CONF2);
     try (Admin admin1 = connection1.getAdmin()) {
-      admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin1.createTable(table, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 3);
     }
     try (Admin admin2 = connection2.getAdmin()) {
-      admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      admin2.createTable(table, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 3);
     }
     UTIL1.waitUntilAllRegionsAssigned(tableName);
     UTIL2.waitUntilAllRegionsAssigned(tableName);
