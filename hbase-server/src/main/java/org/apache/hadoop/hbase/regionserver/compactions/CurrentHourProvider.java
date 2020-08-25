@@ -39,7 +39,7 @@ public class CurrentHourProvider {
   }
 
   @VisibleForTesting
-  protected static Tick nextTick() {
+  static Tick nextTick() {
     Calendar calendar = new GregorianCalendar();
     calendar.setTimeInMillis(EnvironmentEdgeManager.currentTime());
     int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
@@ -55,7 +55,7 @@ public class CurrentHourProvider {
   }
 
   @VisibleForTesting
-  protected static volatile Tick tick = nextTick();
+  static volatile Tick tick = nextTick();
 
   public static int getCurrentHour() {
     Tick tick = CurrentHourProvider.tick;
