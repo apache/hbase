@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -61,13 +62,13 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * original return value is useless.
    */
   CompletableFuture<Long> replay(TableName tableName, byte[] encodedRegionName, byte[] row,
-      List<Entry> entries, int replicaId, int numRetries, long operationTimeoutNs);
+    List<Entry> entries, int replicaId, int numRetries, long operationTimeoutNs);
 
   /**
    * Return all the replicas for a region. Used for region replica replication.
    */
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
-      boolean reload);
+    boolean reload);
 
   /**
    * Return the token for this bulk load.
@@ -98,4 +99,9 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * Clean up after finishing bulk load, no matter success or not.
    */
   CompletableFuture<Void> cleanupBulkLoad(TableName tableName, String bulkToken);
+
+  /**
+   * Fetch all meta region locations from active master, used by backup masters for caching.
+   */
+  CompletableFuture<List<HRegionLocation>> getAllMetaRegionLocations(int callTimeoutMs);
 }

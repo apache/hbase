@@ -18,21 +18,36 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Registry for meta information needed for connection setup to a HBase cluster. Implementations
- * hold cluster information such as this cluster's id, location of hbase:meta, etc..
- * Internal use only.
+ * hold cluster information such as this cluster's id, location of hbase:meta, etc.. Internal use
+ * only.
  */
 @InterfaceAudience.Private
 interface ConnectionRegistry extends Closeable {
 
   /**
+   * Get location of meta region for the given {@code row}.
+   */
+  CompletableFuture<RegionLocations> locateMeta(byte[] row, RegionLocateType locateType);
+
+  /**
+   * Get all meta region locations, including the location of secondary regions.
+   * @param excludeOfflinedSplitParents whether to include split parent.
+   */
+  CompletableFuture<List<HRegionLocation>>
+    getAllMetaRegionLocations(boolean excludeOfflinedSplitParents);
+
+  /**
    * Should only be called once.
-   * <p>
+   * <p/>
    * The upper layer should store this value somewhere as it will not be change any more.
    */
   CompletableFuture<String> getClusterId();

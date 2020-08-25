@@ -20,8 +20,11 @@ package org.apache.hadoop.hbase.client;
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -43,6 +46,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBul
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
 
 /**
  * The implementation of AsyncClusterConnection.
@@ -50,8 +54,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
 @InterfaceAudience.Private
 class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClusterConnection {
 
+  private final AtomicReference<ClientMetaService.Interface> cachedClientMetaStub =
+    new AtomicReference<>();
+
+  private final AtomicReference<CompletableFuture<ClientMetaService.Interface>>
+    clientMetaStubMakeFuture = new AtomicReference<>();
+
   public AsyncClusterConnectionImpl(Configuration conf, ConnectionRegistry registry,
-      String clusterId, SocketAddress localAddress, User user) {
+    String clusterId, SocketAddress localAddress, User user) {
     super(conf, registry, clusterId, localAddress, user);
   }
 
@@ -72,14 +82,14 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
 
   @Override
   public CompletableFuture<FlushRegionResponse> flush(byte[] regionName,
-      boolean writeFlushWALMarker) {
+    boolean writeFlushWALMarker) {
     RawAsyncHBaseAdmin admin = (RawAsyncHBaseAdmin) getAdmin();
     return admin.flushRegionInternal(regionName, null, writeFlushWALMarker);
   }
 
   @Override
   public CompletableFuture<Long> replay(TableName tableName, byte[] encodedRegionName, byte[] row,
-      List<Entry> entries, int replicaId, int retries, long operationTimeoutNs) {
+    List<Entry> entries, int replicaId, int retries, long operationTimeoutNs) {
     return new AsyncRegionReplicaReplayRetryingCaller(RETRY_TIMER, this,
       ConnectionUtils.retries2Attempts(retries), operationTimeoutNs, tableName, encodedRegionName,
       row, entries, replicaId).call();
@@ -87,7 +97,7 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
 
   @Override
   public CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
-      boolean reload) {
+    boolean reload) {
     return getLocator().getRegionLocations(tableName, row, RegionLocateType.CURRENT, reload, -1L);
   }
 
@@ -131,5 +141,17 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
             return CleanupBulkLoadRequest.newBuilder().setRegion(region).setBulkToken(bt).build();
           }, (s, c, req, done) -> s.cleanupBulkLoad(c, req, done), (c, resp) -> null))
       .call();
+  }
+
+  private CompletableFuture<ClientMetaService.Interface> getClientMetaStub() {
+    return ConnectionUtils.getMasterStub(registry, cachedClientMetaStub, clientMetaStubMakeFuture,
+      rpcClient, user, rpcTimeout, TimeUnit.MILLISECONDS, ClientMetaService::newStub,
+      "ClientMetaService");
+  }
+
+  @Override
+  public CompletableFuture<List<HRegionLocation>> getAllMetaRegionLocations(int callTimeoutMs) {
+    return ConnectionUtils.getAllMetaRegionLocations(false, getClientMetaStub(),
+      cachedClientMetaStub, rpcControllerFactory, callTimeoutMs);
   }
 }
