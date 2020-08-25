@@ -29,16 +29,17 @@ import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.RequestLog;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.Slf4jRequestLog;
-import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.util.RegexSet;
 import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Request;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Slf4jRequestLog;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.AbstractHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.RegexSet;
 
 /**
  * A {@link org.junit.Rule} that manages a simple http server. The caller registers request
