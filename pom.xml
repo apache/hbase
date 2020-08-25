@@ -1617,7 +1617,7 @@
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
     <glassfish.el.version>3.0.1-b08</glassfish.el.version>
-    <jruby.version>9.1.17.0</jruby.version>
+    <jruby.version>9.2.13.0</jruby.version>
     <junit.version>4.13</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
     <htrace.version>4.2.0-incubating</htrace.version>
@@ -1633,8 +1633,8 @@
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.3.8</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
-    <joni.version>2.1.11</joni.version>
-    <jcodings.version>1.0.18</jcodings.version>
+    <joni.version>2.1.31</joni.version>
+    <jcodings.version>1.0.55</jcodings.version>
     <spy.version>2.12.2</spy.version>
     <bouncycastle.version>1.60</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
