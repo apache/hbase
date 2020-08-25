@@ -464,15 +464,16 @@ public final class ReplicationPeerConfigUtil {
   /**
    * Helper method to add base peer configs from HBase Configuration to ReplicationPeerConfig
    * @param conf Configuration
-   * @return true if new configurations was added.
+   * @return ReplicationPeerConfig if peer configurations are updated else null.
    */
   public static ReplicationPeerConfig addBasePeerConfigsIfNotPresent(Configuration conf,
     ReplicationPeerConfig receivedPeerConfig){
 
+    boolean isPeerConfigChanged = false;
+    String defaultPeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG,null);
+
     ReplicationPeerConfigBuilder copiedPeerConfigBuilder = ReplicationPeerConfig.
       newBuilder(receivedPeerConfig);
-    String defaultPeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG);
-
     Map<String,String> peerConfigurations = receivedPeerConfig.getConfiguration();
 
     if (defaultPeerConfigs != null && defaultPeerConfigs.length() != 0) {
@@ -480,6 +481,7 @@ public final class ReplicationPeerConfigUtil {
 
       for (String defaultPeerConfig :  defaultPeerConfigList) {
         String[] configSplit = defaultPeerConfig.split("=");
+
         if (configSplit != null && configSplit.length == 2) {
           String configName = configSplit[0];
           String configValue = configSplit[1];
@@ -489,11 +491,13 @@ public final class ReplicationPeerConfigUtil {
           if (!peerConfigurations.containsKey(configName) ||
             !peerConfigurations.get(configName).equalsIgnoreCase(configValue)) {
             copiedPeerConfigBuilder.putConfiguration(configName,configValue);
+            isPeerConfigChanged = true;
           }
         }
       }
     }
-    return copiedPeerConfigBuilder.build();
+
+    return isPeerConfigChanged ? copiedPeerConfigBuilder.build() : null;
   }
 
   public static ReplicationPeerConfig appendExcludeTableCFsToReplicationPeerConfig(

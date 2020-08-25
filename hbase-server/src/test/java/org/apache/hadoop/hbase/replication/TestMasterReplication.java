@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -438,6 +439,29 @@ public class TestMasterReplication {
     } finally {
       close(htables);
       shutDownMiniClusters();
+    }
+  }
+
+  /**
+   * Tests that base replication peer configs are applied on peer creation.
+   *
+   */
+  @Test
+  public void testBasePeerConfigsAppliedOnPeerCreation()
+    throws Exception {
+    LOG.info("testBasePeerConfigsAppliedOnPeerCreation");
+    String customPeerConfigKey = "hbase.xxx.custom_config";
+    String customPeerConfigValue = "test";
+    try {
+      baseConfiguration.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
+        customPeerConfigKey.concat("=").concat(customPeerConfigValue));
+      startMiniClusters(2);
+      addPeer("1", 0, 1);
+      ReplicationPeerConfig peerConfig = utilities[0].getAdmin().getReplicationPeerConfig("1");
+      Assert.assertEquals(customPeerConfigValue, peerConfig.getConfiguration().get(customPeerConfigKey));
+    }finally {
+      shutDownMiniClusters();
+      baseConfiguration.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
     }
   }
 

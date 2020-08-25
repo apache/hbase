@@ -548,8 +548,18 @@ public class ReplicationPeerManager {
     ReplicationPeerStorage peerStorage =
       ReplicationStorageFactory.getReplicationPeerStorage(zk, conf);
     ConcurrentMap<String, ReplicationPeerDescription> peers = new ConcurrentHashMap<>();
+
     for (String peerId : peerStorage.listPeerIds()) {
       ReplicationPeerConfig peerConfig = peerStorage.getPeerConfig(peerId);
+
+      ReplicationPeerConfig updatedPeerConfig = ReplicationPeerConfigUtil.
+        addBasePeerConfigsIfNotPresent(conf,peerConfig);
+
+      if (updatedPeerConfig != null) {
+        peerStorage.updatePeerConfig(peerId,updatedPeerConfig);
+        peerConfig = updatedPeerConfig;
+      }
+
       boolean enabled = peerStorage.isPeerEnabled(peerId);
       SyncReplicationState state = peerStorage.getPeerSyncReplicationState(peerId);
       peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, peerConfig, state));

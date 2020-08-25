@@ -23,7 +23,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -146,11 +145,7 @@ public class ReplicationPeers {
     SyncReplicationState newSyncReplicationState =
       peerStorage.getPeerNewSyncReplicationState(peerId);
 
-    ReplicationPeerConfig updatedPeerConfig = ReplicationPeerConfigUtil.
-      addBasePeerConfigsIfNotPresent(this.conf, peerConfig);
-    peerStorage.updatePeerConfig(peerId,updatedPeerConfig);
-
     return new ReplicationPeerImpl(ReplicationUtils.getPeerClusterConfiguration(peerConfig, conf),
-      peerId, updatedPeerConfig, enabled, syncReplicationState, newSyncReplicationState);
+      peerId, peerConfig, enabled, syncReplicationState, newSyncReplicationState);
   }
 }
