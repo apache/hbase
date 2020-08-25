@@ -2121,6 +2121,60 @@ All the settings that apply to normal compactions (see <<compaction.configuratio
 The exceptions are the minimum and maximum number of files, which are set to higher values by default because the files in stripes are smaller.
 To control these for stripe compactions, use `hbase.store.stripe.compaction.minFiles` and `hbase.store.stripe.compaction.maxFiles`, rather than `hbase.hstore.compaction.min` and `hbase.hstore.compaction.max`.
 
+[[ops.fifo]]
+===== FIFO Compaction
+
+FIFO compaction policy selects only files which have all cells expired. The column family *MUST* have non-default TTL.
+Essentially, FIFO compactor only collects expired store files.
+
+Because we don't do any real compaction, we do not use CPU and IO (disk and network) and evict hot data from a block cache. 
+As a result, both RW throughput and latency can be improved.
+
+[[ops.fifo.when]]
+===== When To Use FIFO Compaction
+
+Consider using FIFO Compaction when your use case is
+
+* Very high volume raw data which has low TTL and which is the source of another data (after additional processing).
+* Data which can be kept entirely in a a block cache (RAM/SSD). No need for compaction of a raw data at all.
+
+Do not use FIFO compaction when
+
+* Table/ColumnFamily has MIN_VERSION > 0
+* Table/ColumnFamily has TTL = FOREVER (HColumnDescriptor.DEFAULT_TTL)
+
+[[ops.fifo.enable]]
+====== Enabling FIFO Compaction
+
+For Table:
+
+[source,java]
+----
+HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+      FIFOCompactionPolicy.class.getName());
+----
+
+For Column Family:
+
+[source,java]
+----
+HColumnDescriptor desc = new HColumnDescriptor(family);
+    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+      FIFOCompactionPolicy.class.getName());
+----
+
+From HBase Shell:
+
+[source,bash]
+----
+create 'x',{NAME=>'y', TTL=>'30'}, {CONFIGURATION => {'hbase.hstore.defaultengine.compactionpolicy.class' => 'org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy', 'hbase.hstore.blockingStoreFiles' => 1000}}
+----
+
+Although region splitting is still supported, for optimal performance it should be disabled, either by setting explicitly `DisabledRegionSplitPolicy` or by setting `ConstantSizeRegionSplitPolicy` and very large max region size.
+You will have to increase to a very large number store's blocking file (`hbase.hstore.blockingStoreFiles`) as well.
+There is a sanity check on table/column family configuration in case of FIFO compaction and minimum value for number of blocking file is 1000.
+
 [[arch.bulk.load]]
 == Bulk Loading
 
