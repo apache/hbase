@@ -345,10 +345,10 @@ public class TestSimpleRegionNormalizerOnCluster {
       public String explainFailure() {
         return "expected " + targetRegionCount + " number of regions for table " + tableName;
       }
+
       @Override
       public boolean evaluate() throws IOException {
-        final int currentRegionCount =
-          getRegionCount( tableName);
+        final int currentRegionCount = getRegionCount(tableName);
         return currentRegionCount == targetRegionCount;
       }
     });
@@ -357,12 +357,14 @@ public class TestSimpleRegionNormalizerOnCluster {
   private static void waitForTableSplit(final TableName tableName, final int targetRegionCount)
       throws IOException {
     TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5), new ExplainingPredicate<IOException>() {
-      @Override public String explainFailure() {
+      @Override
+      public String explainFailure() {
         return "expected normalizer to split region.";
       }
-      @Override public boolean evaluate() throws IOException {
-        final int currentRegionCount =
-          getRegionCount( tableName);
+
+      @Override
+      public boolean evaluate() throws IOException {
+        final int currentRegionCount = getRegionCount(tableName);
         return currentRegionCount >= targetRegionCount;
       }
     });
@@ -371,12 +373,14 @@ public class TestSimpleRegionNormalizerOnCluster {
   private static void waitForTableMerge(final TableName tableName, final int targetRegionCount)
       throws IOException {
     TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5), new ExplainingPredicate<IOException>() {
-      @Override public String explainFailure() {
+      @Override
+      public String explainFailure() {
         return "expected normalizer to merge regions.";
       }
-      @Override public boolean evaluate() throws IOException {
-        final int currentRegionCount =
-          getRegionCount( tableName);
+
+      @Override
+      public boolean evaluate() throws IOException {
+        final int currentRegionCount = getRegionCount(tableName);
         return currentRegionCount <= targetRegionCount;
       }
     });

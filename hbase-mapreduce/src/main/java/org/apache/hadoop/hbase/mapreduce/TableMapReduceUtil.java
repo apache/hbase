@@ -756,7 +756,9 @@ public class TableMapReduceUtil {
    */
   public static void limitNumReduceTasks(String table, Job job) throws IOException {
     int regions = getRegionCount(job.getConfiguration(), TableName.valueOf(table));
-    if (job.getNumReduceTasks() > regions) job.setNumReduceTasks(regions);
+    if (job.getNumReduceTasks() > regions) {
+      job.setNumReduceTasks(regions);
+    }
   }
 
   /**
@@ -1050,7 +1052,7 @@ public class TableMapReduceUtil {
     }
 
     return ret;
-  } 
+  }
 
   private static int getRegionCount(Configuration conf, TableName tableName) throws IOException {
     try (Connection conn = ConnectionFactory.createConnection(conf);

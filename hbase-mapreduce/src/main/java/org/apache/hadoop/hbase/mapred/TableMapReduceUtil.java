@@ -332,7 +332,9 @@ public class TableMapReduceUtil {
   // Used by tests.
   public static void limitNumReduceTasks(String table, JobConf job) throws IOException {
     int regions = getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
-    if (job.getNumReduceTasks() > regions) job.setNumReduceTasks(regions);
+    if (job.getNumReduceTasks() > regions) {
+      job.setNumReduceTasks(regions);
+    }
   }
 
   /**
@@ -346,7 +348,9 @@ public class TableMapReduceUtil {
   // Used by tests.
   public static void limitNumMapTasks(String table, JobConf job) throws IOException {
     int regions = getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
-    if (job.getNumMapTasks() > regions) job.setNumMapTasks(regions);
+    if (job.getNumMapTasks() > regions) {
+      job.setNumMapTasks(regions);
+    }
   }
 
   /**
