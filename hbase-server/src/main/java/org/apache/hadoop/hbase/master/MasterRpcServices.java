@@ -2974,13 +2974,27 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
 
   @Override
   public GetMetaRegionLocationsResponse getMetaRegionLocations(RpcController rpcController,
-      GetMetaRegionLocationsRequest request) throws ServiceException {
-    GetMetaRegionLocationsResponse.Builder response = GetMetaRegionLocationsResponse.newBuilder();
-    Optional<List<HRegionLocation>> metaLocations =
-        master.getMetaRegionLocationCache().getMetaRegionLocations();
-    metaLocations.ifPresent(hRegionLocations -> hRegionLocations.forEach(
-      location -> response.addMetaLocations(ProtobufUtil.toRegionLocation(location))));
-    return response.build();
+    GetMetaRegionLocationsRequest request) throws ServiceException {
+    MetaLocationCache cache = master.getMetaLocationCache();
+    RegionLocations locs;
+    try {
+      if (cache != null) {
+        locs = cache.locateMeta(HConstants.EMPTY_BYTE_ARRAY, RegionLocateType.CURRENT);
+      } else {
+        locs = master.locateMeta(HConstants.EMPTY_BYTE_ARRAY, RegionLocateType.CURRENT);
+      }
+      GetMetaRegionLocationsResponse.Builder builder = GetMetaRegionLocationsResponse.newBuilder();
+      if (locs != null) {
+        for (HRegionLocation loc : locs) {
+          if (loc != null) {
+            builder.addMetaLocations(ProtobufUtil.toRegionLocation(loc));
+          }
+        }
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override
@@ -3322,11 +3336,16 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
     byte[] row = request.getRow().toByteArray();
     RegionLocateType locateType = ProtobufUtil.toRegionLocateType(request.getLocateType());
     try {
-      master.checkServiceStarted();
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preLocateMetaRegion(row, locateType);
       }
-      RegionLocations locs = master.locateMeta(row, locateType);
+      MetaLocationCache cache = master.getMetaLocationCache();
+      RegionLocations locs;
+      if (cache != null) {
+        locs = cache.locateMeta(row, locateType);
+      } else {
+        locs = master.locateMeta(row, locateType);
+      }
       List<HRegionLocation> list = new ArrayList<>();
       LocateMetaRegionResponse.Builder builder = LocateMetaRegionResponse.newBuilder();
       if (locs != null) {
@@ -3351,23 +3370,30 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
     GetAllMetaRegionLocationsRequest request) throws ServiceException {
     boolean excludeOfflinedSplitParents = request.getExcludeOfflinedSplitParents();
     try {
-      master.checkServiceStarted();
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preGetAllMetaRegionLocations(excludeOfflinedSplitParents);
       }
-      List<RegionLocations> locs = master.getAllMetaRegionLocations(excludeOfflinedSplitParents);
-      List<HRegionLocation> list = new ArrayList<>();
-      GetAllMetaRegionLocationsResponse.Builder builder =
-        GetAllMetaRegionLocationsResponse.newBuilder();
-      if (locs != null) {
-        for (RegionLocations ls : locs) {
-          for (HRegionLocation loc : ls) {
-            if (loc != null) {
-              builder.addMetaLocations(ProtobufUtil.toRegionLocation(loc));
-              list.add(loc);
+      MetaLocationCache cache = master.getMetaLocationCache();
+      List<HRegionLocation> list;
+      if (cache != null) {
+        list = cache.getAllMetaRegionLocations(excludeOfflinedSplitParents);
+      } else {
+        List<RegionLocations> locs = master.getAllMetaRegionLocations(excludeOfflinedSplitParents);
+        list = new ArrayList<>();
+        if (locs != null) {
+          for (RegionLocations ls : locs) {
+            for (HRegionLocation loc : ls) {
+              if (loc != null) {
+                list.add(loc);
+              }
             }
           }
         }
+      }
+      GetAllMetaRegionLocationsResponse.Builder builder =
+        GetAllMetaRegionLocationsResponse.newBuilder();
+      for (HRegionLocation loc : list) {
+        builder.addMetaLocations(ProtobufUtil.toRegionLocation(loc));
       }
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postGetAllMetaRegionLocations(excludeOfflinedSplitParents,

@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 
 /**
@@ -28,7 +31,7 @@ import org.apache.hadoop.hbase.ServerName;
 public class DummyConnectionRegistry implements ConnectionRegistry {
 
   public static final String REGISTRY_IMPL_CONF_KEY =
-      HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY;
+    HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY;
 
   @Override
   public CompletableFuture<String> getClusterId() {
@@ -42,5 +45,16 @@ public class DummyConnectionRegistry implements ConnectionRegistry {
 
   @Override
   public void close() {
+  }
+
+  @Override
+  public CompletableFuture<RegionLocations> locateMeta(byte[] row, RegionLocateType type) {
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<List<HRegionLocation>>
+    getAllMetaRegionLocations(boolean excludeOfflinedSplitParents) {
+    return null;
   }
 }

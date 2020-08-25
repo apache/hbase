@@ -118,7 +118,7 @@ public class TestZKConnectionRegistry {
   }
 
   @Test
-  public void testNoMetaAvailable() throws InterruptedException {
+  public void testNoMetaAvailable() throws InterruptedException, IOException {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set("zookeeper.znode.metaserver", "whatever");
     try (ZKConnectionRegistry registry = new ZKConnectionRegistry(conf)) {
