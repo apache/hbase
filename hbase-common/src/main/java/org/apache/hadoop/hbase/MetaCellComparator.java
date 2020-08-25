@@ -36,6 +36,9 @@ import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 @InterfaceStability.Evolving
 public class MetaCellComparator extends CellComparatorImpl {
 
+  public static final Comparator<byte[]> ROW_COMPARATOR =
+    (r1, r2) -> compareRows(r1, 0, r1.length, r2, 0, r2.length);
+
   /**
    * A {@link MetaCellComparator} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
@@ -71,7 +74,7 @@ public class MetaCellComparator extends CellComparatorImpl {
     return ignoreSequenceid ? diff : Longs.compare(b.getSequenceId(), a.getSequenceId());
   }
 
-  public static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+  private static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
       int rlength) {
     int leftDelimiter = Bytes.searchDelimiterIndex(left, loffset, llength, HConstants.DELIMITER);
     int rightDelimiter = Bytes.searchDelimiterIndex(right, roffset, rlength, HConstants.DELIMITER);
