@@ -207,8 +207,16 @@ if interactive
       $0 = File.basename(ap_path, '.rb') if ap_path
 
       IRB.setup(ap_path)
+      IRB.conf[:PROMPT][:CUSTOM] = {
+        :PROMPT_I => "%N:%03n:%i> ",
+        :PROMPT_S => "%N:%03n:%i%l ",
+        :PROMPT_C => "%N:%03n:%i* ",
+        :RETURN => "=> %s\n"
+      }
+
       @CONF[:IRB_NAME] = 'hbase'
       @CONF[:AP_NAME] = 'hbase'
+      @CONF[:PROMPT_MODE] = :CUSTOM
       @CONF[:BACK_TRACE_LIMIT] = 0 unless $fullBackTrace
 
       hirb = if @CONF[:SCRIPT]
