@@ -21,19 +21,15 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Date;
 import java.util.TimeZone;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestCurrentHourProvider {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCurrentHourProvider.class);
 
   /**
    * In timezone GMT+08:00, the unix time of 2020-08-20 11:52:41 is 1597895561000
@@ -54,8 +50,13 @@ public class TestCurrentHourProvider {
 
       // set a time represent hour 11
       long deltaFor11 = TimeZone.getDefault().getRawOffset() - 28800000;
-      long timeFor11 = 1597895561000L - deltaFor11;
-      EnvironmentEdgeManager.injectEdge(() -> timeFor11);
+      final long timeFor11 = 1597895561000L - deltaFor11;
+      EnvironmentEdgeManager.injectEdge(new EnvironmentEdge() {
+        @Override
+        public long currentTime() {
+          return timeFor11;
+        }
+      });
       CurrentHourProvider.tick = CurrentHourProvider.nextTick();
       int hour11 = CurrentHourProvider.getCurrentHour();
       if (TimeZone.getDefault().inDaylightTime(new Date(timeFor11))) {
@@ -67,8 +68,13 @@ public class TestCurrentHourProvider {
 
       // set a time represent hour 15
       long deltaFor15 = TimeZone.getDefault().getRawOffset() - 28800000;
-      long timeFor15 = 1597907081000L - deltaFor15;
-      EnvironmentEdgeManager.injectEdge(() -> timeFor15);
+      final long timeFor15 = 1597907081000L - deltaFor15;
+      EnvironmentEdgeManager.injectEdge(new EnvironmentEdge() {
+        @Override
+        public long currentTime() {
+          return timeFor15;
+        }
+      });
       CurrentHourProvider.tick = CurrentHourProvider.nextTick();
       int hour15 = CurrentHourProvider.getCurrentHour();
       if (TimeZone.getDefault().inDaylightTime(new Date(timeFor15))) {
