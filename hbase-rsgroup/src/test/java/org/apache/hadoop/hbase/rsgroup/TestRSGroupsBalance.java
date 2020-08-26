@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -180,4 +182,20 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     });
   }
 
+  @Test
+  public void testGetRSGroupAssignmentsByTable() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY, 10);
+    // disable table
+    final TableName disableTableName = TableName.valueOf("testDisableTable");
+    TEST_UTIL.createMultiRegionTable(disableTableName, HConstants.CATALOG_FAMILY, 10);
+    TEST_UTIL.getAdmin().disableTable(disableTableName);
+
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
+        rsGroupAdminEndpoint.getGroupAdminServer()
+            .getRSGroupAssignmentsByTable(master.getTableStateManager(), RSGroupInfo.DEFAULT_GROUP);
+    assertFalse(assignments.containsKey(disableTableName));
+    assertTrue(assignments.containsKey(tableName));
+  }
 }
