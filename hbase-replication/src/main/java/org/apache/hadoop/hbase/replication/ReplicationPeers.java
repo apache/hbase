@@ -144,7 +144,6 @@ public class ReplicationPeers {
     SyncReplicationState syncReplicationState = peerStorage.getPeerSyncReplicationState(peerId);
     SyncReplicationState newSyncReplicationState =
       peerStorage.getPeerNewSyncReplicationState(peerId);
-
     return new ReplicationPeerImpl(ReplicationUtils.getPeerClusterConfiguration(peerConfig, conf),
       peerId, peerConfig, enabled, syncReplicationState, newSyncReplicationState);
   }

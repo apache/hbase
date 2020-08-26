@@ -117,7 +117,6 @@ public class ReplicationPeerManager {
 
   void preAddPeer(String peerId, ReplicationPeerConfig peerConfig)
       throws DoNotRetryIOException, ReplicationException {
-
     if (peerId.contains("-")) {
       throw new DoNotRetryIOException("Found invalid peer name: " + peerId);
     }
@@ -551,13 +550,11 @@ public class ReplicationPeerManager {
     ReplicationPeerStorage peerStorage =
       ReplicationStorageFactory.getReplicationPeerStorage(zk, conf);
     ConcurrentMap<String, ReplicationPeerDescription> peers = new ConcurrentHashMap<>();
-
     for (String peerId : peerStorage.listPeerIds()) {
       ReplicationPeerConfig peerConfig = peerStorage.getPeerConfig(peerId);
 
       ReplicationPeerConfig updatedPeerConfig = ReplicationPeerConfigUtil.
         addBasePeerConfigsIfNotPresent(conf,peerConfig);
-
       if (updatedPeerConfig != null) {
         peerStorage.updatePeerConfig(peerId,updatedPeerConfig);
         peerConfig = updatedPeerConfig;
