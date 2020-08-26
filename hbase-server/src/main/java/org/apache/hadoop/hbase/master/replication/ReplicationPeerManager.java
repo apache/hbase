@@ -117,12 +117,10 @@ public class ReplicationPeerManager {
 
   void preAddPeer(String peerId, ReplicationPeerConfig peerConfig)
       throws DoNotRetryIOException, ReplicationException {
+
     if (peerId.contains("-")) {
       throw new DoNotRetryIOException("Found invalid peer name: " + peerId);
     }
-    ReplicationPeerConfig updatedPeerConfig = ReplicationPeerConfigUtil.
-      addBasePeerConfigsIfNotPresent(conf,peerConfig);
-    peerConfig = updatedPeerConfig;
     checkPeerConfig(peerConfig);
     if (peerConfig.isSyncReplication()) {
       checkSyncReplicationPeerConfigConflict(peerConfig);
@@ -235,6 +233,11 @@ public class ReplicationPeerManager {
     if (peers.containsKey(peerId)) {
       // this should be a retry, just return
       return;
+    }
+    ReplicationPeerConfig updatedPeerConfig = ReplicationPeerConfigUtil.
+      addBasePeerConfigsIfNotPresent(conf,peerConfig);
+    if(updatedPeerConfig != null) {
+      peerConfig = updatedPeerConfig;
     }
     ReplicationPeerConfig copiedPeerConfig = ReplicationPeerConfig.newBuilder(peerConfig).build();
     SyncReplicationState syncReplicationState =

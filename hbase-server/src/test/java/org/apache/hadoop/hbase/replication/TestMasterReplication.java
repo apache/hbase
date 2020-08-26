@@ -443,22 +443,34 @@ public class TestMasterReplication {
   }
 
   /**
-   * Tests that base replication peer configs are applied on peer creation.
+   * Tests that base replication peer configs are applied on peer creation
+   * and the is overriden if updated as part of updateReplicationPeerConfig()
    *
    */
   @Test
-  public void testBasePeerConfigsAppliedOnPeerCreation()
+  public void testBasePeerConfigsAppliedOnPeerCreationAndUpdate()
     throws Exception {
     LOG.info("testBasePeerConfigsAppliedOnPeerCreation");
     String customPeerConfigKey = "hbase.xxx.custom_config";
     String customPeerConfigValue = "test";
+    String customPeerConfigUpdatedValue = "test_updated";
     try {
       baseConfiguration.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
         customPeerConfigKey.concat("=").concat(customPeerConfigValue));
       startMiniClusters(2);
       addPeer("1", 0, 1);
-      ReplicationPeerConfig peerConfig = utilities[0].getAdmin().getReplicationPeerConfig("1");
-      Assert.assertEquals(customPeerConfigValue, peerConfig.getConfiguration().get(customPeerConfigKey));
+      Admin admin = utilities[0].getAdmin();
+
+      Assert.assertEquals(customPeerConfigValue, admin.getReplicationPeerConfig("1").
+        getConfiguration().get(customPeerConfigKey));
+
+      ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfig.
+        newBuilder(admin.getReplicationPeerConfig("1")).
+        putConfiguration(customPeerConfigKey,customPeerConfigUpdatedValue).build();
+      admin.updateReplicationPeerConfig("1", updatedReplicationPeerConfig);
+
+      Assert.assertEquals(customPeerConfigUpdatedValue, admin.getReplicationPeerConfig("1").
+        getConfiguration().get(customPeerConfigKey));
     }finally {
       shutDownMiniClusters();
       baseConfiguration.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);

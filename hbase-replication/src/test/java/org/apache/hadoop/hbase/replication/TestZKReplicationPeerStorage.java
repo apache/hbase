@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -220,7 +221,7 @@ public class TestZKReplicationPeerStorage {
   }
 
   @Test
-  public void testDefaultReplicationPeerConfigIsAppliedIfNotAlreadySet(){
+  public void testBaseReplicationPeerConfigIsAppliedIfNotAlreadySet(){
     String customPeerConfigKey = "hbase.xxx.custom_config";
     String customPeerConfigValue = "test";
 
@@ -247,15 +248,15 @@ public class TestZKReplicationPeerStorage {
   }
 
   @Test
-  public void testDefaultReplicationPeerConfigOverrideIfAlreadySet(){
+  public void testBaseReplicationPeerConfigDoesNotOverrideIfAlreadySet(){
 
     String customPeerConfigKey = "hbase.xxx.custom_config";
-    String customPeerConfigValue = "test";
+    String customPeerConfigOldValue = "test";
     String customPeerConfigUpdatedValue = "test_updated";
 
     ReplicationPeerConfig existingReplicationPeerConfig = ReplicationPeerConfig.
       newBuilder(getConfig(1))
-      .putConfiguration(customPeerConfigKey,customPeerConfigValue).build();
+      .putConfiguration(customPeerConfigKey,customPeerConfigOldValue).build();
 
     Configuration conf = UTIL.getConfiguration();
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
@@ -263,7 +264,6 @@ public class TestZKReplicationPeerStorage {
 
     ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
       addBasePeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
-    assertEquals(customPeerConfigUpdatedValue, updatedReplicationPeerConfig.
-      getConfiguration().get(customPeerConfigKey));
+    assertNull(updatedReplicationPeerConfig);
   }
 }
