@@ -17,7 +17,10 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
+import com.google.common.collect.ImmutableList;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -35,9 +38,10 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Handles everything on master-side related to master election.
+ * Handles everything on master-side related to master election. Keeps track of
+ * currently active master and registered backup masters.
  *
- * <p>Listens and responds to ZooKeeper notifications on the master znode,
+ * <p>Listens and responds to ZooKeeper notifications on the master znodes,
  * both <code>nodeCreated</code> and <code>nodeDeleted</code>.
  *
  * <p>Contains blocking methods which will hold up backup masters, waiting
@@ -64,18 +68,23 @@ public class ActiveMasterManager extends ZooKeeperListener {
   // Active master's server name. Invalidated anytime active master changes (based on ZK
   // notifications) and lazily fetched on-demand.
   // ServerName is immutable, so we don't need heavy synchronization around it.
-  private volatile ServerName activeMasterServerName;
+  volatile ServerName activeMasterServerName;
+  // Registered backup masters. List is kept up to date based on ZK change notifications to
+  // backup znode.
+  private volatile ImmutableList<ServerName> backupMasters;
 
   /**
    * @param watcher ZK watcher
    * @param sn ServerName
    * @param master In an instance of a Master.
    */
-  ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, Server master) {
+  ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, Server master)
+      throws InterruptedIOException {
     super(watcher);
     watcher.registerListener(this);
     this.sn = sn;
     this.master = master;
+    updateBackupMasters();
   }
 
   // will be set after jetty server is started
@@ -89,8 +98,18 @@ public class ActiveMasterManager extends ZooKeeperListener {
   }
 
   @Override
-  public void nodeDeleted(String path) {
+  public void nodeChildrenChanged(String path) {
+    if (path.equals(watcher.backupMasterAddressesZNode)) {
+      try {
+        updateBackupMasters();
+      } catch (InterruptedIOException ioe) {
+        LOG.error("Error updating backup masters", ioe);
+      }
+    }
+  }
 
+  @Override
+  public void nodeDeleted(String path) {
     // We need to keep track of the cluster's shutdown status while
     // we wait on the current master. We consider that, if the cluster
     // was already in a "shutdown" state when we started, that this master
@@ -101,7 +120,6 @@ public class ActiveMasterManager extends ZooKeeperListener {
     if(path.equals(watcher.clusterStateZNode) && !master.isStopped()) {
       clusterShutDown.set(true);
     }
-
     handle(path);
   }
 
@@ -109,6 +127,11 @@ public class ActiveMasterManager extends ZooKeeperListener {
     if (path.equals(watcher.getMasterAddressZNode()) && !master.isStopped()) {
       handleMasterNodeChange();
     }
+  }
+
+  private void updateBackupMasters() throws InterruptedIOException {
+    backupMasters =
+        ImmutableList.copyOf(MasterAddressTracker.getBackupMastersAndRenewWatch(watcher));
   }
 
   /**
@@ -319,5 +342,12 @@ public class ActiveMasterManager extends ZooKeeperListener {
     } catch (KeeperException e) {
       LOG.error(this.watcher.prefix("Error deleting our own master address node"), e);
     }
+  }
+
+  /**
+   * @return list of registered backup masters.
+   */
+  public List<ServerName> getBackupMasters() {
+    return backupMasters;
   }
 }

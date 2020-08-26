@@ -19,9 +19,15 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.META_REPLICAS_NUM;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.RpcController;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,6 +39,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -40,6 +47,10 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClientMetaService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdResponse;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestMasterRegistry {
@@ -57,6 +68,20 @@ public class TestMasterRegistry {
   @AfterClass
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  private static class ExceptionInjectorRegistry extends MasterRegistry {
+    @Override
+    public String getClusterId() throws IOException {
+      GetClusterIdResponse resp = doCall(new Callable<GetClusterIdResponse>() {
+        @Override
+        public GetClusterIdResponse call(ClientMetaService.Interface stub, RpcController controller)
+            throws IOException {
+          throw new SocketTimeoutException("Injected exception.");
+        }
+      });
+      return resp.getClusterId();
+    }
   }
 
   /**
@@ -128,6 +153,84 @@ public class TestMasterRegistry {
       assertEquals(TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size(), numRs);
     } finally {
       registry.close();
+    }
+  }
+
+  /**
+   * Tests that the list of masters configured in the MasterRegistry is dynamically refreshed in the
+   * event of errors.
+   */
+  @Test
+  public void testDynamicMasterConfigurationRefresh() throws Exception {
+    Configuration conf = TEST_UTIL.getConnection().getConfiguration();
+    String currentMasterAddrs = Preconditions.checkNotNull(conf.get(HConstants.MASTER_ADDRS_KEY));
+    HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();
+    // Add a non-working master
+    ServerName badServer = ServerName.valueOf("localhost", 1234, -1);
+    conf.set(HConstants.MASTER_ADDRS_KEY, badServer.toShortString() + "," + currentMasterAddrs);
+    // Do not limit the number of refreshes during the test run.
+    conf.setLong(MasterAddressRefresher.MIN_SECS_BETWEEN_REFRESHES, 0);
+    final ExceptionInjectorRegistry registry = new ExceptionInjectorRegistry();
+    try {
+      registry.init(TEST_UTIL.getConnection());
+      final ImmutableSet<String> masters = registry.getParsedMasterServers();
+      assertTrue(masters.contains(badServer.toString()));
+      // Make a registry RPC, this should trigger a refresh since one of the RPC fails.
+      try {
+        registry.getClusterId();
+      } catch (MasterRegistryFetchException e) {
+        // Expected.
+      }
+
+      // Wait for new set of masters to be populated.
+      TEST_UTIL.waitFor(5000,
+          new Waiter.Predicate<Exception>() {
+            @Override
+            public boolean evaluate() throws Exception {
+              return !registry.getParsedMasterServers().equals(masters);
+            }
+          });
+      // new set of masters should not include the bad server
+      final ImmutableSet<String> newMasters = registry.getParsedMasterServers();
+      // Bad one should be out.
+      assertEquals(3, newMasters.size());
+      assertFalse(newMasters.contains(badServer.toString()));
+      // Kill the active master
+      activeMaster.stopMaster();
+      TEST_UTIL.waitFor(10000,
+          new Waiter.Predicate<Exception>() {
+            @Override
+            public boolean evaluate() {
+              return TEST_UTIL.getMiniHBaseCluster().getLiveMasterThreads().size() == 2;
+            }
+          });
+      TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(10000);
+      // Make a registry RPC, this should trigger a refresh since one of the RPC fails.
+      try {
+        registry.getClusterId();
+      } catch (MasterRegistryFetchException e) {
+        // Expected.
+      }
+      // Wait until the killed master de-registered.
+      TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return registry.getMasters().size() == 2;
+        }
+      });
+      TEST_UTIL.waitFor(20000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return registry.getParsedMasterServers().size() == 2;
+        }
+      });
+      final ImmutableSet<String> newMasters2 = registry.getParsedMasterServers();
+      assertEquals(2, newMasters2.size());
+      assertFalse(newMasters2.contains(activeMaster.getServerName().toString()));
+    } finally {
+      registry.close();
+      // Reset the state, add a killed master.
+      TEST_UTIL.getMiniHBaseCluster().startMaster();
     }
   }
 }
