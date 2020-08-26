@@ -30,7 +30,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -86,10 +85,11 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 // TODO: Encapsulate MasterObserver functions into separate subclass.
@@ -147,6 +147,10 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     return groupInfoManager;
   }
 
+  @VisibleForTesting
+  RSGroupAdminServer getGroupAdminServer() {
+    return groupAdminServer;
+  }
   /**
    * Implementation of RSGroupAdminService defined in RSGroupAdmin.proto.
    * This class calls {@link RSGroupAdminServer} for actual work, converts result to protocol

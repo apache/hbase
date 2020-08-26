@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.net.Address;
@@ -46,6 +48,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
@@ -454,7 +457,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
       //We balance per group instead of per table
       Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
-        getRSGroupAssignmentsByTable(groupName);
+          getRSGroupAssignmentsByTable(master.getTableStateManager(), groupName);
       List<RegionPlan> plans = balancer.balanceCluster(assignmentsByTable);
       boolean balancerRan = !plans.isEmpty();
       if (balancerRan) {
@@ -547,17 +550,32 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     return rit;
   }
 
-  private Map<TableName, Map<ServerName, List<RegionInfo>>>
-      getRSGroupAssignmentsByTable(String groupName) throws IOException {
+  /**
+   * This is an EXPENSIVE clone. Cloning though is the safest thing to do. Can't let out original
+   * since it can change and at least the load balancer wants to iterate this exported list. Load
+   * balancer should iterate over this list because cloned list will ignore disabled table and split
+   * parent region cases. This method is invoked by {@link #balanceRSGroup}
+   * @return A clone of current assignments for this group.
+   */
+  @VisibleForTesting
+  Map<TableName, Map<ServerName, List<RegionInfo>>> getRSGroupAssignmentsByTable(
+      TableStateManager tableStateManager, String groupName) throws IOException {
     Map<TableName, Map<ServerName, List<RegionInfo>>> result = Maps.newHashMap();
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
     Map<TableName, Map<ServerName, List<RegionInfo>>> assignments = Maps.newHashMap();
-    for(Map.Entry<RegionInfo, ServerName> entry:
-        master.getAssignmentManager().getRegionStates().getRegionAssignments().entrySet()) {
+    for (Map.Entry<RegionInfo, ServerName> entry : master.getAssignmentManager().getRegionStates()
+        .getRegionAssignments().entrySet()) {
       TableName currTable = entry.getKey().getTable();
       ServerName currServer = entry.getValue();
       RegionInfo currRegion = entry.getKey();
       if (rsGroupInfo.getTables().contains(currTable)) {
+        if (tableStateManager.isTableState(currTable, TableState.State.DISABLED,
+          TableState.State.DISABLING)) {
+          continue;
+        }
+        if (currRegion.isSplitParent()) {
+          continue;
+        }
         assignments.putIfAbsent(currTable, new HashMap<>());
         assignments.get(currTable).putIfAbsent(currServer, new ArrayList<>());
         assignments.get(currTable).get(currServer).add(currRegion);
