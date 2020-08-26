@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
@@ -65,6 +69,57 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    */
   public MasterAddressTracker(ZooKeeperWatcher watcher, Abortable abortable) {
     super(watcher, watcher.getMasterAddressZNode(), abortable);
+  }
+
+  /**
+   * @param watcher ZooKeeperWatcher instance to use for querying ZK.
+   * @return current list of backup masters.
+   */
+  public static List<ServerName> getBackupMastersAndRenewWatch(
+      ZooKeeperWatcher watcher) {
+    // Build Set of backup masters from ZK nodes
+    List<String> backupMasterStrings;
+    try {
+      backupMasterStrings = ZKUtil.listChildrenAndWatchForNewChildren(
+          watcher, watcher.backupMasterAddressesZNode);
+    } catch (KeeperException e) {
+      LOG.warn(watcher.prefix("Unable to list backup servers"), e);
+      backupMasterStrings = null;
+    }
+
+    List<ServerName> backupMasters = new ArrayList<>();
+    if (backupMasterStrings != null && !backupMasterStrings.isEmpty()) {
+      for (String s: backupMasterStrings) {
+        try {
+          byte [] bytes;
+          try {
+            bytes = ZKUtil.getData(watcher, ZKUtil.joinZNode(
+               watcher.backupMasterAddressesZNode, s));
+          } catch (InterruptedException e) {
+            throw new InterruptedIOException("Thread interrupted.");
+          }
+          if (bytes != null) {
+            ServerName sn;
+            try {
+              sn = ServerName.parseFrom(bytes);
+            } catch (DeserializationException e) {
+              LOG.warn("Failed parse, skipping registering backup server", e);
+              continue;
+            }
+            backupMasters.add(sn);
+          }
+        } catch (KeeperException | InterruptedIOException e) {
+          LOG.warn(watcher.prefix("Unable to get information about " +
+              "backup servers"), e);
+        }
+      }
+      Collections.sort(backupMasters, new Comparator<ServerName>() {
+        @Override
+        public int compare(ServerName s1, ServerName s2) {
+          return s1.getServerName().compareTo(s2.getServerName());
+        }});
+    }
+    return backupMasters;
   }
 
   /**

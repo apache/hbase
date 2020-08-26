@@ -97,14 +97,15 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableReques
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMastersRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMastersResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
@@ -1804,12 +1805,19 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
-  public GetActiveMasterResponse getActiveMaster(RpcController rpcController,
-      GetActiveMasterRequest request) throws ServiceException {
-    GetActiveMasterResponse.Builder resp = GetActiveMasterResponse.newBuilder();
+  public GetMastersResponse getMasters(RpcController rpcController, GetMastersRequest request)
+      throws ServiceException {
+    GetMastersResponse.Builder resp = GetMastersResponse.newBuilder();
+    // Active master
     ServerName serverName = master.getActiveMaster();
     if (serverName != null) {
-      resp.setServerName(ProtobufUtil.toServerName(serverName));
+      resp.addMasterServers(GetMastersResponseEntry.newBuilder()
+          .setServerName(ProtobufUtil.toServerName(serverName)).setIsActive(true).build());
+    }
+    // Backup masters
+    for (ServerName backupMaster: master.getBackupMasters()) {
+      resp.addMasterServers(GetMastersResponseEntry.newBuilder().setServerName(
+          ProtobufUtil.toServerName(backupMaster)).setIsActive(false).build());
     }
     return resp.build();
   }

@@ -45,8 +45,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClientMetaService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
@@ -106,25 +104,6 @@ public class TestClientMetaServiceRPCs {
       GetClusterIdResponse resp =
           stub.getClusterId(rpcController, GetClusterIdRequest.getDefaultInstance());
       assertEquals(clusterID, resp.getClusterId());
-      rpcCount++;
-    }
-    assertEquals(MASTER_COUNT, rpcCount);
-  }
-
-  /**
-   * Verifies the active master ServerName as seen by all masters.
-   */
-  @Test public void TestActiveMaster() throws Exception {
-    HBaseRpcController rpcController = getRpcController();
-    ServerName activeMaster = TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName();
-    int rpcCount = 0;
-    for (JVMClusterUtil.MasterThread masterThread:
-        TEST_UTIL.getMiniHBaseCluster().getMasterThreads()) {
-      ClientMetaService.BlockingInterface stub =
-          getMasterStub(masterThread.getMaster().getServerName());
-      GetActiveMasterResponse resp =
-          stub.getActiveMaster(rpcController, GetActiveMasterRequest.getDefaultInstance());
-      assertEquals(activeMaster, ProtobufUtil.toServerName(resp.getServerName()));
       rpcCount++;
     }
     assertEquals(MASTER_COUNT, rpcCount);

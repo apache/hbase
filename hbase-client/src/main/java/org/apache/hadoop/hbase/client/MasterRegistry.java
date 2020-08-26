@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.util.DNS.getMasterHostname;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HostAndPort;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -51,10 +53,11 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.security.User;
 
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClientMetaService;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMastersRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMastersResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest;
@@ -69,12 +72,14 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRespo
 public class MasterRegistry implements ConnectionRegistry {
   private static final String MASTER_ADDRS_CONF_SEPARATOR = ",";
 
-  private ImmutableMap<String, ClientMetaService.Interface> masterAddr2Stub;
+  private volatile ImmutableMap<String, ClientMetaService.Interface> masterAddr2Stub;
 
   // RPC client used to talk to the masters.
   private RpcClient rpcClient;
   private RpcControllerFactory rpcControllerFactory;
   private int rpcTimeoutMs;
+
+  protected MasterAddressRefresher masterAddressRefresher;
 
   @Override
   public void init(Connection connection) throws IOException {
@@ -87,13 +92,15 @@ public class MasterRegistry implements ConnectionRegistry {
     rpcClient = RpcClientFactory.createClient(conf, null);
     rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     populateMasterStubs(parseMasterAddrs(conf));
+    masterAddressRefresher = new MasterAddressRefresher(conf, this);
   }
 
-  private interface Callable <T extends Message> {
+  protected interface Callable <T extends Message> {
     T call(ClientMetaService.Interface stub, RpcController controller) throws IOException;
   }
 
-  private <T extends Message> T doCall(Callable<T> callable) throws MasterRegistryFetchException {
+   protected <T extends Message> T doCall(Callable<T> callable)
+       throws MasterRegistryFetchException {
     Exception lastException = null;
     Set<String> masters = masterAddr2Stub.keySet();
     List<ClientMetaService.Interface> stubs = new ArrayList<>(masterAddr2Stub.values());
@@ -102,13 +109,15 @@ public class MasterRegistry implements ConnectionRegistry {
       HBaseRpcController controller = rpcControllerFactory.newController();
       try {
         T resp = callable.call(stub, controller);
-        if (controller.failed()) {
-          lastException = controller.getFailed();
-          continue;
+        if (!controller.failed()) {
+          return resp;
         }
-        return resp;
+        lastException = controller.getFailed();
       } catch (Exception e) {
         lastException = e;
+      }
+      if (ClientExceptionsUtil.isConnectionException(lastException)) {
+        masterAddressRefresher.refreshNow();
       }
     }
     // rpcs to all masters failed.
@@ -117,19 +126,37 @@ public class MasterRegistry implements ConnectionRegistry {
 
   @Override
   public ServerName getActiveMaster() throws IOException {
-    GetActiveMasterResponse resp = doCall(new Callable<GetActiveMasterResponse>() {
+    GetMastersResponseEntry activeMaster = null;
+    for (GetMastersResponseEntry entry: getMastersInternal().getMasterServersList()) {
+      if (entry.getIsActive()) {
+        activeMaster = entry;
+        break;
+      }
+    }
+    if (activeMaster == null) {
+      throw new HBaseIOException("No active master found");
+    }
+    return ProtobufUtil.toServerName(activeMaster.getServerName());
+  }
+
+  List<ServerName> getMasters() throws IOException {
+    List<ServerName> result = new ArrayList<>();
+    for (GetMastersResponseEntry entry: getMastersInternal().getMasterServersList()) {
+      result.add(ProtobufUtil.toServerName(entry.getServerName()));
+    }
+    return result;
+  }
+
+  private GetMastersResponse getMastersInternal() throws IOException {
+    return doCall(new Callable<GetMastersResponse>() {
       @Override
-      public GetActiveMasterResponse call(
+      public GetMastersResponse call(
           ClientMetaService.Interface stub, RpcController controller) throws IOException {
-        BlockingRpcCallback<GetActiveMasterResponse> cb = new BlockingRpcCallback<>();
-        stub.getActiveMaster(controller, GetActiveMasterRequest.getDefaultInstance(), cb);
+        BlockingRpcCallback<GetMastersResponse> cb = new BlockingRpcCallback<>();
+        stub.getMasters(controller, GetMastersRequest.getDefaultInstance(), cb);
         return cb.get();
       }
     });
-    if (!resp.hasServerName() || resp.getServerName() == null) {
-      throw new HBaseIOException("No active master found");
-    }
-    return ProtobufUtil.toServerName(resp.getServerName());
   }
 
   @Override
@@ -230,4 +257,10 @@ public class MasterRegistry implements ConnectionRegistry {
     }
     masterAddr2Stub = builder.build();
   }
+
+  @InterfaceAudience.Private
+  ImmutableSet<String> getParsedMasterServers() {
+    return masterAddr2Stub.keySet();
+  }
+
 }

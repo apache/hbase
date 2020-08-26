@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -1138,10 +1139,16 @@ public class TestMasterFailover {
 
     // Check that ClusterStatus reports the correct active and backup masters
     assertNotNull(active);
+    final HMaster finalActive = active;
+    TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        ClusterStatus status = finalActive.getClusterStatus();
+        return status.getBackupMastersSize() == 1 && status.getBackupMasters().size() == 1;
+      }
+    });
     status = active.getClusterStatus();
     assertTrue(status.getMaster().equals(activeName));
-    assertEquals(1, status.getBackupMastersSize());
-    assertEquals(1, status.getBackupMasters().size());
 
     // kill the active master
     LOG.debug("\n\nStopping the active master " + active.getServerName() + "\n");

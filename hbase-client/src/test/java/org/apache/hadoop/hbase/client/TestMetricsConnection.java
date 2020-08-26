@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import com.google.protobuf.ByteString;
 import com.yammer.metrics.util.RatioGauge;
@@ -128,6 +129,11 @@ public class TestMetricsConnection {
               .setRegion(region)
               .build(),
           MetricsConnection.newCallStats());
+    }
+    for (String method: new String[]{"Get", "Scan", "Mutate"}) {
+      final String metricKey = "rpcCount_" + ClientService.getDescriptor().getName() + "_" + method;
+      final long metricVal = METRICS.rpcCounters.get(metricKey).count();
+      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
     }
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
       METRICS.getTracker, METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker,
