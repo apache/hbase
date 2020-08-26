@@ -27,6 +27,20 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-24150](https://issues.apache.org/jira/browse/HBASE-24150) | *Major* | **Allow module tests run in parallel**
+
+Pass -T2 to mvn. Makes it so we do two modules-at-a-time dependencies willing. Helps speed build and testing. Doubles the resource usage when running modules in parallel.
+
+
+---
+
+* [HBASE-24126](https://issues.apache.org/jira/browse/HBASE-24126) | *Major* | **Up the container nproc uplimit from 10000 to 12500**
+
+Start docker with upped ulimit for nproc passing '--ulimit nproc=12500'. It was 10000, the default, but made it 12500. Then, set PROC\_LIMIT in hbase-personality so when yetus runs, it is w/ the new 12500 value.
+
+
+---
+
 * [HBASE-24625](https://issues.apache.org/jira/browse/HBASE-24625) | *Critical* | **AsyncFSWAL.getLogFileSizeIfBeingWritten does not return the expected synced file length.**
 
 We add a method getSyncedLength in  WALProvider.WriterBase interface for  WALFileLengthProvider used for replication, considering the case if we use  AsyncFSWAL,we write to 3 DNs concurrently,according to the visibility guarantee of HDFS, the data will be available immediately
@@ -35,6 +49,13 @@ see also HBASE-14004 and this document for more details:
 https://docs.google.com/document/d/11AyWtGhItQs6vsLRIx32PwTxmBY3libXwGXI25obVEY/edit#
 
 Before this patch, replication may read uncommitted data and replicate it to the slave cluster and cause data inconsistency between master and slave cluster, we could use FSHLog instead of AsyncFSWAL  to reduce probability of inconsistency without this patch applied.
+
+
+---
+
+* [HBASE-24578](https://issues.apache.org/jira/browse/HBASE-24578) | *Major* | **[WAL] Add a parameter to config RingBufferEventHandler's SyncFuture count**
+
+Introduce a new parameter "hbase.regionserver.wal.sync.batch.count" to control the wal sync batch size which is equals to "hbase.regionserver.handler.count" by default. It should work well if you use default wal provider---one wal per regionserver. But if you use read/write separated handlers, you can set "hbase.regionserver.wal.sync.batch.count" to the number of write handlers. And if you use wal-per-groups or wal-per-region, you can consider lower "hbase.regionserver.wal.sync.batch.count", the default number will be too big and consume more memories as the number of wals grows.
 
 
 ---

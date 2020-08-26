@@ -20,13 +20,25 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.2.6 - Unreleased (as of 2020-07-16)
+## Release 2.2.6 - Unreleased (as of 2020-08-26)
 
 
 ### IMPROVEMENTS:
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24928](https://issues.apache.org/jira/browse/HBASE-24928) | balanceRSGroup should skip generating balance plan for disabled table and splitParent region |  Major | Balancer |
+| [HBASE-24686](https://issues.apache.org/jira/browse/HBASE-24686) | [LOG] Log improvement in Connection#close |  Major | Client, logging |
+| [HBASE-24912](https://issues.apache.org/jira/browse/HBASE-24912) | Enlarge MemstoreFlusherChore/CompactionChecker period for unit test |  Major | . |
+| [HBASE-24854](https://issues.apache.org/jira/browse/HBASE-24854) | Correct the help content of assign and unassign commands in hbase shell |  Minor | shell |
+| [HBASE-21721](https://issues.apache.org/jira/browse/HBASE-21721) | FSHLog : reduce write#syncs() times |  Major | . |
+| [HBASE-24821](https://issues.apache.org/jira/browse/HBASE-24821) | Simplify the logic of getRegionInfo in TestFlushFromClient to reduce redundancy code |  Minor | test |
+| [HBASE-20226](https://issues.apache.org/jira/browse/HBASE-20226) | Performance Improvement Taking Large Snapshots In Remote Filesystems |  Minor | snapshots |
+| [HBASE-24757](https://issues.apache.org/jira/browse/HBASE-24757) | ReplicationSink should limit the batch rowcount for batch mutations based on hbase.rpc.rows.warning.threshold |  Major | . |
+| [HBASE-24777](https://issues.apache.org/jira/browse/HBASE-24777) | InfoServer support ipv6 host and port |  Minor | UI |
+| [HBASE-24696](https://issues.apache.org/jira/browse/HBASE-24696) | Include JVM information on Web UI under "Software Attributes" |  Minor | UI |
+| [HBASE-24740](https://issues.apache.org/jira/browse/HBASE-24740) | Enable journal logging for HBase snapshot operation |  Minor | master |
+| [HBASE-24578](https://issues.apache.org/jira/browse/HBASE-24578) | [WAL] Add a parameter to config RingBufferEventHandler's SyncFuture count |  Major | wal |
 | [HBASE-24467](https://issues.apache.org/jira/browse/HBASE-24467) | Backport HBASE-23963: Split TestFromClientSide; it takes too long to complete timing out |  Major | . |
 | [HBASE-24562](https://issues.apache.org/jira/browse/HBASE-24562) | Stabilize master startup with meta replicas enabled |  Major | meta, read replicas |
 | [HBASE-24603](https://issues.apache.org/jira/browse/HBASE-24603) | Zookeeper sync() call is async |  Critical | master, regionserver |
@@ -46,18 +58,34 @@
 | [HBASE-24371](https://issues.apache.org/jira/browse/HBASE-24371) | Add more details when print CompactionConfiguration info |  Minor | regionserver |
 | [HBASE-24427](https://issues.apache.org/jira/browse/HBASE-24427) | HStore.add log format error |  Minor | . |
 | [HBASE-24387](https://issues.apache.org/jira/browse/HBASE-24387) | TableSnapshotInputFormatImpl support row limit on each InputSplit |  Major | mapreduce |
-| [HBASE-24578](https://issues.apache.org/jira/browse/HBASE-24578) | [WAL] Add a parameter to config RingBufferEventHandler's SyncFuture count | Major | wal |
 
 
 ### BUG FIXES:
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24897](https://issues.apache.org/jira/browse/HBASE-24897) | RegionReplicaFlushHandler should handle NoServerForRegionException to avoid aborting RegionServer |  Major | . |
+| [HBASE-23987](https://issues.apache.org/jira/browse/HBASE-23987) | NettyRpcClientConfigHelper will not share event loop by default which is incorrect |  Major | Client, rpc |
+| [HBASE-24871](https://issues.apache.org/jira/browse/HBASE-24871) | Replication may loss data when refresh recovered replication sources |  Major | Replication |
+| [HBASE-24926](https://issues.apache.org/jira/browse/HBASE-24926) | Should call setFailure in MergeTableRegionsProcedure when isMergeable returns false |  Major | master, proc-v2 |
+| [HBASE-24884](https://issues.apache.org/jira/browse/HBASE-24884) | BulkLoadHFilesTool/LoadIncrementalHFiles should accept -D options from command line parameters |  Minor | . |
+| [HBASE-24844](https://issues.apache.org/jira/browse/HBASE-24844) | Exception on standalone (master) shutdown |  Minor | Zookeeper |
+| [HBASE-24665](https://issues.apache.org/jira/browse/HBASE-24665) | MultiWAL :  Avoid rolling of ALL WALs when one of the WAL needs a roll |  Major | wal |
+| [HBASE-23157](https://issues.apache.org/jira/browse/HBASE-23157) | WAL unflushed seqId tracking may wrong when Durability.ASYNC\_WAL is used |  Major | regionserver, wal |
+| [HBASE-24625](https://issues.apache.org/jira/browse/HBASE-24625) | AsyncFSWAL.getLogFileSizeIfBeingWritten does not return the expected synced file length. |  Critical | Replication, wal |
+| [HBASE-24788](https://issues.apache.org/jira/browse/HBASE-24788) | Fix the connection leaks on getting hbase admin from unclosed connection |  Major | mapreduce |
+| [HBASE-24812](https://issues.apache.org/jira/browse/HBASE-24812) | Fix the precommit error for branch-2.2 |  Major | . |
+| [HBASE-24713](https://issues.apache.org/jira/browse/HBASE-24713) | RS startup with FSHLog throws NPE after HBASE-21751 |  Minor | wal |
+| [HBASE-24794](https://issues.apache.org/jira/browse/HBASE-24794) | hbase.rowlock.wait.duration should not be \<= 0 |  Minor | regionserver |
+| [HBASE-24752](https://issues.apache.org/jira/browse/HBASE-24752) | NPE/500 accessing webui on master startup |  Minor | master |
+| [HBASE-24775](https://issues.apache.org/jira/browse/HBASE-24775) | [hbtop] StoreFile size should be rounded off |  Minor | hbtop |
+| [HBASE-24675](https://issues.apache.org/jira/browse/HBASE-24675) | On Master restart all servers are assigned to default rsgroup. |  Major | rsgroup |
+| [HBASE-22146](https://issues.apache.org/jira/browse/HBASE-22146) | SpaceQuotaViolationPolicy Disable is not working in Namespace level |  Major | . |
+| [HBASE-24742](https://issues.apache.org/jira/browse/HBASE-24742) | Improve performance of SKIP vs SEEK logic |  Major | Performance, regionserver |
 | [HBASE-24721](https://issues.apache.org/jira/browse/HBASE-24721) | rename\_rsgroup overwriting the existing rsgroup. |  Major | . |
 | [HBASE-24615](https://issues.apache.org/jira/browse/HBASE-24615) | MutableRangeHistogram#updateSnapshotRangeMetrics doesn't calculate the distribution for last bucket. |  Major | metrics |
 | [HBASE-24720](https://issues.apache.org/jira/browse/HBASE-24720) | Meta replicas not cleaned when disabled |  Minor | read replicas |
 | [HBASE-24693](https://issues.apache.org/jira/browse/HBASE-24693) | regioninfo#isLast() has a logic error |  Minor | . |
-| [HBASE-24625](https://issues.apache.org/jira/browse/HBASE-24625) | AsyncFSWAL.getLogFileSizeIfBeingWritten does not return the expected synced file length. |  Critical | Replication, wal |
 | [HBASE-24593](https://issues.apache.org/jira/browse/HBASE-24593) | [branch-2.2] Fix the maven compilation failure for nightly build |  Major | . |
 | [HBASE-24546](https://issues.apache.org/jira/browse/HBASE-24546) | CloneSnapshotProcedure unlimited retry |  Major | snapshots |
 | [HBASE-24657](https://issues.apache.org/jira/browse/HBASE-24657) | JsonBean representation of metrics at /jmx endpoint now quotes all numbers |  Minor | metrics |
@@ -89,13 +117,38 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-23814](https://issues.apache.org/jira/browse/HBASE-23814) | Add null checks and logging to misc set of tests |  Trivial | . |
+| [HBASE-22548](https://issues.apache.org/jira/browse/HBASE-22548) | Split TestAdmin1 |  Major | Admin, test |
+| [HBASE-22524](https://issues.apache.org/jira/browse/HBASE-22524) | Refactor TestReplicationSyncUpTool |  Major | test |
 | [HBASE-21905](https://issues.apache.org/jira/browse/HBASE-21905) | TestFIFOCompactionPolicy is flaky |  Major | test |
+| [HBASE-23974](https://issues.apache.org/jira/browse/HBASE-23974) | [Flakey Tests] Allow that server may not yet be cleared from DeadServers in TestHBCKSCP |  Major | . |
+| [HBASE-24035](https://issues.apache.org/jira/browse/HBASE-24035) | [Flakey Tests] Disable TestClusterScopeQuotaThrottle#testUserNamespaceClusterScopeQuota |  Major | . |
 
 
 ### SUB-TASKS:
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24881](https://issues.apache.org/jira/browse/HBASE-24881) | Fix flaky TestMasterAbortAndRSGotKilled for branch-2.2 |  Major | . |
+| [HBASE-24870](https://issues.apache.org/jira/browse/HBASE-24870) | Ignore TestAsyncTableRSCrashPublish |  Major | . |
+| [HBASE-24946](https://issues.apache.org/jira/browse/HBASE-24946) | Remove the metrics assert in TestClusterRestartFailover |  Major | . |
+| [HBASE-24948](https://issues.apache.org/jira/browse/HBASE-24948) | Reduce the resource of  TestReplicationBase |  Major | . |
+| [HBASE-24052](https://issues.apache.org/jira/browse/HBASE-24052) | Add debug+fix to TestMasterShutdown |  Trivial | . |
+| [HBASE-24906](https://issues.apache.org/jira/browse/HBASE-24906) | Enlarge the wait time in TestReplicationEndpoint/TestMetaWithReplicasBasic |  Major | . |
+| [HBASE-24904](https://issues.apache.org/jira/browse/HBASE-24904) | Speed up some unit tests |  Major | . |
+| [HBASE-24895](https://issues.apache.org/jira/browse/HBASE-24895) | Speed up TestFromClientSide3 by reduce the table regions number |  Major | . |
+| [HBASE-24907](https://issues.apache.org/jira/browse/HBASE-24907) | Turn off the balancer when test region admin api |  Major | . |
+| [HBASE-24847](https://issues.apache.org/jira/browse/HBASE-24847) | Backport HBASE-23956: Use less resources running tests to branch-2.2 |  Major | . |
+| [HBASE-24878](https://issues.apache.org/jira/browse/HBASE-24878) | Backport part of HBASE-24079 and HBASE-24034 |  Major | . |
+| [HBASE-24879](https://issues.apache.org/jira/browse/HBASE-24879) | Fix the shellcheck download url |  Major | . |
+| [HBASE-24150](https://issues.apache.org/jira/browse/HBASE-24150) | Allow module tests run in parallel |  Major | build |
+| [HBASE-24126](https://issues.apache.org/jira/browse/HBASE-24126) | Up the container nproc uplimit from 10000 to 12500 |  Major | build |
+| [HBASE-24876](https://issues.apache.org/jira/browse/HBASE-24876) | Fix the flaky job url in hbase-personality.sh |  Major | . |
+| [HBASE-23851](https://issues.apache.org/jira/browse/HBASE-23851) | Log networks and bind addresses when multicast publisher/listener enabled |  Trivial | . |
+| [HBASE-24841](https://issues.apache.org/jira/browse/HBASE-24841) | Change the jenkins job urls in our jenkinsfile |  Major | build, scripts |
+| [HBASE-24846](https://issues.apache.org/jira/browse/HBASE-24846) | Address compaction races in TestFIFOCompactionPolicy |  Major | Compaction, master |
+| [HBASE-24819](https://issues.apache.org/jira/browse/HBASE-24819) | Fix flaky test TestRaceBetweenSCPAndDTP and TestRaceBetweenSCPAndTRSP for branch-2.2 |  Major | . |
+| [HBASE-24756](https://issues.apache.org/jira/browse/HBASE-24756) | Backport HBASE-24336 to branch-2.2 |  Minor | metrics |
 | [HBASE-24690](https://issues.apache.org/jira/browse/HBASE-24690) | Set version to 2.2.6 in branch-2.2 for first RC of 2.2.6 |  Major | . |
 | [HBASE-24689](https://issues.apache.org/jira/browse/HBASE-24689) | Generate CHANGES.md and RELEASENOTES.md for 2.2.6 |  Major | . |
 | [HBASE-24630](https://issues.apache.org/jira/browse/HBASE-24630) | Purge dev javadoc from client bin tarball |  Major | build |
@@ -110,6 +163,9 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-14847](https://issues.apache.org/jira/browse/HBASE-14847) | Add FIFO compaction section to HBase book |  Major | documentation |
+| [HBASE-23866](https://issues.apache.org/jira/browse/HBASE-23866) | More test classifications |  Trivial | test |
+| [HBASE-24658](https://issues.apache.org/jira/browse/HBASE-24658) | Update PolicyBasedChaosMonkey to handle uncaught exceptions |  Minor | integration tests |
 | [HBASE-24635](https://issues.apache.org/jira/browse/HBASE-24635) | Split TestMetaWithReplicas |  Major | test |
 | [HBASE-24367](https://issues.apache.org/jira/browse/HBASE-24367) | ScheduledChore log elapsed timespan in a human-friendly format |  Minor | master, regionserver |
 | [HBASE-24500](https://issues.apache.org/jira/browse/HBASE-24500) | The behavior of RegionInfoBuilder.newBuilder(RegionInfo) is strange |  Blocker | Client, read replicas |
