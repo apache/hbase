@@ -444,7 +444,7 @@ public class TestMasterReplication {
 
   /**
    * Tests that base replication peer configs are applied on peer creation
-   * and the is overriden if updated as part of updateReplicationPeerConfig()
+   * and the configs are overriden if updated as part of updateReplicationPeerConfig()
    *
    */
   @Test
