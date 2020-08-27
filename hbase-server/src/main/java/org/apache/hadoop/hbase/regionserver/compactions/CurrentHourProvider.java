@@ -22,6 +22,7 @@ import java.util.GregorianCalendar;
 
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
 public class CurrentHourProvider {
@@ -37,7 +38,8 @@ public class CurrentHourProvider {
     }
   }
 
-  private static Tick nextTick() {
+  @VisibleForTesting
+  static Tick nextTick() {
     Calendar calendar = new GregorianCalendar();
     calendar.setTimeInMillis(EnvironmentEdgeManager.currentTime());
     int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
@@ -52,7 +54,8 @@ public class CurrentHourProvider {
     calendar.set(Calendar.MILLISECOND, 0);
   }
 
-  private static volatile Tick tick = nextTick();
+  @VisibleForTesting
+  static volatile Tick tick = nextTick();
 
   public static int getCurrentHour() {
     Tick tick = CurrentHourProvider.tick;
