@@ -26,8 +26,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -60,6 +58,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestMetaCache {
@@ -73,7 +73,7 @@ public class TestMetaCache {
   private static final byte[] FAMILY = Bytes.toBytes("fam1");
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
   private static HRegionServer badRS;
-  private static final Log LOG = LogFactory.getLog(TestMetaCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMetaCache.class);
 
 
   /**
