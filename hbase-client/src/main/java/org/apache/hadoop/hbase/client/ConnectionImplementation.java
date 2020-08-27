@@ -863,7 +863,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       // Query the meta region
       long pauseBase = this.pause;
-      userRegionLock.lock();
+      takeUserRegionLock();
       try {
         if (useCache) {// re-check cache after get lock
           RegionLocations locations = getCachedLocation(tableName, row);
@@ -965,6 +965,19 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         throw new InterruptedIOException("Giving up trying to location region in " +
           "meta: thread is interrupted.");
       }
+    }
+  }
+
+  private void takeUserRegionLock() throws IOException {
+    try {
+      long waitTime = connectionConfig.getScannerTimeoutPeriod();
+      if (!userRegionLock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
+        throw new LockTimeoutException("Failed to get user region lock in"
+            + waitTime + " ms. " + " for accessing meta region server.");
+      }
+    } catch (InterruptedException ie) {
+      LOG.error("Interrupted while waiting for a lock", ie);
+      throw ExceptionUtil.asInterrupt(ie);
     }
   }
 
