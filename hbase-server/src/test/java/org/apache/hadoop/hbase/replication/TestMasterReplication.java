@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -448,30 +449,73 @@ public class TestMasterReplication {
    *
    */
   @Test
-  public void testBasePeerConfigsAppliedOnPeerCreationAndUpdate()
+  public void testBasePeerConfigsForPeerMutations()
     throws Exception {
-    LOG.info("testBasePeerConfigsAppliedOnPeerCreation");
-    String customPeerConfigKey = "hbase.xxx.custom_config";
-    String customPeerConfigValue = "test";
-    String customPeerConfigUpdatedValue = "test_updated";
+    LOG.info("testBasePeerConfigsForPeerMutations");
+    String firstCustomPeerConfigKey = "hbase.xxx.custom_config";
+    String firstCustomPeerConfigValue = "test";
+    String firstCustomPeerConfigUpdatedValue = "test_updated";
+
+    String secondCustomPeerConfigKey = "hbase.xxx.custom_second_config";
+    String secondCustomPeerConfigValue = "testSecond";
+    String secondCustomPeerConfigUpdatedValue = "testSecondUpdated";
     try {
       baseConfiguration.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
-        customPeerConfigKey.concat("=").concat(customPeerConfigValue));
+        firstCustomPeerConfigKey.concat("=").concat(firstCustomPeerConfigValue));
       startMiniClusters(2);
       addPeer("1", 0, 1);
+      addPeer("2", 0, 1);
       Admin admin = utilities[0].getAdmin();
 
-      Assert.assertEquals(customPeerConfigValue, admin.getReplicationPeerConfig("1").
-        getConfiguration().get(customPeerConfigKey));
+      // Validates base configs 1 is present for both peer.
+      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("1").
+        getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("2").
+        getConfiguration().get(firstCustomPeerConfigKey));
 
-      ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfig.
+      // override value of configuration 1 for peer "1".
+      ReplicationPeerConfig updatedReplicationConfigForPeer1 = ReplicationPeerConfig.
         newBuilder(admin.getReplicationPeerConfig("1")).
-        putConfiguration(customPeerConfigKey,customPeerConfigUpdatedValue).build();
-      admin.updateReplicationPeerConfig("1", updatedReplicationPeerConfig);
+        putConfiguration(firstCustomPeerConfigKey, firstCustomPeerConfigUpdatedValue).build();
 
-      Assert.assertEquals(customPeerConfigUpdatedValue, admin.getReplicationPeerConfig("1").
-        getConfiguration().get(customPeerConfigKey));
-    }finally {
+      // add configuration 2 for peer "2".
+      ReplicationPeerConfig updatedReplicationConfigForPeer2 = ReplicationPeerConfig.
+        newBuilder(admin.getReplicationPeerConfig("2")).
+        putConfiguration(secondCustomPeerConfigKey, secondCustomPeerConfigUpdatedValue).build();
+
+      admin.updateReplicationPeerConfig("1", updatedReplicationConfigForPeer1);
+      admin.updateReplicationPeerConfig("2", updatedReplicationConfigForPeer2);
+
+      // validates configuration is overridden by updateReplicationPeerConfig
+      Assert.assertEquals(firstCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("1").
+        getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(secondCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("2").
+        getConfiguration().get(secondCustomPeerConfigKey));
+
+      // Add second config to base config and perform restart.
+      utilities[0].getConfiguration().set(ReplicationPeerConfigUtil.
+        HBASE_REPLICATION_PEER_BASE_CONFIG, firstCustomPeerConfigKey.concat("=").
+        concat(firstCustomPeerConfigValue).concat(";").concat(secondCustomPeerConfigKey)
+        .concat("=").concat(secondCustomPeerConfigValue));
+
+      utilities[0].shutdownMiniHBaseCluster();
+      utilities[0].restartHBaseCluster(1);
+      admin = utilities[0].getAdmin();
+
+      // Both retains the value of base configuration 1 value as before restart.
+      // Peer 1 (Update value), Peer 2 (Base Value)
+      Assert.assertEquals(firstCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("1").
+        getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("2").
+        getConfiguration().get(firstCustomPeerConfigKey));
+
+      // Peer 1 gets new base config as part of restart.
+      Assert.assertEquals(secondCustomPeerConfigValue, admin.getReplicationPeerConfig("1").
+        getConfiguration().get(secondCustomPeerConfigKey));
+      // Peer 2 retains the updated value as before restart.
+      Assert.assertEquals(secondCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("2").
+        getConfiguration().get(secondCustomPeerConfigKey));
+    } finally {
       shutDownMiniClusters();
       baseConfiguration.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
     }

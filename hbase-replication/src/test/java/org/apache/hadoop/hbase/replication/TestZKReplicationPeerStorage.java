@@ -221,12 +221,14 @@ public class TestZKReplicationPeerStorage {
   }
 
   @Test
-  public void testBaseReplicationPeerConfigIsAppliedIfNotAlreadySet(){
+  public void testBaseReplicationPeerConfig() {
     String customPeerConfigKey = "hbase.xxx.custom_config";
     String customPeerConfigValue = "test";
+    String customPeerConfigUpdatedValue = "testUpdated";
 
     String customPeerConfigSecondKey = "hbase.xxx.custom_second_config";
     String customPeerConfigSecondValue = "testSecond";
+    String customPeerConfigSecondUpdatedValue = "testSecondUpdated";
 
     ReplicationPeerConfig existingReplicationPeerConfig = getConfig(1);
 
@@ -241,29 +243,19 @@ public class TestZKReplicationPeerStorage {
     ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
       addBasePeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
 
+    // validates base configs are present in replicationPeerConfig
     assertEquals(customPeerConfigValue, updatedReplicationPeerConfig.getConfiguration().
       get(customPeerConfigKey));
     assertEquals(customPeerConfigSecondValue, updatedReplicationPeerConfig.getConfiguration().
       get(customPeerConfigSecondKey));
-  }
 
-  @Test
-  public void testBaseReplicationPeerConfigDoesNotOverrideIfAlreadySet(){
-
-    String customPeerConfigKey = "hbase.xxx.custom_config";
-    String customPeerConfigOldValue = "test";
-    String customPeerConfigUpdatedValue = "test_updated";
-
-    ReplicationPeerConfig existingReplicationPeerConfig = ReplicationPeerConfig.
-      newBuilder(getConfig(1))
-      .putConfiguration(customPeerConfigKey,customPeerConfigOldValue).build();
-
-    Configuration conf = UTIL.getConfiguration();
+    // validates base configs does not override value if config already present
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
-      customPeerConfigKey.concat("=").concat(customPeerConfigUpdatedValue));
+      customPeerConfigKey.concat("=").concat(customPeerConfigUpdatedValue).concat(";").
+        concat(customPeerConfigSecondKey).concat("=").concat(customPeerConfigSecondUpdatedValue));
 
-    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
-      addBasePeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
-    assertNull(updatedReplicationPeerConfig);
+    ReplicationPeerConfig replicationPeerConfigAfterValueUpdate = ReplicationPeerConfigUtil.
+      addBasePeerConfigsIfNotPresent(conf,updatedReplicationPeerConfig);
+    assertNull(replicationPeerConfigAfterValueUpdate);
   }
 }

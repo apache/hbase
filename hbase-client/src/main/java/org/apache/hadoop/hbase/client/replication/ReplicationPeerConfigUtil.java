@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Splitter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
@@ -465,29 +466,26 @@ public final class ReplicationPeerConfigUtil {
    * @return ReplicationPeerConfig if peer configurations are updated else null.
    */
   public static ReplicationPeerConfig addBasePeerConfigsIfNotPresent(Configuration conf,
-    ReplicationPeerConfig receivedPeerConfig){
+    ReplicationPeerConfig receivedPeerConfig) {
     boolean isPeerConfigChanged = false;
-    String defaultPeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG,null);
+    String basePeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG, null);
 
     ReplicationPeerConfigBuilder copiedPeerConfigBuilder = ReplicationPeerConfig.
       newBuilder(receivedPeerConfig);
-    Map<String,String> peerConfigurations = receivedPeerConfig.getConfiguration();
+    Map<String,String> receivedPeerConfigMap = receivedPeerConfig.getConfiguration();
 
-    if (defaultPeerConfigs != null && defaultPeerConfigs.length() != 0) {
-      String[] defaultPeerConfigList = defaultPeerConfigs.split(";");
+    if (basePeerConfigs != null && basePeerConfigs.length() != 0) {
 
-      for (String defaultPeerConfig :  defaultPeerConfigList) {
-        String[] configSplit = defaultPeerConfig.split("=");
+      Map<String, String> basePeerConfigMap = Splitter.on(';').trimResults().omitEmptyStrings()
+        .withKeyValueSeparator("=").split(basePeerConfigs);
 
-        if (configSplit != null && configSplit.length == 2) {
-          String configName = configSplit[0];
-          String configValue = configSplit[1];
-
-          // Only override if base config does not exist in existing peer configs
-          if (!peerConfigurations.containsKey(configName)) {
-            copiedPeerConfigBuilder.putConfiguration(configName,configValue);
-            isPeerConfigChanged = true;
-          }
+      for (Map.Entry<String,String> entry : basePeerConfigMap.entrySet()) {
+        String configName = entry.getKey();
+        String configValue = entry.getValue();
+        // Only override if base config does not exist in existing peer configs
+        if (!receivedPeerConfigMap.containsKey(configName)) {
+          copiedPeerConfigBuilder.putConfiguration(configName,configValue);
+          isPeerConfigChanged = true;
         }
       }
     }
