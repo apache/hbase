@@ -30,7 +30,7 @@ import java.util.Set;
 
 /**
  * Slow/Large Log Query Filter with all filter and limit parameters
- * Used by Admin API: getSlowLogResponses
+ * Extends generic LogRequest used by Admin API getLogEntries
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -40,6 +40,7 @@ public class LogQueryFilter extends LogRequest {
   private String clientAddress;
   private String tableName;
   private String userName;
+  private int limit = 10;
   private Type type = Type.SLOW_LOG;
   private FilterByOperator filterByOperator = FilterByOperator.OR;
   private Set<ServerName> serverNames;
@@ -86,6 +87,14 @@ public class LogQueryFilter extends LogRequest {
     this.userName = userName;
   }
 
+  public int getLimit() {
+    return limit;
+  }
+
+  public void setLimit(int limit) {
+    this.limit = limit;
+  }
+
   public Type getType() {
     return type;
   }
@@ -123,6 +132,7 @@ public class LogQueryFilter extends LogRequest {
     LogQueryFilter that = (LogQueryFilter) o;
 
     return new EqualsBuilder()
+      .append(limit, that.limit)
       .append(regionName, that.regionName)
       .append(clientAddress, that.clientAddress)
       .append(tableName, that.tableName)
@@ -140,6 +150,7 @@ public class LogQueryFilter extends LogRequest {
       .append(clientAddress)
       .append(tableName)
       .append(userName)
+      .append(limit)
       .append(type)
       .append(filterByOperator)
       .append(serverNames)
@@ -153,6 +164,7 @@ public class LogQueryFilter extends LogRequest {
       .append("clientAddress", clientAddress)
       .append("tableName", tableName)
       .append("userName", userName)
+      .append("limit", limit)
       .append("type", type)
       .append("filterByOperator", filterByOperator)
       .append("serverNames", serverNames)

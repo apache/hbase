@@ -1497,6 +1497,7 @@ public final class ThriftUtilities {
     tLogQueryFilter.setClientAddress(logQueryFilter.getClientAddress());
     tLogQueryFilter.setTableName(logQueryFilter.getTableName());
     tLogQueryFilter.setUserName(logQueryFilter.getUserName());
+    tLogQueryFilter.setLimit(logQueryFilter.getLimit());
     TLogType tLogType = gettLogTypeFromHBase(logQueryFilter);
     tLogQueryFilter.setLogType(tLogType);
     TFilterByOperator tFilterByOperator = getTFilterByFromHBase(logQueryFilter);
@@ -1547,6 +1548,7 @@ public final class ThriftUtilities {
     logQueryFilter.setClientAddress(tLogQueryFilter.getClientAddress());
     logQueryFilter.setTableName(tLogQueryFilter.getTableName());
     logQueryFilter.setUserName(tLogQueryFilter.getUserName());
+    logQueryFilter.setLimit(tLogQueryFilter.getLimit());
     LogQueryFilter.Type type = getLogTypeFromThrift(tLogQueryFilter);
     logQueryFilter.setType(type);
     LogQueryFilter.FilterByOperator filterByOperator = getFilterByFromThrift(tLogQueryFilter);

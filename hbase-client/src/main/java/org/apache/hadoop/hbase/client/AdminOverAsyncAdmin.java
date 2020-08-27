@@ -1053,7 +1053,7 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<LogEntry> getLogEntries(LogRequest logRequest, int limit) throws IOException {
-    return get(admin.getLogEntries(logRequest, limit));
+  public List<LogEntry> getLogEntries(LogRequest logRequest) throws IOException {
+    return get(admin.getLogEntries(logRequest));
   }
 }

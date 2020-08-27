@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -28,5 +31,42 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class BalancerDecisionRequest extends LogRequest {
-  // no filters for BalancerDecision so far
+
+  private int limit = 250;
+
+  public int getLimit() {
+    return limit;
+  }
+
+  public void setLimit(int limit) {
+    this.limit = limit;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    BalancerDecisionRequest that = (BalancerDecisionRequest) o;
+    return new EqualsBuilder()
+      .append(limit, that.limit)
+      .isEquals();
+  }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder(17, 37)
+      .append(limit)
+      .toHashCode();
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this)
+      .append("limit", limit)
+      .toString();
+  }
 }

@@ -930,7 +930,7 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<LogEntry>> getLogEntries(LogRequest logRequest, int limit) {
-    return wrap(rawAdmin.getLogEntries(logRequest, limit));
+  public CompletableFuture<List<LogEntry>> getLogEntries(LogRequest logRequest) {
+    return wrap(rawAdmin.getLogEntries(logRequest));
   }
 }

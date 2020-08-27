@@ -843,7 +843,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
-  public List<LogEntry> getLogEntries(LogRequest logRequest, int limit) throws IOException {
+  public List<LogEntry> getLogEntries(LogRequest logRequest) throws IOException {
     return Collections.emptyList();
   }
 

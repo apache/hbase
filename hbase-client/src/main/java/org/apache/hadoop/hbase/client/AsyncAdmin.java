@@ -1545,12 +1545,12 @@ public interface AsyncAdmin {
    * @param logQueryFilter filter to be used if provided
    * @return Online slowlog response list. The return value wrapped by a {@link CompletableFuture}
    * @deprecated since 2.4.0 and will be removed in 4.0.0.
-   *   Use {@link #getLogEntries(LogRequest, int)} instead.
+   *   Use {@link #getLogEntries(LogRequest)} instead.
    */
   default CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
       final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
     logQueryFilter.setServerNames(serverNames);
-    CompletableFuture<List<LogEntry>> logEntries = getLogEntries(logQueryFilter, 10);
+    CompletableFuture<List<LogEntry>> logEntries = getLogEntries(logQueryFilter);
     return logEntries.thenApply(
       logEntryList -> logEntryList.stream().map(logEntry -> (OnlineLogRecord) logEntry)
         .collect(Collectors.toList()));
@@ -1688,8 +1688,7 @@ public interface AsyncAdmin {
    * Examples include slow/large RPC logs, balancer decisions by master.
    *
    * @param logRequest request payload with possible filters
-   * @param limit limit the number of records that API returns
    * @return Log entries representing online records from servers
    */
-  CompletableFuture<List<LogEntry>> getLogEntries(LogRequest logRequest, int limit);
+  CompletableFuture<List<LogEntry>> getLogEntries(LogRequest logRequest);
 }

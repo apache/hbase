@@ -1281,7 +1281,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public List<LogEntry> getLogEntries(LogRequest logRequest, int limit) throws IOException {
+  public List<LogEntry> getLogEntries(LogRequest logRequest) throws IOException {
     throw new NotImplementedException("getLogEntries not supported in ThriftAdmin");
   }
 }
