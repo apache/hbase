@@ -173,7 +173,7 @@ public class CloneSnapshotProcedure
           break;
         case CLONE_SNAPSHOT_UPDATE_DESC_CACHE:
           CreateTableProcedure.setEnabledState(env, getTableName());
-          CreateTableProcedure.updateTableDescCache(env, getTableName());
+          env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
           setNextState(CloneSnapshotState.CLONE_SNAPHOST_RESTORE_ACL);
           break;
         case CLONE_SNAPHOST_RESTORE_ACL:

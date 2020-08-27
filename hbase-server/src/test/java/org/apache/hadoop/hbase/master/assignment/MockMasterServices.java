@@ -331,16 +331,8 @@ public class MockMasterServices extends MockNoopMasterServices {
       }
 
       @Override
-      public void update(TableDescriptor htd) throws IOException {
+      public void update(TableDescriptor htd, boolean cacheOnly) throws IOException {
         // noop
-      }
-
-      @Override
-      public void setCacheOn() throws IOException {
-      }
-
-      @Override
-      public void setCacheOff() throws IOException {
       }
     };
   }

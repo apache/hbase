@@ -115,7 +115,7 @@ public class CreateTableProcedure
           break;
         case CREATE_TABLE_UPDATE_DESC_CACHE:
           setEnabledState(env, getTableName());
-          updateTableDescCache(env, getTableName());
+          env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
           setNextState(CreateTableState.CREATE_TABLE_POST_OPERATION);
           break;
         case CREATE_TABLE_POST_OPERATION:
@@ -404,11 +404,6 @@ public class CreateTableProcedure
       final List<RegionInfo> regionInfos) throws IOException {
     MetaTableAccessor.addRegionsToMeta(env.getMasterServices().getConnection(),
       regionInfos, tableDescriptor.getRegionReplication());
-  }
-
-  protected static void updateTableDescCache(final MasterProcedureEnv env,
-      final TableName tableName) throws IOException {
-    env.getMasterServices().getTableDescriptors().get(tableName);
   }
 
   @Override
