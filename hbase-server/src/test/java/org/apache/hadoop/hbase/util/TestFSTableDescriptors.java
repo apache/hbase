@@ -107,19 +107,19 @@ public class TestFSTableDescriptors {
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(fs, testdir);
-    Path p0 = fstd.updateTableDesciptor(htd);
+    Path p0 = fstd.updateTableDescriptor(htd);
     int i0 = FSTableDescriptors.getTableInfoSequenceId(p0);
-    Path p1 = fstd.updateTableDesciptor(htd);
+    Path p1 = fstd.updateTableDescriptor(htd);
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p0));
     int i1 = FSTableDescriptors.getTableInfoSequenceId(p1);
     assertTrue(i1 == i0 + 1);
-    Path p2 = fstd.updateTableDesciptor(htd);
+    Path p2 = fstd.updateTableDescriptor(htd);
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p1));
     int i2 = FSTableDescriptors.getTableInfoSequenceId(p2);
     assertTrue(i2 == i1 + 1);
-    Path p3 = fstd.updateTableDesciptor(htd);
+    Path p3 = fstd.updateTableDescriptor(htd);
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p2));
     int i3 = FSTableDescriptors.getTableInfoSequenceId(p3);
@@ -191,7 +191,7 @@ public class TestFSTableDescriptors {
     Path rootdir = UTIL.getDataTestDir(name);
     FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).build();
-    Path descriptorFile = fstd.updateTableDesciptor(htd);
+    Path descriptorFile = fstd.updateTableDescriptor(htd);
     try (FSDataOutputStream out = fs.create(descriptorFile, true)) {
       out.write(TableDescriptorBuilder.toByteArray(htd));
     }

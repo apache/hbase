@@ -297,7 +297,7 @@ public class FSTableDescriptors implements TableDescriptors {
       throw new UnsupportedOperationException("Cannot add a table descriptor - in read only mode");
     }
     if (!cacheOnly) {
-      updateTableDesciptor(td);
+      updateTableDescriptor(td);
     }
     if (usecache) {
       this.cache.put(td.getTableName(), td);
@@ -305,7 +305,7 @@ public class FSTableDescriptors implements TableDescriptors {
   }
 
   @VisibleForTesting
-  Path updateTableDesciptor(TableDescriptor td) throws IOException {
+  Path updateTableDescriptor(TableDescriptor td) throws IOException {
     TableName tableName = td.getTableName();
     Path tableDir = getTableDir(tableName);
     Path p = writeTableDescriptor(fs, td, tableDir, getTableInfoPath(tableDir));
