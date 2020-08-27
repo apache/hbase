@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -171,6 +172,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminLogEntry;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminLogRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
@@ -4004,6 +4007,35 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       .setIsCleaned(slowLogsCleaned)
       .build();
     return clearSlowLogResponses;
+  }
+
+  @Override
+  public AdminLogEntry getLogEntries(RpcController controller,
+      AdminLogRequest request) throws ServiceException {
+    try {
+      final String logClassName = request.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName)
+        .asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("SlowLogResponseRequest")) {
+        SlowLogResponseRequest slowLogResponseRequest =
+          (SlowLogResponseRequest) method.invoke(null, request.getLogInitializerMessage());
+        final NamedQueueRecorder namedQueueRecorder =
+          this.regionServer.getNamedQueueRecorder();
+        final List<SlowLogPayload> slowLogPayloads =
+          getSlowLogPayloads(slowLogResponseRequest, namedQueueRecorder);
+        SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
+          .addAllSlowLogPayloads(slowLogPayloads)
+          .build();
+        return AdminLogEntry.newBuilder().setLogClassName(slowLogResponses.getClass().getName())
+          .setLogInitializerMessage(slowLogResponses.toByteString()).build();
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+        | InvocationTargetException e) {
+      LOG.error("Error while retrieving log entries.", e);
+      throw new ServiceException(e);
+    }
+    throw new ServiceException("Invalid request params");
   }
 
   @VisibleForTesting

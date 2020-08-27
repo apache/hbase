@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1801,12 +1802,12 @@ public final class RequestConverter {
    * @param limit
    * @return a protocol buffer SlowLogResponseRequest
    */
-  public static SlowLogResponseRequest buildSlowLogResponseRequest(
+  public static AdminProtos.AdminLogRequest buildSlowLogResponseRequest(
       final LogQueryFilter logQueryFilter, int limit) {
-    SlowLogResponseRequest.Builder builder = SlowLogResponseRequest.newBuilder();
     if (logQueryFilter == null) {
-      return builder.build();
+      return AdminProtos.AdminLogRequest.getDefaultInstance();
     }
+    SlowLogResponseRequest.Builder builder = SlowLogResponseRequest.newBuilder();
     final String clientAddress = logQueryFilter.getClientAddress();
     if (StringUtils.isNotEmpty(clientAddress)) {
       builder.setClientAddress(clientAddress);
@@ -1834,7 +1835,11 @@ public final class RequestConverter {
     } else {
       builder.setLogType(SlowLogResponseRequest.LogType.LARGE_LOG);
     }
-    return builder.setLimit(limit).build();
+    SlowLogResponseRequest slowLogResponseRequest = builder.setLimit(limit).build();
+    return AdminProtos.AdminLogRequest.newBuilder()
+      .setLogClassName(slowLogResponseRequest.getClass().getName())
+      .setLogInitializerMessage(slowLogResponseRequest.toByteString())
+      .build();
   }
 
   /**

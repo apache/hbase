@@ -3989,22 +3989,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }
-    if (logQueryFilter.getType() == null
-        || logQueryFilter.getType() == LogQueryFilter.Type.SLOW_LOG) {
-      return CompletableFuture.supplyAsync(() -> serverNames.stream()
-        .map((ServerName serverName) ->
-          getSlowLogResponseFromServer(serverName, logQueryFilter, limit))
-        .map(CompletableFuture::join)
-        .flatMap(List::stream)
-        .collect(Collectors.toList()));
-    } else {
-      return CompletableFuture.supplyAsync(() -> serverNames.stream()
-        .map((ServerName serverName) ->
-          getLargeLogResponseFromServer(serverName, logQueryFilter, limit))
-        .map(CompletableFuture::join)
-        .flatMap(List::stream)
-        .collect(Collectors.toList()));
-    }
+    return CompletableFuture.supplyAsync(() -> serverNames.stream()
+      .map((ServerName serverName) ->
+        getSlowLogResponseFromServer(serverName, logQueryFilter, limit))
+      .map(CompletableFuture::join)
+      .flatMap(List::stream)
+      .collect(Collectors.toList()));
   }
 
   private CompletableFuture<List<LogEntry>> getSlowLogResponseFromServer(
@@ -4013,18 +4003,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .action((controller, stub) -> this
         .adminCall(
           controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter, limit),
-          AdminService.Interface::getSlowLogResponses,
-          ProtobufUtil::toSlowLogPayloads))
-      .serverName(serverName).call();
-  }
-
-  private CompletableFuture<List<LogEntry>> getLargeLogResponseFromServer(
-      final ServerName serverName, final LogQueryFilter logQueryFilter, int limit) {
-    return this.<List<LogEntry>>newAdminCaller()
-      .action((controller, stub) -> this
-        .adminCall(
-          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter, limit),
-          AdminService.Interface::getLargeLogResponses,
+          AdminService.Interface::getLogEntries,
           ProtobufUtil::toSlowLogPayloads))
       .serverName(serverName).call();
   }
@@ -4221,8 +4200,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return this.<List<LogEntry>>newMasterCaller()
       .action((controller, stub) ->
         this.call(controller, stub,
-          MasterProtos.BalancerDecisionsRequest.newBuilder().setLimit(limit).build(),
-          MasterService.Interface::getBalancerDecisions, ProtobufUtil::toBalancerDecisionResponse))
+          ProtobufUtil.toBalancerDecisionRequest(limit),
+          MasterService.Interface::getLogEntries, ProtobufUtil::toBalancerDecisionResponse))
       .call();
   }
 

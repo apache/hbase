@@ -82,7 +82,7 @@ public class TestBalancerDecision extends BalancerTestBase {
           .addAllBalancerDecision(balancerDecisions)
           .build();
       List<LogEntry> balancerDecisionRecords =
-        ProtobufUtil.toBalancerDecisionResponse(response);
+        ProtobufUtil.getBalancerDecisionEntries(response);
       Assert.assertTrue(balancerDecisionRecords.size() > 160);
     } finally {
       // reset config

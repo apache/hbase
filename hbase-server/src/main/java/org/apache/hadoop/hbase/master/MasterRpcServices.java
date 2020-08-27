@@ -21,6 +21,8 @@ import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -122,6 +124,7 @@ import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -3297,7 +3300,33 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
-  public MasterProtos.BalancerDecisionsResponse getBalancerDecisions(RpcController controller,
+  public MasterProtos.MasterLogEntry getLogEntries(RpcController controller,
+      MasterProtos.MasterLogRequest request) throws ServiceException {
+    try {
+      final String logClassName = request.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName)
+        .asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("BalancerDecisionsRequest")) {
+        MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest =
+          (MasterProtos.BalancerDecisionsRequest) method
+            .invoke(null, request.getLogInitializerMessage());
+        MasterProtos.BalancerDecisionsResponse balancerDecisionsResponse =
+          getBalancerDecisions(balancerDecisionsRequest);
+        return MasterProtos.MasterLogEntry.newBuilder()
+          .setLogClassName(balancerDecisionsResponse.getClass().getName())
+          .setLogInitializerMessage(balancerDecisionsResponse.toByteString())
+          .build();
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+        | InvocationTargetException e) {
+      LOG.error("Error while retrieving log entries.", e);
+      throw new ServiceException(e);
+    }
+    throw new ServiceException("Invalid request params");
+  }
+
+  private MasterProtos.BalancerDecisionsResponse getBalancerDecisions(
       MasterProtos.BalancerDecisionsRequest request) {
     final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
     if (namedQueueRecorder == null) {

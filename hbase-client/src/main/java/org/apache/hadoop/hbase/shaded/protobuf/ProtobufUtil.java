@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
@@ -3507,14 +3508,26 @@ public final class ProtobufUtil {
   /**
    * Convert  AdminProtos#SlowLogResponses to list of {@link OnlineLogRecord}
    *
-   * @param slowLogResponses slowlog response protobuf instance
+   * @param adminLogEntry slowlog response protobuf instance
    * @return list of SlowLog payloads for client usecase
    */
   public static List<LogEntry> toSlowLogPayloads(
-      final AdminProtos.SlowLogResponses slowLogResponses) {
-    List<LogEntry> onlineLogRecords = slowLogResponses.getSlowLogPayloadsList()
-      .stream().map(ProtobufUtil::getSlowLogRecord).collect(Collectors.toList());
-    return onlineLogRecords;
+      final AdminProtos.AdminLogEntry adminLogEntry) {
+    try {
+      final String logClassName = adminLogEntry.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("SlowLogResponses")) {
+        AdminProtos.SlowLogResponses slowLogResponses = (AdminProtos.SlowLogResponses) method
+          .invoke(null, adminLogEntry.getLogInitializerMessage());
+        return slowLogResponses.getSlowLogPayloadsList().stream()
+          .map(ProtobufUtil::getSlowLogRecord).collect(Collectors.toList());
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      throw new RuntimeException("Error while retrieving response from server");
+    }
+    throw new RuntimeException("Invalid response from server");
   }
 
   /**
@@ -3628,21 +3641,47 @@ public final class ProtobufUtil {
   }
 
   public static List<LogEntry> toBalancerDecisionResponse(
-      MasterProtos.BalancerDecisionsResponse balancerDecisionsResponse) {
-    List<RecentLogs.BalancerDecision> balancerDecisions =
-      balancerDecisionsResponse.getBalancerDecisionList();
+      MasterProtos.MasterLogEntry masterLogEntry) {
+    try {
+      final String logClassName = masterLogEntry.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("BalancerDecisionsResponse")) {
+        MasterProtos.BalancerDecisionsResponse response =
+          (MasterProtos.BalancerDecisionsResponse) method
+            .invoke(null, masterLogEntry.getLogInitializerMessage());
+        return getBalancerDecisionEntries(response);
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      throw new RuntimeException("Error while retrieving response from server");
+    }
+    throw new RuntimeException("Invalid response from server");
+  }
+
+  public static List<LogEntry> getBalancerDecisionEntries(
+      MasterProtos.BalancerDecisionsResponse response) {
+    List<RecentLogs.BalancerDecision> balancerDecisions = response.getBalancerDecisionList();
     if (CollectionUtils.isEmpty(balancerDecisions)) {
       return Collections.emptyList();
     }
-    return balancerDecisions.stream()
-      .map(balancerDecision -> new BalancerDecision.Builder()
-        .setInitTotalCost(balancerDecision.getInitTotalCost())
-        .setInitialFunctionCosts(balancerDecision.getInitialFunctionCosts())
-        .setComputedTotalCost(balancerDecision.getComputedTotalCost())
-        .setFinalFunctionCosts(balancerDecision.getFinalFunctionCosts())
-        .setComputedSteps(balancerDecision.getComputedSteps())
-        .setRegionPlans(balancerDecision.getRegionPlansList()).build())
+    return balancerDecisions.stream().map(balancerDecision -> new BalancerDecision.Builder()
+      .setInitTotalCost(balancerDecision.getInitTotalCost())
+      .setInitialFunctionCosts(balancerDecision.getInitialFunctionCosts())
+      .setComputedTotalCost(balancerDecision.getComputedTotalCost())
+      .setFinalFunctionCosts(balancerDecision.getFinalFunctionCosts())
+      .setComputedSteps(balancerDecision.getComputedSteps())
+      .setRegionPlans(balancerDecision.getRegionPlansList()).build())
       .collect(Collectors.toList());
+  }
+
+  public static MasterProtos.MasterLogRequest toBalancerDecisionRequest(int limit) {
+    MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest =
+      MasterProtos.BalancerDecisionsRequest.newBuilder().setLimit(limit).build();
+    return MasterProtos.MasterLogRequest.newBuilder()
+      .setLogClassName(balancerDecisionsRequest.getClass().getName())
+      .setLogInitializerMessage(balancerDecisionsRequest.toByteString())
+      .build();
   }
 
 }
