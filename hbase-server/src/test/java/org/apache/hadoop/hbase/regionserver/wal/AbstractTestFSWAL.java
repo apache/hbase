@@ -73,7 +73,7 @@ import org.apache.hadoop.hbase.regionserver.FlushPolicy;
 import org.apache.hadoop.hbase.regionserver.FlushPolicyFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SequenceId;
@@ -515,7 +515,8 @@ public abstract class AbstractTestFSWAL {
   private HRegion createHoldingHRegion(Configuration conf, TableDescriptor htd, WAL wal)
     throws IOException {
     RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     TEST_UTIL.createLocalHRegion(hri, htd, wal).close();
     RegionServerServices rsServices = mock(RegionServerServices.class);
     when(rsServices.getServerName()).thenReturn(ServerName.valueOf("localhost:12345", 123456));
