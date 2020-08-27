@@ -116,7 +116,8 @@ public class TestRecoveredEditsReplayAndAbort {
     //mock a RegionServerServices
     final RegionServerAccounting rsAccounting = new RegionServerAccounting(CONF);
     RegionServerServices rs = Mockito.mock(RegionServerServices.class);
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     Mockito.when(rs.getRegionServerAccounting()).thenReturn(rsAccounting);
     Mockito.when(rs.isAborted()).thenReturn(false);
     Mockito.when(rs.getNonceManager()).thenReturn(null);

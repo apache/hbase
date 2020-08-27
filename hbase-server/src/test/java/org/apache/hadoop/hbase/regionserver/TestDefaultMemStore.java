@@ -99,7 +99,8 @@ public class TestDefaultMemStore {
     internalSetUp();
     // no pool
     this.chunkCreator =
-        ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+      ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+        0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     this.memstore = new DefaultMemStore();
   }
 

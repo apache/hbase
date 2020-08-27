@@ -172,7 +172,8 @@ public class TestCompactionArchiveConcurrentClose {
 
     HRegionFileSystem fs =
         new WaitingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, "log_" + info.getEncodedName());
