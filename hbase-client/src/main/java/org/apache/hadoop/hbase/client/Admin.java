@@ -2340,9 +2340,8 @@ public interface Admin extends Abortable, Closeable {
    * @param logQueryFilter filter to be used if provided (determines slow / large RPC logs)
    * @return online slowlog response list
    * @throws IOException if a remote or network exception occurs
-   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
-   *   {@link #getLogEntries(LogRequest, int)} instead. This deprecated API version will internally
-   *   use {@link #getLogEntries(LogRequest, int)} with limit 10.
+   * @deprecated since 2.4.0 and will be removed in 4.0.0.
+   *   Use {@link #getLogEntries(LogRequest, int)} instead.
    */
   default List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
       final LogQueryFilter logQueryFilter) throws IOException {
