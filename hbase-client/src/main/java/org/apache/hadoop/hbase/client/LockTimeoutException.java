@@ -18,14 +18,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /*
   Thrown whenever we are not able to get the lock within the specified wait time.
  */
 @InterfaceAudience.Public
-public class LockTimeoutException extends IOException {
+public class LockTimeoutException extends HBaseIOException {
   public LockTimeoutException(String message) {
     super(message);
   }

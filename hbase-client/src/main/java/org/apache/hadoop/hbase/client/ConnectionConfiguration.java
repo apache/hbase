@@ -120,9 +120,10 @@ public class ConnectionConfiguration {
     this.writeRpcTimeout = conf.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
         conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
 
-    this.scannerTimeoutPeriod = HBaseConfiguration.getInt(conf, HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
-      HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
-      HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
+    this.scannerTimeoutPeriod = HBaseConfiguration.getInt(conf,
+        HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
+        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
   }
 
   /**

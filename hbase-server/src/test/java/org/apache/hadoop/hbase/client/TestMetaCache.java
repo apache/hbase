@@ -406,7 +406,7 @@ public class TestMetaCache {
     }
   }
 
-  private class ClientThread extends Thread {
+  private final class ClientThread extends Thread {
     private Exception exception;
     private ConnectionImplementation connection;
 
