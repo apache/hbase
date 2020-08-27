@@ -64,7 +64,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
     UTIL.getConfiguration().set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
       HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     // Enable retain assignment during ServerCrashProcedure
-    UTIL.getConfiguration().setBoolean(ServerCrashProcedure.SCP_RETAIN_ASSIGNMENT, true);
+    UTIL.getConfiguration().setBoolean(ServerCrashProcedure.MASTER_SCP_RETAIN_ASSIGNMENT, true);
     UTIL.startMiniCluster(2);
     // Turn off balancer
     UTIL.getMiniHBaseCluster().getMaster().getMasterRpcServices().synchronousBalanceSwitch(false);
