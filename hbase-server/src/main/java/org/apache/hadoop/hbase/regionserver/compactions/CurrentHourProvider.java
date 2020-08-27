@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 @InterfaceAudience.Private
 public class CurrentHourProvider {
