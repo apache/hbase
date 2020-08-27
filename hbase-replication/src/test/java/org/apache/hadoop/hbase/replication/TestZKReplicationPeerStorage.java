@@ -256,6 +256,10 @@ public class TestZKReplicationPeerStorage {
 
     ReplicationPeerConfig replicationPeerConfigAfterValueUpdate = ReplicationPeerConfigUtil.
       addBasePeerConfigsIfNotPresent(conf,updatedReplicationPeerConfig);
-    assertNull(replicationPeerConfigAfterValueUpdate);
+
+    assertEquals(customPeerConfigValue, replicationPeerConfigAfterValueUpdate.
+      getConfiguration().get(customPeerConfigKey));
+    assertEquals(customPeerConfigSecondValue, replicationPeerConfigAfterValueUpdate.
+      getConfiguration().get(customPeerConfigSecondKey));
   }
 }

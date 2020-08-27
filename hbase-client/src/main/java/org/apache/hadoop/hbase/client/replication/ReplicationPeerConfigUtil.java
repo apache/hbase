@@ -460,14 +460,14 @@ public final class ReplicationPeerConfigUtil {
    * This merges the user supplied peer configuration
    * {@link org.apache.hadoop.hbase.replication.ReplicationPeerConfig} with peer configs
    * provided as property hbase.replication.peer.base.configs in hbase configuration.
-   * Expected format for this hbase configuration is "k1=v1;k2=v2,v2_1"
+   * Expected format for this hbase configuration is "k1=v1;k2=v2,v2_1". Original value
+   * of conf is retained if already present in ReplicationPeerConfig.
    *
    * @param conf Configuration
-   * @return ReplicationPeerConfig if peer configurations are updated else null.
+   * @return ReplicationPeerConfig containing updated configs.
    */
   public static ReplicationPeerConfig addBasePeerConfigsIfNotPresent(Configuration conf,
     ReplicationPeerConfig receivedPeerConfig) {
-    boolean isPeerConfigChanged = false;
     String basePeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG, null);
 
     ReplicationPeerConfigBuilder copiedPeerConfigBuilder = ReplicationPeerConfig.
@@ -485,12 +485,11 @@ public final class ReplicationPeerConfigUtil {
         // Only override if base config does not exist in existing peer configs
         if (!receivedPeerConfigMap.containsKey(configName)) {
           copiedPeerConfigBuilder.putConfiguration(configName,configValue);
-          isPeerConfigChanged = true;
         }
       }
     }
 
-    return isPeerConfigChanged ? copiedPeerConfigBuilder.build() : null;
+    return copiedPeerConfigBuilder.build();
   }
 
   public static ReplicationPeerConfig appendExcludeTableCFsToReplicationPeerConfig(

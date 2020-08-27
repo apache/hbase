@@ -235,9 +235,7 @@ public class ReplicationPeerManager {
     }
     ReplicationPeerConfig updatedPeerConfig = ReplicationPeerConfigUtil.
       addBasePeerConfigsIfNotPresent(conf,peerConfig);
-    if(updatedPeerConfig != null) {
-      peerConfig = updatedPeerConfig;
-    }
+    peerConfig = updatedPeerConfig;
     ReplicationPeerConfig copiedPeerConfig = ReplicationPeerConfig.newBuilder(peerConfig).build();
     SyncReplicationState syncReplicationState =
       copiedPeerConfig.isSyncReplication() ? SyncReplicationState.DOWNGRADE_ACTIVE
@@ -555,14 +553,10 @@ public class ReplicationPeerManager {
 
       ReplicationPeerConfig updatedPeerConfig = ReplicationPeerConfigUtil.
         addBasePeerConfigsIfNotPresent(conf,peerConfig);
-      if (updatedPeerConfig != null) {
-        peerStorage.updatePeerConfig(peerId,updatedPeerConfig);
-        peerConfig = updatedPeerConfig;
-      }
-
+      peerStorage.updatePeerConfig(peerId,updatedPeerConfig);
       boolean enabled = peerStorage.isPeerEnabled(peerId);
       SyncReplicationState state = peerStorage.getPeerSyncReplicationState(peerId);
-      peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, peerConfig, state));
+      peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, updatedPeerConfig, state));
     }
     return new ReplicationPeerManager(peerStorage,
       ReplicationStorageFactory.getReplicationQueueStorage(zk, conf), peers, conf, clusterId);
