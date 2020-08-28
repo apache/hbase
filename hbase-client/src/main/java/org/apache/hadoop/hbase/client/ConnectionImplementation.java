@@ -865,11 +865,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       long pauseBase = this.pause;
       takeUserRegionLock();
       try {
-        if (useCache) {// re-check cache after get lock
-          RegionLocations locations = getCachedLocation(tableName, row);
-          if (locations != null && locations.getRegionLocation(replicaId) != null) {
-            return locations;
-          }
+        // We don't need to check if useCache is enabled or not. Even if useCache is false
+        // we already cleared the cache for this row before acquiring userRegion lock so if this
+        // row is present in cache that means some other thread has populated it while we were
+        // waiting to acquire user region lock.
+        RegionLocations locations = getCachedLocation(tableName, row);
+        if (locations != null && locations.getRegionLocation(replicaId) != null) {
+          return locations;
         }
         if (relocateMeta) {
           relocateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW,
@@ -892,7 +894,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
             }
             tableNotFound = false;
             // convert the row result into the HRegionLocation we need!
-            RegionLocations locations = MetaTableAccessor.getRegionLocations(regionInfoRow);
+            locations = MetaTableAccessor.getRegionLocations(regionInfoRow);
             if (locations == null || locations.getRegionLocation(replicaId) == null) {
               throw new IOException("RegionInfo null in " + tableName + ", row=" + regionInfoRow);
             }
