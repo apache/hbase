@@ -24,6 +24,8 @@ import java.util.Collections;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -32,6 +34,7 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -56,8 +59,8 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    Configuration configuration = TEST_UTIL.getConfiguration();
-    configuration.set(RSGroupBasedLoadBalancer.FALLBACK_GROUPS_KEY, FALLBACK_GROUP);
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setBoolean(RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY, true);
     setUpTestBeforeClass();
     MASTER.balanceSwitch(true);
   }
@@ -78,51 +81,57 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
   }
 
   @Test
-  public void testGroupFallback() throws Exception {
+  public void testFallback() throws Exception {
     // add fallback group
     addGroup(FALLBACK_GROUP, 1);
     // add test group
     String groupName = getGroupName(name.getMethodName());
     addGroup(groupName, 1);
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).build())
-        .setRegionServerGroup(groupName)
-        .build();
-    ADMIN.createTable(desc);
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).build())
+      .setRegionServerGroup(groupName)
+      .build();
+    ADMIN.createTable(desc, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-    // server of test group crash
-    for (Address server : ADMIN.getRSGroup(groupName).getServers()) {
-      AssignmentTestingUtil.crashRs(TEST_UTIL, getServerName(server), true);
-    }
-    Threads.sleep(1000);
-    TEST_UTIL.waitUntilNoRegionsInTransition(10000);
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    // server of test group crash, regions move to default group
+    crashRsInGroup(groupName);
+    assertRegionsInGroup(tableName, RSGroupInfo.DEFAULT_GROUP);
 
-    // regions move to fallback group
-    assertRegionsInGroup(FALLBACK_GROUP);
+    // server of default group crash, regions move to any other group
+    crashRsInGroup(RSGroupInfo.DEFAULT_GROUP);
+    assertRegionsInGroup(tableName, FALLBACK_GROUP);
 
-    // move a new server from default group
-    Address address = ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers().first();
-    ADMIN.moveServersToRSGroup(Collections.singleton(address), groupName);
-
-    // correct misplaced regions
+    // add a new server to default group, regions move to default group
+    TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
     MASTER.balance();
+    assertRegionsInGroup(tableName, RSGroupInfo.DEFAULT_GROUP);
 
-    TEST_UTIL.waitUntilNoRegionsInTransition(10000);
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-
-    // regions move back
-    assertRegionsInGroup(groupName);
+    // add a new server to test group, regions move back
+    JVMClusterUtil.RegionServerThread t =
+      TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
+    ADMIN.moveServersToRSGroup(
+      Collections.singleton(t.getRegionServer().getServerName().getAddress()), groupName);
+    MASTER.balance();
+    assertRegionsInGroup(tableName, groupName);
 
     TEST_UTIL.deleteTable(tableName);
   }
 
-  private void assertRegionsInGroup(String group) throws IOException {
-    RSGroupInfo fallbackGroup = ADMIN.getRSGroup(group);
-    MASTER.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName).forEach(region -> {
+  private void assertRegionsInGroup(TableName table, String group) throws IOException {
+    TEST_UTIL.waitUntilAllRegionsAssigned(table);
+    RSGroupInfo rsGroup = ADMIN.getRSGroup(group);
+    MASTER.getAssignmentManager().getRegionStates().getRegionsOfTable(table).forEach(region -> {
       Address regionOnServer = MASTER.getAssignmentManager().getRegionStates()
           .getRegionAssignments().get(region).getAddress();
-      assertTrue(fallbackGroup.getServers().contains(regionOnServer));
+      assertTrue(rsGroup.getServers().contains(regionOnServer));
     });
+  }
+
+  private void crashRsInGroup(String groupName) throws Exception {
+    for (Address server : ADMIN.getRSGroup(groupName).getServers()) {
+      AssignmentTestingUtil.crashRs(TEST_UTIL, getServerName(server), true);
+    }
+    Threads.sleep(1000);
+    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
   }
 }
