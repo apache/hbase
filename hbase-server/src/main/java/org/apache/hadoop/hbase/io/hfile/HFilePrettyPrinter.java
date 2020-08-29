@@ -291,7 +291,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
     if (checkRootDir) {
       Path rootPath = CommonFSUtils.getRootDir(getConf());
-      String rootString = rootPath + rootPath.SEPARATOR;
+      String rootString = rootPath + Path.SEPARATOR;
       if (!file.toString().startsWith(rootString)) {
         // First we see if fully-qualified URI matches the root dir. It might
         // also be an absolute path in the same filesystem, so we prepend the FS

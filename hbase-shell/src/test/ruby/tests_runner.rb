@@ -82,9 +82,14 @@ if java.lang.System.get_property('shell.test')
   puts "Only running tests that match #{shell_test_pattern}"
   runner_args << "--testcase=#{shell_test_pattern}"
 end
-# first couple of args are to match the defaults, so we can pass options to limit the tests run
-if !(Test::Unit::AutoRunner.run(false, nil, runner_args))
-  raise "Shell unit tests failed. Check output file for details."
+begin
+  # first couple of args are to match the defaults, so we can pass options to limit the tests run
+  unless Test::Unit::AutoRunner.run(false, nil, runner_args)
+    raise 'Shell unit tests failed. Check output file for details.'
+  end
+rescue SystemExit => e
+  # Unit tests should not raise uncaught SystemExit exceptions. This could cause tests to be ignored.
+  raise 'Caught SystemExit during unit test execution! Check output file for details.'
 end
 
 puts "Done with tests! Shutting down the cluster..."

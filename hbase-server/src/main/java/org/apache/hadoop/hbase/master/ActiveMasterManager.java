@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.master;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.Server;
@@ -34,12 +36,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
- * Handles everything on master-side related to master election.
+ * Handles everything on master-side related to master election. Keeps track of
+ * currently active master and registered backup masters.
  *
- * <p>Listens and responds to ZooKeeper notifications on the master znode,
+ * <p>Listens and responds to ZooKeeper notifications on the master znodes,
  * both <code>nodeCreated</code> and <code>nodeDeleted</code>.
  *
  * <p>Contains blocking methods which will hold up backup masters, waiting
@@ -65,17 +69,22 @@ public class ActiveMasterManager extends ZKListener {
   // notifications) and lazily fetched on-demand.
   // ServerName is immutable, so we don't need heavy synchronization around it.
   volatile ServerName activeMasterServerName;
+  // Registered backup masters. List is kept up to date based on ZK change notifications to
+  // backup znode.
+  private volatile ImmutableList<ServerName> backupMasters;
 
   /**
    * @param watcher ZK watcher
    * @param sn ServerName
    * @param master In an instance of a Master.
    */
-  ActiveMasterManager(ZKWatcher watcher, ServerName sn, Server master) {
+  ActiveMasterManager(ZKWatcher watcher, ServerName sn, Server master)
+      throws InterruptedIOException {
     super(watcher);
     watcher.registerListener(this);
     this.sn = sn;
     this.master = master;
+    updateBackupMasters();
   }
 
   // will be set after jetty server is started
@@ -89,8 +98,18 @@ public class ActiveMasterManager extends ZKListener {
   }
 
   @Override
-  public void nodeDeleted(String path) {
+  public void nodeChildrenChanged(String path) {
+    if (path.equals(watcher.getZNodePaths().backupMasterAddressesZNode)) {
+      try {
+        updateBackupMasters();
+      } catch (InterruptedIOException ioe) {
+        LOG.error("Error updating backup masters", ioe);
+      }
+    }
+  }
 
+  @Override
+  public void nodeDeleted(String path) {
     // We need to keep track of the cluster's shutdown status while
     // we wait on the current master. We consider that, if the cluster
     // was already in a "shutdown" state when we started, that this master
@@ -101,7 +120,6 @@ public class ActiveMasterManager extends ZKListener {
     if(path.equals(watcher.getZNodePaths().clusterStateZNode) && !master.isStopped()) {
       clusterShutDown.set(true);
     }
-
     handle(path);
   }
 
@@ -109,6 +127,11 @@ public class ActiveMasterManager extends ZKListener {
     if (path.equals(watcher.getZNodePaths().masterAddressZNode) && !master.isStopped()) {
       handleMasterNodeChange();
     }
+  }
+
+  private void updateBackupMasters() throws InterruptedIOException {
+    backupMasters =
+        ImmutableList.copyOf(MasterAddressTracker.getBackupMastersAndRenewWatch(watcher));
   }
 
   /**
@@ -317,5 +340,12 @@ public class ActiveMasterManager extends ZKListener {
       LOG.debug(this.watcher.prefix("Failed delete of our master address node; " +
           e.getMessage()));
     }
+  }
+
+  /**
+   * @return list of registered backup masters.
+   */
+  public List<ServerName> getBackupMasters() {
+    return backupMasters;
   }
 }

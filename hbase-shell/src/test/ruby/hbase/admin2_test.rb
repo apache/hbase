@@ -435,5 +435,47 @@ class CommissioningTest < Test::Unit::TestCase
       end
     end
   end
+
+  # Tests for the `regioninfo` shell command
+  class RegionInfoTest < Test::Unit::TestCase
+    include TestHelpers
+    include HBaseConstants
+
+    def setup
+      setup_hbase
+      # Create test table if it does not exist
+      @test_name = "hbase_shell_regioninfo_test"
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+    end
+
+    def teardown
+      shutdown
+    end
+
+    define_test "Get region info without any args" do
+      assert_raise(ArgumentError) do
+        command(:regioninfo)
+      end
+    end
+
+    define_test 'Get region info with encoded region name' do
+      region = command(:locate_region, @test_name, '')
+      encodedRegionName = region.getRegion.getEncodedName
+      output = capture_stdout { command(:regioninfo, encodedRegionName) }
+      puts "Region info output:\n#{output}"
+      assert output.include? 'ENCODED'
+      assert output.include? 'STARTKEY'
+    end
+
+    define_test 'Get region info with region name' do
+      region = command(:locate_region, @test_name, '')
+      regionName = region.getRegion.getRegionNameAsString
+      output = capture_stdout { command(:regioninfo, regionName) }
+      puts "Region info output:\n#{output}"
+      assert output.include? 'ENCODED'
+      assert output.include? 'STARTKEY'
+    end
+  end
   # rubocop:enable ClassLength
 end

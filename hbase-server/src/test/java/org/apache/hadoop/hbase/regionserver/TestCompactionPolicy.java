@@ -106,7 +106,8 @@ public class TestCompactionPolicy {
 
     hlog = new FSHLog(fs, basedir, logName, conf);
     hlog.init();
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     region = HRegion.createHRegion(info, basedir, conf, tableDescriptor, hlog);
     region.close();
     Path tableDir = CommonFSUtils.getTableDir(basedir, tableDescriptor.getTableName());
