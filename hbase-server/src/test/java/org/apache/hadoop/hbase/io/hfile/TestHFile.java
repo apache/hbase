@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -762,7 +763,7 @@ public class TestHFile  {
     // optimization done.
     left = getCell(Bytes.toBytes("g"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = getCell(Bytes.toBytes("i"), Bytes.toBytes("a"), Bytes.toBytes("a"));
-    mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.META_COMPARATOR, left, right);
+    mid = HFileWriterImpl.getMidpoint(MetaCellComparator.META_COMPARATOR, left, right);
     assertTrue(PrivateCellUtil
       .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
     assertTrue(PrivateCellUtil
@@ -809,7 +810,7 @@ public class TestHFile  {
     assertTrue(newKey.getTypeByte() == Type.Maximum.getCode());
 
     // verify metaKeyComparator's getShortMidpointKey output
-    final CellComparatorImpl metaKeyComparator = CellComparatorImpl.META_COMPARATOR;
+    final CellComparatorImpl metaKeyComparator = MetaCellComparator.META_COMPARATOR;
     kv1 = new KeyValue(Bytes.toBytes("ilovehbase123"), family, qualA, 5, Type.Put);
     kv2 = new KeyValue(Bytes.toBytes("ilovehbase234"), family, qualA, 0, Type.Put);
     newKey = HFileWriterImpl.getMidpoint(metaKeyComparator, kv1, kv2);
