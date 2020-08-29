@@ -141,6 +141,7 @@ public class CloneSnapshotProcedure
           break;
         case CLONE_SNAPSHOT_WRITE_FS_LAYOUT:
           newRegions = createFilesystemLayout(env, tableDescriptor, newRegions);
+          env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_ADD_TO_META);
           break;
         case CLONE_SNAPSHOT_ADD_TO_META:
@@ -172,8 +173,9 @@ public class CloneSnapshotProcedure
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_UPDATE_DESC_CACHE);
           break;
         case CLONE_SNAPSHOT_UPDATE_DESC_CACHE:
+          // XXX: this stage should be named as set table enabled, as now we will cache the
+          // descriptor after writing fs layout.
           CreateTableProcedure.setEnabledState(env, getTableName());
-          CreateTableProcedure.updateTableDescCache(env, getTableName());
           setNextState(CloneSnapshotState.CLONE_SNAPHOST_RESTORE_ACL);
           break;
         case CLONE_SNAPHOST_RESTORE_ACL:
