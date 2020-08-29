@@ -72,7 +72,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     return TableOperationType.CREATE;
   }
 
-  private static void writeFsLayout(Path rootDir, Configuration conf) throws IOException {
+  private static TableDescriptor writeFsLayout(Path rootDir, Configuration conf) throws IOException {
     LOG.info("BOOTSTRAP: creating hbase:meta region");
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
@@ -89,6 +89,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     HRegion
       .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
       .close();
+    return metaDescriptor;
   }
 
   @Override
@@ -100,7 +101,8 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
         case INIT_META_WRITE_FS_LAYOUT:
           Configuration conf = env.getMasterConfiguration();
           Path rootDir = CommonFSUtils.getRootDir(conf);
-          writeFsLayout(rootDir, conf);
+          TableDescriptor td = writeFsLayout(rootDir, conf);
+          env.getMasterServices().getTableDescriptors().update(td, true);
           setNextState(InitMetaState.INIT_META_ASSIGN_META);
           return Flow.HAS_MORE_STATE;
         case INIT_META_ASSIGN_META:
