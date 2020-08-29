@@ -20,11 +20,18 @@ package org.apache.hadoop.hbase.master;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReadWriteLock;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
@@ -42,6 +49,7 @@ import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
 import org.apache.hadoop.hbase.util.ZKDataMigrator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -317,5 +325,40 @@ public class TableStateManager {
     } catch (KeeperException e) {
       LOG.warn("Failed deleting table state from zookeeper", e);
     }
+  }
+
+  public void asyncLoadTableState() {
+    new Thread(() -> {
+      LOG.info("load table state...");
+      ThreadFactoryBuilder builder = new ThreadFactoryBuilder().setDaemon(true).setNameFormat("TableStateFetcher" + "-%1$d");
+      ExecutorService
+        executorService = Executors.newFixedThreadPool(master.getConfiguration().getInt("hbase.table.state.fetcher.threads",10), builder.build());
+
+      try {
+        List<Result> results = MetaTableAccessor.fullScan(master.getConnection(), ClientMetaTableAccessor.QueryType.TABLE);
+        List<Future<Void>> futures = new ArrayList<>();
+        results.forEach(r -> futures.add(executorService.submit(new Callable<Void>() {
+          @Override
+          public Void call() throws IOException {
+            TableState tableState = CatalogFamilyFormat.getTableState(r);
+            if (tableState != null && !TableStateManager.this.tableName2State.containsKey(tableState.getState())) {
+              TableStateManager.this.setTableState(tableState.getTableName(), tableState.getState());
+            }
+            return null;
+          }
+        })));
+        futures.forEach(f -> {
+          try {
+            f.get();
+          } catch (ExecutionException | InterruptedException e) {
+            master.abort("Failed to load tableState.", e);
+          }
+        });
+      } catch (IOException e) {
+        master.abort("Failed to load tableState.", e);
+      } finally {
+        executorService.shutdown();
+      }
+    }).start();
   }
 }

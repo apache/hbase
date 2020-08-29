@@ -158,7 +158,7 @@ public final class MetaTableAccessor {
    * @param type scanned part of meta
    * @return List of {@link Result}
    */
-  private static List<Result> fullScan(Connection connection, QueryType type) throws IOException {
+  public static List<Result> fullScan(Connection connection, QueryType type) throws IOException {
     ClientMetaTableAccessor.CollectAllVisitor v = new ClientMetaTableAccessor.CollectAllVisitor();
     scanMeta(connection, null, null, type, v);
     return v.getResults();
