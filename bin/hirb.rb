@@ -174,16 +174,20 @@ def debug?
   nil
 end
 
+
 # For backwards compatibility, this will export all the HBase shell commands, constants, and
 # instance variables (@hbase and @shell) onto Ruby's top-level receiver object known as "main".
 @shell.export_all(self) if top_level_definitions
 
 # If script2run, try running it.  If we're in interactive mode, will go on to run the shell unless
 # script calls 'exit' or 'exit 0' or 'exit errcode'.
-@shell.eval_io(File.new(script2run)) if script2run
+require 'shell/hbase_loader'
+if script2run
+  ::Shell::Shell.exception_handler(!$fullBackTrace) { @shell.eval_io(Hbase::Loader.file_for_load(script2run), filename = script2run) }
+end
 
 # If we are not running interactively, evaluate standard input
-@shell.eval_io(STDIN) unless interactive
+::Shell::Shell.exception_handler(!$fullBackTrace) { @shell.eval_io(STDIN) } unless interactive
 
 if interactive
   # Output a banner message that tells users where to go for help

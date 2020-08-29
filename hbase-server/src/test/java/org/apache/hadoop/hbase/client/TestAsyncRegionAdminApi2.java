@@ -189,7 +189,7 @@ public class TestAsyncRegionAdminApi2 extends TestAsyncAdminBase {
     // Need to wait GC for merged child region is done.
     HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
     CatalogJanitor cj = services.getCatalogJanitor();
-    cj.cleanMergeQualifier(mergedChildRegion);
+    assertTrue(cj.scan() > 0);
     // Wait until all procedures settled down
     while (!services.getMasterProcedureExecutor().getActiveProcIds().isEmpty()) {
       Thread.sleep(200);

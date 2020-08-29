@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.http;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.eclipse.jetty.server.RequestLog;
-import org.eclipse.jetty.server.Slf4jRequestLog;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Slf4jRequestLog;
 
 /**
  * RequestLog object for use with Http

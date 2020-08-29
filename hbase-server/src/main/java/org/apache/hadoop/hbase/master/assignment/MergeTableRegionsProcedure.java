@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
@@ -459,7 +460,7 @@ public class MergeTableRegionsProcedure
     if (!env.getMasterServices().isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
       String regionsStr = Arrays.deepToString(this.regionsToMerge);
       LOG.warn("Merge switch is off! skip merge of " + regionsStr);
-      super.setFailure(getClass().getSimpleName(),
+      setFailure(getClass().getSimpleName(),
           new IOException("Merge of " + regionsStr + " failed because merge switch is off"));
       return false;
     }
@@ -467,17 +468,17 @@ public class MergeTableRegionsProcedure
     if (!env.getMasterServices().getTableDescriptors().get(getTableName()).isMergeEnabled()) {
       String regionsStr = Arrays.deepToString(regionsToMerge);
       LOG.warn("Merge is disabled for the table! Skipping merge of {}", regionsStr);
-      super.setFailure(getClass().getSimpleName(), new IOException(
+      setFailure(getClass().getSimpleName(), new IOException(
           "Merge of " + regionsStr + " failed as region merge is disabled for the table"));
       return false;
     }
 
-    CatalogJanitor catalogJanitor = env.getMasterServices().getCatalogJanitor();
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
-    for (RegionInfo ri: this.regionsToMerge) {
-      if (!catalogJanitor.cleanMergeQualifier(ri)) {
+    for (RegionInfo ri : this.regionsToMerge) {
+      if (MetaTableAccessor.hasMergeRegions(env.getMasterServices().getConnection(),
+        ri.getRegionName())) {
         String msg = "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge) +
-            ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier " +
+          ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier " +
           "(if a 'merge column' in parent, it was recently merged but still has outstanding " +
           "references to its parents that must be cleared before it can participate in merge -- " +
           "major compact it to hurry clearing of its references)";
@@ -496,11 +497,15 @@ public class MergeTableRegionsProcedure
       // along with the failure, so we can see why regions are not mergeable at this time.
       try {
         if (!isMergeable(env, state)) {
+          setFailure(getClass().getSimpleName(),
+            new MergeRegionException(
+              "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge) +
+                ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", is not mergeable"));
           return false;
         }
       } catch (IOException e) {
         IOException ioe = new IOException(RegionInfo.getShortNameToLog(ri) + " NOT mergeable", e);
-        super.setFailure(getClass().getSimpleName(), ioe);
+        setFailure(getClass().getSimpleName(), ioe);
         return false;
       }
     }

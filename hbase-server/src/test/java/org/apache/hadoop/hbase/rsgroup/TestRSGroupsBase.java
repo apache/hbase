@@ -206,6 +206,12 @@ public abstract class TestRSGroupsBase {
       }
     }
     ADMIN.setRSGroup(tables, RSGroupInfo.DEFAULT_GROUP);
+    for (NamespaceDescriptor nd : ADMIN.listNamespaceDescriptors()) {
+      if (groupName.equals(nd.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP))) {
+        nd.removeConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
+        ADMIN.modifyNamespace(nd);
+      }
+    }
     RSGroupInfo groupInfo = ADMIN.getRSGroup(groupName);
     ADMIN.moveServersToRSGroup(groupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
     ADMIN.removeRSGroup(groupName);

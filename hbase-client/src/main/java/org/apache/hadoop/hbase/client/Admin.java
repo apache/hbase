@@ -856,10 +856,24 @@ public interface Admin extends Abortable, Closeable {
    * the request was submitted successfully. We need to check logs for the details of which regions
    * were split/merged.
    *
-   * @return <code>true</code> if region normalizer ran, <code>false</code> otherwise.
+   * @return {@code true} if region normalizer ran, {@code false} otherwise.
    * @throws IOException if a remote or network exception occurs
    */
-  boolean normalize() throws IOException;
+  default boolean normalize() throws IOException {
+    return normalize(new NormalizeTableFilterParams.Builder().build());
+  }
+
+  /**
+   * Invoke region normalizer. Can NOT run for various reasons.  Check logs.
+   * This is a non-blocking invocation to region normalizer. If return value is true, it means
+   * the request was submitted successfully. We need to check logs for the details of which regions
+   * were split/merged.
+   *
+   * @param ntfp limit to tables matching the specified filter.
+   * @return {@code true} if region normalizer ran, {@code false} otherwise.
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean normalize(NormalizeTableFilterParams ntfp) throws IOException;
 
   /**
    * Query the current state of the region normalizer.
