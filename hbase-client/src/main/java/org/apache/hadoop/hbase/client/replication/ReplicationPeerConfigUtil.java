@@ -468,27 +468,23 @@ public final class ReplicationPeerConfigUtil {
    */
   public static ReplicationPeerConfig addBasePeerConfigsIfNotPresent(Configuration conf,
     ReplicationPeerConfig receivedPeerConfig) {
-    String basePeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG, null);
-
+    String basePeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG, "");
     ReplicationPeerConfigBuilder copiedPeerConfigBuilder = ReplicationPeerConfig.
       newBuilder(receivedPeerConfig);
     Map<String,String> receivedPeerConfigMap = receivedPeerConfig.getConfiguration();
 
-    if (basePeerConfigs != null && basePeerConfigs.length() != 0) {
-
+    if (basePeerConfigs.length() != 0) {
       Map<String, String> basePeerConfigMap = Splitter.on(';').trimResults().omitEmptyStrings()
         .withKeyValueSeparator("=").split(basePeerConfigs);
-
       for (Map.Entry<String,String> entry : basePeerConfigMap.entrySet()) {
         String configName = entry.getKey();
         String configValue = entry.getValue();
         // Only override if base config does not exist in existing peer configs
         if (!receivedPeerConfigMap.containsKey(configName)) {
-          copiedPeerConfigBuilder.putConfiguration(configName,configValue);
+          copiedPeerConfigBuilder.putConfiguration(configName, configValue);
         }
       }
     }
-
     return copiedPeerConfigBuilder.build();
   }
 
