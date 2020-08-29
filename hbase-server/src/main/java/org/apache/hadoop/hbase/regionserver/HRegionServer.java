@@ -731,8 +731,8 @@ public class HRegionServer extends Thread implements
     CommonFSUtils.setFsDefault(this.conf, CommonFSUtils.getRootDir(this.conf));
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
-    this.tableDescriptors =
-      new FSTableDescriptors(this.dataFs, this.dataRootDir, !canUpdateTableDescriptor(), false);
+    this.tableDescriptors = new FSTableDescriptors(this.dataFs, this.dataRootDir,
+      !canUpdateTableDescriptor(), cacheTableDescriptor());
   }
 
   protected void login(UserProvider user, String host) throws IOException {
@@ -755,6 +755,10 @@ public class HRegionServer extends Thread implements
   }
 
   protected boolean canUpdateTableDescriptor() {
+    return false;
+  }
+
+  protected boolean cacheTableDescriptor() {
     return false;
   }
 
