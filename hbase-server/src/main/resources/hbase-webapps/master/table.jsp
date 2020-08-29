@@ -30,6 +30,7 @@
   import="java.util.HashSet"
   import="java.util.Optional"
   import="java.util.TreeMap"
+  import="java.util.concurrent.TimeoutException"
   import="java.util.concurrent.TimeUnit"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
@@ -655,12 +656,14 @@
 <%
   if (master.getAssignmentManager().isTableEnabled(table.getName())) {
     try {
-      CompactionState compactionState = admin.getCompactionState(table.getName()).get();
+      CompactionState compactionState = admin.getCompactionState(table.getName()).get(1, TimeUnit.SECONDS);
       %><%= compactionState %><%
     } catch (Exception e) {
 
       if(e.getCause() != null && e.getCause().getCause() instanceof NotServingRegionException) {
         %><%= CompactionState.NONE %><%
+      } else if(e instanceof TimeoutException){
+        %> Unknown <%
       } else {
         // Nothing really to do here
         for(StackTraceElement element : e.getStackTrace()) {
