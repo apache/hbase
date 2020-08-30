@@ -247,9 +247,20 @@ public class TestCatalogJanitorCluster {
     //Verify start and end region holes
     verifyCornerHoles(janitor, T2);
     verifyMiddleHole(janitor);
-    //verify total number of holes, 2 in t1 and t2 each and one in t3
+    //Verify that MetaFixer is able to fix these holes
+    fixHoles(janitor);
+  }
+
+  private void fixHoles(CatalogJanitor janitor) throws IOException {
+    MetaFixer metaFixer = new MetaFixer(TEST_UTIL.getHBaseCluster().getMaster());
     janitor.scan();
-    assertEquals(5, janitor.getLastReport().getHoles().size());
+    CatalogJanitor.Report report = janitor.getLastReport();
+    //Verify total number of holes, 2 in t1 and t2 each and one in t3
+    assertEquals("Number of holes are not matching", 5, report.getHoles().size());
+    metaFixer.fix();
+    janitor.scan();
+    report = janitor.getLastReport();
+    assertEquals("Holes are not fixed", 0, report.getHoles().size());
   }
 
   private void verifyMiddleHole(CatalogJanitor janitor) throws IOException {
