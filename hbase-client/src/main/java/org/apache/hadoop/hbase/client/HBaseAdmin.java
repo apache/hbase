@@ -464,7 +464,7 @@ public class HBaseAdmin implements Admin {
     return executeCallable(new RpcRetryingCallable<Boolean>() {
       @Override
       protected Boolean rpcCall(int callTimeout) throws Exception {
-        return MetaTableAccessor.tableExists(connection, tableName);
+        return MetaTableAccessor.getTableState(getConnection(), tableName) != null;
       }
     });
   }
@@ -2026,7 +2026,7 @@ public class HBaseAdmin implements Admin {
     return executeCallable(new RpcRetryingCallable<TableName>() {
       @Override
       protected TableName rpcCall(int callTimeout) throws Exception {
-        if (!MetaTableAccessor.tableExists(connection, tableName)) {
+        if (MetaTableAccessor.getTableState(getConnection(), tableName) == null) {
           throw new TableNotFoundException(tableName);
         }
         return tableName;

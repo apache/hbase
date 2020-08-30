@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -211,7 +212,7 @@ public class MasterProcedureTestingUtility {
     LOG.debug("Table directory layout is as expected.");
 
     // check meta
-    assertTrue(MetaTableAccessor.tableExists(master.getConnection(), tableName));
+    assertTrue(tableExists(master.getConnection(), tableName));
     assertEquals(regions.length, countMetaRegions(master, tableName));
 
     // check htd
@@ -232,7 +233,7 @@ public class MasterProcedureTestingUtility {
     assertFalse(fs.exists(tableDir));
 
     // check meta
-    assertFalse(MetaTableAccessor.tableExists(master.getConnection(), tableName));
+    assertFalse(tableExists(master.getConnection(), tableName));
     assertEquals(0, countMetaRegions(master, tableName));
 
     // check htd
@@ -574,6 +575,12 @@ public class MasterProcedureTestingUtility {
       ProcedureTestingUtility.waitProcedure(procExec, procId);
     } finally {
       assertTrue(procExec.unregisterListener(abortListener));
+    }
+  }
+
+  public static boolean tableExists(Connection conn, TableName tableName) throws IOException {
+    try (Admin admin = conn.getAdmin()) {
+      return admin.tableExists(tableName);
     }
   }
 
