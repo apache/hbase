@@ -623,12 +623,17 @@ public class CatalogJanitor extends ScheduledChore {
       // If table is disabled, skip integrity check.
       if (!isTableDisabled(ri)) {
         if (isTableTransition(ri)) {
-          // On table transition, look to see if last region was last in table
-          // and if this is the first. Report 'hole' if neither is true.
           // HBCK1 used to have a special category for missing start or end keys.
           // We'll just lump them in as 'holes'.
-          if ((this.previous != null && !this.previous.isLast()) || !ri.isFirst()) {
-            addHole(this.previous == null? RegionInfo.UNDEFINED: this.previous, ri);
+
+          // This is a table transition. If this region is not first region, report a hole.
+          if (!ri.isFirst()) {
+            addHole(RegionInfo.UNDEFINED, ri);
+          }
+          // This is a table transition. If last region was not last region of previous table,
+          // report a hole
+          if (this.previous != null && !this.previous.isLast()) {
+            addHole(this.previous, RegionInfo.UNDEFINED);
           }
         } else {
           if (!this.previous.isNext(ri)) {
