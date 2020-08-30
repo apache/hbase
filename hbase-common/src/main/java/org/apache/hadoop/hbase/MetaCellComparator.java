@@ -36,10 +36,10 @@ import java.util.Comparator;
 public class MetaCellComparator extends CellComparatorImpl {
 
   /**
-   * A {@link CellComparatorImpl} for <code>hbase:meta</code> catalog table
+   * A {@link MetaCellComparator} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
    */
-  public static final CellComparatorImpl META_COMPARATOR = new MetaCellComparator();
+  public static final MetaCellComparator META_COMPARATOR = new MetaCellComparator();
 
   // TODO: Do we need a ByteBufferKeyValue version of this?
   @Override
