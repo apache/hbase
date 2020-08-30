@@ -28,6 +28,14 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
  */
 @InterfaceAudience.Private
 public interface TableDescriptors {
+
+  /**
+   * Test whether a given table exists, i.e, has a table descriptor.
+   */
+  default boolean exists(TableName tableName) throws IOException {
+    return get(tableName) != null;
+  }
+
   /**
    * @return TableDescriptor for tablename
    */

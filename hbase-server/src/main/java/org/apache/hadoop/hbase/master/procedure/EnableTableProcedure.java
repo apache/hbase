@@ -282,9 +282,8 @@ public class EnableTableProcedure
    */
   private boolean prepareEnable(final MasterProcedureEnv env) throws IOException {
     boolean canTableBeEnabled = true;
-
     // Check whether table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
       setFailure("master-enable-table", new TableNotFoundException(tableName));
       canTableBeEnabled = false;
     } else {

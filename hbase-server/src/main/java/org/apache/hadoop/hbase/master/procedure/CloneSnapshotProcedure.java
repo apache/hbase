@@ -27,7 +27,6 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -330,12 +329,11 @@ public class CloneSnapshotProcedure
   /**
    * Action before any real action of cloning from snapshot.
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private void prepareClone(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
-    if (MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
-      throw new TableExistsException(getTableName());
+    if (env.getMasterServices().getTableDescriptors().exists(tableName)) {
+      throw new TableExistsException(tableName);
     }
   }
 
