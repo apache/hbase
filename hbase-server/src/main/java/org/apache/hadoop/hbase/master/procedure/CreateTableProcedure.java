@@ -240,7 +240,7 @@ public class CreateTableProcedure
 
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
-    if (MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    if (env.getMasterServices().getTableDescriptors().exists(tableName)) {
       setFailure("master-create-table", new TableExistsException(getTableName()));
       return false;
     }
