@@ -4222,14 +4222,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
       @Override
       public boolean evaluate() throws IOException {
-        boolean tableEnabled = false;
         try {
-          tableEnabled = getHBaseAdmin().tableExists(tableName)
+          return getHBaseAdmin().tableExists(tableName)
               && getHBaseAdmin().isTableEnabled(tableName);
         } catch (TableNotFoundException tnfe) {
           // Ignore TNFE
+          return false;
         }
-        return tableEnabled;
       }
     };
   }
