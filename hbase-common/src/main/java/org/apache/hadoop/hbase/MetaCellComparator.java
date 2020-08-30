@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.hbase;
 
+import java.nio.ByteBuffer;
+import java.util.Comparator;
+
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import java.nio.ByteBuffer;
-import java.util.Comparator;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 
 /**
  * A {@link CellComparatorImpl} for <code>hbase:meta</code> catalog table
