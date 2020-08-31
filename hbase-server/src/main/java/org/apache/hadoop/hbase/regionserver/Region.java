@@ -292,7 +292,8 @@ public interface Region extends ConfigurationObserver {
   /**
    * Perform a batch of mutations.
    * <p>
-   * Note this supports only Put and Delete mutations and will ignore other types passed.
+   * Note this supports only Put, Delete, Increment and Append mutations and will ignore other
+   * types passed.
    * @param mutations the list of mutations
    * @return an array of OperationStatus which internally contains the
    *         OperationStatusCode and the exceptionMessage if any.
