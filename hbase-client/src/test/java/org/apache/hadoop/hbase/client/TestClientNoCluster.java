@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTooBusyException;
@@ -682,7 +683,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * Comparator for meta row keys.
    */
   private static class MetaRowsComparator implements Comparator<byte []> {
-    private final CellComparatorImpl delegate = CellComparatorImpl.META_COMPARATOR;
+    private final CellComparatorImpl delegate = MetaCellComparator.META_COMPARATOR;
     @Override
     public int compare(byte[] left, byte[] right) {
       return delegate.compareRows(new KeyValue.KeyOnlyKeyValue(left), right, 0, right.length);
