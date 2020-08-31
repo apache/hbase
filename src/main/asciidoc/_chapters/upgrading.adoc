@@ -131,14 +131,14 @@ Previously, we tried to maintain dependency compatibility for the underly Hadoop
 [[hbase.client.api.surface]]
 ==== HBase API Surface
 
-HBase has a lot of API points, but for the compatibility matrix above, we differentiate between Client API, Limited Private API, and Private API. HBase uses link:https://yetus.apache.org/documentation/0.5.0/interface-classification/[Apache Yetus Audience Annotations] to guide downstream expectations for stability.
+HBase has a lot of API points, but for the compatibility matrix above, we differentiate between Client API, Limited Private API, and Private API. HBase uses link:https://yetus.apache.org/documentation/in-progress/interface-classification/[Apache Yetus Audience Annotations] to guide downstream expectations for stability.
 
-* InterfaceAudience (link:https://yetus.apache.org/documentation/0.5.0/audience-annotations-apidocs/org/apache/yetus/audience/InterfaceAudience.html[javadocs]): captures the intended audience, possible values include:
+* InterfaceAudience (link:https://yetus.apache.org/documentation/in-progress/javadocs/org/apache/yetus/audience/InterfaceAudience.html[javadocs]): captures the intended audience, possible values include:
   - Public: safe for end users and external projects
   - LimitedPrivate: used for internals we expect to be pluggable, such as coprocessors
   - Private: strictly for use within HBase itself
 Classes which are defined as `IA.Private` may be used as parameters or return values for interfaces which are declared `IA.LimitedPrivate`. Treat the `IA.Private` object as opaque; do not try to access its methods or fields directly.
-* InterfaceStability (link:https://yetus.apache.org/documentation/0.5.0/audience-annotations-apidocs/org/apache/yetus/audience/InterfaceStability.html[javadocs]): describes what types of interface changes are permitted. Possible values include:
+* InterfaceStability (link:https://yetus.apache.org/documentation/in-progress/javadocs/org/apache/yetus/audience/InterfaceStability.html[javadocs]): describes what types of interface changes are permitted. Possible values include:
   - Stable: the interface is fixed and is not expected to change
   - Evolving: the interface may change in future minor verisons
   - Unstable: the interface may change at any time
