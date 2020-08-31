@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -91,7 +92,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
         familyCells
             .computeIfAbsent(familyName,
               key -> new CellSet(
-                  isMetaTable ? CellComparatorImpl.META_COMPARATOR : CellComparatorImpl.COMPARATOR))
+                  isMetaTable ? MetaCellComparator.META_COMPARATOR : CellComparatorImpl.COMPARATOR))
             .add(cell);
         familySeqIds.compute(familyName, (k, v) -> v == null ? seqId : Math.max(v, seqId));
       }
@@ -201,7 +202,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
       withChecksumType(HStore.getChecksumType(walSplitter.conf)).
       withBytesPerCheckSum(HStore.getBytesPerChecksum(walSplitter.conf)).
       withCellComparator(isMetaTable?
-        CellComparatorImpl.META_COMPARATOR: CellComparatorImpl.COMPARATOR).build();
+        MetaCellComparator.META_COMPARATOR: CellComparatorImpl.COMPARATOR).build();
     return writerBuilder.withFileContext(hFileContext).build();
   }
 }

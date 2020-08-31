@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -109,7 +110,7 @@ public class TestFixedFileTrailer {
     assertEquals(CellComparatorImpl.COMPARATOR.getClass().getName(), t.getComparatorClassName());
     HFileProtos.FileTrailerProto pb = t.toProtobuf();
     assertEquals(KeyValue.COMPARATOR.getClass().getName(), pb.getComparatorClassName());
-    t.setComparatorClass(CellComparatorImpl.MetaCellComparator.META_COMPARATOR.getClass());
+    t.setComparatorClass(MetaCellComparator.META_COMPARATOR.getClass());
     pb = t.toProtobuf();
     assertEquals(KeyValue.META_COMPARATOR.getClass().getName(),
         pb.getComparatorClassName());
@@ -125,16 +126,16 @@ public class TestFixedFileTrailer {
           t.createComparator(KeyValue.COMPARATOR.getClass().getName()).getClass());
       assertEquals(CellComparatorImpl.class,
           t.createComparator(CellComparator.class.getName()).getClass());
-      assertEquals(CellComparatorImpl.MetaCellComparator.class,
+      assertEquals(MetaCellComparator.class,
           t.createComparator(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName()).getClass());
-      assertEquals(CellComparatorImpl.MetaCellComparator.class,
+      assertEquals(MetaCellComparator.class,
           t.createComparator(KeyValue.META_COMPARATOR.getClass().getName()).getClass());
-      assertEquals(CellComparatorImpl.MetaCellComparator.class, t.createComparator(
-          CellComparatorImpl.MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
-      assertEquals(CellComparatorImpl.META_COMPARATOR.getClass(), t.createComparator(
-        CellComparatorImpl.MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
+      assertEquals(MetaCellComparator.class, t.createComparator(
+          MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
+      assertEquals(MetaCellComparator.META_COMPARATOR.getClass(), t.createComparator(
+        MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
       assertEquals(CellComparatorImpl.COMPARATOR.getClass(), t.createComparator(
-        CellComparatorImpl.MetaCellComparator.COMPARATOR.getClass().getName()).getClass());
+        MetaCellComparator.COMPARATOR.getClass().getName()).getClass());
       assertNull(t.createComparator(Bytes.BYTES_RAWCOMPARATOR.getClass().getName()));
       assertNull(t.createComparator("org.apache.hadoop.hbase.KeyValue$RawBytesComparator"));
     } catch (IOException e) {
