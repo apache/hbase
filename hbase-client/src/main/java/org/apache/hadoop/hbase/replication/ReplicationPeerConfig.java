@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.hbase.replication;
 
+import com.google.common.base.Splitter;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.google.common.base.Splitter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
