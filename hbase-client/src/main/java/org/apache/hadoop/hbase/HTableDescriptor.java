@@ -209,6 +209,15 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   private static final ImmutableBytesWritable NORMALIZATION_ENABLED_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(NORMALIZATION_ENABLED));
 
+  public static final String NORMALIZER_TARGET_REGION_COUNT =
+    "NORMALIZER_TARGET_REGION_COUNT";
+  private static final ImmutableBytesWritable NORMALIZER_TARGET_REGION_COUNT_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(NORMALIZER_TARGET_REGION_COUNT));
+
+  public static final String NORMALIZER_TARGET_REGION_SIZE = "NORMALIZER_TARGET_REGION_SIZE";
+  private static final ImmutableBytesWritable NORMALIZER_TARGET_REGION_SIZE_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE));
+
   /** Default durability for HTD is USE_DEFAULT, which defaults to HBase-global default value */
   private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
 
@@ -683,6 +692,33 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     setValue(NORMALIZATION_ENABLED_KEY, isEnable ? TRUE : FALSE);
     return this;
   }
+
+  public HTableDescriptor setNormalizerTargetRegionCount(final int regionCount) {
+    setValue(NORMALIZER_TARGET_REGION_COUNT_KEY, Integer.toString(regionCount));
+    return this;
+  }
+
+  public int getNormalizerTargetRegionCount() {
+    byte [] value = getValue(NORMALIZER_TARGET_REGION_COUNT_KEY);
+    if (value != null) {
+      return Integer.parseInt(Bytes.toString(value));
+    }
+    return -1;
+  }
+
+  public HTableDescriptor setNormalizerTargetRegionSize(final long regionSize) {
+    setValue(NORMALIZER_TARGET_REGION_SIZE_KEY, Long.toString(regionSize));
+    return this;
+  }
+
+  public long getNormalizerTargetRegionSize() {
+    byte [] value = getValue(NORMALIZER_TARGET_REGION_SIZE_KEY);
+    if (value != null) {
+      return Long.parseLong(Bytes.toString(value));
+    }
+    return -1;
+  }
+
 
   /**
    * Sets the {@link Durability} setting for the table. This defaults to Durability.USE_DEFAULT.

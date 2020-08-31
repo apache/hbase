@@ -18,15 +18,17 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import com.google.protobuf.ServiceException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -35,8 +37,6 @@ import org.apache.hadoop.hbase.client.Admin.MasterSwitchType;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
-
-import com.google.protobuf.ServiceException;
 
 /**
  * Simple implementation of region normalizer.
@@ -152,7 +152,31 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       }
     }
 
-    double avgRegionSize = acutalRegionCnt == 0 ? 0 : totalSizeMb / (double) acutalRegionCnt;
+    int targetRegionCount = -1;
+    long targetRegionSize = -1;
+    try {
+      HTableDescriptor tableDescriptor = masterServices.getTableDescriptors().get(table);
+      if(tableDescriptor != null) {
+        targetRegionCount =
+          tableDescriptor.getNormalizerTargetRegionCount();
+        targetRegionSize =
+          tableDescriptor.getNormalizerTargetRegionSize();
+        LOG.debug("Table " + table + ":  target region count is " + targetRegionCount
+            + ", target region size is targetRegionSize");
+      }
+    } catch (IOException e) {
+      LOG.warn("cannot get the target number and target size of table " + table
+          + ", they will be default value -1.");
+    }
+
+    double avgRegionSize;
+    if (targetRegionSize > 0) {
+      avgRegionSize = targetRegionSize;
+    } else if (targetRegionCount > 0) {
+      avgRegionSize = totalSizeMb / (double) targetRegionCount;
+    } else {
+      avgRegionSize = acutalRegionCnt == 0 ? 0 : totalSizeMb / (double) acutalRegionCnt;
+    }
 
     LOG.debug("Table " + table + ", total aggregated regions size: " + totalSizeMb);
     LOG.debug("Table " + table + ", average region size: " + avgRegionSize);

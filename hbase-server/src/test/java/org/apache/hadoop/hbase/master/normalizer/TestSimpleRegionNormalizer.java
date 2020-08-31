@@ -18,6 +18,18 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.when;
+
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -27,7 +39,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -36,20 +47,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests logic of {@link SimpleRegionNormalizer}.
@@ -262,6 +259,110 @@ public class TestSimpleRegionNormalizer {
     assertTrue(plan instanceof SplitNormalizationPlan);
     assertEquals(hri4, ((SplitNormalizationPlan) plan).getRegionInfo());
   }
+
+  @Test
+  public void testSplitWithTargetRegionCount() throws Exception {
+    final TableName tableName = TableName.valueOf("testSplitWithTargetRegionCount");
+    List<HRegionInfo> RegionInfo = new ArrayList<>();
+    Map<byte[], Integer> regionSizes = new HashMap<>();
+
+    HRegionInfo hri1 = new HRegionInfo(tableName, Bytes.toBytes("aaa"), Bytes.toBytes("bbb"));
+    RegionInfo.add(hri1);
+    regionSizes.put(hri1.getRegionName(), 20);
+
+    HRegionInfo hri2 = new HRegionInfo(tableName, Bytes.toBytes("bbb"), Bytes.toBytes("ccc"));
+    RegionInfo.add(hri2);
+    regionSizes.put(hri2.getRegionName(), 40);
+
+    HRegionInfo hri3 = new HRegionInfo(tableName, Bytes.toBytes("ccc"), Bytes.toBytes("ddd"));
+    RegionInfo.add(hri3);
+    regionSizes.put(hri3.getRegionName(), 60);
+
+    HRegionInfo hri4 = new HRegionInfo(tableName, Bytes.toBytes("ddd"), Bytes.toBytes("eee"));
+    RegionInfo.add(hri4);
+    regionSizes.put(hri4.getRegionName(), 80);
+
+    HRegionInfo hri5 = new HRegionInfo(tableName, Bytes.toBytes("eee"), Bytes.toBytes("fff"));
+    RegionInfo.add(hri5);
+    regionSizes.put(hri5.getRegionName(), 100);
+
+    HRegionInfo hri6 = new HRegionInfo(tableName, Bytes.toBytes("fff"), Bytes.toBytes("ggg"));
+    RegionInfo.add(hri6);
+    regionSizes.put(hri6.getRegionName(), 120);
+
+    setupMocksForNormalizer(regionSizes, RegionInfo);
+
+    // test when target region size is 20
+    when(
+      masterServices.getTableDescriptors().get((TableName) any()).getNormalizerTargetRegionSize())
+          .thenReturn(20L);
+    List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
+    assertEquals(4, plans.size());
+
+    for (NormalizationPlan plan : plans) {
+      assertTrue(plan instanceof SplitNormalizationPlan);
+    }
+
+    // test when target region size is 200
+    when(
+      masterServices.getTableDescriptors().get((TableName) any()).getNormalizerTargetRegionSize())
+          .thenReturn(200L);
+    plans = normalizer.computePlanForTable(tableName);
+    assertEquals(2, plans.size());
+    NormalizationPlan plan = plans.get(0);
+    assertTrue(plan instanceof MergeNormalizationPlan);
+    assertEquals(hri1, ((MergeNormalizationPlan) plan).getFirstRegion());
+    assertEquals(hri2, ((MergeNormalizationPlan) plan).getSecondRegion());
+  }
+
+  @Test
+  public void testSplitWithTargetRegionSize() throws Exception {
+    final TableName tableName = TableName.valueOf("testSplitWithTargetRegionSize");
+    List<HRegionInfo> RegionInfo = new ArrayList<>();
+    Map<byte[], Integer> regionSizes = new HashMap<>();
+
+    HRegionInfo hri1 = new HRegionInfo(tableName, Bytes.toBytes("aaa"), Bytes.toBytes("bbb"));
+    RegionInfo.add(hri1);
+    regionSizes.put(hri1.getRegionName(), 20);
+
+    HRegionInfo hri2 = new HRegionInfo(tableName, Bytes.toBytes("bbb"), Bytes.toBytes("ccc"));
+    RegionInfo.add(hri2);
+    regionSizes.put(hri2.getRegionName(), 40);
+
+    HRegionInfo hri3 =new HRegionInfo(tableName, Bytes.toBytes("ccc"), Bytes.toBytes("ddd"));
+    RegionInfo.add(hri3);
+    regionSizes.put(hri3.getRegionName(), 60);
+
+    HRegionInfo hri4 = new HRegionInfo(tableName, Bytes.toBytes("ddd"), Bytes.toBytes("eee"));
+    RegionInfo.add(hri4);
+    regionSizes.put(hri4.getRegionName(), 80);
+
+    setupMocksForNormalizer(regionSizes, RegionInfo);
+
+    // test when target region count is 8
+    when(
+      masterServices.getTableDescriptors().get((TableName) any()).getNormalizerTargetRegionCount())
+          .thenReturn(8);
+    List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
+    assertEquals(2, plans.size());
+
+    for (NormalizationPlan plan : plans) {
+      assertTrue(plan instanceof SplitNormalizationPlan);
+    }
+
+    // test when target region count is 3
+    when(
+      masterServices.getTableDescriptors().get((TableName) any()).getNormalizerTargetRegionCount())
+          .thenReturn(3);
+    plans = normalizer.computePlanForTable(tableName);
+    assertEquals(1, plans.size());
+    NormalizationPlan plan = plans.get(0);
+    assertTrue(plan instanceof MergeNormalizationPlan);
+    assertEquals(hri1, ((MergeNormalizationPlan) plan).getFirstRegion());
+    assertEquals(hri2, ((MergeNormalizationPlan) plan).getSecondRegion());
+  }
+
+
 
   @SuppressWarnings("MockitoCast")
   protected void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
