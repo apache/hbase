@@ -1490,7 +1490,7 @@ public class TestAdmin1 {
 
   @Test (timeout=30000)
   public void testTableNotFoundException() throws Exception {
-    ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
+    ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     TableName table = TableName.valueOf("tableNotExists");
     try {
       ZKTableStateClientSideReader.isDisabledTable(zkw, table);
