@@ -19,17 +19,16 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -43,7 +42,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -96,9 +94,9 @@ public class TestQuotaObserverChoreRegionReports {
     TEST_UTIL.startMiniCluster(1);
     // Wait till quota table onlined.
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
-        return MetaTableAccessor.tableExists(TEST_UTIL.getConnection(),
-          QuotaTableUtil.QUOTA_TABLE_NAME);
+      @Override
+      public boolean evaluate() throws Exception {
+        return TEST_UTIL.getAdmin().tableExists(QuotaTableUtil.QUOTA_TABLE_NAME);
       }
     });
 
@@ -155,9 +153,9 @@ public class TestQuotaObserverChoreRegionReports {
     TEST_UTIL.startMiniCluster(1);
     // Wait till quota table onlined.
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
-        return MetaTableAccessor.tableExists(TEST_UTIL.getConnection(),
-          QuotaTableUtil.QUOTA_TABLE_NAME);
+      @Override
+      public boolean evaluate() throws Exception {
+        return TEST_UTIL.getAdmin().tableExists(QuotaTableUtil.QUOTA_TABLE_NAME);
       }
     });
 

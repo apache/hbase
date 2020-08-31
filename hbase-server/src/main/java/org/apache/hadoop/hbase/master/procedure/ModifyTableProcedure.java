@@ -275,7 +275,7 @@ public class ModifyTableProcedure
    */
   private void prepareModify(final MasterProcedureEnv env) throws IOException {
     // Checks whether the table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), getTableName())) {
+    if (!env.getMasterServices().getTableDescriptors().exists(getTableName())) {
       throw new TableNotFoundException(getTableName());
     }
 

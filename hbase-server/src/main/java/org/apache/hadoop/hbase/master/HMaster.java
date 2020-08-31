@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
+
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Service;
 import java.io.IOException;
@@ -213,19 +214,21 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.webapp.WebAppContext;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
@@ -749,6 +752,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
+  protected boolean cacheTableDescriptor() {
+    return true;
+  }
+
+  @Override
   protected RSRpcServices createRpcServices() throws IOException {
     return new MasterRpcServices(this);
   }
@@ -900,9 +908,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     initializeMemStoreChunkCreator();
     this.fileSystemManager = new MasterFileSystem(conf);
     this.walManager = new MasterWalManager(this);
-
-    // enable table descriptors cache
-    this.tableDescriptors.setCacheOn();
 
     // warm-up HTDs cache on master initialization
     if (preLoadTableDescriptors) {
@@ -2571,8 +2576,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private void checkTableExists(final TableName tableName)
-      throws IOException, TableNotFoundException {
-    if (!MetaTableAccessor.tableExists(getConnection(), tableName)) {
+    throws IOException, TableNotFoundException {
+    if (!tableDescriptors.exists(tableName)) {
       throw new TableNotFoundException(tableName);
     }
   }

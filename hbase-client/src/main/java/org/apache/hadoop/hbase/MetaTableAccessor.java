@@ -447,21 +447,6 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Checks if the specified table exists.  Looks at the hbase:meta table hosted on
-   * the specified server.
-   * @param connection connection we're using
-   * @param tableName table to check
-   * @return true if the table exists in meta, false if not
-   */
-  public static boolean tableExists(Connection connection,
-      final TableName tableName)
-  throws IOException {
-    // Catalog tables always exist.
-    return tableName.equals(TableName.META_TABLE_NAME) ||
-        getTableState(connection, tableName) != null;
-  }
-
-  /**
    * Lists all of the regions currently in META.
    *
    * @param connection to connect with
