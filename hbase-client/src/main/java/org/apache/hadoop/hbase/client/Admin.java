@@ -2343,6 +2343,7 @@ public interface Admin extends Abortable, Closeable {
    * @deprecated since 2.4.0 and will be removed in 4.0.0.
    *   Use {@link #getLogEntries(LogRequest)} instead.
    */
+  @Deprecated
   default List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
       final LogQueryFilter logQueryFilter) throws IOException {
     logQueryFilter.setServerNames(serverNames);

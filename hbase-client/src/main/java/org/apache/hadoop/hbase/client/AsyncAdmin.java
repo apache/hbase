@@ -1547,6 +1547,7 @@ public interface AsyncAdmin {
    * @deprecated since 2.4.0 and will be removed in 4.0.0.
    *   Use {@link #getLogEntries(LogRequest)} instead.
    */
+  @Deprecated
   default CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
       final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
     logQueryFilter.setServerNames(serverNames);

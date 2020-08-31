@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -28,19 +32,20 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
+
+/**
+ * Test BalancerDecision ring buffer using namedQueue interface
+ */
 @Category({ MasterTests.class, MediumTests.class })
 public class TestBalancerDecision extends BalancerTestBase {
 

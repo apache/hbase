@@ -19,14 +19,15 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.util.Collections;
+import java.util.Set;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import java.util.Collections;
-import java.util.Set;
 
 /**
  * Slow/Large Log Query Filter with all filter and limit parameters

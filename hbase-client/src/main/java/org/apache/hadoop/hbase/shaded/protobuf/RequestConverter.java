@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -74,6 +73,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminLogRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
@@ -1799,13 +1799,13 @@ public final class RequestConverter {
    * Create a protocol buffer {@link SlowLogResponseRequest}
    *
    * @param logQueryFilter filter to use if provided
-   * @param limit
+   * @param limit limiting the response entries
    * @return a protocol buffer SlowLogResponseRequest
    */
-  public static AdminProtos.AdminLogRequest buildSlowLogResponseRequest(
-      final LogQueryFilter logQueryFilter, int limit) {
+  public static AdminLogRequest buildSlowLogResponseRequest(final LogQueryFilter logQueryFilter,
+      int limit) {
     if (logQueryFilter == null) {
-      return AdminProtos.AdminLogRequest.getDefaultInstance();
+      return AdminLogRequest.getDefaultInstance();
     }
     SlowLogResponseRequest.Builder builder = SlowLogResponseRequest.newBuilder();
     final String clientAddress = logQueryFilter.getClientAddress();
@@ -1836,7 +1836,7 @@ public final class RequestConverter {
       builder.setLogType(SlowLogResponseRequest.LogType.LARGE_LOG);
     }
     SlowLogResponseRequest slowLogResponseRequest = builder.setLimit(limit).build();
-    return AdminProtos.AdminLogRequest.newBuilder()
+    return AdminLogRequest.newBuilder()
       .setLogClassName(slowLogResponseRequest.getClass().getName())
       .setLogInitializerMessage(slowLogResponseRequest.toByteString())
       .build();
