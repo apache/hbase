@@ -716,7 +716,7 @@ public class HbckTableInfo {
       }
     }
 
-    if (hbck.shouldDisplayFullReport()) {
+    if (HBaseFsck.shouldDisplayFullReport()) {
       // do full region split map dump
       hbck.getErrors().print("---- Table '"  +  this.tableName
           + "': region split map");

@@ -118,7 +118,8 @@ public class TestStoreFileRefresherChore {
     final Configuration walConf = new Configuration(conf);
     CommonFSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, "log_" + replicaId);
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     HRegion region =
         new HRegion(fs, wals.getWAL(info),
             conf, htd, null);

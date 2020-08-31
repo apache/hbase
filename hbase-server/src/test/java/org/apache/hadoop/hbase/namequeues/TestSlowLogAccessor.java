@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -37,12 +36,9 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,6 +48,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 
 /**
  * Tests for SlowLog System Table
@@ -167,17 +168,16 @@ public class TestSlowLogAccessor {
     }
   }
 
-  private Connection waitForSlowLogTableCreation() {
-    Connection connection =
-      HBASE_TESTING_UTILITY.getMiniHBaseCluster().getRegionServer(0).getConnection();
+  private Connection waitForSlowLogTableCreation() throws IOException {
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(2000, () -> {
       try {
-        return MetaTableAccessor.tableExists(connection, SlowLogTableAccessor.SLOW_LOG_TABLE_NAME);
+        return HBASE_TESTING_UTILITY.getAdmin()
+          .tableExists(SlowLogTableAccessor.SLOW_LOG_TABLE_NAME);
       } catch (IOException e) {
         return false;
       }
     }));
-    return connection;
+    return HBASE_TESTING_UTILITY.getConnection();
   }
 
   @Test

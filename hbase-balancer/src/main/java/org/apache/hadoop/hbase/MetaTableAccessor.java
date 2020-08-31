@@ -34,12 +34,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor.QueryType;
 import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -47,7 +45,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -291,6 +288,13 @@ public final class MetaTableAccessor {
   }
 
   /**
+   * Check whether the given {@code regionName} has any 'info:merge*' columns.
+   */
+  public static boolean hasMergeRegions(Connection conn, byte[] regionName) throws IOException {
+    return hasMergeRegions(getRegionResult(conn, regionName).rawCells());
+  }
+
+  /**
    * @return Deserialized values of &lt;qualifier,regioninfo&gt; pairs taken from column values that
    *         match the regex 'info:merge.*' in array of <code>cells</code>.
    */
@@ -348,20 +352,6 @@ public final class MetaTableAccessor {
     // Check to see if has family and that qualifier starts with the merge qualifier 'merge'
     return CellUtil.matchingFamily(cell, HConstants.CATALOG_FAMILY) &&
       PrivateCellUtil.qualifierStartsWith(cell, HConstants.MERGE_QUALIFIER_PREFIX);
-  }
-
-  /**
-   * Checks if the specified table exists. Looks at the hbase:meta table hosted on the specified
-   * server.
-   * @param connection connection we're using
-   * @param tableName table to check
-   * @return true if the table exists in meta, false if not
-   */
-  public static boolean tableExists(Connection connection, final TableName tableName)
-    throws IOException {
-    // Catalog tables always exist.
-    return tableName.equals(TableName.META_TABLE_NAME) ||
-      getTableState(connection, tableName) != null;
   }
 
   /**
@@ -734,33 +724,6 @@ public final class MetaTableAccessor {
   public static void updateTableState(Connection conn, TableName tableName, TableState.State actual)
     throws IOException {
     updateTableState(conn, new TableState(tableName, actual));
-  }
-
-  /**
-   * Count regions in <code>hbase:meta</code> for passed table.
-   * @param c Configuration object
-   * @param tableName table name to count regions for
-   * @return Count or regions in table <code>tableName</code>
-   */
-  public static int getRegionCount(final Configuration c, final TableName tableName)
-    throws IOException {
-    try (Connection connection = ConnectionFactory.createConnection(c)) {
-      return getRegionCount(connection, tableName);
-    }
-  }
-
-  /**
-   * Count regions in <code>hbase:meta</code> for passed table.
-   * @param connection Connection object
-   * @param tableName table name to count regions for
-   * @return Count or regions in table <code>tableName</code>
-   */
-  public static int getRegionCount(final Connection connection, final TableName tableName)
-    throws IOException {
-    try (RegionLocator locator = connection.getRegionLocator(tableName)) {
-      List<HRegionLocation> locations = locator.getAllRegionLocations();
-      return locations == null ? 0 : locations.size();
-    }
   }
 
   ////////////////////////

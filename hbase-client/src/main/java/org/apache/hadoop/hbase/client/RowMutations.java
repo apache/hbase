@@ -75,30 +75,6 @@ public class RowMutations implements Row {
   }
 
   /**
-   * Add a {@link Put} operation to the list of mutations
-   * @param p The {@link Put} to add
-   * @throws IOException if the row of added mutation doesn't match the original row
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             use {@link #add(Mutation)}
-   */
-  @Deprecated
-  public void add(Put p) throws IOException {
-    add((Mutation) p);
-  }
-
-  /**
-   * Add a {@link Delete} operation to the list of mutations
-   * @param d The {@link Delete} to add
-   * @throws IOException if the row of added mutation doesn't match the original row
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             use {@link #add(Mutation)}
-   */
-  @Deprecated
-  public void add(Delete d) throws IOException {
-    add((Mutation) d);
-  }
-
-  /**
    * Currently only supports {@link Put} and {@link Delete} mutations.
    *
    * @param mutation The data to send.

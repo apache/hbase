@@ -743,8 +743,8 @@ public class HRegionServer extends Thread implements
     CommonFSUtils.setFsDefault(this.conf, CommonFSUtils.getRootDir(this.conf));
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
-    this.tableDescriptors =
-      new FSTableDescriptors(this.dataFs, this.dataRootDir, !canUpdateTableDescriptor(), false);
+    this.tableDescriptors = new FSTableDescriptors(this.dataFs, this.dataRootDir,
+      !canUpdateTableDescriptor(), cacheTableDescriptor());
   }
 
   protected void login(UserProvider user, String host) throws IOException {
@@ -767,6 +767,10 @@ public class HRegionServer extends Thread implements
   }
 
   protected boolean canUpdateTableDescriptor() {
+    return false;
+  }
+
+  protected boolean cacheTableDescriptor() {
     return false;
   }
 
@@ -1629,14 +1633,16 @@ public class HRegionServer extends Thread implements
       long globalMemStoreSize = pair.getFirst();
       boolean offheap = this.regionServerAccounting.isOffheap();
       // When off heap memstore in use, take full area for chunk pool.
-      float poolSizePercentage = offheap? 1.0F:
-          conf.getFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, MemStoreLAB.POOL_MAX_SIZE_DEFAULT);
+      float poolSizePercentage = offheap ? 1.0F :
+        conf.getFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, MemStoreLAB.POOL_MAX_SIZE_DEFAULT);
       float initialCountPercentage = conf.getFloat(MemStoreLAB.CHUNK_POOL_INITIALSIZE_KEY,
-          MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT);
+        MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT);
       int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY, MemStoreLAB.CHUNK_SIZE_DEFAULT);
+      float indexChunkSizePercent = conf.getFloat(MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_KEY,
+        MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
       // init the chunkCreator
       ChunkCreator.initialize(chunkSize, offheap, globalMemStoreSize, poolSizePercentage,
-        initialCountPercentage, this.hMemManager);
+        initialCountPercentage, this.hMemManager, indexChunkSizePercent);
     }
   }
 

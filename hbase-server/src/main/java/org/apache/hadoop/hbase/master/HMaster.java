@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
@@ -90,7 +91,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.http.InfoServer;
@@ -220,12 +220,9 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -233,7 +230,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.webapp.WebAppContext;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -607,8 +608,8 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Protected to have custom implementations in tests override the default ActiveMaster
    * implementation.
    */
-  protected ActiveMasterManager createActiveMasterManager(
-      ZKWatcher zk, ServerName sn, org.apache.hadoop.hbase.Server server) {
+  protected ActiveMasterManager createActiveMasterManager(ZKWatcher zk, ServerName sn,
+      org.apache.hadoop.hbase.Server server) throws InterruptedIOException {
     return new ActiveMasterManager(zk, sn, server);
   }
 
@@ -757,6 +758,11 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   protected boolean canUpdateTableDescriptor() {
+    return true;
+  }
+
+  @Override
+  protected boolean cacheTableDescriptor() {
     return true;
   }
 
@@ -924,9 +930,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     initializeMemStoreChunkCreator();
     this.fileSystemManager = new MasterFileSystem(conf);
     this.walManager = new MasterWalManager(this);
-
-    // enable table descriptors cache
-    this.tableDescriptors.setCacheOn();
 
     // warm-up HTDs cache on master initialization
     if (preLoadTableDescriptors) {
@@ -2604,8 +2607,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private void checkTableExists(final TableName tableName)
-      throws IOException, TableNotFoundException {
-    if (!MetaTableAccessor.tableExists(getConnection(), tableName)) {
+    throws IOException, TableNotFoundException {
+    if (!tableDescriptors.exists(tableName)) {
       throw new TableNotFoundException(tableName);
     }
   }
@@ -2728,51 +2731,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     return status;
   }
 
-  private List<ServerName> getBackupMasters() throws InterruptedIOException {
-    // Build Set of backup masters from ZK nodes
-    List<String> backupMasterStrings;
-    try {
-      backupMasterStrings = ZKUtil.listChildrenNoWatch(this.zooKeeper,
-        this.zooKeeper.getZNodePaths().backupMasterAddressesZNode);
-    } catch (KeeperException e) {
-      LOG.warn(this.zooKeeper.prefix("Unable to list backup servers"), e);
-      backupMasterStrings = null;
-    }
-
-    List<ServerName> backupMasters = Collections.emptyList();
-    if (backupMasterStrings != null && !backupMasterStrings.isEmpty()) {
-      backupMasters = new ArrayList<>(backupMasterStrings.size());
-      for (String s: backupMasterStrings) {
-        try {
-          byte [] bytes;
-          try {
-            bytes = ZKUtil.getData(this.zooKeeper, ZNodePaths.joinZNode(
-                this.zooKeeper.getZNodePaths().backupMasterAddressesZNode, s));
-          } catch (InterruptedException e) {
-            throw new InterruptedIOException();
-          }
-          if (bytes != null) {
-            ServerName sn;
-            try {
-              sn = ProtobufUtil.parseServerNameFrom(bytes);
-            } catch (DeserializationException e) {
-              LOG.warn("Failed parse, skipping registering backup server", e);
-              continue;
-            }
-            backupMasters.add(sn);
-          }
-        } catch (KeeperException e) {
-          LOG.warn(this.zooKeeper.prefix("Unable to get information about " +
-                   "backup servers"), e);
-        }
-      }
-      Collections.sort(backupMasters, new Comparator<ServerName>() {
-        @Override
-        public int compare(ServerName s1, ServerName s2) {
-          return s1.getServerName().compareTo(s2.getServerName());
-        }});
-    }
-    return backupMasters;
+  List<ServerName> getBackupMasters() {
+    return activeMasterManager.getBackupMasters();
   }
 
   /**

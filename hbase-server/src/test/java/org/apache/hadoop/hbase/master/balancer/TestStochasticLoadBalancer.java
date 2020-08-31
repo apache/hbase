@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -49,14 +50,10 @@ import org.apache.hadoop.hbase.master.MockNoopMasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.ServerLocalityCostFunction;
-import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
-import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
-import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -303,9 +300,14 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertEquals(StochasticLoadBalancer.MoveCostFunction.DEFAULT_MOVE_COST,
       costFunction.getMultiplier(), 0.01);
 
-    //In offpeak hours, the multiplier of move cost should be lower
+    // In offpeak hours, the multiplier of move cost should be lower
     conf.setInt("hbase.offpeak.start.hour",0);
     conf.setInt("hbase.offpeak.end.hour",23);
+    // Set a fixed time which hour is 15, so it will always in offpeak
+    // See HBASE-24898 for more info of the calculation here
+    long deltaFor15 = TimeZone.getDefault().getRawOffset() - 28800000;
+    long timeFor15 = 1597907081000L - deltaFor15;
+    EnvironmentEdgeManager.injectEdge(() -> timeFor15);
     costFunction = new StochasticLoadBalancer.MoveCostFunction(conf);
     costFunction.init(cluster);
     costFunction.cost();

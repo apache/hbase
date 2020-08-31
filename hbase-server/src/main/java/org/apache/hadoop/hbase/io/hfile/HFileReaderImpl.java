@@ -1115,7 +1115,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     BlockCache cache = cacheConf.getBlockCache().orElse(null);
     if (cache != null) {
       HFileBlock cachedBlock =
-          (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock, updateCacheMetrics);
+          (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock,
+            updateCacheMetrics, expectedBlockType);
       if (cachedBlock != null) {
         if (cacheConf.shouldCacheCompressed(cachedBlock.getBlockType().getCategory())) {
           HFileBlock compressedBlock = cachedBlock;

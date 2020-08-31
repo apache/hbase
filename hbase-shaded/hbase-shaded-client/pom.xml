@@ -59,6 +59,10 @@
                                          need not be included -->
                                     <exclude>javax.annotation:javax.annotation-api</exclude>
                                     <exclude>javax.activation:javax.activation-api</exclude>
+                                    <exclude>jakarta.ws.rs:jakarta.ws.rs-api</exclude>
+                                    <exclude>jakarta.annotation:jakarta.annotation-api</exclude>
+                                    <exclude>jakarta.validation:jakarta.validation-api</exclude>
+                                    <exclude>org.glassfish.hk2.external:jakarta.inject</exclude>
                                     <!--
                                       Tell the shade plugin that in this case we want to include hadoop
                                       by leaving out the exclude.
@@ -73,6 +77,7 @@
                                     <exclude>org.apache.yetus:*</exclude>
                                     <exclude>log4j:*</exclude>
                                     <exclude>commons-logging:*</exclude>
+                                    <exclude>org.javassist:*</exclude>
                                 </excludes>
                             </artifactSet>
                         </configuration>
@@ -85,7 +90,6 @@
         <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-client</artifactId>
-            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
