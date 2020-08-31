@@ -151,7 +151,7 @@ public class TestKeyValue {
         Bytes.toBytes("TestScanMultipleVersions,row_0500,1236020145502"), now);
     KeyValue bbb = new KeyValue(
         Bytes.toBytes("TestScanMultipleVersions,,99999999999999"), now);
-    CellComparator c = CellComparatorImpl.META_COMPARATOR;
+    CellComparator c = MetaCellComparator.META_COMPARATOR;
     assertTrue(c.compare(bbb, aaa) < 0);
 
     KeyValue aaaa = new KeyValue(Bytes.toBytes("TestScanMultipleVersions,,1236023996656"),
@@ -166,14 +166,14 @@ public class TestKeyValue {
         Bytes.toBytes("info"), Bytes.toBytes("regioninfo"), 1236034574912L,
         (byte[])null);
     assertTrue(c.compare(x, y) < 0);
-    comparisons(CellComparatorImpl.META_COMPARATOR);
+    comparisons(MetaCellComparator.META_COMPARATOR);
     comparisons(CellComparatorImpl.COMPARATOR);
-    metacomparisons(CellComparatorImpl.META_COMPARATOR);
+    metacomparisons(MetaCellComparator.META_COMPARATOR);
   }
 
   @Test
   public void testMetaComparatorTableKeysWithCommaOk() {
-    CellComparator c = CellComparatorImpl.META_COMPARATOR;
+    CellComparator c = MetaCellComparator.META_COMPARATOR;
     long now = System.currentTimeMillis();
     // meta keys values are not quite right.  A users can enter illegal values
     // from shell when scanning meta.
@@ -194,13 +194,13 @@ public class TestKeyValue {
       Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     KeyValue rowB = new KeyValue(Bytes.toBytes("testtable,www.hbase.org/%20,99999"),
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
-    assertTrue(CellComparatorImpl.META_COMPARATOR.compare(rowA, rowB) < 0);
+    assertTrue(MetaCellComparator.META_COMPARATOR.compare(rowA, rowB) < 0);
 
     rowA = new KeyValue(Bytes.toBytes("testtable,,1234"), Bytes.toBytes("fam"),
         Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     rowB = new KeyValue(Bytes.toBytes("testtable,$www.hbase.org/,99999"),
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
-    assertTrue(CellComparatorImpl.META_COMPARATOR.compare(rowA, rowB) < 0);
+    assertTrue(MetaCellComparator.META_COMPARATOR.compare(rowA, rowB) < 0);
   }
 
   private void metacomparisons(final CellComparatorImpl c) {
@@ -264,7 +264,7 @@ public class TestKeyValue {
     }
     assertTrue(assertion);
     // Make set with good comparator
-    set = new TreeSet<>(CellComparatorImpl.META_COMPARATOR);
+    set = new TreeSet<>(MetaCellComparator.META_COMPARATOR);
     Collections.addAll(set, keys);
     count = 0;
     for (KeyValue k : set) {
@@ -519,7 +519,7 @@ public class TestKeyValue {
 
   @Test
   public void testMetaKeyComparator() {
-    CellComparator c = CellComparatorImpl.META_COMPARATOR;
+    CellComparator c = MetaCellComparator.META_COMPARATOR;
     long now = System.currentTimeMillis();
 
     KeyValue a = new KeyValue(Bytes.toBytes("table1"), now);
