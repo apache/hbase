@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import static org.junit.Assert.fail;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -28,8 +30,6 @@ import org.apache.zookeeper.data.Stat;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
-import static org.junit.Assert.fail;
 
 @Category({SmallTests.class})
 public class TestZKTableStateClientSideReader {
