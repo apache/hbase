@@ -146,6 +146,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     memstore.add(kv, null);
     long timeOfOldestEdit = memstore.timeOfOldestEdit();
     assertNotEquals(Long.MAX_VALUE, timeOfOldestEdit);
+
     ((CompactingMemStore)memstore).flushInMemory();
     assertEquals(timeOfOldestEdit, memstore.timeOfOldestEdit());
     memstore.add(kv, null);
