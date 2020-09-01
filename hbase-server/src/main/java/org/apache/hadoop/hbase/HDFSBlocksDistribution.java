@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.DNS;
 
 /**
  * Data structure to describe the distribution of HDFS blocks among hosts.
