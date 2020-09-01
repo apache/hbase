@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.DNS;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -73,4 +75,19 @@ public class TestHDFSBlocksDistribution {
     assertEquals("Should be one host", 1, distribution.getHostAndWeights().size());
     assertEquals("Total weight should be 10", 10, distribution.getUniqueBlocksTotalWeight());
   }
+
+  @Test
+  public void testLocalHostCompatibility() throws Exception {
+    String currentHost = DNS.getDefaultHost("default", "default");
+    HDFSBlocksDistribution distribution = new HDFSBlocksDistribution();
+    assertEquals("Locality should be 0.0", 0.0,
+      distribution.getBlockLocalityIndex(currentHost), 0.01);
+    distribution.addHostsAndBlockWeight(new String[] { "localhost" }, 10);
+    assertEquals("Should be one host", 1, distribution.getHostAndWeights().size());
+    assertEquals("Locality should be 0.0", 0.0,
+      distribution.getBlockLocalityIndex("test"), 0.01);
+    assertNotEquals("Locality should be 0.0", 0.0,
+      distribution.getBlockLocalityIndex(currentHost), 0.01);
+  }
+
 }

@@ -25,9 +25,8 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
+import org.apache.hadoop.hbase.util.DNS;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * Data structure to describe the distribution of HDFS blocks among hosts.
@@ -201,6 +200,18 @@ public class HDFSBlocksDistribution {
   public float getBlockLocalityIndex(String host) {
     float localityIndex = 0;
     HostAndWeight hostAndWeight = this.hostAndWeights.get(host);
+    // Compatible with local mode, see HBASE-24569
+    if (hostAndWeight == null) {
+      String currentHost = "";
+      try {
+        currentHost = DNS.getDefaultHost("default", "default");
+      } catch (Exception e) {
+        // Just ignore, it's ok, avoid too many log info
+      }
+      if (host.equals(currentHost)) {
+        hostAndWeight = this.hostAndWeights.get(HConstants.LOCALHOST);
+      }
+    }
     if (hostAndWeight != null && uniqueBlocksTotalWeight != 0) {
       localityIndex=(float)hostAndWeight.weight/(float)uniqueBlocksTotalWeight;
     }
