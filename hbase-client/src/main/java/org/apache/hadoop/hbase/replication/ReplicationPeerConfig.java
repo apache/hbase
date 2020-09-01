@@ -127,7 +127,7 @@ public class ReplicationPeerConfig {
       for (Map.Entry<String,String> entry : basePeerConfigMap.entrySet()) {
         String configName = entry.getKey();
         String configValue = entry.getValue();
-        // Only override if base config does not exist in existing peer configs
+        // Only override if base config does not exist in existing replication peer configs
         if (!receivedPeerConfigMap.containsKey(configName)) {
           receivedPeerConfigMap.put(configName, configValue);
         }
