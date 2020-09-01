@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -55,7 +56,7 @@ public class ZKTableStateClientSideReader {
    */
   public static boolean isDisabledTable(final ZooKeeperWatcher zkw,
       final TableName tableName)
-      throws KeeperException, InterruptedException {
+      throws KeeperException, InterruptedException, TableNotFoundException {
     ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
     return isTableState(ZooKeeperProtos.Table.State.DISABLED, state);
   }
@@ -71,7 +72,7 @@ public class ZKTableStateClientSideReader {
    */
   public static boolean isEnabledTable(final ZooKeeperWatcher zkw,
       final TableName tableName)
-      throws KeeperException, InterruptedException {
+      throws KeeperException, InterruptedException, TableNotFoundException {
     return getTableState(zkw, tableName) == ZooKeeperProtos.Table.State.ENABLED;
   }
 
@@ -87,7 +88,7 @@ public class ZKTableStateClientSideReader {
    */
   public static boolean isDisablingOrDisabledTable(final ZooKeeperWatcher zkw,
       final TableName tableName)
-      throws KeeperException, InterruptedException {
+      throws KeeperException, InterruptedException, TableNotFoundException {
     ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
     return isTableState(ZooKeeperProtos.Table.State.DISABLING, state) ||
       isTableState(ZooKeeperProtos.Table.State.DISABLED, state);
@@ -99,7 +100,7 @@ public class ZKTableStateClientSideReader {
    * @throws KeeperException
    */
   public static Set<TableName> getDisabledTables(ZooKeeperWatcher zkw)
-      throws KeeperException, InterruptedException {
+      throws KeeperException, InterruptedException, TableNotFoundException {
     Set<TableName> disabledTables = new HashSet<TableName>();
     List<String> children =
       ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
@@ -118,7 +119,7 @@ public class ZKTableStateClientSideReader {
    * @throws KeeperException
    */
   public static Set<TableName> getDisabledOrDisablingTables(ZooKeeperWatcher zkw)
-      throws KeeperException, InterruptedException {
+      throws KeeperException, InterruptedException, TableNotFoundException {
     return
         getTablesInStates(
           zkw,
@@ -134,7 +135,7 @@ public class ZKTableStateClientSideReader {
    * @throws InterruptedException
    */
   public static Set<TableName> getEnablingTables(ZooKeeperWatcher zkw)
-      throws KeeperException, InterruptedException {
+      throws KeeperException, InterruptedException, TableNotFoundException {
     return getTablesInStates(zkw, ZooKeeperProtos.Table.State.ENABLING);
   }
 
@@ -149,7 +150,7 @@ public class ZKTableStateClientSideReader {
   private static Set<TableName> getTablesInStates(
     ZooKeeperWatcher zkw,
     ZooKeeperProtos.Table.State... states)
-      throws KeeperException, InterruptedException {
+      throws KeeperException, InterruptedException, TableNotFoundException {
     Set<TableName> tableNameSet = new HashSet<TableName>();
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
     TableName tableName;
@@ -175,15 +176,18 @@ public class ZKTableStateClientSideReader {
   /**
    * @param zkw ZooKeeperWatcher instance to use
    * @param tableName table we're checking
-   * @return Null or {@link ZooKeeperProtos.Table.State} found in znode.
+   * @return {@link ZooKeeperProtos.Table.State} found in znode.
    * @throws KeeperException
+   * @throws TableNotFoundException if tableName doesn't exist
    */
   static ZooKeeperProtos.Table.State getTableState(final ZooKeeperWatcher zkw,
       final TableName tableName)
-      throws KeeperException, InterruptedException {
+      throws KeeperException, InterruptedException, TableNotFoundException {
     String znode = ZKUtil.joinZNode(zkw.tableZNode, tableName.getNameAsString());
     byte [] data = ZKUtil.getData(zkw, znode);
-    if (data == null || data.length <= 0) return null;
+    if (data == null || data.length <= 0) {
+      throw new TableNotFoundException(tableName);
+    }
     try {
       ProtobufUtil.expectPBMagicPrefix(data);
       ZooKeeperProtos.Table.Builder builder = ZooKeeperProtos.Table.newBuilder();
