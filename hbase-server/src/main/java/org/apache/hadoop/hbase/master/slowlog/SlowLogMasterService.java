@@ -63,7 +63,7 @@ public class SlowLogMasterService {
       LOG.info("Slow/Large requests logging to system table hbase:slowlog is disabled. Quitting.");
       return;
     }
-    if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
+    if (!masterServices.getTableDescriptors().exists(
         SlowLogTableAccessor.SLOW_LOG_TABLE_NAME)) {
       LOG.info("slowlog table not found. Creating.");
       this.masterServices.createSystemTable(TABLE_DESCRIPTOR_BUILDER.build());

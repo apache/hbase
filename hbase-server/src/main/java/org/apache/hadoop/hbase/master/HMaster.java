@@ -222,6 +222,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -233,6 +234,7 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.webapp.WebAppContext;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -760,6 +762,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
+  protected boolean cacheTableDescriptor() {
+    return true;
+  }
+
+  @Override
   protected RSRpcServices createRpcServices() throws IOException {
     return new MasterRpcServices(this);
   }
@@ -923,9 +930,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     initializeMemStoreChunkCreator();
     this.fileSystemManager = new MasterFileSystem(conf);
     this.walManager = new MasterWalManager(this);
-
-    // enable table descriptors cache
-    this.tableDescriptors.setCacheOn();
 
     // warm-up HTDs cache on master initialization
     if (preLoadTableDescriptors) {
@@ -2603,8 +2607,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private void checkTableExists(final TableName tableName)
-      throws IOException, TableNotFoundException {
-    if (!MetaTableAccessor.tableExists(getConnection(), tableName)) {
+    throws IOException, TableNotFoundException {
+    if (!tableDescriptors.exists(tableName)) {
       throw new TableNotFoundException(tableName);
     }
   }

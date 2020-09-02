@@ -130,7 +130,7 @@ public class TruncateTableProcedure
         case TRUNCATE_TABLE_CREATE_FS_LAYOUT:
           DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
           regions = CreateTableProcedure.createFsLayout(env, tableDescriptor, regions);
-          CreateTableProcedure.updateTableDescCache(env, getTableName());
+          env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
           setNextState(TruncateTableState.TRUNCATE_TABLE_ADD_TO_META);
           break;
         case TRUNCATE_TABLE_ADD_TO_META:

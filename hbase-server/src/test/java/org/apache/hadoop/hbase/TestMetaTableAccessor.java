@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -321,24 +320,6 @@ public class TestMetaTableAccessor {
     List<RegionInfo> regions = MetaTableLocator.getMetaRegions(UTIL.getZooKeeperWatcher());
     assertTrue(regions.size() >= 1);
     assertTrue(MetaTableLocator.getMetaRegionsAndLocations(UTIL.getZooKeeperWatcher()).size() >= 1);
-  }
-
-  @Test
-  public void testTableExists() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    assertFalse(MetaTableAccessor.tableExists(connection, tableName));
-    UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    assertTrue(MetaTableAccessor.tableExists(connection, tableName));
-    Admin admin = UTIL.getAdmin();
-    admin.disableTable(tableName);
-    admin.deleteTable(tableName);
-    assertFalse(MetaTableAccessor.tableExists(connection, tableName));
-    assertTrue(MetaTableAccessor.tableExists(connection, TableName.META_TABLE_NAME));
-    UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    assertTrue(MetaTableAccessor.tableExists(connection, tableName));
-    admin.disableTable(tableName);
-    admin.deleteTable(tableName);
-    assertFalse(MetaTableAccessor.tableExists(connection, tableName));
   }
 
   @Test

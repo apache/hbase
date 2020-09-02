@@ -246,7 +246,7 @@ public class DisableTableProcedure
       setFailure("master-disable-table",
         new ConstraintException("Cannot disable " + this.tableName));
       canTableBeDisabled = false;
-    } else if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    } else if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
       setFailure("master-disable-table", new TableNotFoundException(tableName));
       canTableBeDisabled = false;
     } else if (!skipTableStateCheck) {
