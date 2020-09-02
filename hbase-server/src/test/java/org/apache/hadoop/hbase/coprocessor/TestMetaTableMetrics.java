@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -33,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServerConnection;
@@ -41,7 +41,6 @@ import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -141,7 +140,8 @@ public class TestMetaTableMetrics {
   public void testMetaTableMetricsInJmx() throws Exception {
     UTIL.getAdmin()
         .createTable(TableDescriptorBuilder.newBuilder(NAME1).setColumnFamily(CFD).build());
-    writeData(NAME1);
+    assertTrue(UTIL.getAdmin().isTableEnabled(NAME1));
+    readWriteData(NAME1);
     UTIL.deleteTable(NAME1);
 
     UTIL.waitFor(30000, 2000, true, () -> {
@@ -187,7 +187,7 @@ public class TestMetaTableMetrics {
     }
   }
 
-  private void writeData(TableName tableName) throws IOException {
+  private void readWriteData(TableName tableName) throws IOException {
     try (Table t = UTIL.getConnection().getTable(tableName)) {
       List<Put> puts = new ArrayList<>(NUM_ROWS);
       for (int i = 0; i < NUM_ROWS; i++) {
@@ -196,6 +196,10 @@ public class TestMetaTableMetrics {
         puts.add(p);
       }
       t.put(puts);
+      for (int i = 0; i < NUM_ROWS; i++) {
+        Get get = new Get(Bytes.toBytes(i + 1));
+        assertArrayEquals(Bytes.toBytes(value), t.get(get).getValue(FAMILY, QUALIFIER));
+      }
     }
   }
 
