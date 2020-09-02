@@ -28,6 +28,7 @@
   https://issues.apache.org/jira/browse/HBASE-6795.
 
 -->
+  <!-- stonks only go up -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache</groupId>
