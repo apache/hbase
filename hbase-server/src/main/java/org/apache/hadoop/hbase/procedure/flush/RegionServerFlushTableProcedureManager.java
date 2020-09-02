@@ -150,6 +150,11 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
       throw new IllegalStateException("Failed to figure out if there is region to flush.", e1);
     }
 
+    if (involvedRegions == null && involvedRegions.isEmpty()) {
+      LOG.info("no region of {} is online on the {}.", table, this.rss.getServerName());
+      return null;
+    }
+
     // We need to run the subprocedure even if we have no relevant regions.  The coordinator
     // expects participation in the procedure and without sending message the master procedure
     // will hang and fail.

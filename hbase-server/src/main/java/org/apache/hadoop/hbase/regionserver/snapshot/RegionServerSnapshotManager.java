@@ -170,6 +170,11 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
           + "something has gone awry with the online regions.", e1);
     }
 
+    if (involvedRegions == null && involvedRegions.isEmpty()) {
+      LOG.info("no region of {} is online on the {}.", snapshot.getTable(), this.rss.getServerName());
+      return null;
+    }
+
     // We need to run the subprocedure even if we have no relevant regions.  The coordinator
     // expects participation in the procedure and without sending message the snapshot attempt
     // will hang and fail.
