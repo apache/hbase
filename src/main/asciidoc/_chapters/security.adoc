@@ -271,14 +271,14 @@ Since 2.2.0, client can specify the following configurations in `hbase-site.xml`
 </property>
 
 <property>
-  <name>hbase.client.keytab.principal</name>
+  <name>hbase.client.kerberos.principal</name>
   <value>foo@EXAMPLE.COM</value>
 </property>
 ----
 Then application can automatically do the login and credential renewal jobs without client interference.
 
 It's optional feature, client, who upgrades to 2.2.0, can still keep their login and credential renewal logic already did in older version, as long as keeping `hbase.client.keytab.file`
-and `hbase.client.keytab.principal` are unset.
+and `hbase.client.kerberos.principal` are unset.
 
 Be advised that if the `hbase.security.authentication` in the client- and server-side site files do not match, the client will not be able to communicate with the cluster.
 
