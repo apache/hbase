@@ -22,10 +22,12 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -34,8 +36,8 @@ import org.apache.zookeeper.KeeperException;
 /**
  * A cluster registry that stores to zookeeper.
  */
-class ZooKeeperRegistry implements Registry {
-  private static final Log LOG = LogFactory.getLog(ZooKeeperRegistry.class);
+class ZooKeeperConnectionRegistry implements ConnectionRegistry {
+  private static final Log LOG = LogFactory.getLog(ZooKeeperConnectionRegistry.class);
   // Needs an instance of hci to function.  Set after construct this instance.
   ConnectionManager.HConnectionImplementation hci;
 
@@ -48,10 +50,19 @@ class ZooKeeperRegistry implements Registry {
   }
 
   @Override
-  public RegionLocations getMetaRegionLocation() throws IOException {
-    ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher();
+  public ServerName getActiveMaster() throws IOException {
+    ServerName sn;
+    try (ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher()) {
+      sn = MasterAddressTracker.getMasterAddress(zkw);
+    } catch (KeeperException e) {
+      throw new HBaseIOException(e);
+    }
+    return sn;
+  }
 
-    try {
+  @Override
+  public RegionLocations getMetaRegionLocations() throws IOException {
+    try (ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher();) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Looking up meta region location in ZK," + " connection=" + this);
       }
@@ -84,8 +95,6 @@ class ZooKeeperRegistry implements Registry {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return null;
-    } finally {
-      zkw.close();
     }
   }
 
@@ -96,34 +105,25 @@ class ZooKeeperRegistry implements Registry {
     if (this.clusterId != null) return this.clusterId;
     // No synchronized here, worse case we will retrieve it twice, that's
     //  not an issue.
-    ZooKeeperKeepAliveConnection zkw = null;
-    try {
-      zkw = hci.getKeepAliveZooKeeperWatcher();
+    try (ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher()) {
       this.clusterId = ZKClusterId.readClusterIdZNode(zkw);
       if (this.clusterId == null) {
         LOG.info("ClusterId read in ZooKeeper is null");
       }
-    } catch (KeeperException e) {
+    } catch (KeeperException | IOException e) {
       LOG.warn("Can't retrieve clusterId from Zookeeper", e);
-    } catch (IOException e) {
-      LOG.warn("Can't retrieve clusterId from Zookeeper", e);
-    } finally {
-      if (zkw != null) zkw.close();
     }
     return this.clusterId;
   }
 
   @Override
   public int getCurrentNrHRS() throws IOException {
-    ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher();
-    try {
+    try (ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher()) {
       // We go to zk rather than to master to get count of regions to avoid
       // HTable having a Master dependency.  See HBase-2828
       return ZKUtil.getNumberOfChildren(zkw, zkw.rsZNode);
     } catch (KeeperException ke) {
       throw new IOException("Unexpected ZooKeeper exception", ke);
-    } finally {
-        zkw.close();
     }
   }
 }
