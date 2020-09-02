@@ -19,30 +19,41 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.RegionLocations;
 
 /**
- * Get instance of configured Registry.
+ * Implementations hold cluster information such as this cluster's id, location of hbase:meta, etc.
+ * needed by cluster connections.
+ * Internal use only.
  */
 @InterfaceAudience.Private
-class RegistryFactory {
-  static final String REGISTRY_IMPL_CONF_KEY = "hbase.client.registry.impl";
+interface ConnectionRegistry {
+  /**
+   * @param connection
+   */
+  void init(Connection connection);
 
   /**
-   * @return The cluster registry implementation to use.
+   * @return the currently active master, null if none exists.
+   */
+  ServerName getActiveMaster() throws IOException;
+
+  /**
+   * @return Meta region location
    * @throws IOException
    */
-  static Registry getRegistry(final Connection connection)
-  throws IOException {
-    String registryClass = connection.getConfiguration().get(REGISTRY_IMPL_CONF_KEY,
-      ZooKeeperRegistry.class.getName());
-    Registry registry = null;
-    try {
-      registry = (Registry)Class.forName(registryClass).getDeclaredConstructor().newInstance();
-    } catch (Throwable t) {
-      throw new IOException(t);
-    }
-    registry.init(connection);
-    return registry;
-  }
+  RegionLocations getMetaRegionLocations() throws IOException;
+
+  /**
+   * @return Cluster id.
+   */
+  String getClusterId();
+
+  /**
+   * @return Count of 'running' regionservers
+   * @throws IOException
+   */
+  int getCurrentNrHRS() throws IOException;
 }

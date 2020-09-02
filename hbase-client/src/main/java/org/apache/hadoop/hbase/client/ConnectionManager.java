@@ -83,7 +83,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.*;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
@@ -635,7 +635,7 @@ class ConnectionManager {
     /**
      * Cluster registry of basic info such as clusterid and meta region location.
      */
-    Registry registry;
+    ConnectionRegistry registry;
 
     private final ClientBackoffPolicy backoffPolicy;
 
@@ -920,8 +920,8 @@ class ConnectionManager {
      * @return The cluster registry implementation to use.
      * @throws IOException
      */
-    private Registry setupRegistry() throws IOException {
-      return RegistryFactory.getRegistry(this);
+    private ConnectionRegistry setupRegistry() throws IOException {
+      return ConnectionRegistryFactory.getRegistry(this);
     }
 
     /**
@@ -1259,7 +1259,7 @@ class ConnectionManager {
           }
         }
         // Look up from zookeeper
-        metaLocations = this.registry.getMetaRegionLocation();
+        metaLocations = this.registry.getMetaRegionLocations();
         lastMetaLookupTime = EnvironmentEdgeManager.currentTime();
         if (metaLocations != null &&
             metaLocations.getRegionLocation(replicaId) != null) {
@@ -1589,43 +1589,31 @@ class ConnectionManager {
        * @throws KeeperException
        * @throws ServiceException
        */
-      private Object makeStubNoRetries() throws IOException, KeeperException, ServiceException {
-        ZooKeeperKeepAliveConnection zkw;
-        try {
-          zkw = getKeepAliveZooKeeperWatcher();
-        } catch (IOException e) {
-          ExceptionUtil.rethrowIfInterrupt(e);
-          throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
+      private Object makeStubNoRetries() throws IOException, ServiceException {
+        ServerName sn = registry.getActiveMaster();
+        if (sn == null) {
+          String msg = "ZooKeeper available but no active master location found";
+          LOG.info(msg);
+          throw new MasterNotRunningException(msg);
         }
-        try {
-          checkIfBaseNodeAvailable(zkw);
-          ServerName sn = MasterAddressTracker.getMasterAddress(zkw);
-          if (sn == null) {
-            String msg = "ZooKeeper available but no active master location found";
-            LOG.info(msg);
-            throw new MasterNotRunningException(msg);
-          }
-          if (isDeadServer(sn)) {
-            throw new MasterNotRunningException(sn + " is dead.");
-          }
-          // Use the security info interface name as our stub key
-          String key = getStubKey(getServiceName(),
-              sn.getHostname(), sn.getPort(), hostnamesCanChange);
-          connectionLock.putIfAbsent(key, key);
-          Object stub = null;
-          synchronized (connectionLock.get(key)) {
-            stub = stubs.get(key);
-            if (stub == null) {
-              BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
-              stub = makeStub(channel);
-              isMasterRunning();
-              stubs.put(key, stub);
-            }
-          }
-          return stub;
-        } finally {
-          zkw.close();
+        if (isDeadServer(sn)) {
+          throw new MasterNotRunningException(sn + " is dead.");
         }
+        // Use the security info interface name as our stub key
+        String key = getStubKey(getServiceName(),
+            sn.getHostname(), sn.getPort(), hostnamesCanChange);
+        connectionLock.putIfAbsent(key, key);
+        Object stub = null;
+        synchronized (connectionLock.get(key)) {
+          stub = stubs.get(key);
+          if (stub == null) {
+            BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
+            stub = makeStub(channel);
+            isMasterRunning();
+            stubs.put(key, stub);
+          }
+        }
+        return stub;
       }
 
       /**
@@ -1643,12 +1631,9 @@ class ConnectionManager {
               return makeStubNoRetries();
             } catch (IOException e) {
               exceptionCaught = e;
-            } catch (KeeperException e) {
-              exceptionCaught = e;
             } catch (ServiceException e) {
               exceptionCaught = e;
             }
-
             throw new MasterNotRunningException(exceptionCaught);
           } else {
             throw new DoNotRetryIOException("Connection was closed while trying to get master");

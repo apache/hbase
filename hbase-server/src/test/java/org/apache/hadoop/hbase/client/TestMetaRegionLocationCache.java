@@ -55,11 +55,11 @@ public class TestMetaRegionLocationCache {
   private static final Log LOG = LogFactory.getLog(TestMetaRegionLocationCache.class.getName());
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static Registry REGISTRY;
+  private static ConnectionRegistry REGISTRY;
 
   // waits for all replicas to have region location
   static void waitUntilAllMetaReplicasHavingRegionLocation(Configuration conf,
-       final Registry registry, final int regionReplication) throws IOException {
+                                                           final ConnectionRegistry registry, final int regionReplication) throws IOException {
     Waiter.waitFor(conf, conf.getLong(
         "hbase.client.sync.wait.timeout.msec", 60000), 200, true,
         new Waiter.ExplainingPredicate<IOException>() {
@@ -71,7 +71,7 @@ public class TestMetaRegionLocationCache {
           @Override
           public boolean evaluate() throws IOException {
             try {
-              RegionLocations locs = registry.getMetaRegionLocation();
+              RegionLocations locs = registry.getMetaRegionLocations();
               if (locs == null || locs.size() < regionReplication) {
                 return false;
               }
@@ -93,7 +93,7 @@ public class TestMetaRegionLocationCache {
   public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TEST_UTIL.startMiniCluster(3);
-    REGISTRY = RegistryFactory.getRegistry(TEST_UTIL.getConnection());
+    REGISTRY = ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConnection());
     waitUntilAllMetaReplicasHavingRegionLocation(
         TEST_UTIL.getConfiguration(), REGISTRY, 3);
     TEST_UTIL.getConnection().getAdmin().setBalancerRunning(false, true);

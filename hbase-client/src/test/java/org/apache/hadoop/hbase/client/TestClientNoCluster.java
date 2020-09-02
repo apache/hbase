@@ -105,13 +105,13 @@ public class TestClientNoCluster extends Configured implements Tool {
     // Run my HConnection overrides.  Use my little HConnectionImplementation below which
     // allows me insert mocks and also use my Registry below rather than the default zk based
     // one so tests run faster and don't have zk dependency.
-    this.conf.set("hbase.client.registry.impl", SimpleRegistry.class.getName());
+    this.conf.set("hbase.client.registry.impl", SimpleConnectionRegistry.class.getName());
   }
 
   /**
    * Simple cluster registry inserted in place of our usual zookeeper based one.
    */
-  static class SimpleRegistry implements Registry {
+  static class SimpleConnectionRegistry implements ConnectionRegistry {
     final ServerName META_HOST = META_SERVERNAME;
 
     @Override
@@ -119,7 +119,12 @@ public class TestClientNoCluster extends Configured implements Tool {
     }
 
     @Override
-    public RegionLocations getMetaRegionLocation() throws IOException {
+    public ServerName getActiveMaster() {
+      return null;
+    }
+
+    @Override
+    public RegionLocations getMetaRegionLocations() throws IOException {
       return new RegionLocations(
         new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, META_HOST));
     }
@@ -796,7 +801,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     getConf().set("hbase.client.connection.impl",
       ManyServersManyRegionsConnection.class.getName());
     // Use simple kv registry rather than zk
-    getConf().set("hbase.client.registry.impl", SimpleRegistry.class.getName());
+    getConf().set("hbase.client.registry.impl", SimpleConnectionRegistry.class.getName());
     // When to report fails.  Default is we report the 10th.  This means we'll see log everytime
     // an exception is thrown -- usually RegionTooBusyException when we have more than
     // hbase.test.multi.too.many requests outstanding at any time.
