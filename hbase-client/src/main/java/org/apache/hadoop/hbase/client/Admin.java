@@ -903,7 +903,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Ask for a scan of the catalog table.
    *
-   * @return the number of entries cleaned
+   * @return the number of entries cleaned. Returns -1 if previous run is in progress.
    * @throws IOException if a remote or network exception occurs
    */
   int runCatalogJanitor() throws IOException;
