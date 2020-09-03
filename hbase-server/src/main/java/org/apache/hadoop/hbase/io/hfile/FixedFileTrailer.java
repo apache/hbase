@@ -29,8 +29,8 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellComparatorImpl.MetaCellComparator;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -613,8 +613,7 @@ public class FixedFileTrailer {
       comparatorKlass = CellComparatorImpl.class;
     } else if (comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
       || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())
-      || (comparatorClassName
-      .equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator"))) {
+      || (comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator"))) {
       comparatorKlass = MetaCellComparator.class;
     } else if (comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$RawBytesComparator")
       || comparatorClassName.equals("org.apache.hadoop.hbase.util.Bytes$ByteArrayComparator")) {
@@ -636,8 +635,8 @@ public class FixedFileTrailer {
     if (comparatorClassName.equals(CellComparatorImpl.COMPARATOR.getClass().getName())) {
       return CellComparatorImpl.COMPARATOR;
     } else if (comparatorClassName.equals(
-      CellComparatorImpl.META_COMPARATOR.getClass().getName())) {
-      return CellComparatorImpl.META_COMPARATOR;
+      MetaCellComparator.META_COMPARATOR.getClass().getName())) {
+      return MetaCellComparator.META_COMPARATOR;
     }
     try {
       Class<? extends CellComparator> comparatorClass = getComparatorClass(comparatorClassName);

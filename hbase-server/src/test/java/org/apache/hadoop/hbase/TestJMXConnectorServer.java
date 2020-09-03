@@ -32,8 +32,10 @@ import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -56,22 +58,37 @@ public class TestJMXConnectorServer {
   private static Configuration conf = null;
   private static Admin admin;
   // RMI registry port
-  private static int rmiRegistryPort = 61120;
+  private static int rmiRegistryPort;
   // Switch for customized Accesscontroller to throw ACD exception while executing test case
-  static boolean hasAccess;
+  private volatile static boolean hasAccess;
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    conf = UTIL.getConfiguration();
+    String cps = JMXListener.class.getName() + "," + MyAccessController.class.getName();
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, cps);
+    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, cps);
+    rmiRegistryPort = UTIL.randomFreePort();
+    conf.setInt("master.rmi.registry.port", rmiRegistryPort);
+    conf.setInt("regionserver.rmi.registry.port", rmiRegistryPort);
+    UTIL.startMiniCluster();
+    admin = UTIL.getConnection().getAdmin();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    admin.close();
+    UTIL.shutdownMiniCluster();
+  }
 
   @Before
-  public void setUp() throws Exception {
-    UTIL = new HBaseTestingUtility();
-    conf = UTIL.getConfiguration();
+  public void setUp() {
+    hasAccess = false;
   }
 
   @After
-  public void tearDown() throws Exception {
-    // Set to true while stopping cluster
+  public void tearDown() {
     hasAccess = true;
-    admin.close();
-    UTIL.shutdownMiniCluster();
   }
 
   /**
@@ -79,16 +96,9 @@ public class TestJMXConnectorServer {
    */
   @Test
   public void testHMConnectorServerWhenStopMaster() throws Exception {
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      JMXListener.class.getName() + "," + MyAccessController.class.getName());
-    conf.setInt("master.rmi.registry.port", rmiRegistryPort);
-    UTIL.startMiniCluster();
-    admin = UTIL.getConnection().getAdmin();
-
     // try to stop master
     boolean accessDenied = false;
     try {
-      hasAccess = false;
       LOG.info("Stopping HMaster...");
       admin.stopMaster();
     } catch (AccessDeniedException e) {
@@ -97,18 +107,7 @@ public class TestJMXConnectorServer {
     }
     Assert.assertTrue(accessDenied);
 
-    // Check whether HMaster JMX Connector server can be connected
-    JMXConnector connector = null;
-    try {
-      connector = JMXConnectorFactory
-          .connect(JMXListener.buildJMXServiceURL(rmiRegistryPort, rmiRegistryPort));
-    } catch (IOException e) {
-      if (e.getCause() instanceof ServiceUnavailableException) {
-        Assert.fail("Can't connect to HMaster ConnectorServer.");
-      }
-    }
-    Assert.assertNotNull("JMXConnector should not be null.", connector);
-    connector.close();
+    checkConnector();
   }
 
   /**
@@ -117,29 +116,11 @@ public class TestJMXConnectorServer {
    */
   @Test
   public void testRSConnectorServerWhenStopRegionServer() throws Exception {
-    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-      JMXListener.class.getName() + "," + MyAccessController.class.getName());
-    conf.setInt("regionserver.rmi.registry.port", rmiRegistryPort);
-    UTIL.startMiniCluster();
-    admin = UTIL.getConnection().getAdmin();
-
-    hasAccess = false;
     ServerName serverName = UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     LOG.info("Stopping Region Server...");
     admin.stopRegionServer(serverName.getHostname() + ":" + serverName.getPort());
 
-    // Check whether Region Sever JMX Connector server can be connected
-    JMXConnector connector = null;
-    try {
-      connector = JMXConnectorFactory
-          .connect(JMXListener.buildJMXServiceURL(rmiRegistryPort, rmiRegistryPort));
-    } catch (IOException e) {
-      if (e.getCause() instanceof ServiceUnavailableException) {
-        Assert.fail("Can't connect to Region Server ConnectorServer.");
-      }
-    }
-    Assert.assertNotNull("JMXConnector should not be null.", connector);
-    connector.close();
+    checkConnector();
   }
 
   /**
@@ -147,16 +128,8 @@ public class TestJMXConnectorServer {
    */
   @Test
   public void testHMConnectorServerWhenShutdownCluster() throws Exception {
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      JMXListener.class.getName() + "," + MyAccessController.class.getName());
-    conf.setInt("master.rmi.registry.port", rmiRegistryPort);
-
-    UTIL.startMiniCluster();
-    admin = UTIL.getConnection().getAdmin();
-
     boolean accessDenied = false;
     try {
-      hasAccess = false;
       LOG.info("Stopping HMaster...");
       admin.shutdown();
     } catch (AccessDeniedException e) {
@@ -165,14 +138,18 @@ public class TestJMXConnectorServer {
     }
     Assert.assertTrue(accessDenied);
 
+    checkConnector();
+  }
+
+  private void checkConnector() throws Exception {
     // Check whether HMaster JMX Connector server can be connected
     JMXConnector connector = null;
     try {
       connector = JMXConnectorFactory
-          .connect(JMXListener.buildJMXServiceURL(rmiRegistryPort, rmiRegistryPort));
+        .connect(JMXListener.buildJMXServiceURL(rmiRegistryPort, rmiRegistryPort));
     } catch (IOException e) {
       if (e.getCause() instanceof ServiceUnavailableException) {
-        Assert.fail("Can't connect to HMaster ConnectorServer.");
+        Assert.fail("Can't connect to ConnectorServer.");
       }
     }
     Assert.assertNotNull("JMXConnector should not be null.", connector);
@@ -185,7 +162,7 @@ public class TestJMXConnectorServer {
    */
   public static class MyAccessController extends AccessController {
     @Override
-    public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+    public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) {
       // Do nothing. In particular, stop the creation of the hbase:acl table. It makes the
       // shutdown take time.
     }

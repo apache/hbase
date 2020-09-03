@@ -21,19 +21,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link ScheduledChore} which periodically updates the {@link RegionServerSpaceQuotaManager}
@@ -160,7 +159,9 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
    * @throws IOException throws IOException
    */
   boolean checkQuotaTableExists() throws IOException {
-    return MetaTableAccessor.tableExists(getConnection(), QuotaUtil.QUOTA_TABLE_NAME);
+    try (Admin admin = getConnection().getAdmin()) {
+      return admin.tableExists(QuotaUtil.QUOTA_TABLE_NAME);
+    }
   }
 
   /**
