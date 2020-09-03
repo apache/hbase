@@ -38,8 +38,6 @@
 [[other.info.pres]]
 === HBase Presentations (Slides)
 
-link:https://slideplayer.com/slide/7066186/[The Multiple Uses Of HBase] by Jean-Daniel Cryans(Berlin buzzwords 2011).
-
 link:https://www.slideshare.net/cloudera/hadoop-world-2011-advanced-hbase-schema-design-lars-george-cloudera[Advanced HBase Schema Design] by Lars George (Hadoop World 2011).
 
 link:http://www.slideshare.net/cloudera/chicago-data-summit-apache-hbase-an-introduction[Introduction to HBase] by Todd Lipcon (Chicago Data Summit 2011).
