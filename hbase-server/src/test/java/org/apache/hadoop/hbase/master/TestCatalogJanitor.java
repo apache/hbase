@@ -26,6 +26,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -1066,6 +1067,37 @@ public class TestCatalogJanitor {
     services.stop("Test finished");
     server.stop("shutdown");
     janitor.cancel(true);
+  }
+
+  @Test
+  public void testAlreadyRunningStatus() throws Exception {
+    int numberOfThreads = 2;
+    final List<Integer> gcValues = new ArrayList<>();
+    Thread[] threads = new Thread[numberOfThreads];
+    HBaseTestingUtility hBaseTestingUtility = new HBaseTestingUtility();
+    hBaseTestingUtility.getConfiguration().setInt("hbase.client.retries.number", 5);
+    Server server = new MockServer(hBaseTestingUtility);
+    MasterServices services = new MockMasterServices(server);
+    final CatalogJanitor catalogJanitor = new CatalogJanitor(server, services);
+    for (int i = 0; i < numberOfThreads; i++) {
+      threads[i] = new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            gcValues.add(catalogJanitor.scan());
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      });
+    }
+    for (int i = 0; i < numberOfThreads; i++) {
+      threads[i].start();
+    }
+    for (int i = 0; i < numberOfThreads; i++) {
+      threads[i].join();
+    }
+    assertTrue("One janitor.scan() call should have returned -1", gcValues.contains(-1));
   }
 
   private FileStatus[] addMockStoreFiles(int count, MasterServices services, Path storedir)
