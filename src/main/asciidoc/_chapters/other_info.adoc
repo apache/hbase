@@ -33,11 +33,12 @@
 
 .Introduction to HBase
 * link:https://vimeo.com/23400732[Introduction to HBase] by Todd Lipcon (Chicago Data Summit 2011).
-* link:https://vimeo.com/26804675[Building Real Time Services at Facebook with HBase] by Jonathan Gray (Berlin buzzwords 2011)
-* link:http://www.cloudera.com/videos/hw10_video_how_stumbleupon_built_and_advertising_platform_using_hbase_and_hadoop[The Multiple Uses Of HBase] by Jean-Daniel Cryans(Berlin buzzwords 2011).
+* link:https://www.youtube.com/watch?v=DdGKAorSSZ0[Building Real Time Services at Facebook with HBase] by Jonathan Gray (Berlin buzzwords 2011)
 
 [[other.info.pres]]
 === HBase Presentations (Slides)
+
+link:https://slideplayer.com/slide/7066186/[The Multiple Uses Of HBase] by Jean-Daniel Cryans(Berlin buzzwords 2011).
 
 link:https://www.slideshare.net/cloudera/hadoop-world-2011-advanced-hbase-schema-design-lars-george-cloudera[Advanced HBase Schema Design] by Lars George (Hadoop World 2011).
 
