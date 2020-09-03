@@ -13,40 +13,45 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import java.util.List;
+import java.io.File;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.HttpCookie;
+import java.net.URI;
+import java.net.URL;
+import javax.net.ssl.HttpsURLConnection;
+import javax.servlet.Filter;
+import javax.servlet.FilterConfig;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletResponse;
+import java.security.GeneralSecurityException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
+
+import org.junit.Assert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import javax.net.ssl.HttpsURLConnection;
-import javax.servlet.*;
-import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
-import java.security.GeneralSecurityException;
-import java.net.HttpCookie;
-import java.util.List;
-
 @Category({ MiscTests.class, SmallTests.class})
 public class TestHttpCookieFlag {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestHttpCookieFlag.class);
-  
+
   private static final String BASEDIR = System.getProperty("test.build.dir",
       "target/test-dir") + "/" + org.apache.hadoop.hbase.http.TestHttpCookieFlag.class.getSimpleName();
   private static String keystoresDir;
