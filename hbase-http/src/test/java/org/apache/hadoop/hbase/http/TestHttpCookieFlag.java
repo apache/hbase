@@ -110,7 +110,7 @@ public class TestHttpCookieFlag {
                     sslConf.get("ssl.server.truststore.password"),
                     sslConf.get("ssl.server.truststore.type", "jks"))
             .build();
-    server.addUnprivilegedServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
+    server.addPrivilegedServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
     server.start();
   }
 
