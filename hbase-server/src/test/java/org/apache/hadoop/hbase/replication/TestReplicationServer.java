@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.ReplicationServerManager;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.ReplicationServerSinkPeer;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -75,6 +77,7 @@ public class TestReplicationServer {
   private static HMaster MASTER;
 
   private static HReplicationServer replicationServer;
+  private static ServerName replicationServerName;
 
   private static Path baseNamespaceDir;
   private static Path hfileArchiveDir;
@@ -89,12 +92,7 @@ public class TestReplicationServer {
   public static void beforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     MASTER = TEST_UTIL.getMiniHBaseCluster().getMaster();
-
-    replicationServer = new HReplicationServer(CONF);
-    replicationServer.start();
-
     TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster();
-    TEST_UTIL.waitFor(60000, () -> replicationServer.isOnline());
 
     Path rootDir = CommonFSUtils.getRootDir(CONF);
     baseNamespaceDir = new Path(rootDir, new Path(HConstants.BASE_NAMESPACE_DIR));
@@ -109,6 +107,11 @@ public class TestReplicationServer {
 
   @Before
   public void before() throws Exception {
+    replicationServer = new HReplicationServer(CONF);
+    replicationServer.start();
+    TEST_UTIL.waitFor(60000, () -> replicationServer.isOnline());
+    replicationServerName = replicationServer.getServerName();
+
     TEST_UTIL.createTable(TABLENAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLENAME);
   }
@@ -116,6 +119,11 @@ public class TestReplicationServer {
   @After
   public void after() throws IOException {
     TEST_UTIL.deleteTableIfAny(TABLENAME);
+    if (!replicationServer.isStopped()) {
+      replicationServer.stop("test");
+    }
+    replicationServer = null;
+    replicationServerName = null;
   }
 
   /**
@@ -126,10 +134,10 @@ public class TestReplicationServer {
     AsyncClusterConnection conn =
         TEST_UTIL.getHBaseCluster().getMaster().getAsyncClusterConnection();
     AsyncReplicationServerAdmin replAdmin =
-        conn.getReplicationServerAdmin(replicationServer.getServerName());
+        conn.getReplicationServerAdmin(replicationServerName);
 
     ReplicationServerSinkPeer sinkPeer =
-        new ReplicationServerSinkPeer(replicationServer.getServerName(), replAdmin);
+        new ReplicationServerSinkPeer(replicationServerName, replAdmin);
     replicateWALEntryAndVerify(sinkPeer);
   }
 
@@ -174,5 +182,31 @@ public class TestReplicationServer {
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(row, Bytes.toBytes(FAMILY), Bytes.toBytes(FAMILY), timestamp, row));
     return new WAL.Entry(key, edit);
+  }
+
+  @Test
+  public void testReplicationServerReport() throws Exception {
+    ReplicationServerManager replicationServerManager = MASTER.getReplicationServerManager();
+    assertNotNull(replicationServerManager);
+    TEST_UTIL.waitFor(60000, () -> !replicationServerManager.getOnlineServers().isEmpty()
+        && null != replicationServerManager.getServerMetrics(replicationServerName));
+
+    // put data via replication server
+    testReplicateWAL();
+    TEST_UTIL.waitFor(60000, () -> replicationServer.rpcServices.requestCount.sum() > 0
+        && replicationServer.rpcServices.requestCount.sum() == replicationServerManager
+        .getServerMetrics(replicationServerName).getRequestCount());
+  }
+
+  @Test
+  public void testReplicationServerExpire() throws Exception {
+    ReplicationServerManager replicationServerManager = MASTER.getReplicationServerManager();
+    TEST_UTIL.waitFor(60000, () -> !replicationServerManager.getOnlineServers().isEmpty()
+        && null != replicationServerManager.getServerMetrics(replicationServerName));
+
+    replicationServer.stop("test");
+
+    TEST_UTIL.waitFor(180000, 10000, () -> replicationServerManager.getOnlineServers().isEmpty());
+    assertNull(replicationServerManager.getServerMetrics(replicationServerName));
   }
 }
