@@ -160,6 +160,7 @@ public class CatalogJanitor extends ScheduledChore {
    * Run janitorial scan of catalog <code>hbase:meta</code> table looking for
    * garbage to collect.
    * @return How many items gc'd whether for merge or split.
+   *   Returns -1 if previous scan is in progress.
    */
   @VisibleForTesting
   public int scan() throws IOException {
@@ -167,7 +168,8 @@ public class CatalogJanitor extends ScheduledChore {
     try {
       if (!alreadyRunning.compareAndSet(false, true)) {
         LOG.debug("CatalogJanitor already running");
-        return gcs;
+        // -1 indicates previous scan is in progress
+        return -1;
       }
       this.lastReport = scanForReport();
       if (!this.lastReport.isEmpty()) {
