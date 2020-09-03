@@ -13,6 +13,7 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
@@ -24,6 +25,7 @@ import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -41,6 +43,10 @@ import java.util.List;
 
 @Category({ MiscTests.class, SmallTests.class})
 public class TestHttpCookieFlag {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHttpCookieFlag.class);
+  
   private static final String BASEDIR = System.getProperty("test.build.dir",
       "target/test-dir") + "/" + org.apache.hadoop.hbase.http.TestHttpCookieFlag.class.getSimpleName();
   private static String keystoresDir;
