@@ -365,6 +365,13 @@ module Hbase
       assert_match(/12345678/, admin.describe(@test_name))
     end
 
+    define_test 'alter should be able to set the TargetRegionSize and TargetRegionCount' do
+      admin.alter(@test_name, true, 'NORMALIZER_TARGET_REGION_COUNT' => 156)
+      assert_match(/156/, admin.describe(@test_name))
+      admin.alter(@test_name, true, 'NORMALIZER_TARGET_REGION_SIZE' => 234)
+      assert_match(/234/, admin.describe(@test_name))
+    end
+
     def capture_stdout
       begin
         old_stdout = $stdout
