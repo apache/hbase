@@ -857,6 +857,8 @@ public class HttpServer implements FilterContainer {
       fmap.setFilterName(AdminAuthorizedFilter.class.getSimpleName());
       webAppContext.getServletHandler().addFilter(filter, fmap);
     }
+    webAppContext.getSessionHandler().getSessionCookieConfig().setHttpOnly(true);
+    webAppContext.getSessionHandler().getSessionCookieConfig().setSecure(true);
     webAppContext.addServlet(holder, pathSpec);
   }
 
