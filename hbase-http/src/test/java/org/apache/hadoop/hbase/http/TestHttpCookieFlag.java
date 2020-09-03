@@ -53,7 +53,8 @@ public class TestHttpCookieFlag {
       HBaseClassTestRule.forClass(TestHttpCookieFlag.class);
 
   private static final String BASEDIR = System.getProperty("test.build.dir",
-      "target/test-dir") + "/" + org.apache.hadoop.hbase.http.TestHttpCookieFlag.class.getSimpleName();
+      "target/test-dir") + "/" +
+      org.apache.hadoop.hbase.http.TestHttpCookieFlag.class.getSimpleName();
   private static String keystoresDir;
   private static String sslConfDir;
   private static SSLFactory clientSslFactory;
@@ -165,9 +166,8 @@ public class TestHttpCookieFlag {
     URL base = new URL("https://" + NetUtils.getHostPortString(server
         .getConnectorAddress(1)) + "/");
 
-    for (String servlet : new String[] { "static",  "stacks", "logLevel", "jmx",
-      "logs" }) { //
-       conn = (HttpsURLConnection) new URL(base,
+    for (String servlet : new String[] { "static",  "stacks", "logLevel", "jmx", "logs" }) {
+      conn = (HttpsURLConnection) new URL(base,
           "/" + servlet).openConnection();
       conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
 
