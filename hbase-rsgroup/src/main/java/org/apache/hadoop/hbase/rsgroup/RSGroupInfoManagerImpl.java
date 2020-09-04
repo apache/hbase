@@ -459,6 +459,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   @Override
   public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
       throws IOException {
+    if (RSGroupInfo.DEFAULT_GROUP.equals(groupName)) {
+      // We do not persist anything of default group, therefore, it is not supported to update
+      // default group's configuration which lost once master down.
+      throw new ConstraintException("configuration of " + RSGroupInfo.DEFAULT_GROUP
+          + " can't be stored persistently");
+    }
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
     new HashSet<>(rsGroupInfo.getConfiguration().keySet())
         .forEach(rsGroupInfo::removeConfiguration);
