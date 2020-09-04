@@ -132,7 +132,7 @@ public class TestClientOperationTimeout {
     DELAY_GET = 600;
     try {
       TABLE.get(new Get(ROW));
-      throw new AssertionError("should not reach here");
+      Assert.fail("should not reach here");
     } catch (Exception e) {
       Assert.assertTrue(
         e instanceof RetriesExhaustedException && e.getCause() instanceof CallTimeoutException);
@@ -150,7 +150,7 @@ public class TestClientOperationTimeout {
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     try {
       TABLE.put(put);
-      throw new AssertionError("should not reach here");
+      Assert.fail("should not reach here");
     } catch (Exception e) {
       Assert.assertTrue(
         e instanceof RetriesExhaustedException && e.getCause() instanceof CallTimeoutException);
@@ -173,7 +173,7 @@ public class TestClientOperationTimeout {
     puts.add(put2);
     try {
       TABLE.batch(puts, new Object[2]);
-      throw new AssertionError("should not reach here");
+      Assert.fail("should not reach here");
     } catch (Exception e) {
       Assert.assertTrue(
         e instanceof RetriesExhaustedException && e.getCause() instanceof RetriesExhaustedException
@@ -191,7 +191,7 @@ public class TestClientOperationTimeout {
     try {
       ResultScanner scanner = TABLE.getScanner(new Scan());
       scanner.next();
-      throw new AssertionError("should not reach here");
+      Assert.fail("should not reach here");
     } catch (Exception e) {
       Assert.assertTrue(
         e instanceof RetriesExhaustedException && e.getCause() instanceof TimeoutIOException);
