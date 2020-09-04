@@ -64,7 +64,8 @@ public final class DNS {
 
   public enum ServerType {
     MASTER("master"),
-    REGIONSERVER("regionserver");
+    REGIONSERVER("regionserver"),
+    REPLICATIONSERVER("replicationserver");
 
     private String name;
     ServerType(String name) {
