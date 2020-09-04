@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -83,7 +84,7 @@ public class WALPrettyPrinter {
   private long sequence;
 
   // List of tables for filter
-  private Set<String> tableList;
+  private final Set<String> tableSet;
   private String region;
   private String row;
   private boolean outputOnlyRowKey;
@@ -104,7 +105,7 @@ public class WALPrettyPrinter {
     outputValues = false;
     outputJSON = false;
     sequence = -1;
-    tableList = new HashSet<>();
+    tableSet = new HashSet<>();
     region = null;
     row = null;
     outputOnlyRowKey = false;
@@ -153,13 +154,11 @@ public class WALPrettyPrinter {
   }
 
   /**
-   * Sets the tables filter. Only log entries for these table are printed.
-   * @param tableListWithDelimiter table names separated with comma.
+   * Sets the tables filter. Only log entries for these tables are printed.
+   * @param tablesWithDelimiter table names separated with comma.
    */
-  public void setTableFilter(String tableListWithDelimiter) {
-    for (String table :  tableListWithDelimiter.split(",")) {
-      tableList.add(table);
-    }
+  public void setTableFilter(String tablesWithDelimiter) {
+    Collections.addAll(tableSet, tablesWithDelimiter.split(","));
   }
   /**
    * sets the region by which output will be filtered
@@ -289,8 +288,8 @@ public class WALPrettyPrinter {
         Map<String, Object> txn = key.toStringMap();
         long writeTime = key.getWriteTime();
         // check output filters
-        if (!tableList.isEmpty() &&
-          !tableList.contains(((TableName) txn.get("table")).toString())) {
+        if (!tableSet.isEmpty() &&
+          !tableSet.contains(txn.get("table").toString())) {
           continue;
         }
         if (sequence >= 0 && ((Long) txn.get("sequence")) != sequence) {
@@ -410,13 +409,14 @@ public class WALPrettyPrinter {
     options.addOption("h", "help", false, "Output help message");
     options.addOption("j", "json", false, "Output JSON");
     options.addOption("p", "printvals", false, "Print values");
-    options.addOption("t", "table", true, "Table name to filter by.");
+    options.addOption("t", "tables", true,
+      "Table names (comma separated) to filter by; eg: test1,test2,test3 ");
     options.addOption("r", "region", true,
         "Region to filter by. Pass encoded region name; e.g. '9192caead6a5a20acb4454ffbc79fa14'");
     options.addOption("s", "sequence", true,
         "Sequence to filter by. Pass sequence number.");
     options.addOption("k", "outputOnlyRowKey", false,
-      "If only row keys are required in output");
+      "Print only row keys");
     options.addOption("w", "row", true, "Row to filter by. Pass row name.");
     options.addOption("g", "goto", true, "Position to seek to in the file");
 
