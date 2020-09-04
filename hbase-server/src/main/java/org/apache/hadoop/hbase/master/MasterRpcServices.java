@@ -109,6 +109,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLoca
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
@@ -1824,4 +1826,15 @@ public class MasterRpcServices extends RSRpcServices
     return response.build();
   }
 
+  @Override
+  public GetNumLiveRSResponse getNumLiveRS(RpcController rpcController, GetNumLiveRSRequest request)
+      throws ServiceException {
+    GetNumLiveRSResponse.Builder response = GetNumLiveRSResponse.newBuilder();
+    try {
+      response.setNumRegionServers(master.getNumLiveRegionServers());
+    } catch (KeeperException ke) {
+      throw new ServiceException(ke);
+    }
+    return response.build();
+  }
 }

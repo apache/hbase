@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 import java.lang.reflect.Method;
 import java.net.UnknownHostException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
@@ -65,5 +66,15 @@ public final class DNS {
     } else {
       return org.apache.hadoop.net.DNS.getDefaultHost(strInterface, nameserver);
     }
+  }
+
+  public static String getMasterHostname(Configuration conf) throws UnknownHostException {
+    String hostname = conf.get("hbase.master.hostname", "");
+    if (hostname.isEmpty()) {
+      return Strings.domainNamePointerToHostName(getDefaultHost(
+          conf.get("hbase.master.dns.interface", "default"),
+          conf.get("hbase.master.dns.nameserver", "default")));
+    }
+    return hostname;
   }
 }

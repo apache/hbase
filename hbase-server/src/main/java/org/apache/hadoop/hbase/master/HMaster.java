@@ -2641,6 +2641,21 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return masterFinishedInitializationTime;
   }
 
+  /**
+   * @return number of live region servers tracked by this master.
+   * @throws KeeperException if there is an issue with zookeeper connection.
+   */
+  public int getNumLiveRegionServers() throws KeeperException {
+    if (isActiveMaster()) {
+      return regionServerTracker.getOnlineServers().size();
+    }
+    // If the master is not active, we fall back to ZK to fetch the number of live region servers.
+    // This is an extra hop but that is okay since the ConnectionRegistry call that is serviced by
+    // this method is already deprecated and is not used in any active code paths. This method is
+    // here to only for the test code.
+    return ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
+  }
+
   public int getNumWALFiles() {
     return procedureStore != null ? procedureStore.getActiveLogs().size() : 0;
   }

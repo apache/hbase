@@ -68864,6 +68864,794 @@ public final class MasterProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.GetMetaRegionLocationsResponse)
   }
 
+  public interface GetNumLiveRSRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code hbase.pb.GetNumLiveRSRequest}
+   *
+   * <pre>
+   ** Request and response to get the number of live region servers 
+   * </pre>
+   */
+  public static final class GetNumLiveRSRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements GetNumLiveRSRequestOrBuilder {
+    // Use GetNumLiveRSRequest.newBuilder() to construct.
+    private GetNumLiveRSRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private GetNumLiveRSRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final GetNumLiveRSRequest defaultInstance;
+    public static GetNumLiveRSRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public GetNumLiveRSRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private GetNumLiveRSRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetNumLiveRSRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetNumLiveRSRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<GetNumLiveRSRequest> PARSER =
+        new com.google.protobuf.AbstractParser<GetNumLiveRSRequest>() {
+      public GetNumLiveRSRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new GetNumLiveRSRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<GetNumLiveRSRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest) obj;
+
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.GetNumLiveRSRequest}
+     *
+     * <pre>
+     ** Request and response to get the number of live region servers 
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetNumLiveRSRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetNumLiveRSRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetNumLiveRSRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest(this);
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetNumLiveRSRequest)
+    }
+
+    static {
+      defaultInstance = new GetNumLiveRSRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetNumLiveRSRequest)
+  }
+
+  public interface GetNumLiveRSResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required int32 num_region_servers = 1;
+    /**
+     * <code>required int32 num_region_servers = 1;</code>
+     */
+    boolean hasNumRegionServers();
+    /**
+     * <code>required int32 num_region_servers = 1;</code>
+     */
+    int getNumRegionServers();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.GetNumLiveRSResponse}
+   */
+  public static final class GetNumLiveRSResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements GetNumLiveRSResponseOrBuilder {
+    // Use GetNumLiveRSResponse.newBuilder() to construct.
+    private GetNumLiveRSResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private GetNumLiveRSResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final GetNumLiveRSResponse defaultInstance;
+    public static GetNumLiveRSResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public GetNumLiveRSResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private GetNumLiveRSResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              numRegionServers_ = input.readInt32();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetNumLiveRSResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetNumLiveRSResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<GetNumLiveRSResponse> PARSER =
+        new com.google.protobuf.AbstractParser<GetNumLiveRSResponse>() {
+      public GetNumLiveRSResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new GetNumLiveRSResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<GetNumLiveRSResponse> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required int32 num_region_servers = 1;
+    public static final int NUM_REGION_SERVERS_FIELD_NUMBER = 1;
+    private int numRegionServers_;
+    /**
+     * <code>required int32 num_region_servers = 1;</code>
+     */
+    public boolean hasNumRegionServers() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required int32 num_region_servers = 1;</code>
+     */
+    public int getNumRegionServers() {
+      return numRegionServers_;
+    }
+
+    private void initFields() {
+      numRegionServers_ = 0;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasNumRegionServers()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeInt32(1, numRegionServers_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(1, numRegionServers_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse) obj;
+
+      boolean result = true;
+      result = result && (hasNumRegionServers() == other.hasNumRegionServers());
+      if (hasNumRegionServers()) {
+        result = result && (getNumRegionServers()
+            == other.getNumRegionServers());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasNumRegionServers()) {
+        hash = (37 * hash) + NUM_REGION_SERVERS_FIELD_NUMBER;
+        hash = (53 * hash) + getNumRegionServers();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.GetNumLiveRSResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetNumLiveRSResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetNumLiveRSResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        numRegionServers_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_GetNumLiveRSResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.numRegionServers_ = numRegionServers_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.getDefaultInstance()) return this;
+        if (other.hasNumRegionServers()) {
+          setNumRegionServers(other.getNumRegionServers());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasNumRegionServers()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required int32 num_region_servers = 1;
+      private int numRegionServers_ ;
+      /**
+       * <code>required int32 num_region_servers = 1;</code>
+       */
+      public boolean hasNumRegionServers() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required int32 num_region_servers = 1;</code>
+       */
+      public int getNumRegionServers() {
+        return numRegionServers_;
+      }
+      /**
+       * <code>required int32 num_region_servers = 1;</code>
+       */
+      public Builder setNumRegionServers(int value) {
+        bitField0_ |= 0x00000001;
+        numRegionServers_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required int32 num_region_servers = 1;</code>
+       */
+      public Builder clearNumRegionServers() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        numRegionServers_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetNumLiveRSResponse)
+    }
+
+    static {
+      defaultInstance = new GetNumLiveRSResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetNumLiveRSResponse)
+  }
+
   /**
    * Protobuf service {@code hbase.pb.MasterService}
    */
@@ -74280,6 +75068,19 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse> done);
 
+      /**
+       * <code>rpc GetNumLiveRS(.hbase.pb.GetNumLiveRSRequest) returns (.hbase.pb.GetNumLiveRSResponse);</code>
+       *
+       * <pre>
+       **
+       * Get number of live region servers.
+       * </pre>
+       */
+      public abstract void getNumLiveRS(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse> done);
+
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -74307,6 +75108,14 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse> done) {
           impl.getMetaRegionLocations(controller, request, done);
+        }
+
+        @java.lang.Override
+        public  void getNumLiveRS(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse> done) {
+          impl.getNumLiveRS(controller, request, done);
         }
 
       };
@@ -74337,6 +75146,8 @@ public final class MasterProtos {
               return impl.getActiveMaster(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterRequest)request);
             case 2:
               return impl.getMetaRegionLocations(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest)request);
+            case 3:
+              return impl.getNumLiveRS(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -74357,6 +75168,8 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterRequest.getDefaultInstance();
             case 2:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest.getDefaultInstance();
+            case 3:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -74377,6 +75190,8 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterResponse.getDefaultInstance();
             case 2:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse.getDefaultInstance();
+            case 3:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -74424,6 +75239,19 @@ public final class MasterProtos {
         org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse> done);
 
+    /**
+     * <code>rpc GetNumLiveRS(.hbase.pb.GetNumLiveRSRequest) returns (.hbase.pb.GetNumLiveRSResponse);</code>
+     *
+     * <pre>
+     **
+     * Get number of live region servers.
+     * </pre>
+     */
+    public abstract void getNumLiveRS(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse> done);
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -74461,6 +75289,11 @@ public final class MasterProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse>specializeCallback(
               done));
           return;
+        case 3:
+          this.getNumLiveRS(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -74481,6 +75314,8 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterRequest.getDefaultInstance();
         case 2:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest.getDefaultInstance();
+        case 3:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -74501,6 +75336,8 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetActiveMasterResponse.getDefaultInstance();
         case 2:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse.getDefaultInstance();
+        case 3:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -74566,6 +75403,21 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse.getDefaultInstance()));
       }
+
+      public  void getNumLiveRS(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(3),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -74587,6 +75439,11 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse getMetaRegionLocations(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse getNumLiveRS(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -74630,6 +75487,18 @@ public final class MasterProtos {
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse getNumLiveRS(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(3),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse.getDefaultInstance());
       }
 
     }
@@ -75292,6 +76161,16 @@ public final class MasterProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_GetMetaRegionLocationsResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_GetNumLiveRSRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_GetNumLiveRSRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_GetNumLiveRSResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_GetNumLiveRSResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -75516,168 +76395,171 @@ public final class MasterProtos {
       "r_name\030\001 \001(\0132\024.hbase.pb.ServerName\"\037\n\035Ge" +
       "tMetaRegionLocationsRequest\"R\n\036GetMetaRe" +
       "gionLocationsResponse\0220\n\016meta_locations\030" +
-      "\001 \003(\0132\030.hbase.pb.RegionLocation*(\n\020Maste" +
-      "rSwitchType\022\t\n\005SPLIT\020\000\022\t\n\005MERGE\020\0012\363.\n\rMa" +
-      "sterService\022e\n\024GetSchemaAlterStatus\022%.hb" +
-      "ase.pb.GetSchemaAlterStatusRequest\032&.hba" +
-      "se.pb.GetSchemaAlterStatusResponse\022b\n\023Ge",
-      "tTableDescriptors\022$.hbase.pb.GetTableDes" +
-      "criptorsRequest\032%.hbase.pb.GetTableDescr" +
-      "iptorsResponse\022P\n\rGetTableNames\022\036.hbase." +
-      "pb.GetTableNamesRequest\032\037.hbase.pb.GetTa" +
-      "bleNamesResponse\022Y\n\020GetClusterStatus\022!.h" +
-      "base.pb.GetClusterStatusRequest\032\".hbase." +
-      "pb.GetClusterStatusResponse\022V\n\017IsMasterR" +
-      "unning\022 .hbase.pb.IsMasterRunningRequest" +
-      "\032!.hbase.pb.IsMasterRunningResponse\022D\n\tA" +
-      "ddColumn\022\032.hbase.pb.AddColumnRequest\032\033.h",
-      "base.pb.AddColumnResponse\022M\n\014DeleteColum" +
-      "n\022\035.hbase.pb.DeleteColumnRequest\032\036.hbase" +
-      ".pb.DeleteColumnResponse\022M\n\014ModifyColumn" +
-      "\022\035.hbase.pb.ModifyColumnRequest\032\036.hbase." +
-      "pb.ModifyColumnResponse\022G\n\nMoveRegion\022\033." +
-      "hbase.pb.MoveRegionRequest\032\034.hbase.pb.Mo" +
-      "veRegionResponse\022k\n\026DispatchMergingRegio" +
-      "ns\022\'.hbase.pb.DispatchMergingRegionsRequ" +
-      "est\032(.hbase.pb.DispatchMergingRegionsRes" +
-      "ponse\022M\n\014AssignRegion\022\035.hbase.pb.AssignR",
-      "egionRequest\032\036.hbase.pb.AssignRegionResp" +
-      "onse\022S\n\016UnassignRegion\022\037.hbase.pb.Unassi" +
-      "gnRegionRequest\032 .hbase.pb.UnassignRegio" +
-      "nResponse\022P\n\rOfflineRegion\022\036.hbase.pb.Of" +
-      "flineRegionRequest\032\037.hbase.pb.OfflineReg" +
-      "ionResponse\022J\n\013DeleteTable\022\034.hbase.pb.De" +
-      "leteTableRequest\032\035.hbase.pb.DeleteTableR" +
-      "esponse\022P\n\rtruncateTable\022\036.hbase.pb.Trun" +
-      "cateTableRequest\032\037.hbase.pb.TruncateTabl" +
-      "eResponse\022J\n\013EnableTable\022\034.hbase.pb.Enab",
-      "leTableRequest\032\035.hbase.pb.EnableTableRes" +
-      "ponse\022M\n\014DisableTable\022\035.hbase.pb.Disable" +
-      "TableRequest\032\036.hbase.pb.DisableTableResp" +
-      "onse\022J\n\013ModifyTable\022\034.hbase.pb.ModifyTab" +
-      "leRequest\032\035.hbase.pb.ModifyTableResponse" +
-      "\022J\n\013CreateTable\022\034.hbase.pb.CreateTableRe" +
-      "quest\032\035.hbase.pb.CreateTableResponse\022A\n\010" +
-      "Shutdown\022\031.hbase.pb.ShutdownRequest\032\032.hb" +
-      "ase.pb.ShutdownResponse\022G\n\nStopMaster\022\033." +
-      "hbase.pb.StopMasterRequest\032\034.hbase.pb.St",
-      "opMasterResponse\022h\n\031IsMasterInMaintenanc" +
-      "eMode\022$.hbase.pb.IsInMaintenanceModeRequ" +
-      "est\032%.hbase.pb.IsInMaintenanceModeRespon" +
-      "se\022>\n\007Balance\022\030.hbase.pb.BalanceRequest\032" +
-      "\031.hbase.pb.BalanceResponse\022_\n\022SetBalance" +
-      "rRunning\022#.hbase.pb.SetBalancerRunningRe" +
-      "quest\032$.hbase.pb.SetBalancerRunningRespo" +
-      "nse\022\\\n\021IsBalancerEnabled\022\".hbase.pb.IsBa" +
-      "lancerEnabledRequest\032#.hbase.pb.IsBalanc" +
-      "erEnabledResponse\022k\n\026SetSplitOrMergeEnab",
-      "led\022\'.hbase.pb.SetSplitOrMergeEnabledReq" +
-      "uest\032(.hbase.pb.SetSplitOrMergeEnabledRe" +
-      "sponse\022h\n\025IsSplitOrMergeEnabled\022&.hbase." +
-      "pb.IsSplitOrMergeEnabledRequest\032\'.hbase." +
-      "pb.IsSplitOrMergeEnabledResponse\022D\n\tNorm" +
-      "alize\022\032.hbase.pb.NormalizeRequest\032\033.hbas" +
-      "e.pb.NormalizeResponse\022e\n\024SetNormalizerR" +
-      "unning\022%.hbase.pb.SetNormalizerRunningRe" +
-      "quest\032&.hbase.pb.SetNormalizerRunningRes" +
-      "ponse\022b\n\023IsNormalizerEnabled\022$.hbase.pb.",
-      "IsNormalizerEnabledRequest\032%.hbase.pb.Is" +
-      "NormalizerEnabledResponse\022S\n\016RunCatalogS" +
-      "can\022\037.hbase.pb.RunCatalogScanRequest\032 .h" +
-      "base.pb.RunCatalogScanResponse\022e\n\024Enable" +
-      "CatalogJanitor\022%.hbase.pb.EnableCatalogJ" +
-      "anitorRequest\032&.hbase.pb.EnableCatalogJa" +
-      "nitorResponse\022n\n\027IsCatalogJanitorEnabled" +
-      "\022(.hbase.pb.IsCatalogJanitorEnabledReque" +
-      "st\032).hbase.pb.IsCatalogJanitorEnabledRes" +
-      "ponse\022V\n\017RunCleanerChore\022 .hbase.pb.RunC",
-      "leanerChoreRequest\032!.hbase.pb.RunCleaner" +
-      "ChoreResponse\022k\n\026SetCleanerChoreRunning\022" +
-      "\'.hbase.pb.SetCleanerChoreRunningRequest" +
-      "\032(.hbase.pb.SetCleanerChoreRunningRespon" +
-      "se\022h\n\025IsCleanerChoreEnabled\022&.hbase.pb.I" +
-      "sCleanerChoreEnabledRequest\032\'.hbase.pb.I" +
-      "sCleanerChoreEnabledResponse\022^\n\021ExecMast" +
-      "erService\022#.hbase.pb.CoprocessorServiceR" +
-      "equest\032$.hbase.pb.CoprocessorServiceResp" +
-      "onse\022A\n\010Snapshot\022\031.hbase.pb.SnapshotRequ",
-      "est\032\032.hbase.pb.SnapshotResponse\022h\n\025GetCo" +
-      "mpletedSnapshots\022&.hbase.pb.GetCompleted" +
-      "SnapshotsRequest\032\'.hbase.pb.GetCompleted" +
-      "SnapshotsResponse\022S\n\016DeleteSnapshot\022\037.hb" +
-      "ase.pb.DeleteSnapshotRequest\032 .hbase.pb." +
-      "DeleteSnapshotResponse\022S\n\016IsSnapshotDone" +
-      "\022\037.hbase.pb.IsSnapshotDoneRequest\032 .hbas" +
-      "e.pb.IsSnapshotDoneResponse\022V\n\017RestoreSn" +
-      "apshot\022 .hbase.pb.RestoreSnapshotRequest" +
-      "\032!.hbase.pb.RestoreSnapshotResponse\022h\n\025I",
-      "sRestoreSnapshotDone\022&.hbase.pb.IsRestor" +
-      "eSnapshotDoneRequest\032\'.hbase.pb.IsRestor" +
-      "eSnapshotDoneResponse\022P\n\rExecProcedure\022\036" +
-      ".hbase.pb.ExecProcedureRequest\032\037.hbase.p" +
-      "b.ExecProcedureResponse\022W\n\024ExecProcedure" +
-      "WithRet\022\036.hbase.pb.ExecProcedureRequest\032" +
-      "\037.hbase.pb.ExecProcedureResponse\022V\n\017IsPr" +
-      "ocedureDone\022 .hbase.pb.IsProcedureDoneRe" +
-      "quest\032!.hbase.pb.IsProcedureDoneResponse" +
-      "\022V\n\017ModifyNamespace\022 .hbase.pb.ModifyNam",
-      "espaceRequest\032!.hbase.pb.ModifyNamespace" +
-      "Response\022V\n\017CreateNamespace\022 .hbase.pb.C" +
-      "reateNamespaceRequest\032!.hbase.pb.CreateN" +
-      "amespaceResponse\022V\n\017DeleteNamespace\022 .hb" +
-      "ase.pb.DeleteNamespaceRequest\032!.hbase.pb" +
-      ".DeleteNamespaceResponse\022k\n\026GetNamespace" +
-      "Descriptor\022\'.hbase.pb.GetNamespaceDescri" +
-      "ptorRequest\032(.hbase.pb.GetNamespaceDescr" +
-      "iptorResponse\022q\n\030ListNamespaceDescriptor" +
-      "s\022).hbase.pb.ListNamespaceDescriptorsReq",
-      "uest\032*.hbase.pb.ListNamespaceDescriptors" +
-      "Response\022\206\001\n\037ListTableDescriptorsByNames" +
-      "pace\0220.hbase.pb.ListTableDescriptorsByNa" +
-      "mespaceRequest\0321.hbase.pb.ListTableDescr" +
-      "iptorsByNamespaceResponse\022t\n\031ListTableNa" +
-      "mesByNamespace\022*.hbase.pb.ListTableNames" +
-      "ByNamespaceRequest\032+.hbase.pb.ListTableN" +
-      "amesByNamespaceResponse\022A\n\010SetQuota\022\031.hb" +
-      "ase.pb.SetQuotaRequest\032\032.hbase.pb.SetQuo" +
-      "taResponse\022x\n\037getLastMajorCompactionTime",
-      "stamp\022).hbase.pb.MajorCompactionTimestam" +
-      "pRequest\032*.hbase.pb.MajorCompactionTimes" +
-      "tampResponse\022\212\001\n(getLastMajorCompactionT" +
-      "imestampForRegion\0222.hbase.pb.MajorCompac" +
-      "tionTimestampForRegionRequest\032*.hbase.pb" +
-      ".MajorCompactionTimestampResponse\022_\n\022get" +
-      "ProcedureResult\022#.hbase.pb.GetProcedureR" +
-      "esultRequest\032$.hbase.pb.GetProcedureResu" +
-      "ltResponse\022h\n\027getSecurityCapabilities\022%." +
-      "hbase.pb.SecurityCapabilitiesRequest\032&.h",
-      "base.pb.SecurityCapabilitiesResponse\022S\n\016" +
-      "AbortProcedure\022\037.hbase.pb.AbortProcedure" +
-      "Request\032 .hbase.pb.AbortProcedureRespons" +
-      "e\022S\n\016ListProcedures\022\037.hbase.pb.ListProce" +
-      "duresRequest\032 .hbase.pb.ListProceduresRe" +
-      "sponse\022Y\n\020ClearDeadServers\022!.hbase.pb.Cl" +
-      "earDeadServersRequest\032\".hbase.pb.ClearDe" +
-      "adServersResponse\022S\n\016ListNamespaces\022\037.hb" +
-      "ase.pb.ListNamespacesRequest\032 .hbase.pb." +
-      "ListNamespacesResponse\022b\n\025SwitchSnapshot",
-      "Cleanup\022#.hbase.pb.SetSnapshotCleanupReq" +
-      "uest\032$.hbase.pb.SetSnapshotCleanupRespon" +
-      "se\022q\n\030IsSnapshotCleanupEnabled\022).hbase.p" +
-      "b.IsSnapshotCleanupEnabledRequest\032*.hbas" +
-      "e.pb.IsSnapshotCleanupEnabledResponse\022P\n" +
-      "\rGetTableState\022\036.hbase.pb.GetTableStateR" +
-      "equest\032\037.hbase.pb.GetTableStateResponse2" +
-      "\247\002\n\021ClientMetaService\022M\n\014GetClusterId\022\035." +
-      "hbase.pb.GetClusterIdRequest\032\036.hbase.pb." +
-      "GetClusterIdResponse\022V\n\017GetActiveMaster\022",
-      " .hbase.pb.GetActiveMasterRequest\032!.hbas" +
-      "e.pb.GetActiveMasterResponse\022k\n\026GetMetaR" +
-      "egionLocations\022\'.hbase.pb.GetMetaRegionL" +
-      "ocationsRequest\032(.hbase.pb.GetMetaRegion" +
-      "LocationsResponseBB\n*org.apache.hadoop.h" +
-      "base.protobuf.generatedB\014MasterProtosH\001\210" +
-      "\001\001\240\001\001"
+      "\001 \003(\0132\030.hbase.pb.RegionLocation\"\025\n\023GetNu" +
+      "mLiveRSRequest\"2\n\024GetNumLiveRSResponse\022\032" +
+      "\n\022num_region_servers\030\001 \002(\005*(\n\020MasterSwit" +
+      "chType\022\t\n\005SPLIT\020\000\022\t\n\005MERGE\020\0012\363.\n\rMasterS" +
+      "ervice\022e\n\024GetSchemaAlterStatus\022%.hbase.p",
+      "b.GetSchemaAlterStatusRequest\032&.hbase.pb" +
+      ".GetSchemaAlterStatusResponse\022b\n\023GetTabl" +
+      "eDescriptors\022$.hbase.pb.GetTableDescript" +
+      "orsRequest\032%.hbase.pb.GetTableDescriptor" +
+      "sResponse\022P\n\rGetTableNames\022\036.hbase.pb.Ge" +
+      "tTableNamesRequest\032\037.hbase.pb.GetTableNa" +
+      "mesResponse\022Y\n\020GetClusterStatus\022!.hbase." +
+      "pb.GetClusterStatusRequest\032\".hbase.pb.Ge" +
+      "tClusterStatusResponse\022V\n\017IsMasterRunnin" +
+      "g\022 .hbase.pb.IsMasterRunningRequest\032!.hb",
+      "ase.pb.IsMasterRunningResponse\022D\n\tAddCol" +
+      "umn\022\032.hbase.pb.AddColumnRequest\032\033.hbase." +
+      "pb.AddColumnResponse\022M\n\014DeleteColumn\022\035.h" +
+      "base.pb.DeleteColumnRequest\032\036.hbase.pb.D" +
+      "eleteColumnResponse\022M\n\014ModifyColumn\022\035.hb" +
+      "ase.pb.ModifyColumnRequest\032\036.hbase.pb.Mo" +
+      "difyColumnResponse\022G\n\nMoveRegion\022\033.hbase" +
+      ".pb.MoveRegionRequest\032\034.hbase.pb.MoveReg" +
+      "ionResponse\022k\n\026DispatchMergingRegions\022\'." +
+      "hbase.pb.DispatchMergingRegionsRequest\032(",
+      ".hbase.pb.DispatchMergingRegionsResponse" +
+      "\022M\n\014AssignRegion\022\035.hbase.pb.AssignRegion" +
+      "Request\032\036.hbase.pb.AssignRegionResponse\022" +
+      "S\n\016UnassignRegion\022\037.hbase.pb.UnassignReg" +
+      "ionRequest\032 .hbase.pb.UnassignRegionResp" +
+      "onse\022P\n\rOfflineRegion\022\036.hbase.pb.Offline" +
+      "RegionRequest\032\037.hbase.pb.OfflineRegionRe" +
+      "sponse\022J\n\013DeleteTable\022\034.hbase.pb.DeleteT" +
+      "ableRequest\032\035.hbase.pb.DeleteTableRespon" +
+      "se\022P\n\rtruncateTable\022\036.hbase.pb.TruncateT",
+      "ableRequest\032\037.hbase.pb.TruncateTableResp" +
+      "onse\022J\n\013EnableTable\022\034.hbase.pb.EnableTab" +
+      "leRequest\032\035.hbase.pb.EnableTableResponse" +
+      "\022M\n\014DisableTable\022\035.hbase.pb.DisableTable" +
+      "Request\032\036.hbase.pb.DisableTableResponse\022" +
+      "J\n\013ModifyTable\022\034.hbase.pb.ModifyTableReq" +
+      "uest\032\035.hbase.pb.ModifyTableResponse\022J\n\013C" +
+      "reateTable\022\034.hbase.pb.CreateTableRequest" +
+      "\032\035.hbase.pb.CreateTableResponse\022A\n\010Shutd" +
+      "own\022\031.hbase.pb.ShutdownRequest\032\032.hbase.p",
+      "b.ShutdownResponse\022G\n\nStopMaster\022\033.hbase" +
+      ".pb.StopMasterRequest\032\034.hbase.pb.StopMas" +
+      "terResponse\022h\n\031IsMasterInMaintenanceMode" +
+      "\022$.hbase.pb.IsInMaintenanceModeRequest\032%" +
+      ".hbase.pb.IsInMaintenanceModeResponse\022>\n" +
+      "\007Balance\022\030.hbase.pb.BalanceRequest\032\031.hba" +
+      "se.pb.BalanceResponse\022_\n\022SetBalancerRunn" +
+      "ing\022#.hbase.pb.SetBalancerRunningRequest" +
+      "\032$.hbase.pb.SetBalancerRunningResponse\022\\" +
+      "\n\021IsBalancerEnabled\022\".hbase.pb.IsBalance",
+      "rEnabledRequest\032#.hbase.pb.IsBalancerEna" +
+      "bledResponse\022k\n\026SetSplitOrMergeEnabled\022\'" +
+      ".hbase.pb.SetSplitOrMergeEnabledRequest\032" +
+      "(.hbase.pb.SetSplitOrMergeEnabledRespons" +
+      "e\022h\n\025IsSplitOrMergeEnabled\022&.hbase.pb.Is" +
+      "SplitOrMergeEnabledRequest\032\'.hbase.pb.Is" +
+      "SplitOrMergeEnabledResponse\022D\n\tNormalize" +
+      "\022\032.hbase.pb.NormalizeRequest\032\033.hbase.pb." +
+      "NormalizeResponse\022e\n\024SetNormalizerRunnin" +
+      "g\022%.hbase.pb.SetNormalizerRunningRequest",
+      "\032&.hbase.pb.SetNormalizerRunningResponse" +
+      "\022b\n\023IsNormalizerEnabled\022$.hbase.pb.IsNor" +
+      "malizerEnabledRequest\032%.hbase.pb.IsNorma" +
+      "lizerEnabledResponse\022S\n\016RunCatalogScan\022\037" +
+      ".hbase.pb.RunCatalogScanRequest\032 .hbase." +
+      "pb.RunCatalogScanResponse\022e\n\024EnableCatal" +
+      "ogJanitor\022%.hbase.pb.EnableCatalogJanito" +
+      "rRequest\032&.hbase.pb.EnableCatalogJanitor" +
+      "Response\022n\n\027IsCatalogJanitorEnabled\022(.hb" +
+      "ase.pb.IsCatalogJanitorEnabledRequest\032).",
+      "hbase.pb.IsCatalogJanitorEnabledResponse" +
+      "\022V\n\017RunCleanerChore\022 .hbase.pb.RunCleane" +
+      "rChoreRequest\032!.hbase.pb.RunCleanerChore" +
+      "Response\022k\n\026SetCleanerChoreRunning\022\'.hba" +
+      "se.pb.SetCleanerChoreRunningRequest\032(.hb" +
+      "ase.pb.SetCleanerChoreRunningResponse\022h\n" +
+      "\025IsCleanerChoreEnabled\022&.hbase.pb.IsClea" +
+      "nerChoreEnabledRequest\032\'.hbase.pb.IsClea" +
+      "nerChoreEnabledResponse\022^\n\021ExecMasterSer" +
+      "vice\022#.hbase.pb.CoprocessorServiceReques",
+      "t\032$.hbase.pb.CoprocessorServiceResponse\022" +
+      "A\n\010Snapshot\022\031.hbase.pb.SnapshotRequest\032\032" +
+      ".hbase.pb.SnapshotResponse\022h\n\025GetComplet" +
+      "edSnapshots\022&.hbase.pb.GetCompletedSnaps" +
+      "hotsRequest\032\'.hbase.pb.GetCompletedSnaps" +
+      "hotsResponse\022S\n\016DeleteSnapshot\022\037.hbase.p" +
+      "b.DeleteSnapshotRequest\032 .hbase.pb.Delet" +
+      "eSnapshotResponse\022S\n\016IsSnapshotDone\022\037.hb" +
+      "ase.pb.IsSnapshotDoneRequest\032 .hbase.pb." +
+      "IsSnapshotDoneResponse\022V\n\017RestoreSnapsho",
+      "t\022 .hbase.pb.RestoreSnapshotRequest\032!.hb" +
+      "ase.pb.RestoreSnapshotResponse\022h\n\025IsRest" +
+      "oreSnapshotDone\022&.hbase.pb.IsRestoreSnap" +
+      "shotDoneRequest\032\'.hbase.pb.IsRestoreSnap" +
+      "shotDoneResponse\022P\n\rExecProcedure\022\036.hbas" +
+      "e.pb.ExecProcedureRequest\032\037.hbase.pb.Exe" +
+      "cProcedureResponse\022W\n\024ExecProcedureWithR" +
+      "et\022\036.hbase.pb.ExecProcedureRequest\032\037.hba" +
+      "se.pb.ExecProcedureResponse\022V\n\017IsProcedu" +
+      "reDone\022 .hbase.pb.IsProcedureDoneRequest",
+      "\032!.hbase.pb.IsProcedureDoneResponse\022V\n\017M" +
+      "odifyNamespace\022 .hbase.pb.ModifyNamespac" +
+      "eRequest\032!.hbase.pb.ModifyNamespaceRespo" +
+      "nse\022V\n\017CreateNamespace\022 .hbase.pb.Create" +
+      "NamespaceRequest\032!.hbase.pb.CreateNamesp" +
+      "aceResponse\022V\n\017DeleteNamespace\022 .hbase.p" +
+      "b.DeleteNamespaceRequest\032!.hbase.pb.Dele" +
+      "teNamespaceResponse\022k\n\026GetNamespaceDescr" +
+      "iptor\022\'.hbase.pb.GetNamespaceDescriptorR" +
+      "equest\032(.hbase.pb.GetNamespaceDescriptor",
+      "Response\022q\n\030ListNamespaceDescriptors\022).h" +
+      "base.pb.ListNamespaceDescriptorsRequest\032" +
+      "*.hbase.pb.ListNamespaceDescriptorsRespo" +
+      "nse\022\206\001\n\037ListTableDescriptorsByNamespace\022" +
+      "0.hbase.pb.ListTableDescriptorsByNamespa" +
+      "ceRequest\0321.hbase.pb.ListTableDescriptor" +
+      "sByNamespaceResponse\022t\n\031ListTableNamesBy" +
+      "Namespace\022*.hbase.pb.ListTableNamesByNam" +
+      "espaceRequest\032+.hbase.pb.ListTableNamesB" +
+      "yNamespaceResponse\022A\n\010SetQuota\022\031.hbase.p",
+      "b.SetQuotaRequest\032\032.hbase.pb.SetQuotaRes" +
+      "ponse\022x\n\037getLastMajorCompactionTimestamp" +
+      "\022).hbase.pb.MajorCompactionTimestampRequ" +
+      "est\032*.hbase.pb.MajorCompactionTimestampR" +
+      "esponse\022\212\001\n(getLastMajorCompactionTimest" +
+      "ampForRegion\0222.hbase.pb.MajorCompactionT" +
+      "imestampForRegionRequest\032*.hbase.pb.Majo" +
+      "rCompactionTimestampResponse\022_\n\022getProce" +
+      "dureResult\022#.hbase.pb.GetProcedureResult" +
+      "Request\032$.hbase.pb.GetProcedureResultRes",
+      "ponse\022h\n\027getSecurityCapabilities\022%.hbase" +
+      ".pb.SecurityCapabilitiesRequest\032&.hbase." +
+      "pb.SecurityCapabilitiesResponse\022S\n\016Abort" +
+      "Procedure\022\037.hbase.pb.AbortProcedureReque" +
+      "st\032 .hbase.pb.AbortProcedureResponse\022S\n\016" +
+      "ListProcedures\022\037.hbase.pb.ListProcedures" +
+      "Request\032 .hbase.pb.ListProceduresRespons" +
+      "e\022Y\n\020ClearDeadServers\022!.hbase.pb.ClearDe" +
+      "adServersRequest\032\".hbase.pb.ClearDeadSer" +
+      "versResponse\022S\n\016ListNamespaces\022\037.hbase.p",
+      "b.ListNamespacesRequest\032 .hbase.pb.ListN" +
+      "amespacesResponse\022b\n\025SwitchSnapshotClean" +
+      "up\022#.hbase.pb.SetSnapshotCleanupRequest\032" +
+      "$.hbase.pb.SetSnapshotCleanupResponse\022q\n" +
+      "\030IsSnapshotCleanupEnabled\022).hbase.pb.IsS" +
+      "napshotCleanupEnabledRequest\032*.hbase.pb." +
+      "IsSnapshotCleanupEnabledResponse\022P\n\rGetT" +
+      "ableState\022\036.hbase.pb.GetTableStateReques" +
+      "t\032\037.hbase.pb.GetTableStateResponse2\366\002\n\021C" +
+      "lientMetaService\022M\n\014GetClusterId\022\035.hbase",
+      ".pb.GetClusterIdRequest\032\036.hbase.pb.GetCl" +
+      "usterIdResponse\022V\n\017GetActiveMaster\022 .hba" +
+      "se.pb.GetActiveMasterRequest\032!.hbase.pb." +
+      "GetActiveMasterResponse\022k\n\026GetMetaRegion" +
+      "Locations\022\'.hbase.pb.GetMetaRegionLocati" +
+      "onsRequest\032(.hbase.pb.GetMetaRegionLocat" +
+      "ionsResponse\022M\n\014GetNumLiveRS\022\035.hbase.pb." +
+      "GetNumLiveRSRequest\032\036.hbase.pb.GetNumLiv" +
+      "eRSResponseBB\n*org.apache.hadoop.hbase.p" +
+      "rotobuf.generatedB\014MasterProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -76470,6 +77352,18 @@ public final class MasterProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GetMetaRegionLocationsResponse_descriptor,
               new java.lang.String[] { "MetaLocations", });
+          internal_static_hbase_pb_GetNumLiveRSRequest_descriptor =
+            getDescriptor().getMessageTypes().get(131);
+          internal_static_hbase_pb_GetNumLiveRSRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_GetNumLiveRSRequest_descriptor,
+              new java.lang.String[] { });
+          internal_static_hbase_pb_GetNumLiveRSResponse_descriptor =
+            getDescriptor().getMessageTypes().get(132);
+          internal_static_hbase_pb_GetNumLiveRSResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_GetNumLiveRSResponse_descriptor,
+              new java.lang.String[] { "NumRegionServers", });
           return null;
         }
       };

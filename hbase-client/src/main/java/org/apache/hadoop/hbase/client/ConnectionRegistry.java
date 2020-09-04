@@ -33,7 +33,7 @@ interface ConnectionRegistry {
   /**
    * @param connection
    */
-  void init(Connection connection);
+  void init(Connection connection) throws IOException;
 
   /**
    * @return the currently active master, null if none exists.
@@ -49,11 +49,16 @@ interface ConnectionRegistry {
   /**
    * @return Cluster id.
    */
-  String getClusterId();
+  String getClusterId() throws IOException;
 
   /**
    * @return Count of 'running' regionservers
    * @throws IOException
    */
   int getCurrentNrHRS() throws IOException;
+
+  /**
+   * Cleanup state, if any.
+   */
+  void close();
 }
