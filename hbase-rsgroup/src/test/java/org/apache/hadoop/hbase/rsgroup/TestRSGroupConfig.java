@@ -19,12 +19,14 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -35,8 +37,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 @Category(MediumTests.class)
 public class TestRSGroupConfig extends TestRSGroupsBase {
@@ -61,15 +61,15 @@ public class TestRSGroupConfig extends TestRSGroupsBase {
   }
 
   @Test
-  public void testSetDefaultGroupConfiguration() throws IOException {
-    testSetConfiguration(RSGroupInfo.DEFAULT_GROUP);
+  public void testSetDefaultGroupConfiguration() {
+    assertThrows(ConstraintException.class, () -> testSetConfiguration(RSGroupInfo.DEFAULT_GROUP));
   }
 
   @Test
   public void testSetNonDefaultGroupConfiguration() throws IOException {
     String group = getGroupName(name.getMethodName());
     rsGroupAdmin.addRSGroup(group);
-    testSetConfiguration(RSGroupInfo.DEFAULT_GROUP);
+    testSetConfiguration(group);
     rsGroupAdmin.removeRSGroup(group);
   }
 
@@ -79,14 +79,11 @@ public class TestRSGroupConfig extends TestRSGroupsBase {
     configuration.put("bbb", "222");
     rsGroupAdmin.updateRSGroupConfig(group, configuration);
     RSGroupInfo rsGroup = rsGroupAdmin.getRSGroupInfo(group);
-    Map<String, String> configFromGroup = Maps.newHashMap(rsGroup.getConfiguration());
-    assertNotNull(configFromGroup);
-    assertEquals(2, configFromGroup.size());
-    assertEquals("111", configFromGroup.get("aaa"));
+    assertEquals(configuration, rsGroup.getConfiguration());
     // unset configuration
     rsGroupAdmin.updateRSGroupConfig(group, null);
     rsGroup = rsGroupAdmin.getRSGroupInfo(group);
-    configFromGroup = rsGroup.getConfiguration();
+    Map<String, String> configFromGroup = rsGroup.getConfiguration();
     assertNotNull(configFromGroup);
     assertEquals(0, configFromGroup.size());
   }
