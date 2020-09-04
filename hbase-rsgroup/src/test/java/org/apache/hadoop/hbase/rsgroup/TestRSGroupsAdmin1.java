@@ -558,6 +558,14 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     assertNotNull(anotherGroup);
     assertEquals(1, anotherGroup.getServers().size());
 
+    //Rename a non existing RSGroup
+    try {
+      rsGroupAdmin.renameRSGroup("nonExistingRSGroup", "newRSGroup1");
+      fail("ConstraintException was expected.");
+    } catch (ConstraintException e) {
+      assertTrue(e.getMessage().contains("does not exist"));
+    }
+
     //Rename to existing group
     try {
       rsGroupAdmin.renameRSGroup(oldGroup.getName(), anotherRSGroupName);
