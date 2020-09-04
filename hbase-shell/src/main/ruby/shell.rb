@@ -18,6 +18,7 @@
 #
 require 'irb'
 require 'irb/workspace'
+require 'shell/formatter/table'
 
 #
 # Simple class to act as the main receiver for an IRB Workspace (and its respective ruby Binding)
@@ -95,6 +96,8 @@ module Shell
   class Shell
     attr_accessor :hbase
     attr_accessor :interactive
+    attr_accessor :table_formatter
+    attr_accessor :old_school
     alias interactive? interactive
 
     @debug = false
@@ -103,6 +106,10 @@ module Shell
     def initialize(hbase, interactive = true)
       self.hbase = hbase
       self.interactive = interactive
+      # Configure the default table formatter
+      self.table_formatter = ::Shell::Formatter::AlignedTableFormatter.new
+      # Turn on old-school formatting for a few commands
+      self.old_school = true
     end
 
     # Returns Admin class from admin.rb
@@ -175,6 +182,10 @@ module Shell
       # add constants to class of target
       target.class.include ::HBaseConstants
       target.class.include ::HBaseQuotasConstants
+      # Export formatter constants. We can probably find a better place to put these, but we
+      # probably should not require that they get loaded in hbase_constants.rb.
+      target.class.const_set :BORDER, ::Shell::Formatter::AlignedTableFormatter::BORDER_MODE
+      target.class.const_set :OVERFLOW, ::Shell::Formatter::AlignedTableFormatter::OVERFLOW_MODE
       # add instance variables @hbase and @shell for backwards compatibility
       target.instance_variable_set :'@hbase', @hbase
       target.instance_variable_set :'@shell', self
@@ -285,6 +296,15 @@ double-quote'd hexadecimal representation. For example:
   hbase> get 't1', "key\\003\\023\\011"
   hbase> put 't1', "test\\xef\\xff", 'f1:', "\\x01\\x33\\x40"
 
+Many of the commands use a special formatter which supports multiple output
+formats. To change which formatter is used, try one of the following:
+
+  hbase> set_formatter :aligned
+  hbase> set_formatter :aligned, border: BORDER.FULL, overflow: OVERFLOW.TRUNCATE
+  hbase> set_formatter :unaligned
+  hbase> set_formatter :unaligned, padding: 0, row_separator: "\\n", cell_separator: ','
+  hbase> set_formatter :json
+
 The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.
 For more on the HBase Shell, see http://hbase.apache.org/book.html
       HERE
@@ -371,6 +391,7 @@ Shell.load_command_group(
     table_help
     whoami
     processlist
+    set_formatter
   ]
 )
 

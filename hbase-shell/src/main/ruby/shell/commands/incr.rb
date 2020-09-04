@@ -50,7 +50,13 @@ EOF
 
       def incr(table, row, column, value = nil, args = {})
         if cnt = table._incr_internal(row, column, value, args)
-          puts "COUNTER VALUE = #{cnt}"
+          if @shell.old_school
+            puts "COUNTER VALUE = #{cnt}"
+          else
+            table_formatter.single_value_table('COUNTER_VALUE', cnt.to_s)
+          end
+
+          cnt
         else
           puts 'No counter found at specified coordinates'
         end

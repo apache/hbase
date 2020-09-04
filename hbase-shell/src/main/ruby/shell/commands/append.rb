@@ -43,7 +43,12 @@ EOF
 
       def append(table, row, column, value, args = {})
         if current_value = table._append_internal(row, column, value, args)
-          puts "CURRENT VALUE = #{current_value}"
+          if @shell.old_school
+            puts "CURRENT VALUE = #{current_value}"
+          else
+            table_formatter.single_value_table('CURRENT_VALUE', current_value.to_s)
+          end
+          current_value
         end
       end
     end

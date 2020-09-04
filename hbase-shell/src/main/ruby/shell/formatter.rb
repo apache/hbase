@@ -18,6 +18,8 @@
 #
 
 require 'stringio'
+require 'shell/formatter/table'
+require 'shell/formatter/util'
 
 # Results formatter
 module Shell
@@ -182,6 +184,11 @@ module Shell
         else
           @out.printf('%-*s', width, str)
         end
+      end
+
+      # provided here for backwards compatibility
+      def set_text_width(text, width)
+        ::Shell::Formatter::Util.set_text_width(text, width)
       end
 
       def footer(row_count = nil, is_stale = false)

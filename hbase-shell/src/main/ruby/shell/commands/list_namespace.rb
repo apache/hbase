@@ -31,14 +31,19 @@ EOF
       end
 
       def command(regex = '.*')
-        formatter.header(['NAMESPACE'])
-
         list = admin.list_namespace(regex)
-        list.each do |table|
-          formatter.row([table])
+
+        if @shell.old_school
+          puts
+        else
+          table_formatter.start_table(headers: %w[NAMESPACE])
+          list.each do |table|
+            table_formatter.row([table])
+          end
+          table_formatter.close_table
         end
 
-        formatter.footer(list.size)
+        list
       end
     end
   end

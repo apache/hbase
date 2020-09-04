@@ -189,25 +189,19 @@ module Shell
 
         @end_time = Time.now
 
+        # print the results
+        headers = []
+        widths = []
         size_hash.each do |param, length|
-          printf(" %#{length}s |", param)
+          headers.push param
+          widths.push length
         end
-        printf("\n")
-
-        size_hash.each_value do |length|
-          str = '-' * length
-          printf(" %#{length}s |", str)
-        end
-        printf("\n")
-
+        table_formatter.start_table(headers: headers, widths: widths)
         results.each do |result|
-          size_hash.each do |param, length|
-            printf(" %#{length}s |", result[param])
-          end
-          printf("\n")
+          row = headers.map { |key| result.fetch key, nil }
+          table_formatter.row row
         end
-
-        printf(" %d rows\n", results.size)
+        table_formatter.close_table
       end
 
       def valid_locality_threshold?(value)

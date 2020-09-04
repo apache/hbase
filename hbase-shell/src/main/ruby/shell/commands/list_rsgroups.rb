@@ -32,44 +32,57 @@ EOF
       end
 
       def command(regex = '.*')
-        formatter.header(['NAME', 'SERVER / TABLE'])
+        if @shell.old_school
+          formatter.header(['NAME', 'SERVER / TABLE'])
+        else
+          table_formatter.start_table(headers: %w[GROUP_NAME KIND MEMBER], widths: [nil, 6, nil])
+        end
 
         regex = /#{regex}/ unless regex.is_a?(Regexp)
         list = rsgroup_admin.list_rs_groups
         groups = 0
 
         list.each do |group|
-          next unless group.getName.match(regex)
+          group_name = group.getName
+          next unless group_name.match(regex)
 
           groups += 1
           group_name_printed = false
 
           group.getServers.each do |server|
-            if group_name_printed
+            if @shell.old_school
+              formatter.row([group_name, 'server ' + server.toString])
               group_name = ''
             else
-              group_name = group.getName
-              group_name_printed = true
+              table_formatter.row([group_name, 'server', server.toString])
             end
-
-            formatter.row([group_name, 'server ' + server.toString])
+            group_name_printed = true
           end
           tables = rsgroup_admin.list_tables_in_rs_group(group.getName)
           tables.each do |table|
-            if group_name_printed
+            if @shell.old_school
+              formatter.row([group_name, 'table ' + table.getNameAsString])
               group_name = ''
             else
-              group_name = group.getName
-              group_name_printed = true
+              table_formatter.row([group_name, 'table', table.getNameAsString])
             end
-
-            formatter.row([group_name, 'table ' + table.getNameAsString])
+            group_name_printed = true
           end
 
-          formatter.row([group.getName, '']) unless group_name_printed
+          if @shell.old_school
+            formatter.row([group.getName, '']) unless group_name_printed
+          else
+            table_formatter.row([group.getName, '']) unless group_name_printed
+          end
         end
 
-        formatter.footer(groups)
+        if @shell.old_school
+          formatter.close_table
+        else
+          table_formatter.close_table
+        end
+
+        nil
       end
     end
   end
