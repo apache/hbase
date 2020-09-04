@@ -49,8 +49,9 @@ import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.LogDestination;
 import org.apache.hadoop.hbase.client.LogEntry;
-import org.apache.hadoop.hbase.client.LogRequest;
+import org.apache.hadoop.hbase.client.LogType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -843,7 +844,9 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
-  public List<LogEntry> getLogEntries(LogRequest logRequest) throws IOException {
+  public List<LogEntry> getLogEntries(Set<ServerName> serverNames, LogType logType,
+      LogDestination logDestination, int limit, Map<String, Object> filterParams)
+      throws IOException {
     return Collections.emptyList();
   }
 

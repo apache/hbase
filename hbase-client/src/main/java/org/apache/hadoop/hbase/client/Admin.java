@@ -23,6 +23,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -2341,13 +2342,26 @@ public interface Admin extends Abortable, Closeable {
    * @return online slowlog response list
    * @throws IOException if a remote or network exception occurs
    * @deprecated since 2.4.0 and will be removed in 4.0.0.
-   *   Use {@link #getLogEntries(LogRequest)} instead.
+   *   Use {@link #getLogEntries(Set, LogType, LogDestination, int, Map)} instead.
    */
   @Deprecated
   default List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
       final LogQueryFilter logQueryFilter) throws IOException {
-    logQueryFilter.setServerNames(serverNames);
-    List<LogEntry> logEntries = getLogEntries(logQueryFilter);
+    LogType logType;
+    if (LogQueryFilter.Type.LARGE_LOG.equals(logQueryFilter.getType())) {
+      logType = LogType.LARGE_LOG;
+    } else {
+      logType = LogType.SLOW_LOG;
+    }
+    Map<String, Object> filterParams = new HashMap<>();
+    filterParams.put("regionName", logQueryFilter.getRegionName());
+    filterParams.put("clientAddress", logQueryFilter.getClientAddress());
+    filterParams.put("tableName", logQueryFilter.getTableName());
+    filterParams.put("userName", logQueryFilter.getUserName());
+    filterParams.put("filterByOperator", logQueryFilter.getFilterByOperator().toString());
+    List<LogEntry> logEntries =
+      getLogEntries(serverNames, logType, LogDestination.HREGION_SERVER, logQueryFilter.getLimit(),
+        filterParams);
     return logEntries.stream().map(logEntry -> (OnlineLogRecord) logEntry)
       .collect(Collectors.toList());
   }
@@ -2485,9 +2499,16 @@ public interface Admin extends Abortable, Closeable {
    * Retrieve recent online records from HMaster / RegionServers.
    * Examples include slow/large RPC logs, balancer decisions by master.
    *
-   * @param logRequest request payload with possible filters
+   * @param serverNames servers to retrieve records from, useful in case of records maintained by
+   *  RegionServer as we can select specific server. In case of records maintained by HMaster,
+   *  this param is not required.
+   * @param logType enum representing type of log records
+   * @param logDestination records are maintained by HMaster or RegionServer
+   * @param limit put a limit to list of records that server should send in response
+   * @param filterParams additional filter params
    * @return Log entries representing online records from servers
    * @throws IOException if a remote or network exception occurs
    */
-  List<LogEntry> getLogEntries(LogRequest logRequest) throws IOException;
+  List<LogEntry> getLogEntries(Set<ServerName> serverNames, LogType logType,
+    LogDestination logDestination, int limit, Map<String, Object> filterParams) throws IOException;
 }

@@ -90,7 +90,6 @@ echo "get_slowlog_responses '*'" | hbase shell > xyz.out 2>&1
         unless args.is_a? Hash
           raise 'Filter parameters are not Hash'
         end
-
         slow_log_responses_arr = admin.get_slowlog_responses(server_names, args)
         puts 'Retrieved SlowLog Responses from RegionServers'
         puts slow_log_responses_arr

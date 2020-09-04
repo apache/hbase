@@ -20,15 +20,14 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Abstract request payload to retrieve online logs from ring-buffer use-cases
- * e.g slow/large RPC logs, balancer decision logs
- * Extend this class for specific ring buffer use-cases
+ * Select the destination of log records.
+ * e.g slow/large log records are maintained by HRegionServer, whereas balancer decisions
+ * are maintained by HMaster.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
-public abstract class LogRequest {
-  // empty
+public enum LogDestination {
+  HMASTER,
+  HREGION_SERVER
 }

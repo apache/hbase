@@ -3983,27 +3983,25 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<List<LogEntry>> getSlowLogResponses(
-      final LogQueryFilter logQueryFilter) {
-    final Set<ServerName> serverNames = logQueryFilter.getServerNames();
+      final Map<String, Object> filterParams, final Set<ServerName> serverNames, final int limit,
+      final LogType logType) {
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }
     return CompletableFuture.supplyAsync(() -> serverNames.stream()
       .map((ServerName serverName) ->
-        getSlowLogResponseFromServer(serverName, logQueryFilter, logQueryFilter.getLimit()))
+        getSlowLogResponseFromServer(serverName, filterParams, limit, logType))
       .map(CompletableFuture::join)
       .flatMap(List::stream)
       .collect(Collectors.toList()));
   }
 
-  private CompletableFuture<List<LogEntry>> getSlowLogResponseFromServer(
-      final ServerName serverName, final LogQueryFilter logQueryFilter, int limit) {
-    return this.<List<LogEntry>>newAdminCaller()
-      .action((controller, stub) -> this
-        .adminCall(
-          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter, limit),
-          AdminService.Interface::getLogEntries,
-          ProtobufUtil::toSlowLogPayloads))
+  private CompletableFuture<List<LogEntry>> getSlowLogResponseFromServer(ServerName serverName,
+      Map<String, Object> filterParams, int limit, LogType logType) {
+    return this.<List<LogEntry>>newAdminCaller().action((controller, stub) -> this
+      .adminCall(controller, stub,
+        RequestConverter.buildSlowLogResponseRequest(filterParams, limit, logType),
+        AdminService.Interface::getLogEntries, ProtobufUtil::toSlowLogPayloads))
       .serverName(serverName).call();
   }
 
@@ -4192,25 +4190,35 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         ).call();
   }
 
-  private CompletableFuture<List<LogEntry>> getBalancerDecisions(
-      BalancerDecisionRequest balancerDecisionRequest) {
-    // balancerDecisionRequest is unused for now, however with addition of any attributes
-    // or filters, we can expect some use-case in future
+  private CompletableFuture<List<LogEntry>> getBalancerDecisions(final int limit) {
     return this.<List<LogEntry>>newMasterCaller()
       .action((controller, stub) ->
         this.call(controller, stub,
-          ProtobufUtil.toBalancerDecisionRequest(balancerDecisionRequest.getLimit()),
+          ProtobufUtil.toBalancerDecisionRequest(limit),
           MasterService.Interface::getLogEntries, ProtobufUtil::toBalancerDecisionResponse))
       .call();
   }
 
   @Override
-  public CompletableFuture<List<LogEntry>> getLogEntries(LogRequest logRequest) {
-    if (logRequest instanceof BalancerDecisionRequest) {
-      return getBalancerDecisions((BalancerDecisionRequest) logRequest);
-    } else if (logRequest instanceof LogQueryFilter) {
-      return getSlowLogResponses((LogQueryFilter) logRequest);
+  public CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames,
+      LogType logType, LogDestination logDestination, int limit,
+      Map<String, Object> filterParams) {
+    if (logType == null || logDestination == null) {
+      throw new IllegalArgumentException("logType and/or logDestination cannot be empty");
     }
-    throw new UnsupportedOperationException("LogRequest type is not supported");
+    if (logType.equals(LogType.SLOW_LOG) || logType.equals(LogType.LARGE_LOG)) {
+      if (LogDestination.HMASTER.equals(logDestination)) {
+        throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
+      }
+      return getSlowLogResponses(filterParams, serverNames, limit, logType);
+    } else if (logType.equals(LogType.BALANCER_DECISION)) {
+      if (LogDestination.HREGION_SERVER.equals(logDestination)) {
+        throw new IllegalArgumentException(
+          "Balancer Decision logs are not maintained by HRegionServer");
+      }
+      return getBalancerDecisions(limit);
+    }
+    return CompletableFuture.completedFuture(Collections.emptyList());
   }
+
 }

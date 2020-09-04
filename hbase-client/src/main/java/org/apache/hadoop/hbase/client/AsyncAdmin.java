@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -1545,13 +1546,26 @@ public interface AsyncAdmin {
    * @param logQueryFilter filter to be used if provided
    * @return Online slowlog response list. The return value wrapped by a {@link CompletableFuture}
    * @deprecated since 2.4.0 and will be removed in 4.0.0.
-   *   Use {@link #getLogEntries(LogRequest)} instead.
+   *   Use {@link #getLogEntries(Set, LogType, LogDestination, int, Map)} instead.
    */
   @Deprecated
   default CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
       final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
-    logQueryFilter.setServerNames(serverNames);
-    CompletableFuture<List<LogEntry>> logEntries = getLogEntries(logQueryFilter);
+    LogType logType;
+    if (LogQueryFilter.Type.LARGE_LOG.equals(logQueryFilter.getType())) {
+      logType = LogType.LARGE_LOG;
+    } else {
+      logType = LogType.SLOW_LOG;
+    }
+    Map<String, Object> filterParams = new HashMap<>();
+    filterParams.put("regionName", logQueryFilter.getRegionName());
+    filterParams.put("clientAddress", logQueryFilter.getClientAddress());
+    filterParams.put("tableName", logQueryFilter.getTableName());
+    filterParams.put("userName", logQueryFilter.getUserName());
+    filterParams.put("filterByOperator", logQueryFilter.getFilterByOperator().toString());
+    CompletableFuture<List<LogEntry>> logEntries =
+      getLogEntries(serverNames, logType, LogDestination.HREGION_SERVER, logQueryFilter.getLimit(),
+        filterParams);
     return logEntries.thenApply(
       logEntryList -> logEntryList.stream().map(logEntry -> (OnlineLogRecord) logEntry)
         .collect(Collectors.toList()));
@@ -1688,8 +1702,15 @@ public interface AsyncAdmin {
    * Retrieve recent online records from HMaster / RegionServers.
    * Examples include slow/large RPC logs, balancer decisions by master.
    *
-   * @param logRequest request payload with possible filters
+   * @param serverNames servers to retrieve records from, useful in case of records maintained by
+   *  RegionServer as we can select specific server. In case of records maintained by HMaster,
+   *  this param is not required.
+   * @param logType enum representing type of log records
+   * @param logDestination records are maintained by HMaster or RegionServer
+   * @param limit put a limit to list of records that server should send in response
+   * @param filterParams additional filter params
    * @return Log entries representing online records from servers
    */
-  CompletableFuture<List<LogEntry>> getLogEntries(LogRequest logRequest);
+  CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames, LogType logType,
+    LogDestination logDestination, int limit, Map<String, Object> filterParams);
 }

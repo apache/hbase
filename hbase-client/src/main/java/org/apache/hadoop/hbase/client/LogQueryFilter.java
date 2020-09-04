@@ -19,23 +19,21 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.util.Collections;
-import java.util.Set;
-
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Slow/Large Log Query Filter with all filter and limit parameters
  * Extends generic LogRequest used by Admin API getLogEntries
+ * @deprecated as of 2.4.0. Will be removed in 4.0.0.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class LogQueryFilter extends LogRequest {
+@Deprecated
+public class LogQueryFilter {
 
   private String regionName;
   private String clientAddress;
@@ -44,7 +42,6 @@ public class LogQueryFilter extends LogRequest {
   private int limit = 10;
   private Type type = Type.SLOW_LOG;
   private FilterByOperator filterByOperator = FilterByOperator.OR;
-  private Set<ServerName> serverNames;
 
   public enum Type {
     SLOW_LOG,
@@ -112,14 +109,6 @@ public class LogQueryFilter extends LogRequest {
     this.filterByOperator = filterByOperator;
   }
 
-  public Set<ServerName> getServerNames() {
-    return Collections.unmodifiableSet(serverNames);
-  }
-
-  public void setServerNames(Set<ServerName> serverNames) {
-    this.serverNames = serverNames;
-  }
-
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -140,7 +129,6 @@ public class LogQueryFilter extends LogRequest {
       .append(userName, that.userName)
       .append(type, that.type)
       .append(filterByOperator, that.filterByOperator)
-      .append(serverNames, that.serverNames)
       .isEquals();
   }
 
@@ -154,7 +142,6 @@ public class LogQueryFilter extends LogRequest {
       .append(limit)
       .append(type)
       .append(filterByOperator)
-      .append(serverNames)
       .toHashCode();
   }
 
@@ -168,7 +155,6 @@ public class LogQueryFilter extends LogRequest {
       .append("limit", limit)
       .append("type", type)
       .append("filterByOperator", filterByOperator)
-      .append("serverNames", serverNames)
       .toString();
   }
 
