@@ -404,11 +404,14 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     if (oldName.equals(RSGroupInfo.DEFAULT_GROUP)) {
       throw new ConstraintException("Can't rename default rsgroup");
     }
+    RSGroupInfo oldGroup = getRSGroup(oldName);
+    if (oldGroup == null) {
+      throw new ConstraintException("RSGroup " + oldName + " does not exist");
+    }
     if (rsGroupMap.containsKey(newName)) {
       throw new ConstraintException("Group already exists: " + newName);
     }
 
-    RSGroupInfo oldGroup = getRSGroup(oldName);
     Map<String,RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.remove(oldName);
     RSGroupInfo newGroup = new RSGroupInfo(newName,
