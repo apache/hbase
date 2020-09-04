@@ -20,13 +20,15 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.2.6 - Unreleased (as of 2020-08-26)
+## Release 2.2.6 - Unreleased (as of 2020-09-04)
 
 
 ### IMPROVEMENTS:
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24913](https://issues.apache.org/jira/browse/HBASE-24913) | Refactor TestJMXConnectorServer |  Major | test |
+| [HBASE-24898](https://issues.apache.org/jira/browse/HBASE-24898) | Use EnvironmentEdge.currentTime() instead of System.currentTimeMillis() in CurrentHourProvider |  Major | tooling |
 | [HBASE-24928](https://issues.apache.org/jira/browse/HBASE-24928) | balanceRSGroup should skip generating balance plan for disabled table and splitParent region |  Major | Balancer |
 | [HBASE-24686](https://issues.apache.org/jira/browse/HBASE-24686) | [LOG] Log improvement in Connection#close |  Major | Client, logging |
 | [HBASE-24912](https://issues.apache.org/jira/browse/HBASE-24912) | Enlarge MemstoreFlusherChore/CompactionChecker period for unit test |  Major | . |
@@ -64,6 +66,10 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24656](https://issues.apache.org/jira/browse/HBASE-24656) | [Flakey Tests] branch-2 TestMasterNoCluster.testStopDuringStart |  Major | . |
+| [HBASE-19352](https://issues.apache.org/jira/browse/HBASE-19352) | Port HADOOP-10379: Protect authentication cookies with the HttpOnly and Secure flags |  Major | . |
+| [HBASE-24971](https://issues.apache.org/jira/browse/HBASE-24971) | Upgrade JQuery to 3.5.1 |  Major | security, UI |
+| [HBASE-24892](https://issues.apache.org/jira/browse/HBASE-24892) | config 'hbase.hregion.memstore.mslab.indexchunksize' not be used |  Major | . |
 | [HBASE-24897](https://issues.apache.org/jira/browse/HBASE-24897) | RegionReplicaFlushHandler should handle NoServerForRegionException to avoid aborting RegionServer |  Major | . |
 | [HBASE-23987](https://issues.apache.org/jira/browse/HBASE-23987) | NettyRpcClientConfigHelper will not share event loop by default which is incorrect |  Major | Client, rpc |
 | [HBASE-24871](https://issues.apache.org/jira/browse/HBASE-24871) | Replication may loss data when refresh recovered replication sources |  Major | Replication |
@@ -129,6 +135,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-24689](https://issues.apache.org/jira/browse/HBASE-24689) | Generate CHANGES.md and RELEASENOTES.md for 2.2.6 |  Major | . |
 | [HBASE-24881](https://issues.apache.org/jira/browse/HBASE-24881) | Fix flaky TestMasterAbortAndRSGotKilled for branch-2.2 |  Major | . |
 | [HBASE-24870](https://issues.apache.org/jira/browse/HBASE-24870) | Ignore TestAsyncTableRSCrashPublish |  Major | . |
 | [HBASE-24946](https://issues.apache.org/jira/browse/HBASE-24946) | Remove the metrics assert in TestClusterRestartFailover |  Major | . |
@@ -150,7 +157,6 @@
 | [HBASE-24819](https://issues.apache.org/jira/browse/HBASE-24819) | Fix flaky test TestRaceBetweenSCPAndDTP and TestRaceBetweenSCPAndTRSP for branch-2.2 |  Major | . |
 | [HBASE-24756](https://issues.apache.org/jira/browse/HBASE-24756) | Backport HBASE-24336 to branch-2.2 |  Minor | metrics |
 | [HBASE-24690](https://issues.apache.org/jira/browse/HBASE-24690) | Set version to 2.2.6 in branch-2.2 for first RC of 2.2.6 |  Major | . |
-| [HBASE-24689](https://issues.apache.org/jira/browse/HBASE-24689) | Generate CHANGES.md and RELEASENOTES.md for 2.2.6 |  Major | . |
 | [HBASE-24630](https://issues.apache.org/jira/browse/HBASE-24630) | Purge dev javadoc from client bin tarball |  Major | build |
 | [HBASE-24598](https://issues.apache.org/jira/browse/HBASE-24598) | Port HBASE-24380 (Improve WAL splitting log lines to enable sessionization) to branch-2.2 |  Major | logging, Operability, wal |
 | [HBASE-24347](https://issues.apache.org/jira/browse/HBASE-24347) | Hadoop2&Hadoop3 profiles are both active when pre-commit PR builds run |  Major | build |

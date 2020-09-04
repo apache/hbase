@@ -27,6 +27,13 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-24892](https://issues.apache.org/jira/browse/HBASE-24892) | *Major* | **config 'hbase.hregion.memstore.mslab.indexchunksize' not be used**
+
+Remove the config "hbase.hregion.memstore.mslab.indexchunksize" which never used. And use "hbase.hregion.memstore.mslab.indexchunksize.percent" instead.
+
+
+---
+
 * [HBASE-24150](https://issues.apache.org/jira/browse/HBASE-24150) | *Major* | **Allow module tests run in parallel**
 
 Pass -T2 to mvn. Makes it so we do two modules-at-a-time dependencies willing. Helps speed build and testing. Doubles the resource usage when running modules in parallel.
@@ -102,6 +109,7 @@ This is also an aggregate against every store the number of reads that happened 
 * [HBASE-24524](https://issues.apache.org/jira/browse/HBASE-24524) | *Minor* | **SyncTable logging improvements**
 
 Notice this has changed log level for mismatching row keys, originally those were being logged at INFO level, now it's logged at DEBUG level. This is consistent with the logging of mismatching cells. Also, for missing row keys, it now logs row key values in human readable format, making it more meaningful for operators troubleshooting mismatches.
+
 
 
 
