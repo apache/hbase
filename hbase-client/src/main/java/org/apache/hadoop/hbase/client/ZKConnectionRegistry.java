@@ -36,8 +36,8 @@ import org.apache.zookeeper.KeeperException;
 /**
  * A cluster registry that stores to zookeeper.
  */
-class ZooKeeperConnectionRegistry implements ConnectionRegistry {
-  private static final Log LOG = LogFactory.getLog(ZooKeeperConnectionRegistry.class);
+class ZKConnectionRegistry implements ConnectionRegistry {
+  private static final Log LOG = LogFactory.getLog(ZKConnectionRegistry.class);
   // Needs an instance of hci to function.  Set after construct this instance.
   ConnectionManager.HConnectionImplementation hci;
 
@@ -125,5 +125,9 @@ class ZooKeeperConnectionRegistry implements ConnectionRegistry {
     } catch (KeeperException ke) {
       throw new IOException("Unexpected ZooKeeper exception", ke);
     }
+  }
+
+  @Override
+  public void close() {
   }
 }

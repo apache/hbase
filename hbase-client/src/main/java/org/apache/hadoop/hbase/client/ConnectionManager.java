@@ -941,7 +941,7 @@ class ConnectionManager {
 
     protected String clusterId = null;
 
-    void retrieveClusterId() {
+    void retrieveClusterId() throws IOException {
       if (clusterId != null) return;
       this.clusterId = this.registry.getClusterId();
       if (clusterId == null) {
@@ -1576,7 +1576,7 @@ class ConnectionManager {
       private Object makeStubNoRetries() throws IOException, ServiceException {
         ServerName sn = registry.getActiveMaster();
         if (sn == null) {
-          String msg = "ZooKeeper available but no active master location found";
+          String msg = "No active master location found";
           LOG.info(msg);
           throw new MasterNotRunningException(msg);
         }
@@ -2570,6 +2570,9 @@ class ConnectionManager {
     void internalClose() {
       if (this.closed) {
         return;
+      }
+      if (this.registry != null) {
+        this.registry.close();
       }
       closeMaster();
       shutdownPools();

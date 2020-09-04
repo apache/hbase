@@ -483,6 +483,10 @@ public class TestAsyncProcess {
       public int getCurrentNrHRS() throws IOException {
         return 1;
       }
+
+      @Override
+      public void close() {
+      }
     }
 
     final AtomicInteger nbThreads = new AtomicInteger(0);
@@ -492,7 +496,7 @@ public class TestAsyncProcess {
     }
 
     private static Configuration setupConf(Configuration conf) {
-      conf.setClass(ConnectionRegistryFactory.REGISTRY_IMPL_CONF_KEY, TestConnectionRegistry.class, ConnectionRegistry.class);
+      conf.setClass(HConstants.REGISTRY_IMPL_CONF_KEY, TestConnectionRegistry.class, ConnectionRegistry.class);
       return conf;
     }
 

@@ -19,6 +19,11 @@
 
 package org.apache.hadoop.hbase.util;
 
+import com.google.common.base.Joiner;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 
@@ -95,6 +100,20 @@ public class PrettyPrinter {
     sb.append(")");
 
     return sb.toString();
+  }
+
+  /**
+   * Pretty prints a collection of any type to a string. Relies on toString() implementation of the
+   * object type.
+   * @param collection collection to pretty print.
+   * @return Pretty printed string for the collection.
+   */
+  public static String toString(Collection<?> collection) {
+    List<String> stringList = new ArrayList<>();
+    for (Object o: collection) {
+      stringList.add(Objects.toString(o));
+    }
+    return "[" + Joiner.on(',').join(stringList) + "]";
   }
 
 }

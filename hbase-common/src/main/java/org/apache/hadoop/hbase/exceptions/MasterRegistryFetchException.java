@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,34 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.exceptions;
 
-import java.io.IOException;
-
-import org.apache.hadoop.hbase.HConstants;
+import java.util.Set;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.PrettyPrinter;
 
 /**
- * Get instance of configured Connection Registry.
+ * Exception thrown when an master registry RPC fails in client. The exception includes the list of
+ * masters to which RPC was attempted and the last exception encountered. Prior exceptions are
+ * included in the logs.
  */
 @InterfaceAudience.Private
-class ConnectionRegistryFactory {
+public class MasterRegistryFetchException extends HBaseIOException {
 
-  /**
-   * @return The cluster registry implementation to use.
-   * @throws IOException
-   */
-  static ConnectionRegistry getRegistry(final Connection connection)
-  throws IOException {
-    String registryClass = connection.getConfiguration().get(HConstants.REGISTRY_IMPL_CONF_KEY,
-      ZKConnectionRegistry.class.getName());
-    ConnectionRegistry registry = null;
-    try {
-      registry = (ConnectionRegistry)Class.forName(registryClass).getDeclaredConstructor().newInstance();
-    } catch (Throwable t) {
-      throw new IOException(t);
-    }
-    registry.init(connection);
-    return registry;
+  private static final long serialVersionUID = 6992134872168185171L;
+
+  public MasterRegistryFetchException(Set<String> masters, Throwable failure) {
+    super(String.format("Exception making rpc to masters %s", PrettyPrinter.toString(masters)),
+        failure);
   }
 }

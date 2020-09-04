@@ -138,6 +138,10 @@ public class TestClientNoCluster extends Configured implements Tool {
     public int getCurrentNrHRS() throws IOException {
       return 1;
     }
+
+    @Override
+    public void close() {
+    }
   }
 
   /**

@@ -938,6 +938,13 @@ message GetMetaRegionLocationsResponse {
   repeated RegionLocation meta_locations = 1;
 }
 
+/** Request and response to get the number of live region servers */
+message GetNumLiveRSRequest {
+}
+message GetNumLiveRSResponse {
+  required int32 num_region_servers = 1;
+}
+
 /**
  * Implements all the RPCs needed by clients to look up cluster meta information needed for connection establishment.
  */
@@ -956,4 +963,9 @@ service ClientMetaService {
    * Get current meta replicas' region locations.
    */
   rpc GetMetaRegionLocations(GetMetaRegionLocationsRequest) returns(GetMetaRegionLocationsResponse);
+
+  /**
+   * Get number of live region servers.
+   */
+  rpc GetNumLiveRS(GetNumLiveRSRequest) returns(GetNumLiveRSResponse);
 }
