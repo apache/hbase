@@ -576,13 +576,16 @@ public class ReplicationSource implements ReplicationSourceInterface {
         replicationEndpoint.stop();
         if (sleepForRetries("Error starting ReplicationEndpoint", sleepMultiplier)) {
           sleepMultiplier++;
+        } else {
+          this.startupOngoing.set(false);
+          throw new RuntimeException("Exhausted retries to start replication endpoint.");
         }
       }
     }
 
     if (!this.isSourceActive()) {
       this.startupOngoing.set(false);
-      return;
+      throw new IllegalStateException("Source should be active.");
     }
 
     sleepMultiplier = 1;
@@ -605,7 +608,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     if(!this.isSourceActive()) {
       this.startupOngoing.set(false);
-      return;
+      throw new IllegalStateException("Source should be active.");
     }
     LOG.info("{} Source: {}, is now replicating from cluster: {}; to peer cluster: {};",
       logPeerId(), this.replicationQueueInfo.getQueueId(), clusterId, peerClusterId);
@@ -637,10 +640,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
           (t,e) -> {
             sourceRunning = false;
             uncaughtException(t, e, null, null);
-            retryStartup.setValue(true);
+            retryStartup.setValue(!this.abortOnError);
           });
       }
-    } while (this.startupOngoing.get());
+    } while (this.startupOngoing.get() && !this.abortOnError);
   }
 
   @Override
