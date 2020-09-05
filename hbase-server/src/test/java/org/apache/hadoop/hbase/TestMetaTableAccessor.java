@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.SimpleRpcSchedulerFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -500,34 +499,6 @@ public class TestMetaTableAccessor {
   }
 
   @Test
-  public void testMetaLocationForRegionReplicasIsAddedAtRegionSplit() throws IOException {
-    long regionId = System.currentTimeMillis();
-    ServerName serverName0 = ServerName.valueOf("foo", 60010, random.nextLong());
-    RegionInfo parent = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
-
-    RegionInfo splitA = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
-      .setRegionId(regionId + 1).setReplicaId(0).build();
-    RegionInfo splitB = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey(Bytes.toBytes("a")).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId + 1).setReplicaId(0).build();
-
-    try (Table meta = MetaTableAccessor.getMetaHTable(connection)) {
-      List<RegionInfo> regionInfos = Lists.newArrayList(parent);
-      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
-
-      MetaTableAccessor.splitRegion(connection, parent, -1L, splitA, splitB, serverName0, 3);
-
-      assertEmptyMetaLocation(meta, splitA.getRegionName(), 1);
-      assertEmptyMetaLocation(meta, splitA.getRegionName(), 2);
-      assertEmptyMetaLocation(meta, splitB.getRegionName(), 1);
-      assertEmptyMetaLocation(meta, splitB.getRegionName(), 2);
-    }
-  }
-
-  @Test
   public void testMetaLocationForRegionReplicasIsAddedAtRegionMerge() throws IOException {
     long regionId = System.currentTimeMillis();
     ServerName serverName0 = ServerName.valueOf("foo", 60010, random.nextLong());
@@ -727,98 +698,6 @@ public class TestMetaTableAccessor {
         numPriorityCalls++;
       }
       return super.dispatch(task);
-    }
-  }
-
-  @Test
-  public void testMetaUpdatesGoToPriorityQueue() throws Exception {
-    // This test has to be end-to-end, and do the verification from the server side
-    Configuration c = UTIL.getConfiguration();
-
-    c.set(RSRpcServices.REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
-      SpyingRpcSchedulerFactory.class.getName());
-
-    // restart so that new config takes place
-    afterClass();
-    beforeClass();
-
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    try (Admin admin = connection.getAdmin();
-      RegionLocator rl = connection.getRegionLocator(tableName)) {
-
-      // create a table and prepare for a manual split
-      UTIL.createTable(tableName, "cf1");
-
-      HRegionLocation loc = rl.getAllRegionLocations().get(0);
-      RegionInfo parent = loc.getRegion();
-      long rid = 1000;
-      byte[] splitKey = Bytes.toBytes("a");
-      RegionInfo splitA =
-        RegionInfoBuilder.newBuilder(parent.getTable()).setStartKey(parent.getStartKey())
-          .setEndKey(splitKey).setSplit(false).setRegionId(rid).build();
-      RegionInfo splitB = RegionInfoBuilder.newBuilder(parent.getTable()).setStartKey(splitKey)
-        .setEndKey(parent.getEndKey()).setSplit(false).setRegionId(rid).build();
-
-      // find the meta server
-      MiniHBaseCluster cluster = UTIL.getMiniHBaseCluster();
-      int rsIndex = cluster.getServerWithMeta();
-      HRegionServer rs;
-      if (rsIndex >= 0) {
-        rs = cluster.getRegionServer(rsIndex);
-      } else {
-        // it is in master
-        rs = cluster.getMaster();
-      }
-      SpyingRpcScheduler scheduler = (SpyingRpcScheduler) rs.getRpcServer().getScheduler();
-      long prevCalls = scheduler.numPriorityCalls;
-      MetaTableAccessor.splitRegion(connection, parent, -1L, splitA, splitB, loc.getServerName(),
-        1);
-
-      assertTrue(prevCalls < scheduler.numPriorityCalls);
-    }
-  }
-
-  @Test
-  public void testEmptyMetaDaughterLocationDuringSplit() throws IOException {
-    long regionId = System.currentTimeMillis();
-    ServerName serverName0 = ServerName.valueOf("foo", 60010, random.nextLong());
-    RegionInfo parent = RegionInfoBuilder.newBuilder(TableName.valueOf("table_foo"))
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
-    RegionInfo splitA = RegionInfoBuilder.newBuilder(TableName.valueOf("table_foo"))
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
-      .setRegionId(regionId + 1).setReplicaId(0).build();
-    RegionInfo splitB = RegionInfoBuilder.newBuilder(TableName.valueOf("table_foo"))
-      .setStartKey(Bytes.toBytes("a")).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId + 1).setReplicaId(0).build();
-
-    Table meta = MetaTableAccessor.getMetaHTable(connection);
-    try {
-      List<RegionInfo> regionInfos = Lists.newArrayList(parent);
-      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
-
-      MetaTableAccessor.splitRegion(connection, parent, -1L, splitA, splitB, serverName0, 3);
-      Get get1 = new Get(splitA.getRegionName());
-      Result resultA = meta.get(get1);
-      Cell serverCellA = resultA.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        CatalogFamilyFormat.getServerColumn(splitA.getReplicaId()));
-      Cell startCodeCellA = resultA.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        CatalogFamilyFormat.getStartCodeColumn(splitA.getReplicaId()));
-      assertNull(serverCellA);
-      assertNull(startCodeCellA);
-
-      Get get2 = new Get(splitA.getRegionName());
-      Result resultB = meta.get(get2);
-      Cell serverCellB = resultB.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        CatalogFamilyFormat.getServerColumn(splitB.getReplicaId()));
-      Cell startCodeCellB = resultB.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-        CatalogFamilyFormat.getStartCodeColumn(splitB.getReplicaId()));
-      assertNull(serverCellB);
-      assertNull(startCodeCellB);
-    } finally {
-      if (meta != null) {
-        meta.close();
-      }
     }
   }
 

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.regionserver.MetaRegionSplitPolicy;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -105,17 +106,24 @@ public class ModifyTableProcedure
     if (this.modifiedTableDescriptor.isMetaTable()) {
       // If we are modifying the hbase:meta table, make sure we are not deleting critical
       // column families else we'll damage the cluster.
-      Set<byte []> cfs = this.modifiedTableDescriptor.getColumnFamilyNames();
+      Set<byte[]> cfs = this.modifiedTableDescriptor.getColumnFamilyNames();
       for (byte[] family : UNDELETABLE_META_COLUMNFAMILIES) {
         if (!cfs.contains(family)) {
-          throw new HBaseIOException("Delete of hbase:meta column family " +
-            Bytes.toString(family));
+          throw new HBaseIOException(
+            "Delete of hbase:meta column family " + Bytes.toString(family));
         }
+      }
+      // also check if we want to change the split policy, which is not allowed
+      if (!MetaRegionSplitPolicy.class.getName()
+        .equals(this.modifiedTableDescriptor.getRegionSplitPolicyClassName())) {
+        throw new HBaseIOException("Can not change split policy for hbase:meta to " +
+          this.modifiedTableDescriptor.getRegionSplitPolicyClassName());
       }
     }
   }
 
-  private void initialize(final TableDescriptor unmodifiedTableDescriptor,
+  private void initialize(
+    final TableDescriptor unmodifiedTableDescriptor,
       final boolean shouldCheckDescriptor) {
     this.unmodifiedTableDescriptor = unmodifiedTableDescriptor;
     this.shouldCheckDescriptor = shouldCheckDescriptor;

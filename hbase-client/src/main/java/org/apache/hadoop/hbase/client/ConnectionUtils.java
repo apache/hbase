@@ -296,32 +296,6 @@ public final class ConnectionUtils {
     }
   }
 
-  static boolean noMoreResultsForScan(Scan scan, RegionInfo info) {
-    if (isEmptyStopRow(info.getEndKey())) {
-      return true;
-    }
-    if (isEmptyStopRow(scan.getStopRow())) {
-      return false;
-    }
-    int c = Bytes.compareTo(info.getEndKey(), scan.getStopRow());
-    // 1. if our stop row is less than the endKey of the region
-    // 2. if our stop row is equal to the endKey of the region and we do not include the stop row
-    // for scan.
-    return c > 0 || (c == 0 && !scan.includeStopRow());
-  }
-
-  static boolean noMoreResultsForReverseScan(Scan scan, RegionInfo info) {
-    if (isEmptyStartRow(info.getStartKey())) {
-      return true;
-    }
-    if (isEmptyStopRow(scan.getStopRow())) {
-      return false;
-    }
-    // no need to test the inclusive of the stop row as the start key of a region is included in
-    // the region.
-    return Bytes.compareTo(info.getStartKey(), scan.getStopRow()) <= 0;
-  }
-
   static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> futures) {
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
       .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));

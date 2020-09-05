@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
@@ -33,13 +35,16 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -250,15 +255,62 @@ public class RegionStateStore {
   // ============================================================================================
   //  Update Region Splitting State helpers
   // ============================================================================================
-  public void splitRegion(RegionInfo parent, RegionInfo hriA, RegionInfo hriB,
-      ServerName serverName) throws IOException {
-    TableDescriptor htd = getDescriptor(parent.getTable());
+  /**
+   * Splits the region into two in an atomic operation. Offlines the parent region with the
+   * information that it is split into two, and also adds the daughter regions. Does not add the
+   * location information to the daughter regions since they are not open yet.
+   */
+  public void splitRegion(RegionInfo parent, RegionInfo splitA, RegionInfo splitB,
+    ServerName serverName, TableDescriptor htd) throws IOException {
     long parentOpenSeqNum = HConstants.NO_SEQNUM;
     if (htd.hasGlobalReplicationScope()) {
       parentOpenSeqNum = getOpenSeqNumForParentRegion(parent);
     }
-    MetaTableAccessor.splitRegion(master.getConnection(), parent, parentOpenSeqNum, hriA, hriB,
-      serverName, getRegionReplication(htd));
+    long time = EnvironmentEdgeManager.currentTime();
+    // Put for parent
+    Put putParent = MetaTableAccessor.makePutFromRegionInfo(
+      RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
+    MetaTableAccessor.addDaughtersToPut(putParent, splitA, splitB);
+
+    // Puts for daughters
+    Put putA = MetaTableAccessor.makePutFromRegionInfo(splitA, time);
+    Put putB = MetaTableAccessor.makePutFromRegionInfo(splitB, time);
+    if (parentOpenSeqNum > 0) {
+      MetaTableAccessor.addReplicationBarrier(putParent, parentOpenSeqNum);
+      MetaTableAccessor.addReplicationParent(putA, Collections.singletonList(parent));
+      MetaTableAccessor.addReplicationParent(putB, Collections.singletonList(parent));
+    }
+    // Set initial state to CLOSED
+    // NOTE: If initial state is not set to CLOSED then daughter regions get added with the
+    // default OFFLINE state. If Master gets restarted after this step, start up sequence of
+    // master tries to assign these offline regions. This is followed by re-assignments of the
+    // daughter regions from resumed {@link SplitTableRegionProcedure}
+    MetaTableAccessor.addRegionStateToPut(putA, RegionState.State.CLOSED);
+    MetaTableAccessor.addRegionStateToPut(putB, RegionState.State.CLOSED);
+
+    // new regions, openSeqNum = 1 is fine.
+    MetaTableAccessor.addSequenceNum(putA, 1, splitA.getReplicaId());
+    MetaTableAccessor.addSequenceNum(putB, 1, splitB.getReplicaId());
+
+    // Add empty locations for region replicas of daughters so that number of replicas can be
+    // cached whenever the primary region is looked up from meta
+    int regionReplication = getRegionReplication(htd);
+    for (int i = 1; i < regionReplication; i++) {
+      MetaTableAccessor.addEmptyLocation(putA, i);
+      MetaTableAccessor.addEmptyLocation(putB, i);
+    }
+
+    List<Mutation> mutations = Arrays.asList(putParent, putA, putB);
+    if (htd.isMetaTable()) {
+      masterRegion.update(region -> {
+        List<byte[]> rowsToLock =
+          mutations.stream().map(Mutation::getRow).collect(Collectors.toList());
+        region.mutateRowsWithLocks(mutations, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      });
+    } else {
+      byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
+      MetaTableAccessor.multiMutate(master.getConnection(), tableRow, mutations);
+    }
   }
 
   // ============================================================================================

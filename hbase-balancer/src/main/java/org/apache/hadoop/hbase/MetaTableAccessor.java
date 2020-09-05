@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -751,7 +750,7 @@ public final class MetaTableAccessor {
   /**
    * Adds split daughters to the Put
    */
-  private static Put addDaughtersToPut(Put put, RegionInfo splitA, RegionInfo splitB)
+  public static Put addDaughtersToPut(Put put, RegionInfo splitA, RegionInfo splitB)
     throws IOException {
     if (splitA != null) {
       put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
@@ -865,7 +864,7 @@ public final class MetaTableAccessor {
     }
   }
 
-  private static Put addRegionStateToPut(Put put, RegionState.State state) throws IOException {
+  public static Put addRegionStateToPut(Put put, RegionState.State state) throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
       .setFamily(HConstants.CATALOG_FAMILY).setQualifier(HConstants.STATE_QUALIFIER)
       .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put).setValue(Bytes.toBytes(state.name()))
@@ -885,9 +884,7 @@ public final class MetaTableAccessor {
   /**
    * Adds daughter region infos to hbase:meta row for the specified region. Note that this does not
    * add its daughter's as different rows, but adds information about the daughters in the same row
-   * as the parent. Use
-   * {@link #splitRegion(Connection, RegionInfo, long, RegionInfo, RegionInfo, ServerName, int)} if
-   * you want to do that.
+   * as the parent.
    * @param connection connection we're using
    * @param regionInfo RegionInfo of parent region
    * @param splitA first split daughter of the parent regionInfo
@@ -906,11 +903,7 @@ public final class MetaTableAccessor {
   }
 
   /**
-   * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this
-   * does not add its daughter's as different rows, but adds information about the daughters in the
-   * same row as the parent. Use
-   * {@link #splitRegion(Connection, RegionInfo, long, RegionInfo, RegionInfo, ServerName, int)} if
-   * you want to do that.
+   * Adds a (single) hbase:meta row for the specified new region and its daughters.
    * @param connection connection we're using
    * @param regionInfo region information
    * @throws IOException if problem connecting or updating meta
@@ -1038,56 +1031,6 @@ public final class MetaTableAccessor {
   }
 
   /**
-   * Splits the region into two in an atomic operation. Offlines the parent region with the
-   * information that it is split into two, and also adds the daughter regions. Does not add the
-   * location information to the daughter regions since they are not open yet.
-   * @param connection connection we're using
-   * @param parent the parent region which is split
-   * @param parentOpenSeqNum the next open sequence id for parent region, used by serial
-   *          replication. -1 if not necessary.
-   * @param splitA Split daughter region A
-   * @param splitB Split daughter region B
-   * @param sn the location of the region
-   */
-  public static void splitRegion(Connection connection, RegionInfo parent, long parentOpenSeqNum,
-    RegionInfo splitA, RegionInfo splitB, ServerName sn, int regionReplication) throws IOException {
-    long time = EnvironmentEdgeManager.currentTime();
-    // Put for parent
-    Put putParent = makePutFromRegionInfo(
-      RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
-    addDaughtersToPut(putParent, splitA, splitB);
-
-    // Puts for daughters
-    Put putA = makePutFromRegionInfo(splitA, time);
-    Put putB = makePutFromRegionInfo(splitB, time);
-    if (parentOpenSeqNum > 0) {
-      addReplicationBarrier(putParent, parentOpenSeqNum);
-      addReplicationParent(putA, Collections.singletonList(parent));
-      addReplicationParent(putB, Collections.singletonList(parent));
-    }
-    // Set initial state to CLOSED
-    // NOTE: If initial state is not set to CLOSED then daughter regions get added with the
-    // default OFFLINE state. If Master gets restarted after this step, start up sequence of
-    // master tries to assign these offline regions. This is followed by re-assignments of the
-    // daughter regions from resumed {@link SplitTableRegionProcedure}
-    addRegionStateToPut(putA, RegionState.State.CLOSED);
-    addRegionStateToPut(putB, RegionState.State.CLOSED);
-
-    addSequenceNum(putA, 1, splitA.getReplicaId()); // new regions, openSeqNum = 1 is fine.
-    addSequenceNum(putB, 1, splitB.getReplicaId());
-
-    // Add empty locations for region replicas of daughters so that number of replicas can be
-    // cached whenever the primary region is looked up from meta
-    for (int i = 1; i < regionReplication; i++) {
-      addEmptyLocation(putA, i);
-      addEmptyLocation(putB, i);
-    }
-
-    byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
-    multiMutate(connection, tableRow, Arrays.asList(putParent, putA, putB));
-  }
-
-  /**
    * Update state of the table in meta.
    * @param connection what we use for update
    * @param state new state
@@ -1121,12 +1064,13 @@ public final class MetaTableAccessor {
     deleteFromMetaTable(connection, delete);
     LOG.info("Deleted table " + table + " state from META");
   }
+
   /**
    * Performs an atomic multi-mutate operation against the given table. Used by the likes of merge
    * and split as these want to make atomic mutations across multiple rows.
    * @throws IOException even if we encounter a RuntimeException, we'll still wrap it in an IOE.
    */
-  private static void multiMutate(Connection conn, byte[] row, List<Mutation> mutations)
+  public static void multiMutate(Connection conn, byte[] row, List<Mutation> mutations)
     throws IOException {
     debugLogMutations(mutations);
     MutateRowsRequest.Builder builder = MutateRowsRequest.newBuilder();
@@ -1364,7 +1308,7 @@ public final class MetaTableAccessor {
     return parents;
   }
 
-  private static void addReplicationParent(Put put, List<RegionInfo> parents) throws IOException {
+  public static void addReplicationParent(Put put, List<RegionInfo> parents) throws IOException {
     byte[] value = getParentsBytes(parents);
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
       .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(REPLICATION_PARENT_QUALIFIER)
@@ -1388,7 +1332,7 @@ public final class MetaTableAccessor {
       .build());
   }
 
-  private static Put addEmptyLocation(Put p, int replicaId) throws IOException {
+  public static Put addEmptyLocation(Put p, int replicaId) throws IOException {
     CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     return p
       .add(builder.clear().setRow(p.getRow()).setFamily(HConstants.CATALOG_FAMILY)
@@ -1541,7 +1485,7 @@ public final class MetaTableAccessor {
     METALOG.debug("{} {}", p.getClass().getSimpleName(), p.toJSON());
   }
 
-  private static Put addSequenceNum(Put p, long openSeqNum, int replicaId) throws IOException {
+  public static Put addSequenceNum(Put p, long openSeqNum, int replicaId) throws IOException {
     return p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(p.getRow())
       .setFamily(HConstants.CATALOG_FAMILY)
       .setQualifier(CatalogFamilyFormat.getSeqNumColumn(replicaId)).setTimestamp(p.getTimestamp())
