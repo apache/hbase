@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -143,6 +144,7 @@ public class TestCompactionState {
       ht = TEST_UTIL.createTable(table, families);
       loadData(ht, families, 3000, flushes);
       HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+      HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
       List<HRegion> regions = rs.getRegions(table);
       int countBefore = countStoreFilesInFamilies(regions, families);
       int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
@@ -164,10 +166,10 @@ public class TestCompactionState {
       long curt = System.currentTimeMillis();
       long waitTime = 5000;
       long endt = curt + waitTime;
-      CompactionState state = admin.getCompactionState(table);
+      CompactionState state = master.getCompactionState(table);
       while (state == CompactionState.NONE && curt < endt) {
         Thread.sleep(10);
-        state = admin.getCompactionState(table);
+        state = master.getCompactionState(table);
         curt = System.currentTimeMillis();
       }
       // Now, should have the right compaction state,
@@ -179,10 +181,10 @@ public class TestCompactionState {
         }
       } else {
         // Wait until the compaction is done
-        state = admin.getCompactionState(table);
+        state = master.getCompactionState(table);
         while (state != CompactionState.NONE && curt < endt) {
           Thread.sleep(10);
-          state = admin.getCompactionState(table);
+          state = master.getCompactionState(table);
         }
         // Now, compaction should be done.
         assertEquals(CompactionState.NONE, state);

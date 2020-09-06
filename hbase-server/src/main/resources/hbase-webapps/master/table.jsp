@@ -655,23 +655,8 @@
       <td>
 <%
   if (master.getAssignmentManager().isTableEnabled(table.getName())) {
-    try {
-      CompactionState compactionState = admin.getCompactionState(table.getName()).get(1, TimeUnit.SECONDS);
-      %><%= compactionState %><%
-    } catch (Exception e) {
-
-      if(e.getCause() != null && e.getCause().getCause() instanceof NotServingRegionException) {
-        %><%= CompactionState.NONE %><%
-      } else if(e instanceof TimeoutException){
-        %> Unknown <%
-      } else {
-        // Nothing really to do here
-        for(StackTraceElement element : e.getStackTrace()) {
-           %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
-        }
-       %> Unknown <%
-      }
-    }
+    CompactionState compactionState = master.getCompactionState(table.getName());
+    %><%= compactionState==null?"UNKNOWN":compactionState %><%
   } else {
     %><%= CompactionState.NONE %><%
   }

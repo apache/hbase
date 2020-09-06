@@ -75,7 +75,9 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -3906,5 +3908,52 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public RSGroupInfoManager getRSGroupInfoManager() {
     return rsGroupInfoManager;
+  }
+
+  /**
+   * Get the compaction state of the table
+   *
+   * @param tableName The table name
+   * @return CompactionState Compaction state of the table
+   */
+  public org.apache.hadoop.hbase.client.CompactionState getCompactionState(
+      final TableName tableName) {
+    org.apache.hadoop.hbase.client.CompactionState compactionState =
+      org.apache.hadoop.hbase.client.CompactionState.NONE;
+    try {
+      List<RegionInfo> regions =
+        assignmentManager.getRegionStates().getRegionsOfTable(tableName, false);
+      for (RegionInfo regionInfo : regions) {
+        ServerName serverName =
+          assignmentManager.getRegionStates().getRegionServerOfRegion(regionInfo);
+        if (serverName == null) {
+          continue;
+        }
+        ServerMetrics sl = serverManager.getLoad(serverName);
+        if (sl == null) {
+          continue;
+        }
+        RegionMetrics regionMetrics = sl.getRegionMetrics().get(regionInfo.getRegionName());
+        if (regionMetrics.getCompactionState()
+          == org.apache.hadoop.hbase.client.CompactionState.MAJOR) {
+          if (compactionState == org.apache.hadoop.hbase.client.CompactionState.MINOR) {
+            compactionState = org.apache.hadoop.hbase.client.CompactionState.MAJOR_AND_MINOR;
+          } else {
+            compactionState = org.apache.hadoop.hbase.client.CompactionState.MAJOR;
+          }
+        } else if (regionMetrics.getCompactionState()
+          == org.apache.hadoop.hbase.client.CompactionState.MINOR) {
+          if (compactionState == org.apache.hadoop.hbase.client.CompactionState.MAJOR) {
+            compactionState = org.apache.hadoop.hbase.client.CompactionState.MAJOR_AND_MINOR;
+          } else {
+            compactionState = org.apache.hadoop.hbase.client.CompactionState.MINOR;
+          }
+        }
+      }
+    } catch (Exception e) {
+      compactionState = null;
+      LOG.error("Exception when get compaction state for " + tableName.getNameAsString(), e);
+    }
+    return compactionState;
   }
 }

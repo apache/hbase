@@ -1741,9 +1741,10 @@ public class HRegionServer extends Thread implements
       .setBlocksLocalWeight(blocksLocalWeight)
       .setBlocksLocalWithSsdWeight(blocksLocalWithSsdWeight)
       .setBlocksTotalWeight(blocksTotalWeight)
+      .setCompactionState(ProtobufUtil.createCompactionStateForRegionLoad(r.getCompactionState()))
       .setLastMajorCompactionTs(r.getOldestHfileTs(true));
     r.setCompleteSequenceId(regionLoadBldr);
-
+    LOG.info(">>>>>>setCompactionState:{}",r.getCompactionState());
     return regionLoadBldr.build();
   }
 

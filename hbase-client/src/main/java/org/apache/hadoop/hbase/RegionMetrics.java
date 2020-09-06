@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Map;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -182,4 +183,9 @@ public interface RegionMetrics {
    * @return the block total weight of this region
    */
   long getBlocksTotalWeight();
+
+  /**
+   * @return the compaction state of this region
+   */
+  CompactionState getCompactionState();
 }
