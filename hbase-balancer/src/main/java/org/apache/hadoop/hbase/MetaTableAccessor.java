@@ -994,7 +994,6 @@ public final class MetaTableAccessor {
     LOG.debug("Overwritten regions: {} ", regionInfos);
   }
 
-
   public static Put addRegionInfo(final Put p, final RegionInfo hri) throws IOException {
     p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(p.getRow())
       .setFamily(HConstants.CATALOG_FAMILY).setQualifier(HConstants.REGIONINFO_QUALIFIER)
