@@ -21,6 +21,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -345,5 +346,65 @@ public class CatalogFamilyFormat {
     } catch (DeserializationException e) {
       throw new IOException(e);
     }
+  }
+
+  /**
+   * @return Deserialized values of &lt;qualifier,regioninfo&gt; pairs taken from column values that
+   *         match the regex 'info:merge.*' in array of <code>cells</code>.
+   */
+  @Nullable
+  public static Map<String, RegionInfo> getMergeRegionsWithName(Cell[] cells) {
+    if (cells == null) {
+      return null;
+    }
+    Map<String, RegionInfo> regionsToMerge = null;
+    for (Cell cell : cells) {
+      if (!isMergeQualifierPrefix(cell)) {
+        continue;
+      }
+      // Ok. This cell is that of a info:merge* column.
+      RegionInfo ri = RegionInfo.parseFromOrNull(cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength());
+      if (ri != null) {
+        if (regionsToMerge == null) {
+          regionsToMerge = new LinkedHashMap<>();
+        }
+        regionsToMerge.put(Bytes.toString(CellUtil.cloneQualifier(cell)), ri);
+      }
+    }
+    return regionsToMerge;
+  }
+
+  /**
+   * @return Deserialized regioninfo values taken from column values that match the regex
+   *         'info:merge.*' in array of <code>cells</code>.
+   */
+  @Nullable
+  public static List<RegionInfo> getMergeRegions(Cell[] cells) {
+    Map<String, RegionInfo> mergeRegionsWithName = getMergeRegionsWithName(cells);
+    return (mergeRegionsWithName == null) ? null : new ArrayList<>(mergeRegionsWithName.values());
+  }
+
+  /**
+   * @return True if any merge regions present in <code>cells</code>; i.e. the column in
+   *         <code>cell</code> matches the regex 'info:merge.*'.
+   */
+  public static boolean hasMergeRegions(Cell[] cells) {
+    for (Cell cell : cells) {
+      if (!isMergeQualifierPrefix(cell)) {
+        continue;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * @return True if the column in <code>cell</code> matches the regex 'info:merge.*'.
+   */
+  public static boolean isMergeQualifierPrefix(Cell cell) {
+    // Check to see if has family and that qualifier starts with the merge qualifier 'merge'
+    return CellUtil.matchingFamily(cell, HConstants.CATALOG_FAMILY) &&
+      PrivateCellUtil.qualifierStartsWith(cell, HConstants.MERGE_QUALIFIER_PREFIX);
   }
 }

@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -39,8 +40,9 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
 import org.apache.hadoop.hbase.master.assignment.GCMultipleMergedRegionsProcedure;
+import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
+import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -212,7 +214,7 @@ public class TestMetaFixer {
           // a hole.
           Map<RegionInfo, Result> mergedRegions = cj.getLastReport().mergedRegions;
           for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
-            List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(e.getValue().rawCells());
+            List<RegionInfo> parents = CatalogFamilyFormat.getMergeRegions(e.getValue().rawCells());
             if (parents != null) {
               ProcedureExecutor<MasterProcedureEnv> pe = services.getMasterProcedureExecutor();
               pe.submitProcedure(new GCMultipleMergedRegionsProcedure(pe.getEnvironment(),
@@ -276,7 +278,7 @@ public class TestMetaFixer {
           cj.scan();
           final CatalogJanitor.Report postReport = cj.getLastReport();
           RegionStates regionStates = am.getRegionStates();
-
+          RegionStateStore regionStateStore = am.getRegionStateStore();
           // Make sure that two merged regions are opened and GCs are done.
           if (postReport.getOverlaps().size() == 1) {
             Pair<RegionInfo, RegionInfo> pair = postReport.getOverlaps().get(0);
@@ -285,10 +287,8 @@ public class TestMetaFixer {
               (!overlapRegions.contains(pair.getSecond().getRegionNameAsString()) &&
               regionStates.getRegionState(pair.getSecond()).isOpened())) {
               // Make sure GC is done.
-              List<RegionInfo> firstParents = MetaTableAccessor.getMergeRegions(
-                services.getConnection(), pair.getFirst().getRegionName());
-              List<RegionInfo> secondParents = MetaTableAccessor.getMergeRegions(
-                services.getConnection(), pair.getSecond().getRegionName());
+              List<RegionInfo> firstParents = regionStateStore.getMergeRegions(pair.getFirst());
+              List<RegionInfo> secondParents = regionStateStore.getMergeRegions(pair.getSecond());
 
               return (firstParents == null || firstParents.isEmpty()) &&
                 (secondParents == null || secondParents.isEmpty());

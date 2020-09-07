@@ -25,11 +25,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableAccessor.ReplicationBarrierResult;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
+import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat.ReplicationBarrierResult;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -160,7 +160,7 @@ class SerialReplicationChecker {
   }
 
   private boolean isParentFinished(byte[] regionName) throws IOException {
-    long[] barriers = MetaTableAccessor.getReplicationBarrier(conn, regionName);
+    long[] barriers = ReplicationBarrierFamilyFormat.getReplicationBarrier(conn, regionName);
     if (barriers.length == 0) {
       return true;
     }
@@ -185,8 +185,9 @@ class SerialReplicationChecker {
   private boolean canPush(Entry entry, byte[] row) throws IOException {
     String encodedNameAsString = Bytes.toString(entry.getKey().getEncodedRegionName());
     long seqId = entry.getKey().getSequenceId();
-    ReplicationBarrierResult barrierResult = MetaTableAccessor.getReplicationBarrierResult(conn,
-      entry.getKey().getTableName(), row, entry.getKey().getEncodedRegionName());
+    ReplicationBarrierResult barrierResult =
+      ReplicationBarrierFamilyFormat.getReplicationBarrierResult(conn,
+        entry.getKey().getTableName(), row, entry.getKey().getEncodedRegionName());
     LOG.debug("Replication barrier for {}: {}", entry, barrierResult);
     long[] barriers = barrierResult.getBarriers();
     int index = Arrays.binarySearch(barriers, seqId);

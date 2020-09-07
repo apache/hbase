@@ -88,7 +88,7 @@ extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
         setNextState(GCMergedRegionsState.GC_REGION_EDIT_METADATA);
         break;
       case GC_REGION_EDIT_METADATA:
-        MetaTableAccessor.deleteMergeQualifiers(env.getMasterServices().getConnection(), mergedChild);
+        env.getAssignmentManager().getRegionStateStore().deleteMergeQualifiers(mergedChild);
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException(this + " unhandled state=" + state);

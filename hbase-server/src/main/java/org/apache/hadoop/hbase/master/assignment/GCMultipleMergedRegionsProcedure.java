@@ -100,8 +100,8 @@ public class GCMultipleMergedRegionsProcedure extends
           // If GCMultipleMergedRegionsProcedure processing is slower than the CatalogJanitor's scan
           // interval, it will end resubmitting GCMultipleMergedRegionsProcedure for the same
           // region. We can skip duplicate GCMultipleMergedRegionsProcedure while previous finished
-          List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(
-            env.getMasterServices().getConnection(), mergedChild.getRegionName());
+          List<RegionInfo> parents =
+            env.getAssignmentManager().getRegionStateStore().getMergeRegions(mergedChild);
           if (parents == null || parents.isEmpty()) {
             LOG.info("{} mergeXXX qualifiers have ALL been deleted", mergedChild.getShortNameToLog());
             return Flow.NO_MORE_STATE;
@@ -113,8 +113,7 @@ public class GCMultipleMergedRegionsProcedure extends
           setNextState(GCMergedRegionsState.GC_REGION_EDIT_METADATA);
           break;
         case GC_REGION_EDIT_METADATA:
-          MetaTableAccessor.deleteMergeQualifiers(env.getMasterServices().getConnection(),
-              mergedChild);
+          env.getAssignmentManager().getRegionStateStore().deleteMergeQualifiers(mergedChild);
           return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);
