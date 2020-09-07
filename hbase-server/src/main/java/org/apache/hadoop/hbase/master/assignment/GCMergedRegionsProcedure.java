@@ -72,30 +72,30 @@ extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, GCMergedRegionsState state)
-  throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
     try {
       switch (state) {
-      case GC_MERGED_REGIONS_PREPARE:
-        // Nothing to do to prepare.
-        setNextState(GCMergedRegionsState.GC_MERGED_REGIONS_PURGE);
-        break;
-      case GC_MERGED_REGIONS_PURGE:
-        addChildProcedure(createGCRegionProcedures(env));
-        setNextState(GCMergedRegionsState.GC_REGION_EDIT_METADATA);
-        break;
-      case GC_REGION_EDIT_METADATA:
-        env.getAssignmentManager().getRegionStateStore().deleteMergeQualifiers(mergedChild);
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException(this + " unhandled state=" + state);
+        case GC_MERGED_REGIONS_PREPARE:
+          // Nothing to do to prepare.
+          setNextState(GCMergedRegionsState.GC_MERGED_REGIONS_PURGE);
+          break;
+        case GC_MERGED_REGIONS_PURGE:
+          addChildProcedure(createGCRegionProcedures(env));
+          setNextState(GCMergedRegionsState.GC_REGION_EDIT_METADATA);
+          break;
+        case GC_REGION_EDIT_METADATA:
+          env.getAssignmentManager().getRegionStateStore().deleteMergeQualifiers(mergedChild);
+          return Flow.NO_MORE_STATE;
+        default:
+          throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException ioe) {
       // TODO: This is going to spew log?
-      LOG.warn("Error trying to GC merged regions " + this.father.getShortNameToLog() +
-          " & " + this.mother.getShortNameToLog() + "; retrying...", ioe);
+      LOG.warn("Error trying to GC merged regions " + this.father.getShortNameToLog() + " & " +
+        this.mother.getShortNameToLog() + "; retrying...", ioe);
     }
     return Flow.HAS_MORE_STATE;
   }
