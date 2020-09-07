@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -45,23 +47,35 @@ public class TestShutdownOfMetaReplicaHolder extends MetaWithReplicasTestBase {
     startCluster();
   }
 
+  private HRegionLocation getLoc(RegionLocator locator, int replica)
+    throws IOException, InterruptedException {
+    // we have backup master in this test so we may get stale meta replicas since the cache is
+    // refreshed asynchronously, so add retries here.
+    for (;;) {
+      List<HRegionLocation> locs = locator.getRegionLocations(HConstants.EMPTY_START_ROW, true);
+      if (locs.size() > replica) {
+        return locs.get(1);
+      }
+      Thread.sleep(1000);
+    }
+  }
+
   @Test
   public void testShutdownOfReplicaHolder() throws Exception {
     // checks that the when the server holding meta replica is shut down, the meta replica
     // can be recovered
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
       RegionLocator locator = conn.getRegionLocator(TableName.META_TABLE_NAME)) {
-      HRegionLocation hrl = locator.getRegionLocations(HConstants.EMPTY_START_ROW, true).get(1);
+      HRegionLocation hrl = getLoc(locator, 1);
       ServerName oldServer = hrl.getServerName();
       TEST_UTIL.getHBaseClusterInterface().killRegionServer(oldServer);
       LOG.debug("Waiting for the replica {} to come up", hrl.getRegion());
       TEST_UTIL.waitFor(30000, () -> {
-        HRegionLocation loc = locator.getRegionLocations(HConstants.EMPTY_START_ROW, true).get(1);
+        HRegionLocation loc = getLoc(locator, 1);
         return loc != null && !loc.getServerName().equals(oldServer);
       });
       LOG.debug("Replica {} is online on {}, old server is {}", hrl.getRegion(),
-        locator.getRegionLocations(HConstants.EMPTY_START_ROW, true).get(1).getServerName(),
-        oldServer);
+        getLoc(locator, 1).getServerName(), oldServer);
     }
   }
 }
