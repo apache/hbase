@@ -30,14 +30,16 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
+import org.apache.hadoop.hbase.client.AsyncReplicationServerAdmin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.ReplicationServerSinkPeer;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -116,22 +118,47 @@ public class TestReplicationServer {
     TEST_UTIL.deleteTableIfAny(TABLENAME);
   }
 
+  /**
+   * Requests replication server using {@link AsyncReplicationServerAdmin}
+   */
   @Test
   public void testReplicateWAL() throws Exception {
-    AsyncClusterConnection conn = TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().get(0)
-        .getRegionServer().getAsyncClusterConnection();
-    AsyncRegionServerAdmin rsAdmin = conn.getRegionServerAdmin(replicationServer.getServerName());
+    AsyncClusterConnection conn =
+        TEST_UTIL.getHBaseCluster().getMaster().getAsyncClusterConnection();
+    AsyncReplicationServerAdmin replAdmin =
+        conn.getReplicationServerAdmin(replicationServer.getServerName());
 
+    ReplicationServerSinkPeer sinkPeer =
+        new ReplicationServerSinkPeer(replicationServer.getServerName(), replAdmin);
+    replicateWALEntryAndVerify(sinkPeer);
+  }
+
+  /**
+   * Requests region server using {@link AsyncReplicationServerAdmin}
+   */
+  @Test
+  public void testReplicateWAL2() throws Exception {
+    AsyncClusterConnection conn =
+        TEST_UTIL.getHBaseCluster().getMaster().getAsyncClusterConnection();
+    ServerName rs = TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().get(0)
+        .getRegionServer().getServerName();
+    AsyncReplicationServerAdmin replAdmin = conn.getReplicationServerAdmin(rs);
+
+    ReplicationServerSinkPeer sinkPeer = new ReplicationServerSinkPeer(rs, replAdmin);
+    replicateWALEntryAndVerify(sinkPeer);
+  }
+
+  private void replicateWALEntryAndVerify(SinkPeer sinkPeer) throws Exception {
     Entry[] entries = new Entry[BATCH_SIZE];
     for(int i = 0; i < BATCH_SIZE; i++) {
       entries[i] = generateEdit(i, TABLENAME, Bytes.toBytes(i));
     }
 
-    ReplicationProtbufUtil.replicateWALEntry(rsAdmin, entries, replicationClusterId,
-        baseNamespaceDir, hfileArchiveDir, 1000);
+    sinkPeer.replicateWALEntry(entries, replicationClusterId, baseNamespaceDir, hfileArchiveDir,
+        1000);
 
+    Table table = TEST_UTIL.getConnection().getTable(TABLENAME);
     for (int i = 0; i < BATCH_SIZE; i++) {
-      Table table = TEST_UTIL.getConnection().getTable(TABLENAME);
       Result result = table.get(new Get(Bytes.toBytes(i)));
       Cell cell = result.getColumnLatestCell(Bytes.toBytes(FAMILY), Bytes.toBytes(FAMILY));
       assertNotNull(cell);

@@ -42,6 +42,11 @@ public interface AsyncClusterConnection extends AsyncConnection {
   AsyncRegionServerAdmin getRegionServerAdmin(ServerName serverName);
 
   /**
+   * Get the admin service for the give replication server.
+   */
+  AsyncReplicationServerAdmin getReplicationServerAdmin(ServerName serverName);
+
+  /**
    * Get the nonce generator for this connection.
    */
   NonceGenerator getNonceGenerator();
