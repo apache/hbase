@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
@@ -83,7 +84,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
@@ -1894,7 +1897,8 @@ public class AssignmentManager {
     final RegionStateNode nodeB = regionStates.getOrCreateRegionStateNode(daughterB);
     nodeB.setState(State.SPLITTING_NEW);
 
-    regionStateStore.splitRegion(parent, daughterA, daughterB, serverName);
+    TableDescriptor td = master.getTableDescriptors().get(parent.getTable());
+    regionStateStore.splitRegion(parent, daughterA, daughterB, serverName, td);
     if (shouldAssignFavoredNodes(parent)) {
       List<ServerName> onlineServers = this.master.getServerManager().getOnlineServersList();
       getFavoredNodePromoter().generateFavoredNodesForDaughter(onlineServers, parent, daughterA,
@@ -1919,9 +1923,9 @@ public class AssignmentManager {
     node.setState(State.MERGED);
     for (RegionInfo ri: mergeParents) {
       regionStates.deleteRegion(ri);
-
     }
-    regionStateStore.mergeRegions(child, mergeParents, serverName);
+    TableDescriptor td = master.getTableDescriptors().get(child.getTable());
+    regionStateStore.mergeRegions(child, mergeParents, serverName, td);
     if (shouldAssignFavoredNodes(child)) {
       getFavoredNodePromoter().generateFavoredNodesForMergedRegion(child, mergeParents);
     }

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
@@ -121,7 +122,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
     try (ResultScanner scanner =
         MetaTableAccessor.getMetaHTable(UTIL.getConnection()).getScanner(barrierScan)) {
       while ((result = scanner.next()) != null) {
-        assertTrue(MetaTableAccessor.getReplicationBarriers(result).length > 0);
+        assertTrue(ReplicationBarrierFamilyFormat.getReplicationBarriers(result).length > 0);
       }
     }
     boolean cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
@@ -135,7 +136,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
     cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertFalse(cleaned);
     for (RegionInfo region : regionInfos) {
-      assertEquals(0, MetaTableAccessor.getReplicationBarrier(UTIL.getConnection(),
+      assertEquals(0, ReplicationBarrierFamilyFormat.getReplicationBarriers(UTIL.getConnection(),
         region.getRegionName()).length);
     }
   }
@@ -168,7 +169,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
     cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertFalse(cleaned);
     for (RegionInfo region : UTIL.getAdmin().getRegions(tableName)) {
-      assertEquals(0, MetaTableAccessor.getReplicationBarrier(UTIL.getConnection(),
+      assertEquals(0, ReplicationBarrierFamilyFormat.getReplicationBarriers(UTIL.getConnection(),
         region.getRegionName()).length);
     }
   }
