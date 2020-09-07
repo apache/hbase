@@ -18,13 +18,12 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
-
-import java.io.IOException;
 
 /**
  * Normalization plan to merge regions (smallest region in the table with its smallest neighbor).
@@ -70,9 +69,10 @@ public class MergeNormalizationPlan implements NormalizationPlan {
     LOG.info("Executing merging normalization plan: " + this);
     try {
       admin.mergeRegions(firstRegion.getEncodedNameAsBytes(),
-        secondRegion.getEncodedNameAsBytes(), true);
+        secondRegion.getEncodedNameAsBytes(), false);
     } catch (IOException ex) {
-      LOG.error("Error during region merge: ", ex);
+      LOG.error("Error during region merge of " + firstRegion.getEncodedName() + " and "
+          + secondRegion.getEncodedName() + " : ", ex);
     }
   }
 }
