@@ -784,9 +784,7 @@ public final class MetaTableAccessor {
   /**
    * Adds daughter region infos to hbase:meta row for the specified region. Note that this does not
    * add its daughter's as different rows, but adds information about the daughters in the same row
-   * as the parent. Use
-   * {@link #splitRegion(Connection, RegionInfo, long, RegionInfo, RegionInfo, ServerName, int)} if
-   * you want to do that.
+   * as the parent.
    * @param connection connection we're using
    * @param regionInfo RegionInfo of parent region
    * @param splitA first split daughter of the parent regionInfo
@@ -805,11 +803,7 @@ public final class MetaTableAccessor {
   }
 
   /**
-   * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this
-   * does not add its daughter's as different rows, but adds information about the daughters in the
-   * same row as the parent. Use
-   * {@link #splitRegion(Connection, RegionInfo, long, RegionInfo, RegionInfo, ServerName, int)} if
-   * you want to do that.
+   * Adds a (single) hbase:meta row for the specified new region and its daughters.
    * @param connection connection we're using
    * @param regionInfo region information
    * @throws IOException if problem connecting or updating meta

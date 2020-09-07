@@ -276,30 +276,38 @@ public class RegionStateStore {
    */
   private void multiMutate(RegionInfo ri, List<Mutation> mutations) throws IOException {
     debugLogMutations(mutations);
-    byte[] row =
-      Bytes.toBytes(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionNameAsString() +
-        HConstants.DELIMITER);
-    MutateRowsRequest.Builder builder = MutateRowsRequest.newBuilder();
-    for (Mutation mutation : mutations) {
-      if (mutation instanceof Put) {
-        builder.addMutationRequest(
-          ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.PUT, mutation));
-      } else if (mutation instanceof Delete) {
-        builder.addMutationRequest(
-          ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.DELETE, mutation));
-      } else {
-        throw new DoNotRetryIOException(
-          "multi in MetaEditor doesn't support " + mutation.getClass().getName());
+    if (ri.isMetaRegion()) {
+      masterRegion.update(region -> {
+        List<byte[]> rowsToLock =
+          mutations.stream().map(Mutation::getRow).collect(Collectors.toList());
+        region.mutateRowsWithLocks(mutations, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      });
+    } else {
+      byte[] row =
+        Bytes.toBytes(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionNameAsString() +
+          HConstants.DELIMITER);
+      MutateRowsRequest.Builder builder = MutateRowsRequest.newBuilder();
+      for (Mutation mutation : mutations) {
+        if (mutation instanceof Put) {
+          builder.addMutationRequest(
+            ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.PUT, mutation));
+        } else if (mutation instanceof Delete) {
+          builder.addMutationRequest(
+            ProtobufUtil.toMutation(ClientProtos.MutationProto.MutationType.DELETE, mutation));
+        } else {
+          throw new DoNotRetryIOException(
+            "multi in MetaEditor doesn't support " + mutation.getClass().getName());
+        }
       }
+      MutateRowsRequest request = builder.build();
+      AsyncTable<?> table =
+        master.getConnection().toAsyncConnection().getTable(TableName.META_TABLE_NAME);
+      CompletableFuture<MutateRowsResponse> future =
+        table.<MultiRowMutationService, MutateRowsResponse> coprocessorService(
+          MultiRowMutationService::newStub,
+          (stub, controller, done) -> stub.mutateRows(controller, request, done), row);
+      FutureUtils.get(future);
     }
-    MutateRowsRequest request = builder.build();
-    AsyncTable<?> table =
-      master.getConnection().toAsyncConnection().getTable(TableName.META_TABLE_NAME);
-    CompletableFuture<MutateRowsResponse> future =
-      table.<MultiRowMutationService, MutateRowsResponse> coprocessorService(
-        MultiRowMutationService::newStub,
-        (stub, controller, done) -> stub.mutateRows(controller, request, done), row);
-    FutureUtils.get(future);
   }
 
   private Result getRegionCatalogResult(RegionInfo region) throws IOException {

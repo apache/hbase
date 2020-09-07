@@ -8663,11 +8663,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Return the split point. An empty result indicates the region isn't splittable.
    */
   public Optional<byte[]> checkSplit(boolean force) {
-    // Can't split META
-    if (this.getRegionInfo().isMetaRegion()) {
-      return Optional.empty();
-    }
-
     // Can't split a region that is closing.
     if (this.isClosing()) {
       return Optional.empty();
