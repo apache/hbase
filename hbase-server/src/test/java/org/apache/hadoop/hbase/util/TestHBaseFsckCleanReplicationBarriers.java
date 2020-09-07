@@ -136,7 +136,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
     cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertFalse(cleaned);
     for (RegionInfo region : regionInfos) {
-      assertEquals(0, ReplicationBarrierFamilyFormat.getReplicationBarrier(UTIL.getConnection(),
+      assertEquals(0, ReplicationBarrierFamilyFormat.getReplicationBarriers(UTIL.getConnection(),
         region.getRegionName()).length);
     }
   }
@@ -169,7 +169,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
     cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertFalse(cleaned);
     for (RegionInfo region : UTIL.getAdmin().getRegions(tableName)) {
-      assertEquals(0, ReplicationBarrierFamilyFormat.getReplicationBarrier(UTIL.getConnection(),
+      assertEquals(0, ReplicationBarrierFamilyFormat.getReplicationBarriers(UTIL.getConnection(),
         region.getRegionName()).length);
     }
   }

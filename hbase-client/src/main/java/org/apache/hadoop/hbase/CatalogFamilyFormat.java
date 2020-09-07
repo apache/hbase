@@ -391,10 +391,9 @@ public class CatalogFamilyFormat {
    */
   public static boolean hasMergeRegions(Cell[] cells) {
     for (Cell cell : cells) {
-      if (!isMergeQualifierPrefix(cell)) {
-        continue;
+      if (isMergeQualifierPrefix(cell)) {
+        return true;
       }
-      return true;
     }
     return false;
   }

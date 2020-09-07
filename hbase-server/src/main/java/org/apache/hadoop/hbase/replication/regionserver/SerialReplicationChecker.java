@@ -160,7 +160,7 @@ class SerialReplicationChecker {
   }
 
   private boolean isParentFinished(byte[] regionName) throws IOException {
-    long[] barriers = ReplicationBarrierFamilyFormat.getReplicationBarrier(conn, regionName);
+    long[] barriers = ReplicationBarrierFamilyFormat.getReplicationBarriers(conn, regionName);
     if (barriers.length == 0) {
       return true;
     }

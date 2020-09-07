@@ -209,14 +209,14 @@ public class TestReplicationBarrierCleaner {
     verify(peerManager, times(2)).getSerialPeerIdsBelongsTo(any(TableName.class));
 
     assertArrayEquals(new long[] { 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarrier(UTIL.getConnection(), region11.getRegionName()));
+      .getReplicationBarriers(UTIL.getConnection(), region11.getRegionName()));
     assertArrayEquals(new long[] { 70 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarrier(UTIL.getConnection(), region12.getRegionName()));
+      .getReplicationBarriers(UTIL.getConnection(), region12.getRegionName()));
 
     assertArrayEquals(new long[] { 400 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarrier(UTIL.getConnection(), region21.getRegionName()));
+      .getReplicationBarriers(UTIL.getConnection(), region21.getRegionName()));
     assertArrayEquals(new long[] { 600 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarrier(UTIL.getConnection(), region22.getRegionName()));
+      .getReplicationBarriers(UTIL.getConnection(), region22.getRegionName()));
   }
 
   @Test
@@ -236,27 +236,27 @@ public class TestReplicationBarrierCleaner {
     // beyond the first barrier, no deletion
     cleaner.chore();
     assertArrayEquals(new long[] { 10, 20, 30, 40, 50, 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarrier(UTIL.getConnection(), region.getRegionName()));
+      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
 
     // in the first range, still no deletion
     cleaner.chore();
     assertArrayEquals(new long[] { 10, 20, 30, 40, 50, 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarrier(UTIL.getConnection(), region.getRegionName()));
+      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
 
     // in the second range, 10 is deleted
     cleaner.chore();
     assertArrayEquals(new long[] { 20, 30, 40, 50, 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarrier(UTIL.getConnection(), region.getRegionName()));
+      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
 
     // between 50 and 60, so the barriers before 50 will be deleted
     cleaner.chore();
     assertArrayEquals(new long[] { 50, 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarrier(UTIL.getConnection(), region.getRegionName()));
+      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
 
     // in the last open range, 50 is deleted
     cleaner.chore();
     assertArrayEquals(new long[] { 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarrier(UTIL.getConnection(), region.getRegionName()));
+      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
   }
 
   @Test
@@ -275,7 +275,7 @@ public class TestReplicationBarrierCleaner {
     // we have something in catalog family, so only delete 40
     cleaner.chore();
     assertArrayEquals(new long[] { 50, 60 }, ReplicationBarrierFamilyFormat
-      .getReplicationBarrier(UTIL.getConnection(), region.getRegionName()));
+      .getReplicationBarriers(UTIL.getConnection(), region.getRegionName()));
     verify(queueStorage, never()).removeLastSequenceIds(anyString(), anyList());
 
     // No catalog family, then we should remove the whole row

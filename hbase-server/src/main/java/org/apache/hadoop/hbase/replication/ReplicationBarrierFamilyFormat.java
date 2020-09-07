@@ -216,7 +216,7 @@ public final class ReplicationBarrierFamilyFormat {
     }
   }
 
-  public static long[] getReplicationBarrier(Connection conn, byte[] regionName)
+  public static long[] getReplicationBarriers(Connection conn, byte[] regionName)
     throws IOException {
     try (Table table = conn.getTable(TableName.META_TABLE_NAME)) {
       Result result = table.get(new Get(regionName)
