@@ -269,7 +269,7 @@
   </property>
   <property>
     <name>hbase.replication.source.maxthreads</name>
-    <value></value>
+    <value>10</value>
     <description>Default is 10</description>
   </property>
   <property>
