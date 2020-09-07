@@ -207,7 +207,8 @@ public class TestMergeTableRegionsProcedure {
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(true);
     UTIL.getHBaseCluster().getMaster().getCatalogJanitor().triggerNow();
     RegionInfo mergedRegion = proc.getMergedRegion();
-    RegionStateStore regionStateStore = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+    RegionStateStore regionStateStore =
+      UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     while (ris != null && ris.get(0) != null && ris.get(1) != null) {
       ris = regionStateStore.getMergeRegions(mergedRegion);
       LOG.info("{} {}", Bytes.toStringBinary(mergedRegion.getRegionName()), ris);

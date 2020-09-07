@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineTableProcedure;
@@ -29,12 +27,12 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.GCMergedRegionsState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.GCMultipleMergedRegionsStateData;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * GC regions that have been Merged. Caller determines if it is GC time. This Procedure does not

@@ -66,6 +66,9 @@ public final class ReplicationBarrierFamilyFormat {
 
   private static final byte SEPARATED_BYTE = 0x00;
 
+  private ReplicationBarrierFamilyFormat() {
+  }
+
   public static void addReplicationBarrier(Put put, long openSeqNum) throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
       .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(HConstants.SEQNUM_QUALIFIER)
