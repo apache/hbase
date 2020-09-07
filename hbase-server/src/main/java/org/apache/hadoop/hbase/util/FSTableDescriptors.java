@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.MetaRegionSplitPolicy;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -192,9 +193,10 @@ public class FSTableDescriptors implements TableDescriptors {
         .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
         .setBloomFilterType(BloomType.ROWCOL)
         .build())
-      .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(
-        MultiRowMutationEndpoint.class.getName())
-        .setPriority(Coprocessor.PRIORITY_SYSTEM).build());
+      .setCoprocessor(
+        CoprocessorDescriptorBuilder.newBuilder(MultiRowMutationEndpoint.class.getName())
+          .setPriority(Coprocessor.PRIORITY_SYSTEM).build())
+      .setRegionSplitPolicyClassName(MetaRegionSplitPolicy.class.getName());
   }
 
   @VisibleForTesting
