@@ -29,9 +29,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
@@ -424,14 +422,6 @@ public class TestMetaTableAccessor {
     } finally {
       meta.close();
     }
-  }
-
-  private Map<RegionInfo, Long> getMapOfRegionsToSeqNum(RegionInfo... regions) {
-    Map<RegionInfo, Long> mids = new HashMap<>(regions.length);
-    for (RegionInfo region : regions) {
-      mids.put(region, -1L);
-    }
-    return mids;
   }
 
   @Test
