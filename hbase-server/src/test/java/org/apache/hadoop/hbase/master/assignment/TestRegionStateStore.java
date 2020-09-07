@@ -64,7 +64,6 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-
 @Category({ MasterTests.class, MediumTests.class })
 public class TestRegionStateStore {
 
@@ -89,12 +88,12 @@ public class TestRegionStateStore {
 
   @Test
   public void testVisitMetaForRegionExistingRegion() throws Exception {
-    final TableName tableName = TableName.valueOf("testVisitMetaForRegion");
+    final TableName tableName = name.getTableName();
     UTIL.createTable(tableName, "cf");
     final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
-    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
-      getAssignmentManager().getRegionStateStore();
+    final RegionStateStore regionStateStore =
+      UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
@@ -109,18 +108,18 @@ public class TestRegionStateStore {
 
   @Test
   public void testVisitMetaForBadRegionState() throws Exception {
-    final TableName tableName = TableName.valueOf("testVisitMetaForBadRegionState");
+    final TableName tableName = name.getTableName();
     UTIL.createTable(tableName, "cf");
     final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
-    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
-        getAssignmentManager().getRegionStateStore();
+    final RegionStateStore regionStateStore =
+      UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
 
     // add the BAD_STATE which does not exist in enum RegionState.State
-    Put put = new Put(regions.get(0).getRegionInfo().getRegionName(),
-        EnvironmentEdgeManager.currentTime());
+    Put put =
+      new Put(regions.get(0).getRegionInfo().getRegionName(), EnvironmentEdgeManager.currentTime());
     put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
-        Bytes.toBytes("BAD_STATE"));
+      Bytes.toBytes("BAD_STATE"));
 
     try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       table.put(put);
@@ -129,9 +128,8 @@ public class TestRegionStateStore {
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override
-      public void visitRegionState(Result result, RegionInfo regionInfo,
-                                   RegionState.State state, ServerName regionLocation,
-                                   ServerName lastHost, long openSeqNum) {
+      public void visitRegionState(Result result, RegionInfo regionInfo, RegionState.State state,
+        ServerName regionLocation, ServerName lastHost, long openSeqNum) {
         assertEquals(encodedName, regionInfo.getEncodedName());
         assertNull(state);
         visitorCalled.set(true);
@@ -143,8 +141,8 @@ public class TestRegionStateStore {
   @Test
   public void testVisitMetaForRegionNonExistingRegion() throws Exception {
     final String encodedName = "fakeencodedregionname";
-    final RegionStateStore regionStateStore = UTIL.getHBaseCluster().getMaster().
-      getAssignmentManager().getRegionStateStore();
+    final RegionStateStore regionStateStore =
+      UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     final AtomicBoolean visitorCalled = new AtomicBoolean(false);
     regionStateStore.visitMetaForRegion(encodedName, new RegionStateStore.RegionStateVisitor() {
       @Override

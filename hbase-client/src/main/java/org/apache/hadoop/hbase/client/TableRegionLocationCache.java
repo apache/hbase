@@ -111,7 +111,7 @@ class TableRegionLocationCache {
         // the region is different, here we trust the one we fetched. This maybe wrong but finally
         // the upper layer can detect this and trigger removal of the wrong locations
         if (LOG.isDebugEnabled()) {
-          LOG.debug("The newnly fetch region {} is different from the old one {} for row '{}'," +
+          LOG.debug("The newly fetch region {} is different from the old one {} for row '{}'," +
             " try replaing the old one...", region, oldRegion, Bytes.toStringBinary(startKey));
         }
         if (cache.replace(startKey, oldLocs, locs)) {
