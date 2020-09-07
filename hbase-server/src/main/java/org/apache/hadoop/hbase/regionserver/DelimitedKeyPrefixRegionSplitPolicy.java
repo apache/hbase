@@ -45,7 +45,7 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundR
       .getLogger(DelimitedKeyPrefixRegionSplitPolicy.class);
   public static final String DELIMITER_KEY = "DelimitedKeyPrefixRegionSplitPolicy.delimiter";
 
-  private byte[] delimiter = null;
+  protected byte[] delimiter = null;
 
   @Override
   protected void configureForRegion(HRegion region) {

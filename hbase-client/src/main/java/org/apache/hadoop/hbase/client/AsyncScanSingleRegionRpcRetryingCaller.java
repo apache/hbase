@@ -21,8 +21,8 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCCallsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCRetriesMetrics;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForReverseScan;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForScan;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStartRow;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.updateResultsMetrics;
@@ -30,6 +30,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.updateServerSideMet
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -37,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer.ScanResumer;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -113,6 +116,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   private final CompletableFuture<Boolean> future;
 
   private final HBaseRpcController controller;
+
+  private final Comparator<byte[]> comparator;
 
   private byte[] nextStartRowWhenError;
 
@@ -304,11 +309,11 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   }
 
   public AsyncScanSingleRegionRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
-      Scan scan, ScanMetrics scanMetrics, long scannerId, ScanResultCache resultCache,
-      AdvancedScanResultConsumer consumer, Interface stub, HRegionLocation loc,
-      boolean isRegionServerRemote, int priority, long scannerLeaseTimeoutPeriodNs, long pauseNs,
-      long pauseForCQTBENs, int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs,
-      int startLogErrorsCnt) {
+    Scan scan, ScanMetrics scanMetrics, long scannerId, ScanResultCache resultCache,
+    AdvancedScanResultConsumer consumer, Interface stub, HRegionLocation loc,
+    boolean isRegionServerRemote, int priority, long scannerLeaseTimeoutPeriodNs, long pauseNs,
+    long pauseForCQTBENs, int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs,
+    int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.scan = scan;
     this.scanMetrics = scanMetrics;
@@ -335,6 +340,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.controller = conn.rpcControllerFactory.newController();
     this.controller.setPriority(priority);
     this.exceptions = new ArrayList<>();
+    this.comparator =
+      loc.getRegion().isMetaRegion() ? MetaCellComparator.ROW_COMPARATOR : Bytes.BYTES_COMPARATOR;
   }
 
   private long elapsedMs() {
@@ -440,6 +447,32 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   private void updateNextStartRowWhenError(Result result) {
     nextStartRowWhenError = result.getRow();
     includeNextStartRowWhenError = result.mayHaveMoreCellsInRow();
+  }
+
+  private boolean noMoreResultsForScan(Scan scan, RegionInfo info) {
+    if (isEmptyStopRow(info.getEndKey())) {
+      return true;
+    }
+    if (isEmptyStopRow(scan.getStopRow())) {
+      return false;
+    }
+    int c = comparator.compare(info.getEndKey(), scan.getStopRow());
+    // 1. if our stop row is less than the endKey of the region
+    // 2. if our stop row is equal to the endKey of the region and we do not include the stop row
+    // for scan.
+    return c > 0 || (c == 0 && !scan.includeStopRow());
+  }
+
+  private boolean noMoreResultsForReverseScan(Scan scan, RegionInfo info) {
+    if (isEmptyStartRow(info.getStartKey())) {
+      return true;
+    }
+    if (isEmptyStopRow(scan.getStopRow())) {
+      return false;
+    }
+    // no need to test the inclusive of the stop row as the start key of a region is included in
+    // the region.
+    return comparator.compare(info.getStartKey(), scan.getStopRow()) <= 0;
   }
 
   private void completeWhenNoMoreResultsInRegion() {
