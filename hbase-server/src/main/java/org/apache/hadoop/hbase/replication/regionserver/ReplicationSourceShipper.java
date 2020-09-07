@@ -334,19 +334,31 @@ public class ReplicationSourceShipper extends Thread {
    * In that case, it iterates through the batched entries and decrease the pending
    * entries size from <code>ReplicationSourceManager.totalBufferUser</code>
    * <p/>
-   * <b>NOTE</b> This method should be only called upon replication source termination.
+   * <b>NOTES</b>
+   * 1) This method should only be called upon replication source termination.
    * It blocks waiting for both shipper and reader threads termination,
    * to make sure no race conditions
    * when updating <code>ReplicationSourceManager.totalBufferUser</code>.
+   *
+   * 2) It <b>does not</b> attempt to terminate reader and shipper threads. Those <b>must</b>
+   * have been triggered interruption/termination prior to calling this method.
    */
   void clearWALEntryBatch() {
+    long timeout = System.currentTimeMillis() + this.shipEditsTimeout;
     while(this.isAlive() || this.entryReader.isAlive()){
       try {
-        // Wait both shipper and reader threads to stop
-        Thread.sleep(this.sleepForRetries);
+        if(System.currentTimeMillis() >= timeout ) {
+          LOG.warn("Interrupting source thread for peer {} without cleaning buffer usage "
+            + "because clearWALEntryBatch method timed out whilst waiting reader/shipper "
+            + "thread to stop.", this.source.getPeerId());
+          Thread.currentThread().interrupt();
+        } else {
+          // Wait both shipper and reader threads to stop
+          Thread.sleep(this.sleepForRetries);
+        }
       } catch (InterruptedException e) {
-        LOG.info("{} Interrupted while waiting {} to stop on clearWALEntryBatch",
-          this.source.getPeerId(), this.getName());
+        LOG.warn("{} Interrupted while waiting {} to stop on clearWALEntryBatch: {}",
+          this.source.getPeerId(), this.getName(), e);
         Thread.currentThread().interrupt();
       }
     }

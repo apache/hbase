@@ -629,7 +629,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     for (ReplicationSourceShipper worker : workers) {
       worker.stopWorker();
-      worker.entryReader.setReaderRunning(false);
+      if (worker.entryReader != null ) {
+        worker.entryReader.setReaderRunning(false);
+      }
       if (worker.isAlive() || worker.entryReader.isAlive()) {
         try {
           // Wait worker to stop
@@ -647,20 +649,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
           worker.entryReader.interrupt();
         }
       }
-      //block this thread until worker thread is interrupted
-      while(worker.isAlive()){
-        try {
-          // Wait worker to stop
-          Thread.sleep(this.sleepForRetries);
-        } catch (InterruptedException e) {
-          LOG.info("{} Interrupted while waiting {} to stop", logPeerId(), worker.getName());
-          Thread.currentThread().interrupt();
-        }
-      }
       //If worker is already stopped but there was still entries batched,
       //we need to clear buffer used for non processed entries
       worker.clearWALEntryBatch();
-
     }
 
     if (this.replicationEndpoint != null) {
