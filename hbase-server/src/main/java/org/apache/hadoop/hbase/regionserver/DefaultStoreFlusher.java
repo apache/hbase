@@ -52,8 +52,7 @@ public class DefaultStoreFlusher extends StoreFlusher {
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
     // Use a store scanner to find which rows to flush.
-    long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint, tracker);
+    InternalScanner scanner = createScanner(snapshot.getScanners(), tracker);
     StoreFileWriter writer;
     try {
       // TODO:  We can fail in the below block before we complete adding this flush to
@@ -66,7 +65,7 @@ public class DefaultStoreFlusher extends StoreFlusher {
             snapshot.isTagsPresent(), false);
         IOException e = null;
         try {
-          performFlush(scanner, writer, smallestReadPoint, throughputController);
+          performFlush(scanner, writer, throughputController);
         } catch (IOException ioe) {
           e = ioe;
           // throw the exception out

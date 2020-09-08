@@ -650,7 +650,7 @@ public class TestAtomicOperation {
     put.addColumn(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("10"));
     puts[0] = put;
 
-    region.batchMutate(puts, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    region.batchMutate(puts);
     MultithreadedTestUtil.TestContext ctx =
       new MultithreadedTestUtil.TestContext(conf);
     ctx.addThread(new PutThread(ctx, region));

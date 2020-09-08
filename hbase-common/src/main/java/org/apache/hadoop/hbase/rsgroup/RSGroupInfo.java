@@ -177,15 +177,18 @@ public class RSGroupInfo {
       return false;
     }
 
-    RSGroupInfo RSGroupInfo = (RSGroupInfo) o;
+    RSGroupInfo rsGroupInfo = (RSGroupInfo) o;
 
-    if (!name.equals(RSGroupInfo.name)) {
+    if (!name.equals(rsGroupInfo.name)) {
       return false;
     }
-    if (!servers.equals(RSGroupInfo.servers)) {
+    if (!servers.equals(rsGroupInfo.servers)) {
       return false;
     }
-    if (!tables.equals(RSGroupInfo.tables)) {
+    if (!tables.equals(rsGroupInfo.tables)) {
+      return false;
+    }
+    if (!configuration.equals(rsGroupInfo.configuration)) {
       return false;
     }
 

@@ -3503,6 +3503,10 @@ public final class ProtobufUtil {
           return builder.build(ProtobufUtil.toPut(mutation, cellScanner));
         case DELETE:
           return builder.build(ProtobufUtil.toDelete(mutation, cellScanner));
+        case INCREMENT:
+          return builder.build(ProtobufUtil.toIncrement(mutation, cellScanner));
+        case APPEND:
+          return builder.build(ProtobufUtil.toAppend(mutation, cellScanner));
         default:
           throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
       }

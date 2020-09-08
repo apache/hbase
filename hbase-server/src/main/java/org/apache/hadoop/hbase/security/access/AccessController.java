@@ -1506,8 +1506,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           if (m instanceof Put) {
             checkForReservedTagPresence(user, m);
             opType = OpType.PUT;
-          } else {
+          } else if (m instanceof Delete) {
             opType = OpType.DELETE;
+          } else {
+            // If the operation type is not Put or Delete, do nothing
+            continue;
           }
           AuthResult authResult = null;
           if (checkCoveringPermission(user, opType, c.getEnvironment(), m.getRow(),
