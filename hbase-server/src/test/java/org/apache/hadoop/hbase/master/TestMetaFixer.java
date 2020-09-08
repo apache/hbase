@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -171,7 +172,8 @@ public class TestMetaFixer {
         Collections.singletonList(MetaTableAccessor.makePutFromRegionInfo(overlapRegion,
             System.currentTimeMillis())));
     // TODO: Add checks at assign time to PREVENT being able to assign over existing assign.
-    services.getAssignmentManager().assign(overlapRegion);
+    long assign = services.getAssignmentManager().assign(overlapRegion);
+    ProcedureTestingUtility.waitProcedures(services.getMasterProcedureExecutor(), assign);
     return overlapRegion;
   }
 
@@ -242,6 +244,41 @@ public class TestMetaFixer {
     cj.scan();
     final CatalogJanitor.Report postReport = cj.getLastReport();
     assertTrue(postReport.isEmpty());
+  }
+
+  @Test
+  public void testMultipleTableOverlaps() throws Exception {
+    TableName t1 = TableName.valueOf("t1");
+    TableName t2 = TableName.valueOf("t2");
+    TEST_UTIL.createMultiRegionTable(t1, new byte[][] { HConstants.CATALOG_FAMILY });
+    TEST_UTIL.createMultiRegionTable(t2, new byte[][] { HConstants.CATALOG_FAMILY });
+    TEST_UTIL.waitTableAvailable(t2);
+
+    HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
+    services.getCatalogJanitor().scan();
+    CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
+    assertTrue(report.isEmpty());
+
+    // Make a simple overlap for t1
+    List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), t1);
+    makeOverlap(services, ris.get(1), ris.get(2));
+    // Make a simple overlap for t2
+    ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), t2);
+    makeOverlap(services, ris.get(1), ris.get(2));
+
+    services.getCatalogJanitor().scan();
+    report = services.getCatalogJanitor().getLastReport();
+    assertEquals("Region overlaps count does not match.", 4, report.getOverlaps().size());
+
+    MetaFixer fixer = new MetaFixer(services);
+    List<Long> longs = fixer.fixOverlaps(report);
+    long[] procIds = longs.stream().mapToLong(l -> l).toArray();
+    ProcedureTestingUtility.waitProcedures(services.getMasterProcedureExecutor(), procIds);
+
+    // After fix, verify no overlaps are left.
+    services.getCatalogJanitor().scan();
+    report = services.getCatalogJanitor().getLastReport();
+    assertTrue("After fix there should not have been any overlaps.", report.isEmpty());
   }
 
   @Test
