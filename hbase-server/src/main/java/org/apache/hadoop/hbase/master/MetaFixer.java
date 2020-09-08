@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
@@ -39,6 +41,8 @@ import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -231,16 +235,18 @@ class MetaFixer {
   /**
    * Fix overlaps noted in CJ consistency report.
    */
-  void fixOverlaps(CatalogJanitor.Report report) throws IOException {
+  List<Long> fixOverlaps(CatalogJanitor.Report report) throws IOException {
+    List<Long> pidList = new ArrayList<>();
     for (Set<RegionInfo> regions: calculateMerges(maxMergeCount, report.getOverlaps())) {
       RegionInfo [] regionsArray = regions.toArray(new RegionInfo [] {});
       try {
-        this.masterServices.mergeRegions(regionsArray,
-            true, HConstants.NO_NONCE, HConstants.NO_NONCE);
+        pidList.add(this.masterServices
+          .mergeRegions(regionsArray, true, HConstants.NO_NONCE, HConstants.NO_NONCE));
       } catch (MergeRegionException mre) {
         LOG.warn("Failed overlap fix of {}", regionsArray, mre);
       }
     }
+    return pidList;
   }
 
   /**
@@ -258,6 +264,21 @@ class MetaFixer {
       return Collections.emptyList();
     }
     List<SortedSet<RegionInfo>> merges = new ArrayList<>();
+    // First group overlaps by table then calculate merge table by table.
+    ListMultimap<TableName, Pair<RegionInfo, RegionInfo>> overlapGroups =
+      ArrayListMultimap.create();
+    for (Pair<RegionInfo, RegionInfo> pair : overlaps) {
+      overlapGroups.put(pair.getFirst().getTable(), pair);
+    }
+    for (Map.Entry<TableName, Collection<Pair<RegionInfo, RegionInfo>>> entry : overlapGroups
+      .asMap().entrySet()) {
+      calculateTableMerges(maxMergeCount, merges, entry.getValue());
+    }
+    return merges;
+  }
+
+  private static void calculateTableMerges(int maxMergeCount, List<SortedSet<RegionInfo>> merges,
+    Collection<Pair<RegionInfo, RegionInfo>> overlaps) {
     SortedSet<RegionInfo> currentMergeSet = new TreeSet<>();
     HashSet<RegionInfo> regionsInMergeSet = new HashSet<>();
     RegionInfo regionInfoWithlargestEndKey =  null;
@@ -301,7 +322,6 @@ class MetaFixer {
           regionInfoWithlargestEndKey);
     }
     merges.add(currentMergeSet);
-    return merges;
   }
 
   /**
