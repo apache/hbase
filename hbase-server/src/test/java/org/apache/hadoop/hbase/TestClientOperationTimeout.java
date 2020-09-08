@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -27,15 +29,18 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -74,6 +79,7 @@ public class TestClientOperationTimeout {
   private static int DELAY_GET;
   private static int DELAY_SCAN;
   private static int DELAY_MUTATE;
+  private static int DELAY_BATCH_MUTATE;
 
   private static final TableName TABLE_NAME = TableName.valueOf("Timeout");
   private static final byte[] FAMILY = Bytes.toBytes("family");
@@ -107,6 +113,7 @@ public class TestClientOperationTimeout {
     DELAY_GET = 0;
     DELAY_SCAN = 0;
     DELAY_MUTATE = 0;
+    DELAY_BATCH_MUTATE = 0;
   }
 
   @AfterClass
@@ -117,37 +124,76 @@ public class TestClientOperationTimeout {
   }
 
   /**
-   * Tests that a get on a table throws {@link SocketTimeoutException} when the operation takes
+   * Tests that a get on a table throws {@link RetriesExhaustedException} when the operation takes
    * longer than 'hbase.client.operation.timeout'.
    */
-  @Test(expected = SocketTimeoutException.class)
-  public void testGetTimeout() throws Exception {
+  @Test
+  public void testGetTimeout() {
     DELAY_GET = 600;
-    TABLE.get(new Get(ROW));
+    try {
+      TABLE.get(new Get(ROW));
+      Assert.fail("should not reach here");
+    } catch (Exception e) {
+      Assert.assertTrue(
+        e instanceof SocketTimeoutException && e.getCause() instanceof CallTimeoutException);
+    }
   }
 
   /**
-   * Tests that a put on a table throws {@link SocketTimeoutException} when the operation takes
+   * Tests that a put on a table throws {@link RetriesExhaustedException} when the operation takes
    * longer than 'hbase.client.operation.timeout'.
    */
-  @Test(expected = SocketTimeoutException.class)
-  public void testPutTimeout() throws Exception {
+  @Test
+  public void testPutTimeout() {
     DELAY_MUTATE = 600;
-
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
-    TABLE.put(put);
+    try {
+      TABLE.put(put);
+      Assert.fail("should not reach here");
+    } catch (Exception e) {
+      Assert.assertTrue(
+        e instanceof SocketTimeoutException && e.getCause() instanceof CallTimeoutException);
+    }
+  }
+
+  /**
+   * Tests that a batch mutate on a table throws {@link RetriesExhaustedException} when the
+   * operation takes longer than 'hbase.client.operation.timeout'.
+   */
+  @Test
+  public void testMultiPutsTimeout() {
+    DELAY_BATCH_MUTATE = 600;
+    Put put1 = new Put(ROW);
+    put1.addColumn(FAMILY, QUALIFIER, VALUE);
+    Put put2 = new Put(ROW);
+    put2.addColumn(FAMILY, QUALIFIER, VALUE);
+    List<Put> puts = new ArrayList<>();
+    puts.add(put1);
+    puts.add(put2);
+    try {
+      TABLE.batch(puts, new Object[2]);
+      Assert.fail("should not reach here");
+    } catch (Exception e) {
+      Assert.assertTrue(e instanceof RetriesExhaustedWithDetailsException);
+    }
   }
 
   /**
    * Tests that scan on a table throws {@link RetriesExhaustedException} when the operation takes
    * longer than 'hbase.client.scanner.timeout.period'.
    */
-  @Test(expected = RetriesExhaustedException.class)
-  public void testScanTimeout() throws Exception {
+  @Test
+  public void testScanTimeout() {
     DELAY_SCAN = 600;
-    ResultScanner scanner = TABLE.getScanner(new Scan());
-    scanner.next();
+    try {
+      ResultScanner scanner = TABLE.getScanner(new Scan());
+      scanner.next();
+      Assert.fail("should not reach here");
+    } catch (Exception e) {
+      Assert.assertTrue(
+        e instanceof RetriesExhaustedException && e.getCause() instanceof SocketTimeoutException);
+    }
   }
 
   private static class DelayedRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
@@ -200,6 +246,17 @@ public class TestClientOperationTimeout {
         LOG.error("Sleep interrupted during scan operation", e);
       }
       return super.scan(controller, request);
+    }
+
+    @Override
+    public ClientProtos.MultiResponse multi(RpcController rpcc, ClientProtos.MultiRequest request)
+        throws ServiceException {
+      try {
+        Thread.sleep(DELAY_BATCH_MUTATE);
+      } catch (InterruptedException e) {
+        LOG.error("Sleep interrupted during multi operation", e);
+      }
+      return super.multi(rpcc, request);
     }
   }
 }
