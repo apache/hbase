@@ -619,6 +619,25 @@ elif [ "$COMMAND" = "rest" ] ; then
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_REST_OPTS"
   fi
+
+  #Remove jersey 1.x dependency, see HBASE-24987
+  TMP_CLASSPATH=""
+  for jarfile in `echo ${CLASSPATH} | tr ':' '\n'`
+  do
+    if [[ ${jarfile} == *"jersey"*"1.19"* ]]
+    then
+      continue
+    fi
+
+    if [[ ${TMP_CLASSPATH} == "" ]]
+    then
+      TMP_CLASSPATH=${jarfile}
+    else
+      TMP_CLASSPATH="${TMP_CLASSPATH}:${jarfile}"
+    fi
+  done
+  CLASSPATH=${TMP_CLASSPATH}
+
 elif [ "$COMMAND" = "zookeeper" ] ; then
   CLASS='org.apache.hadoop.hbase.zookeeper.HQuorumPeer'
   if [ "$1" != "stop" ] ; then
