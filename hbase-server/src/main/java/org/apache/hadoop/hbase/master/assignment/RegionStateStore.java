@@ -297,14 +297,17 @@ public class RegionStateStore {
     FutureUtils.get(future);
   }
 
+  private Table getMetaTable() throws IOException {
+    return master.getConnection().getTable(TableName.META_TABLE_NAME);
+  }
+
   private Result getRegionCatalogResult(RegionInfo region) throws IOException {
     Get get =
       new Get(CatalogFamilyFormat.getMetaKeyForRegion(region)).addFamily(HConstants.CATALOG_FAMILY);
-    try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = getMetaTable()) {
       return table.get(get);
     }
   }
-
 
   private static Put addSequenceNum(Put p, long openSeqNum, int replicaId) throws IOException {
     return p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(p.getRow())
@@ -490,12 +493,56 @@ public class RegionStateStore {
   // ============================================================================================
   //  Delete Region State helpers
   // ============================================================================================
+  /**
+   * Deletes the specified region.
+   */
   public void deleteRegion(final RegionInfo regionInfo) throws IOException {
     deleteRegions(Collections.singletonList(regionInfo));
   }
 
+  /**
+   * Deletes the specified regions.
+   */
   public void deleteRegions(final List<RegionInfo> regions) throws IOException {
-    MetaTableAccessor.deleteRegionInfos(master.getConnection(), regions);
+    deleteRegions(regions, EnvironmentEdgeManager.currentTime());
+  }
+
+  private void deleteRegions(List<RegionInfo> regions, long ts) throws IOException {
+    List<Delete> deletes = new ArrayList<>(regions.size());
+    for (RegionInfo hri : regions) {
+      Delete e = new Delete(hri.getRegionName());
+      e.addFamily(HConstants.CATALOG_FAMILY, ts);
+      deletes.add(e);
+    }
+    try (Table table = getMetaTable()) {
+      debugLogMutations(deletes);
+      table.delete(deletes);
+    }
+    LOG.info("Deleted {} regions from META", regions.size());
+    LOG.debug("Deleted regions: {}", regions);
+  }
+
+  /**
+   * Overwrites the specified regions from hbase:meta. Deletes old rows for the given regions and
+   * adds new ones. Regions added back have state CLOSED.
+   * @param connection connection we're using
+   * @param regionInfos list of regions to be added to META
+   */
+  public void overwriteRegions(List<RegionInfo> regionInfos, int regionReplication)
+    throws IOException {
+    // use master time for delete marker and the Put
+    long now = EnvironmentEdgeManager.currentTime();
+    deleteRegions(regionInfos, now);
+    // Why sleep? This is the easiest way to ensure that the previous deletes does not
+    // eclipse the following puts, that might happen in the same ts from the server.
+    // See HBASE-9906, and HBASE-9879. Once either HBASE-9879, HBASE-8770 is fixed,
+    // or HBASE-9905 is fixed and meta uses seqIds, we do not need the sleep.
+    //
+    // HBASE-13875 uses master timestamp for the mutations. The 20ms sleep is not needed
+    MetaTableAccessor.addRegionsToMeta(master.getConnection(), regionInfos, regionReplication,
+      now + 1);
+    LOG.info("Overwritten " + regionInfos.size() + " regions to Meta");
+    LOG.debug("Overwritten regions: {} ", regionInfos);
   }
 
   // ==========================================================================

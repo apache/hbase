@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -107,13 +108,15 @@ public class TestCatalogJanitorCluster {
   @Test
   public void testConsistency() throws IOException {
     CatalogJanitor janitor = TEST_UTIL.getHBaseCluster().getMaster().getCatalogJanitor();
+    RegionStateStore regionStateStore =
+      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     int gc = janitor.scan();
     CatalogJanitor.Report report = janitor.getLastReport();
     // Assert no problems.
     assertTrue(report.isEmpty());
     // Now remove first region in table t2 to see if catalogjanitor scan notices.
     List<RegionInfo> t2Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T2);
-    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), t2Ris.get(0));
+    regionStateStore.deleteRegion(t2Ris.get(0));
     gc = janitor.scan();
     report = janitor.getLastReport();
     assertFalse(report.isEmpty());
@@ -184,7 +187,7 @@ public class TestCatalogJanitorCluster {
     // Make sure only overlaps and no holes are reported.
     List<RegionInfo> t4Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T4);
     // delete the region [bb, cc)
-    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), t4Ris.get(2));
+    regionStateStore.deleteRegion(t4Ris.get(2));
 
     // add a new region [a, cc)
     RegionInfo newRiT4 = RegionInfoBuilder.newBuilder(T4).
@@ -207,7 +210,7 @@ public class TestCatalogJanitorCluster {
     // Make sure only overlaps and no holes are reported.
     List<RegionInfo> t5Ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), T5);
     // delete the region [cc, dd)
-    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), t5Ris.get(2));
+    regionStateStore.deleteRegion(t5Ris.get(2));
 
     // add a new region [a, g)
     RegionInfo newRiT5 = RegionInfoBuilder.newBuilder(T5).
@@ -268,7 +271,8 @@ public class TestCatalogJanitorCluster {
     RegionInfo firstRegion = getRegionInfo(T3, "".getBytes());
     RegionInfo secondRegion = getRegionInfo(T3, "bbb".getBytes());
     RegionInfo thirdRegion = getRegionInfo(T3, "ccc".getBytes());
-    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), secondRegion);
+    TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore()
+      .deleteRegion(secondRegion);
     LinkedList<Pair<RegionInfo, RegionInfo>> holes = getHoles(janitor, T3);
     Pair<RegionInfo, RegionInfo> regionInfoRegionInfoPair = holes.getFirst();
     assertTrue(regionInfoRegionInfoPair.getFirst().getTable().equals(T3));
@@ -280,9 +284,11 @@ public class TestCatalogJanitorCluster {
   }
 
   private void verifyCornerHoles(CatalogJanitor janitor, TableName tableName) throws IOException {
+    RegionStateStore regionStateStore =
+      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     RegionInfo firstRegion = getRegionInfo(tableName, "".getBytes());
     RegionInfo secondRegion = getRegionInfo(tableName, "bbb".getBytes());
-    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), firstRegion);
+    regionStateStore.deleteRegion(firstRegion);
     LinkedList<Pair<RegionInfo, RegionInfo>> holes = getHoles(janitor, tableName);
 
     assertEquals(1, holes.size());
@@ -295,7 +301,7 @@ public class TestCatalogJanitorCluster {
 
     RegionInfo lastRegion = getRegionInfo(tableName, "zzz".getBytes());
     RegionInfo secondLastRegion = getRegionInfo(tableName, "yyy".getBytes());
-    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), lastRegion);
+    regionStateStore.deleteRegion(lastRegion);
     holes = getHoles(janitor, tableName);
     assertEquals(2, holes.size());
     regionInfoRegionInfoPair = holes.get(1);
