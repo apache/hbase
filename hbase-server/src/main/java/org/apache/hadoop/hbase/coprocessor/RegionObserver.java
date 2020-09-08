@@ -441,8 +441,9 @@ public interface RegionObserver {
   /**
    * This will be called for every batch mutation operation happening at the server. This will be
    * called after acquiring the locks on the mutating rows and after applying the proper timestamp
-   * for each Mutation at the server. The batch may contain Put/Delete. By setting OperationStatus
-   * of Mutations ({@link MiniBatchOperationInProgress#setOperationStatus(int, OperationStatus)}),
+   * for each Mutation at the server. The batch may contain Put/Delete/Increment/Append. By
+   * setting OperationStatus of Mutations
+   * ({@link MiniBatchOperationInProgress#setOperationStatus(int, OperationStatus)}),
    * {@link RegionObserver} can make Region to skip these Mutations.
    * <p>
    * Note: Do not retain references to any Cells in Mutations beyond the life of this invocation.
@@ -454,10 +455,12 @@ public interface RegionObserver {
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {}
 
   /**
-   * This will be called after applying a batch of Mutations on a region. The Mutations are added to
-   * memstore and WAL. The difference of this one with
-   * {@link #postPut(ObserverContext, Put, WALEdit, Durability) }
-   * and {@link #postDelete(ObserverContext, Delete, WALEdit, Durability) } is
+   * This will be called after applying a batch of Mutations on a region. The Mutations are added
+   * to memstore and WAL. The difference of this one with
+   * {@link #postPut(ObserverContext, Put, WALEdit, Durability)}
+   * and {@link #postDelete(ObserverContext, Delete, WALEdit, Durability)}
+   * and {@link #postIncrement(ObserverContext, Increment, Result)}
+   * and {@link #postAppend(ObserverContext, Append, Result)} is
    * this hook will be executed before the mvcc transaction completion.
    * <p>
    * Note: Do not retain references to any Cells in Mutations beyond the life of this invocation.
@@ -488,8 +491,8 @@ public interface RegionObserver {
       Operation operation) throws IOException {}
 
   /**
-   * Called after the completion of batch put/delete and will be called even if the batch operation
-   * fails.
+   * Called after the completion of batch put/delete/increment/append and will be called even if
+   * the batch operation fails.
    * <p>
    * Note: Do not retain references to any Cells in Mutations beyond the life of this invocation.
    * If need a Cell reference for later use, copy the cell and use that.
