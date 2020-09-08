@@ -68,7 +68,7 @@ public final class RegionReplicaInfo {
       ? MetaTableAccessor.getTargetServerName(result, regionInfo.getReplicaId())
       : null;
     this.mergeRegionInfo = (result != null)
-      ? MetaTableAccessor.getMergeRegionsWithName(result.rawCells())
+      ? CatalogFamilyFormat.getMergeRegionsWithName(result.rawCells())
       : null;
 
     if (result != null) {

@@ -23,7 +23,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
+import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -89,7 +89,7 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
           break;
         }
         totalRows++;
-        long[] barriers = MetaTableAccessor.getReplicationBarriers(result);
+        long[] barriers = ReplicationBarrierFamilyFormat.getReplicationBarriers(result);
         if (barriers.length == 0) {
           continue;
         }

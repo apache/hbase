@@ -196,7 +196,7 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer MutateRequest for a conditioned put/delete
+   * Create a protocol buffer MutateRequest for a conditioned put/delete/increment/append
    *
    * @return a mutate request
    * @throws IOException
@@ -204,15 +204,9 @@ public final class RequestConverter {
   public static MutateRequest buildMutateRequest(final byte[] regionName, final byte[] row,
     final byte[] family, final byte[] qualifier, final CompareOperator op, final byte[] value,
     final Filter filter, final TimeRange timeRange, final Mutation mutation) throws IOException {
-    MutationType type;
-    if (mutation instanceof Put) {
-      type = MutationType.PUT;
-    } else {
-      type = MutationType.DELETE;
-    }
     return MutateRequest.newBuilder()
       .setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName))
-      .setMutation(ProtobufUtil.toMutation(type, mutation))
+      .setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation))
       .setCondition(buildCondition(row, family, qualifier, op, value, filter, timeRange))
       .build();
   }
@@ -553,16 +547,12 @@ public final class RequestConverter {
       } else if (row instanceof Delete) {
         buildNoDataRegionAction((Delete) row, cells, builder, actionBuilder, mutationBuilder);
       } else if (row instanceof Append) {
-        Append a = (Append)row;
-        cells.add(a);
-        builder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutationNoData(
-          MutationType.APPEND, a, mutationBuilder, action.getNonce())));
+        buildNoDataRegionAction((Append) row, cells, action.getNonce(), builder, actionBuilder,
+          mutationBuilder);
         hasNonce = true;
       } else if (row instanceof Increment) {
-        Increment i = (Increment)row;
-        cells.add(i);
-        builder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutationNoData(
-          MutationType.INCREMENT, i, mutationBuilder, action.getNonce())));
+        buildNoDataRegionAction((Increment) row, cells, action.getNonce(), builder, actionBuilder,
+          mutationBuilder);
         hasNonce = true;
       } else if (row instanceof RegionCoprocessorServiceExec) {
         RegionCoprocessorServiceExec exec = (RegionCoprocessorServiceExec) row;
@@ -636,6 +626,16 @@ public final class RequestConverter {
         mutationBuilder.clear();
         buildNoDataRegionAction((Delete) cam.getAction(), cells, builder, actionBuilder,
           mutationBuilder);
+      } else if (cam.getAction() instanceof Increment) {
+        actionBuilder.clear();
+        mutationBuilder.clear();
+        buildNoDataRegionAction((Increment) cam.getAction(), cells, HConstants.NO_NONCE, builder,
+          actionBuilder, mutationBuilder);
+      } else if (cam.getAction() instanceof Append) {
+        actionBuilder.clear();
+        mutationBuilder.clear();
+        buildNoDataRegionAction((Append) cam.getAction(), cells, HConstants.NO_NONCE, builder,
+          actionBuilder, mutationBuilder);
       } else if (cam.getAction() instanceof RowMutations) {
         buildNoDataRegionAction((RowMutations) cam.getAction(), cells, builder, actionBuilder,
           mutationBuilder);
@@ -682,6 +682,24 @@ public final class RequestConverter {
     }
   }
 
+  private static void buildNoDataRegionAction(final Increment increment,
+    final List<CellScannable> cells, long nonce, final RegionAction.Builder regionActionBuilder,
+    final ClientProtos.Action.Builder actionBuilder,
+    final MutationProto.Builder mutationBuilder) throws IOException {
+    cells.add(increment);
+    regionActionBuilder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutationNoData(
+      MutationType.INCREMENT, increment, mutationBuilder, nonce)));
+  }
+
+  private static void buildNoDataRegionAction(final Append append,
+    final List<CellScannable> cells, long nonce, final RegionAction.Builder regionActionBuilder,
+    final ClientProtos.Action.Builder actionBuilder,
+    final MutationProto.Builder mutationBuilder) throws IOException {
+    cells.add(append);
+    regionActionBuilder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutationNoData(
+      MutationType.APPEND, append, mutationBuilder, nonce)));
+  }
+
   private static void buildNoDataRegionAction(final RowMutations rowMutations,
     final List<CellScannable> cells, final RegionAction.Builder regionActionBuilder,
     final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)
@@ -701,6 +719,19 @@ public final class RequestConverter {
       cells.add(mutation);
       actionBuilder.clear();
       regionActionBuilder.addAction(actionBuilder.setMutation(mp).build());
+    }
+  }
+
+  private static MutationType getMutationType(Mutation mutation) {
+    assert !(mutation instanceof CheckAndMutate);
+    if (mutation instanceof Put) {
+      return MutationType.PUT;
+    } else if (mutation instanceof Delete) {
+      return MutationType.DELETE;
+    } else if (mutation instanceof Increment) {
+      return MutationType.INCREMENT;
+    } else {
+      return MutationType.APPEND;
     }
   }
 

@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
@@ -198,7 +198,7 @@ public class HbckChore extends ScheduledChore {
     // Null tablename means scan all of meta.
     MetaTableAccessor.scanMetaForTableRegions(this.master.getConnection(),
       r -> {
-        List<RegionInfo> mergeParents = MetaTableAccessor.getMergeRegions(r.rawCells());
+        List<RegionInfo> mergeParents = CatalogFamilyFormat.getMergeRegions(r.rawCells());
         if (mergeParents != null) {
           for (RegionInfo mergeRegion : mergeParents) {
             if (mergeRegion != null) {

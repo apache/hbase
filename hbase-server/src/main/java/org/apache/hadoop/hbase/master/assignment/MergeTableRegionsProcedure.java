@@ -27,7 +27,6 @@ import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
@@ -40,7 +39,6 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.master.CatalogJanitor;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -61,6 +59,7 @@ import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -474,9 +473,9 @@ public class MergeTableRegionsProcedure
     }
 
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
+    RegionStateStore regionStateStore = env.getAssignmentManager().getRegionStateStore();
     for (RegionInfo ri : this.regionsToMerge) {
-      if (MetaTableAccessor.hasMergeRegions(env.getMasterServices().getConnection(),
-        ri.getRegionName())) {
+      if (regionStateStore.hasMergeRegions(ri)) {
         String msg = "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge) +
           ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier " +
           "(if a 'merge column' in parent, it was recently merged but still has outstanding " +

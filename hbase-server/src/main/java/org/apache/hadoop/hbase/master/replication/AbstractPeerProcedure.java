@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Connection;
@@ -30,6 +29,7 @@ import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
+import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
@@ -160,7 +160,7 @@ public abstract class AbstractPeerProcedure<TState> extends AbstractPeerNoLockPr
       LOG.debug("Skip settting last pushed sequence id for {}", tableName);
       return;
     }
-    for (Pair<String, Long> name2Barrier : MetaTableAccessor
+    for (Pair<String, Long> name2Barrier : ReplicationBarrierFamilyFormat
       .getTableEncodedRegionNameAndLastBarrier(conn, tableName)) {
       LOG.trace("Update last pushed sequence id for {}, {}", tableName, name2Barrier);
       addToMap(lastSeqIds, name2Barrier.getFirst(), name2Barrier.getSecond().longValue() - 1,

@@ -460,13 +460,17 @@ public class TestFromClientSide3 {
       byte[] row3 = Bytes.toBytes("row3");
       byte[] row4 = Bytes.toBytes("row4");
       byte[] row5 = Bytes.toBytes("row5");
+      byte[] row6 = Bytes.toBytes("row6");
+      byte[] row7 = Bytes.toBytes("row7");
 
       table.put(Arrays.asList(
         new Put(row1).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")),
         new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")),
         new Put(row3).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")),
         new Put(row4).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")),
-        new Put(row5).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e"))));
+        new Put(row5).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")),
+        new Put(row6).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes(10L)),
+        new Put(row7).addColumn(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g"))));
 
       CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row1)
         .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
@@ -479,17 +483,36 @@ public class TestFromClientSide3 {
         .ifEquals(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("a"))
         .build(new Put(row4).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("h")));
       Put put = new Put(row5).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("f"));
+      CheckAndMutate checkAndMutate3 = CheckAndMutate.newBuilder(row6)
+        .ifEquals(FAMILY, Bytes.toBytes("F"), Bytes.toBytes(10L))
+        .build(new Increment(row6).addColumn(FAMILY, Bytes.toBytes("F"), 1));
+      CheckAndMutate checkAndMutate4 = CheckAndMutate.newBuilder(row7)
+        .ifEquals(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g"))
+        .build(new Append(row7).addColumn(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g")));
 
-      List<Row> actions = Arrays.asList(checkAndMutate1, get, mutations, checkAndMutate2, put);
+      List<Row> actions = Arrays.asList(checkAndMutate1, get, mutations, checkAndMutate2, put,
+        checkAndMutate3, checkAndMutate4);
       Object[] results = new Object[actions.size()];
       table.batch(actions, results);
 
       assertTrue(((CheckAndMutateResult) results[0]).isSuccess());
+      assertNull(((CheckAndMutateResult) results[0]).getResult());
       assertEquals("b",
         Bytes.toString(((Result) results[1]).getValue(FAMILY, Bytes.toBytes("B"))));
       assertTrue(((Result) results[2]).getExists());
       assertFalse(((CheckAndMutateResult) results[3]).isSuccess());
+      assertNull(((CheckAndMutateResult) results[3]).getResult());
       assertTrue(((Result) results[4]).isEmpty());
+
+      CheckAndMutateResult checkAndMutateResult = (CheckAndMutateResult) results[5];
+      assertTrue(checkAndMutateResult.isSuccess());
+      assertEquals(11, Bytes.toLong(checkAndMutateResult.getResult()
+        .getValue(FAMILY, Bytes.toBytes("F"))));
+
+      checkAndMutateResult = (CheckAndMutateResult) results[6];
+      assertTrue(checkAndMutateResult.isSuccess());
+      assertEquals("gg", Bytes.toString(checkAndMutateResult.getResult()
+        .getValue(FAMILY, Bytes.toBytes("G"))));
 
       Result result = table.get(new Get(row1));
       assertEquals("g", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("A"))));
@@ -503,6 +526,12 @@ public class TestFromClientSide3 {
 
       result = table.get(new Get(row5));
       assertEquals("f", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("E"))));
+
+      result = table.get(new Get(row6));
+      assertEquals(11, Bytes.toLong(result.getValue(FAMILY, Bytes.toBytes("F"))));
+
+      result = table.get(new Get(row7));
+      assertEquals("gg", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("G"))));
     }
   }
 
