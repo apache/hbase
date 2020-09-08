@@ -458,6 +458,8 @@ public class MetricsRegionServerSourceImpl
               .addCounter(Interns.info(HEDGED_READS, HEDGED_READS_DESC), rsWrap.getHedgedReadOps())
               .addCounter(Interns.info(HEDGED_READ_WINS, HEDGED_READ_WINS_DESC),
                       rsWrap.getHedgedReadWins())
+              .addCounter(Interns.info(HEDGED_READ_IN_CUR_THREAD, HEDGED_READ_IN_CUR_THREAD_DESC),
+                      rsWrap.getHedgedReadOpsInCurThread())
               .addCounter(Interns.info(BLOCKED_REQUESTS_COUNT, BLOCKED_REQUESTS_COUNT_DESC),
                       rsWrap.getBlockedRequestsCount())
               .tag(Interns.info(ZOOKEEPER_QUORUM_NAME, ZOOKEEPER_QUORUM_DESC),
