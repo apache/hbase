@@ -31,8 +31,7 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * Used to perform CheckAndMutate operations. Currently {@link Put}, {@link Delete}
- * and {@link RowMutations} are supported.
+ * Used to perform CheckAndMutate operations.
  * <p>
  * Use the builder class to instantiate a CheckAndMutate object.
  * This builder class is fluent style APIs, the code are like:
@@ -137,9 +136,9 @@ public final class CheckAndMutate extends Mutation {
     }
 
     private void preCheck(Row action) {
-      Preconditions.checkNotNull(action, "action (Put/Delete/RowMutations) is null");
+      Preconditions.checkNotNull(action, "action is null");
       if (!Bytes.equals(row, action.getRow())) {
-        throw new IllegalArgumentException("The row of the action (Put/Delete/RowMutations) <" +
+        throw new IllegalArgumentException("The row of the action <" +
           Bytes.toStringBinary(action.getRow()) + "> doesn't match the original one <" +
           Bytes.toStringBinary(this.row) + ">");
       }
@@ -171,6 +170,32 @@ public final class CheckAndMutate extends Mutation {
         return new CheckAndMutate(row, filter, timeRange, delete);
       } else {
         return new CheckAndMutate(row, family, qualifier, op, value, timeRange, delete);
+      }
+    }
+
+    /**
+     * @param increment data to increment if check succeeds
+     * @return a CheckAndMutate object
+     */
+    public CheckAndMutate build(Increment increment) {
+      preCheck(increment);
+      if (filter != null) {
+        return new CheckAndMutate(row, filter, timeRange, increment);
+      } else {
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, increment);
+      }
+    }
+
+    /**
+     * @param append data to append if check succeeds
+     * @return a CheckAndMutate object
+     */
+    public CheckAndMutate build(Append append) {
+      preCheck(append);
+      if (filter != null) {
+        return new CheckAndMutate(row, filter, timeRange, append);
+      } else {
+        return new CheckAndMutate(row, family, qualifier, op, value, timeRange, append);
       }
     }
 
