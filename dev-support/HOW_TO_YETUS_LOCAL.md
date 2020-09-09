@@ -181,5 +181,5 @@ $ test-patch.sh \
 [maven]: https://maven.apache.org
 [spotbugs]: https://spotbugs.github.io
 [yetus]: https://yetus.apache.org
-[yetus-basic-precommit]: https://yetus.apache.org/documentation/0.11.1/precommit-basic/
+[yetus-basic-precommit]: https://yetus.apache.org/documentation/in-progress/precommit-basic/
 [yetus-downloads]: https://yetus.apache.org/downloads/

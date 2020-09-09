@@ -696,7 +696,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           ZKUtil.createAndFailSilent(watcher, znode);
           zkOps.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(znode));
           zkOps.add(ZKUtil.ZKUtilOp.createAndFailSilent(znode,
-              ProtobufUtil.prependPBMagic(proto.toByteArray())));
+            ProtobufUtil.prependPBMagic(proto.toByteArray())));
         }
       }
       LOG.debug("Writing ZK GroupInfo count: " + zkOps.size());
@@ -1270,6 +1270,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   @Override
   public synchronized void updateRSGroupConfig(String groupName, Map<String, String> configuration)
       throws IOException {
+    if (RSGroupInfo.DEFAULT_GROUP.equals(groupName)) {
+      // We do not persist anything of default group, therefore, it is not supported to update
+      // default group's configuration which lost once master down.
+      throw new ConstraintException("configuration of " + RSGroupInfo.DEFAULT_GROUP
+        + " can't be stored persistently");
+    }
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
     rsGroupInfo.getConfiguration().forEach((k, v) -> rsGroupInfo.removeConfiguration(k));
     configuration.forEach((k, v) -> rsGroupInfo.setConfiguration(k, v));

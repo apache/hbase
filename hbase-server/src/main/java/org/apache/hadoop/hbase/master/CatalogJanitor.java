@@ -162,6 +162,7 @@ public class CatalogJanitor extends ScheduledChore {
    * Run janitorial scan of catalog <code>hbase:meta</code> table looking for
    * garbage to collect.
    * @return How many items gc'd whether for merge or split.
+   *   Returns -1 if previous scan is in progress.
    */
   @VisibleForTesting
   public int scan() throws IOException {
@@ -169,7 +170,8 @@ public class CatalogJanitor extends ScheduledChore {
     try {
       if (!alreadyRunning.compareAndSet(false, true)) {
         LOG.debug("CatalogJanitor already running");
-        return gcs;
+        // -1 indicates previous scan is in progress
+        return -1;
       }
       this.lastReport = scanForReport();
       if (!this.lastReport.isEmpty()) {
@@ -187,7 +189,7 @@ public class CatalogJanitor extends ScheduledChore {
           break;
         }
 
-        List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(e.getValue().rawCells());
+        List<RegionInfo> parents = CatalogFamilyFormat.getMergeRegions(e.getValue().rawCells());
         if (parents != null && cleanMergeRegion(e.getKey(), parents)) {
           gcs++;
         }
@@ -321,7 +323,7 @@ public class CatalogJanitor extends ScheduledChore {
   boolean cleanParent(final RegionInfo parent, Result rowContent)
   throws IOException {
     // Check whether it is a merged region and if it is clean of references.
-    if (MetaTableAccessor.hasMergeRegions(rowContent.rawCells())) {
+    if (CatalogFamilyFormat.hasMergeRegions(rowContent.rawCells())) {
       // Wait until clean of merge parent regions first
       return false;
     }
@@ -578,7 +580,7 @@ public class CatalogJanitor extends ScheduledChore {
         if (regionInfo.isSplitParent()) { // splitParent means split and offline.
           this.report.splitParents.put(regionInfo, r);
         }
-        if (MetaTableAccessor.hasMergeRegions(r.rawCells())) {
+        if (CatalogFamilyFormat.hasMergeRegions(r.rawCells())) {
           this.report.mergedRegions.put(regionInfo, r);
         }
       }

@@ -226,11 +226,11 @@ public final class ResponseConverter {
    * @return a CheckAndMutateResult object
    */
   public static CheckAndMutateResult getCheckAndMutateResult(
-    ClientProtos.MutateResponse mutateResponse) {
+    ClientProtos.MutateResponse mutateResponse, CellScanner cells) throws IOException {
     boolean success = mutateResponse.getProcessed();
     Result result = null;
     if (mutateResponse.hasResult()) {
-      result = ProtobufUtil.toResult(mutateResponse.getResult());
+      result = ProtobufUtil.toResult(mutateResponse.getResult(), cells);
     }
     return new CheckAndMutateResult(success, result);
   }

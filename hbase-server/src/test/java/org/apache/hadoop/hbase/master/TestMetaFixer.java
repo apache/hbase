@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -39,11 +40,13 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
 import org.apache.hadoop.hbase.master.assignment.GCMultipleMergedRegionsProcedure;
+import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
+import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -169,7 +172,8 @@ public class TestMetaFixer {
         Collections.singletonList(MetaTableAccessor.makePutFromRegionInfo(overlapRegion,
             System.currentTimeMillis())));
     // TODO: Add checks at assign time to PREVENT being able to assign over existing assign.
-    services.getAssignmentManager().assign(overlapRegion);
+    long assign = services.getAssignmentManager().assign(overlapRegion);
+    ProcedureTestingUtility.waitProcedures(services.getMasterProcedureExecutor(), assign);
     return overlapRegion;
   }
 
@@ -212,7 +216,7 @@ public class TestMetaFixer {
           // a hole.
           Map<RegionInfo, Result> mergedRegions = cj.getLastReport().mergedRegions;
           for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
-            List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(e.getValue().rawCells());
+            List<RegionInfo> parents = CatalogFamilyFormat.getMergeRegions(e.getValue().rawCells());
             if (parents != null) {
               ProcedureExecutor<MasterProcedureEnv> pe = services.getMasterProcedureExecutor();
               pe.submitProcedure(new GCMultipleMergedRegionsProcedure(pe.getEnvironment(),
@@ -240,6 +244,41 @@ public class TestMetaFixer {
     cj.scan();
     final CatalogJanitor.Report postReport = cj.getLastReport();
     assertTrue(postReport.isEmpty());
+  }
+
+  @Test
+  public void testMultipleTableOverlaps() throws Exception {
+    TableName t1 = TableName.valueOf("t1");
+    TableName t2 = TableName.valueOf("t2");
+    TEST_UTIL.createMultiRegionTable(t1, new byte[][] { HConstants.CATALOG_FAMILY });
+    TEST_UTIL.createMultiRegionTable(t2, new byte[][] { HConstants.CATALOG_FAMILY });
+    TEST_UTIL.waitTableAvailable(t2);
+
+    HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
+    services.getCatalogJanitor().scan();
+    CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
+    assertTrue(report.isEmpty());
+
+    // Make a simple overlap for t1
+    List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), t1);
+    makeOverlap(services, ris.get(1), ris.get(2));
+    // Make a simple overlap for t2
+    ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), t2);
+    makeOverlap(services, ris.get(1), ris.get(2));
+
+    services.getCatalogJanitor().scan();
+    report = services.getCatalogJanitor().getLastReport();
+    assertEquals("Region overlaps count does not match.", 4, report.getOverlaps().size());
+
+    MetaFixer fixer = new MetaFixer(services);
+    List<Long> longs = fixer.fixOverlaps(report);
+    long[] procIds = longs.stream().mapToLong(l -> l).toArray();
+    ProcedureTestingUtility.waitProcedures(services.getMasterProcedureExecutor(), procIds);
+
+    // After fix, verify no overlaps are left.
+    services.getCatalogJanitor().scan();
+    report = services.getCatalogJanitor().getLastReport();
+    assertTrue("After fix there should not have been any overlaps.", report.isEmpty());
   }
 
   @Test
@@ -276,7 +315,7 @@ public class TestMetaFixer {
           cj.scan();
           final CatalogJanitor.Report postReport = cj.getLastReport();
           RegionStates regionStates = am.getRegionStates();
-
+          RegionStateStore regionStateStore = am.getRegionStateStore();
           // Make sure that two merged regions are opened and GCs are done.
           if (postReport.getOverlaps().size() == 1) {
             Pair<RegionInfo, RegionInfo> pair = postReport.getOverlaps().get(0);
@@ -285,10 +324,8 @@ public class TestMetaFixer {
               (!overlapRegions.contains(pair.getSecond().getRegionNameAsString()) &&
               regionStates.getRegionState(pair.getSecond()).isOpened())) {
               // Make sure GC is done.
-              List<RegionInfo> firstParents = MetaTableAccessor.getMergeRegions(
-                services.getConnection(), pair.getFirst().getRegionName());
-              List<RegionInfo> secondParents = MetaTableAccessor.getMergeRegions(
-                services.getConnection(), pair.getSecond().getRegionName());
+              List<RegionInfo> firstParents = regionStateStore.getMergeRegions(pair.getFirst());
+              List<RegionInfo> secondParents = regionStateStore.getMergeRegions(pair.getSecond());
 
               return (firstParents == null || firstParents.isEmpty()) &&
                 (secondParents == null || secondParents.isEmpty());

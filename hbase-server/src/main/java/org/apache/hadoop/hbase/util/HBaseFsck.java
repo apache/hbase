@@ -2799,7 +2799,7 @@ public class HBaseFsck extends Configured implements Closeable {
               throw new IOException("Two entries in hbase:meta are same " + previous);
             }
           }
-          List<RegionInfo> mergeParents = MetaTableAccessor.getMergeRegions(result.rawCells());
+          List<RegionInfo> mergeParents = CatalogFamilyFormat.getMergeRegions(result.rawCells());
           if (mergeParents != null) {
             for (RegionInfo mergeRegion : mergeParents) {
               if (mergeRegion != null) {

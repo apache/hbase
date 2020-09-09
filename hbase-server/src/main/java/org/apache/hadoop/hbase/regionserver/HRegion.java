@@ -3240,6 +3240,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected final WALEdit[] walEditsFromCoprocessors;
     // reference family cell maps directly so coprocessors can mutate them if desired
     protected final Map<byte[], List<Cell>>[] familyCellMaps;
+    // For Increment/Append operations
+    protected final Result[] results;
+    // For nonce operations
+    protected final boolean[] canProceed;
 
     protected final HRegion region;
     protected int nextIndexToProcess = 0;
@@ -3254,6 +3258,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Arrays.fill(this.retCodeDetails, OperationStatus.NOT_RUN);
       this.walEditsFromCoprocessors = new WALEdit[operations.length];
       familyCellMaps = new Map[operations.length];
+      this.results = new Result[operations.length];
+      this.canProceed = new boolean[operations.length];
 
       this.region = region;
       observedExceptions = new ObservedExceptionsInBatch();
@@ -3308,10 +3314,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     /**
      * Validates each mutation and prepares a batch for write. If necessary (non-replay case), runs
-     * CP prePut()/ preDelete() hooks for all mutations in a batch. This is intended to operate on
-     * entire batch and will be called from outside of class to check and prepare batch. This can
-     * be implemented by calling helper method {@link #checkAndPrepareMutation(int, long)} in a
-     * 'for' loop over mutations.
+     * CP prePut()/preDelete()/preIncrement()/preAppend() hooks for all mutations in a batch. This
+     * is intended to operate on entire batch and will be called from outside of class to check
+     * and prepare batch. This can be implemented by calling helper method
+     * {@link #checkAndPrepareMutation(int, long)} in a 'for' loop over mutations.
      */
     public abstract void checkAndPrepare() throws IOException;
 
@@ -3379,8 +3385,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     /**
      * Helper method that checks and prepares only one mutation. This can be used to implement
      * {@link #checkAndPrepare()} for entire Batch.
-     * NOTE: As CP prePut()/ preDelete() hooks may modify mutations, this method should be called
-     * after prePut()/ preDelete() CP hooks are run for the mutation
+     * NOTE: As CP prePut()/preDelete()/preIncrement()/preAppend() hooks may modify mutations,
+     * this method should be called after prePut()/preDelete()/preIncrement()/preAppend() CP hooks
+     * are run for the mutation
      */
     protected void checkAndPrepareMutation(Mutation mutation, final long timestamp)
         throws IOException {
@@ -3389,8 +3396,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // Check the families in the put. If bad, skip this one.
         checkAndPreparePut((Put) mutation);
         region.checkTimestamps(mutation.getFamilyCellMap(), timestamp);
-      } else {
+      } else if (mutation instanceof Delete) {
         region.prepareDelete((Delete) mutation);
+      } else if (mutation instanceof Increment || mutation instanceof Append) {
+        region.checkFamilies(mutation.getFamilyCellMap().keySet(), mutation.getDurability());
       }
     }
 
@@ -3725,7 +3734,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     @Override
     public void checkAndPrepare() throws IOException {
-      final int[] metrics = {0, 0}; // index 0: puts, index 1: deletes
+      // index 0: puts, index 1: deletes, index 2: increments, index 3: append
+      final int[] metrics = {0, 0, 0, 0};
+
       visitBatchOperations(true, this.size(), new Visitor() {
         private long now = EnvironmentEdgeManager.currentTime();
         private WALEdit walEdit;
@@ -3765,21 +3776,57 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // There were some Deletes in the batch.
           region.metricsRegion.updateDelete();
         }
+        if (metrics[2] > 0) {
+          // There were some Increment in the batch.
+          region.metricsRegion.updateIncrement();
+        }
+        if (metrics[3] > 0) {
+          // There were some Append in the batch.
+          region.metricsRegion.updateAppend();
+        }
       }
     }
 
     @Override
     public void prepareMiniBatchOperations(MiniBatchOperationInProgress<Mutation> miniBatchOp,
         long timestamp, final List<RowLock> acquiredRowLocks) throws IOException {
-      byte[] byteTS = Bytes.toBytes(timestamp);
       visitBatchOperations(true, miniBatchOp.getLastIndexExclusive(), (int index) -> {
         Mutation mutation = getMutation(index);
         if (mutation instanceof Put) {
-          HRegion.updateCellTimestamps(familyCellMaps[index].values(), byteTS);
+          HRegion.updateCellTimestamps(familyCellMaps[index].values(), Bytes.toBytes(timestamp));
           miniBatchOp.incrementNumOfPuts();
-        } else {
-          region.prepareDeleteTimestamps(mutation, familyCellMaps[index], byteTS);
+        } else if (mutation instanceof Delete) {
+          region.prepareDeleteTimestamps(mutation, familyCellMaps[index],
+            Bytes.toBytes(timestamp));
           miniBatchOp.incrementNumOfDeletes();
+        } else if (mutation instanceof Increment || mutation instanceof Append) {
+          // For nonce operations
+          canProceed[index] = startNonceOperation(nonceGroup, nonce);
+          if (!canProceed[index]) {
+            // convert duplicate increment/append to get
+            List<Cell> results = region.get(toGet(mutation), false, nonceGroup, nonce);
+            retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS,
+              Result.create(results));
+            return true;
+          }
+
+          boolean returnResults;
+          if (mutation instanceof Increment) {
+            returnResults = ((Increment) mutation).isReturnResults();
+            miniBatchOp.incrementNumOfIncrements();
+          } else {
+            returnResults = ((Append) mutation).isReturnResults();
+            miniBatchOp.incrementNumOfAppends();
+          }
+          Result result = doCoprocessorPreCallAfterRowLock(mutation);
+          if (result != null) {
+            retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS,
+              returnResults ? result : Result.EMPTY_RESULT);
+            return true;
+          }
+          List<Cell> results = returnResults ? new ArrayList<>(mutation.size()) : null;
+          familyCellMaps[index] = reckonDeltas(mutation, results, timestamp);
+          this.results[index] = results != null ? Result.create(results): Result.EMPTY_RESULT;
         }
         region.rewriteCellTags(familyCellMaps[index], mutation);
 
@@ -3802,6 +3849,253 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         region.coprocessorHost.preBatchMutate(miniBatchOp);
         checkAndMergeCPMutations(miniBatchOp, acquiredRowLocks, timestamp);
       }
+    }
+
+    /**
+     * Starts the nonce operation for a mutation, if needed.
+     * @param nonceGroup Nonce group from the request.
+     * @param nonce Nonce.
+     * @return whether to proceed this mutation.
+     */
+    private boolean startNonceOperation(long nonceGroup, long nonce) throws IOException {
+      if (region.rsServices == null || region.rsServices.getNonceManager() == null
+        || nonce == HConstants.NO_NONCE) {
+        return true;
+      }
+      boolean canProceed;
+      try {
+        canProceed = region.rsServices.getNonceManager()
+          .startOperation(nonceGroup, nonce, region.rsServices);
+      } catch (InterruptedException ex) {
+        throw new InterruptedIOException("Nonce start operation interrupted");
+      }
+      return canProceed;
+    }
+
+    /**
+     * Ends nonce operation for a mutation, if needed.
+     * @param nonceGroup Nonce group from the request. Always 0 in initial implementation.
+     * @param nonce Nonce.
+     * @param success Whether the operation for this nonce has succeeded.
+     */
+    private void endNonceOperation(long nonceGroup, long nonce, boolean success) {
+      if (region.rsServices != null && region.rsServices.getNonceManager() != null
+        && nonce != HConstants.NO_NONCE) {
+        region.rsServices.getNonceManager().endOperation(nonceGroup, nonce, success);
+      }
+    }
+
+    private static Get toGet(final Mutation mutation) throws IOException {
+      assert mutation instanceof Increment || mutation instanceof Append;
+      Get get = new Get(mutation.getRow());
+      CellScanner cellScanner = mutation.cellScanner();
+      while (!cellScanner.advance()) {
+        Cell cell = cellScanner.current();
+        get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
+      }
+      if (mutation instanceof Increment) {
+        // Increment
+        Increment increment = (Increment) mutation;
+        get.setTimeRange(increment.getTimeRange().getMin(), increment.getTimeRange().getMax());
+      } else {
+        // Append
+        Append append = (Append) mutation;
+        get.setTimeRange(append.getTimeRange().getMin(), append.getTimeRange().getMax());
+      }
+      for (Entry<String, byte[]> entry : mutation.getAttributesMap().entrySet()) {
+        get.setAttribute(entry.getKey(), entry.getValue());
+      }
+      return get;
+    }
+
+    /**
+     * Do coprocessor pre-increment or pre-append after row lock call.
+     * @return Result returned out of the coprocessor, which means bypass all further processing
+     *   and return the preferred Result instead, or null which means proceed.
+     */
+    private Result doCoprocessorPreCallAfterRowLock(Mutation mutation) throws IOException {
+      assert mutation instanceof Increment || mutation instanceof Append;
+      Result result = null;
+      if (region.coprocessorHost != null) {
+        if (mutation instanceof Increment) {
+          result = region.coprocessorHost.preIncrementAfterRowLock((Increment) mutation);
+        } else {
+          result = region.coprocessorHost.preAppendAfterRowLock((Append) mutation);
+        }
+      }
+      return result;
+    }
+
+    private Map<byte[], List<Cell>> reckonDeltas(Mutation mutation, List<Cell> results,
+      long now) throws IOException {
+      assert mutation instanceof Increment || mutation instanceof Append;
+      Map<byte[], List<Cell>> ret = new HashMap<>();
+      // Process a Store/family at a time.
+      for (Map.Entry<byte [], List<Cell>> entry: mutation.getFamilyCellMap().entrySet()) {
+        final byte[] columnFamilyName = entry.getKey();
+        List<Cell> deltas = entry.getValue();
+        // Reckon for the Store what to apply to WAL and MemStore.
+        List<Cell> toApply = reckonDeltasByStore(region.stores.get(columnFamilyName), mutation,
+          now, deltas, results);
+        if (!toApply.isEmpty()) {
+          for (Cell cell : toApply) {
+            HStore store = region.getStore(cell);
+            if (store == null) {
+              region.checkFamily(CellUtil.cloneFamily(cell));
+            } else {
+              ret.computeIfAbsent(store.getColumnFamilyDescriptor().getName(),
+                key -> new ArrayList<>()).add(cell);
+            }
+          }
+        }
+      }
+      return ret;
+    }
+
+    /**
+     * Reckon the Cells to apply to WAL, memstore, and to return to the Client in passed
+     * column family/Store.
+     *
+     * Does Get of current value and then adds passed in deltas for this Store returning the
+     * result.
+     *
+     * @param mutation The encompassing Mutation object
+     * @param deltas Changes to apply to this Store; either increment amount or data to append
+     * @param results In here we accumulate all the Cells we are to return to the client. If null,
+     *   client doesn't want results returned.
+     * @return Resulting Cells after <code>deltas</code> have been applied to current
+     *   values. Side effect is our filling out of the <code>results</code> List.
+     */
+    private List<Cell> reckonDeltasByStore(HStore store, Mutation mutation, long now,
+      List<Cell> deltas, List<Cell> results) throws IOException {
+      assert mutation instanceof Increment || mutation instanceof Append;
+      byte[] columnFamily = store.getColumnFamilyDescriptor().getName();
+      List<Pair<Cell, Cell>> cellPairs = new ArrayList<>(deltas.size());
+
+      // Get previous values for all columns in this family.
+      TimeRange tr;
+      if (mutation instanceof Increment) {
+        tr = ((Increment) mutation).getTimeRange();
+      } else {
+        tr = ((Append) mutation).getTimeRange();
+      }
+      List<Cell> currentValues = get(mutation, store, deltas, tr);
+
+      // Iterate the input columns and update existing values if they were found, otherwise
+      // add new column initialized to the delta amount
+      int currentValuesIndex = 0;
+      for (int i = 0; i < deltas.size(); i++) {
+        Cell delta = deltas.get(i);
+        Cell currentValue = null;
+        if (currentValuesIndex < currentValues.size() &&
+          CellUtil.matchingQualifier(currentValues.get(currentValuesIndex), delta)) {
+          currentValue = currentValues.get(currentValuesIndex);
+          if (i < (deltas.size() - 1) && !CellUtil.matchingQualifier(delta, deltas.get(i + 1))) {
+            currentValuesIndex++;
+          }
+        }
+        // Switch on whether this an increment or an append building the new Cell to apply.
+        Cell newCell;
+        if (mutation instanceof Increment) {
+          long deltaAmount = getLongValue(delta);
+          final long newValue = currentValue == null ?
+            deltaAmount : getLongValue(currentValue) + deltaAmount;
+          newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation,
+            (oldCell) -> Bytes.toBytes(newValue));
+        } else {
+          newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation,
+            (oldCell) ->
+              ByteBuffer.wrap(new byte[delta.getValueLength() + oldCell.getValueLength()])
+                .put(oldCell.getValueArray(), oldCell.getValueOffset(), oldCell.getValueLength())
+                .put(delta.getValueArray(), delta.getValueOffset(), delta.getValueLength())
+                .array()
+          );
+        }
+        if (region.maxCellSize > 0) {
+          int newCellSize = PrivateCellUtil.estimatedSerializedSizeOf(newCell);
+          if (newCellSize > region.maxCellSize) {
+            String msg = "Cell with size " + newCellSize + " exceeds limit of "
+              + region.maxCellSize + " bytes in region " + this;
+            LOG.debug(msg);
+            throw new DoNotRetryIOException(msg);
+          }
+        }
+        cellPairs.add(new Pair<>(currentValue, newCell));
+        // Add to results to get returned to the Client. If null, cilent does not want results.
+        if (results != null) {
+          results.add(newCell);
+        }
+      }
+      // Give coprocessors a chance to update the new cells before apply to WAL or memstore
+      if (region.coprocessorHost != null) {
+        // Here the operation must be increment or append.
+        cellPairs = mutation instanceof Increment ?
+          region.coprocessorHost.postIncrementBeforeWAL(mutation, cellPairs) :
+          region.coprocessorHost.postAppendBeforeWAL(mutation, cellPairs);
+      }
+      return cellPairs.stream().map(Pair::getSecond).collect(Collectors.toList());
+    }
+
+    private static Cell reckonDelta(final Cell delta, final Cell currentCell,
+      final byte[] columnFamily, final long now, Mutation mutation,
+      Function<Cell, byte[]> supplier) throws IOException {
+      // Forward any tags found on the delta.
+      List<Tag> tags = TagUtil.carryForwardTags(delta);
+      tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
+      if (currentCell != null) {
+        tags = TagUtil.carryForwardTags(tags, currentCell);
+        byte[] newValue = supplier.apply(currentCell);
+        return ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+          .setRow(mutation.getRow(), 0, mutation.getRow().length)
+          .setFamily(columnFamily, 0, columnFamily.length)
+          // copy the qualifier if the cell is located in shared memory.
+          .setQualifier(CellUtil.cloneQualifier(delta))
+          .setTimestamp(Math.max(currentCell.getTimestamp() + 1, now))
+          .setType(KeyValue.Type.Put.getCode())
+          .setValue(newValue, 0, newValue.length)
+          .setTags(TagUtil.fromList(tags))
+          .build();
+      } else {
+        PrivateCellUtil.updateLatestStamp(delta, now);
+        return CollectionUtils.isEmpty(tags) ? delta : PrivateCellUtil.createCell(delta, tags);
+      }
+    }
+
+    /**
+     * @return Get the long out of the passed in Cell
+     */
+    private static long getLongValue(final Cell cell) throws DoNotRetryIOException {
+      int len = cell.getValueLength();
+      if (len != Bytes.SIZEOF_LONG) {
+        // throw DoNotRetryIOException instead of IllegalArgumentException
+        throw new DoNotRetryIOException("Field is not a long, it's " + len + " bytes wide");
+      }
+      return PrivateCellUtil.getValueAsLong(cell);
+    }
+
+    /**
+     * Do a specific Get on passed <code>columnFamily</code> and column qualifiers.
+     * @param mutation Mutation we are doing this Get for.
+     * @param store Which column family on row (TODO: Go all Gets in one go)
+     * @param coordinates Cells from <code>mutation</code> used as coordinates applied to Get.
+     * @return Return list of Cells found.
+     */
+    private List<Cell> get(Mutation mutation, HStore store, List<Cell> coordinates,
+      TimeRange tr) throws IOException {
+      // Sort the cells so that they match the order that they appear in the Get results.
+      // Otherwise, we won't be able to find the existing values if the cells are not specified
+      // in order by the client since cells are in an array list.
+      // TODO: I don't get why we are sorting. St.Ack 20150107
+      sort(coordinates, store.getComparator());
+      Get get = new Get(mutation.getRow());
+      for (Cell cell: coordinates) {
+        get.addColumn(store.getColumnFamilyDescriptor().getName(), CellUtil.cloneQualifier(cell));
+      }
+      // Increments carry time range. If an Increment instance, put it on the Get.
+      if (tr != null) {
+        get.setTimeRange(tr.getMin(), tr.getMax());
+      }
+      return region.get(get, false);
     }
 
     @Override
@@ -3836,6 +4130,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         region.coprocessorHost.postBatchMutate(miniBatchOp);
       }
       super.completeMiniBatchOperations(miniBatchOp, writeEntry);
+
+      if (nonce != HConstants.NO_NONCE) {
+        if (region.rsServices != null && region.rsServices.getNonceManager() != null) {
+          region.rsServices.getNonceManager()
+            .addMvccToOperationContext(nonceGroup, nonce, writeEntry.getWriteNumber());
+        }
+      }
     }
 
     @Override
@@ -3847,24 +4148,47 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // synced so that the coprocessor contract is adhered to.
         if (region.coprocessorHost != null) {
           visitBatchOperations(false, miniBatchOp.getLastIndexExclusive(), (int i) -> {
-            // only for successful puts
+            // only for successful puts/deletes/increments/appends
             if (retCodeDetails[i].getOperationStatusCode() == OperationStatusCode.SUCCESS) {
               Mutation m = getMutation(i);
               if (m instanceof Put) {
                 region.coprocessorHost.postPut((Put) m, walEdit, m.getDurability());
-              } else {
+              } else if (m instanceof Delete) {
                 region.coprocessorHost.postDelete((Delete) m, walEdit, m.getDurability());
+              } else if (m instanceof Increment) {
+                Result result = region.getCoprocessorHost().postIncrement((Increment) m,
+                  results[i]);
+                if (result != results[i]) {
+                  retCodeDetails[i] =
+                    new OperationStatus(retCodeDetails[i].getOperationStatusCode(), result);
+                }
+              } else if (m instanceof Append) {
+                Result result = region.getCoprocessorHost().postAppend((Append) m, results[i]);
+                if (result != results[i]) {
+                  retCodeDetails[i] =
+                    new OperationStatus(retCodeDetails[i].getOperationStatusCode(), result);
+                }
               }
             }
             return true;
           });
         }
 
+        // For nonce operations
+        visitBatchOperations(false, miniBatchOp.getLastIndexExclusive(), (int i) -> {
+          if (canProceed[i]) {
+            endNonceOperation(nonceGroup, nonce,
+              retCodeDetails[i].getOperationStatusCode() == OperationStatusCode.SUCCESS);
+          }
+          return true;
+        });
+
         // See if the column families were consistent through the whole thing.
         // if they were then keep them. If they were not then pass a null.
         // null will be treated as unknown.
-        // Total time taken might be involving Puts and Deletes.
-        // Split the time for puts and deletes based on the total number of Puts and Deletes.
+        // Total time taken might be involving Puts, Deletes, Increments and Appends.
+        // Split the time for puts and deletes based on the total number of Puts, Deletes,
+        // Increments and Appends.
         if (region.metricsRegion != null) {
           if (miniBatchOp.getNumOfPuts() > 0) {
             // There were some Puts in the batch.
@@ -3873,6 +4197,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if (miniBatchOp.getNumOfDeletes() > 0) {
             // There were some Deletes in the batch.
             region.metricsRegion.updateDelete();
+          }
+          if (miniBatchOp.getNumOfIncrements() > 0) {
+            // There were some Increments in the batch.
+            region.metricsRegion.updateIncrement();
+          }
+          if (miniBatchOp.getNumOfAppends() > 0) {
+            // There were some Appends in the batch.
+            region.metricsRegion.updateAppend();
           }
         }
       }
@@ -3885,8 +4217,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     /**
-     * Runs prePut/ preDelete coprocessor hook for input mutation in a batch
-     * @param metrics Array of 2 ints. index 0: count of puts and index 1: count of deletes
+     * Runs prePut/preDelete/preIncrement/preAppend coprocessor hook for input mutation in a batch
+     * @param metrics Array of 2 ints. index 0: count of puts, index 1: count of deletes, index 2:
+     *   count of increments and 3: count of appends
      */
     private void callPreMutateCPHook(int index, final WALEdit walEdit, final int[] metrics)
         throws IOException {
@@ -3912,13 +4245,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           metrics[1]++;
           retCodeDetails[index] = OperationStatus.SUCCESS;
         }
+      } else if (m instanceof Increment) {
+        Increment increment = (Increment) m;
+        Result result = region.coprocessorHost.preIncrement(increment);
+        if (result != null) {
+          // pre hook says skip this Increment
+          // mark as success and skip in doMiniBatchMutation
+          metrics[2]++;
+          retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS, result);
+        }
+      } else if (m instanceof Append) {
+        Append append = (Append) m;
+        Result result = region.coprocessorHost.preAppend(append);
+        if (result != null) {
+          // pre hook says skip this Append
+          // mark as success and skip in doMiniBatchMutation
+          metrics[3]++;
+          retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS, result);
+        }
       } else {
-        String msg = "Put/Delete mutations only supported in a batch";
-        // In case of passing Append mutations along with the Puts and Deletes in batchMutate
-        // mark the operation return code as failure so that it will not be considered in
-        // the doMiniBatchMutation
+        String msg = "Put/Delete/Increment/Append mutations only supported in a batch";
         retCodeDetails[index] = new OperationStatus(OperationStatusCode.FAILURE, msg);
-
         if (isAtomic()) { // fail, atomic means all or none
           throw new IOException(msg);
         }
@@ -4089,15 +4436,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  public OperationStatus[] batchMutate(Mutation[] mutations, long nonceGroup, long nonce)
-      throws IOException {
-    return batchMutate(mutations, false, nonceGroup, nonce);
-  }
-
   public OperationStatus[] batchMutate(Mutation[] mutations, boolean atomic, long nonceGroup,
       long nonce) throws IOException {
     // As it stands, this is used for 3 things
-    //  * batchMutate with single mutation - put/delete, separate or from checkAndMutate.
+    //  * batchMutate with single mutation - put/delete/increment/append, separate or from
+    //    checkAndMutate.
     //  * coprocessor calls (see ex. BulkDeleteEndpoint).
     // So nonces are not really ever used by HBase. They could be by coprocs, and checkAnd...
     return batchMutate(new MutationBatchOperation(this, mutations, atomic, nonceGroup, nonce));
@@ -4105,7 +4448,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public OperationStatus[] batchMutate(Mutation[] mutations) throws IOException {
-    return batchMutate(mutations, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    // If the mutations has any Increment/Append operations, we need to do batchMutate atomically
+    boolean atomic = Arrays.stream(mutations)
+      .anyMatch(m -> m instanceof Increment || m instanceof Append);
+    return batchMutate(mutations, atomic, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   public OperationStatus[] batchReplay(MutationReplay[] mutations, long replaySeqId)
@@ -4135,12 +4481,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Perform a batch of mutations.
    *
-   * It supports only Put and Delete mutations and will ignore other types passed. Operations in
-   * a batch are stored with highest durability specified of for all operations in a batch,
-   * except for {@link Durability#SKIP_WAL}.
+   * It supports Put, Delete, Increment, Append mutations and will ignore other types passed.
+   * Operations in a batch are stored with highest durability specified of for all operations in a
+   * batch, except for {@link Durability#SKIP_WAL}.
    *
    * <p>This function is called from {@link #batchReplay(WALSplitUtil.MutationReplay[], long)} with
-   * {@link ReplayBatchOperation} instance and {@link #batchMutate(Mutation[], long, long)} with
+   * {@link ReplayBatchOperation} instance and {@link #batchMutate(Mutation[])} with
    * {@link MutationBatchOperation} instance as an argument. As the processing of replay batch
    * and mutation batch is very similar, lot of code is shared by providing generic methods in
    * base class {@link BatchOperation}. The logic for this method and
@@ -4165,7 +4511,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (!initialized) {
           this.writeRequestsCount.add(batchOp.size());
           // validate and prepare batch for write, for MutationBatchOperation it also calls CP
-          // prePut()/ preDelete() hooks
+          // prePut()/preDelete()/preIncrement()/preAppend() hooks
           batchOp.checkAndPrepare();
           initialized = true;
         }
@@ -4183,7 +4529,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * Called to do a piece of the batch that came in to {@link #batchMutate(Mutation[], long, long)}
+   * Called to do a piece of the batch that came in to {@link #batchMutate(Mutation[])}
    * In here we also handle replay of edits on region recover. Also gets change in size brought
    * about by applying {@code batchOp}.
    */
@@ -4204,16 +4550,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // We've now grabbed as many mutations off the list as we can
       // Ensure we acquire at least one.
       if (miniBatchOp.getReadyToWriteCount() <= 0) {
-        // Nothing to put/delete -- an exception in the above such as NoSuchColumnFamily?
+        // Nothing to put/delete/increment/append -- an exception in the above such as
+        // NoSuchColumnFamily?
         return;
       }
 
       lock(this.updatesLock.readLock(), miniBatchOp.getReadyToWriteCount());
       locked = true;
 
-      // STEP 2. Update mini batch of all operations in progress with  LATEST_TIMESTAMP timestamp
+      // STEP 2. Update mini batch of all operations in progress with LATEST_TIMESTAMP timestamp
       // We should record the timestamp only after we have acquired the rowLock,
-      // otherwise, newer puts/deletes are not guaranteed to have a newer timestamp
+      // otherwise, newer puts/deletes/increment/append are not guaranteed to have a newer
+      // timestamp
       long now = EnvironmentEdgeManager.currentTime();
       batchOp.prepareMiniBatchOperations(miniBatchOp, now, acquiredRowLocks);
 
@@ -4259,11 +4607,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       final int finalLastIndexExclusive =
           miniBatchOp != null ? miniBatchOp.getLastIndexExclusive() : batchOp.size();
       final boolean finalSuccess = success;
-      batchOp.visitBatchOperations(true, finalLastIndexExclusive, (int i) -> {
-        batchOp.retCodeDetails[i] =
-            finalSuccess ? OperationStatus.SUCCESS : OperationStatus.FAILURE;
-        return true;
-      });
+      batchOp.visitBatchOperations(true, finalLastIndexExclusive,
+        (int i) -> {
+          Mutation mutation = batchOp.getMutation(i);
+          if (mutation instanceof Increment || mutation instanceof Append) {
+            if (finalSuccess) {
+              batchOp.retCodeDetails[i] = new OperationStatus(OperationStatusCode.SUCCESS,
+                batchOp.results[i]);
+            } else {
+              batchOp.retCodeDetails[i] = OperationStatus.FAILURE;
+            }
+          } else {
+            batchOp.retCodeDetails[i] =
+              finalSuccess ? OperationStatus.SUCCESS : OperationStatus.FAILURE;
+          }
+          return true;
+        });
 
       batchOp.doPostOpCleanupForMiniBatch(miniBatchOp, walEdit, finalSuccess);
 
@@ -4437,7 +4796,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
         }
 
-        // If matches put the new put or delete the new delete
+        // If matches, perform the mutation or the rowMutations
         if (matches) {
           // We have acquired the row lock already. If the system clock is NOT monotonically
           // non-decreasing (see HBASE-14070) we should make sure that the mutation has a
@@ -4462,13 +4821,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             // timestamp from get (see prepareDeleteTimestamps).
           }
           // All edits for the given row (across all column families) must happen atomically.
+          Result r = null;
           if (mutation != null) {
-            doBatchMutate(mutation);
+            r = doBatchMutate(mutation, true).getResult();
           } else {
             mutateRow(rowMutations);
           }
           this.checkAndMutateChecksPassed.increment();
-          return new CheckAndMutateResult(true, null);
+          return new CheckAndMutateResult(true, r);
         }
         this.checkAndMutateChecksFailed.increment();
         return new CheckAndMutateResult(false, null);
@@ -4482,9 +4842,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private void checkMutationType(final Mutation mutation)
   throws DoNotRetryIOException {
-    boolean isPut = mutation instanceof Put;
-    if (!isPut && !(mutation instanceof Delete)) {
-      throw new org.apache.hadoop.hbase.DoNotRetryIOException("Action must be Put or Delete");
+    if (!(mutation instanceof Put) && !(mutation instanceof Delete) &&
+      !(mutation instanceof Increment) && !(mutation instanceof Append)) {
+      throw new org.apache.hadoop.hbase.DoNotRetryIOException(
+        "Action must be Put or Delete or Increment or Delete");
     }
   }
 
@@ -4522,17 +4883,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return matches;
   }
 
+  private OperationStatus doBatchMutate(Mutation mutation) throws IOException {
+    return doBatchMutate(mutation, false);
+  }
 
-  private void doBatchMutate(Mutation mutation) throws IOException {
-    // Currently this is only called for puts and deletes, so no nonces.
-    OperationStatus[] batchMutate = this.batchMutate(new Mutation[]{mutation});
+  private OperationStatus doBatchMutate(Mutation mutation, boolean atomic) throws IOException {
+    return doBatchMutate(mutation, atomic, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
+
+  private OperationStatus doBatchMutate(Mutation mutation, boolean atomic, long nonceGroup,
+    long nonce) throws IOException {
+    OperationStatus[] batchMutate = this.batchMutate(new Mutation[]{mutation}, atomic,
+      nonceGroup, nonce);
     if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.SANITY_CHECK_FAILURE)) {
       throw new FailedSanityCheckException(batchMutate[0].getExceptionMsg());
     } else if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.BAD_FAMILY)) {
       throw new NoSuchColumnFamilyException(batchMutate[0].getExceptionMsg());
-    } else if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.STORE_TOO_BUSY)) {
+    } else if (batchMutate[0].getOperationStatusCode().equals(
+      OperationStatusCode.STORE_TOO_BUSY)) {
       throw new RegionTooBusyException(batchMutate[0].getExceptionMsg());
     }
+    return batchMutate[0];
   }
 
   /**
@@ -8066,8 +8437,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return append(append, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
-  public Result append(Append mutation, long nonceGroup, long nonce) throws IOException {
-    return doDelta(Operation.APPEND, mutation, nonceGroup, nonce, mutation.isReturnResults());
+  public Result append(Append append, long nonceGroup, long nonce) throws IOException {
+    checkReadOnly();
+    checkResources();
+    startRegionOperation(Operation.APPEND);
+    try {
+      // All edits for the given row (across all column families) must happen atomically.
+      return doBatchMutate(append, true, nonceGroup, nonce).getResult();
+    } finally {
+      closeRegionOperation(Operation.APPEND);
+    }
   }
 
   @Override
@@ -8075,108 +8454,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return increment(increment, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
-  public Result increment(Increment mutation, long nonceGroup, long nonce) throws IOException {
-    return doDelta(Operation.INCREMENT, mutation, nonceGroup, nonce, mutation.isReturnResults());
-  }
-
-  /**
-   * Add "deltas" to Cells. Deltas are increments or appends. Switch on <code>op</code>.
-   *
-   * <p>If increment, add deltas to current values or if an append, then
-   * append the deltas to the current Cell values.
-   *
-   * <p>Append and Increment code paths are mostly the same. They differ in just a few places.
-   * This method does the code path for increment and append and then in key spots, switches
-   * on the passed in <code>op</code> to do increment or append specific paths.
-   */
-  private Result doDelta(Operation op, Mutation mutation, long nonceGroup, long nonce,
-      boolean returnResults) throws IOException {
+  public Result increment(Increment increment, long nonceGroup, long nonce) throws IOException {
     checkReadOnly();
     checkResources();
-    checkRow(mutation.getRow(), op.toString());
-    checkFamilies(mutation.getFamilyCellMap().keySet(), mutation.getDurability());
-    this.writeRequestsCount.increment();
-    WriteEntry writeEntry = null;
-    startRegionOperation(op);
-    List<Cell> results = returnResults? new ArrayList<>(mutation.size()): null;
-    RowLock rowLock = null;
-    MemStoreSizing memstoreAccounting = new NonThreadSafeMemStoreSizing();
+    startRegionOperation(Operation.INCREMENT);
     try {
-      rowLock = getRowLockInternal(mutation.getRow(), false, null);
-      lock(this.updatesLock.readLock());
-      try {
-        Result cpResult = doCoprocessorPreCall(op, mutation);
-        if (cpResult != null) {
-          // Metrics updated below in the finally block.
-          return returnResults? cpResult: null;
-        }
-        Durability effectiveDurability = getEffectiveDurability(mutation.getDurability());
-        Map<HStore, List<Cell>> forMemStore = new HashMap<>(mutation.getFamilyCellMap().size());
-        // Reckon Cells to apply to WAL --  in returned walEdit -- and what to add to memstore and
-        // what to return back to the client (in 'forMemStore' and 'results' respectively).
-        WALEdit walEdit = reckonDeltas(op, mutation, effectiveDurability, forMemStore, results);
-        // Actually write to WAL now if a walEdit to apply.
-        if (walEdit != null && !walEdit.isEmpty()) {
-          writeEntry = doWALAppend(walEdit, effectiveDurability, nonceGroup, nonce);
-        } else {
-          // If walEdits is empty, it means we skipped the WAL; update LongAdders and start an mvcc
-          // transaction.
-          recordMutationWithoutWal(mutation.getFamilyCellMap());
-          writeEntry = mvcc.begin();
-          updateSequenceId(forMemStore.values(), writeEntry.getWriteNumber());
-        }
-        // Now write to MemStore. Do it a column family at a time.
-        for (Map.Entry<HStore, List<Cell>> e : forMemStore.entrySet()) {
-          applyToMemStore(e.getKey(), e.getValue(), true, memstoreAccounting);
-        }
-        mvcc.completeAndWait(writeEntry);
-        if (rsServices != null && rsServices.getNonceManager() != null) {
-          rsServices.getNonceManager().addMvccToOperationContext(nonceGroup, nonce,
-            writeEntry.getWriteNumber());
-        }
-        if (rsServices != null && rsServices.getMetrics() != null) {
-          rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.
-            getTableName());
-        }
-        writeEntry = null;
-      } finally {
-        this.updatesLock.readLock().unlock();
-      }
-      // If results is null, then client asked that we not return the calculated results.
-      return results != null && returnResults? Result.create(results): Result.EMPTY_RESULT;
+      // All edits for the given row (across all column families) must happen atomically.
+      return doBatchMutate(increment, true, nonceGroup, nonce).getResult();
     } finally {
-      // Call complete always, even on success. doDelta is doing a Get READ_UNCOMMITTED when it goes
-      // to get current value under an exclusive lock so no need so no need to wait to return to
-      // the client. Means only way to read-your-own-increment or append is to come in with an
-      // a 0 increment.
-      if (writeEntry != null) mvcc.complete(writeEntry);
-      if (rowLock != null) {
-        rowLock.release();
-      }
-      // Request a cache flush if over the limit.  Do it outside update lock.
-      incMemStoreSize(memstoreAccounting.getMemStoreSize());
-      requestFlushIfNeeded();
-      closeRegionOperation(op);
-      if (this.metricsRegion != null) {
-        switch (op) {
-          case INCREMENT:
-            this.metricsRegion.updateIncrement();
-            break;
-          case APPEND:
-            this.metricsRegion.updateAppend();
-            break;
-          default:
-            break;
-        }
-      }
+      closeRegionOperation(Operation.INCREMENT);
     }
-  }
-
-  private WriteEntry doWALAppend(WALEdit walEdit, Durability durability, long nonceGroup,
-      long nonce)
-  throws IOException {
-    return doWALAppend(walEdit, durability, WALKey.EMPTY_UUIDS, System.currentTimeMillis(),
-      nonceGroup, nonce);
   }
 
   private WriteEntry doWALAppend(WALEdit walEdit, Durability durability, List<UUID> clusterIds,
@@ -8229,223 +8516,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return writeEntry;
   }
 
-  /**
-   * Do coprocessor pre-increment or pre-append call.
-   * @return Result returned out of the coprocessor, which means bypass all further processing and
-   *  return the proffered Result instead, or null which means proceed.
-   */
-  private Result doCoprocessorPreCall(final Operation op, final Mutation mutation)
-  throws IOException {
-    Result result = null;
-    if (this.coprocessorHost != null) {
-      switch(op) {
-        case INCREMENT:
-          result = this.coprocessorHost.preIncrementAfterRowLock((Increment)mutation);
-          break;
-        case APPEND:
-          result = this.coprocessorHost.preAppendAfterRowLock((Append)mutation);
-          break;
-        default: throw new UnsupportedOperationException(op.toString());
-      }
-    }
-    return result;
-  }
 
-  /**
-   * Reckon the Cells to apply to WAL, memstore, and to return to the Client; these Sets are not
-   * always the same dependent on whether to write WAL.
-   *
-   * @param results Fill in here what goes back to the Client if it is non-null (if null, client
-   *  doesn't want results).
-   * @param forMemStore Fill in here what to apply to the MemStore (by Store).
-   * @return A WALEdit to apply to WAL or null if we are to skip the WAL.
-   */
-  private WALEdit reckonDeltas(Operation op, Mutation mutation, Durability effectiveDurability,
-      Map<HStore, List<Cell>> forMemStore, List<Cell> results) throws IOException {
-    WALEdit walEdit = null;
-    long now = EnvironmentEdgeManager.currentTime();
-    final boolean writeToWAL = effectiveDurability != Durability.SKIP_WAL;
-    // Process a Store/family at a time.
-    for (Map.Entry<byte [], List<Cell>> entry: mutation.getFamilyCellMap().entrySet()) {
-      final byte[] columnFamilyName = entry.getKey();
-      List<Cell> deltas = entry.getValue();
-      // Reckon for the Store what to apply to WAL and MemStore.
-      List<Cell> toApply = reckonDeltasByStore(stores.get(columnFamilyName), op, mutation,
-        effectiveDurability, now, deltas, results);
-      if (!toApply.isEmpty()) {
-        for (Cell cell : toApply) {
-          HStore store = getStore(cell);
-          if (store == null) {
-            checkFamily(CellUtil.cloneFamily(cell));
-          } else {
-            forMemStore.computeIfAbsent(store, key -> new ArrayList<>()).add(cell);
-          }
-        }
-        if (writeToWAL) {
-          if (walEdit == null) {
-            walEdit = new WALEdit();
-          }
-          walEdit.getCells().addAll(toApply);
-        }
-      }
-    }
-    return walEdit;
-  }
 
-  /**
-   * Reckon the Cells to apply to WAL, memstore, and to return to the Client in passed
-   * column family/Store.
-   *
-   * Does Get of current value and then adds passed in deltas for this Store returning the result.
-   *
-   * @param op Whether Increment or Append
-   * @param mutation The encompassing Mutation object
-   * @param deltas Changes to apply to this Store; either increment amount or data to append
-   * @param results In here we accumulate all the Cells we are to return to the client. If null,
-   *                client doesn't want results returned.
-   * @return Resulting Cells after <code>deltas</code> have been applied to current
-   *  values. Side effect is our filling out of the <code>results</code> List.
-   */
-  private List<Cell> reckonDeltasByStore(HStore store, Operation op, Mutation mutation,
-      Durability effectiveDurability, long now, List<Cell> deltas, List<Cell> results)
-      throws IOException {
-    byte[] columnFamily = store.getColumnFamilyDescriptor().getName();
-    List<Pair<Cell, Cell>> cellPairs = new ArrayList<>(deltas.size());
-    // Get previous values for all columns in this family.
-    TimeRange tr = null;
-    switch (op) {
-      case INCREMENT:
-        tr = ((Increment)mutation).getTimeRange();
-        break;
-      case APPEND:
-        tr = ((Append)mutation).getTimeRange();
-        break;
-      default:
-        break;
-    }
-    List<Cell> currentValues = get(mutation, store, deltas,null, tr);
-    // Iterate the input columns and update existing values if they were found, otherwise
-    // add new column initialized to the delta amount
-    int currentValuesIndex = 0;
-    for (int i = 0; i < deltas.size(); i++) {
-      Cell delta = deltas.get(i);
-      Cell currentValue = null;
-      if (currentValuesIndex < currentValues.size() &&
-          CellUtil.matchingQualifier(currentValues.get(currentValuesIndex), delta)) {
-        currentValue = currentValues.get(currentValuesIndex);
-        if (i < (deltas.size() - 1) && !CellUtil.matchingQualifier(delta, deltas.get(i + 1))) {
-          currentValuesIndex++;
-        }
-      }
 
-      // Switch on whether this an increment or an append building the new Cell to apply.
-      Cell newCell = null;
-      switch (op) {
-        case INCREMENT:
-          long deltaAmount = getLongValue(delta);
-          final long newValue = currentValue == null ? deltaAmount : getLongValue(currentValue) + deltaAmount;
-          newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation, (oldCell) -> Bytes.toBytes(newValue));
-          break;
-        case APPEND:
-          newCell = reckonDelta(delta, currentValue, columnFamily, now, mutation, (oldCell) ->
-            ByteBuffer.wrap(new byte[delta.getValueLength() + oldCell.getValueLength()])
-                    .put(oldCell.getValueArray(), oldCell.getValueOffset(), oldCell.getValueLength())
-                    .put(delta.getValueArray(), delta.getValueOffset(), delta.getValueLength())
-                    .array()
-          );
-          break;
-        default: throw new UnsupportedOperationException(op.toString());
-      }
-      if (this.maxCellSize > 0) {
-        int newCellSize = PrivateCellUtil.estimatedSerializedSizeOf(newCell);
-        if (newCellSize > this.maxCellSize) {
-          String msg = "Cell with size " + newCellSize + " exceeds limit of " + this.maxCellSize
-            + " bytes in region " + this;
-          LOG.debug(msg);
-          throw new DoNotRetryIOException(msg);
-        }
-      }
-      cellPairs.add(new Pair<>(currentValue, newCell));
-      // Add to results to get returned to the Client. If null, cilent does not want results.
-      if (results != null) {
-        results.add(newCell);
-      }
-    }
 
-    // Give coprocessors a chance to update the new cells before apply to WAL or memstore
-    if (coprocessorHost != null) {
-      // Here the operation must be increment or append.
-      cellPairs = op == Operation.INCREMENT ?
-          coprocessorHost.postIncrementBeforeWAL(mutation, cellPairs) :
-          coprocessorHost.postAppendBeforeWAL(mutation, cellPairs);
-    }
-    return cellPairs.stream().map(Pair::getSecond).collect(Collectors.toList());
-  }
-
-  private static Cell reckonDelta(final Cell delta, final Cell currentCell,
-                                  final byte[] columnFamily, final long now,
-                                  Mutation mutation, Function<Cell, byte[]> supplier) throws IOException {
-    // Forward any tags found on the delta.
-    List<Tag> tags = TagUtil.carryForwardTags(delta);
-    tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
-    if (currentCell != null) {
-      tags = TagUtil.carryForwardTags(tags, currentCell);
-      byte[] newValue = supplier.apply(currentCell);
-      return ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-              .setRow(mutation.getRow(), 0, mutation.getRow().length)
-              .setFamily(columnFamily, 0, columnFamily.length)
-              // copy the qualifier if the cell is located in shared memory.
-              .setQualifier(CellUtil.cloneQualifier(delta))
-              .setTimestamp(Math.max(currentCell.getTimestamp() + 1, now))
-              .setType(KeyValue.Type.Put.getCode())
-              .setValue(newValue, 0, newValue.length)
-              .setTags(TagUtil.fromList(tags))
-              .build();
-    } else {
-      PrivateCellUtil.updateLatestStamp(delta, now);
-      return CollectionUtils.isEmpty(tags) ? delta : PrivateCellUtil.createCell(delta, tags);
-    }
-  }
-
-  /**
-   * @return Get the long out of the passed in Cell
-   */
-  private static long getLongValue(final Cell cell) throws DoNotRetryIOException {
-    int len = cell.getValueLength();
-    if (len != Bytes.SIZEOF_LONG) {
-      // throw DoNotRetryIOException instead of IllegalArgumentException
-      throw new DoNotRetryIOException("Field is not a long, it's " + len + " bytes wide");
-    }
-    return PrivateCellUtil.getValueAsLong(cell);
-  }
-
-  /**
-   * Do a specific Get on passed <code>columnFamily</code> and column qualifiers.
-   * @param mutation Mutation we are doing this Get for.
-   * @param store Which column family on row (TODO: Go all Gets in one go)
-   * @param coordinates Cells from <code>mutation</code> used as coordinates applied to Get.
-   * @return Return list of Cells found.
-   */
-  private List<Cell> get(Mutation mutation, HStore store, List<Cell> coordinates,
-      IsolationLevel isolation, TimeRange tr) throws IOException {
-    // Sort the cells so that they match the order that they appear in the Get results. Otherwise,
-    // we won't be able to find the existing values if the cells are not specified in order by the
-    // client since cells are in an array list.
-    // TODO: I don't get why we are sorting. St.Ack 20150107
-    sort(coordinates, store.getComparator());
-    Get get = new Get(mutation.getRow());
-    if (isolation != null) {
-      get.setIsolationLevel(isolation);
-    }
-    for (Cell cell: coordinates) {
-      get.addColumn(store.getColumnFamilyDescriptor().getName(), CellUtil.cloneQualifier(cell));
-    }
-    // Increments carry time range. If an Increment instance, put it on the Get.
-    if (tr != null) {
-      get.setTimeRange(tr.getMin(), tr.getMax());
-    }
-    return get(get, false);
-  }
 
   /**
    * @return Sorted list of <code>cells</code> using <code>comparator</code>

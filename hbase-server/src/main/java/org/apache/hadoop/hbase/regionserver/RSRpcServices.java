@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -556,38 +555,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  /**
-   * Starts the nonce operation for a mutation, if needed.
-   * @param mutation Mutation.
-   * @param nonceGroup Nonce group from the request.
-   * @return whether to proceed this mutation.
-   */
-  private boolean startNonceOperation(final MutationProto mutation, long nonceGroup)
-      throws IOException {
-    if (regionServer.nonceManager == null || !mutation.hasNonce()) return true;
-    boolean canProceed = false;
-    try {
-      canProceed = regionServer.nonceManager.startOperation(
-        nonceGroup, mutation.getNonce(), regionServer);
-    } catch (InterruptedException ex) {
-      throw new InterruptedIOException("Nonce start operation interrupted");
-    }
-    return canProceed;
-  }
-
-  /**
-   * Ends nonce operation for a mutation, if needed.
-   * @param mutation Mutation.
-   * @param nonceGroup Nonce group from the request. Always 0 in initial implementation.
-   * @param success Whether the operation for this nonce has succeeded.
-   */
-  private void endNonceOperation(final MutationProto mutation,
-      long nonceGroup, boolean success) {
-    if (regionServer.nonceManager != null && mutation.hasNonce()) {
-      regionServer.nonceManager.endOperation(nonceGroup, mutation.getNonce(), success);
-    }
-  }
-
   private boolean isClientCellBlockSupport(RpcCallContext context) {
     return context != null && context.isClientCellBlockSupported();
   }
@@ -625,7 +592,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   private CheckAndMutateResult checkAndMutate(HRegion region, List<ClientProtos.Action> actions,
-    CellScanner cellScanner, Condition condition,ActivePolicyEnforcement spaceQuotaEnforcement)
+    CellScanner cellScanner, Condition condition, ActivePolicyEnforcement spaceQuotaEnforcement)
     throws IOException {
     int countOfCompleteMutation = 0;
     try {
@@ -698,35 +665,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     checkCellSizeLimit(region, append);
     spaceQuota.getPolicyEnforcement(region).check(append);
     quota.addMutation(append);
-    Result r = null;
-    if (region.getCoprocessorHost() != null) {
-      r = region.getCoprocessorHost().preAppend(append);
-    }
-    if (r == null) {
-      boolean canProceed = startNonceOperation(mutation, nonceGroup);
-      boolean success = false;
-      try {
-        long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
-        if (canProceed) {
-          r = region.append(append, nonceGroup, nonce);
-        } else {
-          // convert duplicate append to get
-          List<Cell> results = region.get(toGet(append), false, nonceGroup, nonce);
-          r = Result.create(results);
-        }
-        success = true;
-      } finally {
-        if (canProceed) {
-          endNonceOperation(mutation, nonceGroup, success);
-        }
-      }
-      if (region.getCoprocessorHost() != null) {
-        r = region.getCoprocessorHost().postAppend(append, r);
-      }
-    }
+    long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
+    Result r = region.append(append, nonceGroup, nonce);
     if (regionServer.getMetrics() != null) {
-      regionServer.getMetrics().updateAppend(
-          region.getTableDescriptor().getTableName(),
+      regionServer.getMetrics().updateAppend(region.getTableDescriptor().getTableName(),
         EnvironmentEdgeManager.currentTime() - before);
     }
     return r == null ? Result.EMPTY_RESULT : r;
@@ -744,64 +686,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     checkCellSizeLimit(region, increment);
     spaceQuota.getPolicyEnforcement(region).check(increment);
     quota.addMutation(increment);
-    Result r = null;
-    if (region.getCoprocessorHost() != null) {
-      r = region.getCoprocessorHost().preIncrement(increment);
-    }
-    if (r == null) {
-      boolean canProceed = startNonceOperation(mutation, nonceGroup);
-      boolean success = false;
-      try {
-        long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
-        if (canProceed) {
-          r = region.increment(increment, nonceGroup, nonce);
-        } else {
-          // convert duplicate increment to get
-          List<Cell> results = region.get(toGet(increment), false, nonceGroup, nonce);
-          r = Result.create(results);
-        }
-        success = true;
-      } finally {
-        if (canProceed) {
-          endNonceOperation(mutation, nonceGroup, success);
-        }
-      }
-      if (region.getCoprocessorHost() != null) {
-        r = region.getCoprocessorHost().postIncrement(increment, r);
-      }
-    }
+    long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
+    Result r = region.increment(increment, nonceGroup, nonce);
     final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
     if (metricsRegionServer != null) {
-      metricsRegionServer.updateIncrement(
-          region.getTableDescriptor().getTableName(),
-          EnvironmentEdgeManager.currentTime() - before);
+      metricsRegionServer.updateIncrement(region.getTableDescriptor().getTableName(),
+        EnvironmentEdgeManager.currentTime() - before);
     }
     return r == null ? Result.EMPTY_RESULT : r;
-  }
-
-  private static Get toGet(final Mutation mutation) throws IOException {
-    if(!(mutation instanceof Increment) && !(mutation instanceof Append)) {
-      throw new AssertionError("mutation must be a instance of Increment or Append");
-    }
-    Get get = new Get(mutation.getRow());
-    CellScanner cellScanner = mutation.cellScanner();
-    while (!cellScanner.advance()) {
-      Cell cell = cellScanner.current();
-      get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
-    }
-    if (mutation instanceof Increment) {
-      // Increment
-      Increment increment = (Increment) mutation;
-      get.setTimeRange(increment.getTimeRange().getMin(), increment.getTimeRange().getMax());
-    } else {
-      // Append
-      Append append = (Append) mutation;
-      get.setTimeRange(append.getTimeRange().getMin(), append.getTimeRange().getMax());
-    }
-    for (Entry<String, byte[]> entry : mutation.getAttributesMap().entrySet()) {
-      get.setAttribute(entry.getKey(), entry.getValue());
-    }
-    return get;
   }
 
   /**
@@ -2913,23 +2805,35 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
 
           try {
-            CheckAndMutateResult result = checkAndMutate(region, regionAction.getActionList(),
-              cellScanner, regionAction.getCondition(), spaceQuotaEnforcement);
-            regionActionResultBuilder.setProcessed(result.isSuccess());
             ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
               ClientProtos.ResultOrException.newBuilder();
-            for (int i = 0; i < regionAction.getActionCount(); i++) {
-              if (i == 0 && result.getResult() != null) {
-                resultOrExceptionOrBuilder.setIndex(i);
-                regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder
-                  .setResult(ProtobufUtil.toResult(result.getResult())).build());
-                continue;
+            if (regionAction.getActionCount() == 1) {
+              CheckAndMutateResult result = checkAndMutate(region, quota,
+                regionAction.getAction(0).getMutation(), cellScanner,
+                regionAction.getCondition(), spaceQuotaEnforcement);
+              regionActionResultBuilder.setProcessed(result.isSuccess());
+              resultOrExceptionOrBuilder.setIndex(0);
+              if (result.getResult() != null) {
+                resultOrExceptionOrBuilder.setResult(ProtobufUtil.toResult(result.getResult()));
               }
-              // To unify the response format with doNonAtomicRegionMutation and read through
-              // client's AsyncProcess we have to add an empty result instance per operation
-              resultOrExceptionOrBuilder.clear();
-              resultOrExceptionOrBuilder.setIndex(i);
               regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder.build());
+            } else {
+              CheckAndMutateResult result = checkAndMutate(region, regionAction.getActionList(),
+                cellScanner, regionAction.getCondition(), spaceQuotaEnforcement);
+              regionActionResultBuilder.setProcessed(result.isSuccess());
+              for (int i = 0; i < regionAction.getActionCount(); i++) {
+                if (i == 0 && result.getResult() != null) {
+                  resultOrExceptionOrBuilder.setIndex(i);
+                  regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder
+                    .setResult(ProtobufUtil.toResult(result.getResult())).build());
+                  continue;
+                }
+                // To unify the response format with doNonAtomicRegionMutation and read through
+                // client's AsyncProcess we have to add an empty result instance per operation
+                resultOrExceptionOrBuilder.clear();
+                resultOrExceptionOrBuilder.setIndex(i);
+                regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder.build());
+              }
             }
           } catch (IOException e) {
             rpcServer.getMetrics().exception(e);

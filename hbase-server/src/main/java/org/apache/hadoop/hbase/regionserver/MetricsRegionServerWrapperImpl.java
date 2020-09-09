@@ -929,6 +929,11 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getHedgedReadOpsInCurThread() {
+    return this.dfsHedgedReadMetrics == null ? 0 : this.dfsHedgedReadMetrics.getHedgedReadOpsInCurThread();
+  }
+
+  @Override
   public long getTotalBytesRead() {
     return FSDataInputStreamWrapper.getTotalBytesRead();
   }

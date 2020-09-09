@@ -1560,6 +1560,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           throw new RuntimeException("Generator.verify failed");
         }
       }
+      LOG.info("Generator finished with success. Total nodes=" + numNodes);
     }
 
     protected void runVerify(String outputDir,

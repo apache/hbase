@@ -61,8 +61,7 @@ public class StripeStoreFlusher extends StoreFlusher {
     int cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
-    long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint, tracker);
+    InternalScanner scanner = createScanner(snapshot.getScanners(), tracker);
 
     // Let policy select flush method.
     StripeFlushRequest req = this.policy.selectFlush(store.getComparator(), this.stripes,
@@ -77,7 +76,7 @@ public class StripeStoreFlusher extends StoreFlusher {
       mw.init(storeScanner, factory);
 
       synchronized (flushLock) {
-        performFlush(scanner, mw, smallestReadPoint, throughputController);
+        performFlush(scanner, mw, throughputController);
         result = mw.commitWriters(cacheFlushSeqNum, false);
         success = true;
       }
