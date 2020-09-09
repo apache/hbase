@@ -102,6 +102,11 @@ public interface MasterServices extends Server {
   ServerManager getServerManager();
 
   /**
+   * @return Master's {@link ReplicationServerManager} instance.
+   */
+  ReplicationServerManager getReplicationServerManager();
+
+  /**
    * @return Master's instance of {@link ExecutorService}
    */
   ExecutorService getExecutorService();
