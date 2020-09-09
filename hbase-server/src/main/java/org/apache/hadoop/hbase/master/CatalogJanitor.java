@@ -76,11 +76,13 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * mode, if we are NOT shutting down, AND if the assignmentmanager is loaded.
  * Playing it safe, we will garbage collect no-longer needed region references
  * only if there are no regions-in-transition (RIT).
+ *
+ * if any unknown servers are found, we schedule a HBCKSCP and reassign regions to online
+ * servers.
  */
 // TODO: Only works with single hbase:meta region currently.  Fix.
 // TODO: Should it start over every time? Could it continue if runs into problem? Only if
 // problem does not mess up 'results'.
-// TODO: Do more by way of 'repair'; see note on unknownServers below.
 @InterfaceAudience.Private
 public class CatalogJanitor extends ScheduledChore {
   private static final Logger LOG = LoggerFactory.getLogger(CatalogJanitor.class.getName());
@@ -176,6 +178,8 @@ public class CatalogJanitor extends ScheduledChore {
       this.lastReport = scanForReport();
       if (!this.lastReport.isEmpty()) {
         LOG.warn(this.lastReport.toString());
+        // expires unknown servers
+        repairUnknownServers();
       }
 
       if (isRIT(this.services.getAssignmentManager())) {
@@ -220,6 +224,20 @@ public class CatalogJanitor extends ScheduledChore {
       return gcs;
     } finally {
       alreadyRunning.set(false);
+    }
+  }
+
+  void repairUnknownServers() {
+    if(!lastReport.unknownServers.isEmpty()) {
+      // submit HBCKServerCrashProcedure to avoid any corner cases that in-memory region states
+      // mismatches with hbase:meta. in fact if HBCKSCP finds any in-memory region states,
+      // HBCKSCP is basically same as SCP.
+      lastReport.unknownServers.stream().forEach(regionInfoServerNamePair -> {
+        LOG.warn("Submitting HBCKSCP for Unknown Region Server {}",
+            regionInfoServerNamePair.getSecond());
+        services.getAssignmentManager()
+            .submitServerCrash(regionInfoServerNamePair.getSecond(), true, true);
+      });
     }
   }
 
@@ -432,9 +450,10 @@ public class CatalogJanitor extends ScheduledChore {
     private final List<Pair<RegionInfo, RegionInfo>> overlaps = new ArrayList<>();
 
     /**
-     * TODO: If CatalogJanitor finds an 'Unknown Server', it should 'fix' it by queuing
-     * a {@link org.apache.hadoop.hbase.master.procedure.HBCKServerCrashProcedure} for
-     * found server for it to clean up meta.
+     * If CatalogJanitor finds an 'Unknown Server' during each scan/chore on hbase:meta,
+     * it should be automatically fixed by queuing a
+     * {@link org.apache.hadoop.hbase.master.procedure.HBCKServerCrashProcedure} for
+     * found server for it to clean up meta and reassign regions to online servers.
      */
     private final List<Pair<RegionInfo, ServerName>> unknownServers = new ArrayList<>();
 
