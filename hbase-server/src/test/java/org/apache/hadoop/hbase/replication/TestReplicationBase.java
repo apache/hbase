@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_OPERATION_TIMEOUT;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -196,6 +197,7 @@ public class TestReplicationBase {
     conf.setFloat("replication.source.ratio", 1.0f);
     conf.setBoolean("replication.source.eof.autorecovery", true);
     conf.setLong("hbase.serial.replication.waiting.ms", 100);
+    conf.setLong(HBASE_CLIENT_OPERATION_TIMEOUT, 1000);
   }
 
   static void configureClusters(HBaseTestingUtility util1,
