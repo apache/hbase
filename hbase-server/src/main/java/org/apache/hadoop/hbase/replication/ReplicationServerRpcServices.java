@@ -27,14 +27,12 @@ import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
-import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
@@ -58,53 +56,11 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactionSwitchResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponseRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponses;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WarmupRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerProtos.ReplicationServerService;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -117,7 +73,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
 public class ReplicationServerRpcServices implements HBaseRPCErrorHandler,
-    AdminService.BlockingInterface, PriorityFunction {
+    ReplicationServerService.BlockingInterface, PriorityFunction {
 
   protected static final Logger LOG = LoggerFactory.getLogger(ReplicationServerRpcServices.class);
 
@@ -256,8 +212,8 @@ public class ReplicationServerRpcServices implements HBaseRPCErrorHandler,
   protected List<BlockingServiceAndInterface> getServices() {
     List<BlockingServiceAndInterface> bssi = new ArrayList<>();
     bssi.add(new BlockingServiceAndInterface(
-      AdminService.newReflectiveBlockingService(this),
-      AdminService.BlockingInterface.class));
+      ReplicationServerService.newReflectiveBlockingService(this),
+        ReplicationServerService.BlockingInterface.class));
     return new ImmutableList.Builder<BlockingServiceAndInterface>().addAll(bssi).build();
   }
 
@@ -323,154 +279,6 @@ public class ReplicationServerRpcServices implements HBaseRPCErrorHandler,
       throw new ServerNotRunningYetException("Server " + replicationServer.getServerName()
           + " is not running yet");
     }
-  }
-
-  @Override
-  public GetRegionInfoResponse getRegionInfo(RpcController controller, GetRegionInfoRequest request)
-      throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public GetStoreFileResponse getStoreFile(RpcController controller, GetStoreFileRequest request)
-      throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public GetOnlineRegionResponse getOnlineRegion(RpcController controller,
-      GetOnlineRegionRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public OpenRegionResponse openRegion(RpcController controller, OpenRegionRequest request)
-      throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public WarmupRegionResponse warmupRegion(RpcController controller, WarmupRegionRequest request)
-      throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public CloseRegionResponse closeRegion(RpcController controller, CloseRegionRequest request)
-      throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public FlushRegionResponse flushRegion(RpcController controller, FlushRegionRequest request)
-      throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public CompactionSwitchResponse compactionSwitch(RpcController controller,
-      CompactionSwitchRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public CompactRegionResponse compactRegion(RpcController controller,
-      CompactRegionRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public ReplicateWALEntryResponse replay(RpcController controller,
-      ReplicateWALEntryRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public RollWALWriterResponse rollWALWriter(RpcController controller, RollWALWriterRequest request)
-      throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public GetServerInfoResponse getServerInfo(RpcController controller, GetServerInfoRequest request)
-      throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  /**
-   * Stop the replication server.
-   *
-   * @param controller the RPC controller
-   * @param request the request
-   */
-  @Override
-  @QosPriority(priority=HConstants.ADMIN_QOS)
-  public StopServerResponse stopServer(final RpcController controller,
-      final StopServerRequest request) {
-    requestCount.increment();
-    String reason = request.getReason();
-    replicationServer.stop(reason);
-    return StopServerResponse.newBuilder().build();
-  }
-
-  @Override
-  public UpdateFavoredNodesResponse updateFavoredNodes(RpcController controller,
-      UpdateFavoredNodesRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public UpdateConfigurationResponse updateConfiguration(RpcController controller,
-      UpdateConfigurationRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public GetRegionLoadResponse getRegionLoad(RpcController controller,
-      GetRegionLoadRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public ClearCompactionQueuesResponse clearCompactionQueues(RpcController controller,
-      ClearCompactionQueuesRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public ClearRegionBlockCacheResponse clearRegionBlockCache(RpcController controller,
-      ClearRegionBlockCacheRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public GetSpaceQuotaSnapshotsResponse getSpaceQuotaSnapshots(RpcController controller,
-      GetSpaceQuotaSnapshotsRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public ExecuteProceduresResponse executeProcedures(RpcController controller,
-      ExecuteProceduresRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public SlowLogResponses getSlowLogResponses(RpcController controller,
-      SlowLogResponseRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public SlowLogResponses getLargeLogResponses(RpcController controller,
-      SlowLogResponseRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
-  }
-
-  @Override
-  public ClearSlowLogResponses clearSlowLogsResponses(RpcController controller,
-      ClearSlowLogResponseRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException("This's Replication Server"));
   }
 
   protected AccessChecker getAccessChecker() {
