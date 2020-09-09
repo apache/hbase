@@ -257,6 +257,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerProtos.ReplicationServerService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -1463,8 +1464,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     if (admin) {
       bssi.add(new BlockingServiceAndInterface(
-      AdminService.newReflectiveBlockingService(this),
-      AdminService.BlockingInterface.class));
+          AdminService.newReflectiveBlockingService(this),
+          AdminService.BlockingInterface.class));
+      bssi.add(new BlockingServiceAndInterface(
+          ReplicationServerService.newReflectiveBlockingService(this),
+          ReplicationServerService.BlockingInterface.class));
     }
     return new org.apache.hbase.thirdparty.com.google.common.collect.
         ImmutableList.Builder<BlockingServiceAndInterface>().addAll(bssi).build();
