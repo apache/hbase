@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.regionserver.ReplicationService;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -99,7 +98,6 @@ public class HReplicationServer extends Thread implements Server {
   protected final ReplicationServerRpcServices rpcServices;
 
   public HReplicationServer(final Configuration conf) throws IOException {
-    TraceUtil.initTracer(conf);
     try {
       this.startCode = System.currentTimeMillis();
       this.conf = conf;

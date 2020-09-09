@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminServic
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerProtos.ReplicationServerService;
 
 /**
  * The implementation of AsyncConnection.
@@ -104,6 +105,8 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private final ConcurrentMap<String, ClientService.Interface> rsStubs = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, AdminService.Interface> adminStubs =
+      new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, ReplicationServerService.Interface> replStubs =
       new ConcurrentHashMap<>();
 
   private final AtomicReference<MasterService.Interface> masterStub = new AtomicReference<>();
@@ -283,10 +286,23 @@ class AsyncConnectionImpl implements AsyncConnection {
     return AdminService.newStub(rpcClient.createRpcChannel(serverName, user, rpcTimeout));
   }
 
+  private ReplicationServerService.Interface createReplicationServerStub(ServerName serverName)
+      throws IOException {
+    return ReplicationServerService.newStub(
+        rpcClient.createRpcChannel(serverName, user, rpcTimeout));
+  }
+
   AdminService.Interface getAdminStub(ServerName serverName) throws IOException {
     return ConcurrentMapUtils.computeIfAbsentEx(adminStubs,
       getStubKey(AdminService.getDescriptor().getName(), serverName),
       () -> createAdminServerStub(serverName));
+  }
+
+  ReplicationServerService.Interface getReplicationServerStub(ServerName serverName)
+      throws IOException {
+    return ConcurrentMapUtils.computeIfAbsentEx(replStubs,
+        getStubKey(ReplicationServerService.getDescriptor().getName(), serverName),
+      () -> createReplicationServerStub(serverName));
   }
 
   CompletableFuture<MasterService.Interface> getMasterStub() {

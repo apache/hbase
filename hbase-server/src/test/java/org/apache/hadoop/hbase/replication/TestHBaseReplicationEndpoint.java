@@ -28,7 +28,8 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
-import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
+import org.apache.hadoop.hbase.client.AsyncReplicationServerAdmin;
+import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint.ReplicationServerSinkPeer;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint.SinkPeer;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -99,7 +100,7 @@ public class TestHBaseReplicationEndpoint {
     // Sanity check
     assertEquals(1, endpoint.getNumSinks());
 
-    SinkPeer sinkPeer = new SinkPeer(serverNameA, mock(AsyncRegionServerAdmin.class));
+    SinkPeer sinkPeer = mockSinkPeer(serverNameA);
     endpoint.reportBadSink(sinkPeer);
     // Just reporting a bad sink once shouldn't have an effect
     assertEquals(1, endpoint.getNumSinks());
@@ -123,7 +124,7 @@ public class TestHBaseReplicationEndpoint {
     assertEquals(expected, endpoint.getNumSinks());
 
     ServerName badSinkServer0 = endpoint.getSinkServers().get(0);
-    SinkPeer sinkPeer = new SinkPeer(badSinkServer0, mock(AsyncRegionServerAdmin.class));
+    SinkPeer sinkPeer = mockSinkPeer(badSinkServer0);
     for (int i = 0; i <= HBaseReplicationEndpoint.DEFAULT_BAD_SINK_THRESHOLD; i++) {
       endpoint.reportBadSink(sinkPeer);
     }
@@ -133,7 +134,7 @@ public class TestHBaseReplicationEndpoint {
 
     // now try a sink that has some successes
     ServerName badSinkServer1 = endpoint.getSinkServers().get(0);
-    sinkPeer = new SinkPeer(badSinkServer1, mock(AsyncRegionServerAdmin.class));
+    sinkPeer = mockSinkPeer(badSinkServer1);
     for (int i = 0; i < HBaseReplicationEndpoint.DEFAULT_BAD_SINK_THRESHOLD; i++) {
       endpoint.reportBadSink(sinkPeer);
     }
@@ -168,8 +169,8 @@ public class TestHBaseReplicationEndpoint {
     ServerName serverNameA = endpoint.getSinkServers().get(0);
     ServerName serverNameB = endpoint.getSinkServers().get(1);
 
-    SinkPeer sinkPeerA = new SinkPeer(serverNameA, mock(AsyncRegionServerAdmin.class));
-    SinkPeer sinkPeerB = new SinkPeer(serverNameB, mock(AsyncRegionServerAdmin.class));
+    SinkPeer sinkPeerA = mockSinkPeer(serverNameA);
+    SinkPeer sinkPeerB = mockSinkPeer(serverNameB);
 
     for (int i = 0; i <= HBaseReplicationEndpoint.DEFAULT_BAD_SINK_THRESHOLD; i++) {
       endpoint.reportBadSink(sinkPeerA);
@@ -206,5 +207,9 @@ public class TestHBaseReplicationEndpoint {
     public AsyncClusterConnection createConnection(Configuration conf) throws IOException {
       return null;
     }
+  }
+
+  private SinkPeer mockSinkPeer(ServerName serverName) {
+    return new ReplicationServerSinkPeer(serverName, mock(AsyncReplicationServerAdmin.class));
   }
 }
