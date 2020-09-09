@@ -317,8 +317,12 @@ public class RegionStateStore {
   private Result getRegionCatalogResult(RegionInfo region) throws IOException {
     Get get =
       new Get(CatalogFamilyFormat.getMetaKeyForRegion(region)).addFamily(HConstants.CATALOG_FAMILY);
-    try (Table table = getMetaTable()) {
-      return table.get(get);
+    if (region.isMetaRegion()) {
+      return masterRegion.get(get);
+    } else {
+      try (Table table = getMetaTable()) {
+        return table.get(get);
+      }
     }
   }
 
@@ -504,7 +508,7 @@ public class RegionStateStore {
   }
 
   // ============================================================================================
-  //  Delete Region State helpers
+  // Delete Region State helpers
   // ============================================================================================
   /**
    * Deletes the specified region.
