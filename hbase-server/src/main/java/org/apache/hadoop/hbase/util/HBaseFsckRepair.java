@@ -201,7 +201,6 @@ public class HBaseFsckRepair {
    * Remove parent
    */
   public static void removeParentInMeta(Configuration conf, RegionInfo hri) throws IOException {
-    Connection conn = ConnectionFactory.createConnection(conf);
-    MetaTableAccessor.deleteRegionInfo(conn, hri);
+    throw new UnsupportedOperationException("HBCK1 is read-only now, use HBCK2 instead");
   }
 }

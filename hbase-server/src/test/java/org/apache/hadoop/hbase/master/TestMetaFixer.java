@@ -81,7 +81,7 @@ public class TestMetaFixer {
   }
 
   private void deleteRegion(MasterServices services, RegionInfo ri) throws IOException {
-    MetaTableAccessor.deleteRegionInfo(TEST_UTIL.getConnection(), ri);
+    services.getAssignmentManager().getRegionStateStore().deleteRegion(ri);
     // Delete it from Master context too else it sticks around.
     services.getAssignmentManager().getRegionStates().deleteRegion(ri);
   }
