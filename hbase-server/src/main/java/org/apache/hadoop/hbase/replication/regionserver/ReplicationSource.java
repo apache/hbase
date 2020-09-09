@@ -441,7 +441,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
             t.getName());
           manager.refreshSources(peerId);
           break;
-        } catch (IOException e1) {
+        } catch (ReplicationException | IOException e1) {
           LOG.error("Replication sources refresh failed.", e1);
           sleepForRetries("Sleeping before try refreshing sources again",
             maxRetriesMultiplier);
