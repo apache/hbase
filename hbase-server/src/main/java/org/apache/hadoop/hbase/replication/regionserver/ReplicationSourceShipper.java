@@ -347,7 +347,7 @@ public class ReplicationSourceShipper extends Thread {
     long timeout = System.currentTimeMillis() + this.shipEditsTimeout;
     while(this.isAlive() || this.entryReader.isAlive()){
       try {
-        if(System.currentTimeMillis() >= timeout ) {
+        if (System.currentTimeMillis() >= timeout) {
           LOG.warn("Interrupting source thread for peer {} without cleaning buffer usage "
             + "because clearWALEntryBatch method timed out whilst waiting reader/shipper "
             + "thread to stop.", this.source.getPeerId());

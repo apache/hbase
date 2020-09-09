@@ -629,7 +629,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     for (ReplicationSourceShipper worker : workers) {
       worker.stopWorker();
-      if (worker.entryReader != null ) {
+      if (worker.entryReader != null) {
         worker.entryReader.setReaderRunning(false);
       }
       if (worker.isAlive() || worker.entryReader.isAlive()) {
