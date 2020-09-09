@@ -327,6 +327,11 @@ public final class UnsafeAccess {
       destBase = dest.array();
     }
     long srcAddress = srcOffset + BYTE_ARRAY_BASE_OFFSET;
+    assert (src.length - srcOffset) >= length : "unsafe memory access: attempting to copy "
+      + length + " bytes from src when only " + (src.length - srcOffset) + " capacity remains";
+    assert (dest.capacity() - destOffset) >= length : "unsafe memory access: attempting to copy "
+      + length + " bytes into dest when only " + (dest.capacity() - destOffset)
+      + " capacity remains.";
     unsafeCopy(src, srcAddress, destBase, destAddress, length);
   }
 
@@ -361,6 +366,10 @@ public final class UnsafeAccess {
       srcBase = src.array();
     }
     long destAddress = destOffset + BYTE_ARRAY_BASE_OFFSET;
+    assert (src.capacity() - srcOffset) >= length : "unsafe memory access: attempting to copy "
+      + length + " bytes from src when only " + (src.capacity() - srcOffset) + " capacity remains";
+    assert (dest.length - destOffset) >= length : "unsafe memory access: attempting to copy "
+      + length + " bytes into dest when only " + (dest.length - destOffset) + " capacity remains.";
     unsafeCopy(srcBase, srcAddress, dest, destAddress, length);
   }
 
@@ -390,6 +399,11 @@ public final class UnsafeAccess {
       destAddress = destOffset + BYTE_ARRAY_BASE_OFFSET + dest.arrayOffset();
       destBase = dest.array();
     }
+    assert (src.capacity() - srcOffset) >= length : "unsafe memory access: attempting to copy "
+      + length + " bytes from src when only " + (src.capacity() - srcOffset) + " capacity remains";
+    assert (dest.capacity() - destOffset) >= length : "unsafe memory access: attempting to copy "
+      + length + " bytes into dest when only " + (dest.capacity() - destOffset)
+      + " capacity remains.";
     unsafeCopy(srcBase, srcAddress, destBase, destAddress, length);
   }
 
