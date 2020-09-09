@@ -8021,7 +8021,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this.metricsRegion.updateAppend();
     }
     if (isFlushSize(this.addAndGetGlobalMemstoreSize(size))) requestFlush();
-    return mutate.isReturnResults() ? Result.create(allKVs) : null;
+    return mutate.isReturnResults() ? Result.create(allKVs) : Result.EMPTY_RESULT;
   }
 
   private void preWALAppend(WALKey walKey, WALEdit walEdits) throws IOException {
@@ -8261,7 +8261,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // Request a cache flush.  Do it outside update lock.
     if (isFlushSize(this.addAndGetGlobalMemstoreSize(accumulatedResultSize))) requestFlush();
-    return increment.isReturnResults() ? Result.create(allKVs) : null;
+    return increment.isReturnResults() ? Result.create(allKVs) : Result.EMPTY_RESULT;
   }
 
   /**
