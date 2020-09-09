@@ -3331,8 +3331,8 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
-  public MasterProtos.MasterLogEntry getLogEntries(RpcController controller,
-      MasterProtos.MasterLogRequest request) throws ServiceException {
+  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+      HBaseProtos.LogRequest request) throws ServiceException {
     try {
       final String logClassName = request.getLogClassName();
       Class<?> logClass = Class.forName(logClassName)
@@ -3344,7 +3344,7 @@ public class MasterRpcServices extends RSRpcServices implements
             .invoke(null, request.getLogInitializerMessage());
         MasterProtos.BalancerDecisionsResponse balancerDecisionsResponse =
           getBalancerDecisions(balancerDecisionsRequest);
-        return MasterProtos.MasterLogEntry.newBuilder()
+        return HBaseProtos.LogEntry.newBuilder()
           .setLogClassName(balancerDecisionsResponse.getClass().getName())
           .setLogInitializerMessage(balancerDecisionsResponse.toByteString())
           .build();

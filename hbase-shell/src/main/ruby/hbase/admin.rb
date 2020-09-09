@@ -1578,11 +1578,11 @@ module Hbase
         limit = 10
       end
       if is_large_log
-        log_type = org.apache.hadoop.hbase.client.LogType::LARGE_LOG
+        log_type = 'LARGE_LOG'
       else
-        log_type = org.apache.hadoop.hbase.client.LogType::SLOW_LOG
+        log_type = 'SLOW_LOG'
       end
-      log_dest = org.apache.hadoop.hbase.client.LogDestination::HREGION_SERVER
+      log_dest = org.apache.hadoop.hbase.client.ServerType::HREGION_SERVER
       server_names_set = java.util.HashSet.new(server_names)
       slow_log_responses = @admin.getLogEntries(server_names_set, log_type, log_dest, limit,
                                                 filter_params)
@@ -1719,8 +1719,8 @@ module Hbase
       else
         limit = 250
       end
-      log_type = org.apache.hadoop.hbase.client.LogType::BALANCER_DECISION
-      log_dest = org.apache.hadoop.hbase.client.LogDestination::HMASTER
+      log_type = 'BALANCER_DECISION'
+      log_dest = org.apache.hadoop.hbase.client.ServerType::HMASTER
       balancer_decisions_responses = @admin.getLogEntries(nil, log_type, log_dest, limit, nil)
       balancer_decisions_resp_arr = []
       balancer_decisions_responses.each { |balancer_dec_resp|

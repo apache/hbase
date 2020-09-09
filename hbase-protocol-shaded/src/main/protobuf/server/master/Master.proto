@@ -702,16 +702,6 @@ message BalancerDecisionsResponse {
   repeated BalancerDecision balancer_decision = 1;
 }
 
-message MasterLogRequest {
-  required string log_class_name = 1;
-  required bytes log_initializer_message = 2;
-}
-
-message MasterLogEntry {
-  required string log_class_name = 1;
-  required bytes log_initializer_message = 2;
-}
-
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -1143,8 +1133,8 @@ service MasterService {
   rpc UpdateRSGroupConfig(UpdateRSGroupConfigRequest)
   returns (UpdateRSGroupConfigResponse);
 
-  rpc GetLogEntries(MasterLogRequest)
-    returns(MasterLogEntry);
+  rpc GetLogEntries(LogRequest)
+    returns(LogEntry);
 }
 
 // HBCK Service definitions.

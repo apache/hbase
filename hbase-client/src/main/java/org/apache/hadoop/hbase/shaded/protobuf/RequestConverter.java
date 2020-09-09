@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.LogType;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
@@ -74,7 +73,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminLogRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
@@ -1802,15 +1800,15 @@ public final class RequestConverter {
    * @param filterParams map of filter params
    * @param limit limit for no of records that server returns
    * @param logType type of the log records
-   * @return request payload {@link AdminLogRequest}
+   * @return request payload {@link HBaseProtos.LogRequest}
    */
-  public static AdminLogRequest buildSlowLogResponseRequest(final Map<String, Object> filterParams,
-      final int limit, final LogType logType) {
+  public static HBaseProtos.LogRequest buildSlowLogResponseRequest(
+      final Map<String, Object> filterParams, final int limit, final String logType) {
     SlowLogResponseRequest.Builder builder = SlowLogResponseRequest.newBuilder();
     builder.setLimit(limit);
-    if (logType.equals(LogType.SLOW_LOG)) {
+    if (logType.equals("SLOW_LOG")) {
       builder.setLogType(SlowLogResponseRequest.LogType.SLOW_LOG);
-    } else if (logType.equals(LogType.LARGE_LOG)) {
+    } else if (logType.equals("LARGE_LOG")) {
       builder.setLogType(SlowLogResponseRequest.LogType.LARGE_LOG);
     }
     boolean filterByAnd = false;
@@ -1854,7 +1852,7 @@ public final class RequestConverter {
       builder.setFilterByOperator(SlowLogResponseRequest.FilterByOperator.OR);
     }
     SlowLogResponseRequest slowLogResponseRequest = builder.build();
-    return AdminLogRequest.newBuilder()
+    return HBaseProtos.LogRequest.newBuilder()
       .setLogClassName(slowLogResponseRequest.getClass().getName())
       .setLogInitializerMessage(slowLogResponseRequest.toByteString())
       .build();

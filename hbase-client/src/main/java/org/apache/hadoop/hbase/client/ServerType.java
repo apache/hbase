@@ -22,12 +22,12 @@ package org.apache.hadoop.hbase.client;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Select the destination of log records.
+ * Select server type i.e destination for RPC request associated with ring buffer.
  * e.g slow/large log records are maintained by HRegionServer, whereas balancer decisions
  * are maintained by HMaster.
  */
 @InterfaceAudience.Public
-public enum LogDestination {
+public enum ServerType {
   HMASTER,
   HREGION_SERVER
 }

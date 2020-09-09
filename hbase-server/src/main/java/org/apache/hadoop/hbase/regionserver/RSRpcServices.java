@@ -141,6 +141,7 @@ import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.NoopAccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -172,8 +173,6 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminLogEntry;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminLogRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
@@ -4010,8 +4009,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   @Override
-  public AdminLogEntry getLogEntries(RpcController controller,
-      AdminLogRequest request) throws ServiceException {
+  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+      HBaseProtos.LogRequest request) throws ServiceException {
     try {
       final String logClassName = request.getLogClassName();
       Class<?> logClass = Class.forName(logClassName)
@@ -4027,7 +4026,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
           .addAllSlowLogPayloads(slowLogPayloads)
           .build();
-        return AdminLogEntry.newBuilder().setLogClassName(slowLogResponses.getClass().getName())
+        return HBaseProtos.LogEntry.newBuilder()
+          .setLogClassName(slowLogResponses.getClass().getName())
           .setLogInitializerMessage(slowLogResponses.toByteString()).build();
       }
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException

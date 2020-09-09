@@ -314,16 +314,6 @@ message ClearSlowLogResponses {
   required bool is_cleaned = 1;
 }
 
-message AdminLogRequest {
-  required string log_class_name = 1;
-  required bytes log_initializer_message = 2;
-}
-
-message AdminLogEntry {
-  required string log_class_name = 1;
-  required bytes log_initializer_message = 2;
-}
-
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -398,7 +388,7 @@ service AdminService {
   rpc ClearSlowLogsResponses(ClearSlowLogResponseRequest)
     returns(ClearSlowLogResponses);
 
-  rpc GetLogEntries(AdminLogRequest)
-    returns(AdminLogEntry);
+  rpc GetLogEntries(LogRequest)
+    returns(LogEntry);
 
 }

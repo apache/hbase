@@ -3508,18 +3508,18 @@ public final class ProtobufUtil {
   /**
    * Convert  AdminProtos#SlowLogResponses to list of {@link OnlineLogRecord}
    *
-   * @param adminLogEntry slowlog response protobuf instance
+   * @param logEntry slowlog response protobuf instance
    * @return list of SlowLog payloads for client usecase
    */
   public static List<LogEntry> toSlowLogPayloads(
-      final AdminProtos.AdminLogEntry adminLogEntry) {
+      final HBaseProtos.LogEntry logEntry) {
     try {
-      final String logClassName = adminLogEntry.getLogClassName();
+      final String logClassName = logEntry.getLogClassName();
       Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
       Method method = logClass.getMethod("parseFrom", ByteString.class);
       if (logClassName.contains("SlowLogResponses")) {
         AdminProtos.SlowLogResponses slowLogResponses = (AdminProtos.SlowLogResponses) method
-          .invoke(null, adminLogEntry.getLogInitializerMessage());
+          .invoke(null, logEntry.getLogInitializerMessage());
         return slowLogResponses.getSlowLogPayloadsList().stream()
           .map(ProtobufUtil::getSlowLogRecord).collect(Collectors.toList());
       }
@@ -3641,15 +3641,15 @@ public final class ProtobufUtil {
   }
 
   public static List<LogEntry> toBalancerDecisionResponse(
-      MasterProtos.MasterLogEntry masterLogEntry) {
+      HBaseProtos.LogEntry logEntry) {
     try {
-      final String logClassName = masterLogEntry.getLogClassName();
+      final String logClassName = logEntry.getLogClassName();
       Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
       Method method = logClass.getMethod("parseFrom", ByteString.class);
       if (logClassName.contains("BalancerDecisionsResponse")) {
         MasterProtos.BalancerDecisionsResponse response =
           (MasterProtos.BalancerDecisionsResponse) method
-            .invoke(null, masterLogEntry.getLogInitializerMessage());
+            .invoke(null, logEntry.getLogInitializerMessage());
         return getBalancerDecisionEntries(response);
       }
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
@@ -3675,10 +3675,10 @@ public final class ProtobufUtil {
       .collect(Collectors.toList());
   }
 
-  public static MasterProtos.MasterLogRequest toBalancerDecisionRequest(int limit) {
+  public static HBaseProtos.LogRequest toBalancerDecisionRequest(int limit) {
     MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest =
       MasterProtos.BalancerDecisionsRequest.newBuilder().setLimit(limit).build();
-    return MasterProtos.MasterLogRequest.newBuilder()
+    return HBaseProtos.LogRequest.newBuilder()
       .setLogClassName(balancerDecisionsRequest.getClass().getName())
       .setLogInitializerMessage(balancerDecisionsRequest.toByteString())
       .build();

@@ -3984,7 +3984,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private CompletableFuture<List<LogEntry>> getSlowLogResponses(
       final Map<String, Object> filterParams, final Set<ServerName> serverNames, final int limit,
-      final LogType logType) {
+      final String logType) {
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }
@@ -3997,7 +3997,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<List<LogEntry>> getSlowLogResponseFromServer(ServerName serverName,
-      Map<String, Object> filterParams, int limit, LogType logType) {
+      Map<String, Object> filterParams, int limit, String logType) {
     return this.<List<LogEntry>>newAdminCaller().action((controller, stub) -> this
       .adminCall(controller, stub,
         RequestConverter.buildSlowLogResponseRequest(filterParams, limit, logType),
@@ -4201,18 +4201,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames,
-      LogType logType, LogDestination logDestination, int limit,
+      String logType, ServerType serverType, int limit,
       Map<String, Object> filterParams) {
-    if (logType == null || logDestination == null) {
-      throw new IllegalArgumentException("logType and/or logDestination cannot be empty");
+    if (logType == null || serverType == null) {
+      throw new IllegalArgumentException("logType and/or serverType cannot be empty");
     }
-    if (logType.equals(LogType.SLOW_LOG) || logType.equals(LogType.LARGE_LOG)) {
-      if (LogDestination.HMASTER.equals(logDestination)) {
+    if (logType.equals("SLOW_LOG") || logType.equals("LARGE_LOG")) {
+      if (ServerType.HMASTER.equals(serverType)) {
         throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
       }
       return getSlowLogResponses(filterParams, serverNames, limit, logType);
-    } else if (logType.equals(LogType.BALANCER_DECISION)) {
-      if (LogDestination.HREGION_SERVER.equals(logDestination)) {
+    } else if (logType.equals("BALANCER_DECISION")) {
+      if (ServerType.HREGION_SERVER.equals(serverType)) {
         throw new IllegalArgumentException(
           "Balancer Decision logs are not maintained by HRegionServer");
       }
