@@ -453,6 +453,11 @@ public interface MetricsRegionServerWrapper {
   long getHedgedReadWins();
 
   /**
+   * @return Count of times a hedged read executes in current thread
+   */
+  long getHedgedReadOpsInCurThread();
+
+  /**
    * @return Number of total bytes read from HDFS.
    */
   long getTotalBytesRead();
