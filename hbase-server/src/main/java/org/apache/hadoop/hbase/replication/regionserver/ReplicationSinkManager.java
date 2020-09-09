@@ -23,10 +23,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
+import org.apache.hadoop.hbase.client.AsyncReplicationServerAdmin;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,7 +115,7 @@ public class ReplicationSinkManager {
       throw new IOException("No replication sinks are available");
     }
     ServerName serverName = sinks.get(ThreadLocalRandom.current().nextInt(sinks.size()));
-    return new SinkPeer(serverName, conn.getRegionServerAdmin(serverName));
+    return createSinkPeer(serverName);
   }
 
   /**
@@ -173,21 +178,60 @@ public class ReplicationSinkManager {
    * Wraps a replication region server sink to provide the ability to identify
    * it.
    */
-  public static class SinkPeer {
+  public static abstract class SinkPeer {
     private ServerName serverName;
-    private AsyncRegionServerAdmin regionServer;
 
-    public SinkPeer(ServerName serverName, AsyncRegionServerAdmin regionServer) {
+    public SinkPeer(ServerName serverName) {
       this.serverName = serverName;
-      this.regionServer = regionServer;
     }
 
     ServerName getServerName() {
       return serverName;
     }
 
-    public AsyncRegionServerAdmin getRegionServer() {
-      return regionServer;
+    public abstract void replicateWALEntry(WAL.Entry[] entries, String replicationClusterId,
+        Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, int timeout) throws IOException;
+  }
+
+  public static class RegionServerSinkPeer extends SinkPeer {
+
+    private AsyncRegionServerAdmin regionServer;
+
+    public RegionServerSinkPeer(ServerName serverName,
+        AsyncRegionServerAdmin replicationServer) {
+      super(serverName);
+      this.regionServer = replicationServer;
+    }
+
+    public void replicateWALEntry(WAL.Entry[] entries, String replicationClusterId,
+        Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, int timeout) throws IOException {
+      ReplicationProtbufUtil.replicateWALEntry(regionServer, entries, replicationClusterId,
+          sourceBaseNamespaceDir, sourceHFileArchiveDir, timeout);
+    }
+  }
+
+  public static class ReplicationServerSinkPeer extends SinkPeer {
+
+    private AsyncReplicationServerAdmin replicationServer;
+
+    public ReplicationServerSinkPeer(ServerName serverName,
+        AsyncReplicationServerAdmin replicationServer) {
+      super(serverName);
+      this.replicationServer = replicationServer;
+    }
+
+    public void replicateWALEntry(WAL.Entry[] entries, String replicationClusterId,
+        Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, int timeout) throws IOException {
+      ReplicationProtbufUtil.replicateWALEntry(replicationServer, entries, replicationClusterId,
+          sourceBaseNamespaceDir, sourceHFileArchiveDir, timeout);
+    }
+  }
+
+  private SinkPeer createSinkPeer(ServerName serverName) throws IOException {
+    if (ReplicationUtils.isPeerClusterSupportReplicationOffload(conn)) {
+      return new ReplicationServerSinkPeer(serverName, conn.getReplicationServerAdmin(serverName));
+    } else {
+      return new RegionServerSinkPeer(serverName, conn.getRegionServerAdmin(serverName));
     }
   }
 }
