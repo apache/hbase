@@ -30,6 +30,9 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
+import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -211,5 +214,21 @@ public final class ReplicationUtils {
       ntries = 0;
     }
     return initialValue * HConstants.RETRY_BACKOFF[ntries];
+  }
+
+  /**
+   * Check whether peer cluster supports replication offload.
+   * @param peerConn connection for peer cluster
+   * @return true if peer cluster version >= 3
+   * @throws IOException exception
+   */
+  public static boolean isPeerClusterSupportReplicationOffload(AsyncConnection peerConn)
+      throws IOException {
+    AsyncAdmin admin = peerConn.getAdmin();
+    String version = FutureUtils.get(admin.getClusterMetrics()).getHBaseVersion();
+    if (Integer.parseInt(version.split("\\.")[0]) >= 3) {
+      return true;
+    }
+    return false;
   }
 }
