@@ -1953,7 +1953,7 @@ public class AssignmentManager {
    * References removed).
    */
   public void markRegionAsMerged(final RegionInfo child, final ServerName serverName,
-        RegionInfo [] mergeParents)
+    RegionInfo[] mergeParents)
       throws IOException {
     final RegionStateNode node = regionStates.getOrCreateRegionStateNode(child);
     node.setState(State.MERGED);
