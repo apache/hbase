@@ -66,6 +66,12 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
     assertTrue("'"+p+"' does not match "+value, m.find());
   }
 
+  public static void assertNotFind(String re, String value) {
+    Pattern p = Pattern.compile(re);
+    Matcher m = p.matcher(value);
+    assertFalse("'"+p+"' should not match "+value, m.find());
+  }
+
   @Test public void testQuery() throws Exception {
     String result = readOutput(new URL(baseUrl, "/jmx?qry=java.lang:type=Runtime"));
     LOG.info("/jmx?qry=java.lang:type=Runtime RESULT: "+result);
@@ -116,7 +122,38 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
     assertReFind("\"committed\"\\s*:", result);
     assertReFind("\\}\\);$", result);
+  }
 
+  @Test
+  public void testGetPattern() throws Exception {
+    // test to get an attribute of a mbean as JSONP
+    String result = readOutput(
+      new URL(baseUrl, "/jmx?get=java.lang:type=Memory::[a-zA-z_]*NonHeapMemoryUsage"));
+    LOG.info("/jmx RESULT: " + result);
+    assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
+    assertReFind("\"committed\"\\s*:", result);
+    assertReFind("\"NonHeapMemoryUsage\"\\s*:", result);
+    assertNotFind("\"HeapMemoryUsage\"\\s*:", result);
+
+    result =
+        readOutput(new URL(baseUrl, "/jmx?get=java.lang:type=Memory::[^Non]*HeapMemoryUsage"));
+    LOG.info("/jmx RESULT: " + result);
+    assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
+    assertReFind("\"committed\"\\s*:", result);
+    assertReFind("\"HeapMemoryUsage\"\\s*:", result);
+    assertNotFind("\"NonHeapHeapMemoryUsage\"\\s*:", result);
+
+    result = readOutput(new URL(baseUrl,
+        "/jmx?get=java.lang:type=Memory::[a-zA-z_]*HeapMemoryUsage,[a-zA-z_]*NonHeapMemoryUsage"));
+    LOG.info("/jmx RESULT: " + result);
+    assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
+    assertReFind("\"committed\"\\s*:", result);
+  }
+
+  @Test
+  public void testPatternMatching() throws Exception {
+    assertReFind("[a-zA-z_]*Table1[a-zA-z_]*memStoreSize", "Namespace_default_table_Table1_metric_memStoreSize");
+    assertReFind("[a-zA-z_]*memStoreSize", "Namespace_default_table_Table1_metric_memStoreSize");
   }
 
   @Test
