@@ -4971,12 +4971,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       requestFlush();
       // Don't print current limit because it will vary too much. The message is used as a key
       // over in RetriesExhaustedWithDetailsException processing.
-      throw new RegionTooBusyException("Over memstore limit=" +
-        org.apache.hadoop.hbase.procedure2.util.StringUtils.humanSize(this.blockingMemStoreSize) +
-        ", regionName=" +
-          (this.getRegionInfo() == null? "unknown": this.getRegionInfo().getEncodedName()) +
-          ", server=" + (this.getRegionServerServices() == null? "unknown":
-              this.getRegionServerServices().getServerName()));
+      final String regionName =
+        this.getRegionInfo() == null ? "unknown" : this.getRegionInfo().getEncodedName();
+      final String serverName = this.getRegionServerServices() == null ?
+        "unknown" : (this.getRegionServerServices().getServerName() == null ? "unknown" :
+          this.getRegionServerServices().getServerName().toString());
+      RegionTooBusyException rtbe = new RegionTooBusyException(
+        "Over memstore limit=" + org.apache.hadoop.hbase.procedure2.util.StringUtils
+          .humanSize(this.blockingMemStoreSize) + ", regionName=" + regionName + ", server="
+          + serverName);
+      LOG.warn("Region is too busy due to exceeding memstore size limit.", rtbe);
+      throw rtbe;
     }
   }
 
@@ -8823,11 +8828,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (!lock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
         // Don't print millis. Message is used as a key over in
         // RetriesExhaustedWithDetailsException processing.
-        throw new RegionTooBusyException("Failed to obtain lock; regionName=" +
-            (this.getRegionInfo() == null? "unknown":
-                this.getRegionInfo().getRegionNameAsString()) +
-            ", server=" + (this.getRegionServerServices() == null? "unknown":
-                this.getRegionServerServices().getServerName()));
+        final String regionName =
+          this.getRegionInfo() == null ? "unknown" : this.getRegionInfo().getRegionNameAsString();
+        final String serverName = this.getRegionServerServices() == null ?
+          "unknown" : (this.getRegionServerServices().getServerName() == null ?
+            "unknown" : this.getRegionServerServices().getServerName().toString());
+        RegionTooBusyException rtbe = new RegionTooBusyException(
+          "Failed to obtain lock; regionName=" + regionName + ", server=" + serverName);
+        LOG.warn("Region is too busy to allow lock acquisition.", rtbe);
+        throw rtbe;
       }
     } catch (InterruptedException ie) {
       LOG.info("Interrupted while waiting for a lock in region {}", this);
