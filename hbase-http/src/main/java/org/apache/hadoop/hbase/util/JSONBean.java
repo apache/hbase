@@ -25,6 +25,7 @@ import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.management.AttributeNotFoundException;
@@ -135,8 +136,7 @@ public class JSONBean {
     names = mBeanServer.queryNames(qry, null);
     writer.name("beans").beginArray();
     Iterator<ObjectName> it = names.iterator();
-    boolean pattern = false;
-    String[] patternAttr = null;
+    Pattern[] matchingPattern = null;
     while (it.hasNext()) {
       ObjectName oname = it.next();
       MBeanInfo minfo;
@@ -156,13 +156,17 @@ public class JSONBean {
             code = (String) mBeanServer.getAttribute(oname, prs);
           }
           if (attribute != null) {
+            String[] patternAttr = null;
             if (attribute.contains(ASTERICK)) {
-              pattern = true;
               if (attribute.contains(COMMA)) {
                 patternAttr = attribute.split(COMMA);
               } else {
                 patternAttr = new String[1];
                 patternAttr[0] = attribute;
+              }
+              matchingPattern = new Pattern[patternAttr.length];
+              for (int i = 0; i < patternAttr.length; i++) {
+                matchingPattern[i] = Pattern.compile(patternAttr[i]);
               }
               // nullify the attribute
               attribute = null;
@@ -235,8 +239,8 @@ public class JSONBean {
       } else {
         MBeanAttributeInfo[] attrs = minfo.getAttributes();
         for (int i = 0; i < attrs.length; i++) {
-          if (pattern) {
-            writeAttribute(writer, mBeanServer, oname, description, attrs[i], patternAttr);
+          if (matchingPattern != null) {
+            writeAttribute(writer, mBeanServer, oname, description, attrs[i], matchingPattern);
           } else {
             writeAttribute(writer, mBeanServer, oname, description, attrs[i]);
           }
@@ -256,7 +260,7 @@ public class JSONBean {
   }
 
   private static void writeAttribute(JsonWriter writer, MBeanServer mBeanServer, ObjectName oname,
-      boolean description, MBeanAttributeInfo attr, String pattern[]) throws IOException {
+      boolean description, MBeanAttributeInfo attr, Pattern pattern[]) throws IOException {
     if (!attr.isReadable()) {
       return;
     }
@@ -270,8 +274,7 @@ public class JSONBean {
 
     if (pattern != null) {
       boolean matchFound = false;
-      for (String patt : pattern) {
-        Pattern compile = Pattern.compile(patt);
+      for (Pattern compile : pattern) {
         // check if we have any match
         if (compile.matcher(attName).find()) {
           matchFound = true;
