@@ -109,12 +109,8 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
           // TODO: Purge metadata before removing from HDFS? This ordering is copied
           // from CatalogJanitor.
           AssignmentManager am = masterServices.getAssignmentManager();
-          if (am != null) {
-            if (am.getRegionStates() != null) {
-              am.getRegionStates().deleteRegion(getRegion());
-            }
-          }
-          env.getAssignmentManager().getRegionStateStore().deleteRegion(getRegion());
+          am.getRegionStates().deleteRegion(getRegion());
+          am.getRegionStateStore().deleteRegion(getRegion());
           masterServices.getServerManager().removeRegion(getRegion());
           FavoredNodesManager fnm = masterServices.getFavoredNodesManager();
           if (fnm != null) {
