@@ -17,18 +17,23 @@
  */
 package org.apache.hadoop.hbase.hbtop.screen;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.hbtop.RecordFilter;
+import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.mode.Mode;
 import org.apache.hadoop.hbase.hbtop.screen.top.TopScreenView;
 import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.impl.TerminalImpl;
+import org.apache.hadoop.hbase.hbtop.terminal.impl.batch.BatchTerminal;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,15 +54,23 @@ public class Screen implements Closeable {
   private ScreenView currentScreenView;
   private Long timerTimestamp;
 
-  public Screen(Configuration conf, long initialRefreshDelay, Mode initialMode)
+  public Screen(Configuration conf, long initialRefreshDelay, Mode initialMode,
+    @Nullable List<Field> initialFields, @Nullable Field initialSortField,
+    @Nullable Boolean initialAscendingSort, @Nullable List<RecordFilter> initialFilters,
+    long numberOfIterations, boolean batchMode)
     throws IOException {
     connection = ConnectionFactory.createConnection(conf);
     admin = connection.getAdmin();
 
     // The first screen is the top screen
-    this.terminal = new TerminalImpl("hbtop");
+    if (batchMode) {
+      terminal = new BatchTerminal();
+    } else {
+      terminal = new TerminalImpl("hbtop");
+    }
     currentScreenView = new TopScreenView(this, terminal, initialRefreshDelay, admin,
-      initialMode);
+      initialMode, initialFields, initialSortField, initialAscendingSort, initialFilters,
+      numberOfIterations);
   }
 
   @Override
@@ -91,11 +104,8 @@ public class Screen implements Closeable {
               timerTimestamp = null;
               nextScreenView = currentScreenView.handleTimer();
             } else {
-              if (timerTimestamp - now < SLEEP_TIMEOUT_MILLISECONDS) {
-                TimeUnit.MILLISECONDS.sleep(timerTimestamp - now);
-              } else {
-                TimeUnit.MILLISECONDS.sleep(SLEEP_TIMEOUT_MILLISECONDS);
-              }
+              TimeUnit.MILLISECONDS
+                .sleep(Math.min(timerTimestamp - now, SLEEP_TIMEOUT_MILLISECONDS));
               continue;
             }
           } else {
