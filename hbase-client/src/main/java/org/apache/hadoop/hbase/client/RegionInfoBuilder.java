@@ -20,18 +20,18 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RegionInfoBuilder {
-  private static final Logger LOG = LoggerFactory.getLogger(RegionInfoBuilder.class);
 
   /** A non-capture group so that this can be embedded. */
   public static final String ENCODED_REGION_NAME_REGEX = "(?:[a-f0-9]+)";
 
   //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
   public static final String NO_HASH = null;
+
+  public static final RegionInfo UNDEFINED =
+    RegionInfoBuilder.newBuilder(TableName.valueOf("__UNDEFINED__")).build();
 
   /**
    * RegionInfo for first meta region
