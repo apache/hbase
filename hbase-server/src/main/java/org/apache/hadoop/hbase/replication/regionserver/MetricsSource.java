@@ -432,7 +432,7 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Returns the amount of memory in bytes used in this RegionServer by edits pending replication.
-   * @return
+   * @return the amount of memory in bytes used in this RegionServer by edits pending replication.
    */
   public long getWALReaderEditsBufferUsage() {
     return globalSourceSource.getWALReaderEditsBufferBytes();
