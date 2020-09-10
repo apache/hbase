@@ -22,6 +22,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -378,8 +382,8 @@ public class TestMetaCache {
   public void testUserRegionLockThrowsException() throws IOException, InterruptedException {
     ((FakeRSRpcServices)badRS.getRSRpcServices()).setExceptionInjector(new LockSleepInjector());
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    conf.set(HConstants.HBASE_CLIENT_RETRIES_NUMBER, "1");
-    conf.set(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, "2000");
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
+    conf.setLong(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 2000);
     try (ConnectionImplementation conn =
             (ConnectionImplementation) ConnectionFactory.createConnection(conf)) {
       ClientThread client1 = new ClientThread(conn);
@@ -443,5 +447,30 @@ public class TestMetaCache {
 
     @Override
     public void throwOnMutate(FakeRSRpcServices rpcServices, ClientProtos.MutateRequest request) { }
+  }
+
+  @Test
+  public void testRetriesOnLockTimeoutException() throws Exception {
+    Configuration conf =  new Configuration(TEST_UTIL.getConfiguration());
+    int numRetries = 1;
+    conf.setLong(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 1000l);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, numRetries);
+    try (ConnectionImplementation connection =
+           (ConnectionImplementation) ConnectionFactory.createConnection(conf)) {
+      ConnectionImplementation spyConnection = spy(connection);
+      // Throw LockTimeouException whenever we try to get user region lock.
+      doThrow(new LockTimeoutException("lock timeout")).when(spyConnection).takeUserRegionLock();
+
+      byte[] row = HConstants.EMPTY_START_ROW;
+      try {
+        spyConnection.locateRegion(TABLE_NAME, row, false, true,
+            RegionReplicaUtil.DEFAULT_REPLICA_ID);
+        fail("shouldn't have reached here.");
+      } catch (LockTimeoutException e) {
+        // Ignore since it is expected.
+      }
+      // On LockTimeoutException, we should have tried to get lock (numRetries+1) times.
+      verify(spyConnection, times(numRetries + 1)).takeUserRegionLock();
+    }
   }
 }
