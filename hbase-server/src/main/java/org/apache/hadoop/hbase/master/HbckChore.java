@@ -250,7 +250,7 @@ public class HbckChore extends ScheduledChore {
       numRegions += entry.getValue().size();
     }
     LOG.info("Loaded {} regions from {} regionservers' reports and found {} orphan regions",
-        numRegions, rsReports.size(), orphanRegionsOnFS.size());
+        numRegions, rsReports.size(), orphanRegionsOnRS.size());
 
     for (Map.Entry<String, HbckRegionInfo> entry : regionInfoMap.entrySet()) {
       HbckRegionInfo hri = entry.getValue();
