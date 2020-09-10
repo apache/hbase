@@ -217,6 +217,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     addCostFunction(regionLoadFunctions[1]);
     addCostFunction(regionLoadFunctions[2]);
     addCostFunction(regionLoadFunctions[3]);
+    loadCustomCostFunctions(conf);
 
     curFunctionCosts = new Double[costFunctions.size()];
     tempFunctionCosts = new Double[costFunctions.size()];
@@ -598,7 +599,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   private void addCostFunction(CostFunction costFunction) {
     if (costFunction.getMultiplier() <= 0) {
-      LOG.info("exclude cost function {}", costFunction.getClass().getSimpleName());
+      LOG.debug("exclude cost function {}", costFunction.getClass().getSimpleName());
     } else {
       costFunctions.add(costFunction);
     }
