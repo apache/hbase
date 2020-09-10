@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.janitor;
 
 import static org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.junit.Assert.assertEquals;
@@ -38,6 +38,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.HbckChore;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
 import org.apache.hadoop.hbase.master.assignment.GCMultipleMergedRegionsProcedure;
@@ -91,7 +94,7 @@ public class TestMetaFixer {
     MasterServices services = TEST_UTIL.getHBaseCluster().getMaster();
     int initialSize = services.getAssignmentManager().getRegionStates().getRegionStates().size();
     services.getCatalogJanitor().scan();
-    CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
+    Report report = services.getCatalogJanitor().getLastReport();
     assertTrue(report.isEmpty());
     int originalCount = ris.size();
     // Remove first, last and middle region. See if hole gets plugged. Table has 26 * replicaCount regions.
@@ -149,7 +152,7 @@ public class TestMetaFixer {
     services.getCatalogJanitor().scan();
     deleteRegion(services, ris.get(0));
     services.getCatalogJanitor().scan();
-    CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
+    Report report = services.getCatalogJanitor().getLastReport();
     ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertTrue(ris.isEmpty());
     MetaFixer fixer = new MetaFixer(services);
@@ -182,7 +185,7 @@ public class TestMetaFixer {
     assertTrue(ris.size() > 5);
     HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
     services.getCatalogJanitor().scan();
-    CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
+    Report report = services.getCatalogJanitor().getLastReport();
     assertTrue(report.isEmpty());
     // Make a simple overlap spanning second and third region.
     makeOverlap(services, ris.get(1), ris.get(3));
@@ -199,7 +202,7 @@ public class TestMetaFixer {
 
     CatalogJanitor cj = services.getCatalogJanitor();
     cj.scan();
-    CatalogJanitor.Report report = cj.getLastReport();
+    Report report = cj.getLastReport();
     assertEquals(6, report.getOverlaps().size());
     assertEquals(1,
       MetaFixer.calculateMerges(10, report.getOverlaps()).size());
@@ -235,12 +238,12 @@ public class TestMetaFixer {
     });
 
     // No orphan regions on FS
-    hbckChore.chore();
+    hbckChore.choreForTesting();
     assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
 
     // No holes reported.
     cj.scan();
-    final CatalogJanitor.Report postReport = cj.getLastReport();
+    final Report postReport = cj.getLastReport();
     assertTrue(postReport.isEmpty());
   }
 
@@ -254,7 +257,7 @@ public class TestMetaFixer {
 
     HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
     services.getCatalogJanitor().scan();
-    CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
+    Report report = services.getCatalogJanitor().getLastReport();
     assertTrue(report.isEmpty());
 
     // Make a simple overlap for t1
@@ -287,7 +290,7 @@ public class TestMetaFixer {
       HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
       CatalogJanitor cj = services.getCatalogJanitor();
       cj.scan();
-      CatalogJanitor.Report report = cj.getLastReport();
+      Report report = cj.getLastReport();
       assertEquals(6, report.getOverlaps().size());
       assertEquals(2,
         MetaFixer.calculateMerges(5, report.getOverlaps()).size());
@@ -311,7 +314,7 @@ public class TestMetaFixer {
       HBaseTestingUtility.await(200, () -> {
         try {
           cj.scan();
-          final CatalogJanitor.Report postReport = cj.getLastReport();
+          final Report postReport = cj.getLastReport();
           RegionStates regionStates = am.getRegionStates();
 
           // Make sure that two merged regions are opened and GCs are done.
@@ -352,7 +355,7 @@ public class TestMetaFixer {
 
       // No holes reported.
       cj.scan();
-      final CatalogJanitor.Report postReport = cj.getLastReport();
+      final Report postReport = cj.getLastReport();
       assertTrue(postReport.isEmpty());
 
     } finally {
@@ -371,13 +374,13 @@ public class TestMetaFixer {
   @Test
   public void testMergeWithMergedChildRegion() throws Exception {
     TableName tn = TableName.valueOf(this.name.getMethodName());
-    Table t = TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
+    TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY);
     List<RegionInfo> ris = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
     assertTrue(ris.size() > 5);
     HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
     CatalogJanitor cj = services.getCatalogJanitor();
     cj.scan();
-    CatalogJanitor.Report report = cj.getLastReport();
+    Report report = cj.getLastReport();
     assertTrue(report.isEmpty());
     RegionInfo overlapRegion = makeOverlap(services, ris.get(1), ris.get(2));
 
@@ -443,7 +446,7 @@ public class TestMetaFixer {
     assertTrue(ris.size() > 5);
     MasterServices services = TEST_UTIL.getHBaseCluster().getMaster();
     services.getCatalogJanitor().scan();
-    CatalogJanitor.Report report = services.getCatalogJanitor().getLastReport();
+    Report report = services.getCatalogJanitor().getLastReport();
     assertTrue(report.isEmpty());
     // Make a simple overlap spanning second and third region.
     makeOverlap(services, ris.get(1), ris.get(5));
@@ -467,7 +470,7 @@ public class TestMetaFixer {
     HBaseTestingUtility.await(10, () -> {
       try {
         services.getCatalogJanitor().scan();
-        final CatalogJanitor.Report postReport = services.getCatalogJanitor().getLastReport();
+        final Report postReport = services.getCatalogJanitor().getLastReport();
         return postReport.isEmpty();
       } catch (Exception e) {
         throw new RuntimeException(e);
