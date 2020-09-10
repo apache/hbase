@@ -392,7 +392,8 @@ public class CatalogJanitor extends ScheduledChore {
         tabledir, daughter, true);
 
       for (ColumnFamilyDescriptor family : parentDescriptor.getColumnFamilies()) {
-        if ((references = regionFs.hasReferences(family.getNameAsString()))) {
+        references = regionFs.hasReferences(family.getNameAsString());
+        if (references) {
           break;
         }
       }
