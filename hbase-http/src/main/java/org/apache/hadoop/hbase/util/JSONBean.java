@@ -131,7 +131,7 @@ public class JSONBean {
    */
   private static int write(JsonWriter writer, MBeanServer mBeanServer, ObjectName qry,
       String attribute, boolean description) throws IOException {
-    LOG.debug("Listing beans for " + qry);
+    LOG.debug("Listing beans for {}", qry);
     Set<ObjectName> names = null;
     names = mBeanServer.queryNames(qry, null);
     writer.name("beans").beginArray();
@@ -239,24 +239,13 @@ public class JSONBean {
       } else {
         MBeanAttributeInfo[] attrs = minfo.getAttributes();
         for (int i = 0; i < attrs.length; i++) {
-          if (matchingPattern != null) {
-            writeAttribute(writer, mBeanServer, oname, description, attrs[i], matchingPattern);
-          } else {
-            writeAttribute(writer, mBeanServer, oname, description, attrs[i]);
-          }
-
+          writeAttribute(writer, mBeanServer, oname, description, attrs[i], matchingPattern);
         }
       }
       writer.endObject();
     }
     writer.endArray();
     return 0;
-  }
-
-  private static void writeAttribute(final JsonWriter jg, final MBeanServer mBeanServer,
-      ObjectName oname, final boolean description, final MBeanAttributeInfo attr)
-      throws IOException {
-    writeAttribute(jg, mBeanServer, oname, description, attr, null);
   }
 
   private static void writeAttribute(JsonWriter writer, MBeanServer mBeanServer, ObjectName oname,
