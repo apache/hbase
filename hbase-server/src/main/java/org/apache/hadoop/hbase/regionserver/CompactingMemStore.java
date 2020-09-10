@@ -212,6 +212,7 @@ public class CompactingMemStore extends AbstractMemStore {
       // region level lock ensures pushing active to pipeline is done in isolation
       // no concurrent update operations trying to flush the active segment
       pushActiveToPipeline(getActive());
+      resetTimeOfOldestEdit();
       snapshotId = EnvironmentEdgeManager.currentTime();
       // in both cases whatever is pushed to snapshot is cleared from the pipeline
       if (compositeSnapshot) {
