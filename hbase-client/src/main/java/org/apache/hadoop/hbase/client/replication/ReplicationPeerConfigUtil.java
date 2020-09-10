@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -59,6 +60,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 public final class ReplicationPeerConfigUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationPeerConfigUtil.class);
+  public static final String HBASE_REPLICATION_PEER_BASE_CONFIG =
+    "hbase.replication.peer.base.config";
 
   private ReplicationPeerConfigUtil() {}
 
@@ -422,6 +425,41 @@ public final class ReplicationPeerConfigUtil {
       builder.setTableCFsMap(mergeTableCFs(preTableCfs, tableCfs));
     }
     return builder.build();
+  }
+
+  /**
+   * Helper method to add base peer configs from Configuration to ReplicationPeerConfig
+   * if not present in latter.
+   *
+   * This merges the user supplied peer configuration
+   * {@link org.apache.hadoop.hbase.replication.ReplicationPeerConfig} with peer configs
+   * provided as property hbase.replication.peer.base.configs in hbase configuration.
+   * Expected format for this hbase configuration is "k1=v1;k2=v2,v2_1". Original value
+   * of conf is retained if already present in ReplicationPeerConfig.
+   *
+   * @param conf Configuration
+   * @return ReplicationPeerConfig containing updated configs.
+   */
+  public static ReplicationPeerConfig addBasePeerConfigsIfNotPresent(Configuration conf,
+    ReplicationPeerConfig receivedPeerConfig) {
+    String basePeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG, "");
+    ReplicationPeerConfigBuilder copiedPeerConfigBuilder = ReplicationPeerConfig.
+      newBuilder(receivedPeerConfig);
+    Map<String,String> receivedPeerConfigMap = receivedPeerConfig.getConfiguration();
+
+    if (basePeerConfigs.length() != 0) {
+      Map<String, String> basePeerConfigMap = Splitter.on(';').trimResults().omitEmptyStrings()
+        .withKeyValueSeparator("=").split(basePeerConfigs);
+      for (Map.Entry<String,String> entry : basePeerConfigMap.entrySet()) {
+        String configName = entry.getKey();
+        String configValue = entry.getValue();
+        // Only override if base config does not exist in existing peer configs
+        if (!receivedPeerConfigMap.containsKey(configName)) {
+          copiedPeerConfigBuilder.putConfiguration(configName, configValue);
+        }
+      }
+    }
+    return copiedPeerConfigBuilder.build();
   }
 
   public static ReplicationPeerConfig appendExcludeTableCFsToReplicationPeerConfig(
