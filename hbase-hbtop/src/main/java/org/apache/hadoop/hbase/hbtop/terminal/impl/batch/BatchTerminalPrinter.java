@@ -15,25 +15,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.hbtop.terminal;
+package org.apache.hadoop.hbase.hbtop.terminal.impl.batch;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
-import java.io.Closeable;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 
+public class BatchTerminalPrinter implements TerminalPrinter {
 
-/**
- * The terminal interface that is an abstraction of terminal screen.
- */
-@InterfaceAudience.Private
-public interface Terminal extends Closeable {
-  void clear();
-  void refresh();
-  @Nullable TerminalSize getSize();
-  @Nullable TerminalSize doResizeIfNecessary();
-  @Nullable KeyPress pollKeyPress();
-  CursorPosition getCursorPosition();
-  void setCursorPosition(int column, int row);
-  void hideCursor();
-  TerminalPrinter getTerminalPrinter(int startRow);
+  @Override
+  public TerminalPrinter print(String value) {
+    System.out.print(value);
+    return this;
+  }
+
+  @Override
+  public TerminalPrinter startHighlight() {
+    return this;
+  }
+
+  @Override
+  public TerminalPrinter stopHighlight() {
+    return this;
+  }
+
+  @Override
+  public TerminalPrinter startBold() {
+    return this;
+  }
+
+  @Override
+  public TerminalPrinter stopBold() {
+    return this;
+  }
+
+  @Override
+  public void endOfLine() {
+    System.out.println();
+  }
 }
