@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.hbtop.screen.top;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -57,19 +58,36 @@ public class TopScreenPresenter {
   private final EnumMap<Field, Boolean> fieldDisplayMap = new EnumMap<>(Field.class);
   private final EnumMap<Field, Integer> fieldLengthMap = new EnumMap<>(Field.class);
 
+  private final long numberOfIterations;
+  private long iterations;
+
   public TopScreenPresenter(TopScreenView topScreenView, long initialRefreshDelay,
-    TopScreenModel topScreenModel) {
+    TopScreenModel topScreenModel, @Nullable List<Field> initialFields, long numberOfIterations) {
     this.topScreenView = Objects.requireNonNull(topScreenView);
     this.refreshDelay = new AtomicLong(initialRefreshDelay);
     this.topScreenModel = Objects.requireNonNull(topScreenModel);
+    this.numberOfIterations = numberOfIterations;
 
-    initFieldDisplayMapAndFieldLengthMap();
+    initFieldDisplayMapAndFieldLengthMap(initialFields);
   }
 
   public void init() {
-    terminalLength = topScreenView.getTerminalSize().getColumns();
-    paging.updatePageSize(topScreenView.getPageSize());
+    updateTerminalLengthAndPageSize(topScreenView.getTerminalSize(), topScreenView.getPageSize());
     topScreenView.hideCursor();
+  }
+
+  private void updateTerminalLengthAndPageSize(@Nullable TerminalSize terminalSize,
+    @Nullable Integer pageSize) {
+    if (terminalSize != null) {
+      terminalLength = terminalSize.getColumns();
+    } else {
+      terminalLength = Integer.MAX_VALUE;
+    }
+    if (pageSize != null) {
+      paging.updatePageSize(pageSize);
+    } else {
+      paging.updatePageSize(Integer.MAX_VALUE);
+    }
   }
 
   public long refresh(boolean force) {
@@ -82,8 +100,7 @@ public class TopScreenPresenter {
 
     TerminalSize newTerminalSize = topScreenView.doResizeIfNecessary();
     if (newTerminalSize != null) {
-      terminalLength = newTerminalSize.getColumns();
-      paging.updatePageSize(topScreenView.getPageSize());
+      updateTerminalLengthAndPageSize(newTerminalSize, topScreenView.getPageSize());
       topScreenView.clearTerminal();
     }
 
@@ -98,6 +115,7 @@ public class TopScreenPresenter {
     topScreenView.refreshTerminal();
 
     lastRefreshTimestamp = System.currentTimeMillis();
+    iterations++;
     return refreshDelay.get();
   }
 
@@ -242,7 +260,7 @@ public class TopScreenPresenter {
   }
 
   private void switchMode(Mode nextMode) {
-    topScreenModel.switchMode(nextMode, null, false);
+    topScreenModel.switchMode(nextMode, false, null);
     reset();
   }
 
@@ -258,18 +276,22 @@ public class TopScreenPresenter {
   }
 
   private void reset() {
-    initFieldDisplayMapAndFieldLengthMap();
+    initFieldDisplayMapAndFieldLengthMap(null);
     adjustFieldLength.set(true);
     paging.init();
     horizontalScroll = 0;
     topScreenView.clearTerminal();
   }
 
-  private void initFieldDisplayMapAndFieldLengthMap() {
+  private void initFieldDisplayMapAndFieldLengthMap(@Nullable List<Field> initialFields) {
     fieldDisplayMap.clear();
     fieldLengthMap.clear();
     for (FieldInfo fieldInfo : topScreenModel.getFieldInfos()) {
-      fieldDisplayMap.put(fieldInfo.getField(), fieldInfo.isDisplayByDefault());
+      if (initialFields != null) {
+        fieldDisplayMap.put(fieldInfo.getField(), initialFields.contains(fieldInfo.getField()));
+      } else {
+        fieldDisplayMap.put(fieldInfo.getField(), fieldInfo.isDisplayByDefault());
+      }
       fieldLengthMap.put(fieldInfo.getField(), fieldInfo.getDefaultLength());
     }
   }
@@ -288,7 +310,7 @@ public class TopScreenPresenter {
 
         double delay;
         try {
-          delay = Double.valueOf(inputString);
+          delay = Double.parseDouble(inputString);
         } catch (NumberFormatException e) {
           return goToMessageMode(screen, terminal, row, "Unacceptable floating point");
         }
@@ -328,5 +350,9 @@ public class TopScreenPresenter {
     ArrayList<RecordFilter> filters = new ArrayList<>(topScreenModel.getFilters());
     filters.addAll(topScreenModel.getPushDownFilters());
     return new FilterDisplayModeScreenView(screen, terminal, row, filters, topScreenView);
+  }
+
+  public boolean isIterationFinished() {
+    return iterations >= numberOfIterations;
   }
 }

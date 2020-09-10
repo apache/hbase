@@ -75,6 +75,7 @@ public abstract class AbstractScreenView implements ScreenView {
     return terminal.getTerminalPrinter(startRow);
   }
 
+  @Nullable
   protected TerminalSize getTerminalSize() {
     return terminal.getSize();
   }
