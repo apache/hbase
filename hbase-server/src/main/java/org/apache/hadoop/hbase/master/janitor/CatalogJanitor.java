@@ -221,8 +221,8 @@ public class CatalogJanitor extends ScheduledChore {
   @VisibleForTesting
   protected Report scanForReport() throws IOException {
     ReportMakingVisitor visitor = new ReportMakingVisitor(this.services);
-    // Null tablename means scan all of meta.
-    MetaTableAccessor.scanMetaForTableRegions(this.services.getConnection(), visitor, null);
+    services.getAssignmentManager().getRegionStateStore().scanCatalog(visitor);
+    visitor.done();
     return visitor.getReport();
   }
 

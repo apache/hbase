@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -95,26 +97,7 @@ public class TestSimpleMetaSplitMerge {
     }
   }
 
-  @Test
-  public void test() throws Exception {
-    try (Table table = UTIL.getConnection().getTable(TD1.getTableName())) {
-      table.put(new Put(Bytes.toBytes("row1")).addColumn(CF, CQ, Bytes.toBytes("row1")));
-    }
-    try (Table table = UTIL.getConnection().getTable(TD2.getTableName())) {
-      table.put(new Put(Bytes.toBytes("row2")).addColumn(CF, CQ, Bytes.toBytes("row2")));
-    }
-    Admin admin = UTIL.getAdmin();
-    // split meta
-    admin.split(TableName.META_TABLE_NAME, Bytes.toBytes("b"));
-    assertMetaRegionCount(2);
-    // clear the cache for table 'b'
-    clearCache(TD2.getTableName());
-    // make sure that we could get the location of the TD2 from the second meta region
-    assertValue(TD2.getTableName(), "row2");
-    // assert from client side
-    List<RegionInfo> regions = admin.getRegions(TableName.META_TABLE_NAME);
-    assertEquals(2, regions.size());
-    // compact to make sure we can merge
+  private void compactMeta() throws IOException {
     for (JVMClusterUtil.RegionServerThread t : UTIL.getMiniHBaseCluster()
       .getRegionServerThreads()) {
       for (HRegion r : t.getRegionServer().getOnlineRegionsLocalContext()) {
@@ -126,6 +109,31 @@ public class TestSimpleMetaSplitMerge {
         }
       }
     }
+  }
+
+  @Test
+  public void test() throws Exception {
+    try (Table table = UTIL.getConnection().getTable(TD1.getTableName())) {
+      table.put(new Put(Bytes.toBytes("row1")).addColumn(CF, CQ, Bytes.toBytes("row1")));
+    }
+    try (Table table = UTIL.getConnection().getTable(TD2.getTableName())) {
+      table.put(new Put(Bytes.toBytes("row2")).addColumn(CF, CQ, Bytes.toBytes("row2")));
+    }
+    Admin admin = UTIL.getAdmin();
+    // turn off catalog janitor
+    admin.catalogJanitorSwitch(false);
+    // split meta
+    admin.split(TableName.META_TABLE_NAME, Bytes.toBytes("b"));
+    assertMetaRegionCount(2);
+    // clear the cache for table 'b'
+    clearCache(TD2.getTableName());
+    // make sure that we could get the location of the TD2 from the second meta region
+    assertValue(TD2.getTableName(), "row2");
+    // assert from client side
+    List<RegionInfo> regions = admin.getRegions(TableName.META_TABLE_NAME);
+    assertEquals(2, regions.size());
+    // compact to make sure we can merge
+    compactMeta();
     // merge the 2 regions back to 1
     admin.mergeRegionsAsync(regions.stream().map(RegionInfo::getRegionName).toArray(byte[][]::new),
       false).get();
@@ -137,5 +145,17 @@ public class TestSimpleMetaSplitMerge {
     // make sure that we could still get the locations from the new meta region
     assertValue(TD2.getTableName(), "row2");
     assertValue(TD1.getTableName(), "row1");
+
+    // make sure that catalog janitor can clean up the merged regions
+    RegionStateStore regionStateStore =
+      UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+    RegionInfo mergedRegion = admin.getRegions(TableName.META_TABLE_NAME).get(0);
+    assertTrue(regionStateStore.hasMergeRegions(mergedRegion));
+    // compact to make sure we could clean the merged regions
+    compactMeta();
+    // one for merged region, one for split parent
+    assertEquals(2, admin.runCatalogJanitor());
+    // the gc procedure is run in background so we need to wait here, can not check directly
+    UTIL.waitFor(30000, () -> !regionStateStore.hasMergeRegions(mergedRegion));
   }
 }

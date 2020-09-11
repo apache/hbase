@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * {@link #close()}'d.
  */
 @InterfaceAudience.Private
-class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
+class ReportMakingVisitor implements ClientMetaTableAccessor.Visitor {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReportMakingVisitor.class);
 
@@ -199,14 +199,8 @@ class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
   /**
    * @return True if table is disabled or disabling; defaults false!
    */
-  boolean isTableDisabled(RegionInfo ri) {
-    if (ri == null) {
-      return false;
-    }
-    if (this.services == null) {
-      return false;
-    }
-    if (this.services.getTableStateManager() == null) {
+  private boolean isTableDisabled(RegionInfo ri) {
+    if (ri.isMetaRegion()) {
       return false;
     }
     TableState state = null;
@@ -282,8 +276,7 @@ class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
     return this.previous == null || !this.previous.getTable().equals(ri.getTable());
   }
 
-  @Override
-  public void close() throws IOException {
+  public void done() {
     // This is a table transition... after the last region. Check previous.
     // Should be last region. If not, its a hole on end of laster table.
     if (this.previous != null && !this.previous.isLast()) {
