@@ -22,7 +22,11 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getClientPrinc
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getKeytabFileForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getSecuredConfiguration;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
