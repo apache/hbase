@@ -75,7 +75,7 @@ image::https://hbase.apache.org/hbtop-images/scrolling_metric_records.gif[Scroll
 
 === Modes
 
-There are the following 4 modes in hbtop:
+There are the following modes in hbtop:
 
 [options="header"]
 |=================================
@@ -84,6 +84,8 @@ There are the following 4 modes in hbtop:
 | Namespace | Showing metric records per namespace
 | Table | Showing metric records per table
 | RegionServer | Showing metric records per region server
+| User | Showing metric records per user
+| Client | Showing metric records per client
 |=================================
 
 ==== Region mode
@@ -184,6 +186,40 @@ The fields in this mode are as follows:
 | MEMSTORE | MemStore Size | true
 | UHEAP | Used Heap Size | true
 | MHEAP | Max Heap Size | true
+|=================================
+
+==== User mode
+
+In User mode, the default sort field is `#REQ/S`.
+
+The fields in this mode are as follows:
+
+[options="header"]
+|=================================
+| Field | Description | Displayed by default
+| USER | user Name | true
+| #CLIENT | Client Count | true
+| #REQ/S | Request Count per second | true
+| #READ/S | Read Request Count per second | true
+| #WRITE/S | Write Request Count per second | true
+| #FREAD/S | Filtered Read Request Count per second | true
+|=================================
+
+==== Client mode
+
+In Client mode, the default sort field is `#REQ/S`.
+
+The fields in this mode are as follows:
+
+[options="header"]
+|=================================
+| Field | Description | Displayed by default
+| CLIENT | Client Hostname | true
+| #USER | User Count | true
+| #REQ/S | Request Count per second | true
+| #READ/S | Read Request Count per second | true
+| #WRITE/S | Write Request Count per second | true
+| #FREAD/S | Filtered Read Request Count per second | true
 |=================================
 
 === Changing mode
