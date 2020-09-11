@@ -66,8 +66,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -226,6 +224,28 @@ public class RegionStateStore {
     if (regionInfo.isMetaRegion() && regionInfo.isFirst()) {
       // mirror the meta location to zookeeper
       mirrorMetaLocation(regionInfo, regionLocation, state);
+    }
+  }
+
+  public void scanCatalog(ClientMetaTableAccessor.Visitor visitor) throws IOException {
+    // scan meta first
+    MetaTableAccessor.fullScanRegions(master.getConnection(), visitor);
+    // scan root
+    try (RegionScanner scanner =
+      masterRegion.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
+      boolean moreRows;
+      List<Cell> cells = new ArrayList<>();
+      do {
+        moreRows = scanner.next(cells);
+        if (cells.isEmpty()) {
+          continue;
+        }
+        Result result = Result.create(cells);
+        cells.clear();
+        if (!visitor.visit(result)) {
+          break;
+        }
+      } while (moreRows);
     }
   }
 
@@ -456,7 +476,7 @@ public class RegionStateStore {
     if (cells == null || cells.length == 0) {
       return;
     }
-    Delete delete = new Delete(mergeRegion.getRegionName());
+    Delete delete = new Delete(CatalogFamilyFormat.getMetaKeyForRegion(mergeRegion));
     List<byte[]> qualifiers = new ArrayList<>();
     for (Cell cell : cells) {
       if (!CatalogFamilyFormat.isMergeQualifierPrefix(cell)) {
@@ -475,8 +495,13 @@ public class RegionStateStore {
         " in meta table, they are cleaned up already, Skip.");
       return;
     }
-    try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
-      table.delete(delete);
+    debugLogMutation(delete);
+    if (mergeRegion.isMetaRegion()) {
+      masterRegion.update(r -> r.delete(delete));
+    } else {
+      try (Table table = getMetaTable()) {
+        table.delete(delete);
+      }
     }
     LOG.info("Deleted merge references in " + mergeRegion.getRegionNameAsString() +
       ", deleted qualifiers " +
@@ -520,19 +545,44 @@ public class RegionStateStore {
     deleteRegions(regions, EnvironmentEdgeManager.currentTime());
   }
 
+  private static Delete makeDeleteRegionInfo(RegionInfo regionInfo, long ts) {
+    return new Delete(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo))
+      .addFamily(HConstants.CATALOG_FAMILY, ts);
+  }
+
+  private static List<Delete> makeDeleteRegionInfos(List<RegionInfo> regionInfos, long ts) {
+    return regionInfos.stream().map(ri -> makeDeleteRegionInfo(ri, ts))
+      .collect(Collectors.toList());
+  }
+
   private void deleteRegions(List<RegionInfo> regions, long ts) throws IOException {
-    List<Delete> deletes = new ArrayList<>(regions.size());
-    for (RegionInfo hri : regions) {
-      Delete e = new Delete(hri.getRegionName());
-      e.addFamily(HConstants.CATALOG_FAMILY, ts);
-      deletes.add(e);
+    List<RegionInfo> metaRegions = new ArrayList<>();
+    List<RegionInfo> nonMetaRegions = new ArrayList<>();
+    for (RegionInfo region : regions) {
+      if (region.isMetaRegion()) {
+        metaRegions.add(region);
+      } else {
+        nonMetaRegions.add(region);
+      }
     }
-    try (Table table = getMetaTable()) {
+    if (!metaRegions.isEmpty()) {
+      List<Delete> deletes = makeDeleteRegionInfos(metaRegions, ts);
       debugLogMutations(deletes);
-      table.delete(deletes);
+      for (Delete d : deletes) {
+        masterRegion.update(r -> r.delete(d));
+      }
+      LOG.info("Deleted {} regions from ROOT", metaRegions.size());
+      LOG.debug("Deleted regions: {}", metaRegions);
     }
-    LOG.info("Deleted {} regions from META", regions.size());
-    LOG.debug("Deleted regions: {}", regions);
+    if (!nonMetaRegions.isEmpty()) {
+      List<Delete> deletes = makeDeleteRegionInfos(nonMetaRegions, ts);
+      debugLogMutations(deletes);
+      try (Table table = getMetaTable()) {
+        table.delete(deletes);
+      }
+      LOG.info("Deleted {} regions from META", nonMetaRegions.size());
+      LOG.debug("Deleted regions: {}", nonMetaRegions);
+    }
   }
 
   /**
