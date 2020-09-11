@@ -509,6 +509,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String HEDGED_READ_WINS = "hedgedReadWins";
   String HEDGED_READ_WINS_DESC =
     "The number of times we started a hedged read and a hedged read won";
+  String HEDGED_READ_IN_CUR_THREAD = "hedgedReadOpsInCurThread";
+  String HEDGED_READ_IN_CUR_THREAD_DESC =
+    "The number of times we execute a hedged read in current thread as a fallback for task rejection";
 
   String RPC_GET_REQUEST_COUNT = "rpcGetRequestCount";
   String RPC_GET_REQUEST_COUNT_DESC = "Number of rpc get requests this region server has answered.";
