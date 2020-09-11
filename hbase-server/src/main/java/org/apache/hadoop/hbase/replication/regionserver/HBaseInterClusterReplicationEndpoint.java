@@ -542,20 +542,26 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         parallelReplicate(pool, replicateContext, batches);
         return true;
       } catch (IOException ioe) {
-        if (dropOnDeletedTables && isTableNotFoundException(ioe)) {
-          // Only filter the edits to replicate and don't change the entries in replicateContext
-          // as the upper layer rely on it.
-          batches = filterNotExistTableEdits(batches);
-          if (batches.isEmpty()) {
-            LOG.warn("After filter not exist table's edits, 0 edits to replicate, just return");
-            return true;
-          }
-        } else if (dropOnDeletedColumnFamilies && isNoSuchColumnFamilyException(ioe)) {
-          batches = filterNotExistColumnFamilyEdits(batches);
-          if (batches.isEmpty()) {
-            LOG.warn(
-                "After filter not exist column family's edits, 0 edits to replicate, just return");
-            return true;
+        if (ioe instanceof RemoteException) {
+          if (dropOnDeletedTables && isTableNotFoundException(ioe)) {
+            // Only filter the edits to replicate and don't change the entries in replicateContext
+            // as the upper layer rely on it.
+            batches = filterNotExistTableEdits(batches);
+            if (batches.isEmpty()) {
+              LOG.warn("After filter not exist table's edits, 0 edits to replicate, just return");
+              return true;
+            }
+          } else if (dropOnDeletedColumnFamilies && isNoSuchColumnFamilyException(ioe)) {
+            batches = filterNotExistColumnFamilyEdits(batches);
+            if (batches.isEmpty()) {
+              LOG.warn("After filter not exist column family's edits, 0 edits to replicate, " +
+                  "just return");
+              return true;
+            }
+          } else {
+            LOG.warn("{} Peer encountered RemoteException, rechecking all sinks: ", logPeerId(),
+                ioe);
+            replicationSinkMgr.chooseSinks();
           }
         } else {
           if (ioe instanceof SocketTimeoutException) {
