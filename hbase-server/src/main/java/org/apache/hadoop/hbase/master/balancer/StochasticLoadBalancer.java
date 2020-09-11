@@ -598,9 +598,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   }
 
   private void addCostFunction(CostFunction costFunction) {
-    if (costFunction.getMultiplier() <= 0) {
-      LOG.debug("exclude cost function {}", costFunction.getClass().getSimpleName());
-    } else {
+    if (costFunction.getMultiplier() > 0) {
       costFunctions.add(costFunction);
     }
   }
