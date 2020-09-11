@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -331,12 +330,6 @@ public final class ClientMetaTableAccessor {
      * @return True if we are to proceed scanning the table, else false if we are to stop now.
      */
     boolean visit(final Result r) throws IOException;
-  }
-
-  /**
-   * Implementations 'visit' a catalog table row but with close() at the end.
-   */
-  public interface CloseableVisitor extends Visitor, Closeable {
   }
 
   /**
