@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,7 +48,6 @@ import org.apache.hadoop.hbase.filter.SubstringComparator;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -508,14 +506,6 @@ public final class MetaTableAccessor {
             break;
           }
         }
-      }
-    }
-    if (visitor instanceof Closeable) {
-      try {
-        ((Closeable) visitor).close();
-      } catch (Throwable t) {
-        ExceptionUtil.rethrowIfInterrupt(t);
-        LOG.debug("Got exception in closing the meta scanner visitor", t);
       }
     }
   }
