@@ -4207,12 +4207,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       throw new IllegalArgumentException("logType and/or serverType cannot be empty");
     }
     if (logType.equals("SLOW_LOG") || logType.equals("LARGE_LOG")) {
-      if (ServerType.HMASTER.equals(serverType)) {
+      if (ServerType.MASTER.equals(serverType)) {
         throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
       }
       return getSlowLogResponses(filterParams, serverNames, limit, logType);
     } else if (logType.equals("BALANCER_DECISION")) {
-      if (ServerType.HREGION_SERVER.equals(serverType)) {
+      if (ServerType.REGION_SERVER.equals(serverType)) {
         throw new IllegalArgumentException(
           "Balancer Decision logs are not maintained by HRegionServer");
       }

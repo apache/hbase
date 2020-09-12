@@ -3341,12 +3341,12 @@ public class MasterRpcServices extends RSRpcServices implements
       if (logClassName.contains("BalancerDecisionsRequest")) {
         MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest =
           (MasterProtos.BalancerDecisionsRequest) method
-            .invoke(null, request.getLogInitializerMessage());
+            .invoke(null, request.getLogMessage());
         MasterProtos.BalancerDecisionsResponse balancerDecisionsResponse =
           getBalancerDecisions(balancerDecisionsRequest);
         return HBaseProtos.LogEntry.newBuilder()
           .setLogClassName(balancerDecisionsResponse.getClass().getName())
-          .setLogInitializerMessage(balancerDecisionsResponse.toByteString())
+          .setLogMessage(balancerDecisionsResponse.toByteString())
           .build();
       }
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException

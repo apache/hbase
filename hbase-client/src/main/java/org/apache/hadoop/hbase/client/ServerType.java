@@ -28,6 +28,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public enum ServerType {
-  HMASTER,
-  HREGION_SERVER
+  MASTER,
+  REGION_SERVER
 }

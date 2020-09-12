@@ -1885,7 +1885,7 @@ public final class RequestConverter {
     SlowLogResponseRequest slowLogResponseRequest = builder.build();
     return HBaseProtos.LogRequest.newBuilder()
       .setLogClassName(slowLogResponseRequest.getClass().getName())
-      .setLogInitializerMessage(slowLogResponseRequest.toByteString())
+      .setLogMessage(slowLogResponseRequest.toByteString())
       .build();
   }
 

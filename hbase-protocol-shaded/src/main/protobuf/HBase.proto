@@ -277,10 +277,10 @@ message RegionLocation {
 
 message LogRequest {
   required string log_class_name = 1;
-  required bytes log_initializer_message = 2;
+  required bytes log_message = 2;
 }
 
 message LogEntry {
   required string log_class_name = 1;
-  required bytes log_initializer_message = 2;
+  required bytes log_message = 2;
 }

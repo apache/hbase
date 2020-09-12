@@ -3519,7 +3519,7 @@ public final class ProtobufUtil {
       Method method = logClass.getMethod("parseFrom", ByteString.class);
       if (logClassName.contains("SlowLogResponses")) {
         AdminProtos.SlowLogResponses slowLogResponses = (AdminProtos.SlowLogResponses) method
-          .invoke(null, logEntry.getLogInitializerMessage());
+          .invoke(null, logEntry.getLogMessage());
         return slowLogResponses.getSlowLogPayloadsList().stream()
           .map(ProtobufUtil::getSlowLogRecord).collect(Collectors.toList());
       }
@@ -3653,7 +3653,7 @@ public final class ProtobufUtil {
       if (logClassName.contains("BalancerDecisionsResponse")) {
         MasterProtos.BalancerDecisionsResponse response =
           (MasterProtos.BalancerDecisionsResponse) method
-            .invoke(null, logEntry.getLogInitializerMessage());
+            .invoke(null, logEntry.getLogMessage());
         return getBalancerDecisionEntries(response);
       }
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
@@ -3684,7 +3684,7 @@ public final class ProtobufUtil {
       MasterProtos.BalancerDecisionsRequest.newBuilder().setLimit(limit).build();
     return HBaseProtos.LogRequest.newBuilder()
       .setLogClassName(balancerDecisionsRequest.getClass().getName())
-      .setLogInitializerMessage(balancerDecisionsRequest.toByteString())
+      .setLogMessage(balancerDecisionsRequest.toByteString())
       .build();
   }
 

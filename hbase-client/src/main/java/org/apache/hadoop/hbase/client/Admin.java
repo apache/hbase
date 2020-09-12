@@ -2360,7 +2360,7 @@ public interface Admin extends Abortable, Closeable {
     filterParams.put("userName", logQueryFilter.getUserName());
     filterParams.put("filterByOperator", logQueryFilter.getFilterByOperator().toString());
     List<LogEntry> logEntries =
-      getLogEntries(serverNames, logType, ServerType.HREGION_SERVER, logQueryFilter.getLimit(),
+      getLogEntries(serverNames, logType, ServerType.REGION_SERVER, logQueryFilter.getLimit(),
         filterParams);
     return logEntries.stream().map(logEntry -> (OnlineLogRecord) logEntry)
       .collect(Collectors.toList());
@@ -2499,9 +2499,9 @@ public interface Admin extends Abortable, Closeable {
    * Retrieve recent online records from HMaster / RegionServers.
    * Examples include slow/large RPC logs, balancer decisions by master.
    *
-   * @param serverNames servers to retrieve records from, useful in case of records maintained by
-   *  RegionServer as we can select specific server. In case of records maintained by HMaster,
-   *  this param is not required.
+   * @param serverNames servers to retrieve records from, useful in case of records maintained
+   *  by RegionServer as we can select specific server. In case of servertype=MASTER, logs will
+   *  only come from the currently active master.
    * @param logType string representing type of log records
    * @param serverType enum for server type: HMaster or RegionServer
    * @param limit put a limit to list of records that server should send in response

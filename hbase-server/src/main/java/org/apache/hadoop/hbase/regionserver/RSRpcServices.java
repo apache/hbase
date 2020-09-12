@@ -3922,7 +3922,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       Method method = logClass.getMethod("parseFrom", ByteString.class);
       if (logClassName.contains("SlowLogResponseRequest")) {
         SlowLogResponseRequest slowLogResponseRequest =
-          (SlowLogResponseRequest) method.invoke(null, request.getLogInitializerMessage());
+          (SlowLogResponseRequest) method.invoke(null, request.getLogMessage());
         final NamedQueueRecorder namedQueueRecorder =
           this.regionServer.getNamedQueueRecorder();
         final List<SlowLogPayload> slowLogPayloads =
@@ -3932,7 +3932,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           .build();
         return HBaseProtos.LogEntry.newBuilder()
           .setLogClassName(slowLogResponses.getClass().getName())
-          .setLogInitializerMessage(slowLogResponses.toByteString()).build();
+          .setLogMessage(slowLogResponses.toByteString()).build();
       }
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
         | InvocationTargetException e) {
