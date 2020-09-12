@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -101,7 +102,8 @@ public class HLogPrettyPrinter extends WALPrettyPrinter {
   public HLogPrettyPrinter(boolean outputValues, boolean outputJSON,
       long sequence, String table, String region, String row, boolean persistentOutput,
       PrintStream out) {
-    super(outputValues, outputJSON, sequence, table, region, row, persistentOutput, out);
+    super(outputValues, outputJSON, sequence, Collections.singleton(table), region, row,
+      false, persistentOutput, out);
   }
 
   public static void main(String[] args) throws IOException {
