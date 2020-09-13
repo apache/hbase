@@ -82,9 +82,6 @@ NOTE: End-of-life releases are not included in this list.
 | Release
 | Release Manager
 
-| 1.3
-| Mikhail Antonov
-
 | 1.4
 | Andrew Purtell
 
