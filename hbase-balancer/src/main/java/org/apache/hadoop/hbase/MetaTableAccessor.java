@@ -841,7 +841,7 @@ public final class MetaTableAccessor {
    * @param ts desired timestamp
    * @throws IOException if problem connecting or updating meta
    */
-  private static void addRegionsToMeta(Connection connection, List<RegionInfo> regionInfos,
+  public static void addRegionsToMeta(Connection connection, List<RegionInfo> regionInfos,
     int regionReplication, long ts) throws IOException {
     List<Put> puts = new ArrayList<>();
     for (RegionInfo regionInfo : regionInfos) {
@@ -936,70 +936,6 @@ public final class MetaTableAccessor {
     putToMetaTable(connection, put);
     LOG.info("Updated row {} with server=", regionInfo.getRegionNameAsString(), sn);
   }
-
-  /**
-   * Deletes the specified region from META.
-   * @param connection connection we're using
-   * @param regionInfo region to be deleted from META
-   */
-  public static void deleteRegionInfo(Connection connection, RegionInfo regionInfo)
-    throws IOException {
-    Delete delete = new Delete(regionInfo.getRegionName());
-    delete.addFamily(HConstants.CATALOG_FAMILY, HConstants.LATEST_TIMESTAMP);
-    deleteFromMetaTable(connection, delete);
-    LOG.info("Deleted " + regionInfo.getRegionNameAsString());
-  }
-
-  /**
-   * Deletes the specified regions from META.
-   * @param connection connection we're using
-   * @param regionsInfo list of regions to be deleted from META
-   */
-  public static void deleteRegionInfos(Connection connection, List<RegionInfo> regionsInfo)
-    throws IOException {
-    deleteRegionInfos(connection, regionsInfo, EnvironmentEdgeManager.currentTime());
-  }
-
-  /**
-   * Deletes the specified regions from META.
-   * @param connection connection we're using
-   * @param regionsInfo list of regions to be deleted from META
-   */
-  private static void deleteRegionInfos(Connection connection, List<RegionInfo> regionsInfo,
-    long ts) throws IOException {
-    List<Delete> deletes = new ArrayList<>(regionsInfo.size());
-    for (RegionInfo hri : regionsInfo) {
-      Delete e = new Delete(hri.getRegionName());
-      e.addFamily(HConstants.CATALOG_FAMILY, ts);
-      deletes.add(e);
-    }
-    deleteFromMetaTable(connection, deletes);
-    LOG.info("Deleted {} regions from META", regionsInfo.size());
-    LOG.debug("Deleted regions: {}", regionsInfo);
-  }
-
-  /**
-   * Overwrites the specified regions from hbase:meta. Deletes old rows for the given regions and
-   * adds new ones. Regions added back have state CLOSED.
-   * @param connection connection we're using
-   * @param regionInfos list of regions to be added to META
-   */
-  public static void overwriteRegions(Connection connection, List<RegionInfo> regionInfos,
-    int regionReplication) throws IOException {
-    // use master time for delete marker and the Put
-    long now = EnvironmentEdgeManager.currentTime();
-    deleteRegionInfos(connection, regionInfos, now);
-    // Why sleep? This is the easiest way to ensure that the previous deletes does not
-    // eclipse the following puts, that might happen in the same ts from the server.
-    // See HBASE-9906, and HBASE-9879. Once either HBASE-9879, HBASE-8770 is fixed,
-    // or HBASE-9905 is fixed and meta uses seqIds, we do not need the sleep.
-    //
-    // HBASE-13875 uses master timestamp for the mutations. The 20ms sleep is not needed
-    addRegionsToMeta(connection, regionInfos, regionReplication, now + 1);
-    LOG.info("Overwritten " + regionInfos.size() + " regions to Meta");
-    LOG.debug("Overwritten regions: {} ", regionInfos);
-  }
-
 
   public static Put addRegionInfo(final Put p, final RegionInfo hri) throws IOException {
     p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(p.getRow())

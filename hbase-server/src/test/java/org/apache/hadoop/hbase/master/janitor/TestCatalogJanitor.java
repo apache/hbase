@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.janitor;
 
 import static org.apache.hadoop.hbase.util.HFileArchiveTestingUtil.assertArchiveEqualToOriginal;
 import static org.junit.Assert.assertEquals;
@@ -52,8 +52,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.MockMasterServices;
+import org.apache.hadoop.hbase.master.janitor.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -83,16 +84,19 @@ public class TestCatalogJanitor {
     HBaseClassTestRule.forClass(TestCatalogJanitor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitor.class);
+
+  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+
   @Rule
   public final TestName name = new TestName();
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+
   private MockMasterServices masterServices;
   private CatalogJanitor janitor;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
 
   @Before
@@ -151,12 +155,12 @@ public class TestCatalogJanitor {
     LOG.info("Created reference " + path);
     // Add a parentdir for kicks so can check it gets removed by the catalogjanitor.
     fs.mkdirs(parentdir);
-    assertFalse(this.janitor.cleanParent(parent, r));
+    assertFalse(CatalogJanitor.cleanParent(masterServices, parent, r));
     ProcedureTestingUtility.waitAllProcedures(masterServices.getMasterProcedureExecutor());
     assertTrue(fs.exists(parentdir));
     // Remove the reference file and try again.
     assertTrue(fs.delete(p, true));
-    assertTrue(this.janitor.cleanParent(parent, r));
+    assertTrue(CatalogJanitor.cleanParent(masterServices, parent, r));
     // Parent cleanup is run async as a procedure. Make sure parentdir is removed.
     ProcedureTestingUtility.waitAllProcedures(masterServices.getMasterProcedureExecutor());
     assertTrue(!fs.exists(parentdir));
@@ -249,11 +253,11 @@ public class TestCatalogJanitor {
     Path splitaRef =
       createReferences(this.masterServices, td, parent, splita, Bytes.toBytes("ccc"), false);
     // Make sure actual super parent sticks around because splita has a ref.
-    assertFalse(janitor.cleanParent(parent, regions.get(parent)));
+    assertFalse(CatalogJanitor.cleanParent(masterServices, parent, regions.get(parent)));
 
     // splitba, and split bb, do not have dirs in fs. That means that if
     // we test splitb, it should get cleaned up.
-    assertTrue(janitor.cleanParent(splitb, regions.get(splitb)));
+    assertTrue(CatalogJanitor.cleanParent(masterServices, splitb, regions.get(splitb)));
 
     // Now remove ref from splita to parent... so parent can be let go and so
     // the daughter splita can be split (can't split if still references).
@@ -268,15 +272,15 @@ public class TestCatalogJanitor {
       createReferences(this.masterServices, td, splita, splitab, Bytes.toBytes("bbb"), true);
 
     // Test splita. It should stick around because references from splitab, etc.
-    assertFalse(janitor.cleanParent(splita, regions.get(splita)));
+    assertFalse(CatalogJanitor.cleanParent(masterServices, splita, regions.get(splita)));
 
     // Now clean up parent daughter first. Remove references from its daughters.
     assertTrue(fs.delete(splitaaRef, true));
     assertTrue(fs.delete(splitabRef, true));
-    assertTrue(janitor.cleanParent(splita, regions.get(splita)));
+    assertTrue(CatalogJanitor.cleanParent(masterServices, splita, regions.get(splita)));
 
     // Super parent should get cleaned up now both splita and splitb are gone.
-    assertTrue(janitor.cleanParent(parent, regions.get(parent)));
+    assertTrue(CatalogJanitor.cleanParent(masterServices, parent, regions.get(parent)));
   }
 
   /**
@@ -321,7 +325,7 @@ public class TestCatalogJanitor {
     final Map<RegionInfo, Result> mergedRegions = new TreeMap<>();
     CatalogJanitor spy = spy(this.janitor);
 
-    CatalogJanitor.Report report = new CatalogJanitor.Report();
+    Report report = new Report();
     report.count = 10;
     report.mergedRegions.putAll(mergedRegions);
     report.splitParents.putAll(splitParents);
@@ -461,7 +465,7 @@ public class TestCatalogJanitor {
     }
 
     // do the cleaning of the parent
-    assertTrue(janitor.cleanParent(parent, parentMetaRow));
+    assertTrue(CatalogJanitor.cleanParent(masterServices, parent, parentMetaRow));
     Path parentDir = new Path(tabledir, parent.getEncodedName());
     // Cleanup procedure runs async. Wait till it done.
     ProcedureTestingUtility.waitAllProcedures(masterServices.getMasterProcedureExecutor());
@@ -516,20 +520,20 @@ public class TestCatalogJanitor {
     CommonFSUtils.setRootDir(fs.getConf(), rootdir);
     Path tabledir = CommonFSUtils.getTableDir(rootdir, parent.getTable());
     Path storedir = HStore.getStoreHomedir(tabledir, parent, td.getColumnFamilies()[0].getName());
-    System.out.println("Old root:" + rootdir);
-    System.out.println("Old table:" + tabledir);
-    System.out.println("Old store:" + storedir);
+    LOG.info("Old root:" + rootdir);
+    LOG.info("Old table:" + tabledir);
+    LOG.info("Old store:" + storedir);
 
     Path storeArchive = HFileArchiveUtil.getStoreArchivePath(this.masterServices.getConfiguration(),
       parent, tabledir, td.getColumnFamilies()[0].getName());
-    System.out.println("Old archive:" + storeArchive);
+    LOG.info("Old archive:" + storeArchive);
 
     // enable archiving, make sure that files get archived
     addMockStoreFiles(2, this.masterServices, storedir);
     // get the current store files for comparison
     FileStatus[] storeFiles = fs.listStatus(storedir);
     // Do the cleaning of the parent
-    assertTrue(janitor.cleanParent(parent, r));
+    assertTrue(CatalogJanitor.cleanParent(masterServices, parent, r));
     Path parentDir = new Path(tabledir, parent.getEncodedName());
     ProcedureTestingUtility.waitAllProcedures(masterServices.getMasterProcedureExecutor());
     assertTrue(!fs.exists(parentDir));
@@ -543,7 +547,7 @@ public class TestCatalogJanitor {
     addMockStoreFiles(2, this.masterServices, storedir);
 
     // Do the cleaning of the parent
-    assertTrue(janitor.cleanParent(parent, r));
+    assertTrue(CatalogJanitor.cleanParent(masterServices, parent, r));
     // Cleanup procedure runs async. Wait till it done.
     ProcedureTestingUtility.waitAllProcedures(masterServices.getMasterProcedureExecutor());
     assertTrue(!fs.exists(parentDir));

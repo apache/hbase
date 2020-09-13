@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.janitor;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,16 +37,18 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
-import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 
 /**
@@ -57,7 +59,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * and encapsulates their fixing on behalf of the Master.
  */
 @InterfaceAudience.Private
-class MetaFixer {
+public class MetaFixer {
   private static final Logger LOG = LoggerFactory.getLogger(MetaFixer.class);
   private static final String MAX_MERGE_COUNT_KEY = "hbase.master.metafixer.max.merge.count";
   private static final int MAX_MERGE_COUNT_DEFAULT = 64;
@@ -68,14 +70,14 @@ class MetaFixer {
    */
   private final int maxMergeCount;
 
-  MetaFixer(MasterServices masterServices) {
+  public MetaFixer(MasterServices masterServices) {
     this.masterServices = masterServices;
     this.maxMergeCount = this.masterServices.getConfiguration().
       getInt(MAX_MERGE_COUNT_KEY, MAX_MERGE_COUNT_DEFAULT);
   }
 
-  void fix() throws IOException {
-    CatalogJanitor.Report report = this.masterServices.getCatalogJanitor().getLastReport();
+  public void fix() throws IOException {
+    Report report = this.masterServices.getCatalogJanitor().getLastReport();
     if (report == null) {
       LOG.info("CatalogJanitor has not generated a report yet; run 'catalogjanitor_run' in " +
           "shell or wait until CatalogJanitor chore runs.");
@@ -92,7 +94,7 @@ class MetaFixer {
    * If hole, it papers it over by adding a region in the filesystem and to hbase:meta.
    * Does not assign.
    */
-  void fixHoles(CatalogJanitor.Report report) {
+  void fixHoles(Report report) {
     final List<Pair<RegionInfo, RegionInfo>> holes = report.getHoles();
     if (holes.isEmpty()) {
       LOG.info("CatalogJanitor Report contains no holes to fix. Skipping.");
@@ -146,8 +148,8 @@ class MetaFixer {
       return Optional.of(buildRegionInfo(left.getTable(), left.getEndKey(), right.getStartKey()));
     }
 
-    final boolean leftUndefined = left.equals(RegionInfo.UNDEFINED);
-    final boolean rightUndefined = right.equals(RegionInfo.UNDEFINED);
+    final boolean leftUndefined = left.equals(RegionInfoBuilder.UNDEFINED);
+    final boolean rightUndefined = right.equals(RegionInfoBuilder.UNDEFINED);
     final boolean last = left.isLast();
     final boolean first = right.isFirst();
     if (leftUndefined && rightUndefined) {
@@ -235,7 +237,7 @@ class MetaFixer {
   /**
    * Fix overlaps noted in CJ consistency report.
    */
-  List<Long> fixOverlaps(CatalogJanitor.Report report) throws IOException {
+  List<Long> fixOverlaps(Report report) throws IOException {
     List<Long> pidList = new ArrayList<>();
     for (Set<RegionInfo> regions: calculateMerges(maxMergeCount, report.getOverlaps())) {
       RegionInfo [] regionsArray = regions.toArray(new RegionInfo [] {});
