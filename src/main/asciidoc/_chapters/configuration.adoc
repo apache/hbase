@@ -133,8 +133,8 @@ JVM. When selecting your JDK distribution, please take this into consideration.
 [cols="4*^.^", options="header"]
 |===
 |Java Version
-|HBase 1.3+
-|HBase 2.1+
+|HBase 1.4+
+|HBase 2.2+
 |HBase 2.3+
 
 |JDK7
@@ -293,45 +293,21 @@ Use the following legend to interpret this table:
 link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in newer minor releases
 * icon:exclamation-circle[role="yellow"] = Not tested, may/may-not function
 
-[cols="1,6*^.^", options="header"]
+[cols="1,4*^.^", options="header"]
 |===
-| | HBase-1.3.x | HBase-1.4.x | HBase-1.5.x | HBase-2.1.x | HBase-2.2.x | HBase-2.3.x
-|Hadoop-2.4.x | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.5.x | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.6.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.6.1+ | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.7.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.7.1+ | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.8.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.8.[3-4] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.8.5+ | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
-|Hadoop-2.9.[0-1] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-2.9.2+ | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
-|Hadoop-2.10.0 | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"]
-|Hadoop-3.0.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-3.0.3+ | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-3.1.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-3.1.1+ | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
-|Hadoop-3.2.x | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+| | HBase-1.4.x | HBase-1.6.x | HBase-2.2.x | HBase-2.3.x
+|Hadoop-2.7.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.7.1+ | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.8.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.8.[3-4] | icon:exclamation-circle[role="yellow"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.8.5+ | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+|Hadoop-2.9.[0-1] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-2.9.2+ | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+|Hadoop-2.10.0 | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"]
+|Hadoop-3.1.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+|Hadoop-3.1.1+ | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.2.x | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
 |===
-
-.Hadoop Pre-2.6.1 and JDK 1.8 Kerberos
-[TIP]
-====
-When using pre-2.6.1 Hadoop versions and JDK 1.8 in a Kerberos environment, HBase server can fail
-and abort due to Kerberos keytab relogin error. Late version of JDK 1.7 (1.7.0_80) has the problem
-too. Refer to link:https://issues.apache.org/jira/browse/HADOOP-10786[HADOOP-10786] for additional
-details. Consider upgrading to Hadoop 2.6.1+ in this case.
-====
-
-.Hadoop 2.6.x
-[TIP]
-====
-Hadoop distributions based on the 2.6.x line *must* have
-link:https://issues.apache.org/jira/browse/HADOOP-11710[HADOOP-11710] applied if you plan to run
-HBase on top of an HDFS Encryption Zone. Failure to do so will result in cluster failure and
-data loss. This patch is present in Apache Hadoop releases 2.6.1+.
-====
 
 .Hadoop 2.y.0 Releases
 [TIP]
@@ -344,16 +320,6 @@ release announcements for link:https://s.apache.org/hadoop-2.7.0-announcement[Ap
 link:https://s.apache.org/hadoop-2.8.0-announcement[Apache Hadoop 2.8.0],
 link:https://s.apache.org/hadoop-2.8.1-announcement[Apache Hadoop 2.8.1], and
 link:https://s.apache.org/hadoop-2.9.0-announcement[Apache Hadoop 2.9.0].
-====
-
-.Hadoop 3.0.x Releases
-[TIP]
-====
-Hadoop distributions that include the Application Timeline Service feature may cause unexpected
-versions of HBase classes to be present in the application classpath. Users planning on running
-MapReduce applications with HBase should make sure that
-link:https://issues.apache.org/jira/browse/YARN-7190[YARN-7190] is present in their YARN service
-(currently fixed in 2.9.1+ and 3.1.0+).
 ====
 
 .Hadoop 3.1.0 Release
