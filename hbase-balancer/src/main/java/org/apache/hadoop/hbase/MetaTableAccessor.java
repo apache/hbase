@@ -249,7 +249,8 @@ public final class MetaTableAccessor {
         new RowFilter(CompareOperator.EQUAL, new SubstringComparator(regionEncodedName));
     Scan scan = getMetaScan(connection, 1);
     scan.setFilter(rowFilter);
-    try (ResultScanner resultScanner = getMetaHTable(connection).getScanner(scan)) {
+    try (Table table = getMetaHTable(connection);
+        ResultScanner resultScanner = table.getScanner(scan)) {
       return resultScanner.next();
     }
   }
