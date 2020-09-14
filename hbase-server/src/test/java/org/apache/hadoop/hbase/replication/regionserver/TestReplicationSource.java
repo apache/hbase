@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.META_WAL_PROVIDER_ID;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -397,6 +398,26 @@ public class TestReplicationSource {
   }
 
   /**
+   * Deadend Endpoint. Does nothing.
+   */
+  public static class FaultyReplicationEndpoint extends DoNothingReplicationEndpoint {
+
+    static int count = 0;
+
+    @Override
+    public synchronized UUID getPeerUUID() {
+      LOG.info(">>>>>>>> " + count);
+      if(count==0) {
+        count++;
+        throw new RuntimeException();
+      } else {
+        return super.getPeerUUID();
+      }
+    }
+
+  }
+
+  /**
    * Test HBASE-20497
    * Moved here from TestReplicationSource because doesn't need cluster.
    */
@@ -422,6 +443,79 @@ public class TestReplicationSource {
     RecoveredReplicationSourceShipper shipper =
       new RecoveredReplicationSourceShipper(conf, walGroupId, queue, source, storage);
     assertEquals(1001L, shipper.getStartPosition());
+  }
+
+  /**
+   * Test ReplicationSource retries startup once an uncaught exception happens
+   * during initialization and <b>eplication.source.regionserver.abort</b> is set to false.
+   */
+  @Test
+  public void testAbortFalseOnError() throws IOException {
+    ReplicationSource rs = new ReplicationSource();
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt("replication.source.maxretriesmultiplier", 1);
+    conf.setBoolean("replication.source.regionserver.abort", false);
+    ReplicationPeer mockPeer = Mockito.mock(ReplicationPeer.class);
+    Mockito.when(mockPeer.getConfiguration()).thenReturn(conf);
+    Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
+    ReplicationPeerConfig peerConfig = Mockito.mock(ReplicationPeerConfig.class);
+    FaultyReplicationEndpoint.count = 0;
+    Mockito.when(peerConfig.getReplicationEndpointImpl()).
+      thenReturn(FaultyReplicationEndpoint.class.getName());
+    Mockito.when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
+    ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
+    Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
+    String queueId = "qid";
+    RegionServerServices rss =
+      TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
+    rs.init(conf, null, manager, null, mockPeer, rss, queueId, null,
+      p -> OptionalLong.empty(), new MetricsSource(queueId));
+    try {
+      rs.startup();
+      assertTrue(rs.isSourceActive());
+      assertEquals(0, rs.getSourceMetrics().getSizeOfLogQueue());
+      rs.enqueueLog(new Path("a.1" + META_WAL_PROVIDER_ID));
+      assertEquals(0, rs.getSourceMetrics().getSizeOfLogQueue());
+      rs.enqueueLog(new Path("a.1"));
+      assertEquals(1, rs.getSourceMetrics().getSizeOfLogQueue());
+    } finally {
+      rs.terminate("Done");
+      rss.stop("Done");
+    }
+  }
+
+  /**
+   * Test ReplicationSource retries startup once an uncaught exception happens
+   * during initialization and <b>replication.source.regionserver.abort</b> is set to false.
+   */
+  @Test
+  public void testAbortTrueOnError() throws IOException {
+    ReplicationSource rs = new ReplicationSource();
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt("replication.source.maxretriesmultiplier", 1);
+    ReplicationPeer mockPeer = Mockito.mock(ReplicationPeer.class);
+    Mockito.when(mockPeer.getConfiguration()).thenReturn(conf);
+    Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
+    ReplicationPeerConfig peerConfig = Mockito.mock(ReplicationPeerConfig.class);
+    FaultyReplicationEndpoint.count = 0;
+    Mockito.when(peerConfig.getReplicationEndpointImpl()).
+      thenReturn(FaultyReplicationEndpoint.class.getName());
+    Mockito.when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
+    ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
+    Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
+    String queueId = "qid";
+    RegionServerServices rss =
+      TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
+    rs.init(conf, null, manager, null, mockPeer, rss, queueId, null,
+      p -> OptionalLong.empty(), new MetricsSource(queueId));
+    try {
+      rs.startup();
+      Waiter.waitFor(conf, 1000, () -> rss.isAborted());
+      assertFalse(rs.isSourceActive());
+    } finally {
+      rs.terminate("Done");
+      rss.stop("Done");
+    }
   }
 }
 
