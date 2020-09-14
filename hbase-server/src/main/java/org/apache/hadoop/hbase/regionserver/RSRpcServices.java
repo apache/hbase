@@ -105,6 +105,7 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.net.Address;
@@ -127,7 +128,6 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.UnassignRegionHandler;
-import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -1421,14 +1421,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } else {
       accessChecker = new NoopAccessChecker(getConfiguration());
     }
-    if (!getConfiguration().getBoolean("hbase.testing.nocluster", false) && zkWatcher != null) {
-      zkPermissionWatcher =
-          new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
-      try {
-        zkPermissionWatcher.start();
-      } catch (KeeperException e) {
-        LOG.error("ZooKeeper permission watcher initialization failed", e);
-      }
+    zkPermissionWatcher =
+      new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
+    try {
+      zkPermissionWatcher.start();
+    } catch (KeeperException e) {
+      LOG.error("ZooKeeper permission watcher initialization failed", e);
     }
     this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.serverName);
     rpcServer.start();
