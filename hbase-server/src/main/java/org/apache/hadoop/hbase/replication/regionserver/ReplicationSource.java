@@ -35,9 +35,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
+
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -119,6 +122,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private int logQueueWarnThreshold;
   // ReplicationEndpoint which will handle the actual replication
   private volatile ReplicationEndpoint replicationEndpoint;
+
+  private boolean abortOnError;
+  //This is needed for the startup loop to identify when there's already
+  //an initialization happening (but not finished yet),
+  //so that it doesn't try submit another initialize thread.
+  //NOTE: this should only be set to false at the end of initialize method, prior to return.
+  private AtomicBoolean startupOngoing = new AtomicBoolean(false);
+
 
   /**
    * A filter (or a chain of filters) for WAL entries; filters out edits.
@@ -217,6 +228,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
     this.totalBufferUsed = manager.getTotalBufferUsed();
     this.walFileLengthProvider = walFileLengthProvider;
+
+    this.abortOnError = this.conf.getBoolean("replication.source.regionserver.abort",
+      true);
+
     LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
       replicationPeer.getId(), this.currentBandwidth);
   }
@@ -372,10 +387,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
             createNewWALReader(walGroupId, queue, worker.getStartPosition());
         Threads.setDaemonThreadRunning(
             walReader, Thread.currentThread().getName()
-                + ".replicationSource.wal-reader." + walGroupId + "," + queueId,
-            this::uncaughtException);
+            + ".replicationSource.wal-reader." + walGroupId + "," + queueId,
+          (t,e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
         worker.setWALReader(walReader);
-        worker.startup(this::uncaughtException);
+        worker.startup((t,e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
         return worker;
       }
     });
@@ -450,11 +465,28 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return walEntryFilter;
   }
 
-  protected final void uncaughtException(Thread t, Throwable e) {
+  protected final void uncaughtException(Thread t, Throwable e,
+      ReplicationSourceManager manager, String peerId) {
     RSRpcServices.exitIfOOME(e);
     LOG.error("Unexpected exception in {} currentPath={}",
       t.getName(), getCurrentPath(), e);
-    server.abort("Unexpected exception in " + t.getName(), e);
+    if(abortOnError){
+      server.abort("Unexpected exception in " + t.getName(), e);
+    }
+    if(manager != null){
+      while (true) {
+        try {
+          LOG.info("Refreshing replication sources now due to previous error on thread: {}",
+            t.getName());
+          manager.refreshSources(peerId);
+          break;
+        } catch (IOException e1) {
+          LOG.error("Replication sources refresh failed.", e1);
+          sleepForRetries("Sleeping before try refreshing sources again",
+            maxRetriesMultiplier);
+        }
+      }
+    }
   }
 
   @Override
@@ -544,12 +576,16 @@ public class ReplicationSource implements ReplicationSourceInterface {
         replicationEndpoint.stop();
         if (sleepForRetries("Error starting ReplicationEndpoint", sleepMultiplier)) {
           sleepMultiplier++;
+        } else {
+          this.startupOngoing.set(false);
+          throw new RuntimeException("Exhausted retries to start replication endpoint.");
         }
       }
     }
 
     if (!this.isSourceActive()) {
-      return;
+      this.startupOngoing.set(false);
+      throw new IllegalStateException("Source should be active.");
     }
 
     sleepMultiplier = 1;
@@ -571,7 +607,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if(!this.isSourceActive()) {
-      return;
+      this.startupOngoing.set(false);
+      throw new IllegalStateException("Source should be active.");
     }
     LOG.info("{} Source: {}, is now replicating from cluster: {}; to peer cluster: {};",
       logPeerId(), this.replicationQueueInfo.getQueueId(), clusterId, peerClusterId);
@@ -583,16 +620,30 @@ public class ReplicationSource implements ReplicationSourceInterface {
       PriorityBlockingQueue<Path> queue = entry.getValue();
       tryStartNewShipper(walGroupId, queue);
     }
+    this.startupOngoing.set(false);
   }
 
   @Override
   public void startup() {
-    // mark we are running now
+    //Flag that signalizes uncaught error happening while starting up the source
+    // and a retry should be attempted
+    MutableBoolean retryStartup = new MutableBoolean(true);
     this.sourceRunning = true;
-    initThread = new Thread(this::initialize);
-    Threads.setDaemonThreadRunning(initThread,
-      Thread.currentThread().getName() + ".replicationSource," + this.queueId,
-      this::uncaughtException);
+    do {
+      if(retryStartup.booleanValue()) {
+        retryStartup.setValue(false);
+        startupOngoing.set(true);
+        // mark we are running now
+        initThread = new Thread(this::initialize);
+        Threads.setDaemonThreadRunning(initThread,
+          Thread.currentThread().getName() + ".replicationSource," + this.queueId,
+          (t,e) -> {
+            sourceRunning = false;
+            uncaughtException(t, e, null, null);
+            retryStartup.setValue(!this.abortOnError);
+          });
+      }
+    } while (this.startupOngoing.get() && !this.abortOnError);
   }
 
   @Override
