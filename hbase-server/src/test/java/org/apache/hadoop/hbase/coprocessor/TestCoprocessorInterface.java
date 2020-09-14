@@ -70,8 +70,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorInterface {
@@ -81,7 +79,6 @@ public class TestCoprocessorInterface {
       HBaseClassTestRule.forClass(TestCoprocessorInterface.class);
 
   @Rule public TestName name = new TestName();
-  private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorInterface.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 
@@ -396,7 +393,7 @@ public class TestCoprocessorInterface {
     r.setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
-      host.load((Class<? extends RegionCoprocessor>) implClass, Coprocessor.PRIORITY_USER, conf);
+      host.load(implClass.asSubclass(RegionCoprocessor.class), Coprocessor.PRIORITY_USER, conf);
     }
     // we need to manually call pre- and postOpen here since the
     // above load() is not the real case for CP loading. A CP is
@@ -431,7 +428,7 @@ public class TestCoprocessorInterface {
     r.setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
-      host.load((Class<? extends RegionCoprocessor>) implClass, Coprocessor.PRIORITY_USER, conf);
+      host.load(implClass.asSubclass(RegionCoprocessor.class), Coprocessor.PRIORITY_USER, conf);
       Coprocessor c = host.findCoprocessor(implClass.getName());
       assertNotNull(c);
     }
@@ -452,8 +449,6 @@ public class TestCoprocessorInterface {
     // below.  After adding all data, the first region is 1.3M
     TEST_UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE,
         1024 * 128);
-    TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster",
-        true);
     TEST_UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
 
     return TEST_UTIL.getConfiguration();
