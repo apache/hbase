@@ -638,28 +638,22 @@ public class HRegionServer extends Thread implements
       setupWindows(getConfiguration(), getConfigurationManager());
 
       // Some unit tests don't need a cluster, so no zookeeper at all
-      if (!conf.getBoolean("hbase.testing.nocluster", false)) {
-        // Open connection to zookeeper and set primary watcher
-        zooKeeper = new ZKWatcher(conf, getProcessName() + ":" +
-          rpcServices.isa.getPort(), this, canCreateBaseZNode());
-        // If no master in cluster, skip trying to track one or look for a cluster status.
-        if (!this.masterless) {
-          if (conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
-            DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
-            this.csm = new ZkCoordinatedStateManager(this);
-          }
-
-          masterAddressTracker = new MasterAddressTracker(getZooKeeper(), this);
-          masterAddressTracker.start();
-
-          clusterStatusTracker = new ClusterStatusTracker(zooKeeper, this);
-          clusterStatusTracker.start();
-        } else {
-          masterAddressTracker = null;
-          clusterStatusTracker = null;
+      // Open connection to zookeeper and set primary watcher
+      zooKeeper = new ZKWatcher(conf, getProcessName() + ":" + rpcServices.isa.getPort(), this,
+        canCreateBaseZNode());
+      // If no master in cluster, skip trying to track one or look for a cluster status.
+      if (!this.masterless) {
+        if (conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
+          DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+          this.csm = new ZkCoordinatedStateManager(this);
         }
+
+        masterAddressTracker = new MasterAddressTracker(getZooKeeper(), this);
+        masterAddressTracker.start();
+
+        clusterStatusTracker = new ClusterStatusTracker(zooKeeper, this);
+        clusterStatusTracker.start();
       } else {
-        zooKeeper = null;
         masterAddressTracker = null;
         clusterStatusTracker = null;
       }
