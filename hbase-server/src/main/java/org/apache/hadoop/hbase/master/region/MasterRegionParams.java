@@ -53,8 +53,6 @@ public class MasterRegionParams {
 
   private String archivedHFileSuffix;
 
-  private Boolean useMetaCellComparator;
-
   public MasterRegionParams server(Server server) {
     this.server = server;
     return this;
@@ -120,11 +118,6 @@ public class MasterRegionParams {
     return this;
   }
 
-  public MasterRegionParams useMetaCellComparator(boolean useMetaCellComparator) {
-    this.useMetaCellComparator = useMetaCellComparator;
-    return this;
-  }
-
   public Server server() {
     return server;
   }
@@ -175,9 +168,5 @@ public class MasterRegionParams {
 
   public String archivedHFileSuffix() {
     return archivedHFileSuffix;
-  }
-
-  public Boolean useMetaCellComparator() {
-    return useMetaCellComparator;
   }
 }
