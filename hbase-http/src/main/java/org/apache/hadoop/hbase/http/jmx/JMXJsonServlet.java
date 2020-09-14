@@ -67,6 +67,21 @@ import org.slf4j.LoggerFactory;
  * </code> will return the cluster id of the namenode mxbean.
  * </p>
  * <p>
+ * If we are not sure on the exact attribute and we want to get all the attributes that match one or
+ * more given pattern then the format is
+ * <code>http://.../jmx?get=MXBeanName::*[RegExp1],*[RegExp2]</code>
+ * </p>
+ * <p>
+ * For example
+ * <code>
+ * <p>
+ * http://../jmx?get=Hadoop:service=HBase,name=RegionServer,sub=Tables::[a-zA-z_0-9]*memStoreSize
+ * </p>
+ * <p>
+ * http://../jmx?get=Hadoop:service=HBase,name=RegionServer,sub=Tables::[a-zA-z_0-9]*memStoreSize,[a-zA-z_0-9]*storeFileSize
+ * </p>
+ * </code>
+ * </p>
  * If the <code>qry</code> or the <code>get</code> parameter is not formatted
  * correctly then a 400 BAD REQUEST http response code will be returned.
  * </p>
