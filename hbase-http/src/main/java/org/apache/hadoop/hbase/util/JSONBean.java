@@ -25,7 +25,6 @@ import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.management.AttributeNotFoundException;
@@ -43,13 +42,12 @@ import javax.management.RuntimeMBeanException;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.TabularData;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.stream.JsonWriter;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility for doing JSON and MBeans.
@@ -239,7 +237,7 @@ public class JSONBean {
       } else {
         MBeanAttributeInfo[] attrs = minfo.getAttributes();
         for (int i = 0; i < attrs.length; i++) {
-          writeAttribute(writer, mBeanServer, oname, description, attrs[i], matchingPattern);
+          writeAttribute(writer, mBeanServer, oname, description, matchingPattern, attrs[i]);
         }
       }
       writer.endObject();
@@ -249,7 +247,7 @@ public class JSONBean {
   }
 
   private static void writeAttribute(JsonWriter writer, MBeanServer mBeanServer, ObjectName oname,
-      boolean description, MBeanAttributeInfo attr, Pattern pattern[]) throws IOException {
+      boolean description, Pattern pattern[], MBeanAttributeInfo attr) throws IOException {
     if (!attr.isReadable()) {
       return;
     }

@@ -152,7 +152,8 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
 
   @Test
   public void testPatternMatching() throws Exception {
-    assertReFind("[a-zA-z_]*Table1[a-zA-z_]*memStoreSize", "Namespace_default_table_Table1_metric_memStoreSize");
+    assertReFind("[a-zA-z_]*Table1[a-zA-z_]*memStoreSize",
+      "Namespace_default_table_Table1_metric_memStoreSize");
     assertReFind("[a-zA-z_]*memStoreSize", "Namespace_default_table_Table1_metric_memStoreSize");
   }
 
