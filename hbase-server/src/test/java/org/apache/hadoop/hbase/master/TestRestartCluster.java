@@ -129,6 +129,7 @@ public class TestRestartCluster {
     // Need to use a new 'Configuration' so we make a new HConnection.
     // Otherwise we're reusing an HConnection that has gone stale because
     // the shutdown of the cluster also called shut of the connection.
+    connection = UTIL.getConnection();
     allRegions =
         MetaScanner.listAllRegions(new Configuration(UTIL.getConfiguration()), connection, true);
     assertEquals(4, allRegions.size());
