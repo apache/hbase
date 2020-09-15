@@ -62,6 +62,7 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
     // disable and start the peer
     admin.disablePeer("2");
     utility2.startMiniHBaseCluster(1, 2);
+    htable2 = utility2.getConnection().getTable(tableName);
     Get get = new Get(rowkey);
     for (int i = 0; i < NB_RETRIES; i++) {
       Result res = htable2.get(get);
