@@ -458,6 +458,7 @@ public class TestReplicationSource {
     Mockito.when(mockPeer.getConfiguration()).thenReturn(conf);
     Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
     ReplicationPeerConfig peerConfig = Mockito.mock(ReplicationPeerConfig.class);
+    FaultyReplicationEndpoint.count = 0;
     Mockito.when(peerConfig.getReplicationEndpointImpl()).
       thenReturn(FaultyReplicationEndpoint.class.getName());
     Mockito.when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
@@ -495,6 +496,7 @@ public class TestReplicationSource {
     Mockito.when(mockPeer.getConfiguration()).thenReturn(conf);
     Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
     ReplicationPeerConfig peerConfig = Mockito.mock(ReplicationPeerConfig.class);
+    FaultyReplicationEndpoint.count = 0;
     Mockito.when(peerConfig.getReplicationEndpointImpl()).
       thenReturn(FaultyReplicationEndpoint.class.getName());
     Mockito.when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
@@ -507,9 +509,8 @@ public class TestReplicationSource {
       p -> OptionalLong.empty(), new MetricsSource(queueId));
     try {
       rs.startup();
-      Waiter.waitFor(conf, 1000, () -> FaultyReplicationEndpoint.count > 0);
+      Waiter.waitFor(conf, 1000, () -> rss.isAborted());
       assertFalse(rs.isSourceActive());
-      assertTrue(rss.isAborted());
     } finally {
       rs.terminate("Done");
       rss.stop("Done");

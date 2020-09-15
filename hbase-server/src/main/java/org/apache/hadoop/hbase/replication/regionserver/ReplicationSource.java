@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -129,7 +128,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
   //so that it doesn't try submit another initialize thread.
   //NOTE: this should only be set to false at the end of initialize method, prior to return.
   private AtomicBoolean startupOngoing = new AtomicBoolean(false);
-
+  //Flag that signalizes uncaught error happening while starting up the source
+  // and a retry should be attempted
+  private AtomicBoolean retryStartup = new AtomicBoolean(false);
 
   /**
    * A filter (or a chain of filters) for WAL entries; filters out edits.
@@ -577,6 +578,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
         if (sleepForRetries("Error starting ReplicationEndpoint", sleepMultiplier)) {
           sleepMultiplier++;
         } else {
+          retryStartup.set(!this.abortOnError);
           this.startupOngoing.set(false);
           throw new RuntimeException("Exhausted retries to start replication endpoint.");
         }
@@ -584,6 +586,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if (!this.isSourceActive()) {
+      retryStartup.set(!this.abortOnError);
       this.startupOngoing.set(false);
       throw new IllegalStateException("Source should be active.");
     }
@@ -607,6 +610,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if(!this.isSourceActive()) {
+      retryStartup.set(!this.abortOnError);
       this.startupOngoing.set(false);
       throw new IllegalStateException("Source should be active.");
     }
@@ -625,25 +629,23 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   @Override
   public void startup() {
-    //Flag that signalizes uncaught error happening while starting up the source
-    // and a retry should be attempted
-    MutableBoolean retryStartup = new MutableBoolean(true);
-    this.sourceRunning = true;
+    retryStartup.set(true);
     do {
-      if(retryStartup.booleanValue()) {
-        retryStartup.setValue(false);
-        startupOngoing.set(true);
+      if(retryStartup.get()) {
         // mark we are running now
+        this.sourceRunning = true;
+        startupOngoing.set(true);
+        retryStartup.set(false);
         initThread = new Thread(this::initialize);
         Threads.setDaemonThreadRunning(initThread,
           Thread.currentThread().getName() + ".replicationSource," + this.queueId,
           (t,e) -> {
             sourceRunning = false;
             uncaughtException(t, e, null, null);
-            retryStartup.setValue(!this.abortOnError);
+            retryStartup.set(!this.abortOnError);
           });
       }
-    } while (this.startupOngoing.get() && !this.abortOnError);
+    } while ((this.startupOngoing.get() || this.retryStartup.get()) && !this.abortOnError);
   }
 
   @Override
