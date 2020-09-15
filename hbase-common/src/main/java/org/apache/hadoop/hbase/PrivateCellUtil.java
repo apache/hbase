@@ -724,6 +724,19 @@ public final class PrivateCellUtil {
         length);
   }
 
+  public static boolean rowsStartWith(Cell left, byte[] startsWith) {
+    if (left.getRowLength() < startsWith.length) {
+      return false;
+    }
+    if (left instanceof ByteBufferExtendedCell) {
+      return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) left).getRowPosition(), startsWith.length, startsWith, 0,
+        startsWith.length);
+    }
+    return Bytes.equals(left.getRowArray(), left.getRowOffset(), startsWith.length, startsWith, 0,
+      startsWith.length);
+  }
+
   public static boolean matchingFamily(final Cell left, final byte[] buf, final int offset,
       final int length) {
     if (left instanceof ByteBufferExtendedCell) {
