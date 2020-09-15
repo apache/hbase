@@ -107,7 +107,7 @@ public final class MasterRegionFactory {
     params.ringBufferSlotCount(conf.getInt(RING_BUFFER_SLOT_COUNT, DEFAULT_RING_BUFFER_SLOT_COUNT));
     long rollPeriodMs = conf.getLong(ROLL_PERIOD_MS_KEY, DEFAULT_ROLL_PERIOD_MS);
     params.rollPeriodMs(rollPeriodMs).archivedWalSuffix(ARCHIVED_WAL_SUFFIX)
-      .archivedHFileSuffix(ARCHIVED_HFILE_SUFFIX).useMetaCellComparator(true);
+      .archivedHFileSuffix(ARCHIVED_HFILE_SUFFIX);
     return MasterRegion.create(params);
   }
 }
