@@ -143,6 +143,7 @@ import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.master.region.MasterRegionCellComparator;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -262,12 +263,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     "hbase.hregion.special.recovered.edits.dir";
 
   /**
-   * Whether to use {@link MetaCellComparator} even if we are not meta region. Used when creating
-   * master local region.
+   * Whether to use {@link MasterRegionCellComparator}.
    */
-  public static final String USE_META_CELL_COMPARATOR = "hbase.region.use.meta.cell.comparator";
-
-  public static final boolean DEFAULT_USE_META_CELL_COMPARATOR = false;
+  public static final String USE_MASTER_REGION_CELL_COMPARATOR =
+    "hbase.region.use.master.region.cell.comparator";
 
   final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -750,6 +749,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       wal, confParam, htd, rsServices);
   }
 
+  private CellComparator getCellComparator(Configuration conf, TableDescriptor htd) {
+    boolean useMasterRegionCellComparator =
+      conf.getBoolean(USE_MASTER_REGION_CELL_COMPARATOR, false);
+    if (useMasterRegionCellComparator) {
+      return MasterRegionCellComparator.MASTER_REGION_COMPARATOR;
+    } else if (htd.isMetaTable()) {
+      return MetaCellComparator.META_COMPARATOR;
+    } else {
+      return CellComparatorImpl.COMPARATOR;
+    }
+  }
+
   /**
    * HRegion constructor. This constructor should only be used for testing and
    * extensions.  Instances of HRegion should be instantiated with the
@@ -783,9 +794,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.baseConf = confParam;
     this.conf = new CompoundConfiguration().add(confParam).addBytesMap(htd.getValues());
-    this.cellComparator = htd.isMetaTable() ||
-      conf.getBoolean(USE_META_CELL_COMPARATOR, DEFAULT_USE_META_CELL_COMPARATOR) ?
-        MetaCellComparator.META_COMPARATOR : CellComparatorImpl.COMPARATOR;
+    this.cellComparator = getCellComparator(this.conf, htd);
     this.lock = new ReentrantReadWriteLock(conf.getBoolean(FAIR_REENTRANT_CLOSE_LOCK,
         DEFAULT_FAIR_REENTRANT_CLOSE_LOCK));
     this.flushCheckInterval = conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL,
