@@ -271,6 +271,12 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
       throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     RegionStateNode regionNode = getRegionNode(env);
+    // The AssignmentManager is started after the ProcedureExecutor and stopped before
+    // the ProcedureExecutor, so it's possible that the regionNode is null
+    // when this method is executed after the AssignmentManager is stopped and clear the RSN.
+    if (regionNode == null) {
+      throw new ProcedureSuspendedException();
+    }
     regionNode.lock();
     try {
       switch (state) {
