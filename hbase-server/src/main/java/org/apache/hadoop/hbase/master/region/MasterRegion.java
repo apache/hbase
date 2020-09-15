@@ -290,9 +290,7 @@ public final class MasterRegion {
     if (params.useHsync() != null) {
       conf.setBoolean(HRegion.WAL_HSYNC_CONF_KEY, params.useHsync());
     }
-    if (params.useMetaCellComparator() != null) {
-      conf.setBoolean(HRegion.USE_META_CELL_COMPARATOR, params.useMetaCellComparator());
-    }
+    conf.setBoolean(HRegion.USE_MASTER_REGION_CELL_COMPARATOR, true);
     conf.setInt(AbstractFSWAL.RING_BUFFER_SLOT_COUNT,
       IntMath.ceilingPowerOfTwo(params.ringBufferSlotCount()));
 
