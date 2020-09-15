@@ -406,7 +406,6 @@ public class TestReplicationSource {
 
     @Override
     public synchronized UUID getPeerUUID() {
-      LOG.info(">>>>>>>> " + count);
       if(count==0) {
         count++;
         throw new RuntimeException();
