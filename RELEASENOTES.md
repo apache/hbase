@@ -20,6 +20,34 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.3.2 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-24776](https://issues.apache.org/jira/browse/HBASE-24776) | *Major* | **[hbtop] Support Batch mode**
+
+HBASE-24776 added the following command line parameters to hbtop:
+\| Argument \| Description \| 
+\|---\|---\|
+\| -n,--numberOfIterations \<arg\> \| The number of iterations \|
+\| -O,--outputFieldNames \| Print each of the available field names on a separate line, then quit \|
+\| -f,--fields \<arg\> \| Show only the given fields. Specify comma separated fields to show multiple fields \|
+\| -s,--sortField \<arg\> \| The initial sort field. You can prepend a \`+' or \`-' to the field name to also override the sort direction. A leading \`+' will force sorting high to low, whereas a \`-' will ensure a low to high ordering \|
+\| -i,--filters \<arg\> \| The initial filters. Specify comma separated filters to set multiple filters \|
+\| -b,--batchMode \| Starts hbtop in Batch mode, which could be useful for sending output from hbtop to other programs or to a file. In this mode, hbtop will not accept input and runs until the iterations limit you've set with the \`-n' command-line option or until killed \|
+
+
+---
+
+* [HBASE-24892](https://issues.apache.org/jira/browse/HBASE-24892) | *Major* | **config 'hbase.hregion.memstore.mslab.indexchunksize' not be used**
+
+Remove the config "hbase.hregion.memstore.mslab.indexchunksize" which never used. And use "hbase.hregion.memstore.mslab.indexchunksize.percent" instead.
+
+
+
 # HBASE  2.3.1 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
