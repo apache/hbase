@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -93,6 +94,26 @@ public class TableRecordReaderImpl {
       timestamp = System.currentTimeMillis();
       rowcount = 0;
     }
+  }
+
+  /**
+   * In new mapreduce APIs, TaskAttemptContext has two getCounter methods
+   * Check if getCounter(String, String) method is available.
+   * @return The getCounter method or null if not available.
+   * @deprecated since 2.4.0 and 2.3.2, will be removed in 4.0.0
+   */
+  protected static Method retrieveGetCounterWithStringsParams(TaskAttemptContext context)
+    throws IOException {
+    Method m = null;
+    try {
+      m = context.getClass().getMethod("getCounter",
+        new Class [] {String.class, String.class});
+    } catch (SecurityException e) {
+      throw new IOException("Failed test for getCounter", e);
+    } catch (NoSuchMethodException e) {
+      // Ignore
+    }
+    return m;
   }
 
   /**
@@ -265,6 +286,15 @@ public class TableRecordReaderImpl {
     }
 
     updateCounters(scanMetrics, numRestarts, context, numStale);
+  }
+
+  /**
+   * @deprecated since 2.4.0 and 2.3.2, will be removed in 4.0.0
+   *   Use {@link #updateCounters(ScanMetrics, long, TaskAttemptContext, long)} instead.
+   */
+  protected static void updateCounters(ScanMetrics scanMetrics, long numScannerRestarts,
+      Method getCounter, TaskAttemptContext context, long numStale) {
+    updateCounters(scanMetrics, numScannerRestarts, context, numStale);
   }
 
   protected static void updateCounters(ScanMetrics scanMetrics, long numScannerRestarts,
