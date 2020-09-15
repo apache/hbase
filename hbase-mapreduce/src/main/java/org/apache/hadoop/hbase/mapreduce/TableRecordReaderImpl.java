@@ -102,6 +102,7 @@ public class TableRecordReaderImpl {
    * @return The getCounter method or null if not available.
    * @deprecated since 2.4.0 and 2.3.2, will be removed in 4.0.0
    */
+  @Deprecated
   protected static Method retrieveGetCounterWithStringsParams(TaskAttemptContext context)
     throws IOException {
     Method m = null;
@@ -292,6 +293,7 @@ public class TableRecordReaderImpl {
    * @deprecated since 2.4.0 and 2.3.2, will be removed in 4.0.0
    *   Use {@link #updateCounters(ScanMetrics, long, TaskAttemptContext, long)} instead.
    */
+  @Deprecated
   protected static void updateCounters(ScanMetrics scanMetrics, long numScannerRestarts,
       Method getCounter, TaskAttemptContext context, long numStale) {
     updateCounters(scanMetrics, numScannerRestarts, context, numStale);
