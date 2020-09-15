@@ -12,7 +12,6 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -63,7 +62,6 @@ public class ConnectionConfiguration {
   private final int writeRpcTimeout;
   // toggle for async/sync prefetch
   private final boolean clientScannerAsyncPrefetch;
-  private final long scannerTimeoutPeriod;
 
   /**
    * Constructor
@@ -119,9 +117,6 @@ public class ConnectionConfiguration {
 
     this.writeRpcTimeout = conf.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
         conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
-
-    this.scannerTimeoutPeriod = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
-        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
   }
 
   /**
@@ -148,7 +143,6 @@ public class ConnectionConfiguration {
     this.readRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.writeRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.rpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
-    this.scannerTimeoutPeriod = HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
   }
 
   public int getReadRpcTimeout() {
@@ -213,9 +207,5 @@ public class ConnectionConfiguration {
 
   public int getRpcTimeout() {
     return rpcTimeout;
-  }
-
-  public long getScannerTimeoutPeriod() {
-    return scannerTimeoutPeriod;
   }
 }

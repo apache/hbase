@@ -863,10 +863,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       // Query the meta region
       long pauseBase = this.pause;
-      boolean lockAcquired = false;
+      takeUserRegionLock();
       try {
-        takeUserRegionLock();
-        lockAcquired = true;
         // We don't need to check if useCache is enabled or not. Even if useCache is false
         // we already cleared the cache for this row before acquiring userRegion lock so if this
         // row is present in cache that means some other thread has populated it while we were
@@ -961,9 +959,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         relocateMeta =
           !(e instanceof RegionOfflineException || e instanceof NoServerForRegionException);
       } finally {
-        if (lockAcquired) {
-          userRegionLock.unlock();
-        }
+        userRegionLock.unlock();
       }
       try{
         Thread.sleep(ConnectionUtils.getPauseTime(pauseBase, tries));
@@ -976,7 +972,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   void takeUserRegionLock() throws IOException {
     try {
-      long waitTime = connectionConfig.getScannerTimeoutPeriod();
+      long waitTime = connectionConfig.getMetaOperationTimeout();
       if (!userRegionLock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
         throw new LockTimeoutException("Failed to get user region lock in"
             + waitTime + " ms. " + " for accessing meta region server.");
