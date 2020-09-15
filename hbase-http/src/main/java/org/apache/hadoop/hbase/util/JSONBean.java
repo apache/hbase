@@ -25,6 +25,8 @@ import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.regex.Pattern;
+
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
@@ -40,18 +42,20 @@ import javax.management.RuntimeMBeanException;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.TabularData;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.stream.JsonWriter;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility for doing JSON and MBeans.
  */
 @InterfaceAudience.Private
 public class JSONBean {
+  private static final String COMMA = ",";
+  private static final String ASTERICK = "*";
   private static final Logger LOG = LoggerFactory.getLogger(JSONBean.class);
   private static final Gson GSON = GsonUtil.createGson().create();
 
@@ -125,11 +129,12 @@ public class JSONBean {
    */
   private static int write(JsonWriter writer, MBeanServer mBeanServer, ObjectName qry,
       String attribute, boolean description) throws IOException {
-    LOG.trace("Listing beans for " + qry);
+    LOG.debug("Listing beans for {}", qry);
     Set<ObjectName> names = null;
     names = mBeanServer.queryNames(qry, null);
     writer.name("beans").beginArray();
     Iterator<ObjectName> it = names.iterator();
+    Pattern[] matchingPattern = null;
     while (it.hasNext()) {
       ObjectName oname = it.next();
       MBeanInfo minfo;
@@ -149,8 +154,24 @@ public class JSONBean {
             code = (String) mBeanServer.getAttribute(oname, prs);
           }
           if (attribute != null) {
-            prs = attribute;
-            attributeinfo = mBeanServer.getAttribute(oname, prs);
+            String[] patternAttr = null;
+            if (attribute.contains(ASTERICK)) {
+              if (attribute.contains(COMMA)) {
+                patternAttr = attribute.split(COMMA);
+              } else {
+                patternAttr = new String[1];
+                patternAttr[0] = attribute;
+              }
+              matchingPattern = new Pattern[patternAttr.length];
+              for (int i = 0; i < patternAttr.length; i++) {
+                matchingPattern[i] = Pattern.compile(patternAttr[i]);
+              }
+              // nullify the attribute
+              attribute = null;
+            } else {
+              prs = attribute;
+              attributeinfo = mBeanServer.getAttribute(oname, prs);
+            }
           }
         } catch (RuntimeMBeanException e) {
           // UnsupportedOperationExceptions happen in the normal course of business,
@@ -216,7 +237,7 @@ public class JSONBean {
       } else {
         MBeanAttributeInfo[] attrs = minfo.getAttributes();
         for (int i = 0; i < attrs.length; i++) {
-          writeAttribute(writer, mBeanServer, oname, description, attrs[i]);
+          writeAttribute(writer, mBeanServer, oname, description, matchingPattern, attrs[i]);
         }
       }
       writer.endObject();
@@ -226,7 +247,7 @@ public class JSONBean {
   }
 
   private static void writeAttribute(JsonWriter writer, MBeanServer mBeanServer, ObjectName oname,
-      boolean description, MBeanAttributeInfo attr) throws IOException {
+      boolean description, Pattern pattern[], MBeanAttributeInfo attr) throws IOException {
     if (!attr.isReadable()) {
       return;
     }
@@ -237,6 +258,21 @@ public class JSONBean {
     if (attName.indexOf("=") >= 0 || attName.indexOf(":") >= 0 || attName.indexOf(" ") >= 0) {
       return;
     }
+
+    if (pattern != null) {
+      boolean matchFound = false;
+      for (Pattern compile : pattern) {
+        // check if we have any match
+        if (compile.matcher(attName).find()) {
+          matchFound = true;
+          break;
+        }
+      }
+      if (!matchFound) {
+        return;
+      }
+    }
+
     String descriptionStr = description ? attr.getDescription() : null;
     Object value = null;
     try {

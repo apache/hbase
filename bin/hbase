@@ -256,7 +256,7 @@ if [ "${INTERNAL_CLASSPATH}" != "true" ]; then
 
   # If command needs our shaded mapreduce, use it
   # N.B "mapredcp" is not included here because in the shaded case it skips our built classpath
-  declare -a commands_in_mr_jar=("hbck" "snapshot" "canary" "regionsplitter" "pre-upgrade")
+  declare -a commands_in_mr_jar=("hbck" "snapshot" "regionsplitter" "pre-upgrade")
   for c in "${commands_in_mr_jar[@]}"; do
     if [ "${COMMAND}" = "${c}" ]; then
       # If we didn't find a jar above, this will just be blank and the

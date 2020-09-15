@@ -140,7 +140,7 @@ public class CanaryTool implements Tool, Canary {
       try {
         InfoServer infoServer = new InfoServer("canary", addr, port, false, conf);
         infoServer.addUnprivilegedServlet("canary", "/canary-status", CanaryStatusServlet.class);
-        infoServer.setAttribute("sink", this.sink);
+        infoServer.setAttribute("sink", getSink(conf, RegionStdOutSink.class));
         infoServer.start();
         LOG.info("Bind Canary http info server to {}:{} ", addr, port);
       } catch (BindException e) {
@@ -979,8 +979,10 @@ public class CanaryTool implements Tool, Canary {
       monitorTargets = new String[length];
       System.arraycopy(args, index, monitorTargets, 0, length);
     }
-
-    putUpWebUI();
+    if (interval > 0) {
+      //Only show the web page in daemon mode
+      putUpWebUI();
+    }
     if (zookeeperMode) {
       return checkZooKeeper();
     } else if (regionServerMode) {
