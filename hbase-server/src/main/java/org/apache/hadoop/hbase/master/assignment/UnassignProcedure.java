@@ -48,8 +48,6 @@ public class UnassignProcedure extends RegionTransitionProcedure {
 
   protected volatile ServerName destinationServer;
 
-  private boolean force;
-
   private boolean removeAfterUnassigning;
 
   public UnassignProcedure() {
@@ -80,9 +78,6 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     if (this.destinationServer != null) {
       state.setDestinationServer(ProtobufUtil.toServerName(destinationServer));
     }
-    if (force) {
-      state.setForce(true);
-    }
     if (removeAfterUnassigning) {
       state.setRemoveAfterUnassigning(true);
     }
@@ -98,7 +93,6 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     setTransitionState(state.getTransitionState());
     setRegionInfo(ProtobufUtil.toRegionInfo(state.getRegionInfo()));
     this.hostingServer = ProtobufUtil.toServerName(state.getHostingServer());
-    force = state.getForce();
     if (state.hasDestinationServer()) {
       this.destinationServer = ProtobufUtil.toServerName(state.getDestinationServer());
     }

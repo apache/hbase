@@ -109,6 +109,7 @@ message AssignRegionResponse {
 
 message UnassignRegionRequest {
   required RegionSpecifier region = 1;
+  // This parameter is ignored
   optional bool force = 2 [default = false];
 }
 

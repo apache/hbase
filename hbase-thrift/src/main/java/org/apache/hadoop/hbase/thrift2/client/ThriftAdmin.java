@@ -602,9 +602,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void unassign(byte[] regionName, boolean force) {
+  public void unassign(byte[] regionName) {
     throw new NotImplementedException("unassign not supported in ThriftAdmin");
-
   }
 
   @Override

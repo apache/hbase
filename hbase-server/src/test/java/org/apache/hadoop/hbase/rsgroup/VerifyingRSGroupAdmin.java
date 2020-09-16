@@ -314,8 +314,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.assign(regionName);
   }
 
-  public void unassign(byte[] regionName, boolean force) throws IOException {
-    admin.unassign(regionName, force);
+  public void unassign(byte[] regionName) throws IOException {
+    admin.unassign(regionName);
   }
 
   public void offline(byte[] regionName) throws IOException {
