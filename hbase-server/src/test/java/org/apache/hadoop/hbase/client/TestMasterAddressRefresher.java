@@ -82,6 +82,11 @@ public class TestMasterAddressRefresher {
     }
 
     @Override
+    public String getClusterId() throws IOException {
+      return null;
+    }
+
+    @Override
     public void close() throws IOException {
 
     }

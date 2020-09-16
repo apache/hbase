@@ -305,7 +305,7 @@ public class TokenUtil {
   public static void addTokenForJob(final Connection conn, final JobConf job, User user)
       throws IOException, InterruptedException {
 
-    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
+    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn, user);
     if (token == null) {
       token = obtainToken(conn, user);
     }
@@ -324,7 +324,7 @@ public class TokenUtil {
    */
   public static void addTokenForJob(final Connection conn, User user, Job job)
       throws IOException, InterruptedException {
-    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
+    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn, user);
     if (token == null) {
       token = obtainToken(conn, user);
     }
@@ -343,7 +343,7 @@ public class TokenUtil {
    */
   public static boolean addTokenIfMissing(Connection conn, User user)
       throws IOException, InterruptedException {
-    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
+    Token<AuthenticationTokenIdentifier> token = getAuthToken(conn, user);
     if (token == null) {
       token = obtainToken(conn, user);
       user.getUGI().addToken(token.getService(), token);
@@ -356,19 +356,9 @@ public class TokenUtil {
    * Get the authentication token of the user for the cluster specified in the configuration
    * @return null if the user does not have the token, otherwise the auth token for the cluster.
    */
-  private static Token<AuthenticationTokenIdentifier> getAuthToken(Configuration conf, User user)
-      throws IOException, InterruptedException {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "TokenUtil-getAuthToken", null);
-    try {
-      String clusterId = ZKClusterId.readClusterIdZNode(zkw);
-      if (clusterId == null) {
-        throw new IOException("Failed to get cluster ID");
-      }
-      return new AuthenticationTokenSelector().selectToken(new Text(clusterId), user.getTokens());
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    } finally {
-      zkw.close();
-    }
+  private static Token<AuthenticationTokenIdentifier> getAuthToken(Connection conn, User user)
+      throws IOException {
+    String clusterId = conn.getClusterId();
+    return new AuthenticationTokenSelector().selectToken(new Text(clusterId), user.getTokens());
   }
 }
