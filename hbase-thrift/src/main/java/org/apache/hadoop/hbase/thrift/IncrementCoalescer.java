@@ -145,7 +145,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
     this.handler = hand;
     LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
     pool = new ThreadPoolExecutor(CORE_POOL_SIZE, CORE_POOL_SIZE, 50, TimeUnit.MILLISECONDS, queue,
-      new ThreadFactoryBuilder().setNameFormat("IncrementCoalescer-pool-%d")
+      new ThreadFactoryBuilder().setNameFormat("IncrementCoalescer-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     MBeans.register("thrift", "Thrift", this);
   }

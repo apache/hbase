@@ -680,7 +680,7 @@ public class SplitTableRegionProcedure
     LOG.info("pid=" + getProcId() + " splitting " + nbFiles + " storefiles, region=" +
         getParentRegion().getShortNameToLog() + ", threads=" + maxThreads);
     final ExecutorService threadPool = Executors.newFixedThreadPool(maxThreads,
-      new ThreadFactoryBuilder().setNameFormat("StoreFileSplitter-pool-%d")
+      new ThreadFactoryBuilder().setNameFormat("StoreFileSplitter-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     final List<Future<Pair<Path, Path>>> futures = new ArrayList<Future<Pair<Path, Path>>>(nbFiles);
 

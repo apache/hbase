@@ -74,9 +74,9 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @VisibleForTesting
   static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
-    new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d")
-      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(), 10,
-    TimeUnit.MILLISECONDS);
+    new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+    10, TimeUnit.MILLISECONDS);
 
   private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
 
