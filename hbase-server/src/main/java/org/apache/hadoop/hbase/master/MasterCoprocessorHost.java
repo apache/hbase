@@ -681,21 +681,20 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preUnassign(final RegionInfo regionInfo, final boolean force)
-      throws IOException {
+  public void preUnassign(final RegionInfo regionInfo) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preUnassign(this, regionInfo, force);
+        observer.preUnassign(this, regionInfo);
       }
     });
   }
 
-  public void postUnassign(final RegionInfo regionInfo, final boolean force) throws IOException {
+  public void postUnassign(final RegionInfo regionInfo) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postUnassign(this, regionInfo, force);
+        observer.postUnassign(this, regionInfo);
       }
     });
   }

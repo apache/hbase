@@ -1679,7 +1679,6 @@ public class MasterRpcServices extends RSRpcServices implements
     try {
       final byte [] regionName = req.getRegion().getValue().toByteArray();
       RegionSpecifierType type = req.getRegion().getType();
-      final boolean force = req.getForce();
       UnassignRegionResponse urr = UnassignRegionResponse.newBuilder().build();
 
       master.checkInitialized();
@@ -1699,13 +1698,13 @@ public class MasterRpcServices extends RSRpcServices implements
 
       RegionInfo hri = pair.getFirst();
       if (master.cpHost != null) {
-        master.cpHost.preUnassign(hri, force);
+        master.cpHost.preUnassign(hri);
       }
       LOG.debug(master.getClientIdAuditPrefix() + " unassign " + hri.getRegionNameAsString()
-          + " in current location if it is online and reassign.force=" + force);
+          + " in current location if it is online");
       master.getAssignmentManager().unassign(hri);
       if (master.cpHost != null) {
-        master.cpHost.postUnassign(hri, force);
+        master.cpHost.postUnassign(hri);
       }
 
       return urr;

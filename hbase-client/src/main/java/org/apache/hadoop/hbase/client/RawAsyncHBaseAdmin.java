@@ -1531,7 +1531,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> unassign(byte[] regionName, boolean forcible) {
+  public CompletableFuture<Void> unassign(byte[] regionName) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(getRegionInfo(regionName), (regionInfo, err) -> {
       if (err != null) {
@@ -1542,7 +1542,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         this.<Void> newMasterCaller().priority(regionInfo.getTable())
           .action(((controller, stub) -> this
             .<UnassignRegionRequest, UnassignRegionResponse, Void> call(controller, stub,
-              RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName(), forcible),
+              RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName()),
               (s, c, req, done) -> s.unassignRegion(c, req, done), resp -> null)))
           .call(),
         (ret, err2) -> {

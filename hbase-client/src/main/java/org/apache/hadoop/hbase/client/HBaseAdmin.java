@@ -1438,14 +1438,14 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void unassign(final byte [] regionName, final boolean force) throws IOException {
+  public void unassign(final byte [] regionName) throws IOException {
     final byte[] toBeUnassigned = getRegionName(regionName);
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Void rpcCall() throws Exception {
         setPriority(regionName);
         UnassignRegionRequest request =
-            RequestConverter.buildUnassignRegionRequest(toBeUnassigned, force);
+            RequestConverter.buildUnassignRegionRequest(toBeUnassigned);
         master.unassignRegion(getRpcController(), request);
         return null;
       }

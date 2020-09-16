@@ -650,13 +650,13 @@ public class TestMasterObserver {
 
     @Override
     public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final RegionInfo regionInfo, final boolean force) throws IOException {
+        final RegionInfo regionInfo) throws IOException {
       preUnassignCalled = true;
     }
 
     @Override
     public void postUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final RegionInfo regionInfo, final boolean force) throws IOException {
+        final RegionInfo regionInfo) throws IOException {
       postUnassignCalled = true;
     }
 

@@ -348,6 +348,7 @@ message UnassignRegionStateData {
   // This is the server currently hosting the Region, the
   // server we will send the unassign rpc too.
   optional ServerName hosting_server = 5;
+  // This parameter is ignored
   optional bool force = 4 [default = false];
   optional bool remove_after_unassigning = 6 [default = false];
   // Current attempt index used for expotential backoff when stuck

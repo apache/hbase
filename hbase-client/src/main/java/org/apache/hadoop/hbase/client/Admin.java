@@ -1168,6 +1168,13 @@ public interface Admin extends Abortable, Closeable {
   void assign(byte[] regionName) throws IOException;
 
   /**
+   * Unassign a Region.
+   * @param regionName Region name to assign.
+   * @throws IOException if a remote or network exception occurs
+   */
+  void unassign(byte[] regionName) throws IOException;
+
+  /**
    * Unassign a region from current hosting regionserver.  Region will then be assigned to a
    * regionserver chosen at random.  Region could be reassigned back to the same server.  Use {@link
    * #move(byte[], ServerName)} if you want to control the region movement.
@@ -1176,9 +1183,14 @@ public interface Admin extends Abortable, Closeable {
    * @param force If <code>true</code>, force unassign (Will remove region from regions-in-transition too if
    * present. If results in double assignment use hbck -fix to resolve. To be used by experts).
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link #unassign(byte[])}
+   *   instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-24875">HBASE-24875</a>
    */
-  void unassign(byte[] regionName, boolean force)
-      throws IOException;
+  @Deprecated
+  default void unassign(byte[] regionName, boolean force) throws IOException {
+    unassign(regionName);
+  }
 
   /**
    * Offline specified region from master's in-memory state. It will not attempt to reassign the
