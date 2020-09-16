@@ -181,7 +181,7 @@ class ClusterStatusListener implements Closeable {
     private DatagramChannel channel;
     private final EventLoopGroup group = new NioEventLoopGroup(1,
       new ThreadFactoryBuilder().setNameFormat("hbase-client-clusterStatusListener-pool-%d")
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     public MulticastListener() {
     }

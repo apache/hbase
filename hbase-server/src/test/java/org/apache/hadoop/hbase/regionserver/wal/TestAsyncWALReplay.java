@@ -53,7 +53,7 @@ public class TestAsyncWALReplay extends AbstractTestWALReplay {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     GROUP = new NioEventLoopGroup(1,
-      new ThreadFactoryBuilder().setNameFormat("TestAsyncWALReplay-pool-%d")
+      new ThreadFactoryBuilder().setNameFormat("TestAsyncWALReplay-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     CHANNEL_CLASS = NioSocketChannel.class;
     Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
