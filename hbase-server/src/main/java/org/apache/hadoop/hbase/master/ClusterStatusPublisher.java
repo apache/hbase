@@ -248,7 +248,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
     private DatagramChannel channel;
     private final EventLoopGroup group = new NioEventLoopGroup(1,
       new ThreadFactoryBuilder().setNameFormat("hbase-master-clusterStatusPublisher-pool-%d")
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     public MulticastPublisher() {
     }

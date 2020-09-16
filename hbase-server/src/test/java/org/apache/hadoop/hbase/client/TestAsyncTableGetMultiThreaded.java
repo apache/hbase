@@ -139,7 +139,7 @@ public class TestAsyncTableGetMultiThreaded {
     int numThreads = 7;
     AtomicBoolean stop = new AtomicBoolean(false);
     ExecutorService executor = Executors.newFixedThreadPool(numThreads,
-      new ThreadFactoryBuilder().setNameFormat("TestAsyncGet-pool-%d")
+      new ThreadFactoryBuilder().setNameFormat("TestAsyncGet-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     List<Future<?>> futures = new ArrayList<>();
     IntStream.range(0, numThreads).forEach(i -> futures.add(executor.submit(() -> {
