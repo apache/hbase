@@ -589,6 +589,11 @@ public interface AsyncAdmin {
   CompletableFuture<Void> assign(byte[] regionName);
 
   /**
+   * @param regionName Encoded or full name of region to unassign.
+   */
+  CompletableFuture<Void> unassign(byte[] regionName);
+
+  /**
    * Unassign a region from current hosting regionserver. Region will then be assigned to a
    * regionserver chosen at random. Region could be reassigned back to the same server. Use
    * {@link #move(byte[], ServerName)} if you want to control the region movement.
@@ -597,8 +602,14 @@ public interface AsyncAdmin {
    * @param forcible If true, force unassign (Will remove region from regions-in-transition too if
    *          present. If results in double assignment use hbck -fix to resolve. To be used by
    *          experts).
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link #unassign(byte[])}
+   *   instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-24875">HBASE-24875</a>
    */
-  CompletableFuture<Void> unassign(byte[] regionName, boolean forcible);
+  @Deprecated
+  default CompletableFuture<Void> unassign(byte[] regionName, boolean forcible) {
+    return unassign(regionName);
+  }
 
   /**
    * Offline specified region from master's in-memory state. It will not attempt to reassign the

@@ -558,8 +558,9 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Unassign a region
-    def unassign(region_name, force)
-      @admin.unassign(region_name.to_java_bytes, java.lang.Boolean.valueOf(force))
+    # the force parameter is deprecated, if it is specified, will be ignored.
+    def unassign(region_name, force = nil)
+      @admin.unassign(region_name.to_java_bytes)
     end
 
     #----------------------------------------------------------------------------------------------
