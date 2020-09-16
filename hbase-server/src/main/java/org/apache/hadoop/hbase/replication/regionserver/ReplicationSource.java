@@ -629,23 +629,34 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   @Override
   public void startup() {
-    retryStartup.set(true);
-    do {
-      if(retryStartup.get()) {
-        // mark we are running now
-        this.sourceRunning = true;
-        startupOngoing.set(true);
-        retryStartup.set(false);
-        initThread = new Thread(this::initialize);
-        Threads.setDaemonThreadRunning(initThread,
-          Thread.currentThread().getName() + ".replicationSource," + this.queueId,
-          (t,e) -> {
+    // mark we are running now
+    this.sourceRunning = true;
+    startupOngoing.set(true);
+    initThread = new Thread(this::initialize);
+      Threads.setDaemonThreadRunning(initThread,
+        Thread.currentThread().getName() + ".replicationSource," + this.queueId,
+        (t,e) -> {
+            //if first initialization attempt failed, and abortOnError is false, we will
+            //keep looping in this thread until initialize eventually succeeds,
+            //while the server main startup one can go on with its work.
             sourceRunning = false;
             uncaughtException(t, e, null, null);
             retryStartup.set(!this.abortOnError);
-          });
-      }
-    } while ((this.startupOngoing.get() || this.retryStartup.get()) && !this.abortOnError);
+            do {
+              if(retryStartup.get()) {
+                this.sourceRunning = true;
+                startupOngoing.set(true);
+                retryStartup.set(false);
+                try {
+                  initialize();
+                } catch(Throwable error){
+                  sourceRunning = false;
+                  uncaughtException(t, error, null, null);
+                  retryStartup.set(!this.abortOnError);
+                }
+              }
+            } while ((this.startupOngoing.get() || this.retryStartup.get()) && !this.abortOnError);
+      });
   }
 
   @Override
