@@ -92,13 +92,13 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   public static final Logger LOG = LoggerFactory.getLogger(AbstractRpcClient.class);
 
   protected static final HashedWheelTimer WHEEL_TIMER = new HashedWheelTimer(
-    new ThreadFactoryBuilder().setNameFormat("RpcClient-timer-pool-%d")
-      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(), 10,
-    TimeUnit.MILLISECONDS);
+    new ThreadFactoryBuilder().setNameFormat("RpcClient-timer-pool-%d").setDaemon(true)
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+    10, TimeUnit.MILLISECONDS);
 
-  private static final ScheduledExecutorService IDLE_CONN_SWEEPER = Executors
-    .newScheduledThreadPool(1,
-      new ThreadFactoryBuilder().setNameFormat("Idle-Rpc-Conn-Sweeper-pool-%d")
+  private static final ScheduledExecutorService IDLE_CONN_SWEEPER =
+    Executors.newScheduledThreadPool(1,
+      new ThreadFactoryBuilder().setNameFormat("Idle-Rpc-Conn-Sweeper-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   protected boolean running = true; // if client runs

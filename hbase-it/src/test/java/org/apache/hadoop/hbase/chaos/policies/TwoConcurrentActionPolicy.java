@@ -43,7 +43,7 @@ public class TwoConcurrentActionPolicy extends PeriodicPolicy {
     this.actionsOne = actionsOne;
     this.actionsTwo = actionsTwo;
     executor = Executors.newFixedThreadPool(2,
-      new ThreadFactoryBuilder().setNameFormat("TwoConcurrentAction-pool-%d")
+      new ThreadFactoryBuilder().setNameFormat("TwoConcurrentAction-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 

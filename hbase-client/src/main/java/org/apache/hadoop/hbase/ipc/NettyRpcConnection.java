@@ -79,7 +79,7 @@ class NettyRpcConnection extends RpcConnection {
 
   private static final ScheduledExecutorService RELOGIN_EXECUTOR = Executors
     .newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat("Relogin-pool-%d")
-      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+      .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   private final NettyRpcClient rpcClient;
 

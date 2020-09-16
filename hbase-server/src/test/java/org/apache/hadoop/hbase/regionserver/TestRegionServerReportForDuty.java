@@ -234,7 +234,7 @@ public class TestRegionServerReportForDuty {
   @Test
   public void testReportForDutyWithRSRpcRetry() throws Exception {
     ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1,
-      new ThreadFactoryBuilder().setNameFormat("RSDelayedStart-pool-%d")
+      new ThreadFactoryBuilder().setNameFormat("RSDelayedStart-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     // Start a master and wait for it to become the active/primary master.

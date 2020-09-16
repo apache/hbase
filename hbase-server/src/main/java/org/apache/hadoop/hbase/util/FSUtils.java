@@ -1658,7 +1658,7 @@ public final class FSUtils {
 
     // run in multiple threads
     final ExecutorService tpe = Executors.newFixedThreadPool(threadPoolSize,
-      new ThreadFactoryBuilder().setNameFormat("FSRegionQuery-pool-%d")
+      new ThreadFactoryBuilder().setNameFormat("FSRegionQuery-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     try {
       // ignore all file status items that are not of interest

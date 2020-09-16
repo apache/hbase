@@ -349,7 +349,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private static ExecutorService createThreadPool(Configuration conf) {
     int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
     return new ScheduledThreadPoolExecutor(numThreads,
-      new ThreadFactoryBuilder().setNameFormat("hbasefsck-pool-%d")
+      new ThreadFactoryBuilder().setNameFormat("hbasefsck-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
