@@ -1561,7 +1561,7 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Retrieve SlowLog Responses from RegionServers
-    def get_slowlog_responses(server_names, args)
+    def get_slowlog_responses(server_names, args, is_large_log = false)
       unless server_names.is_a?(Array) || server_names.is_a?(String)
         raise(ArgumentError,
               "#{server_names.class} of #{server_names.inspect} is not of Array/String type")
@@ -1573,38 +1573,44 @@ module Hbase
         server_names = getServerNames(server_names_list, false)
       end
       filter_params = get_filter_params(args)
-      filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::SLOW_LOG)
-      slow_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
-                                                      filter_params)
-      slow_log_responses_arr = []
-      for slow_log_response in slow_log_responses
-        slow_log_responses_arr << slow_log_response.toJsonPrettyPrint
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+      else
+        limit = 10
       end
-      puts 'Retrieved SlowLog Responses from RegionServers'
-      puts slow_log_responses_arr
+      if is_large_log
+        log_type = 'LARGE_LOG'
+      else
+        log_type = 'SLOW_LOG'
+      end
+      log_dest = org.apache.hadoop.hbase.client.ServerType::REGION_SERVER
+      server_names_set = java.util.HashSet.new(server_names)
+      slow_log_responses = @admin.getLogEntries(server_names_set, log_type, log_dest, limit,
+                                                filter_params)
+      slow_log_responses_arr = []
+      slow_log_responses.each { |slow_log_response|
+        slow_log_responses_arr << slow_log_response.toJsonPrettyPrint
+      }
+      slow_log_responses_arr
     end
 
     def get_filter_params(args)
-      filter_params = org.apache.hadoop.hbase.client.LogQueryFilter.new
+      filter_params = java.util.HashMap.new
       if args.key? 'REGION_NAME'
         region_name = args['REGION_NAME']
-        filter_params.setRegionName(region_name)
+        filter_params.put('regionName', region_name)
       end
       if args.key? 'TABLE_NAME'
         table_name = args['TABLE_NAME']
-        filter_params.setTableName(table_name)
+        filter_params.put('tableName', table_name)
       end
       if args.key? 'CLIENT_IP'
-        client_ip = args['CLIENT_IP']
-        filter_params.setClientAddress(client_ip)
+        client_address = args['CLIENT_IP']
+        filter_params.put('clientAddress', client_address)
       end
       if args.key? 'USER'
         user = args['USER']
-        filter_params.setUserName(user)
-      end
-      if args.key? 'LIMIT'
-        limit = args['LIMIT']
-        filter_params.setLimit(limit)
+        filter_params.put('userName', user)
       end
       if args.key? 'FILTER_BY_OP'
         filter_by_op = args['FILTER_BY_OP']
@@ -1612,36 +1618,10 @@ module Hbase
           raise(ArgumentError, "FILTER_BY_OP should be either OR / AND")
         end
         if filter_by_op == 'AND'
-          filter_params.setFilterByOperator(
-              org.apache.hadoop.hbase.client.LogQueryFilter::FilterByOperator::AND)
+          filter_params.put('filterByOperator', 'AND')
         end
       end
       filter_params
-    end
-
-    #----------------------------------------------------------------------------------------------
-    # Retrieve LargeLog Responses from RegionServers
-    def get_largelog_responses(server_names, args)
-      unless server_names.is_a?(Array) || server_names.is_a?(String)
-        raise(ArgumentError,
-              "#{server_names.class} of #{server_names.inspect} is not of Array/String type")
-      end
-      if server_names == '*'
-        server_names = getServerNames([], true)
-      else
-        server_names_list = to_server_names(server_names)
-        server_names = getServerNames(server_names_list, false)
-      end
-      filter_params = get_filter_params(args)
-      filter_params.setType(org.apache.hadoop.hbase.client.LogQueryFilter::Type::LARGE_LOG)
-      large_log_responses = @admin.getSlowLogResponses(java.util.HashSet.new(server_names),
-                                                       filter_params)
-      large_log_responses_arr = []
-      for large_log_response in large_log_responses
-        large_log_responses_arr << large_log_response.toJsonPrettyPrint
-      end
-      puts 'Retrieved LargeLog Responses from RegionServers'
-      puts large_log_responses_arr
     end
 
     #----------------------------------------------------------------------------------------------
@@ -1730,6 +1710,24 @@ module Hbase
       end
 
       @admin.recommissionRegionServer(server_name, region_names_in_bytes)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Retrieve latest balancer decisions made by LoadBalancers
+    def get_balancer_decisions(args)
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+      else
+        limit = 250
+      end
+      log_type = 'BALANCER_DECISION'
+      log_dest = org.apache.hadoop.hbase.client.ServerType::MASTER
+      balancer_decisions_responses = @admin.getLogEntries(nil, log_type, log_dest, limit, nil)
+      balancer_decisions_resp_arr = []
+      balancer_decisions_responses.each { |balancer_dec_resp|
+        balancer_decisions_resp_arr << balancer_dec_resp.toJsonPrettyPrint
+      }
+      balancer_decisions_resp_arr
     end
 
     #----------------------------------------------------------------------------------------------

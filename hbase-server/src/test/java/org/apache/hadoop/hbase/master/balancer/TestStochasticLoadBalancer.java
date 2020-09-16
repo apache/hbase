@@ -196,6 +196,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertEquals(2, regionsMoveFromServerA.size());
     assertEquals(2, targetServers.size());
     assertTrue(regionsOnServerA.containsAll(regionsMoveFromServerA));
+    assertNull(loadBalancer.namedQueueRecorder);
     // reset config
     conf.setFloat("hbase.master.balancer.stochastic.cpRequestCost", 5f);
     loadBalancer.setConf(conf);
@@ -232,6 +233,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     String regionNameAsString = RegionInfo.getRegionNameAsString(Bytes.toBytes(REGION_KEY));
     assertTrue(loadBalancer.loads.get(regionNameAsString) != null);
     assertTrue(loadBalancer.loads.get(regionNameAsString).size() == 15);
+    assertNull(loadBalancer.namedQueueRecorder);
 
     Queue<BalancerRegionLoad> loads = loadBalancer.loads.get(regionNameAsString);
     int i = 0;
@@ -284,6 +286,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       double expected = 1 - expectedLocalities[test];
       assertEquals(expected, cost, 0.001);
     }
+    assertNull(loadBalancer.namedQueueRecorder);
   }
 
   @Test

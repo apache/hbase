@@ -23,12 +23,14 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -2351,9 +2353,30 @@ public interface Admin extends Abortable, Closeable {
    * @param logQueryFilter filter to be used if provided (determines slow / large RPC logs)
    * @return online slowlog response list
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.4.0 and will be removed in 4.0.0.
+   *   Use {@link #getLogEntries(Set, String, ServerType, int, Map)} instead.
    */
-  List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-      final LogQueryFilter logQueryFilter) throws IOException;
+  @Deprecated
+  default List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter) throws IOException {
+    String logType;
+    if (LogQueryFilter.Type.LARGE_LOG.equals(logQueryFilter.getType())) {
+      logType = "LARGE_LOG";
+    } else {
+      logType = "SLOW_LOG";
+    }
+    Map<String, Object> filterParams = new HashMap<>();
+    filterParams.put("regionName", logQueryFilter.getRegionName());
+    filterParams.put("clientAddress", logQueryFilter.getClientAddress());
+    filterParams.put("tableName", logQueryFilter.getTableName());
+    filterParams.put("userName", logQueryFilter.getUserName());
+    filterParams.put("filterByOperator", logQueryFilter.getFilterByOperator().toString());
+    List<LogEntry> logEntries =
+      getLogEntries(serverNames, logType, ServerType.REGION_SERVER, logQueryFilter.getLimit(),
+        filterParams);
+    return logEntries.stream().map(logEntry -> (OnlineLogRecord) logEntry)
+      .collect(Collectors.toList());
+  }
 
   /**
    * Clears online slow/large RPC logs from the provided list of
@@ -2484,4 +2507,20 @@ public interface Admin extends Abortable, Closeable {
    */
   void updateRSGroupConfig(String groupName, Map<String, String> configuration) throws IOException;
 
+  /**
+   * Retrieve recent online records from HMaster / RegionServers.
+   * Examples include slow/large RPC logs, balancer decisions by master.
+   *
+   * @param serverNames servers to retrieve records from, useful in case of records maintained
+   *  by RegionServer as we can select specific server. In case of servertype=MASTER, logs will
+   *  only come from the currently active master.
+   * @param logType string representing type of log records
+   * @param serverType enum for server type: HMaster or RegionServer
+   * @param limit put a limit to list of records that server should send in response
+   * @param filterParams additional filter params
+   * @return Log entries representing online records from servers
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+    ServerType serverType, int limit, Map<String, Object> filterParams) throws IOException;
 }

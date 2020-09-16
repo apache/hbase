@@ -121,6 +121,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterRpcServicesVersionWrapper;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
@@ -594,14 +595,7 @@ public class HRegionServer extends Thread implements
       this.abortRequested = new AtomicBoolean(false);
       this.stopped = false;
 
-      if (!(this instanceof HMaster)) {
-        final boolean isOnlineLogProviderEnabled = conf.getBoolean(
-          HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
-          HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
-        if (isOnlineLogProviderEnabled) {
-          this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
-        }
-      }
+      initNamedQueueRecorder(conf);
       rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
       String hostName =
@@ -671,6 +665,24 @@ public class HRegionServer extends Thread implements
       // cause of failed startup is lost.
       LOG.error("Failed construction RegionServer", t);
       throw t;
+    }
+  }
+
+  private void initNamedQueueRecorder(Configuration conf) {
+    if (!(this instanceof HMaster)) {
+      final boolean isOnlineLogProviderEnabled = conf.getBoolean(
+        HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
+        HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
+      if (isOnlineLogProviderEnabled) {
+        this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
+      }
+    } else {
+      final boolean isBalancerDecisionRecording = conf
+        .getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
+          BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
+      if (isBalancerDecisionRecording) {
+        this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
+      }
     }
   }
 
