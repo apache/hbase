@@ -282,6 +282,13 @@ message ExecuteProceduresRequest {
 message ExecuteProceduresResponse {
 }
 
+/**
+ * Slow/Large log (LogRequest) use-case specific RPC request. This request payload will be
+ * converted in bytes and sent to generic RPC API: GetLogEntries
+ * LogRequest message has two params:
+ * 1. log_class_name: SlowLogResponseRequest (for Slow/Large log use-case)
+ * 2. log_message: SlowLogResponseRequest converted in bytes (for Slow/Large log use-case)
+ */
 message SlowLogResponseRequest {
   enum FilterByOperator {
     AND = 0;
@@ -302,6 +309,13 @@ message SlowLogResponseRequest {
   optional LogType log_type = 7;
 }
 
+/**
+ * Slow/Large log (LogEntry) use-case specific RPC response. This response payload will be
+ * converted in bytes by servers and sent as response to generic RPC API: GetLogEntries
+ * LogEntry message has two params:
+ * 1. log_class_name: SlowLogResponses (for Slow/Large log use-case)
+ * 2. log_message: SlowLogResponses converted in bytes (for Slow/Large log use-case)
+ */
 message SlowLogResponses {
   repeated SlowLogPayload slow_log_payloads = 1;
 }
@@ -387,4 +401,8 @@ service AdminService {
 
   rpc ClearSlowLogsResponses(ClearSlowLogResponseRequest)
     returns(ClearSlowLogResponses);
+
+  rpc GetLogEntries(LogRequest)
+    returns(LogEntry);
+
 }

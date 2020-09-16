@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.namequeues.response;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 import org.apache.yetus.audience.InterfaceAudience;
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.List;
 public class NamedQueueGetResponse {
 
   private List<TooSlowLog.SlowLogPayload> slowLogPayloads;
+  private List<RecentLogs.BalancerDecision> balancerDecisions;
   private NamedQueuePayload.NamedQueueEvent namedQueueEvent;
 
   public List<TooSlowLog.SlowLogPayload> getSlowLogPayloads() {
@@ -42,18 +44,27 @@ public class NamedQueueGetResponse {
     this.slowLogPayloads = slowLogPayloads;
   }
 
+  public List<RecentLogs.BalancerDecision> getBalancerDecisions() {
+    return balancerDecisions;
+  }
+
+  public void setBalancerDecisions(List<RecentLogs.BalancerDecision> balancerDecisions) {
+    this.balancerDecisions = balancerDecisions;
+  }
+
   public NamedQueuePayload.NamedQueueEvent getNamedQueueEvent() {
     return namedQueueEvent;
   }
 
-  public void setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent namedQueueEvent) {
-    this.namedQueueEvent = namedQueueEvent;
+  public void setNamedQueueEvent(int eventOrdinal) {
+    this.namedQueueEvent = NamedQueuePayload.NamedQueueEvent.getEventByOrdinal(eventOrdinal);
   }
 
   @Override
   public String toString() {
     return new ToStringBuilder(this)
       .append("slowLogPayloads", slowLogPayloads)
+      .append("balancerDecisions", balancerDecisions)
       .append("namedQueueEvent", namedQueueEvent)
       .toString();
   }

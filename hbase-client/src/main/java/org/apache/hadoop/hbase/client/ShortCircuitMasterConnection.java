@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -470,6 +471,12 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   public ListNamespacesResponse listNamespaces(RpcController controller,
       ListNamespacesRequest request) throws ServiceException {
     return stub.listNamespaces(controller, request);
+  }
+
+  @Override
+  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+      HBaseProtos.LogRequest request) throws ServiceException {
+    return stub.getLogEntries(controller, request);
   }
 
   @Override

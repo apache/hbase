@@ -21,10 +21,13 @@ import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -81,6 +84,11 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
+import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
@@ -123,6 +131,11 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
@@ -324,6 +337,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaSta
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.FileArchiveNotificationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -2981,4 +2995,49 @@ public class MasterRpcServices extends RSRpcServices implements
       location -> response.addMetaLocations(ProtobufUtil.toRegionLocation(location))));
     return response.build();
   }
+  @Override
+  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+      HBaseProtos.LogRequest request) throws ServiceException {
+    try {
+      final String logClassName = request.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName)
+        .asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("BalancerDecisionsRequest")) {
+        MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest =
+          (MasterProtos.BalancerDecisionsRequest) method
+            .invoke(null, request.getLogMessage());
+        MasterProtos.BalancerDecisionsResponse balancerDecisionsResponse =
+          getBalancerDecisions(balancerDecisionsRequest);
+        return HBaseProtos.LogEntry.newBuilder()
+          .setLogClassName(balancerDecisionsResponse.getClass().getName())
+          .setLogMessage(balancerDecisionsResponse.toByteString())
+          .build();
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+        | InvocationTargetException e) {
+      LOG.error("Error while retrieving log entries.", e);
+      throw new ServiceException(e);
+    }
+    throw new ServiceException("Invalid request params");
+  }
+
+  private MasterProtos.BalancerDecisionsResponse getBalancerDecisions(
+      MasterProtos.BalancerDecisionsRequest request) {
+    final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
+    if (namedQueueRecorder == null) {
+      return MasterProtos.BalancerDecisionsResponse.newBuilder()
+        .addAllBalancerDecision(Collections.emptyList()).build();
+    }
+    final NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
+    namedQueueGetRequest.setNamedQueueEvent(BalancerDecisionDetails.BALANCER_DECISION_EVENT);
+    namedQueueGetRequest.setBalancerDecisionsRequest(request);
+    NamedQueueGetResponse namedQueueGetResponse =
+      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+    List<RecentLogs.BalancerDecision> balancerDecisions =
+      namedQueueGetResponse.getBalancerDecisions();
+    return MasterProtos.BalancerDecisionsResponse.newBuilder()
+      .addAllBalancerDecision(balancerDecisions).build();
+  }
+
 }

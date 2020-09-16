@@ -30,6 +30,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class RpcLogDetails extends NamedQueuePayload {
 
+  public static final int SLOW_LOG_EVENT = 0;
+
   private final RpcCall rpcCall;
   private final Message param;
   private final String clientAddress;
@@ -40,7 +42,7 @@ public class RpcLogDetails extends NamedQueuePayload {
 
   public RpcLogDetails(RpcCall rpcCall, Message param, String clientAddress, long responseSize,
       String className, boolean isSlowLog, boolean isLargeLog) {
-    super(NamedQueueEvent.SLOW_LOG);
+    super(SLOW_LOG_EVENT);
     this.rpcCall = rpcCall;
     this.param = param;
     this.clientAddress = clientAddress;

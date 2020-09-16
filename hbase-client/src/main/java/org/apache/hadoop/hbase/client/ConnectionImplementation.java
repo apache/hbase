@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -1824,6 +1825,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       public HasUserPermissionsResponse hasUserPermissions(RpcController controller,
           HasUserPermissionsRequest request) throws ServiceException {
         return stub.hasUserPermissions(controller, request);
+      }
+
+      @Override
+      public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+          HBaseProtos.LogRequest request) throws ServiceException {
+        return stub.getLogEntries(controller, request);
       }
     };
   }
