@@ -501,4 +501,9 @@ abstract class ConnectionAdapter implements ClusterConnection {
   public RpcControllerFactory getRpcControllerFactory() {
     return wrappedConnection.getRpcControllerFactory();
   }
+
+  @Override
+  public String getClusterId() throws IOException {
+    return wrappedConnection.getClusterId();
+  }
 }

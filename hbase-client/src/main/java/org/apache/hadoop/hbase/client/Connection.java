@@ -166,6 +166,11 @@ public interface Connection extends Abortable, Closeable {
    */
   Admin getAdmin() throws IOException;
 
+  /**
+   * @return the cluster ID unique to this HBase cluster.
+   */
+  String getClusterId() throws IOException;
+
   @Override
   public void close() throws IOException;
 

@@ -824,6 +824,11 @@ class ConnectionManager {
     }
 
     @Override
+    public String getClusterId() throws IOException {
+      return registry.getClusterId();
+    }
+
+    @Override
     public MetricsConnection getConnectionMetrics() {
       return this.metrics;
     }
