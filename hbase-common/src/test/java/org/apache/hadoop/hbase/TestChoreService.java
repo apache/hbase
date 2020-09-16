@@ -29,9 +29,12 @@ import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.SampleStop
 import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.SleepingChore;
 import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.SlowChore;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +46,9 @@ public class TestChoreService {
       HBaseClassTestRule.forClass(TestChoreService.class);
 
   public static final Logger log = LoggerFactory.getLogger(TestChoreService.class);
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * A few ScheduledChore samples that are useful for testing with ChoreService
@@ -570,7 +576,7 @@ public class TestChoreService {
     ChoreService service = new ChoreService("testNumberOfChoresMissingStartTime");
 
     final int period = 100;
-    final int sleepTime = 5 * period;
+    final int sleepTime = 20 * period;
 
     try {
       // Slow chores sleep for a length of time LONGER than their period. Thus, SlowChores
@@ -834,5 +840,22 @@ public class TestChoreService {
     assertFalse(failChore2.isScheduled());
     assertFalse(service.scheduleChore(failChore3));
     assertFalse(failChore3.isScheduled());
+  }
+
+  /**
+   * for HBASE-25014
+   */
+  @Test(timeout = 10000)
+  public void testInitialDelay() {
+    ChoreService service = new ChoreService(name.getMethodName());
+    SampleStopper stopper = new SampleStopper();
+    service.scheduleChore(new ScheduledChore("chore", stopper, 1000, 2000) {
+      @Override protected void chore() {
+        stopper.stop("test");
+      }
+    });
+    while (!stopper.isStopped()) {
+      Threads.sleep(1000);
+    }
   }
 }
