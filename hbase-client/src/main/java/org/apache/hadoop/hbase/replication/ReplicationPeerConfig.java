@@ -119,7 +119,6 @@ public class ReplicationPeerConfig {
    */
   public void addBasePeerConfigsIfNotPresent(Configuration conf) {
     String basePeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG, "");
-    Map<String,String> receivedPeerConfigMap = this.getConfiguration();
 
     if (basePeerConfigs.length() != 0) {
       Map<String, String> basePeerConfigMap = Splitter.on(';').trimResults().omitEmptyStrings()
@@ -128,8 +127,8 @@ public class ReplicationPeerConfig {
         String configName = entry.getKey();
         String configValue = entry.getValue();
         // Only override if base config does not exist in existing replication peer configs
-        if (!receivedPeerConfigMap.containsKey(configName)) {
-          receivedPeerConfigMap.put(configName, configValue);
+        if (!this.getConfiguration().containsKey(configName)) {
+          this.getConfiguration().put(configName, configValue);
         }
       }
     }
