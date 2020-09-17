@@ -58,6 +58,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestMetaCache {
@@ -70,8 +72,8 @@ public class TestMetaCache {
   private static final TableName TABLE_NAME = TableName.valueOf("test_table");
   private static final byte[] FAMILY = Bytes.toBytes("fam1");
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
-
   private static HRegionServer badRS;
+  private static final Logger LOG = LoggerFactory.getLogger(TestMetaCache.class);
 
   /**
    * @throws java.lang.Exception
@@ -368,5 +370,78 @@ public class TestMetaCache {
     public void throwOnScan(FakeRSRpcServices rpcServices, ClientProtos.ScanRequest request)
         throws ServiceException {
     }
+  }
+
+  @Test
+  public void testUserRegionLockThrowsException() throws IOException, InterruptedException {
+    ((FakeRSRpcServices)badRS.getRSRpcServices()).setExceptionInjector(new LockSleepInjector());
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
+    conf.setLong(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 2000);
+    conf.setLong(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 2000);
+
+    try (ConnectionImplementation conn =
+            (ConnectionImplementation) ConnectionFactory.createConnection(conf)) {
+      ClientThread client1 = new ClientThread(conn);
+      ClientThread client2 = new ClientThread(conn);
+      client1.start();
+      client2.start();
+      client1.join();
+      client2.join();
+      // One thread will get the lock but will sleep in  LockExceptionInjector#throwOnScan and
+      // eventually fail since the sleep time is more than hbase client scanner timeout period.
+      // Other thread will wait to acquire userRegionLock.
+      // Have no idea which thread will be scheduled first. So need to check both threads.
+
+      // Both the threads will throw exception. One thread will throw exception since after
+      // acquiring user region lock, it is sleeping for 5 seconds when the scanner time out period
+      // is 2 seconds.
+      // Other thread will throw exception since it was not able to get hold of user region lock
+      // within meta operation timeout period.
+      assertNotNull(client1.getException());
+      assertNotNull(client2.getException());
+
+      assertTrue(client1.getException() instanceof LockTimeoutException
+          ^ client2.getException() instanceof LockTimeoutException);
+    }
+  }
+
+  private final class ClientThread extends Thread {
+    private Exception exception;
+    private ConnectionImplementation connection;
+
+    private ClientThread(ConnectionImplementation connection) {
+      this.connection = connection;
+    }
+    @Override
+    public void run() {
+      byte[] currentKey = HConstants.EMPTY_START_ROW;
+      try {
+        connection.getRegionLocation(TABLE_NAME, currentKey, true);
+      } catch (IOException e) {
+        LOG.error("Thread id: " + this.getId() + "  exception: ", e);
+        this.exception = e;
+      }
+    }
+    public Exception getException() {
+      return exception;
+    }
+  }
+
+  public static class LockSleepInjector extends ExceptionInjector {
+    @Override
+    public void throwOnScan(FakeRSRpcServices rpcServices, ClientProtos.ScanRequest request) {
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+        LOG.info("Interrupted exception", e);
+      }
+    }
+
+    @Override
+    public void throwOnGet(FakeRSRpcServices rpcServices, ClientProtos.GetRequest request) { }
+
+    @Override
+    public void throwOnMutate(FakeRSRpcServices rpcServices, ClientProtos.MutateRequest request) { }
   }
 }
