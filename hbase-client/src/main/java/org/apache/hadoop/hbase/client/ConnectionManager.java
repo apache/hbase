@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
+import org.apache.hadoop.hbase.exceptions.LockTimeoutException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
@@ -1316,13 +1317,15 @@ class ConnectionManager {
 
         // Query the meta region
         long pauseBase = this.pause;
-        userRegionLock.lock();
+        takeUserRegionLock();
         try {
-          if (useCache) {// re-check cache after get lock
-            RegionLocations locations = getCachedLocation(tableName, row);
-            if (locations != null && locations.getRegionLocation(replicaId) != null) {
-              return locations;
-            }
+          // We don't need to check if useCache is enabled or not. Even if useCache is false
+          // we already cleared the cache for this row before acquiring userRegion lock so if this
+          // row is present in cache that means some other thread has populated it while we were
+          // waiting to acquire user region lock.
+          RegionLocations locations = getCachedLocation(tableName, row);
+          if (locations != null && locations.getRegionLocation(replicaId) != null) {
+            return locations;
           }
           Result regionInfoRow = null;
           s.resetMvccReadPoint();
@@ -1339,7 +1342,7 @@ class ConnectionManager {
           }
 
           // convert the row result into the HRegionLocation we need!
-          RegionLocations locations = MetaTableAccessor.getRegionLocations(regionInfoRow);
+          locations = MetaTableAccessor.getRegionLocations(regionInfoRow);
           if (locations == null || locations.getRegionLocation(replicaId) == null) {
             throw new IOException("HRegionInfo was null in " +
               tableName + ", row=" + regionInfoRow);
@@ -1420,6 +1423,19 @@ class ConnectionManager {
           throw new InterruptedIOException("Giving up trying to location region in " +
             "meta: thread is interrupted.");
         }
+      }
+    }
+
+    void takeUserRegionLock() throws IOException {
+      try {
+        long waitTime = connectionConfig.getMetaOperationTimeout();
+        if (!userRegionLock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
+          throw new LockTimeoutException("Failed to get user region lock in"
+            + waitTime + " ms. " + " for accessing meta region server.");
+        }
+      } catch (InterruptedException ie) {
+        LOG.error("Interrupted while waiting for a lock", ie);
+        throw ExceptionUtil.asInterrupt(ie);
       }
     }
 
