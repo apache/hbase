@@ -493,6 +493,86 @@ public class TestMasterReplication {
     }
   }
 
+  /**
+   * Tests that base replication peer configs are applied on peer creation
+   * and the configs are overridden if updated as part of updatePeerConfig()
+   *
+   */
+  @Test
+  public void testBasePeerConfigsForPeerMutations()
+    throws Exception {
+    LOG.info("testBasePeerConfigsForPeerMutations");
+    String firstCustomPeerConfigKey = "hbase.xxx.custom_config";
+    String firstCustomPeerConfigValue = "test";
+    String firstCustomPeerConfigUpdatedValue = "test_updated";
+
+    String secondCustomPeerConfigKey = "hbase.xxx.custom_second_config";
+    String secondCustomPeerConfigValue = "testSecond";
+    String secondCustomPeerConfigUpdatedValue = "testSecondUpdated";
+    try {
+      baseConfiguration.set(ReplicationPeerConfig.HBASE_REPLICATION_PEER_BASE_CONFIG,
+        firstCustomPeerConfigKey.concat("=").concat(firstCustomPeerConfigValue));
+      startMiniClusters(2);
+      addPeer("1", 0, 1);
+      addPeer("2", 0, 1);
+
+      ReplicationAdmin replicationAdmin = new ReplicationAdmin(configurations[0]);
+      ReplicationPeerConfig replicationPeerConfig1 = replicationAdmin.getPeerConfig("1");
+      ReplicationPeerConfig replicationPeerConfig2 = replicationAdmin.getPeerConfig("2");
+
+      // Validates base configs 1 is present for both peer.
+      assertEquals(firstCustomPeerConfigValue, replicationPeerConfig1.
+        getConfiguration().get(firstCustomPeerConfigKey));
+      assertEquals(firstCustomPeerConfigValue, replicationPeerConfig2.
+        getConfiguration().get(firstCustomPeerConfigKey));
+
+      // override value of configuration 1 for peer "1".
+      replicationPeerConfig1.getConfiguration().put(firstCustomPeerConfigKey,
+        firstCustomPeerConfigUpdatedValue);
+
+      // add configuration 2 for peer "2".
+      replicationPeerConfig2.getConfiguration().put(secondCustomPeerConfigKey,
+        secondCustomPeerConfigUpdatedValue);
+
+      replicationAdmin.updatePeerConfig("1", replicationPeerConfig1);
+      replicationAdmin.updatePeerConfig("2", replicationPeerConfig2);
+
+      // validates configuration is overridden by updateReplicationPeerConfig
+      assertEquals(firstCustomPeerConfigUpdatedValue, replicationAdmin.getPeerConfig("1").
+        getConfiguration().get(firstCustomPeerConfigKey));
+      assertEquals(secondCustomPeerConfigUpdatedValue, replicationAdmin.getPeerConfig("2").
+        getConfiguration().get(secondCustomPeerConfigKey));
+
+      // Add second config to base config and perform restart.
+      utilities[0].getConfiguration().set(ReplicationPeerConfig.
+        HBASE_REPLICATION_PEER_BASE_CONFIG, firstCustomPeerConfigKey.concat("=").
+        concat(firstCustomPeerConfigValue).concat(";").concat(secondCustomPeerConfigKey)
+        .concat("=").concat(secondCustomPeerConfigValue));
+
+      utilities[0].shutdownMiniHBaseCluster();
+      utilities[0].restartHBaseCluster(1);
+      replicationAdmin = new ReplicationAdmin(configurations[0]);
+
+      // Both retains the value of base configuration 1 value as before restart.
+      // Peer 1 (Update value), Peer 2 (Base Value)
+      assertEquals(firstCustomPeerConfigUpdatedValue, replicationAdmin.getPeerConfig("1").
+        getConfiguration().get(firstCustomPeerConfigKey));
+      assertEquals(firstCustomPeerConfigValue, replicationAdmin.getPeerConfig("2").
+        getConfiguration().get(firstCustomPeerConfigKey));
+
+      // Peer 1 gets new base config as part of restart.
+      assertEquals(secondCustomPeerConfigValue, replicationAdmin.getPeerConfig("1").
+        getConfiguration().get(secondCustomPeerConfigKey));
+      // Peer 2 retains the updated value as before restart.
+      assertEquals(secondCustomPeerConfigUpdatedValue, replicationAdmin.getPeerConfig("2").
+        getConfiguration().get(secondCustomPeerConfigKey));
+    } finally {
+      shutDownMiniClusters();
+      baseConfiguration.unset(ReplicationPeerConfig.HBASE_REPLICATION_PEER_BASE_CONFIG);
+    }
+  }
+
+
   @After
   public void tearDown() throws IOException {
     configurations = null;

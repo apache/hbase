@@ -123,6 +123,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
       checkQueuesDeleted(id);
 
+      peerConfig.addBasePeerConfigsIfNotPresent(this.conf);
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
 
       List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
@@ -451,6 +452,9 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     }
     ReplicationPeerZKImpl previous =
       ((ConcurrentMap<String, ReplicationPeerZKImpl>) peerClusters).putIfAbsent(peerId, peer);
+    ReplicationPeerConfig peerConfig = peerClusters.get(peerId).getPeerConfig();
+    peerConfig.addBasePeerConfigsIfNotPresent(this.conf);
+    updatePeerConfig(peerId, peerConfig);
     if (previous == null) {
       LOG.info("Added new peer cluster=" + peer.getPeerConfig().getClusterKey());
     } else {
