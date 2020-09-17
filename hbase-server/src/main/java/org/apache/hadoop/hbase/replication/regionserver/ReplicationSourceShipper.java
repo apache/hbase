@@ -260,8 +260,7 @@ public class ReplicationSourceShipper extends Thread {
     // position and the file will be removed soon in cleanOldLogs.
     if (batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath) ||
       batch.getLastWalPosition() != currentPosition) {
-      source.getSourceManager().logPositionAndCleanOldLogs(source.getQueueId(),
-        source.isRecovered(), batch);
+      source.getSourceManager().logPositionAndCleanOldLogs(source, batch);
       updated = true;
     }
     // if end of file is true, then we can just skip to the next file in queue.

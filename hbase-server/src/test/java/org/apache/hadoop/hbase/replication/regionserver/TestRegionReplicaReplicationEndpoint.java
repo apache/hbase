@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -71,7 +70,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -125,8 +123,7 @@ public class TestRegionReplicaReplicationEndpoint {
     // create a table with region replicas. Check whether the replication peer is created
     // and replication started.
     ReplicationAdmin admin = new ReplicationAdmin(HTU.getConfiguration());
-    String peerId = "region_replica_replication";
-
+    String peerId = ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER;
     ReplicationPeerConfig peerConfig = null;
     try {
       peerConfig = admin.getPeerConfig(peerId);
@@ -245,6 +242,9 @@ public class TestRegionReplicaReplicationEndpoint {
     }
   }
 
+  /**
+   * Used by this test and others.
+   */
   private void verifyReplication(TableName tableName, int regionReplication,
       final int startRow, final int endRow) throws Exception {
     verifyReplication(tableName, regionReplication, startRow, endRow, true);
@@ -406,7 +406,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
     // both tables are created, now pause replication
     ReplicationAdmin admin = new ReplicationAdmin(HTU.getConfiguration());
-    admin.disablePeer(ServerRegionReplicaUtil.getReplicationPeerId());
+    admin.disablePeer(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
 
     // now that the replication is disabled, write to the table to be dropped, then drop the table.
 
@@ -465,7 +465,7 @@ public class TestRegionReplicaReplicationEndpoint {
       HTU.loadNumericRows(table, HBaseTestingUtility.fam1, 0, 1000);
 
       // now enable the replication
-      admin.enablePeer(ServerRegionReplicaUtil.getReplicationPeerId());
+      admin.enablePeer(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
 
       verifyReplication(tableName, regionReplication, 0, 1000);
 

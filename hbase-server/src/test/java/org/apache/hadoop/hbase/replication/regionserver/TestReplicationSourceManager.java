@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URLEncoder;
@@ -64,6 +63,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -83,6 +84,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -96,10 +98,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
@@ -319,8 +319,80 @@ public abstract class TestReplicationSourceManager {
 
     wal.rollWriter();
 
-    manager.logPositionAndCleanOldLogs("1", false,
-      new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath()));
+    manager.logPositionAndCleanOldLogs(
+      new ReplicationSourceInterface() {
+        @Override public String getQueueId() {
+          return "1";
+        }
+
+        @Override public WALProvider getWALProvider() {
+          return null;
+        }
+
+        // Below are defaults.
+        @Override
+        public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
+          ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
+          String queueId, UUID clusterId, MetricsSource metrics) {}
+
+        @Override public void enqueueLog(Path log) {}
+
+        @Override
+        public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
+          throws ReplicationException {}
+
+        @Override public void startup() {}
+
+        @Override public void terminate(String reason) {}
+
+        @Override public void terminate(String reason, Exception cause) {}
+
+        @Override public void terminate(String reason, Exception cause, boolean clearMetrics) {}
+
+        @Override public Path getCurrentPath() {
+          return null;
+        }
+
+        @Override public String getPeerId() {
+          return null;
+        }
+
+        @Override public String getStats() {
+          return null;
+        }
+
+        @Override public boolean isPeerEnabled() {
+          return false;
+        }
+
+        @Override public boolean isSourceActive() {
+          return false;
+        }
+
+        @Override public MetricsSource getSourceMetrics() {
+          return null;
+        }
+
+        @Override public ReplicationEndpoint getReplicationEndpoint() {
+          return null;
+        }
+
+        @Override public ReplicationSourceManager getSourceManager() {
+          return null;
+        }
+
+        @Override public WALFileLengthProvider getWALFileLengthProvider() {
+          return null;
+        }
+
+        @Override public void tryThrottle(int batchSize) throws InterruptedException {}
+
+        @Override public void postShipEdits(List<WAL.Entry> entries, int batchSize) {}
+
+        @Override public ServerName getServerWALsBelongTo() {
+          return null;
+        }
+      }, new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath()));
 
     wal.appendData(hri,
       new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
@@ -394,7 +466,83 @@ public abstract class TestReplicationSourceManager {
     assertEquals(1, manager.getWalsByIdRecoveredQueues().size());
     String id = "1-" + server.getServerName().getServerName();
     assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id).get(group));
-    manager.cleanOldLogs(file2, false, id, true);
+    manager.cleanOldLogs(file2, false, new ReplicationSourceInterface() {
+      @Override public boolean isRecovered() {
+        return true;
+      }
+
+      @Override public String getQueueId() {
+        return id;
+      }
+
+      @Override public WALProvider getWALProvider() {
+        return null;
+      }
+
+      // Below are all defaults.
+      @Override
+      public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
+        ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
+        String queueId, UUID clusterId, MetricsSource metrics) {}
+
+      @Override public void enqueueLog(Path log) {}
+
+      @Override
+      public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
+        throws ReplicationException {}
+
+      @Override public void startup() {}
+
+      @Override public void terminate(String reason) {}
+
+      @Override public void terminate(String reason, Exception cause) {}
+
+      @Override public void terminate(String reason, Exception cause, boolean clearMetrics) {}
+
+      @Override public Path getCurrentPath() {
+        return null;
+      }
+
+      @Override public String getPeerId() {
+        return null;
+      }
+
+      @Override public String getStats() {
+        return null;
+      }
+
+      @Override public boolean isPeerEnabled() {
+        return false;
+      }
+
+      @Override public boolean isSourceActive() {
+        return false;
+      }
+
+      @Override public MetricsSource getSourceMetrics() {
+        return null;
+      }
+
+      @Override public ReplicationEndpoint getReplicationEndpoint() {
+        return null;
+      }
+
+      @Override public ReplicationSourceManager getSourceManager() {
+        return null;
+      }
+
+      @Override public WALFileLengthProvider getWALFileLengthProvider() {
+        return null;
+      }
+
+      @Override public void tryThrottle(int batchSize) throws InterruptedException {}
+
+      @Override public void postShipEdits(List<WAL.Entry> entries, int batchSize) {}
+
+      @Override public ServerName getServerWALsBelongTo() {
+        return null;
+      }
+    });
     // log1 should be deleted
     assertEquals(Sets.newHashSet(file2), manager.getWalsByIdRecoveredQueues().get(id).get(group));
   }
@@ -478,7 +626,6 @@ public abstract class TestReplicationSourceManager {
    * corresponding ReplicationSourceInterface correctly cleans up the corresponding
    * replication queue and ReplicationPeer.
    * See HBASE-16096.
-   * @throws Exception
    */
   @Test
   public void testPeerRemovalCleanup() throws Exception{
@@ -574,10 +721,7 @@ public abstract class TestReplicationSourceManager {
 
   /**
    * Add a peer and wait for it to initialize
-   * @param peerId
-   * @param peerConfig
    * @param waitForSource Whether to wait for replication source to initialize
-   * @throws Exception
    */
   private void addPeerAndWait(final String peerId, final ReplicationPeerConfig peerConfig,
       final boolean waitForSource) throws Exception {
@@ -616,8 +760,6 @@ public abstract class TestReplicationSourceManager {
 
   /**
    * Remove a peer and wait for it to get cleaned up
-   * @param peerId
-   * @throws Exception
    */
   private void removePeerAndWait(final String peerId) throws Exception {
     final ReplicationPeers rp = manager.getReplicationPeers();
@@ -734,9 +876,8 @@ public abstract class TestReplicationSourceManager {
     @Override
     public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
         ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
-        UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
-        throws IOException {
-      throw new IOException("Failing deliberately");
+        UUID clusterId, MetricsSource metrics) {
+      throw new RuntimeException("Failing deliberately");
     }
   }
 

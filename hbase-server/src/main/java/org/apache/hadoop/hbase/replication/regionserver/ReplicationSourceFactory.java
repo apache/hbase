@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,37 +17,49 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 
 /**
- * Constructs a {@link ReplicationSourceInterface}
+ * Constructs appropriate {@link ReplicationSourceInterface}.
+ * Considers whether Recovery or not, whether hbase:meta Region Read Replicas or not, etc.
  */
 @InterfaceAudience.Private
-public class ReplicationSourceFactory {
-
+public final class ReplicationSourceFactory {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceFactory.class);
 
-  static ReplicationSourceInterface create(Configuration conf, String queueId) {
-    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);
-    boolean isQueueRecovered = replicationQueueInfo.isQueueRecovered();
-    ReplicationSourceInterface src;
-    try {
-      String defaultReplicationSourceImpl =
-          isQueueRecovered ? RecoveredReplicationSource.class.getCanonicalName()
-              : ReplicationSource.class.getCanonicalName();
-      Class<?> c = Class.forName(
-        conf.get("replication.replicationsource.implementation", defaultReplicationSourceImpl));
-      src = c.asSubclass(ReplicationSourceInterface.class).getDeclaredConstructor().newInstance();
-    } catch (Exception e) {
-      LOG.warn("Passed replication source implementation throws errors, "
-          + "defaulting to ReplicationSource",
-        e);
-      src = isQueueRecovered ? new RecoveredReplicationSource() : new ReplicationSource();
+  private ReplicationSourceFactory() {}
+
+  static ReplicationSourceInterface create(Configuration conf, String queueId,
+      WALFactory walFactory) throws IOException {
+    // Check for the marker name used to enable a replication source for hbase:meta for region read
+    // replicas. There is no peer nor use of replication storage (or need for queue recovery) when
+    // running hbase:meta region read replicas.
+    if (ReplicationSourceManager.META_REGION_REPLICA_REPLICATION_SOURCE.equals(queueId)) {
+      return new HBaseMetaNoQueueStoreReplicationSource(walFactory.getMetaProvider());
     }
-    return src;
+    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);
+    boolean queueRecovered = replicationQueueInfo.isQueueRecovered();
+    String defaultReplicationSourceImpl = null;
+    Class<?> c = null;
+    try {
+      defaultReplicationSourceImpl = queueRecovered?
+        RecoveredReplicationSource.class.getCanonicalName():
+        ReplicationSource.class.getCanonicalName();
+      c = Class.forName(conf.get("replication.replicationsource.implementation",
+        defaultReplicationSourceImpl));
+      return c.asSubclass(ReplicationSourceInterface.class).getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
+      LOG.warn("Configured replication class {} failed construction, defaulting to {}",
+        c != null? c.getName(): "null", defaultReplicationSourceImpl, e);
+      WALProvider walProvider = walFactory == null? null: walFactory.getWALProvider();
+      return queueRecovered? new RecoveredReplicationSource(walProvider): new ReplicationSource(walProvider);
+    }
   }
 }

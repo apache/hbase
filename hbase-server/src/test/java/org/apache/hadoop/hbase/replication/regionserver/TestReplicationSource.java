@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
-import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -115,7 +114,7 @@ public class TestReplicationSource {
    */
   @Test
   public void testDefaultSkipsMetaWAL() throws IOException {
-    ReplicationSource rs = new ReplicationSource();
+    ReplicationSource rs = new ReplicationSource(null);
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt("replication.source.maxretriesmultiplier", 1);
     ReplicationPeer mockPeer = Mockito.mock(ReplicationPeer.class);
@@ -131,7 +130,7 @@ public class TestReplicationSource {
     RegionServerServices rss =
       TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
     rs.init(conf, null, manager, null, mockPeer, rss, queueId, null,
-      p -> OptionalLong.empty(), new MetricsSource(queueId));
+      new MetricsSource(queueId));
     try {
       rs.startup();
       assertTrue(rs.isSourceActive());
@@ -153,7 +152,7 @@ public class TestReplicationSource {
   public void testWALEntryFilter() throws IOException {
     // To get the fully constructed default WALEntryFilter, need to create a ReplicationSource
     // instance and init it.
-    ReplicationSource rs = new ReplicationSource();
+    ReplicationSource rs = new ReplicationSource(null);
     UUID uuid = UUID.randomUUID();
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     ReplicationPeer mockPeer = Mockito.mock(ReplicationPeer.class);
@@ -169,7 +168,7 @@ public class TestReplicationSource {
     RegionServerServices rss =
       TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
     rs.init(conf, null, manager, null, mockPeer, rss, queueId,
-      uuid, p -> OptionalLong.empty(), new MetricsSource(queueId));
+      uuid, new MetricsSource(queueId));
     try {
       rs.startup();
       TEST_UTIL.waitFor(30000, () -> rs.getWalEntryFilter() != null);
@@ -245,7 +244,7 @@ public class TestReplicationSource {
    */
   @Test
   public void testTerminateTimeout() throws Exception {
-    ReplicationSource source = new ReplicationSource();
+    ReplicationSource source = new ReplicationSource(null);
     ReplicationEndpoint
       replicationEndpoint = new DoNothingReplicationEndpoint();
     try {
@@ -257,7 +256,7 @@ public class TestReplicationSource {
       ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
       Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
       source.init(testConf, null, manager, null, mockPeer, null, "testPeer",
-        null, p -> OptionalLong.empty(), null);
+        null, null);
       ExecutorService executor = Executors.newSingleThreadExecutor();
       Future<?> future = executor.submit(
         () -> source.terminate("testing source termination"));

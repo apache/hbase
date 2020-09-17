@@ -1765,7 +1765,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           toPrint = regionsInTransition.subList(0, max);
           truncated = true;
         }
-        LOG.info(prefix + "unning balancer because " + regionsInTransition.size() +
+        LOG.info(prefix + " not running balancer because " + regionsInTransition.size() +
           " region(s) in transition: " + toPrint + (truncated? "(truncated list)": ""));
         if (!force || metaInTransition) return false;
       }

@@ -28,6 +28,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -64,10 +65,11 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -83,11 +85,14 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public class ReplicationSource implements ReplicationSourceInterface {
-
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSource.class);
-  // Queues of logs to process, entry in format of walGroupId->queue,
-  // each presents a queue for one wal group
-  private Map<String, PriorityBlockingQueue<Path>> queues = new HashMap<>();
+  /**
+   * Queues of WALs to process, walGroupId->queue, where each presents a queue for one wal group
+   * and where 'wal group' is all WALs with the same WAL file 'prefix' (which is usually the
+   * local servername). See AbstractFSWALProvider.getWALPrefixFromWALName(wal.getName());
+   */
+  private final Map<String, PriorityBlockingQueue<Path>> queues = new HashMap<>();
+
   // per group queue size, keep no more than this number of logs in each wal group
   protected int queueSizePerGroup;
   protected ReplicationQueueStorage queueStorage;
@@ -131,7 +136,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private ReplicationThrottler throttler;
   private long defaultBandwidth;
   private long currentBandwidth;
-  private WALFileLengthProvider walFileLengthProvider;
+  private final WALProvider walProvider;
   protected final ConcurrentHashMap<String, ReplicationSourceShipper> workerThreads =
       new ConcurrentHashMap<>();
 
@@ -160,9 +165,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
    */
   private final List<WALEntryFilter> baseFilterOutWALEntries;
 
-  ReplicationSource() {
+  ReplicationSource(WALProvider walProvider) {
     // Default, filters *in* all WALs but meta WALs & filters *out* all WALEntries of System Tables.
-    this(p -> !AbstractFSWALProvider.isMetaFile(p),
+    this(walProvider, p -> !AbstractFSWALProvider.isMetaFile(p),
       Lists.newArrayList(new SystemTableWALEntryFilter()));
   }
 
@@ -172,7 +177,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
    * @param baseFilterOutWALEntries Base set of filters you want applied always; filters *out*
    *   WALEntries so they never make it out of this ReplicationSource.
    */
-  ReplicationSource(Predicate<Path> replicateWAL, List<WALEntryFilter> baseFilterOutWALEntries) {
+  ReplicationSource(WALProvider walProvider, Predicate<Path> replicateWAL,
+      List<WALEntryFilter> baseFilterOutWALEntries) {
+    this.walProvider = walProvider;
     this.filterInWALs = replicateWAL;
     this.baseFilterOutWALEntries = Collections.unmodifiableList(baseFilterOutWALEntries);
   }
@@ -190,8 +197,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
       ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-      String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-      MetricsSource metrics) throws IOException {
+      String queueId, UUID clusterId, MetricsSource metrics) {
     this.server = server;
     this.conf = HBaseConfiguration.create(conf);
     this.waitOnEndpointSeconds =
@@ -208,7 +214,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.fs = fs;
     this.metrics = metrics;
     this.clusterId = clusterId;
-
     this.queueId = queueId;
     this.replicationQueueInfo = new ReplicationQueueInfo(queueId);
     // ReplicationQueueInfo parses the peerId out of the znode for us
@@ -219,8 +224,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     currentBandwidth = getCurrentBandwidth();
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
     this.totalBufferUsed = manager.getTotalBufferUsed();
-    this.walFileLengthProvider = walFileLengthProvider;
-    LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
+    LOG.info("Initialzed queueId={}, replicationSource={}, currentBandwidth={}", queueId,
       replicationPeer.getId(), this.currentBandwidth);
   }
 
@@ -237,21 +241,22 @@ public class ReplicationSource implements ReplicationSourceInterface {
       LOG.trace("NOT replicating {}", wal);
       return;
     }
-    String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal.getName());
-    PriorityBlockingQueue<Path> queue = queues.get(logPrefix);
+    // Use WAL prefix as the WALGroupId for this peer.
+    String walGroupId = AbstractFSWALProvider.getWALPrefixFromWALName(wal.getName());
+    PriorityBlockingQueue<Path> queue = queues.get(walGroupId);
     if (queue == null) {
       queue = new PriorityBlockingQueue<>(queueSizePerGroup, new LogsComparator());
-      queues.put(logPrefix, queue);
+      queues.put(walGroupId, queue);
       if (this.isSourceActive() && this.walEntryFilter != null) {
         // new wal group observed after source startup, start a new worker thread to track it
         // notice: it's possible that wal enqueued when this.running is set but worker thread
         // still not launched, so it's necessary to check workerThreads before start the worker
-        tryStartNewShipper(logPrefix, queue);
+        tryStartNewShipper(walGroupId, queue);
       }
     }
     queue.put(wal);
     if (LOG.isTraceEnabled()) {
-      LOG.trace("{} Added wal {} to queue of source {}.", logPeerId(), logPrefix,
+      LOG.trace("{} Added wal {} to queue of source {}.", logPeerId(), walGroupId,
         this.replicationQueueInfo.getQueueId());
     }
     this.metrics.incrSizeOfLogQueue();
@@ -260,7 +265,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (queueSize > this.logQueueWarnThreshold) {
       LOG.warn("{} WAL group {} queue size: {} exceeds value of "
           + "replication.source.log.queue.warn: {}", logPeerId(),
-        logPrefix, queueSize, logQueueWarnThreshold);
+        walGroupId, queueSize, logQueueWarnThreshold);
     }
   }
 
@@ -357,14 +362,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
     ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
     ReplicationSourceShipper extant = workerThreads.putIfAbsent(walGroupId, worker);
     if (extant != null) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("{} Someone has beat us to start a worker thread for wal group {}", logPeerId(),
-          walGroupId);
-      }
+        LOG.debug("{} preempted start of worker walGroupId={}", logPeerId(), walGroupId);
     } else {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("{} Starting up worker for wal group {}", logPeerId(), walGroupId);
-      }
+      LOG.debug("{} starting worker for walGroupId={}", logPeerId(), walGroupId);
       ReplicationSourceWALReader walReader =
         createNewWALReader(walGroupId, queue, worker.getStartPosition());
       Threads.setDaemonThreadRunning(walReader, Thread.currentThread().getName() +
@@ -435,8 +435,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   /**
    * Call after {@link #initializeWALEntryFilter(UUID)} else it will be null.
-   * @return The WAL Entry Filter Chain this ReplicationSource will use on WAL files filtering
-   * out WALEntry edits.
+   * @return WAL Entry Filter Chain to use on WAL files filtering *out* WALEntry edits.
    */
   @VisibleForTesting
   WALEntryFilter getWalEntryFilter() {
@@ -575,7 +574,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (!this.isSourceActive()) {
       return;
     }
-    LOG.info("{} Source: {}, is now replicating from cluster: {}; to peer cluster: {};",
+    LOG.info("{} queueId={} is replicating from cluster={} to cluster={}",
       logPeerId(), this.replicationQueueInfo.getQueueId(), clusterId, peerClusterId);
 
     initializeWALEntryFilter(peerClusterId);
@@ -589,7 +588,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   @Override
   public void startup() {
-    // mark we are running now
+    if (this.sourceRunning) {
+      return;
+    }
+    // Mark we are running now
     this.sourceRunning = true;
     initThread = new Thread(this::initialize);
     Threads.setDaemonThreadRunning(initThread,
@@ -612,7 +614,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     terminate(reason, cause, clearMetrics, true);
   }
 
-  public void terminate(String reason, Exception cause, boolean clearMetrics, boolean join) {
+  public void terminate(String reason, Exception cause, boolean clearMetrics,
+      boolean join) {
     if (cause == null) {
       LOG.info("{} Closing source {} because: {}", logPeerId(), this.queueId, reason);
     } else {
@@ -780,9 +783,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.manager.getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
   }
 
-  @Override
-  public WALFileLengthProvider getWALFileLengthProvider() {
-    return walFileLengthProvider;
+  @Override public WALProvider getWALProvider() {
+    return this.walProvider;
   }
 
   @Override
@@ -798,7 +800,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return queueStorage;
   }
 
+  /**
+   * @return String to use as a log prefix that contains current peerId.
+   */
   private String logPeerId(){
-    return "[Source for peer " + this.getPeerId() + "]:";
+    return "peerId=" + this.getPeerId() + ",";
   }
 }

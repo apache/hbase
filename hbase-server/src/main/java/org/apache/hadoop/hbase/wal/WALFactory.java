@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -248,8 +247,11 @@ public class WALFactory {
     return provider.getWALs();
   }
 
-  @VisibleForTesting
-  WALProvider getMetaProvider() throws IOException {
+  /**
+   * Called when we lazily create a hbase:meta WAL OR from ReplicationSourceManager ahead of
+   * creating the first hbase:meta WAL so we can register a listener.
+   */
+  public WALProvider getMetaProvider() throws IOException {
     for (;;) {
       WALProvider provider = this.metaProvider.get();
       if (provider != null) {

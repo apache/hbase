@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,13 +16,11 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.replication.regionserver;
-
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.UUID;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,16 +33,16 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Interface that defines a replication source
+ * Interface that defines a replication source.
  */
 @InterfaceAudience.Private
 public interface ReplicationSourceInterface {
-
   /**
-   * Initializer for the source
+   * Initializer for the source.
    * @param conf the configuration to use
    * @param fs the file system to use
    * @param manager the manager to use
@@ -53,8 +50,7 @@ public interface ReplicationSourceInterface {
    */
   void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
       ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-      String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-      MetricsSource metrics) throws IOException;
+      String queueId, UUID clusterId, MetricsSource metrics);
 
   /**
    * Add a log to the list of logs to replicate
@@ -154,12 +150,19 @@ public interface ReplicationSourceInterface {
   /**
    * @return the wal file length provider
    */
-  WALFileLengthProvider getWALFileLengthProvider();
+  default WALFileLengthProvider getWALFileLengthProvider() {
+    WALProvider walProvider = getWALProvider();
+    return walProvider != null? walProvider.getWALFileLengthProvider(): p -> OptionalLong.empty();
+  }
+
+  /**
+   * @return Return WALProvider that this source is reading from.
+   */
+  WALProvider getWALProvider();
 
   /**
    * Try to throttle when the peer config with a bandwidth
    * @param batchSize entries size will be pushed
-   * @throws InterruptedException
    */
   void tryThrottle(int batchSize) throws InterruptedException;
 
@@ -190,5 +193,18 @@ public interface ReplicationSourceInterface {
    */
   default boolean isRecovered() {
     return false;
+  }
+
+  /**
+   * ReplicationSources keep their replication queues and queue state out in the replication
+   * store which is external to the current process -- usually zookeeper -- in case of crash so
+   * another process can pick up where the crashed process left off. A few specialized replication
+   * sources intentionally avoid keeping state in the replication store because they reset and
+   * start over after a crash so need of recovery. One such is the replication of the hbase:meta
+   * table. Its ReplicationSource will return false when this method is called.
+   * @return True if this source persists its queues and queue state to the replication store.
+   */
+  default boolean isQueuePersisted() {
+    return true;
   }
 }

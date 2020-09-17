@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -119,10 +119,11 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobFileCache;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.quotas.FileSystemUtilizationChore;
@@ -139,8 +140,6 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
-import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
-import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
@@ -161,7 +160,6 @@ import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.apache.hadoop.hbase.util.Pair;
@@ -175,7 +173,6 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -1919,8 +1916,7 @@ public class HRegionServer extends Thread implements
       throw new IOException("Can not create wal directory " + logDir);
     }
     // Instantiate replication if replication enabled. Pass it the log directories.
-    createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir,
-      factory.getWALProvider());
+    createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir, factory);
     this.walFactory = factory;
   }
 
@@ -2218,9 +2214,9 @@ public class HRegionServer extends Thread implements
         this.walRoller.addWAL(wal);
       }
       return wal;
-    }catch (FailedCloseWALAfterInitializedErrorException ex) {
+    } catch (FailedCloseWALAfterInitializedErrorException ex) {
       // see HBASE-21751 for details
-      abort("wal can not clean up after init failed", ex);
+      abort("WAL can not clean up after init failed", ex);
       throw ex;
     }
   }
@@ -2229,7 +2225,7 @@ public class HRegionServer extends Thread implements
     return walRoller;
   }
 
-  WALFactory getWalFactory() {
+  public WALFactory getWalFactory() {
     return walFactory;
   }
 
@@ -2445,15 +2441,15 @@ public class HRegionServer extends Thread implements
 
   /**
    * Trigger a flush in the primary region replica if this region is a secondary replica. Does not
-   * block this thread. See RegionReplicaFlushHandler for details.
+   * block this thread. See {@link RegionReplicaFlushHandler} for details.
    */
   private void triggerFlushInPrimaryRegion(final HRegion region) {
     if (ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
       return;
     }
-    if (!ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(region.conf) ||
-        !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(
-          region.conf)) {
+    TableName tn = region.getTableDescriptor().getTableName();
+    if (!ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(region.conf, tn) ||
+        !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(region.conf)) {
       region.setReadsEnabled(true);
       return;
     }
@@ -2461,10 +2457,13 @@ public class HRegionServer extends Thread implements
     region.setReadsEnabled(false); // disable reads before marking the region as opened.
     // RegionReplicaFlushHandler might reset this.
 
-    // submit it to be handled by one of the handlers so that we do not block OpenRegionHandler
+    // Submit it to be handled by one of the handlers so that we do not block OpenRegionHandler
     if (this.executorService != null) {
       this.executorService.submit(new RegionReplicaFlushHandler(this, clusterConnection,
-          rpcRetryingCallerFactory, rpcControllerFactory, operationTimeout, region));
+        rpcRetryingCallerFactory, rpcControllerFactory, operationTimeout, region));
+    } else {
+      LOG.info("Executor is null; not running flush of primary region replica for {}",
+        region.getRegionInfo());
     }
   }
 
@@ -3050,7 +3049,7 @@ public class HRegionServer extends Thread implements
    * Load the replication executorService objects, if any
    */
   private static void createNewReplicationInstance(Configuration conf, HRegionServer server,
-      FileSystem walFs, Path walDir, Path oldWALDir, WALProvider walProvider) throws IOException {
+      FileSystem walFs, Path walDir, Path oldWALDir, WALFactory walFactory) throws IOException {
     if ((server instanceof HMaster) &&
       (!LoadBalancer.isTablesOnMaster(conf) || LoadBalancer.isSystemTablesOnlyOnMaster(conf))) {
       return;
@@ -3068,19 +3067,19 @@ public class HRegionServer extends Thread implements
     // only one object.
     if (sourceClassname.equals(sinkClassname)) {
       server.replicationSourceHandler = newReplicationInstance(sourceClassname,
-        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
+        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walFactory);
       server.replicationSinkHandler = (ReplicationSinkService) server.replicationSourceHandler;
     } else {
       server.replicationSourceHandler = newReplicationInstance(sourceClassname,
-        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
+        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walFactory);
       server.replicationSinkHandler = newReplicationInstance(sinkClassname,
-        ReplicationSinkService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
+        ReplicationSinkService.class, conf, server, walFs, walDir, oldWALDir, walFactory);
     }
   }
 
   private static <T extends ReplicationService> T newReplicationInstance(String classname,
       Class<T> xface, Configuration conf, HRegionServer server, FileSystem walFs, Path logDir,
-      Path oldLogDir, WALProvider walProvider) throws IOException {
+      Path oldLogDir, WALFactory walFactory) throws IOException {
     final Class<? extends T> clazz;
     try {
       ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -3089,7 +3088,7 @@ public class HRegionServer extends Thread implements
       throw new IOException("Could not find class for " + classname);
     }
     T service = ReflectionUtils.newInstance(clazz, conf);
-    service.initialize(server, walFs, logDir, oldLogDir, walProvider);
+    service.initialize(server, walFs, logDir, oldLogDir, walFactory);
     return service;
   }
 

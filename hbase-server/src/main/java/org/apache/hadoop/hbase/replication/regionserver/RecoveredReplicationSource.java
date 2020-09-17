@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,18 +43,19 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class RecoveredReplicationSource extends ReplicationSource {
-
   private static final Logger LOG = LoggerFactory.getLogger(RecoveredReplicationSource.class);
-
   private String actualPeerId;
+
+  RecoveredReplicationSource(WALProvider walProvider) {
+    super(walProvider);
+  }
 
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
       ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-      String peerClusterZnode, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-      MetricsSource metrics) throws IOException {
+      String peerClusterZnode, UUID clusterId, MetricsSource metrics) {
     super.init(conf, fs, manager, queueStorage, replicationPeer, server, peerClusterZnode,
-      clusterId, walFileLengthProvider, metrics);
+      clusterId, metrics);
     this.actualPeerId = this.replicationQueueInfo.getPeerId();
   }
 

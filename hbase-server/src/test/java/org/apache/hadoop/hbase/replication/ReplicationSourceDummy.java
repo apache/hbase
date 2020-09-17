@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,12 +16,9 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.replication;
-
-import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,9 +28,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
-import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALProvider;
 
 /**
  * Source that does nothing at all, helpful to test ReplicationSourceManager
@@ -44,18 +41,19 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   String peerClusterId;
   Path currentPath;
   MetricsSource metrics;
-  WALFileLengthProvider walFileLengthProvider;
   AtomicBoolean startup = new AtomicBoolean(false);
 
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
       ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
-      UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
-      throws IOException {
+      UUID clusterId, MetricsSource metrics) {
     this.manager = manager;
     this.peerClusterId = peerClusterId;
     this.metrics = metrics;
-    this.walFileLengthProvider = walFileLengthProvider;
+  }
+
+  @Override public WALProvider getWALProvider() {
+    return null;
   }
 
   @Override
@@ -149,11 +147,6 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   @Override
   public void postShipEdits(List<Entry> entries, int batchSize) {
-  }
-
-  @Override
-  public WALFileLengthProvider getWALFileLengthProvider() {
-    return walFileLengthProvider;
   }
 
   @Override

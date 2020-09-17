@@ -221,7 +221,7 @@ public final class MetaTableLocator {
       LOG.warn("Tried to set null ServerName in hbase:meta; skipping -- ServerName required");
       return;
     }
-    LOG.info("Setting hbase:meta (replicaId={}) location in ZooKeeper as {}, state={}", replicaId,
+    LOG.info("Setting hbase:meta replicaId={} location in ZooKeeper as {}, state={}", replicaId,
       serverName, state);
     // Make the MetaRegionServer pb and then get its bytes and save this as
     // the znode content.
@@ -235,9 +235,9 @@ public final class MetaTableLocator {
           zookeeper.getZNodePaths().getZNodeForReplica(replicaId), data);
     } catch(KeeperException.NoNodeException nne) {
       if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
-        LOG.debug("META region location doesn't exist, create it");
+        LOG.debug("hbase:meta region location doesn't exist, create it");
       } else {
-        LOG.debug("META region location doesn't exist for replicaId=" + replicaId +
+        LOG.debug("hbase:meta region location doesn't exist for replicaId=" + replicaId +
             ", create it");
       }
       ZKUtil.createAndWatch(zookeeper, zookeeper.getZNodePaths().getZNodeForReplica(replicaId),
