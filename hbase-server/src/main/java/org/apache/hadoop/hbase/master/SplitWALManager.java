@@ -19,7 +19,10 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.master.MasterWalManager.META_FILTER;
-import static org.apache.hadoop.hbase.master.MasterWalManager.NON_META_FILTER;
+import static org.apache.hadoop.hbase.master.MasterWalManager.NON_CATALOG_FILTER;
+import static org.apache.hadoop.hbase.master.MasterWalManager.ROOT_FILTER;
+
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -74,6 +78,22 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 public class SplitWALManager {
   private static final Logger LOG = LoggerFactory.getLogger(SplitWALManager.class);
 
+  public enum SplitType {
+    ROOT(ROOT_FILTER),
+    META(META_FILTER),
+    USER(NON_CATALOG_FILTER);
+
+    private PathFilter filter;
+
+    SplitType(PathFilter filter) {
+      this.filter = filter;
+    }
+
+    public PathFilter getFilter() {
+      return filter;
+    }
+  }
+
   private final MasterServices master;
   private final SplitWorkerAssigner splitWorkerAssigner;
   private final Path rootDir;
@@ -92,11 +112,19 @@ public class SplitWALManager {
     this.walArchiveDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
   }
 
-  public List<Procedure> splitWALs(ServerName crashedServer, boolean splitMeta)
+  //TODO francis temp added this to avoid updating all tests
+  public List<Procedure> splitWALs(ServerName crashedServer, boolean splitMeta) throws IOException {
+    if (splitMeta) {
+      return splitWALs(crashedServer, SplitType.META);
+    }
+    return splitWALs(crashedServer, SplitType.USER);
+  }
+
+  public List<Procedure> splitWALs(ServerName crashedServer, SplitType splitType)
       throws IOException {
     try {
       // 1. list all splitting files
-      List<FileStatus> splittingFiles = getWALsToSplit(crashedServer, splitMeta);
+      List<FileStatus> splittingFiles = getWALsToSplit(crashedServer, splitType);
       // 2. create corresponding procedures
       return createSplitWALProcedures(splittingFiles, crashedServer);
     } catch (IOException e) {
@@ -105,12 +133,22 @@ public class SplitWALManager {
     }
   }
 
+
+  //TODO francis temp added this to avoid updating tests
   public List<FileStatus> getWALsToSplit(ServerName serverName, boolean splitMeta)
+    throws IOException {
+    if (splitMeta) {
+      return getWALsToSplit(serverName, SplitType.META);
+    }
+    return getWALsToSplit(serverName, SplitType.USER);
+  }
+
+  public List<FileStatus> getWALsToSplit(ServerName serverName, SplitType splitType)
       throws IOException {
     List<Path> logDirs = master.getMasterWalManager().getLogDirs(Collections.singleton(serverName));
     FileStatus[] fileStatuses =
-        SplitLogManager.getFileList(this.conf, logDirs, splitMeta ? META_FILTER : NON_META_FILTER);
-    LOG.info("{} WAL count={}, meta={}", serverName, fileStatuses.length, splitMeta);
+        SplitLogManager.getFileList(this.conf, logDirs, splitType.getFilter());
+    LOG.info("{} WAL count={}, SplitType={}", serverName, fileStatuses.length, splitType);
     return Lists.newArrayList(fileStatuses);
   }
 

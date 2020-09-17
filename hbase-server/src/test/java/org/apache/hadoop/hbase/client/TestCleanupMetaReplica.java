@@ -46,10 +46,10 @@ public class TestCleanupMetaReplica extends MetaWithReplicasTestBase {
   @Test
   public void testReplicaCleanup() throws Exception {
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
-    List<String> metaReplicaZnodes = zkw.getMetaReplicaNodes();
-    assertEquals(3, metaReplicaZnodes.size());
-    HBaseTestingUtility.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 1);
-    metaReplicaZnodes = zkw.getMetaReplicaNodes();
-    assertEquals(1, metaReplicaZnodes.size());
+    List<String> rootReplicaZnodes = zkw.getRootReplicaNodes();
+    assertEquals(3, rootReplicaZnodes.size());
+    HBaseTestingUtility.setReplicas(TEST_UTIL.getAdmin(), TableName.ROOT_TABLE_NAME, 1);
+    rootReplicaZnodes = zkw.getRootReplicaNodes();
+    assertEquals(1, rootReplicaZnodes.size());
   }
 }

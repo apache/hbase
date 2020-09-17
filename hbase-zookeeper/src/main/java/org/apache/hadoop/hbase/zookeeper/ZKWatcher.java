@@ -400,37 +400,37 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * @return list of znodes
    * @throws KeeperException if a ZooKeeper operation fails
    */
-  public List<String> getMetaReplicaNodes() throws KeeperException {
+  public List<String> getRootReplicaNodes() throws KeeperException {
     List<String> childrenOfBaseNode = ZKUtil.listChildrenNoWatch(this, znodePaths.baseZNode);
-    return filterMetaReplicaNodes(childrenOfBaseNode);
+    return filterRootReplicaNodes(childrenOfBaseNode);
   }
 
   /**
-   * Same as {@link #getMetaReplicaNodes()} except that this also registers a watcher on base znode
+   * Same as {@link #getRootReplicaNodes()} except that this also registers a watcher on base znode
    * for subsequent CREATE/DELETE operations on child nodes.
    */
-  public List<String> getMetaReplicaNodesAndWatchChildren() throws KeeperException {
+  public List<String> getRootReplicaNodesAndWatchChildren() throws KeeperException {
     List<String> childrenOfBaseNode =
         ZKUtil.listChildrenAndWatchForNewChildren(this, znodePaths.baseZNode);
-    return filterMetaReplicaNodes(childrenOfBaseNode);
+    return filterRootReplicaNodes(childrenOfBaseNode);
   }
 
   /**
    * @param nodes Input list of znodes
    * @return Filtered list of znodes from nodes that belong to meta replica(s).
    */
-  private List<String> filterMetaReplicaNodes(List<String> nodes) {
+  private List<String> filterRootReplicaNodes(List<String> nodes) {
     if (nodes == null || nodes.isEmpty()) {
       return new ArrayList<>();
     }
-    List<String> metaReplicaNodes = new ArrayList<>(2);
+    List<String> rootReplicaNodes = new ArrayList<>(2);
     String pattern = conf.get(ZNodePaths.META_ZNODE_PREFIX_CONF_KEY, ZNodePaths.META_ZNODE_PREFIX);
     for (String child : nodes) {
       if (child.startsWith(pattern)) {
-        metaReplicaNodes.add(child);
+        rootReplicaNodes.add(child);
       }
     }
-    return metaReplicaNodes;
+    return rootReplicaNodes;
   }
 
   /**

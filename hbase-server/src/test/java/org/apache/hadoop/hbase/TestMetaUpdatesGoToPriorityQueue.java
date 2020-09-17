@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import org.apache.hadoop.hbase.TestMetaTableAccessor.SpyingRpcScheduler;
-import org.apache.hadoop.hbase.TestMetaTableAccessor.SpyingRpcSchedulerFactory;
+import org.apache.hadoop.hbase.TestCatalogAccessor.SpyingRpcScheduler;
+import org.apache.hadoop.hbase.TestCatalogAccessor.SpyingRpcSchedulerFactory;
 import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -122,11 +122,11 @@ public class TestMetaUpdatesGoToPriorityQueue {
     SpyingRpcScheduler scheduler = (SpyingRpcScheduler) rs.getRpcServer().getScheduler();
     long prevCalls = scheduler.numPriorityCalls;
     long time = System.currentTimeMillis();
-    Put putParent = MetaTableAccessor.makePutFromRegionInfo(
+    Put putParent = CatalogAccessor.makePutFromRegionInfo(
       RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
-    MetaTableAccessor.addDaughtersToPut(putParent, splitA, splitB);
-    Put putA = MetaTableAccessor.makePutFromRegionInfo(splitA, time);
-    Put putB = MetaTableAccessor.makePutFromRegionInfo(splitB, time);
+    CatalogAccessor.addDaughtersToPut(putParent, splitA, splitB);
+    Put putA = CatalogAccessor.makePutFromRegionInfo(splitA, time);
+    Put putB = CatalogAccessor.makePutFromRegionInfo(splitB, time);
     multiMutate(putParent.getRow(), Arrays.asList(putParent, putA, putB));
 
     assertTrue(prevCalls < scheduler.numPriorityCalls);

@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -80,7 +80,7 @@ public class MasterStatusServlet extends HttpServlet {
   }
 
   private ServerName getMetaLocationOrNull(HMaster master) {
-    return MetaTableLocator.getMetaRegionLocation(master.getZooKeeper());
+    return RootTableLocator.getRootRegionLocation(master.getZooKeeper());
   }
 
   private Map<String, Integer> getFragmentationInfo(

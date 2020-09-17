@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -112,7 +112,7 @@ public class TestRegionServerNoMaster {
     HRegionServer hrs = HTU.getHBaseCluster()
       .getLiveRegionServerThreads().get(0).getRegionServer();
     ZKWatcher zkw = hrs.getZooKeeper();
-    ServerName sn = MetaTableLocator.getMetaRegionLocation(zkw);
+    ServerName sn = RootTableLocator.getRootRegionLocation(zkw);
     if (sn != null && !masterAddr.equals(sn)) {
       return;
     }
@@ -120,7 +120,7 @@ public class TestRegionServerNoMaster {
     ProtobufUtil.openRegion(null, hrs.getRSRpcServices(),
       hrs.getServerName(), RegionInfoBuilder.FIRST_META_REGIONINFO);
     while (true) {
-      sn = MetaTableLocator.getMetaRegionLocation(zkw);
+      sn = RootTableLocator.getRootRegionLocation(zkw);
       if (sn != null && sn.equals(hrs.getServerName())
           && hrs.getOnlineRegions().containsKey(
             RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName())) {

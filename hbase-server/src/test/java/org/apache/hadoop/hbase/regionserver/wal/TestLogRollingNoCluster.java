@@ -93,7 +93,7 @@ public class TestLogRollingNoCluster {
     conf.set(WALFactory.WAL_PROVIDER, "filesystem");
     CommonFSUtils.setRootDir(conf, dir);
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(TEST_UTIL.getConfiguration());
-    FSTableDescriptors.tryUpdateMetaTableDescriptor(TEST_UTIL.getConfiguration());
+    FSTableDescriptors.tryUpdateCatalogTableDescriptor(TEST_UTIL.getConfiguration());
     TableDescriptor metaTableDescriptor = fsTableDescriptors.get(TableName.META_TABLE_NAME);
     conf.set("hbase.regionserver.hlog.writer.impl", HighLatencySyncWriter.class.getName());
     final WALFactory wals = new WALFactory(conf, TestLogRollingNoCluster.class.getName());
@@ -159,7 +159,7 @@ public class TestLogRollingNoCluster {
       final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
       try {
         TableDescriptors tds = new FSTableDescriptors(TEST_UTIL.getConfiguration());
-        FSTableDescriptors.tryUpdateMetaTableDescriptor(TEST_UTIL.getConfiguration());
+        FSTableDescriptors.tryUpdateCatalogTableDescriptor(TEST_UTIL.getConfiguration());
         TableDescriptor htd = tds.get(TableName.META_TABLE_NAME);
         for (int i = 0; i < this.count; i++) {
           long now = System.currentTimeMillis();

@@ -130,6 +130,7 @@ import org.apache.hadoop.hbase.regionserver.handler.AssignRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
+import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
 import org.apache.hadoop.hbase.regionserver.handler.UnassignRegionHandler;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.RejectReplicationRequestStateChecker;
@@ -2036,7 +2037,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           if (regionServer.executorService == null) {
             LOG.info("No executor executorService; skipping open request");
           } else {
-            if (region.isMetaRegion()) {
+            if (region.isRootRegion()) {
+              regionServer.executorService.submit(new OpenRootHandler(
+                  regionServer, regionServer,region, htd, masterSystemTime));
+            } else if (region.isMetaRegion()) {
               regionServer.executorService.submit(new OpenMetaHandler(
               regionServer, regionServer, region, htd, masterSystemTime));
             } else {

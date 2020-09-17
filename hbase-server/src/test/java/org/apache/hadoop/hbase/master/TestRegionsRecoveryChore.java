@@ -603,6 +603,11 @@ public class TestRegionsRecoveryChore {
       }
 
       @Override
+      public boolean isRootRegion() {
+        return false;
+      }
+
+      @Override
       public boolean isMetaRegion() {
         return false;
       }
@@ -614,6 +619,11 @@ public class TestRegionsRecoveryChore {
 
       @Override
       public boolean containsRow(byte[] row) {
+        return false;
+      }
+
+      @Override
+      public boolean containsRow(byte[] row, int offset, short length) {
         return false;
       }
 

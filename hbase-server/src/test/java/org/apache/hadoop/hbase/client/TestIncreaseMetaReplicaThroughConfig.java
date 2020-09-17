@@ -63,6 +63,6 @@ public class TestIncreaseMetaReplicaThroughConfig extends MetaWithReplicasTestBa
     TEST_UTIL.getMiniHBaseCluster().getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 5);
     TEST_UTIL.getMiniHBaseCluster().startMaster();
     TEST_UTIL.waitFor(30000,
-      () -> TEST_UTIL.getZooKeeperWatcher().getMetaReplicaNodes().size() == 5);
+      () -> TEST_UTIL.getZooKeeperWatcher().getRootReplicaNodes().size() == 5);
   }
 }

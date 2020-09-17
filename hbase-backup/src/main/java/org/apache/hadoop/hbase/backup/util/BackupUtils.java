@@ -258,7 +258,7 @@ public final class BackupUtils {
 
     PathFilter filter = p -> {
       try {
-        if (AbstractFSWALProvider.isMetaFile(p)) {
+        if (AbstractFSWALProvider.isCatalogFile(p)) {
           return false;
         }
         String host = parseHostNameFromLogFile(p);

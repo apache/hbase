@@ -49,16 +49,16 @@ public class TestAsyncTableLocatePrefetch {
 
   private static AsyncConnection CONN;
 
-  private static AsyncNonMetaRegionLocator LOCATOR;
+  private static AsyncNonRootRegionLocator LOCATOR;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL.getConfiguration().setInt(AsyncNonMetaRegionLocator.LOCATE_PREFETCH_LIMIT, 100);
+    TEST_UTIL.getConfiguration().setInt(AsyncNonRootRegionLocator.LOCATE_PREFETCH_LIMIT, 100);
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    LOCATOR = new AsyncNonMetaRegionLocator((AsyncConnectionImpl) CONN);
+    LOCATOR = new AsyncNonRootRegionLocator((AsyncConnectionImpl) CONN);
   }
 
   @AfterClass

@@ -38,11 +38,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -124,7 +124,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -1720,10 +1720,10 @@ public class MasterRpcServices extends RSRpcServices implements
           + " actual: " + type);
       }
       Pair<RegionInfo, ServerName> pair =
-        MetaTableAccessor.getRegion(master.getConnection(), regionName);
-      if (Bytes.equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName(), regionName)) {
-        pair = new Pair<>(RegionInfoBuilder.FIRST_META_REGIONINFO,
-          MetaTableLocator.getMetaRegionLocation(master.getZooKeeper()));
+        CatalogAccessor.getRegion(master.getConnection(), regionName);
+      if (Bytes.equals(RegionInfoBuilder.ROOT_REGIONINFO.getRegionName(), regionName)) {
+        pair = new Pair<>(RegionInfoBuilder.ROOT_REGIONINFO,
+          RootTableLocator.getRootRegionLocation(master.getZooKeeper()));
       }
       if (pair == null) {
         throw new UnknownRegionException(Bytes.toString(regionName));
@@ -2537,6 +2537,7 @@ public class MasterRpcServices extends RSRpcServices implements
    *
    * @return previous states of the regions
    */
+  //TODO francis support root here
   @Override
   public SetRegionStateInMetaResponse setRegionStateInMeta(RpcController controller,
     SetRegionStateInMetaRequest request) throws ServiceException {
@@ -2551,21 +2552,22 @@ public class MasterRpcServices extends RSRpcServices implements
           // TODO: actually, a full region name can save a lot on meta scan, improve later.
           encodedName = RegionInfo.encodeRegionName(spec.getValue().toByteArray());
         }
-        RegionInfo info = this.master.getAssignmentManager().loadRegionFromMeta(encodedName);
+        RegionInfo info = this.master.getAssignmentManager().loadRegionFromCatalog(encodedName);
         LOG.trace("region info loaded from meta table: {}", info);
         RegionState prevState =
           this.master.getAssignmentManager().getRegionStates().getRegionState(info);
         RegionState.State newState = RegionState.State.convert(s.getState());
         LOG.info("{} set region={} state from {} to {}", master.getClientIdAuditPrefix(), info,
           prevState.getState(), newState);
-        Put metaPut = MetaTableAccessor.makePutFromRegionInfo(info, System.currentTimeMillis());
+        Put metaPut = CatalogAccessor.makePutFromRegionInfo(info, System.currentTimeMillis());
         metaPut.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
           Bytes.toBytes(newState.name()));
         List<Put> putList = new ArrayList<>();
         putList.add(metaPut);
-        MetaTableAccessor.putsToMetaTable(this.master.getConnection(), putList);
-        // Loads from meta again to refresh AM cache with the new region state
-        this.master.getAssignmentManager().loadRegionFromMeta(encodedName);
+        CatalogAccessor.putsToCatalogTable(this.master.getConnection(),
+            TableName.META_TABLE_NAME, putList);
+        //Loads from meta again to refresh AM cache with the new region state
+        this.master.getAssignmentManager().loadRegionFromCatalog(info.getEncodedName());
         builder.addStates(RegionSpecifierAndState.newBuilder().setRegionSpecifier(spec)
           .setState(prevState.getState().convert()));
       }
@@ -2591,7 +2593,7 @@ public class MasterRpcServices extends RSRpcServices implements
         RegionState regionState = this.master.getAssignmentManager().getRegionStates().
             getRegionState(encodedRegionName);
         ri = regionState == null ?
-          this.master.getAssignmentManager().loadRegionFromMeta(encodedRegionName) :
+          this.master.getAssignmentManager().loadRegionFromCatalog(encodedRegionName) :
             regionState.getRegion();
         break;
       default:

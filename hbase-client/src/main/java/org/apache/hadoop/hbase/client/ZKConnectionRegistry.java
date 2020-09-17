@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
-import static org.apache.hadoop.hbase.client.RegionInfoBuilder.FIRST_META_REGIONINFO;
+import static org.apache.hadoop.hbase.client.RegionInfoBuilder.ROOT_REGIONINFO;
 import static org.apache.hadoop.hbase.client.RegionReplicaUtil.getRegionInfoForDefaultReplica;
 import static org.apache.hadoop.hbase.client.RegionReplicaUtil.getRegionInfoForReplica;
 import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMagic;
@@ -158,7 +158,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
             LOG.warn("Meta region is in state " + stateAndServerName.getFirst());
           }
           locs[DEFAULT_REPLICA_ID] = new HRegionLocation(
-            getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO), stateAndServerName.getSecond());
+            getRegionInfoForDefaultReplica(ROOT_REGIONINFO), stateAndServerName.getSecond());
           tryComplete(remaining, locs, future);
         });
       } else {
@@ -180,7 +180,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
               locs[replicaId] = null;
             } else {
               locs[replicaId] =
-                new HRegionLocation(getRegionInfoForReplica(FIRST_META_REGIONINFO, replicaId),
+                new HRegionLocation(getRegionInfoForReplica(ROOT_REGIONINFO, replicaId),
                   stateAndServerName.getSecond());
             }
           }

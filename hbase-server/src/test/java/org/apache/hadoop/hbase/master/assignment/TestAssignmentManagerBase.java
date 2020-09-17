@@ -172,6 +172,8 @@ public abstract class TestAssignmentManagerBase {
 
   protected void setUpMeta() throws Exception {
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
+    am.assign(RegionInfoBuilder.ROOT_REGIONINFO);
+    am.wakeRootLoadedEvent();
     am.assign(RegionInfoBuilder.FIRST_META_REGIONINFO);
     am.wakeMetaLoadedEvent();
   }

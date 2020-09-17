@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.apache.hadoop.hbase.TableName.ROOT_TABLE_NAME;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashMap;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.RootCellComparator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -77,6 +79,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     Map<String, CellSet> familyCells = new HashMap<>();
     Map<String, Long> familySeqIds = new HashMap<>();
     boolean isMetaTable = buffer.tableName.equals(META_TABLE_NAME);
+    boolean isRootTable = buffer.tableName.equals(ROOT_TABLE_NAME);
     // First iterate all Cells to find which column families are present and to stamp Cell with
     // sequence id.
     for (WAL.Entry entry : buffer.entryBuffer) {
@@ -92,7 +95,9 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
         familyCells
             .computeIfAbsent(familyName,
               key -> new CellSet(
-                  isMetaTable ? MetaCellComparator.META_COMPARATOR : CellComparatorImpl.COMPARATOR))
+                isRootTable ? RootCellComparator.ROOT_COMPARATOR :
+                  (isMetaTable ? MetaCellComparator.META_COMPARATOR :
+                    CellComparatorImpl.COMPARATOR)))
             .add(cell);
         familySeqIds.compute(familyName, (k, v) -> v == null ? seqId : Math.max(v, seqId));
       }
@@ -103,7 +108,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     for (Map.Entry<String, CellSet> cellsEntry : familyCells.entrySet()) {
       String familyName = cellsEntry.getKey();
       StoreFileWriter writer = createRecoveredHFileWriter(buffer.tableName, regionName,
-        familySeqIds.get(familyName), familyName, isMetaTable);
+        familySeqIds.get(familyName), familyName, isRootTable, isMetaTable);
       LOG.trace("Created {}", writer.getPath());
       openingWritersNum.incrementAndGet();
       try {
@@ -192,7 +197,7 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
    *   given hfile has metadata on how it was written.
    */
   private StoreFileWriter createRecoveredHFileWriter(TableName tableName, String regionName,
-      long seqId, String familyName, boolean isMetaTable) throws IOException {
+      long seqId, String familyName, boolean isRootTable, boolean isMetaTable) throws IOException {
     Path outputDir = WALSplitUtil.tryCreateRecoveredHFilesDir(walSplitter.rootFS, walSplitter.conf,
       tableName, regionName, familyName);
     StoreFileWriter.Builder writerBuilder =
@@ -201,8 +206,9 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
     HFileContext hFileContext = new HFileContextBuilder().
       withChecksumType(HStore.getChecksumType(walSplitter.conf)).
       withBytesPerCheckSum(HStore.getBytesPerChecksum(walSplitter.conf)).
-      withCellComparator(isMetaTable?
-        MetaCellComparator.META_COMPARATOR: CellComparatorImpl.COMPARATOR).build();
+      withCellComparator(
+        isRootTable ? RootCellComparator.ROOT_COMPARATOR :
+          (isMetaTable? MetaCellComparator.META_COMPARATOR: CellComparatorImpl.COMPARATOR)).build();
     return writerBuilder.withFileContext(hFileContext).build();
   }
 }

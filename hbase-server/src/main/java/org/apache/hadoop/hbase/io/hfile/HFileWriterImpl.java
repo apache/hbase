@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.RootCellComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -379,7 +380,8 @@ public class HFileWriterImpl implements HFile.Writer {
     // If Cells from meta table, don't mess around. meta table Cells have schema
     // (table,startrow,hash) so can't be treated as plain byte arrays. Just skip
     // out without trying to do this optimization.
-    if (comparator instanceof MetaCellComparator) {
+    if (comparator instanceof MetaCellComparator ||
+        comparator instanceof RootCellComparator) {
       return right;
     }
     int diff = comparator.compareRows(left, right);

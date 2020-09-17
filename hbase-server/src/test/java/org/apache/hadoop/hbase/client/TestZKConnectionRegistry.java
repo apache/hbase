@@ -89,7 +89,7 @@ public class TestZKConnectionRegistry {
     IntStream.range(0, 3).forEach(i -> {
       HRegionLocation loc = locs.getRegionLocation(i);
       assertNotNull("Replica " + i + " doesn't have location", loc);
-      assertEquals(TableName.META_TABLE_NAME, loc.getRegion().getTable());
+      assertEquals(TableName.ROOT_TABLE_NAME, loc.getRegion().getTable());
       assertEquals(i, loc.getRegion().getReplicaId());
     });
   }

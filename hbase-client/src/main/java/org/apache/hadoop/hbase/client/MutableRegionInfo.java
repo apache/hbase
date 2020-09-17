@@ -224,9 +224,19 @@ class MutableRegionInfo implements RegionInfo {
    */
   @Override
   public boolean containsRow(byte[] row) {
-    return Bytes.compareTo(row, startKey) >= 0 &&
-      (Bytes.compareTo(row, endKey) < 0 ||
-       Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
+    return containsRow(row, 0, (short)row.length);
+  }
+
+  @Override
+  public boolean containsRow(byte[] row, int offset, short length) {
+    return Bytes.compareTo(row, offset, length, startKey, 0, startKey.length) >= 0 &&
+      (Bytes.compareTo(row, offset, length, endKey, 0, endKey.length) < 0 ||
+        Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
+  }
+
+  @Override
+  public boolean isRootRegion() {
+    return tableName.equals(TableName.ROOT_TABLE_NAME);
   }
 
   /** @return true if this region is a meta region */

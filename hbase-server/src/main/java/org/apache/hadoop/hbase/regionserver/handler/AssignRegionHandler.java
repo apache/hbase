@@ -166,7 +166,9 @@ public class AssignRegionHandler extends EventHandler {
   public static AssignRegionHandler create(HRegionServer server, RegionInfo regionInfo,
       long openProcId, TableDescriptor tableDesc, long masterSystemTime) {
     EventType eventType;
-    if (regionInfo.isMetaRegion()) {
+    if (regionInfo.isRootRegion()) {
+      eventType = EventType.M_RS_OPEN_ROOT;
+    } else if (regionInfo.isMetaRegion()) {
       eventType = EventType.M_RS_OPEN_META;
     } else if (regionInfo.getTable().isSystemTable() ||
       (tableDesc != null && tableDesc.getPriority() >= HConstants.ADMIN_QOS)) {

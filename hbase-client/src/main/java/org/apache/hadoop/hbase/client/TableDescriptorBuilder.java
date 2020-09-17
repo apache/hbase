@@ -117,6 +117,16 @@ public class TableDescriptorBuilder {
   @InterfaceAudience.Private
   public static final String FLUSH_POLICY = "FLUSH_POLICY";
   private static final Bytes FLUSH_POLICY_KEY = new Bytes(Bytes.toBytes(FLUSH_POLICY));
+
+  /**
+   * Used by rest interface to access this metadata attribute
+   * which denotes if it is a catalog table, either <code> hbase:meta </code>.
+   */
+  @InterfaceAudience.Private
+  public static final String IS_ROOT = "IS_ROOT";
+  private static final Bytes IS_ROOT_KEY
+    = new Bytes(Bytes.toBytes(IS_ROOT));
+
   /**
    * Used by rest interface to access this metadata attribute
    * which denotes if it is a catalog table, either <code> hbase:meta </code>.
@@ -243,6 +253,7 @@ public class TableDescriptorBuilder {
     DEFAULT_VALUES.put(PRIORITY, String.valueOf(DEFAULT_PRIORITY));
     DEFAULT_VALUES.keySet().stream()
             .map(s -> new Bytes(Bytes.toBytes(s))).forEach(RESERVED_KEYWORDS::add);
+    RESERVED_KEYWORDS.add(IS_ROOT_KEY);
     RESERVED_KEYWORDS.add(IS_META_KEY);
   }
 
@@ -597,8 +608,30 @@ public class TableDescriptorBuilder {
       this.name = name;
       families.forEach(c -> this.families.put(c.getName(), ColumnFamilyDescriptorBuilder.copy(c)));
       this.values.putAll(values);
+      this.values.put(IS_ROOT_KEY,
+        new Bytes(Bytes.toBytes(Boolean.toString(name.equals(TableName.ROOT_TABLE_NAME)))));
       this.values.put(IS_META_KEY,
         new Bytes(Bytes.toBytes(Boolean.toString(name.equals(TableName.META_TABLE_NAME)))));
+    }
+
+    /**
+     * Checks if this table is <code> hbase:meta </code> region.
+     *
+     * @return true if this table is <code> hbase:meta </code> region
+     */
+    @Override
+    public boolean isRootRegion() {
+      return getOrDefault(IS_ROOT_KEY, Boolean::valueOf, false);
+    }
+
+    /**
+     * Checks if the table is a <code>hbase:meta</code> table
+     *
+     * @return true if table is <code> hbase:meta </code> region.
+     */
+    @Override
+    public boolean isRootTable() {
+      return isRootRegion();
     }
 
     /**

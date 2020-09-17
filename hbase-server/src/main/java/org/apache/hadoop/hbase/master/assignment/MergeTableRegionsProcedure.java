@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -157,6 +158,8 @@ public class MergeTableRegionsProcedure
    * to have an extent sufficient to cover all regions-to-merge.
    */
   private static RegionInfo createMergedRegionInfo(final RegionInfo[] regionsToMerge) {
+    KeyValue.KVComparator comparator =
+      RegionInfo.getComparator(regionsToMerge[0].getTable());
     byte [] lowestStartKey = null;
     byte [] highestEndKey = null;
     // Region Id is a timestamp. Merged region's id can't be less than that of
@@ -165,12 +168,16 @@ public class MergeTableRegionsProcedure
     for (RegionInfo ri: regionsToMerge) {
       if (lowestStartKey == null) {
         lowestStartKey = ri.getStartKey();
-      } else if (Bytes.compareTo(ri.getStartKey(), lowestStartKey) < 0) {
+      } else if (comparator.compareRows(
+        ri.getStartKey(), 0, ri.getStartKey().length,
+        lowestStartKey, 0, lowestStartKey.length) < 0) {
         lowestStartKey = ri.getStartKey();
       }
       if (highestEndKey == null) {
         highestEndKey = ri.getEndKey();
-      } else if (ri.isLast() || Bytes.compareTo(ri.getEndKey(), highestEndKey) > 0) {
+      } else if (ri.isLast() || comparator.compareRows(
+          ri.getEndKey(), 0, ri.getEndKey().length,
+          highestEndKey, 0, highestEndKey.length) > 0) {
         highestEndKey = ri.getEndKey();
       }
       highestRegionId = ri.getRegionId() > highestRegionId? ri.getRegionId(): highestRegionId;

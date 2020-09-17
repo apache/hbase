@@ -264,6 +264,20 @@ public interface TableDescriptor {
    *
    * @return true if this table is <code> hbase:meta </code> region
    */
+  boolean isRootRegion();
+
+  /**
+   * Checks if the table is a <code>hbase:meta</code> table
+   *
+   * @return true if table is <code> hbase:meta </code> region.
+   */
+  boolean isRootTable();
+
+  /**
+   * Checks if this table is <code> hbase:meta </code> region.
+   *
+   * @return true if this table is <code> hbase:meta </code> region
+   */
   boolean isMetaRegion();
 
   /**

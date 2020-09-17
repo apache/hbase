@@ -67,7 +67,7 @@
 <%@ page import="org.apache.hadoop.hbase.quotas.ThrottleSettings" %>
 <%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
 <%@ page import="org.apache.hadoop.hbase.util.FSUtils" %>
-<%@ page import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator" %>
+<%@ page import="org.apache.hadoop.hbase.zookeeper.RootTableLocator" %>
 <%@ page import="org.apache.hadoop.util.StringUtils" %>
 <%@ page import="org.apache.hbase.thirdparty.com.google.protobuf.ByteString" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos" %>
@@ -313,7 +313,7 @@
           for (int j = 0; j < numMetaReplicas; j++) {
             RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                                     RegionInfoBuilder.FIRST_META_REGIONINFO, j);
-            ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+            ServerName metaLocation = RootTableLocator.waitRootRegionLocation(master.getZooKeeper(), j, 1);
             for (int i = 0; i < 1; i++) {
               String hostAndPort = "";
               String readReq = "N/A";
@@ -378,7 +378,7 @@
            for (int j = 0; j < numMetaReplicas; j++) {
              RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                                      RegionInfoBuilder.FIRST_META_REGIONINFO, j);
-             ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+             ServerName metaLocation = RootTableLocator.waitRootRegionLocation(master.getZooKeeper(), j, 1);
              for (int i = 0; i < 1; i++) {
                String hostAndPort = "";
                float locality = 0.0f;
@@ -426,7 +426,7 @@
           for (int j = 0; j < numMetaReplicas; j++) {
             RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
                                     RegionInfoBuilder.FIRST_META_REGIONINFO, j);
-            ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+            ServerName metaLocation = RootTableLocator.waitRootRegionLocation(master.getZooKeeper(), j, 1);
             for (int i = 0; i < 1; i++) {
               String hostAndPort = "";
               long compactingCells = 0;

@@ -59,6 +59,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -70,7 +71,6 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -124,6 +124,7 @@ import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.InitMetaProcedure;
+import org.apache.hadoop.hbase.master.procedure.InitRootProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
@@ -1014,15 +1015,15 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     // Checking if meta needs initializing.
-    status.setStatus("Initializing meta table if this is a new deploy");
-    InitMetaProcedure initMetaProc = null;
-    // Print out state of hbase:meta on startup; helps debugging.
-    if (!this.assignmentManager.getRegionStates().hasTableRegionStates(TableName.META_TABLE_NAME)) {
-      Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
-        .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
-      initMetaProc = optProc.orElseGet(() -> {
-        // schedule an init meta procedure if meta has not been deployed yet
-        InitMetaProcedure temp = new InitMetaProcedure();
+    status.setStatus("Initializing Catalog tables if this is a new deploy");
+    InitRootProcedure initRootProc = null;
+    // Print out state of hbase:root on startup; helps debugging.
+    if (!this.assignmentManager.getRegionStates().hasTableRegionStates(TableName.ROOT_TABLE_NAME)) {
+      Optional<InitRootProcedure> optProc = procedureExecutor.getProcedures().stream()
+        .filter(p -> p instanceof InitRootProcedure).map(o -> (InitRootProcedure) o).findAny();
+      initRootProc = optProc.orElseGet(() -> {
+        // schedule an init root procedure if meta has not been deployed yet
+        InitRootProcedure temp = new InitRootProcedure();
         procedureExecutor.submitProcedure(temp);
         return temp;
       });
@@ -1036,9 +1037,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     // start up all service threads.
     status.setStatus("Initializing master service threads");
     startServiceThreads();
-    // wait meta to be initialized after we start procedure executor
-    if (initMetaProc != null) {
-      initMetaProc.await();
+    // wait catalog tables to be initialized after we start procedure executor
+    if (initRootProc != null) {
+      initRootProc.await();
     }
     // Wake up this server to check in
     sleeper.skipSleepCycle();
@@ -1057,15 +1058,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     status.setStatus("Starting assignment manager");
-    // FIRST HBASE:META READ!!!!
-    // The below cannot make progress w/o hbase:meta being online.
-    // This is the FIRST attempt at going to hbase:meta. Meta on-lining is going on in background
-    // as procedures run -- in particular SCPs for crashed servers... One should put up hbase:meta
-    // if it is down. It may take a while to come online. So, wait here until meta if for sure
-    // available. That's what waitForMetaOnline does.
-    if (!waitForMetaOnline()) {
-      return;
-    }
     this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
     this.tableStateManager.start();
@@ -1226,6 +1218,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    *   and we will hold here until operator intervention.
    */
   @VisibleForTesting
+  //TODO francis reconcile this with AM?
   public boolean waitForMetaOnline() {
     return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
   }
@@ -1234,6 +1227,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return True if region is online and scannable else false if an error or shutdown (Otherwise
    *   we just block in here holding up all forward-progess).
    */
+  //TODO francis reconcile this with AM?
   private boolean isRegionOnline(RegionInfo ri) {
     RetryCounter rc = null;
     while (!isStopped()) {
@@ -1271,7 +1265,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   private boolean waitForNamespaceOnline() throws IOException {
     TableState nsTableState =
-      MetaTableAccessor.getTableState(getConnection(), TableName.NAMESPACE_TABLE_NAME);
+      CatalogAccessor.getTableState(getConnection(), TableName.NAMESPACE_TABLE_NAME);
     if (nsTableState == null || nsTableState.isDisabled()) {
       // this means we have already migrated the data and disabled or deleted the namespace table,
       // or this is a new deploy which does not have a namespace table from the beginning.
@@ -1285,7 +1279,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     // Else there are namespace regions up in meta. Ensure they are assigned before we go on.
     for (RegionInfo ri : ris) {
-      if (!isRegionOnline(ri)) {
+      if (!assignmentManager.isRegionOnline(ri)) {
         return false;
       }
     }

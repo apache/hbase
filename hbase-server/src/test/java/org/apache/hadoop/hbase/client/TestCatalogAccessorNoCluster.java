@@ -39,15 +39,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test MetaTableAccessor but without spinning up a cluster.
+ * Test CatalogAccessor but without spinning up a cluster.
  * We mock regionserver back and forth (we do spin up a zk cluster).
  */
 @Category({MiscTests.class, MediumTests.class})
-public class TestMetaTableAccessorNoCluster {
+public class TestCatalogAccessorNoCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetaTableAccessorNoCluster.class);
+      HBaseClassTestRule.forClass(TestCatalogAccessorNoCluster.class);
 
   private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

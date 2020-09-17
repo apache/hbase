@@ -247,7 +247,7 @@ public class MetaBrowser {
       HConstants.CATALOG_FAMILY,
       HConstants.STATE_QUALIFIER,
       CompareOperator.EQUAL,
-      // use the same serialization strategy as found in MetaTableAccessor#addRegionStateToPut
+      // use the same serialization strategy as found in CatalogAccessor#addRegionStateToPut
       Bytes.toBytes(state.name()));
   }
 

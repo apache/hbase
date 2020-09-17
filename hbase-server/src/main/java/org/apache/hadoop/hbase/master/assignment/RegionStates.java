@@ -417,6 +417,22 @@ public class RegionStates {
   }
 
   /**
+   * Call this when we start root log splitting a crashed Server.
+   * @see #metaLogSplit(ServerName)
+   */
+  public void rootLogSplitting(ServerName serverName) {
+    setServerState(serverName, ServerState.SPLITTING_ROOT);
+  }
+
+  /**
+   * Called after we've split the meta logs on a crashed Server.
+   * @see #metaLogSplitting(ServerName)
+   */
+  public void rootLogSplit(ServerName serverName) {
+    setServerState(serverName, ServerState.SPLITTING_ROOT_DONE);
+  }
+
+  /**
    * Call this when we start meta log splitting a crashed Server.
    * @see #metaLogSplit(ServerName)
    */

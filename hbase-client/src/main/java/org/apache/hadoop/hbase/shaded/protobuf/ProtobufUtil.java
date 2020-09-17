@@ -3160,7 +3160,7 @@ public final class ProtobufUtil {
    * @return RegionState instance corresponding to the serialized data.
    * @throws DeserializationException if the data is invalid.
    */
-  public static RegionState parseMetaRegionStateFrom(final byte[] data, int replicaId)
+  public static RegionState parseRootRegionStateFrom(final byte[] data, int replicaId)
       throws DeserializationException {
     RegionState.State state = RegionState.State.OPEN;
     ServerName serverName;
@@ -3187,7 +3187,7 @@ public final class ProtobufUtil {
       state = RegionState.State.OFFLINE;
     }
     return new RegionState(RegionReplicaUtil.getRegionInfoForReplica(
-        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), state, serverName);
+        RegionInfoBuilder.ROOT_REGIONINFO, replicaId), state, serverName);
   }
 
   /**
@@ -3303,7 +3303,10 @@ public final class ProtobufUtil {
     long regionId = proto.getRegionId();
     int defaultReplicaId = org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
     int replicaId = proto.hasReplicaId()? proto.getReplicaId(): defaultReplicaId;
-    if (tableName.equals(TableName.META_TABLE_NAME) && replicaId == defaultReplicaId) {
+    //TODO francis room to streamline this logic
+    if (tableName.equals(TableName.META_TABLE_NAME)
+        && replicaId == defaultReplicaId && regionId == 1 && !proto.getSplit()
+        && !proto.getOffline()) {
       return RegionInfoBuilder.FIRST_META_REGIONINFO;
     }
     byte[] startKey = null;

@@ -26,7 +26,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -225,7 +225,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
    * back any response, which cause master startup hangs forever
    */
   @Test
-  public void testAssignMetaAndCrashBeforeResponse() throws Exception {
+  public void testAssignRootAndCrashBeforeResponse() throws Exception {
     tearDown();
     // See setUp(), start HBase until set up meta
     util = new HBaseTestingUtility();
@@ -238,8 +238,8 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
 
     // Assign meta
     rsDispatcher.setMockRsExecutor(new HangThenRSRestartExecutor());
-    am.assign(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    assertEquals(true, am.isMetaAssigned());
+    am.assign(RegionInfoBuilder.ROOT_REGIONINFO);
+    assertEquals(true, am.isRootAssigned());
 
     // set it back as default, see setUpMeta()
     am.wakeMetaLoadedEvent();
@@ -300,11 +300,11 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
       RegionInfo hri = createRegionInfo(tableName, 1);
       assertNull("RegionInfo was just instantiated by the test, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
-      MetaTableAccessor.addRegionsToMeta(this.util.getConnection(), Collections.singletonList(hri),
+      CatalogAccessor.addRegionsToMeta(this.util.getConnection(), Collections.singletonList(hri),
         1);
       assertNull("RegionInfo was manually added in META, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
-      hri = am.loadRegionFromMeta(hri.getEncodedName());
+      hri = am.loadRegionFromCatalog(hri.getEncodedName());
       assertEquals(hri.getEncodedName(),
         am.getRegionStates().getRegionState(hri).getRegion().getEncodedName());
     }finally {
@@ -323,7 +323,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
       assertNull("RegionInfo was just instantiated by the test, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
       assertNull("RegionInfo was never added in META, should had returned null.",
-        am.loadRegionFromMeta(hri.getEncodedName()));
+        am.loadRegionFromCatalog(hri.getEncodedName()));
     }finally {
       this.util.killMiniHBaseCluster();
     }

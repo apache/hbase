@@ -101,10 +101,16 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
 
   @Override
   protected FSHLog createWAL() throws IOException {
+    String suffix = null;
+    if (ROOT_WAL_PROVIDER_ID.equals(providerId)) {
+      suffix = ROOT_WAL_PROVIDER_ID;
+    } else if (META_WAL_PROVIDER_ID.equals(providerId)) {
+      suffix = META_WAL_PROVIDER_ID;
+    }
     return new FSHLog(CommonFSUtils.getWALFileSystem(conf), abortable,
         CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
         getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
-        META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+        suffix);
   }
 
   @Override

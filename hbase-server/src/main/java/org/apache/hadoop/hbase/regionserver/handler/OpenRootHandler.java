@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -16,35 +16,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.zksyncer;
+package org.apache.hadoop.hbase.regionserver.handler;
 
-import java.util.Collection;
-import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 
 /**
- * Tracks the meta region locations on server ZK cluster and synchronize them to client ZK cluster
- * if changed
+ * Handles opening of a meta region on a region server.
+ * <p>
+ * This is executed after receiving an OPEN RPC from the master for meta.
  */
 @InterfaceAudience.Private
-public class MetaLocationSyncer extends ClientZKSyncer {
-  public MetaLocationSyncer(ZKWatcher watcher, ZKWatcher clientZkWatcher, Server server) {
-    super(watcher, clientZkWatcher, server);
-  }
-
-  @Override
-  boolean validate(String path) {
-    return watcher.getZNodePaths().isMetaZNodePath(path);
-  }
-
-  @Override
-  Collection<String> getNodesToWatch() throws KeeperException {
-    return watcher.getRootReplicaNodes().stream()
-      .map(znode -> ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, znode))
-      .collect(Collectors.toList());
+public class OpenRootHandler extends OpenRegionHandler {
+  public OpenRootHandler(final Server server,
+                         final RegionServerServices rsServices, RegionInfo regionInfo,
+                         final TableDescriptor htd, long masterSystemTime) {
+    super(server, rsServices, regionInfo, htd, masterSystemTime, EventType.M_RS_OPEN_ROOT);
   }
 }

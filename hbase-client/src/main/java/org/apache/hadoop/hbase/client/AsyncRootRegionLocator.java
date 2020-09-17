@@ -36,7 +36,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * The asynchronous locator for meta region.
  */
 @InterfaceAudience.Private
-class AsyncMetaRegionLocator {
+class AsyncRootRegionLocator {
 
   private final ConnectionRegistry registry;
 
@@ -45,7 +45,7 @@ class AsyncMetaRegionLocator {
   private final AtomicReference<CompletableFuture<RegionLocations>> metaRelocateFuture =
     new AtomicReference<>();
 
-  AsyncMetaRegionLocator(ConnectionRegistry registry) {
+  AsyncRootRegionLocator(ConnectionRegistry registry) {
     this.registry = registry;
   }
 

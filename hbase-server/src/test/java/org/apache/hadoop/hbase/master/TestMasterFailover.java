@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -192,7 +192,7 @@ public class TestMasterFailover {
       LOG.info("Master has aborted");
 
       // meta should remain where it was
-      RegionState metaState = MetaTableLocator.getMetaRegionState(hrs.getZooKeeper());
+      RegionState metaState = RootTableLocator.getRootRegionState(hrs.getZooKeeper());
       assertEquals("hbase:meta should be online on RS",
           metaState.getServerName(), metaServerName);
       assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
@@ -205,7 +205,7 @@ public class TestMasterFailover {
       LOG.info("Master is ready");
 
       // ensure meta is still deployed on RS
-      metaState = MetaTableLocator.getMetaRegionState(activeMaster.getZooKeeper());
+      metaState = RootTableLocator.getRootRegionState(activeMaster.getZooKeeper());
       assertEquals("hbase:meta should be online on RS",
           metaState.getServerName(), metaServerName);
       assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());

@@ -25,19 +25,19 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Thrown when an operation requires the root and all meta regions to be online
  */
 @InterfaceAudience.Public
-public class NotAllMetaRegionsOnlineException extends DoNotRetryIOException {
+public class NotAllRootRegionsOnlineException extends DoNotRetryIOException {
   private static final long serialVersionUID = 6439786157874827523L;
   /**
    * default constructor
    */
-  public NotAllMetaRegionsOnlineException() {
+  public NotAllRootRegionsOnlineException() {
     super();
   }
 
   /**
    * @param message
    */
-  public NotAllMetaRegionsOnlineException(String message) {
+  public NotAllRootRegionsOnlineException(String message) {
     super(message);
   }
 }

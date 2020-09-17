@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaCellComparator;
+import org.apache.hadoop.hbase.RootCellComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -596,6 +597,9 @@ public class FixedFileTrailer {
     if (comparator.equals(CellComparatorImpl.class.getName())) {
       return KeyValue.COMPARATOR.getClass().getName();
     }
+    if (comparator.equals(RootCellComparator.class.getName())) {
+      return KeyValue.ROOT_COMPARATOR.getClass().getName();
+    }
     if (comparator.equals(MetaCellComparator.class.getName())) {
       return KeyValue.META_COMPARATOR.getClass().getName();
     }
@@ -611,6 +615,11 @@ public class FixedFileTrailer {
       || comparatorClassName.equals(KeyValue.COMPARATOR.getClass().getName())
       || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator"))) {
       comparatorKlass = CellComparatorImpl.class;
+    } else if (comparatorClassName.equals(KeyValue.ROOT_COMPARATOR.getLegacyKeyComparatorName())
+      || comparatorClassName.equals(KeyValue.ROOT_COMPARATOR.getClass().getName())
+      || (comparatorClassName
+      .equals("org.apache.hadoop.hbase.CellComparator$RootCellComparator"))) {
+      comparatorKlass = RootCellComparator.class;
     } else if (comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
       || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())
       || (comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator"))) {
@@ -637,6 +646,9 @@ public class FixedFileTrailer {
     } else if (comparatorClassName.equals(
       MetaCellComparator.META_COMPARATOR.getClass().getName())) {
       return MetaCellComparator.META_COMPARATOR;
+    } else if (comparatorClassName.equals(
+      RootCellComparator.ROOT_COMPARATOR.getClass().getName())) {
+      return RootCellComparator.ROOT_COMPARATOR;
     }
     try {
       Class<? extends CellComparator> comparatorClass = getComparatorClass(comparatorClassName);

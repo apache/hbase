@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -66,8 +66,8 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
    * @param carryingMeta True if carrying hbase:meta table region.
    */
   public HBCKServerCrashProcedure(final MasterProcedureEnv env, final ServerName serverName,
-                              final boolean shouldSplitWal, final boolean carryingMeta) {
-    super(env, serverName, shouldSplitWal, carryingMeta);
+            final boolean shouldSplitWal, final boolean carryingRoot, final boolean carryingMeta) {
+    super(env, serverName, shouldSplitWal, carryingRoot, carryingMeta);
   }
 
   /**
@@ -99,7 +99,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
     UnknownServerVisitor visitor =
         new UnknownServerVisitor(env.getMasterServices().getConnection(), getServerName());
     try {
-      MetaTableAccessor.scanMetaForTableRegions(env.getMasterServices().getConnection(),
+      CatalogAccessor.scanMetaForTableRegions(env.getMasterServices().getConnection(),
           visitor, null);
     } catch (IOException ioe) {
       LOG.warn("Failed scan of hbase:meta for 'Unknown Servers'", ioe);
@@ -152,7 +152,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
           LOG.info("Moving {} from CLOSING to CLOSED in hbase:meta",
               hrl.getRegion().getRegionNameAsString());
           try {
-            MetaTableAccessor.updateRegionState(this.connection, hrl.getRegion(),
+            CatalogAccessor.updateRegionState(this.connection, hrl.getRegion(),
                 RegionState.State.CLOSED);
           } catch (IOException ioe) {
             LOG.warn("Failed moving {} from CLOSING to CLOSED",

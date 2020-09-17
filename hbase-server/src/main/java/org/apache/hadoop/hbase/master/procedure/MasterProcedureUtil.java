@@ -184,7 +184,13 @@ public final class MasterProcedureUtil {
    * server carrying meta, and 1 for others.
    */
   public static int getServerPriority(ServerProcedureInterface proc) {
-    return proc.hasMetaTableRegion() ? 100 : 1;
+    if (proc.hasRootTableRegion()) {
+      //TODO francis is 200 a reasonable number?
+      return 200;
+    } else if (proc.hasMetaTableRegion()) {
+      return 100;
+    }
+    return 1;
   }
 
   /**

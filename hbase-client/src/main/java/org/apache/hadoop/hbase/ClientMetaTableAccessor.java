@@ -193,15 +193,15 @@ public final class ClientMetaTableAccessor {
    * @param tableName table we're looking for, can be null for getting all regions
    * @param excludeOfflinedSplitParents don't return split parents
    * @return the list of regioninfos and server. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
+   *         {@link CompletableFuture}.META_TABLE_NAME
    */
   private static CompletableFuture<List<Pair<RegionInfo, ServerName>>> getTableRegionsAndLocations(
     final AsyncTable<AdvancedScanResultConsumer> metaTable, final TableName tableName,
     final boolean excludeOfflinedSplitParents) {
     CompletableFuture<List<Pair<RegionInfo, ServerName>>> future = new CompletableFuture<>();
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
+    if (TableName.ROOT_TABLE_NAME.equals(tableName)) {
       future.completeExceptionally(new IOException(
-        "This method can't be used to locate meta regions;" + " use MetaTableLocator instead"));
+        "This method can't be used to locate meta regions;" + " use RootTableLocator instead"));
     }
 
     // Make a version of CollectingVisitor that collects RegionInfo and ServerAddress

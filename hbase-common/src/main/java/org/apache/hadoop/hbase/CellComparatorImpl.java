@@ -300,8 +300,12 @@ public class CellComparatorImpl implements CellComparator {
    * @return CellComparator to use going off the {@code tableName} passed.
    */
   public static CellComparator getCellComparator(byte [] tableName) {
-    // FYI, TableName.toBytes does not create an array; just returns existing array pointer.
-    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())?
-      MetaCellComparator.META_COMPARATOR: CellComparatorImpl.COMPARATOR;
+    if (Bytes.equals(tableName, TableName.ROOT_TABLE_NAME.toBytes())) {
+      return RootCellComparator.ROOT_COMPARATOR;
+    }
+    if (Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())) {
+      return MetaCellComparator.META_COMPARATOR;
+    }
+    return CellComparatorImpl.COMPARATOR;
   }
 }

@@ -71,38 +71,12 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     return TableOperationType.CREATE;
   }
 
-  private static TableDescriptor writeFsLayout(Path rootDir, Configuration conf) throws IOException {
-    LOG.info("BOOTSTRAP: creating hbase:meta region");
-    FileSystem fs = rootDir.getFileSystem(conf);
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
-    if (fs.exists(tableDir) && !fs.delete(tableDir, true)) {
-      LOG.warn("Can not delete partial created meta table, continue...");
-    }
-    // Bootstrapping, make sure blockcache is off. Else, one will be
-    // created here in bootstrap and it'll need to be cleaned up. Better to
-    // not make it in first place. Turn off block caching for bootstrap.
-    // Enable after.
-    TableDescriptor metaDescriptor =
-      FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(conf, fs, rootDir);
-    HRegion
-      .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
-      .close();
-    return metaDescriptor;
-  }
-
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, InitMetaState state)
     throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     LOG.debug("Execute {}", this);
     try {
       switch (state) {
-        case INIT_META_WRITE_FS_LAYOUT:
-          Configuration conf = env.getMasterConfiguration();
-          Path rootDir = CommonFSUtils.getRootDir(conf);
-          TableDescriptor td = writeFsLayout(rootDir, conf);
-          env.getMasterServices().getTableDescriptors().update(td, true);
-          setNextState(InitMetaState.INIT_META_ASSIGN_META);
-          return Flow.HAS_MORE_STATE;
         case INIT_META_ASSIGN_META:
           LOG.info("Going to assign meta");
           addChildProcedure(env.getAssignmentManager()
@@ -167,7 +141,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   @Override
   protected InitMetaState getInitialState() {
-    return InitMetaState.INIT_META_WRITE_FS_LAYOUT;
+    return InitMetaState.INIT_META_ASSIGN_META;
   }
 
   @Override

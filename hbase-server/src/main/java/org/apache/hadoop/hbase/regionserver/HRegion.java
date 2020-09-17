@@ -98,6 +98,8 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.RootCellComparator;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -783,9 +785,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.baseConf = confParam;
     this.conf = new CompoundConfiguration().add(confParam).addBytesMap(htd.getValues());
-    this.cellComparator = htd.isMetaTable() ||
-      conf.getBoolean(USE_META_CELL_COMPARATOR, DEFAULT_USE_META_CELL_COMPARATOR) ?
-        MetaCellComparator.META_COMPARATOR : CellComparatorImpl.COMPARATOR;
+    if(htd.isRootTable()) {
+      this.cellComparator = RootCellComparator.ROOT_COMPARATOR;
+    } else if (htd.isMetaTable() ||
+      //TODO francis figure what support is needed for root for this
+      conf.getBoolean(USE_META_CELL_COMPARATOR, DEFAULT_USE_META_CELL_COMPARATOR)) {
+      this.cellComparator = MetaCellComparator.META_COMPARATOR;
+    } else {
+      this.cellComparator = CellComparatorImpl.COMPARATOR;
+    }
     this.lock = new ReentrantReadWriteLock(conf.getBoolean(FAIR_REENTRANT_CLOSE_LOCK,
         DEFAULT_FAIR_REENTRANT_CLOSE_LOCK));
     this.flushCheckInterval = conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL,
@@ -8087,19 +8095,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return true if the row is within the range specified by the RegionInfo
    */
   public static boolean rowIsInRange(RegionInfo info, final byte [] row) {
-    return ((info.getStartKey().length == 0) ||
-        (Bytes.compareTo(info.getStartKey(), row) <= 0)) &&
-        ((info.getEndKey().length == 0) ||
-            (Bytes.compareTo(info.getEndKey(), row) > 0));
+    return info.containsRow(row, 0, (short)row.length);
   }
 
   public static boolean rowIsInRange(RegionInfo info, final byte [] row, final int offset,
       final short length) {
-    return ((info.getStartKey().length == 0) ||
-        (Bytes.compareTo(info.getStartKey(), 0, info.getStartKey().length,
-          row, offset, length) <= 0)) &&
-        ((info.getEndKey().length == 0) ||
-          (Bytes.compareTo(info.getEndKey(), 0, info.getEndKey().length, row, offset, length) > 0));
+    return info.containsRow(row, offset, length);
   }
 
   @Override
@@ -8676,7 +8677,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public Optional<byte[]> checkSplit(boolean force) {
     // Can't split META
-    if (this.getRegionInfo().isMetaRegion()) {
+    if (this.getRegionInfo().isRootRegion()) {
       return Optional.empty();
     }
 

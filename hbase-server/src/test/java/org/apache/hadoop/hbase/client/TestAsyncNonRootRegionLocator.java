@@ -57,11 +57,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MediumTests.class, ClientTests.class })
-public class TestAsyncNonMetaRegionLocator {
+public class TestAsyncNonRootRegionLocator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncNonMetaRegionLocator.class);
+    HBaseClassTestRule.forClass(TestAsyncNonRootRegionLocator.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -71,7 +71,7 @@ public class TestAsyncNonMetaRegionLocator {
 
   private static AsyncConnectionImpl CONN;
 
-  private static AsyncNonMetaRegionLocator LOCATOR;
+  private static AsyncNonRootRegionLocator LOCATOR;
 
   private static byte[][] SPLIT_KEYS;
 
@@ -83,7 +83,7 @@ public class TestAsyncNonMetaRegionLocator {
         ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
       registry.getClusterId().get(), null, User.getCurrent());
-    LOCATOR = new AsyncNonMetaRegionLocator(CONN);
+    LOCATOR = new AsyncNonRootRegionLocator(CONN);
     SPLIT_KEYS = new byte[8][];
     for (int i = 111; i < 999; i += 111) {
       SPLIT_KEYS[i / 111 - 1] = Bytes.toBytes(String.format("%03d", i));

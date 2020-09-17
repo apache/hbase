@@ -80,6 +80,7 @@ public class ServerCrashProcedure
    */
   private List<RegionInfo> regionsOnCrashedServer;
 
+  private boolean carryingRoot = false;
   private boolean carryingMeta = false;
   private boolean shouldSplitWal;
   private MonitoredTask status;
@@ -91,12 +92,17 @@ public class ServerCrashProcedure
    * Call this constructor queuing up a Procedure.
    * @param serverName Name of the crashed server.
    * @param shouldSplitWal True if we should split WALs as part of crashed server processing.
-   * @param carryingMeta True if carrying hbase:meta table region.
+   * @param carryingRoot True if carrying hbase:root table region.
+   * @param carryingMeta True if carrying hbase:meta table region. Although carryingMeta is
+   *                     determined dynamically by an SCP instance. Caller can give the current
+   *                     state it sees, this information might be useful to SCP down the road or
+   *                     for debugging.
    */
   public ServerCrashProcedure(final MasterProcedureEnv env, final ServerName serverName,
-      final boolean shouldSplitWal, final boolean carryingMeta) {
+      final boolean shouldSplitWal, final boolean carryingRoot, final boolean carryingMeta) {
     this.serverName = serverName;
     this.shouldSplitWal = shouldSplitWal;
+    this.carryingRoot = carryingRoot;
     this.carryingMeta = carryingMeta;
     this.setOwner(env.getRequestUser());
   }
@@ -128,13 +134,34 @@ public class ServerCrashProcedure
 
     switch (state) {
       case SERVER_CRASH_START:
+        break;
+
+      //Don't block hbase:root processing states on hbase:meta being loaded
+      case SERVER_CRASH_SPLIT_ROOT_LOGS:
+      case SERVER_CRASH_DELETE_SPLIT_ROOT_WALS_DIR:
+      case SERVER_CRASH_ASSIGN_ROOT:
+        break;
+
+      case SERVER_CRASH_CHECK_CARRYING_META:
+        // If hbase:root is not loaded, we can't do the check so yield
+        if (env.getAssignmentManager().waitRootLoaded(this)) {
+          LOG.info("pid="+getProcId()+", waiting for root loaded: "+state+
+            ", carryingRoot="+carryingRoot+", carryingMeta="+carryingMeta);
+          throw new ProcedureSuspendedException();
+        }
+        break;
+
+      //Don't block hbase:meta processing states on hbase:meta being loaded
       case SERVER_CRASH_SPLIT_META_LOGS:
       case SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR:
       case SERVER_CRASH_ASSIGN_META:
         break;
+
       default:
         // If hbase:meta is not assigned, yield.
         if (env.getAssignmentManager().waitMetaLoaded(this)) {
+          LOG.info("pid="+getProcId()+", waiting for meta loaded: "+state+
+            ", carryingRoot="+carryingRoot+", carryingMeta="+carryingMeta);
           throw new ProcedureSuspendedException();
         }
     }
@@ -143,7 +170,42 @@ public class ServerCrashProcedure
         case SERVER_CRASH_START:
           LOG.info("Start " + this);
           // If carrying meta, process it first. Else, get list of regions on crashed server.
-          if (this.carryingMeta) {
+          if (this.carryingRoot) {
+            setNextState(ServerCrashState.SERVER_CRASH_SPLIT_ROOT_LOGS);
+          } else  {
+            setNextState(ServerCrashState.SERVER_CRASH_CHECK_CARRYING_META);
+          }
+          break;
+        case SERVER_CRASH_SPLIT_ROOT_LOGS:
+          if (env.getMasterConfiguration().getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
+            DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+            zkCoordinatedSplitRootLogs(env);
+            setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_ROOT);
+          } else {
+            am.getRegionStates().rootLogSplitting(serverName);
+            addChildProcedure(createSplittingWalProcedures(env, SplitWALManager.SplitType.ROOT));
+            setNextState(ServerCrashState.SERVER_CRASH_DELETE_SPLIT_ROOT_WALS_DIR);
+          }
+          break;
+        case SERVER_CRASH_DELETE_SPLIT_ROOT_WALS_DIR:
+          if (isSplittingDone(env, SplitWALManager.SplitType.ROOT)) {
+            setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_ROOT);
+            am.getRegionStates().rootLogSplit(serverName);
+          } else {
+            setNextState(ServerCrashState.SERVER_CRASH_SPLIT_ROOT_LOGS);
+          }
+          break;
+        case SERVER_CRASH_ASSIGN_ROOT:
+          assignRegions(env, Arrays.asList(RegionInfoBuilder.ROOT_REGIONINFO));
+          setNextState(ServerCrashState.SERVER_CRASH_CHECK_CARRYING_META);
+          break;
+        case SERVER_CRASH_CHECK_CARRYING_META:
+          boolean currCarryingMeta = am.isCarryingMeta(serverName);
+          if (carryingMeta && !currCarryingMeta) {
+            LOG.error("pid="+getProcId()+", carryingMeta changed to false after SCP check");
+          }
+          carryingMeta = currCarryingMeta;
+          if (carryingMeta) {
             setNextState(ServerCrashState.SERVER_CRASH_SPLIT_META_LOGS);
           } else {
             setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
@@ -156,12 +218,12 @@ public class ServerCrashProcedure
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_META);
           } else {
             am.getRegionStates().metaLogSplitting(serverName);
-            addChildProcedure(createSplittingWalProcedures(env, true));
+            addChildProcedure(createSplittingWalProcedures(env, SplitWALManager.SplitType.META));
             setNextState(ServerCrashState.SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR);
           }
           break;
         case SERVER_CRASH_DELETE_SPLIT_META_WALS_DIR:
-          if (isSplittingDone(env, true)) {
+          if (isSplittingDone(env, SplitWALManager.SplitType.META)) {
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_META);
             am.getRegionStates().metaLogSplit(serverName);
           } else {
@@ -195,12 +257,12 @@ public class ServerCrashProcedure
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
           } else {
             am.getRegionStates().logSplitting(this.serverName);
-            addChildProcedure(createSplittingWalProcedures(env, false));
+            addChildProcedure(createSplittingWalProcedures(env, SplitWALManager.SplitType.USER));
             setNextState(ServerCrashState.SERVER_CRASH_DELETE_SPLIT_WALS_DIR);
           }
           break;
         case SERVER_CRASH_DELETE_SPLIT_WALS_DIR:
-          if (isSplittingDone(env, false)) {
+          if (isSplittingDone(env, SplitWALManager.SplitType.USER)) {
             cleanupSplitDir(env);
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
             am.getRegionStates().logSplit(this.serverName);
@@ -257,7 +319,7 @@ public class ServerCrashProcedure
         // old hbase:meta tenancy on this server; clean these up if any before trying to remove the
         // WAL directory of this server or we will fail. See archiveMetaLog comment for more details
         // on this condition.
-        env.getMasterServices().getMasterWalManager().archiveMetaLog(this.serverName);
+        env.getMasterServices().getMasterWalManager().archiveCatalogLog(this.serverName, false);
       }
       splitWALManager.deleteWALDir(serverName);
     } catch (IOException e) {
@@ -265,11 +327,12 @@ public class ServerCrashProcedure
     }
   }
 
-  private boolean isSplittingDone(MasterProcedureEnv env, boolean splitMeta) {
+  private boolean isSplittingDone(MasterProcedureEnv env, SplitWALManager.SplitType splitType) {
     SplitWALManager splitWALManager = env.getMasterServices().getSplitWALManager();
     try {
-      int wals = splitWALManager.getWALsToSplit(serverName, splitMeta).size();
-      LOG.debug("Check if {} WAL splitting is done? wals={}, meta={}", serverName, wals, splitMeta);
+      int wals = splitWALManager.getWALsToSplit(serverName, splitType).size();
+      LOG.debug("Check if {} WAL splitting is done? wals={}, SplitType={}",
+        serverName, wals, splitType);
       return wals == 0;
     } catch (IOException e) {
       LOG.warn("Get WALs of {} failed, retry...", serverName, e);
@@ -277,11 +340,12 @@ public class ServerCrashProcedure
     }
   }
 
-  private Procedure[] createSplittingWalProcedures(MasterProcedureEnv env, boolean splitMeta)
+  private Procedure[] createSplittingWalProcedures(MasterProcedureEnv env,
+    SplitWALManager.SplitType splitType)
       throws IOException {
-    LOG.info("Splitting WALs {}, isMeta: {}", this, splitMeta);
+    LOG.info("Splitting WALs {}, SplitType: {}", this, splitType);
     SplitWALManager splitWALManager = env.getMasterServices().getSplitWALManager();
-    List<Procedure> procedures = splitWALManager.splitWALs(serverName, splitMeta);
+    List<Procedure> procedures = splitWALManager.splitWALs(serverName, splitType);
     return procedures.toArray(new Procedure[procedures.size()]);
   }
 
@@ -295,6 +359,16 @@ public class ServerCrashProcedure
 
   private boolean isDefaultMetaRegion(RegionInfo hri) {
     return hri.isMetaRegion() && RegionReplicaUtil.isDefaultReplica(hri);
+  }
+
+  private void zkCoordinatedSplitRootLogs(MasterProcedureEnv env) throws IOException {
+    LOG.debug("Splitting root WALs {}", this);
+    MasterWalManager mwm = env.getMasterServices().getMasterWalManager();
+    AssignmentManager am = env.getMasterServices().getAssignmentManager();
+    am.getRegionStates().rootLogSplitting(serverName);
+    mwm.splitRootLog(serverName);
+    am.getRegionStates().rootLogSplit(serverName);
+    LOG.debug("Done splitting root WALs {}", this);
   }
 
   /**
@@ -326,8 +400,11 @@ public class ServerCrashProcedure
     // of SCPs running because big cluster crashed down.
     am.getRegionStates().logSplitting(this.serverName);
     mwm.splitLog(this.serverName);
+    if (!carryingRoot) {
+      mwm.archiveCatalogLog(this.serverName, true);
+    }
     if (!carryingMeta) {
-      mwm.archiveMetaLog(this.serverName);
+      mwm.archiveCatalogLog(this.serverName, false);
     }
     am.getRegionStates().logSplit(this.serverName);
     LOG.debug("Done splitting WALs {}", this);
@@ -396,6 +473,8 @@ public class ServerCrashProcedure
     sb.append(getProcName());
     sb.append(", splitWal=");
     sb.append(shouldSplitWal);
+    sb.append(", root=");
+    sb.append(carryingRoot);
     sb.append(", meta=");
     sb.append(carryingMeta);
   }
@@ -412,6 +491,7 @@ public class ServerCrashProcedure
     MasterProcedureProtos.ServerCrashStateData.Builder state =
       MasterProcedureProtos.ServerCrashStateData.newBuilder().
       setServerName(ProtobufUtil.toServerName(this.serverName)).
+      setCarryingRoot(this.carryingRoot).
       setCarryingMeta(this.carryingMeta).
       setShouldSplitWal(this.shouldSplitWal);
     if (this.regionsOnCrashedServer != null && !this.regionsOnCrashedServer.isEmpty()) {
@@ -430,6 +510,7 @@ public class ServerCrashProcedure
     MasterProcedureProtos.ServerCrashStateData state =
         serializer.deserialize(MasterProcedureProtos.ServerCrashStateData.class);
     this.serverName = ProtobufUtil.toServerName(state.getServerName());
+    this.carryingRoot = state.hasCarryingRoot()? state.getCarryingRoot(): false;
     this.carryingMeta = state.hasCarryingMeta()? state.getCarryingMeta(): false;
     // shouldSplitWAL has a default over in pb so this invocation will always work.
     this.shouldSplitWal = state.getShouldSplitWal();
@@ -447,6 +528,11 @@ public class ServerCrashProcedure
   @Override
   public ServerName getServerName() {
     return this.serverName;
+  }
+
+  @Override
+  public boolean hasRootTableRegion() {
+    return this.carryingRoot;
   }
 
   @Override

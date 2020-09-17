@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
+import org.apache.hadoop.hbase.NotAllRootRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -50,55 +50,55 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.MetaReg
  * TODO: rewrite using RPC calls to master to find out about hbase:meta.
  */
 @InterfaceAudience.Private
-public final class MetaTableLocator {
-  private static final Logger LOG = LoggerFactory.getLogger(MetaTableLocator.class);
+public final class RootTableLocator {
+  private static final Logger LOG = LoggerFactory.getLogger(RootTableLocator.class);
 
-  private MetaTableLocator() {
+  private RootTableLocator() {
   }
 
   /**
    * @param zkw ZooKeeper watcher to be used
-   * @return meta table regions and their locations.
+   * @return root table regions and their locations.
    */
-  public static List<Pair<RegionInfo, ServerName>> getMetaRegionsAndLocations(ZKWatcher zkw) {
-    return getMetaRegionsAndLocations(zkw, RegionInfo.DEFAULT_REPLICA_ID);
+  public static List<Pair<RegionInfo, ServerName>> getRootRegionsAndLocations(ZKWatcher zkw) {
+    return getRootRegionsAndLocations(zkw, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /**
-   * Gets the meta regions and their locations for the given path and replica ID.
+   * Gets the root regions and their locations for the given path and replica ID.
    *
    * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @param replicaId the ID of the replica
-   * @return meta table regions and their locations.
+   * @return root table regions and their locations.
    */
-  public static List<Pair<RegionInfo, ServerName>> getMetaRegionsAndLocations(ZKWatcher zkw,
+  public static List<Pair<RegionInfo, ServerName>> getRootRegionsAndLocations(ZKWatcher zkw,
       int replicaId) {
-    ServerName serverName = getMetaRegionLocation(zkw, replicaId);
+    ServerName serverName = getRootRegionLocation(zkw, replicaId);
     List<Pair<RegionInfo, ServerName>> list = new ArrayList<>(1);
     list.add(new Pair<>(RegionReplicaUtil.getRegionInfoForReplica(
-        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), serverName));
+        RegionInfoBuilder.ROOT_REGIONINFO, replicaId), serverName));
     return list;
   }
 
   /**
-   * Gets the meta regions for the given path with the default replica ID.
+   * Gets the root regions for the given path with the default replica ID.
    *
    * @param zkw ZooKeeper watcher to be used
-   * @return List of meta regions
+   * @return List of root regions
    */
-  public static List<RegionInfo> getMetaRegions(ZKWatcher zkw) {
-    return getMetaRegions(zkw, RegionInfo.DEFAULT_REPLICA_ID);
+  public static List<RegionInfo> getRootRegions(ZKWatcher zkw) {
+    return getRootRegions(zkw, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /**
-   * Gets the meta regions for the given path and replica ID.
+   * Gets the root regions for the given path and replica ID.
    * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @param replicaId the ID of the replica
-   * @return List of meta regions
+   * @return List of root regions
    */
-  public static List<RegionInfo> getMetaRegions(ZKWatcher zkw, int replicaId) {
+  public static List<RegionInfo> getRootRegions(ZKWatcher zkw, int replicaId) {
     List<Pair<RegionInfo, ServerName>> result;
-    result = getMetaRegionsAndLocations(zkw, replicaId);
+    result = getRootRegionsAndLocations(zkw, replicaId);
     return getListOfRegionInfos(result);
   }
 
@@ -116,13 +116,13 @@ public final class MetaTableLocator {
   }
 
   /**
-   * Gets the meta region location, if available.  Does not block.
+   * Gets the root region location, if available.  Does not block.
    * @param zkw zookeeper connection to use
    * @return server name or null if we failed to get the data.
    */
-  public static ServerName getMetaRegionLocation(final ZKWatcher zkw) {
+  public static ServerName getRootRegionLocation(final ZKWatcher zkw) {
     try {
-      RegionState state = getMetaRegionState(zkw);
+      RegionState state = getRootRegionState(zkw);
       return state.isOpened() ? state.getServerName() : null;
     } catch (KeeperException ke) {
       return null;
@@ -130,14 +130,14 @@ public final class MetaTableLocator {
   }
 
   /**
-   * Gets the meta region location, if available.  Does not block.
+   * Gets the root region location, if available.  Does not block.
    * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @param replicaId the ID of the replica
    * @return server name
    */
-  public static ServerName getMetaRegionLocation(final ZKWatcher zkw, int replicaId) {
+  public static ServerName getRootRegionLocation(final ZKWatcher zkw, int replicaId) {
     try {
-      RegionState state = getMetaRegionState(zkw, replicaId);
+      RegionState state = getRootRegionState(zkw, replicaId);
       return state.isOpened() ? state.getServerName() : null;
     } catch (KeeperException ke) {
       return null;
@@ -145,35 +145,35 @@ public final class MetaTableLocator {
   }
 
   /**
-   * Gets the meta region location, if available, and waits for up to the specified timeout if not
+   * Gets the root region location, if available, and waits for up to the specified timeout if not
    * immediately available. Given the zookeeper notification could be delayed, we will try to get
    * the latest data.
    * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @param timeout maximum time to wait, in millis
-   * @return server name for server hosting meta region formatted as per {@link ServerName}, or null
+   * @return server name for server hosting root region formatted as per {@link ServerName}, or null
    *         if none available
    * @throws InterruptedException if interrupted while waiting
-   * @throws NotAllMetaRegionsOnlineException if a meta or root region is not online
+   * @throws NotAllRootRegionsOnlineException if a meta or root region is not online
    */
-  public static ServerName waitMetaRegionLocation(ZKWatcher zkw, long timeout)
-      throws InterruptedException, NotAllMetaRegionsOnlineException {
-    return waitMetaRegionLocation(zkw, RegionInfo.DEFAULT_REPLICA_ID, timeout);
+  public static ServerName waitRootRegionLocation(ZKWatcher zkw, long timeout)
+      throws InterruptedException, NotAllRootRegionsOnlineException {
+    return waitRootRegionLocation(zkw, RegionInfo.DEFAULT_REPLICA_ID, timeout);
   }
 
   /**
-   * Gets the meta region location, if available, and waits for up to the specified timeout if not
+   * Gets the root region location, if available, and waits for up to the specified timeout if not
    * immediately available. Given the zookeeper notification could be delayed, we will try to get
    * the latest data.
    * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @param replicaId the ID of the replica
    * @param timeout maximum time to wait, in millis
-   * @return server name for server hosting meta region formatted as per {@link ServerName}, or null
+   * @return server name for server hosting root region formatted as per {@link ServerName}, or null
    *         if none available
    * @throws InterruptedException if waiting for the socket operation fails
-   * @throws NotAllMetaRegionsOnlineException if a meta or root region is not online
+   * @throws NotAllRootRegionsOnlineException if a roo or root region is not online
    */
-  public static ServerName waitMetaRegionLocation(ZKWatcher zkw, int replicaId, long timeout)
-      throws InterruptedException, NotAllMetaRegionsOnlineException {
+  public static ServerName waitRootRegionLocation(ZKWatcher zkw, int replicaId, long timeout)
+      throws InterruptedException, NotAllRootRegionsOnlineException {
     try {
       if (ZKUtil.checkExists(zkw, zkw.getZNodePaths().baseZNode) == -1) {
         String errorMsg = "Check the value configured in 'zookeeper.znode.parent'. " +
@@ -187,27 +187,27 @@ public final class MetaTableLocator {
     ServerName sn = blockUntilAvailable(zkw, replicaId, timeout);
 
     if (sn == null) {
-      throw new NotAllMetaRegionsOnlineException("Timed out; " + timeout + "ms");
+      throw new NotAllRootRegionsOnlineException("Timed out; " + timeout + "ms");
     }
 
     return sn;
   }
 
   /**
-   * Sets the location of <code>hbase:meta</code> in ZooKeeper to the
+   * Sets the location of <code>hbase:root</code> in ZooKeeper to the
    * specified server address.
    * @param zookeeper zookeeper reference
-   * @param serverName The server hosting <code>hbase:meta</code>
+   * @param serverName The server hosting <code>hbase:root</code>
    * @param state The region transition state
    * @throws KeeperException unexpected zookeeper exception
    */
-  public static void setMetaLocation(ZKWatcher zookeeper,
+  public static void setRootLocation(ZKWatcher zookeeper,
       ServerName serverName, RegionState.State state) throws KeeperException {
-    setMetaLocation(zookeeper, serverName, RegionInfo.DEFAULT_REPLICA_ID, state);
+    setRootLocation(zookeeper, serverName, RegionInfo.DEFAULT_REPLICA_ID, state);
   }
 
   /**
-   * Sets the location of <code>hbase:meta</code> in ZooKeeper to the specified server address.
+   * Sets the location of <code>hbase:root</code> in ZooKeeper to the specified server address.
    * @param zookeeper reference to the {@link ZKWatcher} which also contains configuration and
    *                  operation
    * @param serverName the name of the server
@@ -215,15 +215,15 @@ public final class MetaTableLocator {
    * @param state the state of the region
    * @throws KeeperException if a ZooKeeper operation fails
    */
-  public static void setMetaLocation(ZKWatcher zookeeper, ServerName serverName, int replicaId,
+  public static void setRootLocation(ZKWatcher zookeeper, ServerName serverName, int replicaId,
       RegionState.State state) throws KeeperException {
     if (serverName == null) {
-      LOG.warn("Tried to set null ServerName in hbase:meta; skipping -- ServerName required");
+      LOG.warn("Tried to set null ServerName in hbase:root; skipping -- ServerName required");
       return;
     }
-    LOG.info("Setting hbase:meta replicaId={} location in ZooKeeper as {}, state={}", replicaId,
+    LOG.info("Setting hbase:root replicaId={} location in ZooKeeper as {}, state={}", replicaId,
       serverName, state);
-    // Make the MetaRegionServer pb and then get its bytes and save this as
+    // Make the RootRegionServer pb and then get its bytes and save this as
     // the znode content.
     MetaRegionServer pbrsr = MetaRegionServer.newBuilder()
       .setServer(ProtobufUtil.toServerName(serverName))
@@ -235,9 +235,9 @@ public final class MetaTableLocator {
           zookeeper.getZNodePaths().getZNodeForReplica(replicaId), data);
     } catch(KeeperException.NoNodeException nne) {
       if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
-        LOG.debug("hbase:meta region location doesn't exist, create it");
+        LOG.debug("hbase:root region location doesn't exist, create it");
       } else {
-        LOG.debug("hbase:meta region location doesn't exist for replicaId=" + replicaId +
+        LOG.debug("hbase:root region location doesn't exist for replicaId=" + replicaId +
             ", create it");
       }
       ZKUtil.createAndWatch(zookeeper, zookeeper.getZNodePaths().getZNodeForReplica(replicaId),
@@ -246,26 +246,26 @@ public final class MetaTableLocator {
   }
 
   /**
-   * Load the meta region state from the meta server ZNode.
+   * Load the root region state from the root server ZNode.
    */
-  public static RegionState getMetaRegionState(ZKWatcher zkw) throws KeeperException {
-    return getMetaRegionState(zkw, RegionInfo.DEFAULT_REPLICA_ID);
+  public static RegionState getRootRegionState(ZKWatcher zkw) throws KeeperException {
+    return getRootRegionState(zkw, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /**
-   * Load the meta region state from the meta region server ZNode.
+   * Load the root region state from the root region server ZNode.
    *
    * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @param replicaId the ID of the replica
    * @return regionstate
    * @throws KeeperException if a ZooKeeper operation fails
    */
-  public static RegionState getMetaRegionState(ZKWatcher zkw, int replicaId)
+  public static RegionState getRootRegionState(ZKWatcher zkw, int replicaId)
       throws KeeperException {
     RegionState regionState = null;
     try {
       byte[] data = ZKUtil.getData(zkw, zkw.getZNodePaths().getZNodeForReplica(replicaId));
-      regionState = ProtobufUtil.parseMetaRegionStateFrom(data, replicaId);
+      regionState = ProtobufUtil.parseRootRegionStateFrom(data, replicaId);
     } catch (DeserializationException e) {
       throw ZKUtil.convert(e);
     } catch (InterruptedException e) {
@@ -275,21 +275,21 @@ public final class MetaTableLocator {
   }
 
   /**
-   * Deletes the location of <code>hbase:meta</code> in ZooKeeper.
+   * Deletes the location of <code>hbase:root</code> in ZooKeeper.
    * @param zookeeper zookeeper reference
    * @throws KeeperException unexpected zookeeper exception
    */
-  public static void deleteMetaLocation(ZKWatcher zookeeper)
+  public static void deleteRootLocation(ZKWatcher zookeeper)
     throws KeeperException {
-    deleteMetaLocation(zookeeper, RegionInfo.DEFAULT_REPLICA_ID);
+    deleteRootLocation(zookeeper, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
-  public static void deleteMetaLocation(ZKWatcher zookeeper, int replicaId)
+  public static void deleteRootLocation(ZKWatcher zookeeper, int replicaId)
     throws KeeperException {
     if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
-      LOG.info("Deleting hbase:meta region location in ZooKeeper");
+      LOG.info("Deleting hbase:root region location in ZooKeeper");
     } else {
-      LOG.info("Deleting hbase:meta for {} region location in ZooKeeper", replicaId);
+      LOG.info("Deleting hbase:root for {} region location in ZooKeeper", replicaId);
     }
     try {
       // Just delete the node.  Don't need any watches.
@@ -299,7 +299,7 @@ public final class MetaTableLocator {
     }
   }
   /**
-   * Wait until the primary meta region is available. Get the secondary locations as well but don't
+   * Wait until the primary root region is available. Get the secondary locations as well but don't
    * block for those.
    *
    * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
@@ -324,14 +324,14 @@ public final class MetaTableLocator {
     servers.add(server);
 
     try {
-      List<String> metaReplicaNodes = zkw.getMetaReplicaNodes();
-      numReplicasConfigured = metaReplicaNodes.size();
+      List<String> rootReplicaNodes = zkw.getRootReplicaNodes();
+      numReplicasConfigured = rootReplicaNodes.size();
     } catch (KeeperException e) {
       LOG.warn("Got ZK exception {}", e);
     }
     for (int replicaId = 1; replicaId < numReplicasConfigured; replicaId++) {
-      // return all replica locations for the meta
-      servers.add(getMetaRegionLocation(zkw, replicaId));
+      // return all replica locations for the root
+      servers.add(getRootRegionLocation(zkw, replicaId));
     }
     return servers;
   }
@@ -369,7 +369,7 @@ public final class MetaTableLocator {
     long startTime = System.currentTimeMillis();
     ServerName sn = null;
     while (true) {
-      sn = getMetaRegionLocation(zkw, replicaId);
+      sn = getRootRegionLocation(zkw, replicaId);
       if (sn != null ||
         (System.currentTimeMillis() - startTime) > timeout - HConstants.SOCKET_RETRY_WAIT_MS) {
         break;

@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -63,7 +63,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -102,8 +102,9 @@ public class RegionStateStore {
       ServerName regionLocation, ServerName lastHost, long openSeqNum);
   }
 
-  public void visitMeta(final RegionStateVisitor visitor) throws IOException {
-    MetaTableAccessor.fullScanRegions(master.getConnection(),
+  public void visitCatalogTable(TableName catalogTableName, final RegionStateVisitor visitor)
+    throws IOException {
+    CatalogAccessor.fullScanRegions(master.getConnection(), catalogTableName,
       new ClientMetaTableAccessor.Visitor() {
         final boolean isDebugEnabled = LOG.isDebugEnabled();
 
@@ -114,7 +115,7 @@ public class RegionStateStore {
             if (LOG.isTraceEnabled()) {
               st = System.currentTimeMillis();
             }
-            visitMetaEntry(visitor, r);
+            visitCatalogEntry(visitor, r);
             if (LOG.isTraceEnabled()) {
               long et = System.currentTimeMillis();
               LOG.trace("[T] LOAD META PERF " + StringUtils.humanTimeDiff(et - st));
@@ -134,17 +135,17 @@ public class RegionStateStore {
    * @param visitor The <code>RegionStateVisitor</code> instance to react over the query results.
    * @throws IOException If some error occurs while querying META or parsing results.
    */
-  public void visitMetaForRegion(final String regionEncodedName, final RegionStateVisitor visitor)
-    throws IOException {
+  public void visitCatalogForRegion(final String regionEncodedName,
+    final RegionStateVisitor visitor) throws IOException {
     Result result =
-      MetaTableAccessor.scanByRegionEncodedName(master.getConnection(), regionEncodedName);
+      CatalogAccessor.scanByRegionEncodedName(master.getConnection(), regionEncodedName);
     if (result != null) {
-      visitMetaEntry(visitor, result);
+      visitCatalogEntry(visitor, result);
     }
   }
 
-  private void visitMetaEntry(final RegionStateVisitor visitor, final Result result)
-    throws IOException {
+  private void visitCatalogEntry(final RegionStateVisitor visitor, final Result result)
+      throws IOException {
     final RegionLocations rl = CatalogFamilyFormat.getRegionLocations(result);
     if (rl == null) return;
 
@@ -162,7 +163,7 @@ public class RegionStateStore {
       final State state = getRegionState(result, regionInfo);
 
       final ServerName lastHost = hrl.getServerName();
-      ServerName regionLocation = MetaTableAccessor.getTargetServerName(result, replicaId);
+      ServerName regionLocation = CatalogAccessor.getTargetServerName(result, replicaId);
       final long openSeqNum = hrl.getSeqNum();
 
       // TODO: move under trace, now is visible for debugging
@@ -175,13 +176,13 @@ public class RegionStateStore {
   }
 
   void updateRegionLocation(RegionStateNode regionStateNode) throws IOException {
-    if (regionStateNode.getRegionInfo().isMetaRegion()) {
-      updateMetaLocation(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation(),
+    if (regionStateNode.getRegionInfo().isRootRegion()) {
+      updateRootLocation(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation(),
         regionStateNode.getState());
     } else {
       long openSeqNum = regionStateNode.getState() == State.OPEN ? regionStateNode.getOpenSeqNum() :
         HConstants.NO_SEQNUM;
-      updateUserRegionLocation(regionStateNode.getRegionInfo(), regionStateNode.getState(),
+      updateRegionLocation(regionStateNode.getRegionInfo(), regionStateNode.getState(),
         regionStateNode.getRegionLocation(), openSeqNum,
         // The regionStateNode may have no procedure in a test scenario; allow for this.
         regionStateNode.getProcedure() != null ? regionStateNode.getProcedure().getProcId() :
@@ -189,29 +190,31 @@ public class RegionStateStore {
     }
   }
 
-  private void updateMetaLocation(RegionInfo regionInfo, ServerName serverName, State state)
-    throws IOException {
+  private void updateRootLocation(RegionInfo regionInfo, ServerName serverName, State state)
+      throws IOException {
     try {
-      MetaTableLocator.setMetaLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
+      RootTableLocator.setRootLocation(master.getZooKeeper(), serverName, regionInfo.getReplicaId(),
         state);
     } catch (KeeperException e) {
       throw new IOException(e);
     }
   }
 
-  private void updateUserRegionLocation(RegionInfo regionInfo, State state,
-    ServerName regionLocation, long openSeqNum, long pid) throws IOException {
+  private void updateRegionLocation(RegionInfo regionInfo, State state,
+      ServerName regionLocation, long openSeqNum, long pid) throws IOException {
+    TableName catalogTableName = regionInfo.isMetaRegion() ?
+        TableName.ROOT_TABLE_NAME : TableName.META_TABLE_NAME;
     long time = EnvironmentEdgeManager.currentTime();
     final int replicaId = regionInfo.getReplicaId();
     final Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), time);
-    MetaTableAccessor.addRegionInfo(put, regionInfo);
+    CatalogAccessor.addRegionInfo(put, regionInfo);
     final StringBuilder info =
-      new StringBuilder("pid=").append(pid).append(" updating hbase:meta row=")
+      new StringBuilder("pid=").append(pid).append(" updating "+catalogTableName+" row=")
         .append(regionInfo.getEncodedName()).append(", regionState=").append(state);
     if (openSeqNum >= 0) {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
-        "Open region should be on a server");
-      MetaTableAccessor.addLocation(put, regionLocation, openSeqNum, replicaId);
+          "Open region should be on a server");
+      CatalogAccessor.addLocation(put, regionLocation, openSeqNum, replicaId);
       // only update replication barrier for default replica
       if (regionInfo.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID &&
         hasGlobalReplicationScope(regionInfo.getTable())) {
@@ -235,12 +238,12 @@ public class RegionStateStore {
       .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put).setValue(Bytes.toBytes(state.name()))
       .build());
     LOG.info(info.toString());
-    updateRegionLocation(regionInfo, state, put);
+    updateRegionLocation(catalogTableName, regionInfo, state, put);
   }
 
-  private void updateRegionLocation(RegionInfo regionInfo, State state, Put put)
-    throws IOException {
-    try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
+  private void updateRegionLocation(TableName catalogTableName, RegionInfo regionInfo,
+      State state, Put put) throws IOException {
+    try (Table table = master.getConnection().getTable(catalogTableName)) {
       table.put(put);
     } catch (IOException e) {
       // TODO: Revist!!!! Means that if a server is loaded, then we will abort our host!
@@ -327,13 +330,13 @@ public class RegionStateStore {
     }
     long time = EnvironmentEdgeManager.currentTime();
     // Put for parent
-    Put putParent = MetaTableAccessor.makePutFromRegionInfo(
+    Put putParent = CatalogAccessor.makePutFromRegionInfo(
       RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
-    MetaTableAccessor.addDaughtersToPut(putParent, splitA, splitB);
+    CatalogAccessor.addDaughtersToPut(putParent, splitA, splitB);
 
     // Puts for daughters
-    Put putA = MetaTableAccessor.makePutFromRegionInfo(splitA, time);
-    Put putB = MetaTableAccessor.makePutFromRegionInfo(splitB, time);
+    Put putA = CatalogAccessor.makePutFromRegionInfo(splitA, time);
+    Put putB = CatalogAccessor.makePutFromRegionInfo(splitB, time);
     if (parentOpenSeqNum > 0) {
       ReplicationBarrierFamilyFormat.addReplicationBarrier(putParent, parentOpenSeqNum);
       ReplicationBarrierFamilyFormat.addReplicationParent(putA, Collections.singletonList(parent));
@@ -344,8 +347,8 @@ public class RegionStateStore {
     // default OFFLINE state. If Master gets restarted after this step, start up sequence of
     // master tries to assign these offline regions. This is followed by re-assignments of the
     // daughter regions from resumed {@link SplitTableRegionProcedure}
-    MetaTableAccessor.addRegionStateToPut(putA, RegionState.State.CLOSED);
-    MetaTableAccessor.addRegionStateToPut(putB, RegionState.State.CLOSED);
+    CatalogAccessor.addRegionStateToPut(putA, RegionState.State.CLOSED);
+    CatalogAccessor.addRegionStateToPut(putB, RegionState.State.CLOSED);
 
     // new regions, openSeqNum = 1 is fine.
     addSequenceNum(putA, 1, splitA.getReplicaId());
@@ -355,8 +358,8 @@ public class RegionStateStore {
     // cached whenever the primary region is looked up from meta
     int regionReplication = getRegionReplication(htd);
     for (int i = 1; i < regionReplication; i++) {
-      MetaTableAccessor.addEmptyLocation(putA, i);
-      MetaTableAccessor.addEmptyLocation(putB, i);
+      CatalogAccessor.addEmptyLocation(putA, i);
+      CatalogAccessor.addEmptyLocation(putB, i);
     }
 
     multiMutate(parent, Arrays.asList(putParent, putA, putB));
@@ -374,7 +377,7 @@ public class RegionStateStore {
     for (RegionInfo ri : parents) {
       long seqNum = globalScope ? getOpenSeqNumForParentRegion(ri) : -1;
       // Deletes for merging regions
-      mutations.add(MetaTableAccessor.makeDeleteFromRegionInfo(ri, time));
+      mutations.add(CatalogAccessor.makeDeleteFromRegionInfo(ri, time));
       if (seqNum > 0) {
         mutations
           .add(ReplicationBarrierFamilyFormat.makePutForReplicationBarrier(ri, seqNum, time));
@@ -382,28 +385,28 @@ public class RegionStateStore {
       }
     }
     // Put for parent
-    Put putOfMerged = MetaTableAccessor.makePutFromRegionInfo(child, time);
+    Put putOfMerged = CatalogAccessor.makePutFromRegionInfo(child, time);
     putOfMerged = addMergeRegions(putOfMerged, Arrays.asList(parents));
     // Set initial state to CLOSED.
     // NOTE: If initial state is not set to CLOSED then merged region gets added with the
     // default OFFLINE state. If Master gets restarted after this step, start up sequence of
     // master tries to assign this offline region. This is followed by re-assignments of the
     // merged region from resumed {@link MergeTableRegionsProcedure}
-    MetaTableAccessor.addRegionStateToPut(putOfMerged, RegionState.State.CLOSED);
+    CatalogAccessor.addRegionStateToPut(putOfMerged, RegionState.State.CLOSED);
     mutations.add(putOfMerged);
     // The merged is a new region, openSeqNum = 1 is fine. ServerName may be null
     // if crash after merge happened but before we got to here.. means in-memory
     // locations of offlined merged, now-closed, regions is lost. Should be ok. We
     // assign the merged region later.
     if (serverName != null) {
-      MetaTableAccessor.addLocation(putOfMerged, serverName, 1, child.getReplicaId());
+      CatalogAccessor.addLocation(putOfMerged, serverName, 1, child.getReplicaId());
     }
 
     // Add empty locations for region replicas of the merged region so that number of replicas
     // can be cached whenever the primary region is looked up from meta
     int regionReplication = getRegionReplication(htd);
     for (int i = 1; i < regionReplication; i++) {
-      MetaTableAccessor.addEmptyLocation(putOfMerged, i);
+      CatalogAccessor.addEmptyLocation(putOfMerged, i);
     }
     // add parent reference for serial replication
     if (!replicationParents.isEmpty()) {
@@ -533,14 +536,14 @@ public class RegionStateStore {
     // or HBASE-9905 is fixed and meta uses seqIds, we do not need the sleep.
     //
     // HBASE-13875 uses master timestamp for the mutations. The 20ms sleep is not needed
-    MetaTableAccessor.addRegionsToMeta(master.getConnection(), regionInfos, regionReplication,
+    CatalogAccessor.addRegionsToMeta(master.getConnection(), regionInfos, regionReplication,
       now + 1);
     LOG.info("Overwritten " + regionInfos.size() + " regions to Meta");
     LOG.debug("Overwritten regions: {} ", regionInfos);
   }
 
   private Scan getScanForUpdateRegionReplicas(TableName tableName) {
-    return MetaTableAccessor.getScanForTableName(master.getConfiguration(), tableName)
+    return CatalogAccessor.getScanForTableName(master.getConfiguration(), tableName)
       .addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
   }
 

@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.RootTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -48,16 +48,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
 
 /**
- * Test {@link org.apache.hadoop.hbase.zookeeper.MetaTableLocator}
+ * Test {@link RootTableLocator}
  */
 @Category({ MiscTests.class, MediumTests.class })
-public class TestMetaTableLocator {
+public class TestRootTableLocator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaTableLocator.class);
+    HBaseClassTestRule.forClass(TestRootTableLocator.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableLocator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRootTableLocator.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final ServerName SN =
     ServerName.valueOf("example.org", 1234, System.currentTimeMillis());
@@ -98,7 +98,7 @@ public class TestMetaTableLocator {
     try {
       // Clean out meta location or later tests will be confused... they presume
       // start fresh in zk.
-      MetaTableLocator.deleteMetaLocation(this.watcher);
+      RootTableLocator.deleteRootLocation(this.watcher);
     } catch (KeeperException e) {
       LOG.warn("Unable to delete hbase:meta location", e);
     }
@@ -118,30 +118,30 @@ public class TestMetaTableLocator {
     Mockito.when(client.get((RpcController) Mockito.any(), (GetRequest) Mockito.any()))
       .thenReturn(GetResponse.newBuilder().build());
 
-    assertNull(MetaTableLocator.getMetaRegionLocation(this.watcher));
+    assertNull(RootTableLocator.getRootRegionLocation(this.watcher));
     for (RegionState.State state : RegionState.State.values()) {
       if (state.equals(RegionState.State.OPEN)) {
         continue;
       }
-      MetaTableLocator.setMetaLocation(this.watcher, SN, state);
-      assertNull(MetaTableLocator.getMetaRegionLocation(this.watcher));
-      assertEquals(state, MetaTableLocator.getMetaRegionState(this.watcher).getState());
+      RootTableLocator.setRootLocation(this.watcher, SN, state);
+      assertNull(RootTableLocator.getRootRegionLocation(this.watcher));
+      assertEquals(state, RootTableLocator.getRootRegionState(this.watcher).getState());
     }
-    MetaTableLocator.setMetaLocation(this.watcher, SN, RegionState.State.OPEN);
-    assertEquals(SN, MetaTableLocator.getMetaRegionLocation(this.watcher));
+    RootTableLocator.setRootLocation(this.watcher, SN, RegionState.State.OPEN);
+    assertEquals(SN, RootTableLocator.getRootRegionLocation(this.watcher));
     assertEquals(RegionState.State.OPEN,
-      MetaTableLocator.getMetaRegionState(this.watcher).getState());
+      RootTableLocator.getRootRegionState(this.watcher).getState());
 
-    MetaTableLocator.deleteMetaLocation(this.watcher);
-    assertNull(MetaTableLocator.getMetaRegionState(this.watcher).getServerName());
+    RootTableLocator.deleteRootLocation(this.watcher);
+    assertNull(RootTableLocator.getRootRegionState(this.watcher).getServerName());
     assertEquals(RegionState.State.OFFLINE,
-      MetaTableLocator.getMetaRegionState(this.watcher).getState());
-    assertNull(MetaTableLocator.getMetaRegionLocation(this.watcher));
+      RootTableLocator.getRootRegionState(this.watcher).getState());
+    assertNull(RootTableLocator.getRootRegionLocation(this.watcher));
   }
 
-  @Test(expected = NotAllMetaRegionsOnlineException.class)
+  @Test(expected = NotAllRootRegionsOnlineException.class)
   public void testTimeoutWaitForMeta() throws IOException, InterruptedException {
-    MetaTableLocator.waitMetaRegionLocation(watcher, 100);
+    RootTableLocator.waitRootRegionLocation(watcher, 100);
   }
 
   /**
@@ -149,19 +149,19 @@ public class TestMetaTableLocator {
    */
   @Test
   public void testNoTimeoutWaitForMeta() throws IOException, InterruptedException, KeeperException {
-    ServerName hsa = MetaTableLocator.getMetaRegionLocation(watcher);
+    ServerName hsa = RootTableLocator.getRootRegionLocation(watcher);
     assertNull(hsa);
 
     // Now test waiting on meta location getting set.
     Thread t = new WaitOnMetaThread();
     startWaitAliveThenWaitItLives(t, 1);
     // Set a meta location.
-    MetaTableLocator.setMetaLocation(this.watcher, SN, RegionState.State.OPEN);
+    RootTableLocator.setRootLocation(this.watcher, SN, RegionState.State.OPEN);
     hsa = SN;
     // Join the thread... should exit shortly.
     t.join();
     // Now meta is available.
-    assertTrue(MetaTableLocator.getMetaRegionLocation(watcher).equals(hsa));
+    assertTrue(RootTableLocator.getRootRegionLocation(watcher).equals(hsa));
   }
 
   private void startWaitAliveThenWaitItLives(final Thread t, final int ms) {
@@ -194,11 +194,11 @@ public class TestMetaTableLocator {
     void doWaiting() throws InterruptedException {
       try {
         for (;;) {
-          if (MetaTableLocator.waitMetaRegionLocation(watcher, 10000) != null) {
+          if (RootTableLocator.waitRootRegionLocation(watcher, 10000) != null) {
             break;
           }
         }
-      } catch (NotAllMetaRegionsOnlineException e) {
+      } catch (NotAllRootRegionsOnlineException e) {
         // Ignore
       }
     }

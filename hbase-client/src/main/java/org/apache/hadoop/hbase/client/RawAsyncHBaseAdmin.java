@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.apache.hadoop.hbase.TableName.ROOT_TABLE_NAME;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.FutureUtils.unwrapCompletionException;
 
@@ -354,6 +355,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private final HashedWheelTimer retryTimer;
 
+  private final AsyncTable<AdvancedScanResultConsumer> rootTable;
+
   private final AsyncTable<AdvancedScanResultConsumer> metaTable;
 
   private final long rpcTimeoutNs;
@@ -374,6 +377,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       AsyncAdminBuilderBase builder) {
     this.connection = connection;
     this.retryTimer = retryTimer;
+    this.rootTable = connection.getTable(ROOT_TABLE_NAME);
     this.metaTable = connection.getTable(META_TABLE_NAME);
     this.rpcTimeoutNs = builder.rpcTimeoutNs;
     this.operationTimeoutNs = builder.operationTimeoutNs;
@@ -2391,32 +2395,46 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return failedFuture(new IllegalArgumentException("Passed region name can't be null"));
     }
     try {
+      TableName parentTable;
       CompletableFuture<Optional<HRegionLocation>> future;
       if (RegionInfo.isEncodedRegionName(regionNameOrEncodedRegionName)) {
         String encodedName = Bytes.toString(regionNameOrEncodedRegionName);
-        if (encodedName.length() < RegionInfo.MD5_HEX_LENGTH) {
-          // old format encodedName, should be meta region
+        if (encodedName.equals(RegionInfoBuilder.ROOT_REGIONINFO.getEncodedName())) {
           future = connection.registry.getMetaRegionLocations()
             .thenApply(locs -> Stream.of(locs.getRegionLocations())
               .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
+          parentTable = null;
+        } else if (encodedName.length() < RegionInfo.MD5_HEX_LENGTH) {
+          future = ClientMetaTableAccessor.getRegionLocationWithEncodedName(rootTable,
+            regionNameOrEncodedRegionName);
+          parentTable = ROOT_TABLE_NAME;
         } else {
           future = ClientMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
             regionNameOrEncodedRegionName);
+          parentTable = META_TABLE_NAME;
         }
       } else {
         RegionInfo regionInfo =
           CatalogFamilyFormat.parseRegionInfoFromRegionName(regionNameOrEncodedRegionName);
-        if (regionInfo.isMetaRegion()) {
+        if (regionInfo.isRootRegion()) {
           future = connection.registry.getMetaRegionLocations()
             .thenApply(locs -> Stream.of(locs.getRegionLocations())
               .filter(loc -> loc.getRegion().getReplicaId() == regionInfo.getReplicaId())
               .findFirst());
+          parentTable = null;
+          //TODO francis it won't reach here once meta is split
+        } else if (regionInfo.isMetaRegion())   {
+          parentTable = ROOT_TABLE_NAME;
+          future =
+            ClientMetaTableAccessor.getRegionLocation(rootTable, regionNameOrEncodedRegionName);
         } else {
+          parentTable = META_TABLE_NAME;
           future =
             ClientMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
         }
       }
 
+      final TableName finalParentTable = parentTable;
       CompletableFuture<HRegionLocation> returnedFuture = new CompletableFuture<>();
       addListener(future, (location, err) -> {
         if (err != null) {
@@ -2424,9 +2442,33 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           return;
         }
         if (!location.isPresent() || location.get().getRegion() == null) {
-          returnedFuture.completeExceptionally(
-            new UnknownRegionException("Invalid region name or encoded region name: " +
-              Bytes.toStringBinary(regionNameOrEncodedRegionName)));
+          if (META_TABLE_NAME.equals(finalParentTable)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(
+                "Didn't find encoded name in hbase:meta, trying hbase:root for region :" +
+                  Bytes.toStringBinary(regionNameOrEncodedRegionName));
+            }
+            CompletableFuture<Optional<HRegionLocation>> innerfuture =
+              ClientMetaTableAccessor.getRegionLocationWithEncodedName(rootTable,
+                regionNameOrEncodedRegionName);
+            addListener(innerfuture, (innerlocation, innererr) -> {
+              if (innererr != null) {
+                returnedFuture.completeExceptionally(innererr);
+                return;
+              }
+              if (!innerlocation.isPresent() || innerlocation.get().getRegion() == null) {
+                  returnedFuture.completeExceptionally(new UnknownRegionException(
+                    "Invalid region name or encoded region name: " +
+                      Bytes.toStringBinary(regionNameOrEncodedRegionName)));
+              } else {
+                returnedFuture.complete(innerlocation.get());
+              }
+            });
+          } else {
+            returnedFuture.completeExceptionally(new UnknownRegionException(
+              "Invalid region name or encoded region name: " +
+                Bytes.toStringBinary(regionNameOrEncodedRegionName)));
+          }
         } else {
           returnedFuture.complete(location.get());
         }
@@ -2446,6 +2488,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private CompletableFuture<RegionInfo> getRegionInfo(byte[] regionNameOrEncodedRegionName) {
     if (regionNameOrEncodedRegionName == null) {
       return failedFuture(new IllegalArgumentException("Passed region name can't be null"));
+    }
+
+    if (Bytes.equals(regionNameOrEncodedRegionName,
+      RegionInfoBuilder.ROOT_REGIONINFO.getRegionName()) ||
+      Bytes.equals(regionNameOrEncodedRegionName,
+        RegionInfoBuilder.ROOT_REGIONINFO.getEncodedNameAsBytes())) {
+      return CompletableFuture.completedFuture(RegionInfoBuilder.ROOT_REGIONINFO);
     }
 
     if (Bytes.equals(regionNameOrEncodedRegionName,

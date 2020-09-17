@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -118,16 +119,36 @@ public class FSTableDescriptors implements TableDescriptors {
   }
 
   @VisibleForTesting
-  public static void tryUpdateMetaTableDescriptor(Configuration conf) throws IOException {
-    tryUpdateAndGetMetaTableDescriptor(conf, CommonFSUtils.getCurrentFileSystem(conf),
+  public static List<TableDescriptor> tryUpdateCatalogTableDescriptor(Configuration conf)
+      throws IOException {
+    return tryUpdateAndGetCatalogTableDescriptor(conf, CommonFSUtils.getCurrentFileSystem(conf),
       CommonFSUtils.getRootDir(conf));
   }
 
-  public static TableDescriptor tryUpdateAndGetMetaTableDescriptor(Configuration conf,
+  public static List<TableDescriptor> tryUpdateAndGetCatalogTableDescriptor(Configuration conf,
     FileSystem fs, Path rootdir) throws IOException {
+    List<TableDescriptor> descriptors = new ArrayList<>();
+
+    // see if we already have root descriptor on fs. Write one if not.
+    try {
+      descriptors.add(getTableDescriptorFromFs(fs, rootdir, TableName.ROOT_TABLE_NAME));
+    } catch (TableInfoMissingException e) {
+      TableDescriptorBuilder builder = createRootTableDescriptorBuilder(conf);
+      TableDescriptor td = builder.build();
+      LOG.info("Creating new hbase:root table descriptor {}", td);
+      TableName tableName = td.getTableName();
+      Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
+      Path p = writeTableDescriptor(fs, td, tableDir, getTableInfoPath(fs, tableDir, true));
+      if (p == null) {
+        throw new IOException("Failed update hbase:root table descriptor");
+      }
+      LOG.info("Updated hbase:root table descriptor to {}", p);
+      descriptors.add(td);
+    }
+
     // see if we already have meta descriptor on fs. Write one if not.
     try {
-      return getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
+      descriptors.add(getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME));
     } catch (TableInfoMissingException e) {
       TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
       TableDescriptor td = builder.build();
@@ -139,8 +160,10 @@ public class FSTableDescriptors implements TableDescriptors {
         throw new IOException("Failed update hbase:meta table descriptor");
       }
       LOG.info("Updated hbase:meta table descriptor to {}", p);
-      return td;
+      descriptors.add(td);
     }
+    assert descriptors.size() == 2;
+    return descriptors;
   }
 
   private static TableDescriptorBuilder createMetaTableDescriptorBuilder(final Configuration conf)
@@ -183,6 +206,55 @@ public class FSTableDescriptors implements TableDescriptors {
         .setInMemory(true)
         .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
                 HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
+        .setBloomFilterType(BloomType.ROWCOL)
+        .build())
+      .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(
+        MultiRowMutationEndpoint.class.getName())
+        .setPriority(Coprocessor.PRIORITY_SYSTEM).build());
+  }
+
+  private static TableDescriptorBuilder createRootTableDescriptorBuilder(final Configuration conf)
+    throws IOException {
+    // TODO We used to set CacheDataInL1 for ROOT table. When we have BucketCache in file mode, now
+    // the ROOT table data goes to File mode BC only. Test how that affect the system. If too much,
+    // we have to rethink about adding back the setCacheDataInL1 for ROOT table CFs.
+    return TableDescriptorBuilder.newBuilder(TableName.ROOT_TABLE_NAME)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
+        .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+          HConstants.DEFAULT_HBASE_META_VERSIONS))
+        .setInMemory(true)
+        .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+          HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        .setBloomFilterType(BloomType.ROWCOL)
+        .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
+        .build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.TABLE_FAMILY)
+        .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+          HConstants.DEFAULT_HBASE_META_VERSIONS))
+        .setInMemory(true)
+        .setBlocksize(8 * 1024)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
+        .setBloomFilterType(BloomType.ROWCOL)
+        .build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(HConstants.REPLICATION_BARRIER_FAMILY)
+        .setMaxVersions(HConstants.ALL_VERSIONS)
+        .setInMemory(true)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
+        .setBloomFilterType(BloomType.ROWCOL)
+        .build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(HConstants.NAMESPACE_FAMILY)
+        .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+          HConstants.DEFAULT_HBASE_META_VERSIONS))
+        .setInMemory(true)
+        .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+          HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
         .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
         .setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.ROW_INDEX_V1)
         .setBloomFilterType(BloomType.ROWCOL)

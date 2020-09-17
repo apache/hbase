@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
@@ -91,7 +91,7 @@ public class TestGetClosestAtOrBefore {
     Path rootdir = UTIL.getDataTestDirOnTestFS();
     // Up flush size else we bind up when we use default catalog flush of 16k.
     TableDescriptors tds = new FSTableDescriptors(UTIL.getConfiguration());
-    FSTableDescriptors.tryUpdateMetaTableDescriptor(UTIL.getConfiguration());
+    FSTableDescriptors.tryUpdateCatalogTableDescriptor(UTIL.getConfiguration());
     TableDescriptor td = tds.get(TableName.META_TABLE_NAME);
     td = TableDescriptorBuilder.newBuilder(td).setMemStoreFlushSize(64 * 1024 * 1024).build();
     HRegion mr = HBaseTestingUtility.createRegionAndWAL(RegionInfoBuilder.FIRST_META_REGIONINFO,
@@ -108,7 +108,7 @@ public class TestGetClosestAtOrBefore {
             .setEndKey(i == last ? HConstants.EMPTY_BYTE_ARRAY : Bytes.toBytes((byte) i + interval))
             .build();
           Put put =
-            MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
+            CatalogAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
           put.setDurability(Durability.SKIP_WAL);
           LOG.info("Put {}", put);
           mr.put(put);

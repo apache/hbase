@@ -102,7 +102,7 @@ public class MetaRegionLocationCache extends ZKListener {
     List<String> znodes = null;
     while (retryCounter.shouldRetry()) {
       try {
-        znodes = watcher.getMetaReplicaNodesAndWatchChildren();
+        znodes = watcher.getRootReplicaNodesAndWatchChildren();
         break;
       } catch (KeeperException ke) {
         LOG.debug("Error populating initial meta locations", ke);
@@ -149,7 +149,7 @@ public class MetaRegionLocationCache extends ZKListener {
     try {
       byte[] data = ZKUtil.getDataAndWatch(watcher,
           watcher.getZNodePaths().getZNodeForReplica(replicaId));
-      metaRegionState = ProtobufUtil.parseMetaRegionStateFrom(data, replicaId);
+      metaRegionState = ProtobufUtil.parseRootRegionStateFrom(data, replicaId);
     } catch (DeserializationException e) {
       throw ZKUtil.convert(e);
     }

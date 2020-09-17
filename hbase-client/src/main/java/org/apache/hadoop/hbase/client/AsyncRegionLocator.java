@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+import static org.apache.hadoop.hbase.TableName.ROOT_TABLE_NAME;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.util.concurrent.CompletableFuture;
@@ -50,14 +50,14 @@ class AsyncRegionLocator {
 
   private final AsyncConnectionImpl conn;
 
-  private final AsyncMetaRegionLocator metaRegionLocator;
+  private final AsyncRootRegionLocator metaRegionLocator;
 
-  private final AsyncNonMetaRegionLocator nonMetaRegionLocator;
+  private final AsyncNonRootRegionLocator nonMetaRegionLocator;
 
   AsyncRegionLocator(AsyncConnectionImpl conn, HashedWheelTimer retryTimer) {
     this.conn = conn;
-    this.metaRegionLocator = new AsyncMetaRegionLocator(conn.registry);
-    this.nonMetaRegionLocator = new AsyncNonMetaRegionLocator(conn);
+    this.metaRegionLocator = new AsyncRootRegionLocator(conn.registry);
+    this.nonMetaRegionLocator = new AsyncNonRootRegionLocator(conn);
     this.retryTimer = retryTimer;
   }
 
@@ -81,13 +81,17 @@ class AsyncRegionLocator {
     return future;
   }
 
+  private boolean isRoot(TableName tableName) {
+    return TableName.isRootTableName(tableName);
+  }
+
   private boolean isMeta(TableName tableName) {
     return TableName.isMetaTableName(tableName);
   }
 
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
       RegionLocateType type, boolean reload, long timeoutNs) {
-    CompletableFuture<RegionLocations> future = isMeta(tableName)
+    CompletableFuture<RegionLocations> future = isRoot(tableName)
       ? metaRegionLocator.getRegionLocations(RegionReplicaUtil.DEFAULT_REPLICA_ID, reload)
       : nonMetaRegionLocator.getRegionLocations(tableName, row,
         RegionReplicaUtil.DEFAULT_REPLICA_ID, type, reload);
@@ -103,7 +107,7 @@ class AsyncRegionLocator {
     // Change it later if the meta table can have more than one regions.
     CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
     CompletableFuture<RegionLocations> locsFuture =
-      isMeta(tableName) ? metaRegionLocator.getRegionLocations(replicaId, reload)
+      isRoot(tableName) ? metaRegionLocator.getRegionLocations(replicaId, reload)
         : nonMetaRegionLocator.getRegionLocations(tableName, row, replicaId, type, reload);
     addListener(locsFuture, (locs, error) -> {
       if (error != null) {
@@ -147,7 +151,7 @@ class AsyncRegionLocator {
   }
 
   void updateCachedLocationOnError(HRegionLocation loc, Throwable exception) {
-    if (loc.getRegion().isMetaRegion()) {
+    if (loc.getRegion().isRootRegion()) {
       metaRegionLocator.updateCachedLocationOnError(loc, exception);
     } else {
       nonMetaRegionLocator.updateCachedLocationOnError(loc, exception);
@@ -156,7 +160,7 @@ class AsyncRegionLocator {
 
   void clearCache(TableName tableName) {
     LOG.debug("Clear meta cache for {}", tableName);
-    if (tableName.equals(META_TABLE_NAME)) {
+    if (tableName.equals(ROOT_TABLE_NAME)) {
       metaRegionLocator.clearCache();
     } else {
       nonMetaRegionLocator.clearCache(tableName);
@@ -175,15 +179,14 @@ class AsyncRegionLocator {
     nonMetaRegionLocator.clearCache();
   }
 
-  @VisibleForTesting
-  AsyncNonMetaRegionLocator getNonMetaRegionLocator() {
+  @VisibleForTesting AsyncNonRootRegionLocator getNonMetaRegionLocator() {
     return nonMetaRegionLocator;
   }
 
   // only used for testing whether we have cached the location for a region.
   @VisibleForTesting
   RegionLocations getRegionLocationInCache(TableName tableName, byte[] row) {
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName)) {
       return metaRegionLocator.getRegionLocationInCache();
     } else {
       return nonMetaRegionLocator.getRegionLocationInCache(tableName, row);
@@ -193,7 +196,7 @@ class AsyncRegionLocator {
   // only used for testing whether we have cached the location for a table.
   @VisibleForTesting
   int getNumberOfCachedRegionLocations(TableName tableName) {
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName)) {
       return metaRegionLocator.getNumberOfCachedRegionLocations();
     } else {
       return nonMetaRegionLocator.getNumberOfCachedRegionLocations(tableName);

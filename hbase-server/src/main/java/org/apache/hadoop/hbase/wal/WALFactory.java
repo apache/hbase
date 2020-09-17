@@ -82,6 +82,8 @@ public class WALFactory {
   public static final String WAL_PROVIDER = "hbase.wal.provider";
   static final String DEFAULT_WAL_PROVIDER = Providers.defaultProvider.name();
 
+  public static final String ROOT_WAL_PROVIDER = "hbase.wal.root_provider";
+
   public static final String META_WAL_PROVIDER = "hbase.wal.meta_provider";
 
   public static final String WAL_ENABLED = "hbase.regionserver.hlog.enabled";
@@ -89,6 +91,12 @@ public class WALFactory {
   final String factoryId;
   final Abortable abortable;
   private final WALProvider provider;
+
+  // The root updates are written to a different wal. If this
+  // regionserver holds root regions, then this ref will be non-null.
+  // lazily intialized; most RegionServers don't deal with ROOT
+  private final AtomicReference<WALProvider> rootProvider = new AtomicReference<>();
+
   // The meta updates are written to a different wal. If this
   // regionserver holds meta regions, then this ref will be non-null.
   // lazily intialized; most RegionServers don't deal with META
@@ -224,6 +232,10 @@ public class WALFactory {
    * factory.
    */
   public void close() throws IOException {
+    final WALProvider rootProvider = this.rootProvider.get();
+    if (null != rootProvider) {
+      rootProvider.close();
+    }
     final WALProvider metaProvider = this.metaProvider.get();
     if (null != metaProvider) {
       metaProvider.close();
@@ -242,6 +254,14 @@ public class WALFactory {
    */
   public void shutdown() throws IOException {
     IOException exception = null;
+    final WALProvider rootProvider = this.rootProvider.get();
+    if (null != rootProvider) {
+      try {
+        rootProvider.shutdown();
+      } catch(IOException ioe) {
+        exception = ioe;
+      }
+    }
     final WALProvider metaProvider = this.metaProvider.get();
     if (null != metaProvider) {
       try {
@@ -258,6 +278,36 @@ public class WALFactory {
 
   public List<WAL> getWALs() {
     return provider.getWALs();
+  }
+
+  @VisibleForTesting
+  WALProvider getRootProvider() throws IOException {
+    for (;;) {
+      WALProvider provider = this.rootProvider.get();
+      if (provider != null) {
+        return provider;
+      }
+      Class<? extends WALProvider> clz = null;
+      if (conf.get(ROOT_WAL_PROVIDER) == null) {
+        try {
+          clz = conf.getClass(WAL_PROVIDER, Providers.defaultProvider.clazz, WALProvider.class);
+        } catch (Throwable t) {
+          // the WAL provider should be an enum. Proceed
+        }
+      }
+      if (clz == null){
+        clz = getProviderClass(ROOT_WAL_PROVIDER, conf.get(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
+      }
+      provider = createProvider(clz);
+      provider.init(this, conf, AbstractFSWALProvider.ROOT_WAL_PROVIDER_ID, this.abortable);
+      provider.addWALActionsListener(new MetricsWAL());
+      if (rootProvider.compareAndSet(null, provider)) {
+        return provider;
+      } else {
+        // someone is ahead of us, close and try again.
+        provider.close();
+      }
+    }
   }
 
   @VisibleForTesting
@@ -294,8 +344,11 @@ public class WALFactory {
    * @param region the region which we want to get a WAL for it. Could be null.
    */
   public WAL getWAL(RegionInfo region) throws IOException {
-    // use different WAL for hbase:meta
-    if (region != null && region.isMetaRegion() &&
+    // use different WAL for hbase:root and hbase:meta
+    if (region != null && region.isRootRegion() &&
+      region.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
+      return getRootProvider().getWAL(region);
+    } else if (region != null && region.isMetaRegion() &&
       region.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
       return getMetaProvider().getWAL(region);
     } else {
@@ -489,6 +542,10 @@ public class WALFactory {
 
   public final WALProvider getWALProvider() {
     return this.provider;
+  }
+
+  public final WALProvider getRootWALProvider() {
+    return this.rootProvider.get();
   }
 
   public final WALProvider getMetaWALProvider() {
