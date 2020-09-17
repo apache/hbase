@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.security.Permission;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -84,8 +83,8 @@ public class TestZKMainServer {
       ZKUtil.checkExists(zkw, znode);
       boolean exception = false;
       try {
-        ZKMainServer.main(new String [] {"-server",
-          "localhost:" + htu.getZkCluster().getClientPort(), "delete", znode});
+        ZKMainServer.main(new String [] {"-server", htu.getZkCluster().getAddress().toString(),
+          "delete", znode});
       } catch (ExitException ee) {
         // ZKMS calls System.exit which should trigger this exception.
         exception = true;

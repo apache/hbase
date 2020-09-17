@@ -157,7 +157,7 @@ public class HbckTableInfo {
       for (HbckRegionInfo h : regionInfoMap.values()) {
         if (tableName.equals(h.getTableName())) {
           if (h.getMetaEntry() != null) {
-            regions.add(h.getMetaEntry());
+            regions.add(h.getMetaEntry().getRegionInfo());
           }
         }
       }
@@ -716,7 +716,7 @@ public class HbckTableInfo {
       }
     }
 
-    if (hbck.shouldDisplayFullReport()) {
+    if (HBaseFsck.shouldDisplayFullReport()) {
       // do full region split map dump
       hbck.getErrors().print("---- Table '"  +  this.tableName
           + "': region split map");

@@ -20,10 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -32,13 +28,15 @@ import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({MediumTests.class})
-public class TestUpdateConfiguration {
+public class TestUpdateConfiguration extends AbstractTestUpdateConfiguration {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -49,14 +47,18 @@ public class TestUpdateConfiguration {
 
   @BeforeClass
   public static void setup() throws Exception {
-    // Set master number and use default values for other options.
+    setUpConfigurationFiles(TEST_UTIL);
     StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(2).build();
     TEST_UTIL.startMiniCluster(option);
+    addResourceToRegionServerConfiguration(TEST_UTIL);
   }
+
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   public void testOnlineConfigChange() throws IOException {
-    LOG.debug("Starting the test");
+    LOG.debug("Starting the test {}", name.getMethodName());
     Admin admin = TEST_UTIL.getAdmin();
     ServerName server = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     admin.updateConfiguration(server);
@@ -64,42 +66,28 @@ public class TestUpdateConfiguration {
 
   @Test
   public void testMasterOnlineConfigChange() throws IOException {
-    LOG.debug("Starting the test");
-    Path cnfPath = FileSystems.getDefault().getPath("target/test-classes/hbase-site.xml");
-    Path cnf2Path = FileSystems.getDefault().getPath("target/test-classes/hbase-site2.xml");
-    Path cnf3Path = FileSystems.getDefault().getPath("target/test-classes/hbase-site3.xml");
-    // make a backup of hbase-site.xml
-    Files.copy(cnfPath, cnf3Path, StandardCopyOption.REPLACE_EXISTING);
-    // update hbase-site.xml by overwriting it
-    Files.copy(cnf2Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
-
+    LOG.debug("Starting the test {}", name.getMethodName());
+    replaceHBaseSiteXML();
     Admin admin = TEST_UTIL.getAdmin();
     ServerName server = TEST_UTIL.getHBaseCluster().getMaster().getServerName();
     admin.updateConfiguration(server);
     Configuration conf = TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
     int custom = conf.getInt("hbase.custom.config", 0);
     assertEquals(1000, custom);
-    // restore hbase-site.xml
-    Files.copy(cnf3Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
+    restoreHBaseSiteXML();
   }
 
   @Test
   public void testAllOnlineConfigChange() throws IOException {
-    LOG.debug("Starting the test");
+    LOG.debug("Starting the test {} ", name.getMethodName());
     Admin admin = TEST_UTIL.getAdmin();
     admin.updateConfiguration();
   }
 
   @Test
   public void testAllCustomOnlineConfigChange() throws IOException {
-    LOG.debug("Starting the test");
-    Path cnfPath = FileSystems.getDefault().getPath("target/test-classes/hbase-site.xml");
-    Path cnf2Path = FileSystems.getDefault().getPath("target/test-classes/hbase-site2.xml");
-    Path cnf3Path = FileSystems.getDefault().getPath("target/test-classes/hbase-site3.xml");
-    // make a backup of hbase-site.xml
-    Files.copy(cnfPath, cnf3Path, StandardCopyOption.REPLACE_EXISTING);
-    // update hbase-site.xml by overwriting it
-    Files.copy(cnf2Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
+    LOG.debug("Starting the test {}", name.getMethodName());
+    replaceHBaseSiteXML();
 
     Admin admin = TEST_UTIL.getAdmin();
     admin.updateConfiguration();
@@ -120,7 +108,6 @@ public class TestUpdateConfiguration {
     custom = regionServerConfiguration.getInt("hbase.custom.config", 0);
     assertEquals(1000, custom);
 
-    // restore hbase-site.xml
-    Files.copy(cnf3Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
+    restoreHBaseSiteXML();
   }
 }

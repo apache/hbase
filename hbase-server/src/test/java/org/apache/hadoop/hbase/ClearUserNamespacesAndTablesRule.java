@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
  * <pre>{@code
  *   public class TestMyClass {
  *     @ClassRule
- *     public static final MiniClusterRule miniClusterRule = new MiniClusterRule();
+ *     public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
  *
  *     private final ConnectionRule connectionRule =
  *       new ConnectionRule(miniClusterRule::createConnection);

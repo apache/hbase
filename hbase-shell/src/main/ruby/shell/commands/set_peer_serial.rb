@@ -22,7 +22,7 @@ module Shell
   module Commands
     class SetPeerSerial < Command
       def help
-        <<-EOF
+        <<~EOF
   Set the serial flag to true or false for the specified peer.
 
   If serial flag is true, then all logs of user tables (REPLICATION_SCOPE != 0) will be

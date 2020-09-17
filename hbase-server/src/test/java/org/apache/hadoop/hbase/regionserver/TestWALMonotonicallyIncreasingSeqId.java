@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -113,16 +113,17 @@ public class TestWALMonotonicallyIncreasingSeqId {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set("hbase.wal.provider", walProvider);
     conf.setBoolean("hbase.hregion.mvcc.preassign", false);
-    Path tableDir = FSUtils.getTableDir(testDir, htd.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
 
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(startKey)
         .setEndKey(stopKey).setReplicaId(replicaId).setRegionId(0).build();
     fileSystem = tableDir.getFileSystem(conf);
     final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, tableDir);
+    CommonFSUtils.setRootDir(walConf, tableDir);
     this.walConf = walConf;
     wals = new WALFactory(walConf, "log_" + replicaId);
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     HRegion region = HRegion.createHRegion(info, TEST_UTIL.getDefaultRootDirPath(), conf, htd,
       wals.getWAL(info));
     return region;

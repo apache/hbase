@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
@@ -106,10 +105,10 @@ public class UnassignRegionHandler extends EventHandler {
     LOG.info("Close {}", regionName);
     if (region.getCoprocessorHost() != null) {
       // XXX: The behavior is a bit broken. At master side there is no FAILED_CLOSE state, so if
-      // there are exception thrown from the CP, we can not report the error to master, and if here
-      // we just return without calling reportRegionStateTransition, the TRSP at master side will
-      // hang there for ever. So here if the CP throws an exception out, the only way is to abort
-      // the RS...
+      // there are exception thrown from the CP, we can not report the error to master, and if
+      // here we just return without calling reportRegionStateTransition, the TRSP at master side
+      // will hang there for ever. So here if the CP throws an exception out, the only way is to
+      // abort the RS...
       region.getCoprocessorHost().preClose(abort);
     }
     if (region.close(abort) == null) {
@@ -120,8 +119,9 @@ public class UnassignRegionHandler extends EventHandler {
       return;
     }
     rs.removeRegion(region, destination);
-    if (!rs.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.CLOSED,
-      HConstants.NO_SEQNUM, closeProcId, -1, region.getRegionInfo()))) {
+    if (!rs.reportRegionStateTransition(
+      new RegionStateTransitionContext(TransitionCode.CLOSED, HConstants.NO_SEQNUM, closeProcId,
+        -1, region.getRegionInfo()))) {
       throw new IOException("Failed to report close to master: " + regionName);
     }
     // Cache the close region procedure id after report region transition succeed.
@@ -133,6 +133,9 @@ public class UnassignRegionHandler extends EventHandler {
   @Override
   protected void handleException(Throwable t) {
     LOG.warn("Fatal error occurred while closing region {}, aborting...", encodedName, t);
+    // Clear any reference in getServer().getRegionsInTransitionInRS() otherwise can hold up
+    // regionserver abort on cluster shutdown. HBASE-23984.
+    getServer().getRegionsInTransitionInRS().remove(Bytes.toBytes(this.encodedName));
     getServer().abort("Failed to close region " + encodedName + " and can not recover", t);
   }
 

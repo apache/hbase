@@ -602,5 +602,19 @@ public class TestHeapSize  {
       assertEquals(ClassSize.ARRAY, ClassSize.OBJECT + 8);
     }
   }
-}
 
+  @Test
+  public void testAutoCalcFixedOverHead() {
+    Class[] classList = new Class[] { HFileContext.class, HRegion.class, BlockCacheKey.class,
+        HFileBlock.class, HStore.class, LruBlockCache.class };
+    for (Class cl : classList) {
+      // do estimate in advance to ensure class is loaded
+      ClassSize.estimateBase(cl, false);
+
+      long startTime = System.currentTimeMillis();
+      ClassSize.estimateBase(cl, false);
+      long endTime = System.currentTimeMillis();
+      assertTrue(endTime - startTime < 5);
+    }
+  }
+}

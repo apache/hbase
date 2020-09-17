@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.mockito.Mockito;
 
 /**
@@ -39,12 +39,18 @@ public class HConnectionTestingUtility {
    * probably not what you want.
    * @param conf configuration
    * @return ConnectionImplementation object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
    */
   public static Connection getMockedConnection(final Configuration conf)
-      throws ZooKeeperConnectionException {
+      throws IOException {
     Connection connection = Mockito.mock(Connection.class);
     Mockito.when(connection.getConfiguration()).thenReturn(conf);
+
+    // Some test cases need Mock of getTable and getScanner 
+    Table t = Mockito.mock(Table.class);
+    Mockito.when(connection.getTable(Mockito.any())).thenReturn(t);
+    ResultScanner rs = Mockito.mock(ResultScanner.class);
+    Mockito.when(t.getScanner((Scan)Mockito.any())).thenReturn(rs);
+
     return connection;
   }
 }

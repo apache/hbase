@@ -21,7 +21,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,11 +34,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.NettyRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -55,6 +50,14 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AuthenticationProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AuthenticationProtos.WhoAmIRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AuthenticationProtos.WhoAmIResponse;
 
 @RunWith(Parameterized.class)
 @Category({ SecurityTests.class, MediumTests.class })

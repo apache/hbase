@@ -133,7 +133,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
 
     TableName tableName = HConstants.ENSEMBLE_TABLE_NAME;
     Map<ServerName, List<RegionInfo>> clusterState = mockClusterServers(mockCluster_ensemble);
-    loadBalancer.balanceCluster(tableName, clusterState);
+    loadBalancer.balanceTable(tableName, clusterState);
 
     String[] tableNames = new String[] { tableName.getNameAsString() };
     String[] functionNames = loadBalancer.getCostFunctionNames();
@@ -169,17 +169,17 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     // table 1
     TableName tableName = TableName.valueOf(TABLE_NAME_1);
     Map<ServerName, List<RegionInfo>> clusterState = mockClusterServers(mockCluster_pertable_1);
-    loadBalancer.balanceCluster(tableName, clusterState);
+    loadBalancer.balanceTable(tableName, clusterState);
 
     // table 2
     tableName = TableName.valueOf(TABLE_NAME_2);
     clusterState = mockClusterServers(mockCluster_pertable_2);
-    loadBalancer.balanceCluster(tableName, clusterState);
+    loadBalancer.balanceTable(tableName, clusterState);
 
     // table hbase:namespace
     tableName = TableName.valueOf(TABLE_NAME_NAMESPACE);
     clusterState = mockClusterServers(mockCluster_pertable_namespace);
-    loadBalancer.balanceCluster(tableName, clusterState);
+    loadBalancer.balanceTable(tableName, clusterState);
 
     String[] tableNames = new String[] { TABLE_NAME_1, TABLE_NAME_2, TABLE_NAME_NAMESPACE };
     Set<String> jmxMetrics = readJmxMetricsWithRetry();

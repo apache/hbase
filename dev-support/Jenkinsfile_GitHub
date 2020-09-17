@@ -44,13 +44,13 @@ pipeline {
         ARCHIVE_PATTERN_LIST = 'TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump'
         // These tests currently have known failures. Once they burn down to 0, remove from here so that new problems will cause a failure.
         TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop,mvnsite'
-        EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${CHANGE_TARGET}/lastSuccessfulBuild/artifact/excludes"
+        EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${CHANGE_TARGET}/lastSuccessfulBuild/artifact/excludes"
 
         // a global view of paths. parallel stages can land on the same host concurrently, so each
         // stage works in its own subdirectory. there is an "output" under each of these
         // directories, which we retrieve after the build is complete.
         WORKDIR_REL_GENERAL_CHECK = 'yetus-general-check'
-        WORKDIR_REL_JDK8_HADOOP2_CHECK = 'yetus-jdk8-hadoop2-check'
+        WORKDIR_REL_JDK8_HADOOP3_CHECK = 'yetus-jdk8-hadoop3-check'
         WORKDIR_REL_JDK11_HADOOP3_CHECK = 'yetus-jdk11-hadoop3-check'
     }
 
@@ -101,7 +101,7 @@ pipeline {
                                   passwordVariable: 'GITHUB_PASSWORD',
                                   usernameVariable: 'GITHUB_USER'
                                 )]) {
-                                sh label: 'test-patch', script: '''
+                                sh label: 'test-patch', script: '''#!/bin/bash -e
                                     hostname -a ; pwd ; ls -la
                                     printenv 2>&1 | sort
                                     echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
@@ -128,7 +128,7 @@ pipeline {
                         // Jenkins pipeline jobs fill slaves on PRs without this :(
                         cleanup() {
                             script {
-                                sh label: 'Cleanup workspace', script: '''
+                                sh label: 'Cleanup workspace', script: '''#!/bin/bash -e
                                     # See YETUS-764
                                     if [ -f "${PATCHDIR}/pidfile.txt" ]; then
                                       echo "test-patch process appears to still be running: killing"
@@ -149,7 +149,7 @@ pipeline {
                         }
                     }
                 }
-                stage ('yetus jdk8 Hadoop2 checks') {
+                stage ('yetus jdk8 Hadoop3 checks') {
                     agent {
                         node {
                             label 'Hadoop'
@@ -159,7 +159,7 @@ pipeline {
                         // customized per parallel stage
                         PLUGINS = "${JDK_SPECIFIC_PLUGINS}"
                         SET_JAVA_HOME = '/usr/lib/jvm/java-8'
-                        WORKDIR_REL = "${WORKDIR_REL_JDK8_HADOOP2_CHECK}"
+                        WORKDIR_REL = "${WORKDIR_REL_JDK8_HADOOP3_CHECK}"
                         // identical for all parallel stages
                         WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
                         YETUSDIR = "${WORKDIR}/${YETUS_REL}"
@@ -187,7 +187,7 @@ pipeline {
                                 passwordVariable: 'GITHUB_PASSWORD',
                                 usernameVariable: 'GITHUB_USER'
                               )]) {
-                                sh label: 'test-patch', script: '''
+                                sh label: 'test-patch', script: '''#!/bin/bash -e
                                     hostname -a ; pwd ; ls -la
                                     printenv 2>&1 | sort
                                     echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
@@ -199,7 +199,7 @@ pipeline {
                     post {
                         always {
                             junit testResults: "${WORKDIR_REL}/${SRC_REL}/**/target/**/TEST-*.xml", allowEmptyResults: true
-                            sh label: 'zip surefire reports', script: '''
+                            sh label: 'zip surefire reports', script: '''#!/bin/bash -e
                                 if [ -d "${PATCHDIR}/archiver" ]; then
                                   count=$(find "${PATCHDIR}/archiver" -type f | wc -l)
                                   if [[ 0 -ne ${count} ]]; then
@@ -228,7 +228,7 @@ pipeline {
                         // Jenkins pipeline jobs fill slaves on PRs without this :(
                         cleanup() {
                             script {
-                                sh label: 'Cleanup workspace', script: '''
+                                sh label: 'Cleanup workspace', script: '''#!/bin/bash -e
                                     # See YETUS-764
                                     if [ -f "${PATCHDIR}/pidfile.txt" ]; then
                                       echo "test-patch process appears to still be running: killing"
@@ -259,10 +259,7 @@ pipeline {
                         // customized per parallel stage
                         PLUGINS = "${JDK_SPECIFIC_PLUGINS}"
                         SET_JAVA_HOME = '/usr/lib/jvm/java-11'
-                        HADOOP_PROFILE = '3.0'
                         WORKDIR_REL = "${WORKDIR_REL_JDK11_HADOOP3_CHECK}"
-                        // vote -0 on JDK11 unit failures until HBASE-22972
-                        TESTS_FILTER = "${TESTS_FILTER},unit"
                         // identical for all parallel stages
                         WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
                         YETUSDIR = "${WORKDIR}/${YETUS_REL}"
@@ -290,7 +287,7 @@ pipeline {
                                 passwordVariable: 'GITHUB_PASSWORD',
                                 usernameVariable: 'GITHUB_USER'
                               )]) {
-                                sh label: 'test-patch', script: '''
+                                sh label: 'test-patch', script: '''#!/bin/bash -e
                                     hostname -a ; pwd ; ls -la
                                     printenv 2>&1 | sort
                                     echo "[INFO] Launching Yetus via ${YETUS_DRIVER}"
@@ -302,7 +299,7 @@ pipeline {
                     post {
                         always {
                             junit testResults: "${WORKDIR_REL}/${SRC_REL}/**/target/**/TEST-*.xml", allowEmptyResults: true
-                            sh label: 'zip surefire reports', script: '''
+                            sh label: 'zip surefire reports', script: '''#!/bin/bash -e
                                 if [ -d "${PATCHDIR}/archiver" ]; then
                                   count=$(find "${PATCHDIR}/archiver" -type f | wc -l)
                                   if [[ 0 -ne ${count} ]]; then
@@ -331,7 +328,7 @@ pipeline {
                         // Jenkins pipeline jobs fill slaves on PRs without this :(
                         cleanup() {
                             script {
-                                sh label: 'Cleanup workspace', script: '''
+                                sh label: 'Cleanup workspace', script: '''#!/bin/bash -e
                                     # See YETUS-764
                                     if [ -f "${PATCHDIR}/pidfile.txt" ]; then
                                       echo "test-patch process appears to still be running: killing"
@@ -360,7 +357,7 @@ pipeline {
         // Jenkins pipeline jobs fill slaves on PRs without this :(
         cleanup() {
             script {
-                sh label: 'Cleanup workspace', script: '''
+                sh label: 'Cleanup workspace', script: '''#!/bin/bash -e
                     # See HADOOP-13951
                     chmod -R u+rxw "${WORKSPACE}"
                     '''

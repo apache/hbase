@@ -25,13 +25,21 @@ import static org.apache.hadoop.hbase.master.procedure.AbstractStateMachineNames
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -64,20 +72,47 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     return TableOperationType.CREATE;
   }
 
+  private static TableDescriptor writeFsLayout(Path rootDir, Configuration conf) throws IOException {
+    LOG.info("BOOTSTRAP: creating hbase:meta region");
+    FileSystem fs = rootDir.getFileSystem(conf);
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
+    if (fs.exists(tableDir) && !fs.delete(tableDir, true)) {
+      LOG.warn("Can not delete partial created meta table, continue...");
+    }
+    // Bootstrapping, make sure blockcache is off. Else, one will be
+    // created here in bootstrap and it'll need to be cleaned up. Better to
+    // not make it in first place. Turn off block caching for bootstrap.
+    // Enable after.
+    TableDescriptor metaDescriptor = FSTableDescriptors.tryUpdateAndGetMetaTableDescriptor(conf, fs,
+      rootDir, builder -> builder.setRegionReplication(
+        conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM)));
+    HRegion
+      .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, conf, metaDescriptor, null)
+      .close();
+    return metaDescriptor;
+  }
+
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, InitMetaState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     LOG.debug("Execute {}", this);
-    switch (state) {
-      case INIT_META_ASSIGN_META:
-        LOG.info("Going to assign meta");
-        addChildProcedure(env.getAssignmentManager()
-          .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
-        setNextState(InitMetaState.INIT_META_CREATE_NAMESPACES);
-        return Flow.HAS_MORE_STATE;
-      case INIT_META_CREATE_NAMESPACES:
-        LOG.info("Going to create {} and {} namespaces", DEFAULT_NAMESPACE, SYSTEM_NAMESPACE);
-        try {
+    try {
+      switch (state) {
+        case INIT_META_WRITE_FS_LAYOUT:
+          Configuration conf = env.getMasterConfiguration();
+          Path rootDir = CommonFSUtils.getRootDir(conf);
+          TableDescriptor td = writeFsLayout(rootDir, conf);
+          env.getMasterServices().getTableDescriptors().update(td, true);
+          setNextState(InitMetaState.INIT_META_ASSIGN_META);
+          return Flow.HAS_MORE_STATE;
+        case INIT_META_ASSIGN_META:
+          LOG.info("Going to assign meta");
+          addChildProcedure(env.getAssignmentManager()
+            .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
+          setNextState(InitMetaState.INIT_META_CREATE_NAMESPACES);
+          return Flow.HAS_MORE_STATE;
+        case INIT_META_CREATE_NAMESPACES:
+          LOG.info("Going to create {} and {} namespaces", DEFAULT_NAMESPACE, SYSTEM_NAMESPACE);
           createDirectory(env, DEFAULT_NAMESPACE);
           createDirectory(env, SYSTEM_NAMESPACE);
           // here the TableNamespaceManager has not been initialized yet, so we have to insert the
@@ -85,20 +120,21 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
           // namespaces when starting.
           insertNamespaceToMeta(env.getMasterServices().getConnection(), DEFAULT_NAMESPACE);
           insertNamespaceToMeta(env.getMasterServices().getConnection(), SYSTEM_NAMESPACE);
-        } catch (IOException e) {
-          if (retryCounter == null) {
-            retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
-          }
-          long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
-          LOG.warn("Failed to init default and system namespaces, suspend {}secs", backoff, e);
-          setTimeout(Math.toIntExact(backoff));
-          setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
-          skipPersistence();
-          throw new ProcedureSuspendedException();
-        }
-        return Flow.NO_MORE_STATE;
-      default:
-        throw new UnsupportedOperationException("unhandled state=" + state);
+
+          return Flow.NO_MORE_STATE;
+        default:
+          throw new UnsupportedOperationException("unhandled state=" + state);
+      }
+    } catch (IOException e) {
+      if (retryCounter == null) {
+        retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+      }
+      long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
+      LOG.warn("Failed to init meta, suspend {}secs", backoff, e);
+      setTimeout(Math.toIntExact(backoff));
+      setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+      skipPersistence();
+      throw new ProcedureSuspendedException();
     }
   }
 
@@ -116,16 +152,8 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
   }
 
   @Override
-  protected LockState acquireLock(MasterProcedureEnv env) {
-    if (env.getProcedureScheduler().waitTableExclusiveLock(this, getTableName())) {
-      return LockState.LOCK_EVENT_WAIT;
-    }
-    return LockState.LOCK_ACQUIRED;
-  }
-
-  @Override
   protected void rollbackState(MasterProcedureEnv env, InitMetaState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     throw new UnsupportedOperationException();
   }
 
@@ -141,7 +169,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   @Override
   protected InitMetaState getInitialState() {
-    return InitMetaState.INIT_META_ASSIGN_META;
+    return InitMetaState.INIT_META_WRITE_FS_LAYOUT;
   }
 
   @Override

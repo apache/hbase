@@ -29,11 +29,13 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
-import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
-import org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet;
-import org.apache.hadoop.hbase.util.ByteStringer;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.CellMessage.Cell;
+import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.CellSetMessage.CellSet;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -114,11 +116,11 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
     CellSet.Builder builder = CellSet.newBuilder();
     for (RowModel row : getRows()) {
       CellSet.Row.Builder rowBuilder = CellSet.Row.newBuilder();
-      rowBuilder.setKey(ByteStringer.wrap(row.getKey()));
+      rowBuilder.setKey(UnsafeByteOperations.unsafeWrap(row.getKey()));
       for (CellModel cell : row.getCells()) {
         Cell.Builder cellBuilder = Cell.newBuilder();
-        cellBuilder.setColumn(ByteStringer.wrap(cell.getColumn()));
-        cellBuilder.setData(ByteStringer.wrap(cell.getValue()));
+        cellBuilder.setColumn(UnsafeByteOperations.unsafeWrap(cell.getColumn()));
+        cellBuilder.setData(UnsafeByteOperations.unsafeWrap(cell.getValue()));
         if (cell.hasUserTimestamp()) {
           cellBuilder.setTimestamp(cell.getTimestamp());
         }

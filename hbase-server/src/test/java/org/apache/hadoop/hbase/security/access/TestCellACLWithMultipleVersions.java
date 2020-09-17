@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
@@ -132,18 +134,12 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
   @Before
   public void setUp() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY1);
-    familyDescriptor.setMaxVersions(4);
-    tableDescriptor.setOwner(USER_OWNER);
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY2);
-    familyDescriptor.setMaxVersions(4);
-    tableDescriptor.setOwner(USER_OWNER);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(testTable.getTableName())
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY1).setMaxVersions(4).build())
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY2).setMaxVersions(4).build())
+      .setOwner(USER_OWNER).build();
     // Create the test table (owner added to the _acl_ table)
     try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
       try (Admin admin = connection.getAdmin()) {
@@ -168,20 +164,21 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             Table t = connection.getTable(testTable.getTableName())) {
           Put p;
           // with ro ACL
-          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+          long now = System.currentTimeMillis();
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, now, ZERO);
           p.setACL(writePerms);
           t.put(p);
           // with ro ACL
-          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, now + 1, ZERO);
           p.setACL(readPerms);
           t.put(p);
-          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, now + 2, ZERO);
           p.setACL(writePerms);
           t.put(p);
-          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, now + 3, ZERO);
           p.setACL(readPerms);
           t.put(p);
-          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, now + 4, ZERO);
           p.setACL(writePerms);
           t.put(p);
         }

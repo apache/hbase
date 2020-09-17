@@ -34,6 +34,7 @@ import java.util.Set;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
@@ -64,7 +65,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * RegionServer as the new Primary RegionServer) after a region is recovered. This
  * should help provide consistent read latencies for the regions even when their
  * primary region servers die. This provides two
- * {@link org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.CandidateGenerator}
+ * {@link CandidateGenerator}
  *
  */
 @InterfaceAudience.Private
@@ -596,8 +597,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         int currentServer) {
       List<Integer> fnIndex = new ArrayList<>();
       for (ServerName sn : favoredNodes) {
-        if (cluster.serversToIndex.containsKey(sn.getHostAndPort())) {
-          fnIndex.add(cluster.serversToIndex.get(sn.getHostAndPort()));
+        if (cluster.serversToIndex.containsKey(sn.getAddress())) {
+          fnIndex.add(cluster.serversToIndex.get(sn.getAddress()));
         }
       }
       float locality = 0;
@@ -660,8 +661,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         int currentServerIndex) {
       List<Integer> fnIndex = new ArrayList<>();
       for (ServerName sn : favoredNodes) {
-        if (cluster.serversToIndex.containsKey(sn.getHostAndPort())) {
-          fnIndex.add(cluster.serversToIndex.get(sn.getHostAndPort()));
+        if (cluster.serversToIndex.containsKey(sn.getAddress())) {
+          fnIndex.add(cluster.serversToIndex.get(sn.getAddress()));
         }
       }
       int leastLoadedFN = -1;
@@ -695,8 +696,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * implementation. For the misplaced regions, we assign a bogus server to it and AM takes care.
    */
   @Override
-  public synchronized List<RegionPlan> balanceCluster(Map<ServerName,
-      List<RegionInfo>> clusterState) {
+  public synchronized List<RegionPlan> balanceTable(TableName tableName,
+      Map<ServerName, List<RegionInfo>> loadOfOneTable) {
 
     if (this.services != null) {
 
@@ -704,7 +705,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
       Map<ServerName, List<RegionInfo>> correctAssignments = new HashMap<>();
       int misplacedRegions = 0;
 
-      for (Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
+      for (Entry<ServerName, List<RegionInfo>> entry : loadOfOneTable.entrySet()) {
         ServerName current = entry.getKey();
         List<RegionInfo> regions = Lists.newArrayList();
         correctAssignments.put(current, regions);
@@ -732,13 +733,13 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         }
       }
       LOG.debug("Found misplaced regions: " + misplacedRegions + ", not on favored nodes.");
-      List<RegionPlan> regionPlansFromBalance = super.balanceCluster(correctAssignments);
+      List<RegionPlan> regionPlansFromBalance = super.balanceTable(tableName, correctAssignments);
       if (regionPlansFromBalance != null) {
         regionPlans.addAll(regionPlansFromBalance);
       }
       return regionPlans;
     } else {
-      return super.balanceCluster(clusterState);
+      return super.balanceTable(tableName, loadOfOneTable);
     }
   }
 }

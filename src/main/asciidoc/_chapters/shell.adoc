@@ -324,7 +324,7 @@ TABLE
 t
 1 row(s) in 0.1040 seconds
 
-=> #<#<Class:0x7677ce29>:0x21d377a4>
+=> ["t"]
 hbase(main):017:0> tables.map { |t| disable t ; drop  t}
 0 row(s) in 2.2510 seconds
 

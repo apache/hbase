@@ -65,7 +65,7 @@ public class TestMetaBrowser {
   public static final HBaseClassTestRule testRule =
     HBaseClassTestRule.forClass(TestMetaBrowser.class);
   @ClassRule
-  public static final MiniClusterRule miniClusterRule = new MiniClusterRule();
+  public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
 
   private final ConnectionRule connectionRule =
     new ConnectionRule(miniClusterRule::createConnection);

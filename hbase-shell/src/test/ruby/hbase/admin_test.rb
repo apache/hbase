@@ -23,7 +23,6 @@ require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
-include HBaseConstants
 
 module Hbase
   class AdminHelpersTest < Test::Unit::TestCase
@@ -63,6 +62,8 @@ module Hbase
   # rubocop:disable Metrics/ClassLength
   class AdminMethodsTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
+    include HBaseQuotasConstants
 
     def setup
       setup_hbase
@@ -104,8 +105,10 @@ module Hbase
     end
 
     define_test 'clear_deadservers should show exact row(s) count' do
-      output = capture_stdout { command(:clear_deadservers, 'test.server.com,16020,1574583397867') }
+      deadservers = []
+      output = capture_stdout { deadservers = command(:clear_deadservers, 'test.server.com,16020,1574583397867') }
       assert(output.include?('1 row(s)'))
+      assert(deadservers[0] == 'test.server.com,16020,1574583397867')
     end
 
     #-------------------------------------------------------------------------------
@@ -196,7 +199,8 @@ module Hbase
       output = capture_stdout { command(:balancer_enabled) }
       assert(output.include?('true'))
 
-      command(:balancer)
+      did_balancer_run = command(:balancer)
+      assert(did_balancer_run == true)
       output = capture_stdout { command(:balancer, 'force') }
       assert(output.include?('true'))
     end
@@ -212,27 +216,196 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test 'snapshot auto cleanup should work' do
-      command(:snapshot_cleanup_switch, true)
-      output = capture_stdout { command(:snapshot_cleanup_enabled) }
-      assert(output.include?('true'))
-
+      result = nil
       command(:snapshot_cleanup_switch, false)
-      output = capture_stdout { command(:snapshot_cleanup_enabled) }
+
+      # enable snapshot cleanup and check that the previous state is returned
+      output = capture_stdout { result = command(:snapshot_cleanup_switch, true) }
       assert(output.include?('false'))
+      assert(result == false)
+
+      # check that snapshot_cleanup_enabled returns the current state
+      output = capture_stdout { result = command(:snapshot_cleanup_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # disable snapshot cleanup and check that the previous state is returned
+      output = capture_stdout { result = command(:snapshot_cleanup_switch, false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that snapshot_cleanup_enabled returns the current state
+      output = capture_stdout { result = command(:snapshot_cleanup_enabled) }
+      assert(output.include?('false'))
+      assert(result == false)
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'balancer switch should work' do
+      result = nil
+      command(:balance_switch, false)
+
+      # enable balancer and check that the previous state is returned
+      output = capture_stdout { result = command(:balance_switch, true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # check that balancer_enabled returns the current state
+      output = capture_stdout { result = command(:balancer_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # disable balancer and check that the previous state is returned
+      output = capture_stdout { result = command(:balance_switch, false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that balancer_enabled returns the current state
+      output = capture_stdout { result = command(:balancer_enabled) }
+      assert(output.include?('false'))
+      assert(result == false)
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'normalizer switch should work' do
+      result = nil
+      command(:normalizer_switch, false)
+
+      # enable normalizer and check that the previous state is returned
+      output = capture_stdout { result = command(:normalizer_switch, true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # check that normalizer_enabled returns the current state
+      output = capture_stdout { result = command(:normalizer_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # disable normalizer and check that the previous state is returned
+      output = capture_stdout { result = command(:normalizer_switch, false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that normalizer_enabled returns the current state
+      output = capture_stdout { result = command(:normalizer_enabled) }
+      assert(output.include?('false'))
+      assert(result == false)
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'catalogjanitor switch should work' do
+      result = nil
+      command(:catalogjanitor_switch, false)
+
+      # enable catalogjanitor and check that the previous state is returned
+      output = capture_stdout { result = command(:catalogjanitor_switch, true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # check that catalogjanitor_enabled returns the current state
+      output = capture_stdout { result = command(:catalogjanitor_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # disable catalogjanitor and check that the previous state is returned
+      output = capture_stdout { result = command(:catalogjanitor_switch, false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that catalogjanitor_enabled returns the current state
+      output = capture_stdout { result = command(:catalogjanitor_enabled) }
+      assert(output.include?('false'))
+      assert(result == false)
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'cleaner_chore switch should work' do
+      result = nil
+      command(:cleaner_chore_switch, false)
+
+      # enable cleaner_chore and check that the previous state is returned
+      output = capture_stdout { result = command(:cleaner_chore_switch, true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # check that cleaner_chore_enabled returns the current state
+      output = capture_stdout { result = command(:cleaner_chore_enabled) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # disable cleaner_chore and check that the previous state is returned
+      output = capture_stdout { result = command(:cleaner_chore_switch, false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that cleaner_chore_enabled returns the current state
+      output = capture_stdout { result = command(:cleaner_chore_enabled) }
+      assert(output.include?('false'))
+      assert(result == false)
+    end
+
+    #-------------------------------------------------------------------------------
+
+    define_test 'splitormerge switch should work' do
+      # Author's note: All the other feature switches in hbase-shell only toggle one feature. This command operates on
+      # both the "SPLIT" and "MERGE", so you will note that both code paths need coverage.
+      result = nil
+      command(:splitormerge_switch, 'SPLIT', false)
+      command(:splitormerge_switch, 'MERGE', true)
+
+      # flip switch and check that the previous state is returned
+      output = capture_stdout { result = command(:splitormerge_switch, 'SPLIT', true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      output = capture_stdout { result = command(:splitormerge_switch, 'MERGE', false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      # check that splitormerge_enabled returns the current state
+      output = capture_stdout { result = command(:splitormerge_enabled, 'SPLIT') }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      output = capture_stdout { result = command(:splitormerge_enabled, 'MERGE') }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # flip switch and check that the previous state is returned
+      output = capture_stdout { result = command(:splitormerge_switch, 'SPLIT', false) }
+      assert(output.include?('true'))
+      assert(result == true)
+
+      output = capture_stdout { result = command(:splitormerge_switch, 'MERGE', true) }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      # check that splitormerge_enabled returns the current state
+      output = capture_stdout { result = command(:splitormerge_enabled, 'SPLIT') }
+      assert(output.include?('false'))
+      assert(result == false)
+
+      output = capture_stdout { result = command(:splitormerge_enabled, 'MERGE') }
+      assert(output.include?('true'))
+      assert(result == true)
     end
 
     #-------------------------------------------------------------------------------
 
     define_test 'get slowlog responses should work' do
-      output = capture_stdout { command(:get_slowlog_responses, '*', {}) }
-      assert(output.include?('Retrieved SlowLog Responses from RegionServers'))
+      output = command(:get_slowlog_responses, '*', {})
+      assert(output.nil?)
     end
 
     #-------------------------------------------------------------------------------
 
     define_test 'clear slowlog responses should work' do
       output = capture_stdout { command(:clear_slowlog_responses, nil) }
-      assert(output.include?('Cleared Slowlog responses from 1/1 RegionServers'))
+      assert(output.include?('Cleared Slowlog responses from 0/1 RegionServers'))
     end
 
     #-------------------------------------------------------------------------------
@@ -361,7 +534,7 @@ module Hbase
       assert(output.include?('2 row(s)'))
 
       assert(output.include?('QUOTAS'))
-      assert(output.include?('LIMIT => 1G'))
+      assert(output.include?('LIMIT => 1.00G'))
       assert(output.include?('VIOLATION_POLICY => NO_INSERTS'))
       assert(output.include?('TYPE => SPACE'))
       assert(output.include?('1 row(s)'))
@@ -378,24 +551,25 @@ module Hbase
       ns = @create_test_name
       command(:create_namespace, ns)
       command(:set_quota,
-              TYPE => SPACE,
+              TYPE => ::HBaseQuotasConstants::SPACE,
               LIMIT => '1G',
-              POLICY => NO_INSERTS,
+              POLICY => ::HBaseQuotasConstants::NO_INSERTS,
               NAMESPACE => ns)
       output = capture_stdout { command(:describe_namespace, ns) }
+      puts output
 
       assert(output.include?('DESCRIPTION'))
       assert(output.include?("NAME => '#{ns}'"))
 
       assert(output.include?('QUOTAS'))
-      assert(output.include?('LIMIT => 1G'))
+      assert(output.include?('LIMIT => 1.00G'))
       assert(output.include?('VIOLATION_POLICY => NO_INSERTS'))
       assert(output.include?('TYPE => SPACE'))
       assert(output.include?('1 row(s)'))
 
       command(:set_quota,
-              TYPE => SPACE,
-              LIMIT => NONE,
+              TYPE => ::HBaseQuotasConstants::SPACE,
+              LIMIT => ::HBaseConstants::NONE,
               NAMESPACE => ns)
       output = capture_stdout { command(:describe_namespace, ns) }
       assert(output.include?('0 row(s)'))
@@ -472,7 +646,11 @@ module Hbase
       admin.disable_all(@regex)
       assert(command(:is_disabled, @t1))
       assert(command(:is_disabled, @t2))
+      assert(!command(:is_enabled, @t1))
+      assert(!command(:is_enabled, @t2))
       admin.enable_all(@regex)
+      assert(!command(:is_disabled, @t1))
+      assert(!command(:is_disabled, @t2))
       assert(command(:is_enabled, @t1))
       assert(command(:is_enabled, @t2))
       admin.disable_all(@regex)
@@ -498,6 +676,8 @@ module Hbase
   # Simple administration methods tests
   class AdminCloneTableSchemaTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
+
     def setup
       setup_hbase
       # Create table test table name
@@ -581,6 +761,8 @@ module Hbase
   # Simple administration methods tests
   class AdminRegionTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
+
     def setup
       setup_hbase
       # Create test table if it does not exist
@@ -669,6 +851,7 @@ module Hbase
   # rubocop:disable Metrics/ClassLength
   class AdminAlterTableTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     def setup
       setup_hbase
@@ -760,7 +943,7 @@ module Hbase
       assert_match(/12345678/, admin.describe(@test_name))
     end
 
-    define_test "alter should be able to change coprocessor attributes" do
+    define_test "alter should be able to specify coprocessor attributes with spec string" do
       drop_test_table(@test_name)
       create_test_table(@test_name)
 
@@ -773,8 +956,34 @@ module Hbase
       assert_no_match(eval("/" + class_name + "/"), admin.describe(@test_name))
       assert_no_match(eval("/" + cp_key + "/"), admin.describe(@test_name))
       command(:alter, @test_name, 'METHOD' => 'table_att', cp_key => cp_value)
-      assert_match(eval("/" + class_name + "/"), admin.describe(@test_name))
-      assert_match(eval("/" + cp_key + "\\$(\\d+)/"), admin.describe(@test_name))
+      describe_text = admin.describe(@test_name)
+      assert_match(eval("/" + class_name + "/"), describe_text)
+      assert_match(eval("/" + cp_key + "\\$(\\d+)/"), describe_text)
+      assert_match(/arg1=1,arg2=2/, describe_text)
+    end
+
+    define_test "alter should be able to change coprocessor attributes with hash" do
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+
+      cp_key = "coprocessor"
+      class_name = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver"
+
+      # eval() is used to convert a string to regex
+      assert_no_match(eval("/" + class_name + "/"), admin.describe(@test_name))
+      assert_no_match(eval("/" + cp_key + "/"), admin.describe(@test_name))
+      command(:alter, @test_name, 'METHOD' => 'table_att', cp_key => {
+          'CLASSNAME' => class_name,
+          'PRIORITY' => 15,
+          'PROPERTIES' => {
+              'arg1' => 4,
+              'arg2' => 9,
+          },
+      })
+      describe_text = admin.describe(@test_name)
+      assert_match(eval("/" + class_name + "/"), describe_text)
+      assert_match(eval("/" + cp_key + "\\$(\\d+)/"), describe_text)
+      assert_match(/arg1=4,arg2=9/, describe_text)
     end
 
     define_test "alter should be able to remove a table attribute" do
@@ -807,6 +1016,27 @@ module Hbase
       assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
     end
 
+
+    define_test "alter should raise error trying to remove nonexistent attributes" do
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+
+      key_1 = "TestAttr1"
+      key_2 = "TestAttr2"
+      assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+
+      # first, try removing just one nonexistent attribute
+      assert_raise(ArgumentError) do
+        command(:alter, @test_name, 'METHOD' => 'table_att_unset', 'NAME' => key_1)
+      end
+
+      # second, try removing multiple nonexistent attributes
+      assert_raise(ArgumentError) do
+        command(:alter, @test_name, 'METHOD' => 'table_att_unset', 'NAME' => [ key_1, key_2 ])
+      end
+    end
+
     define_test "alter should be able to remove a table configuration" do
       drop_test_table(@test_name)
       create_test_table(@test_name)
@@ -835,6 +1065,26 @@ module Hbase
       command(:alter, @test_name, 'METHOD' => 'table_conf_unset', 'NAME' => [ key_1, key_2 ])
       assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
       assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+    end
+
+    define_test "alter should raise error trying to remove nonexistent configurations" do
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+
+      key_1 = "TestConf1"
+      key_2 = "TestConf2"
+      assert_no_match(eval("/" + key_1 + "/"), admin.describe(@test_name))
+      assert_no_match(eval("/" + key_2 + "/"), admin.describe(@test_name))
+
+      # first, try removing just one nonexistent configuration
+      assert_raise(ArgumentError) do
+        command(:alter, @test_name, 'METHOD' => 'table_conf_unset', 'NAME' => key_1)
+      end
+
+      # second, try removing multiple nonexistent configurations
+      assert_raise(ArgumentError) do
+        command(:alter, @test_name, 'METHOD' => 'table_conf_unset', 'NAME' => [ key_1, key_2 ])
+      end
     end
 
     define_test "get_table should get a real table" do

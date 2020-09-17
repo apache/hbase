@@ -289,7 +289,7 @@ public class TestOperation {
   @Test
   public void testOperationJSON() throws IOException {
     // produce a Scan Operation
-    Scan scan = new Scan(ROW);
+    Scan scan = new Scan().withStartRow(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     // get its JSON representation, and parse it
     String json = scan.toJSON();

@@ -133,16 +133,20 @@ public class TestRaceBetweenSCPAndTRSP {
     AssignmentManager am = UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     ServerName sn = am.getRegionStates().getRegionState(region).getServerName();
 
+    // Assign the CountDownLatches that get nulled in background threads else we NPE checking
+    // the static.
     ARRIVE_REGION_OPENING = new CountDownLatch(1);
+    CountDownLatch arriveRegionOpening = ARRIVE_REGION_OPENING;
     RESUME_REGION_OPENING = new CountDownLatch(1);
     ARRIVE_GET_REGIONS_ON_SERVER = new CountDownLatch(1);
+    CountDownLatch arriveGetRegionsOnServer = ARRIVE_GET_REGIONS_ON_SERVER;
     RESUME_GET_REGIONS_ON_SERVER = new CountDownLatch(1);
 
     Future<byte[]> moveFuture = am.moveAsync(new RegionPlan(region, sn, sn));
-    ARRIVE_REGION_OPENING.await();
+    arriveRegionOpening.await();
 
     UTIL.getMiniHBaseCluster().killRegionServer(sn);
-    ARRIVE_GET_REGIONS_ON_SERVER.await();
+    arriveGetRegionsOnServer.await();
     RESUME_REGION_OPENING.countDown();
 
     moveFuture.get();

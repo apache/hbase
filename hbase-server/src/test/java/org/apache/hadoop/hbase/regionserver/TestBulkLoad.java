@@ -46,10 +46,11 @@ import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -95,6 +96,7 @@ public class TestBulkLoad {
   private final byte[] randomBytes = new byte[100];
   private final byte[] family1 = Bytes.toBytes("family1");
   private final byte[] family2 = Bytes.toBytes("family2");
+  private final byte[] family3 = Bytes.toBytes("family3");
 
   @Rule
   public TestName name = new TestName();
@@ -204,6 +206,13 @@ public class TestBulkLoad {
       null);
   }
 
+  // after HBASE-24021 will throw DoNotRetryIOException, not MultipleIOException
+  @Test(expected = DoNotRetryIOException.class)
+  public void shouldCrashIfBulkLoadMultiFamiliesNotInTable() throws IOException {
+    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1, family2, family3),
+      false, null);
+  }
+
   @Test(expected = DoNotRetryIOException.class)
   public void bulkHLogShouldThrowErrorWhenFamilySpecifiedAndHFileExistsButNotInTableDescriptor()
       throws IOException {
@@ -223,6 +232,15 @@ public class TestBulkLoad {
     testRegionWithFamilies(family1).bulkLoadHFiles(list, false, null);
   }
 
+  // after HBASE-24021 will throw FileNotFoundException, not MultipleIOException
+  @Test(expected = FileNotFoundException.class)
+  public void shouldThrowErrorIfMultiHFileDoesNotExist() throws IOException {
+    List<Pair<byte[], String>> list = new ArrayList<>();
+    list.addAll(asList(withMissingHFileForFamily(family1)));
+    list.addAll(asList(withMissingHFileForFamily(family2)));
+    testRegionWithFamilies(family1, family2).bulkLoadHFiles(list, false, null);
+  }
+
   private Pair<byte[], String> withMissingHFileForFamily(byte[] family) {
     return new Pair<>(family, getNotExistFilePath());
   }
@@ -238,26 +256,19 @@ public class TestBulkLoad {
     return new Pair<>(new byte[]{0x00, 0x01, 0x02}, getNotExistFilePath());
   }
 
-
   private HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,
-                                                              byte[]... families)
-  throws IOException {
-    HRegionInfo hRegionInfo = new HRegionInfo(tableName);
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    byte[]... families) throws IOException {
+    RegionInfo hRegionInfo = RegionInfoBuilder.newBuilder(tableName).build();
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
     for (byte[] family : families) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     // TODO We need a way to do this without creating files
-    return HRegion.createHRegion(hRegionInfo,
-        new Path(testFolder.newFolder().toURI()),
-        conf,
-        tableDescriptor,
-        log);
-
+    return HRegion.createHRegion(hRegionInfo, new Path(testFolder.newFolder().toURI()), conf,
+      builder.build(), log);
   }
 
   private HRegion testRegionWithFamilies(byte[]... families) throws IOException {

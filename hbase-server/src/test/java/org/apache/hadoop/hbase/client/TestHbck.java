@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,10 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -67,9 +66,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -88,7 +85,7 @@ public class TestHbck {
   @Rule
   public TestName name = new TestName();
 
-  @Parameter
+  @SuppressWarnings("checkstyle:VisibilityModifier") @Parameter
   public boolean async;
 
   private static final TableName TABLE_NAME = TableName.valueOf(TestHbck.class.getSimpleName());
@@ -190,31 +187,30 @@ public class TestHbck {
   @Test
   public void testSetRegionStateInMeta() throws Exception {
     Hbck hbck = getHbck();
-    try(Admin admin = TEST_UTIL.getAdmin()){
-      final List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
-      final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
-      final List<RegionState> prevStates = new ArrayList<>();
-      final List<RegionState> newStates = new ArrayList<>();
-      final Map<String, Pair<RegionState, RegionState>> regionsMap = new HashMap<>();
-      regions.forEach(r -> {
-        RegionState prevState = am.getRegionStates().getRegionState(r);
-        prevStates.add(prevState);
-        RegionState newState = RegionState.createForTesting(r, RegionState.State.CLOSED);
-        newStates.add(newState);
-        regionsMap.put(r.getEncodedName(), new Pair<>(prevState, newState));
-      });
-      final List<RegionState> result = hbck.setRegionStateInMeta(newStates);
-      result.forEach(r -> {
-        RegionState prevState = regionsMap.get(r.getRegion().getEncodedName()).getFirst();
-        assertEquals(prevState.getState(), r.getState());
-      });
-      regions.forEach(r -> {
-        RegionState cachedState = am.getRegionStates().getRegionState(r.getEncodedName());
-        RegionState newState = regionsMap.get(r.getEncodedName()).getSecond();
-        assertEquals(newState.getState(), cachedState.getState());
-      });
-      hbck.setRegionStateInMeta(prevStates);
-    }
+    Admin admin = TEST_UTIL.getAdmin();
+    final List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
+    final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    Map<String, RegionState.State> prevStates = new HashMap<>();
+    Map<String, RegionState.State> newStates = new HashMap<>();
+    final Map<String, Pair<RegionState.State, RegionState.State>> regionsMap = new HashMap<>();
+    regions.forEach(r -> {
+      RegionState prevState = am.getRegionStates().getRegionState(r);
+      prevStates.put(r.getEncodedName(), prevState.getState());
+      newStates.put(r.getEncodedName(), RegionState.State.CLOSED);
+      regionsMap.put(r.getEncodedName(),
+        new Pair<>(prevState.getState(), RegionState.State.CLOSED));
+    });
+    final Map<String, RegionState.State> result = hbck.setRegionStateInMeta(newStates);
+    result.forEach((k, v) -> {
+      RegionState.State prevState = regionsMap.get(k).getFirst();
+      assertEquals(prevState, v);
+    });
+    regions.forEach(r -> {
+      RegionState cachedState = am.getRegionStates().getRegionState(r.getEncodedName());
+      RegionState.State newState = regionsMap.get(r.getEncodedName()).getSecond();
+      assertEquals(newState, cachedState.getState());
+    });
+    hbck.setRegionStateInMeta(prevStates);
   }
 
   @Test
@@ -230,6 +226,26 @@ public class TestHbck {
       List<Long> pids =
         hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
       waitOnPids(pids);
+      // Rerun the unassign. Should fail for all Regions since they already unassigned; failed
+      // unassign will manifest as all pids being -1 (ever since HBASE-24885).
+      pids =
+        hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+      waitOnPids(pids);
+      for (long pid: pids) {
+        assertEquals(Procedure.NO_PROC_ID, pid);
+      }
+      // If we pass override, then we should be able to unassign EVEN THOUGH Regions already
+      // unassigned.... makes for a mess but operator might want to do this at an extreme when
+      // doing fixup of broke cluster.
+      pids =
+        hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()),
+          true);
+      waitOnPids(pids);
+      for (long pid: pids) {
+        assertNotEquals(Procedure.NO_PROC_ID, pid);
+      }
+      // Clean-up by bypassing all the unassigns we just made so tests can continue.
+      hbck.bypassProcedure(pids, 10000, true, true);
       for (RegionInfo ri : regions) {
         RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .getRegionStates().getRegionState(ri.getEncodedName());
@@ -239,6 +255,13 @@ public class TestHbck {
       pids =
         hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
       waitOnPids(pids);
+      // Rerun the assign. Should fail for all Regions since they already assigned; failed
+      // assign will manifest as all pids being -1 (ever since HBASE-24885).
+      pids =
+        hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
+      for (long pid: pids) {
+        assertEquals(Procedure.NO_PROC_ID, pid);
+      }
       for (RegionInfo ri : regions) {
         RegionState rs = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .getRegionStates().getRegionState(ri.getEncodedName());
@@ -249,7 +272,7 @@ public class TestHbck {
       pids = hbck.assigns(
         Arrays.stream(new String[] { "a", "some rubbish name" }).collect(Collectors.toList()));
       for (long pid : pids) {
-        assertEquals(org.apache.hadoop.hbase.procedure2.Procedure.NO_PROC_ID, pid);
+        assertEquals(Procedure.NO_PROC_ID, pid);
       }
     }
   }
@@ -289,7 +312,7 @@ public class TestHbck {
 
   public static class FailingSplitAfterMetaUpdatedMasterObserver
       implements MasterCoprocessor, MasterObserver {
-    public volatile CountDownLatch latch;
+    @SuppressWarnings("checkstyle:VisibilityModifier") public volatile CountDownLatch latch;
 
     @Override
     public void start(CoprocessorEnvironment e) throws IOException {
@@ -316,7 +339,7 @@ public class TestHbck {
 
   public static class FailingMergeAfterMetaUpdatedMasterObserver
       implements MasterCoprocessor, MasterObserver {
-    public volatile CountDownLatch latch;
+    @SuppressWarnings("checkstyle:VisibilityModifier") public volatile CountDownLatch latch;
 
     @Override
     public void start(CoprocessorEnvironment e) throws IOException {

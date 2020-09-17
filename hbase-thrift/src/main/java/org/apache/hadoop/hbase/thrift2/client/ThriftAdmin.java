@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,9 +42,12 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ServerType;
+import org.apache.hadoop.hbase.client.LogEntry;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
+import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.SlowLogQueryFilter;
-import org.apache.hadoop.hbase.client.SlowLogRecord;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -67,7 +69,10 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.thrift2.ThriftUtilities;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
+import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
+import org.apache.hadoop.hbase.thrift2.generated.TServerName;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -471,9 +476,19 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public void flush(TableName tableName, byte[] columnFamily) {
+    throw new NotImplementedException("flush not supported in ThriftAdmin");
+  }
+
+  @Override
   public void flushRegion(byte[] regionName) {
     throw new NotImplementedException("flushRegion not supported in ThriftAdmin");
 
+  }
+
+  @Override
+  public void flushRegion(byte[] regionName, byte[] columnFamily) {
+    throw new NotImplementedException("flushRegion not supported in ThriftAdmin");
   }
 
   @Override
@@ -589,9 +604,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void unassign(byte[] regionName, boolean force) {
+  public void unassign(byte[] regionName) {
     throw new NotImplementedException("unassign not supported in ThriftAdmin");
-
   }
 
   @Override
@@ -626,7 +640,7 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public boolean normalize() {
+  public boolean normalize(NormalizeTableFilterParams ntfp) {
     throw new NotImplementedException("normalize not supported in ThriftAdmin");
   }
 
@@ -1163,14 +1177,29 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public List<SlowLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-      final SlowLogQueryFilter slowLogQueryFilter) {
-    throw new NotImplementedException("getSlowLogResponses not supported in ThriftAdmin");
+  public List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter) throws IOException {
+    Set<TServerName> tServerNames = ThriftUtilities.getServerNamesFromHBase(serverNames);
+    TLogQueryFilter tLogQueryFilter =
+      ThriftUtilities.getSlowLogQueryFromHBase(logQueryFilter);
+    try {
+      List<TOnlineLogRecord> tOnlineLogRecords =
+        client.getSlowLogResponses(tServerNames, tLogQueryFilter);
+      return ThriftUtilities.getSlowLogRecordsFromThrift(tOnlineLogRecords);
+    } catch (TException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
-  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames) {
-    throw new NotImplementedException("clearSlowLogsResponses not supported in ThriftAdmin");
+  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
+      throws IOException {
+    Set<TServerName> tServerNames = ThriftUtilities.getServerNamesFromHBase(serverNames);
+    try {
+      return client.clearSlowLogResponses(tServerNames);
+    } catch (TException e) {
+      throw new IOException(e);
+    }
   }
 
   @Override
@@ -1237,5 +1266,23 @@ public class ThriftAdmin implements Admin {
   public Pair<List<String>, List<TableName>>
     getConfiguredNamespacesAndTablesInRSGroup(String groupName) throws IOException {
     throw new NotImplementedException("setRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    throw new NotImplementedException("renameRSGroup not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    throw new NotImplementedException("updateRSGroupConfig not supported in ThriftAdmin");
+  }
+
+  @Override
+  public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+      ServerType serverType, int limit, Map<String, Object> filterParams)
+      throws IOException {
+    throw new NotImplementedException("getLogEntries not supported in ThriftAdmin");
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.slf4j.Logger;
@@ -29,13 +28,13 @@ import org.slf4j.LoggerFactory;
  * Action that adds high cpu load to a random regionserver for a given duration
  */
 public class AddCPULoadAction extends SudoCommandAction {
-  protected static final Logger LOG = LoggerFactory.getLogger(AddCPULoadAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AddCPULoadAction.class);
   private static final String CPU_LOAD_COMMAND =
       "seq 1 %s | xargs -I{} -n 1 -P %s timeout %s dd if=/dev/urandom of=/dev/null bs=1M " +
           "iflag=fullblock";
 
   private final long duration;
-  private long processes;
+  private final long processes;
 
   /**
    * Add high load to cpu
@@ -49,18 +48,22 @@ public class AddCPULoadAction extends SudoCommandAction {
     this.processes = processes;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   protected void localPerform() throws IOException {
-    LOG.info("Starting to execute AddCPULoadAction");
+    getLogger().info("Starting to execute AddCPULoadAction");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
     String hostname = server.getHostname();
 
     try {
       clusterManager.execSudo(hostname, timeout, getCommand());
     } catch (IOException ex){
-      //This will always happen. We use timeout to kill a continously running process
+      //This will always happen. We use timeout to kill a continuously running process
       //after the duration expires
     }
-    LOG.info("Finished to execute AddCPULoadAction");
+    getLogger().info("Finished to execute AddCPULoadAction");
   }
 
   private String getCommand(){

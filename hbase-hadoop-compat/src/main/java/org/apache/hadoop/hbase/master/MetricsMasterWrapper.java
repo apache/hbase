@@ -31,6 +31,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface MetricsMasterWrapper {
 
   /**
+   * Returns if the master is currently running and is not attempting to shutdown.
+   */
+  boolean isRunning();
+
+  /**
    * Get ServerName
    */
   String getServerName();

@@ -288,7 +288,7 @@ public class TestRegionServerReadRequestMetrics {
     }
 
     // test for scan
-    scan = new Scan(ROW2, ROW3);
+    scan = new Scan().withStartRow(ROW2).withStopRow(ROW3);
     try (ResultScanner scanner = table.getScanner(scan)) {
       resultCount = 0;
       for (Result ignore : scanner) {
@@ -365,7 +365,7 @@ public class TestRegionServerReadRequestMetrics {
     }
 
     // test for scan
-    scan = new Scan(ROW2, ROW3);
+    scan = new Scan().withStartRow(ROW2).withStopRow(ROW3);
     scan.setFilter(new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROW1)));
     try (ResultScanner scanner = table.getScanner(scan)) {
       resultCount = 0;

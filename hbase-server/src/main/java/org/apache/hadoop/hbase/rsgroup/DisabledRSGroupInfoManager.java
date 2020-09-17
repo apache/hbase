@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.rsgroup;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -113,6 +114,21 @@ class DisabledRSGroupInfoManager implements RSGroupInfoManager {
 
   @Override
   public void setRSGroup(Set<TableName> tables, String groupName) throws IOException {
+    throw new DoNotRetryIOException("RSGroup is disabled");
+  }
+
+  @Override
+  public String determineRSGroupInfoForTable(TableName tableName) {
+    return RSGroupInfo.DEFAULT_GROUP;
+  }
+
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+  }
+
+  @Override
+  public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
     throw new DoNotRetryIOException("RSGroup is disabled");
   }
 }

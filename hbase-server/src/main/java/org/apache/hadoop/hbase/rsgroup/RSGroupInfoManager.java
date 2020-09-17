@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -98,4 +99,28 @@ public interface RSGroupInfoManager {
    * Set group for tables.
    */
   void setRSGroup(Set<TableName> tables, String groupName) throws IOException;
+
+  /**
+   * Determine {@code RSGroupInfo} for the given table.
+   * @param tableName table name
+   * @return rsgroup name
+   */
+  String determineRSGroupInfoForTable(TableName tableName);
+
+  /**
+   * Rename rsgroup
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   * @throws IOException
+   */
+  void renameRSGroup(String oldName, String newName) throws IOException;
+
+  /**
+   * Update RSGroup configuration
+   * @param groupName the group name
+   * @param configuration new configuration of the group name to be set
+   * @throws IOException if a remote or network exception occurs
+   */
+  void updateRSGroupConfig(String groupName, Map<String, String> configuration) throws IOException;
+
 }

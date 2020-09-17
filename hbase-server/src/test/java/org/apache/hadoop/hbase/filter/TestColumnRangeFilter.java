@@ -226,7 +226,7 @@ public class TestColumnRangeFilter {
 
     ColumnRangeFilter filter;
     Scan scan = new Scan();
-    scan.setMaxVersions();
+    scan.readAllVersions();
     for (StringRange s : rangeMap.keySet()) {
       filter = new ColumnRangeFilter(s.getStart() == null ? null : Bytes.toBytes(s.getStart()),
           s.isStartInclusive(), s.getEnd() == null ? null : Bytes.toBytes(s.getEnd()),

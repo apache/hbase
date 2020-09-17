@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
-import java.io.IOException;
 
+import java.io.IOException;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.RowProcessor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
-import org.apache.hadoop.hbase.regionserver.RowProcessor;
 
-import com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RowProcessorProtos.ProcessRequest;
+
 /**
  * Convenience class that is used to make RowProcessorEndpoint invocations.
  * For example usage, refer TestRowProcessorEndpoint

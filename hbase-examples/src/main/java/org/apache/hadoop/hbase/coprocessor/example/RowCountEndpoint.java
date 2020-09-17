@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.hbase.coprocessor.example;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,12 +29,19 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+
+import org.apache.hadoop.hbase.shaded.coprocessor.example.generated.RowCountProtos.CountRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.example.generated.RowCountProtos.CountResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.example.generated.RowCountProtos.RowCountService;
 
 /**
  * Sample coprocessor endpoint exposing a Service interface for counting rows and key values.
@@ -48,7 +52,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </p>
  */
 @InterfaceAudience.Private
-public class RowCountEndpoint extends ExampleProtos.RowCountService implements RegionCoprocessor {
+public class RowCountEndpoint extends RowCountService implements RegionCoprocessor {
   private RegionCoprocessorEnvironment env;
 
   public RowCountEndpoint() {
@@ -66,11 +70,11 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService implements R
    * Returns a count of the rows in the region where this coprocessor is loaded.
    */
   @Override
-  public void getRowCount(RpcController controller, ExampleProtos.CountRequest request,
-                          RpcCallback<ExampleProtos.CountResponse> done) {
+  public void getRowCount(RpcController controller, CountRequest request,
+                          RpcCallback<CountResponse> done) {
     Scan scan = new Scan();
     scan.setFilter(new FirstKeyOnlyFilter());
-    ExampleProtos.CountResponse response = null;
+    CountResponse response = null;
     InternalScanner scanner = null;
     try {
       scanner = env.getRegion().getScanner(scan);
@@ -90,7 +94,7 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService implements R
         results.clear();
       } while (hasMore);
 
-      response = ExampleProtos.CountResponse.newBuilder()
+      response = CountResponse.newBuilder()
           .setCount(count).build();
     } catch (IOException ioe) {
       CoprocessorRpcUtils.setControllerException(controller, ioe);
@@ -108,9 +112,9 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService implements R
    * Returns a count of all KeyValues in the region where this coprocessor is loaded.
    */
   @Override
-  public void getKeyValueCount(RpcController controller, ExampleProtos.CountRequest request,
-                               RpcCallback<ExampleProtos.CountResponse> done) {
-    ExampleProtos.CountResponse response = null;
+  public void getKeyValueCount(RpcController controller, CountRequest request,
+                               RpcCallback<CountResponse> done) {
+    CountResponse response = null;
     InternalScanner scanner = null;
     try {
       scanner = env.getRegion().getScanner(new Scan());
@@ -125,7 +129,7 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService implements R
         results.clear();
       } while (hasMore);
 
-      response = ExampleProtos.CountResponse.newBuilder()
+      response = CountResponse.newBuilder()
           .setCount(count).build();
     } catch (IOException ioe) {
       CoprocessorRpcUtils.setControllerException(controller, ioe);

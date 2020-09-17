@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,12 +32,12 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -88,12 +88,10 @@ public class TestRecoveredEdits {
    * Create a region. Close it. Then copy into place a file to replay, one that is bigger than
    * configured flush size so we bring on lots of flushes.  Then reopen and confirm all edits
    * made it in.
-   * @throws IOException
    */
   @Test
-  public void testReplayWorksThoughLotsOfFlushing() throws
-      IOException {
-    for(MemoryCompactionPolicy policy : MemoryCompactionPolicy.values()) {
+  public void testReplayWorksThoughLotsOfFlushing() throws IOException {
+    for (MemoryCompactionPolicy policy : MemoryCompactionPolicy.values()) {
       testReplayWorksWithMemoryCompactionPolicy(policy);
     }
   }
@@ -104,36 +102,18 @@ public class TestRecoveredEdits {
     // Set it so we flush every 1M or so.  Thats a lot.
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, String.valueOf(policy).toLowerCase());
-    // The file of recovered edits has a column family of 'meta'. Also has an encoded regionname
-    // of 4823016d8fca70b25503ee07f4c6d79f which needs to match on replay.
-    final String encodedRegionName = "4823016d8fca70b25503ee07f4c6d79f";
+    // The file of recovered edits has a column family of 'meta'.
     final String columnFamily = "meta";
-    byte [][] columnFamilyAsByteArray = new byte [][] {Bytes.toBytes(columnFamily)};
-    TableDescriptor tableDescriptor =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(testName.getMethodName()))
-            .setColumnFamily(
-                ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(columnFamily)).build())
-            .build();
-    RegionInfo hri = new HRegionInfo(tableDescriptor.getTableName()) {
-      @Override
-      public synchronized String getEncodedName() {
-        return encodedRegionName;
-      }
-
-      // Cache the name because lots of lookups.
-      private byte[] encodedRegionNameAsBytes = null;
-
-      @Override
-      public synchronized byte[] getEncodedNameAsBytes() {
-        if (encodedRegionNameAsBytes == null) {
-          this.encodedRegionNameAsBytes = Bytes.toBytes(getEncodedName());
-        }
-        return this.encodedRegionNameAsBytes;
-      }
-    };
+    byte[][] columnFamilyAsByteArray = new byte[][] { Bytes.toBytes(columnFamily) };
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(testName.getMethodName())).setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(columnFamily)).build())
+      .build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    final String encodedRegionName = hri.getEncodedName();
     Path hbaseRootDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
-    Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableDescriptor.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(hbaseRootDir, tableDescriptor.getTableName());
     HRegionFileSystem hrfs =
         new HRegionFileSystem(TEST_UTIL.getConfiguration(), fs, tableDir, hri);
     if (fs.exists(hrfs.getRegionDir())) {

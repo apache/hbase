@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.Collection;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -44,9 +44,11 @@ import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
@@ -60,6 +62,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
@@ -89,10 +92,14 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   public static final Logger LOG = LoggerFactory.getLogger(AbstractRpcClient.class);
 
   protected static final HashedWheelTimer WHEEL_TIMER = new HashedWheelTimer(
-      Threads.newDaemonThreadFactory("RpcClient-timer"), 10, TimeUnit.MILLISECONDS);
+    new ThreadFactoryBuilder().setNameFormat("RpcClient-timer-pool-%d").setDaemon(true)
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+    10, TimeUnit.MILLISECONDS);
 
-  private static final ScheduledExecutorService IDLE_CONN_SWEEPER = Executors
-      .newScheduledThreadPool(1, Threads.newDaemonThreadFactory("Idle-Rpc-Conn-Sweeper"));
+  private static final ScheduledExecutorService IDLE_CONN_SWEEPER =
+    Executors.newScheduledThreadPool(1,
+      new ThreadFactoryBuilder().setNameFormat("Idle-Rpc-Conn-Sweeper-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   protected boolean running = true; // if client runs
 
@@ -277,7 +284,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
    */
   private static PoolMap.PoolType getPoolType(Configuration config) {
     return PoolMap.PoolType.valueOf(config.get(HConstants.HBASE_CLIENT_IPC_POOL_TYPE),
-      PoolMap.PoolType.RoundRobin, PoolMap.PoolType.ThreadLocal);
+      PoolMap.PoolType.RoundRobin);
   }
 
   /**
@@ -510,13 +517,6 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout)
       throws UnknownHostException {
     return new RpcChannelImplementation(this, createAddr(sn), user, rpcTimeout);
-  }
-
-  @Override
-  public RpcChannel createHedgedRpcChannel(Set<ServerName> sns, User user, int rpcTimeout)
-      throws UnknownHostException {
-    // Check HedgedRpcChannel implementation for detailed comments.
-    throw new UnsupportedOperationException("Hedging not supported for this implementation.");
   }
 
   private static class AbstractRpcChannel {

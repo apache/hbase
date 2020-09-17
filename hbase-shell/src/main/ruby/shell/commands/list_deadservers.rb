@@ -21,7 +21,7 @@ module Shell
   module Commands
     class ListDeadservers < Command
       def help
-        <<-EOF
+        <<~EOF
            List all dead region servers in hbase
            Examples:
            hbase> list_deadservers

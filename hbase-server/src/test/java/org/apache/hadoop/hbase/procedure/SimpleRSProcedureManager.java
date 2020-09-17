@@ -24,10 +24,10 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,19 +116,19 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
     }
   }
 
-  public class SimpleSubprocedurePool implements Closeable, Abortable {
+  public static class SimpleSubprocedurePool implements Closeable, Abortable {
 
     private final ExecutorCompletionService<Void> taskPool;
-    private final ThreadPoolExecutor executor;
+    private final ExecutorService executor;
     private volatile boolean aborted;
     private final List<Future<Void>> futures = new ArrayList<>();
     private final String name;
 
     public SimpleSubprocedurePool(String name, Configuration conf) {
       this.name = name;
-      executor = new ThreadPoolExecutor(1, 1, 500,
-          TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
-          Threads.newDaemonThreadFactory("rs(" + name + ")-procedure"));
+      executor = Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-procedure-pool-%d")
+          .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       taskPool = new ExecutorCompletionService<>(executor);
     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
-import static org.apache.hadoop.hbase.thrift.Constants.INFOPORT_OPTION;
-import static org.apache.hadoop.hbase.thrift.Constants.PORT_OPTION;
+import static org.apache.hadoop.hbase.thrift.TestThriftServerCmdLine.createBoundServer;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -69,17 +68,9 @@ public class TestThriftHttpServer {
 
   protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private Thread httpServerThread;
-  private volatile Exception httpServerException;
-
-  private Exception clientSideException;
-
-  private ThriftServer thriftServer;
-  int port;
-
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean("hbase.regionserver.thrift.http", true);
+    TEST_UTIL.getConfiguration().setBoolean(Constants.USE_HTTP_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
     TEST_UTIL.startMiniCluster();
     //ensure that server time increments every time we do an operation, otherwise
@@ -94,37 +85,25 @@ public class TestThriftHttpServer {
   }
 
   @Test
-  public void testExceptionThrownWhenMisConfigured() throws Exception {
+  public void testExceptionThrownWhenMisConfigured() throws IOException {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set("hbase.thrift.security.qop", "privacy");
     conf.setBoolean("hbase.thrift.ssl.enabled", false);
-
-    ThriftServer server = null;
     ExpectedException thrown = ExpectedException.none();
+    ThriftServerRunner tsr = null;
     try {
       thrown.expect(IllegalArgumentException.class);
       thrown.expectMessage("Thrift HTTP Server's QoP is privacy, " +
           "but hbase.thrift.ssl.enabled is false");
-      server = new ThriftServer(conf);
-      server.run();
+      tsr = TestThriftServerCmdLine.createBoundServer(() -> new ThriftServer(conf));
       fail("Thrift HTTP Server starts up even with wrong security configurations.");
     } catch (Exception e) {
-    }
-  }
-
-  private void startHttpServerThread(final String[] args) {
-    LOG.info("Starting HBase Thrift server with HTTP server: " + Joiner.on(" ").join(args));
-
-    httpServerException = null;
-    httpServerThread = new Thread(() -> {
-      try {
-        thriftServer.run(args);
-      } catch (Exception e) {
-        httpServerException = e;
+      LOG.info("Expected!", e);
+    } finally {
+      if (tsr != null) {
+        tsr.close();
       }
-    });
-    httpServerThread.setName(ThriftServer.class.getSimpleName() + "-httpServer");
-    httpServerThread.start();
+    }
   }
 
   @Rule
@@ -132,7 +111,6 @@ public class TestThriftHttpServer {
 
   @Test
   public void testRunThriftServerWithHeaderBufferLength() throws Exception {
-
     // Test thrift server with HTTP header length less than 64k
     try {
       runThriftServer(1024 * 63);
@@ -146,8 +124,8 @@ public class TestThriftHttpServer {
     runThriftServer(1024 * 64);
   }
 
-  protected ThriftServer createThriftServer() {
-    return new ThriftServer(TEST_UTIL.getConfiguration());
+  protected Supplier<ThriftServer> getThriftServerSupplier() {
+    return () -> new ThriftServer(TEST_UTIL.getConfiguration());
   }
 
   @Test
@@ -156,38 +134,32 @@ public class TestThriftHttpServer {
   }
 
   void runThriftServer(int customHeaderSize) throws Exception {
-    List<String> args = new ArrayList<>(3);
-    port = HBaseTestingUtility.randomFreePort();
-    args.add("-" + PORT_OPTION);
-    args.add(String.valueOf(port));
-    args.add("-" + INFOPORT_OPTION);
-    int infoPort = HBaseTestingUtility.randomFreePort();
-    args.add(String.valueOf(infoPort));
-    args.add("start");
-
-    thriftServer = createThriftServer();
-    startHttpServerThread(args.toArray(new String[args.size()]));
-
-    // wait up to 10s for the server to start
-    HBaseTestingUtility.waitForHostPort(HConstants.LOCALHOST, port);
-
-    String url = "http://" + HConstants.LOCALHOST + ":" + port;
-    try {
-      checkHttpMethods(url);
-      talkToThriftServer(url, customHeaderSize);
-    } catch (Exception ex) {
-      clientSideException = ex;
-    } finally {
-      stopHttpServerThread();
+    // Add retries in case we see stuff like connection reset
+    Exception clientSideException =  null;
+    for (int i = 0; i < 10; i++) {
+      clientSideException =  null;
+      ThriftServerRunner tsr = createBoundServer(getThriftServerSupplier());
+      String url = "http://" + HConstants.LOCALHOST + ":" + tsr.getThriftServer().listenPort;
+      try {
+        checkHttpMethods(url);
+        talkToThriftServer(url, customHeaderSize);
+        break;
+      } catch (Exception ex) {
+        clientSideException = ex;
+        LOG.info("Client-side Exception", ex);
+      } finally {
+        tsr.close();
+        tsr.join();
+        if (tsr.getRunException() != null) {
+          LOG.error("Invocation of HBase Thrift server threw exception", tsr.getRunException());
+          throw tsr.getRunException();
+        }
+      }
     }
 
     if (clientSideException != null) {
-      LOG.error("Thrift client threw an exception " + clientSideException);
-      if (clientSideException instanceof TTransportException) {
-        throw clientSideException;
-      } else {
-        throw new Exception(clientSideException);
-      }
+      LOG.error("Thrift Client", clientSideException);
+      throw clientSideException;
     }
   }
 
@@ -197,7 +169,8 @@ public class TestThriftHttpServer {
     HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
     conn.setRequestMethod("TRACE");
     conn.connect();
-    Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
+    Assert.assertEquals(conn.getResponseMessage(),
+      HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
   }
 
   protected static volatile boolean tableCreated = false;
@@ -225,17 +198,6 @@ public class TestThriftHttpServer {
       TestThriftServer.checkTableList(client);
     } finally {
       httpClient.close();
-    }
-  }
-
-  private void stopHttpServerThread() throws Exception {
-    LOG.debug("Stopping " + " Thrift HTTP server");
-    thriftServer.stop();
-    httpServerThread.join();
-    if (httpServerException != null) {
-      LOG.error("Command-line invocation of HBase Thrift server threw an " +
-          "exception", httpServerException);
-      throw new Exception(httpServerException);
     }
   }
 }

@@ -21,6 +21,7 @@ import static org.apache.hadoop.util.ToolRunner.run;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -41,24 +42,27 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
  * Test Export Snapshot Tool
  */
+@Ignore // HBASE-24493
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestExportSnapshot {
 
@@ -92,7 +96,7 @@ public class TestExportSnapshot {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     setUpBaseConf(TEST_UTIL.getConfiguration());
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.startMiniMapReduceCluster();
   }
 
@@ -114,7 +118,7 @@ public class TestExportSnapshot {
     emptySnapshotName = "emptySnaptb0-" + testName.getMethodName();
 
     // create Table
-    createTable();
+    createTable(this.tableName);
 
     // Take an empty snapshot
     admin.snapshot(emptySnapshotName, tableName);
@@ -127,7 +131,7 @@ public class TestExportSnapshot {
     admin.snapshot(snapshotName, tableName);
   }
 
-  protected void createTable() throws Exception {
+  protected void createTable(TableName tableName) throws Exception {
     SnapshotTestingUtils.createPreSplitTable(TEST_UTIL, tableName, 2, FAMILY);
   }
 
@@ -171,7 +175,7 @@ public class TestExportSnapshot {
 
   @Test
   public void testConsecutiveExports() throws Exception {
-    Path copyDir = getLocalDestinationDir();
+    Path copyDir = getLocalDestinationDir(TEST_UTIL);
     testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles, copyDir, false);
     testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles, copyDir, true);
     removeExportDir(copyDir);
@@ -253,48 +257,12 @@ public class TestExportSnapshot {
     assertEquals(filesExpected, snapshotFiles.size());
   }
 
-  /**
-   * Check that ExportSnapshot will succeed if something fails but the retry succeed.
-   */
-  @Test
-  public void testExportRetry() throws Exception {
-    Path copyDir = getLocalDestinationDir();
-    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    conf.setBoolean(ExportSnapshot.Testing.CONF_TEST_FAILURE, true);
-    conf.setInt(ExportSnapshot.Testing.CONF_TEST_FAILURE_COUNT, 2);
-    conf.setInt("mapreduce.map.maxattempts", 3);
-    testExportFileSystemState(conf, tableName, snapshotName, snapshotName, tableNumFiles,
-        TEST_UTIL.getDefaultRootDirPath(), copyDir, true, getBypassRegionPredicate(), true);
-  }
-
-  /**
-   * Check that ExportSnapshot will fail if we inject failure more times than MR will retry.
-   */
-  @Test
-  public void testExportFailure() throws Exception {
-    Path copyDir = getLocalDestinationDir();
-    FileSystem fs = FileSystem.get(copyDir.toUri(), new Configuration());
-    copyDir = copyDir.makeQualified(fs);
-    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    conf.setBoolean(ExportSnapshot.Testing.CONF_TEST_FAILURE, true);
-    conf.setInt(ExportSnapshot.Testing.CONF_TEST_FAILURE_COUNT, 4);
-    conf.setInt("mapreduce.map.maxattempts", 3);
-    testExportFileSystemState(conf, tableName, snapshotName, snapshotName, tableNumFiles,
-        TEST_UTIL.getDefaultRootDirPath(), copyDir, true, getBypassRegionPredicate(), false);
-  }
-
   /*
    * verify if the snapshot folder on file-system 1 match the one on file-system 2
    */
   protected static void verifySnapshotDir(final FileSystem fs1, final Path root1,
       final FileSystem fs2, final Path root2) throws IOException {
     assertEquals(listFiles(fs1, root1, root1), listFiles(fs2, root2, root2));
-  }
-
-  protected Set<String> verifySnapshot(final FileSystem fs, final Path rootDir,
-      final TableName tableName, final String snapshotName) throws IOException {
-    return verifySnapshot(TEST_UTIL.getConfiguration(), fs, rootDir, tableName,
-      snapshotName, getBypassRegionPredicate());
   }
 
   /*
@@ -320,7 +288,7 @@ public class TestExportSnapshot {
           snapshotFiles.add(hfile);
           if (!storeFile.hasReference()) {
             verifyNonEmptyFile(new Path(exportedArchive,
-              new Path(FSUtils.getTableDir(new Path("./"), tableName),
+              new Path(CommonFSUtils.getTableDir(new Path("./"), tableName),
                   new Path(regionInfo.getEncodedName(), new Path(family, hfile)))));
           }
         }
@@ -343,7 +311,7 @@ public class TestExportSnapshot {
     Set<String> files = new HashSet<>();
     LOG.debug("List files in {} in root {} at {}", fs, root, dir);
     int rootPrefix = root.makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString().length();
-    FileStatus[] list = FSUtils.listStatus(fs, dir);
+    FileStatus[] list = CommonFSUtils.listStatus(fs, dir);
     if (list != null) {
       for (FileStatus fstat: list) {
         LOG.debug(Objects.toString(fstat.getPath()));
@@ -364,10 +332,10 @@ public class TestExportSnapshot {
     return path;
   }
 
-  private Path getLocalDestinationDir() {
-    Path path = TEST_UTIL.getDataTestDir("local-export-" + System.currentTimeMillis());
+  static Path getLocalDestinationDir(HBaseTestingUtility htu) {
+    Path path = htu.getDataTestDir("local-export-" + System.currentTimeMillis());
     try {
-      FileSystem fs = FileSystem.getLocal(TEST_UTIL.getConfiguration());
+      FileSystem fs = FileSystem.getLocal(htu.getConfiguration());
       LOG.info("Local export destination path: " + path);
       return path.makeQualified(fs.getUri(), fs.getWorkingDirectory());
     } catch (IOException ioe) {

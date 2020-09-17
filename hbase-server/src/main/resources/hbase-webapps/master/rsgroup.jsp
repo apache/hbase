@@ -23,10 +23,10 @@
   import="java.util.Date"
   import="java.util.List"
   import="java.util.Map"
+  import="java.util.function.Function"
   import="java.util.regex.Pattern"
   import="java.util.stream.Stream"
   import="java.util.stream.Collectors"
-  import="org.apache.hadoop.hbase.HTableDescriptor"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.client.Admin"
@@ -213,11 +213,10 @@
               <th>Memstore Size</th>
             </tr>
             <%
-               String usedHeapSizeMBStr = ZEROMB;
-               String maxHeapSizeMBStr = ZEROMB;
-               String memStoreSizeMBStr = ZEROMB;
-
                for (Address server: rsGroupServers) {
+                 String usedHeapSizeMBStr = ZEROMB;
+                 String maxHeapSizeMBStr = ZEROMB;
+                 String memStoreSizeMBStr = ZEROMB;
                  ServerName serverName = serverMaping.get(server);
                  ServerMetrics sl = onlineServers.get(server);
                  if (sl != null && serverName != null) {
@@ -309,11 +308,11 @@
                 <th>Bloom Size</th>
             </tr>
             <%
-               String storeUncompressedSizeMBStr = ZEROMB;
-               String storeFileSizeMBStr = ZEROMB;
-               String totalStaticIndexSizeKBStr = ZEROKB;
-               String totalStaticBloomSizeKBStr = ZEROKB;
                for (Address server: rsGroupServers) {
+                  String storeUncompressedSizeMBStr = ZEROMB;
+                  String storeFileSizeMBStr = ZEROMB;
+                  String totalStaticIndexSizeKBStr = ZEROKB;
+                  String totalStaticBloomSizeKBStr = ZEROKB;
                   ServerName serverName = serverMaping.get(server);
                   ServerMetrics sl = onlineServers.get(server);
                   if (sl != null && serverName != null) {
@@ -439,8 +438,8 @@
         try (Admin admin = master.getConnection().getAdmin()) {
             tables = master.isInitialized() ? admin.listTableDescriptors(true) : null;
         }
-         Map<TableName, HTableDescriptor> tableDescriptors
-            = tables.stream().collect(Collectors.toMap(TableDescriptor::getTableName, p -> new HTableDescriptor(p)));
+         Map<TableName, TableDescriptor> tableDescriptors = tables.stream().collect(
+           Collectors.toMap(TableDescriptor::getTableName, Function.identity()));
     %>
          <table class="table table-striped">
          <tr>
@@ -455,8 +454,8 @@
              <th>Description</th>
          </tr>
          <% for(TableName tableName : rsGroupTables) {
-             HTableDescriptor htDesc = tableDescriptors.get(tableName);
-             if(htDesc == null) {
+             TableDescriptor desc = tableDescriptors.get(tableName);
+             if(desc == null) {
          %>
                <tr>
                  <td><%= tableName.getNamespaceAsString() %></td>
@@ -501,7 +500,7 @@
                   <td><%= failedRegionsCount %></td>
                   <td><%= splitRegionsCount %></td>
                   <td><%= otherRegionsCount %></td>
-                  <td><%= htDesc.toStringCustomizedValues() %></td>
+                  <td><%= desc.toStringCustomizedValues() %></td>
                 </tr>
            <% }
             } %>

@@ -122,6 +122,6 @@ public class SnapshotScannerHDFSAclCleaner extends BaseHFileCleanerDelegate {
   }
 
   private boolean tableExists(TableName tableName) throws IOException {
-    return master != null && MetaTableAccessor.tableExists(master.getConnection(), tableName);
+    return master != null && master.getTableDescriptors().exists(tableName);
   }
 }

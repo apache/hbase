@@ -26,9 +26,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -133,7 +134,7 @@ public class TestSnapshotManifest {
     byte[] stopKey = null;
     for (int i = 1; i <= TEST_NUM_REGIONS; i++) {
       stopKey = Bytes.toBytes(String.format("%016d", i));
-      HRegionInfo regionInfo = new HRegionInfo(TABLE_NAME, startKey, stopKey, false);
+      RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TABLE_NAME).build();
       SnapshotRegionManifest.Builder dataRegionManifestBuilder =
           SnapshotRegionManifest.newBuilder();
 
@@ -151,7 +152,7 @@ public class TestSnapshotManifest {
         dataRegionManifestBuilder.addFamilyFiles(family.build());
       }
 
-      dataRegionManifestBuilder.setRegionInfo(HRegionInfo.convert(regionInfo));
+      dataRegionManifestBuilder.setRegionInfo(ProtobufUtil.toRegionInfo(regionInfo));
       dataManifestBuilder.addRegionManifests(dataRegionManifestBuilder.build());
 
       startKey = stopKey;
@@ -167,9 +168,9 @@ public class TestSnapshotManifest {
   private Path createRegionManifest() throws IOException {
     byte[] startKey = Bytes.toBytes("AAAAAA");
     byte[] stopKey = Bytes.toBytes("BBBBBB");
-    HRegionInfo regionInfo = new HRegionInfo(TABLE_NAME, startKey, stopKey, false);
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TABLE_NAME).build();
     SnapshotRegionManifest.Builder dataRegionManifestBuilder = SnapshotRegionManifest.newBuilder();
-    dataRegionManifestBuilder.setRegionInfo(HRegionInfo.convert(regionInfo));
+    dataRegionManifestBuilder.setRegionInfo(ProtobufUtil.toRegionInfo(regionInfo));
 
     for (ColumnFamilyDescriptor hcd: builder.getTableDescriptor().getColumnFamilies()) {
       SnapshotRegionManifest.FamilyFiles.Builder family =

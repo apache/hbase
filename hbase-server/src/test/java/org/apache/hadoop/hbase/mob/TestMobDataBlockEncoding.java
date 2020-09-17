@@ -22,11 +22,13 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -52,9 +54,8 @@ public class TestMobDataBlockEncoding {
   protected final byte[] qf3 = Bytes.toBytes("qualifier3");
   private static Table table;
   private static Admin admin;
-  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor
-    columnFamilyDescriptor;
-  private static TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
+  private static ColumnFamilyDescriptor columnFamilyDescriptor;
+  private static TableDescriptor tableDescriptor;
   private static Random random = new Random();
   private static long defaultThreshold = 10;
 
@@ -70,15 +71,10 @@ public class TestMobDataBlockEncoding {
 
   public void setUp(long threshold, String TN, DataBlockEncoding encoding)
       throws Exception {
-    tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TN));
-    columnFamilyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
-    columnFamilyDescriptor.setMobEnabled(true);
-    columnFamilyDescriptor.setMobThreshold(threshold);
-    columnFamilyDescriptor.setMaxVersions(4);
-    columnFamilyDescriptor.setDataBlockEncoding(encoding);
-    tableDescriptor.setColumnFamily(columnFamilyDescriptor);
+    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true)
+      .setMobThreshold(threshold).setMaxVersions(4).setDataBlockEncoding(encoding).build();
+    tableDescriptor = TableDescriptorBuilder.newBuilder(TableName.valueOf(TN))
+      .setColumnFamily(columnFamilyDescriptor).build();
     admin = TEST_UTIL.getAdmin();
     admin.createTable(tableDescriptor);
     table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
@@ -120,7 +116,7 @@ public class TestMobDataBlockEncoding {
     admin.flush(TableName.valueOf(TN));
 
     Scan scan = new Scan();
-    scan.setMaxVersions(4);
+    scan.readVersions(4);
     MobTestUtil.assertCellsValue(table, scan, value, 3);
   }
 }

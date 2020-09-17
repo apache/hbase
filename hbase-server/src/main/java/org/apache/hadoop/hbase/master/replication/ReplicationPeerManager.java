@@ -35,8 +35,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -50,9 +52,11 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -81,11 +85,17 @@ public class ReplicationPeerManager {
   // Only allow to add one sync replication peer concurrently
   private final Semaphore syncReplicationPeerLock = new Semaphore(1);
 
+  private final String clusterId;
+
+  private final Configuration conf;
+
   ReplicationPeerManager(ReplicationPeerStorage peerStorage, ReplicationQueueStorage queueStorage,
-      ConcurrentMap<String, ReplicationPeerDescription> peers) {
+    ConcurrentMap<String, ReplicationPeerDescription> peers, Configuration conf, String clusterId) {
     this.peerStorage = peerStorage;
     this.queueStorage = queueStorage;
     this.peers = peers;
+    this.conf = conf;
+    this.clusterId = clusterId;
   }
 
   private void checkQueuesDeleted(String peerId)
@@ -223,6 +233,7 @@ public class ReplicationPeerManager {
       // this should be a retry, just return
       return;
     }
+    peerConfig = ReplicationPeerConfigUtil.addBasePeerConfigsIfNotPresent(conf, peerConfig);
     ReplicationPeerConfig copiedPeerConfig = ReplicationPeerConfig.newBuilder(peerConfig).build();
     SyncReplicationState syncReplicationState =
       copiedPeerConfig.isSyncReplication() ? SyncReplicationState.DOWNGRADE_ACTIVE
@@ -268,8 +279,6 @@ public class ReplicationPeerManager {
     ReplicationPeerConfigBuilder newPeerConfigBuilder =
       ReplicationPeerConfig.newBuilder(peerConfig);
     // we need to use the new conf to overwrite the old one.
-    newPeerConfigBuilder.putAllConfiguration(oldPeerConfig.getConfiguration());
-    newPeerConfigBuilder.putAllConfiguration(peerConfig.getConfiguration());
     newPeerConfigBuilder.putAllConfiguration(oldPeerConfig.getConfiguration());
     newPeerConfigBuilder.putAllConfiguration(peerConfig.getConfiguration());
     ReplicationPeerConfig newPeerConfig = newPeerConfigBuilder.build();
@@ -337,11 +346,10 @@ public class ReplicationPeerManager {
 
   private void checkPeerConfig(ReplicationPeerConfig peerConfig) throws DoNotRetryIOException {
     String replicationEndpointImpl = peerConfig.getReplicationEndpointImpl();
-    boolean checkClusterKey = true;
+    ReplicationEndpoint endpoint = null;
     if (!StringUtils.isBlank(replicationEndpointImpl)) {
-      // try creating a instance
-      ReplicationEndpoint endpoint;
       try {
+        // try creating a instance
         endpoint = Class.forName(replicationEndpointImpl)
           .asSubclass(ReplicationEndpoint.class).getDeclaredConstructor().newInstance();
       } catch (Throwable e) {
@@ -349,13 +357,14 @@ public class ReplicationPeerManager {
           "Can not instantiate configured replication endpoint class=" + replicationEndpointImpl,
           e);
       }
-      // do not check cluster key if we are not HBaseInterClusterReplicationEndpoint
-      if (!(endpoint instanceof HBaseInterClusterReplicationEndpoint)) {
-        checkClusterKey = false;
-      }
     }
-    if (checkClusterKey) {
+    // Default is HBaseInterClusterReplicationEndpoint and only it need to check cluster key
+    if (endpoint == null || endpoint instanceof HBaseInterClusterReplicationEndpoint) {
       checkClusterKey(peerConfig.getClusterKey());
+    }
+    // Default is HBaseInterClusterReplicationEndpoint which cannot replicate to same cluster
+    if (endpoint == null || !endpoint.canReplicateToSameCluster()) {
+      checkClusterId(peerConfig.getClusterKey());
     }
 
     if (peerConfig.replicateAllUserTables()) {
@@ -501,6 +510,25 @@ public class ReplicationPeerManager {
     }
   }
 
+  private void checkClusterId(String clusterKey) throws DoNotRetryIOException {
+    String peerClusterId = "";
+    try {
+      // Create the peer cluster config for get peer cluster id
+      Configuration peerConf = HBaseConfiguration.createClusterConf(conf, clusterKey);
+      try (ZKWatcher zkWatcher = new ZKWatcher(peerConf, this + "check-peer-cluster-id", null)) {
+        peerClusterId = ZKClusterId.readClusterIdZNode(zkWatcher);
+      }
+    } catch (IOException | KeeperException e) {
+      throw new DoNotRetryIOException("Can't get peerClusterId for clusterKey=" + clusterKey, e);
+    }
+    // In rare case, zookeeper setting may be messed up. That leads to the incorrect
+    // peerClusterId value, which is the same as the source clusterId
+    if (clusterId.equals(peerClusterId)) {
+      throw new DoNotRetryIOException("Invalid cluster key: " + clusterKey
+        + ", should not replicate to itself for HBaseInterClusterReplicationEndpoint");
+    }
+  }
+
   public List<String> getSerialPeerIdsBelongsTo(TableName tableName) {
     return peers.values().stream().filter(p -> p.getPeerConfig().isSerial())
       .filter(p -> p.getPeerConfig().needToReplicate(tableName)).map(p -> p.getPeerId())
@@ -511,19 +539,22 @@ public class ReplicationPeerManager {
     return queueStorage;
   }
 
-  public static ReplicationPeerManager create(ZKWatcher zk, Configuration conf)
+  public static ReplicationPeerManager create(ZKWatcher zk, Configuration conf, String clusterId)
       throws ReplicationException {
     ReplicationPeerStorage peerStorage =
       ReplicationStorageFactory.getReplicationPeerStorage(zk, conf);
     ConcurrentMap<String, ReplicationPeerDescription> peers = new ConcurrentHashMap<>();
     for (String peerId : peerStorage.listPeerIds()) {
       ReplicationPeerConfig peerConfig = peerStorage.getPeerConfig(peerId);
+
+      peerConfig = ReplicationPeerConfigUtil.addBasePeerConfigsIfNotPresent(conf, peerConfig);
+      peerStorage.updatePeerConfig(peerId, peerConfig);
       boolean enabled = peerStorage.isPeerEnabled(peerId);
       SyncReplicationState state = peerStorage.getPeerSyncReplicationState(peerId);
       peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, peerConfig, state));
     }
     return new ReplicationPeerManager(peerStorage,
-      ReplicationStorageFactory.getReplicationQueueStorage(zk, conf), peers);
+      ReplicationStorageFactory.getReplicationQueueStorage(zk, conf), peers, conf, clusterId);
   }
 
   /**

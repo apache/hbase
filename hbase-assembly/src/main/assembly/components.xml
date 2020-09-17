@@ -106,6 +106,16 @@
         <include>*.dylib</include>
       </includes>
     </fileSet>
+    <!-- includes for native client -->
+    <fileSet>
+      <directory>${project.basedir}/../hbase-common/target/generated-sources/native</directory>
+      <outputDirectory>include</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+      <includes>
+          <include>**/*.h</include>
+      </includes>
+    </fileSet>
     <!-- This is only necessary until maven fixes the intra-project dependency bug
       in maven 3.0. Until then, we have to include the test jars for sub-projects. When
       fixed, the below dependencySet stuff is sufficient for pulling in the test jars as
@@ -149,6 +159,14 @@
       <outputDirectory>lib</outputDirectory>
       <includes>
         <include>${mapreduce.test.jar}</include>
+      </includes>
+      <fileMode>0644</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>${project.basedir}/../hbase-asyncfs/target/</directory>
+      <outputDirectory>lib</outputDirectory>
+      <includes>
+        <include>${asyncfs.test.jar}</include>
       </includes>
       <fileMode>0644</fileMode>
     </fileSet>

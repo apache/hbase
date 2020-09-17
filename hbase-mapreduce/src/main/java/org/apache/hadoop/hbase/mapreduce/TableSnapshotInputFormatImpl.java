@@ -26,16 +26,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution.HostAndWeight;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.ClientSideRegionScanner;
 import org.apache.hadoop.hbase.client.IsolationLevel;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -45,7 +44,7 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.Writable;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,6 +52,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos.TableSnapshotRegionSplit;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -102,12 +102,18 @@ public class TableSnapshotInputFormatImpl {
   public static final boolean SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT = true;
 
   /**
+   * In some scenario, scan limited rows on each InputSplit for sampling data extraction
+   */
+  public static final String SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT =
+      "hbase.TableSnapshotInputFormat.row.limit.per.inputsplit";
+
+  /**
    * Implementation class for InputSplit logic common between mapred and mapreduce.
    */
   public static class InputSplit implements Writable {
 
     private TableDescriptor htd;
-    private HRegionInfo regionInfo;
+    private RegionInfo regionInfo;
     private String[] locations;
     private String scan;
     private String restoreDir;
@@ -115,7 +121,7 @@ public class TableSnapshotInputFormatImpl {
     // constructor for mapreduce framework / Writable
     public InputSplit() {}
 
-    public InputSplit(TableDescriptor htd, HRegionInfo regionInfo, List<String> locations,
+    public InputSplit(TableDescriptor htd, RegionInfo regionInfo, List<String> locations,
         Scan scan, Path restoreDir) {
       this.htd = htd;
       this.regionInfo = regionInfo;
@@ -158,7 +164,7 @@ public class TableSnapshotInputFormatImpl {
       return htd;
     }
 
-    public HRegionInfo getRegionInfo() {
+    public RegionInfo getRegionInfo() {
       return regionInfo;
     }
 
@@ -168,7 +174,7 @@ public class TableSnapshotInputFormatImpl {
     public void write(DataOutput out) throws IOException {
       TableSnapshotRegionSplit.Builder builder = TableSnapshotRegionSplit.newBuilder()
           .setTable(ProtobufUtil.toTableSchema(htd))
-          .setRegion(HRegionInfo.convert(regionInfo));
+          .setRegion(ProtobufUtil.toRegionInfo(regionInfo));
 
       for (String location : locations) {
         builder.addLocations(location);
@@ -193,9 +199,9 @@ public class TableSnapshotInputFormatImpl {
       int len = in.readInt();
       byte[] buf = new byte[len];
       in.readFully(buf);
-      TableSnapshotRegionSplit split = TableSnapshotRegionSplit.PARSER.parseFrom(buf);
+      TableSnapshotRegionSplit split = TableSnapshotRegionSplit.parser().parseFrom(buf);
       this.htd = ProtobufUtil.toTableDescriptor(split.getTable());
-      this.regionInfo = HRegionInfo.convert(split.getRegion());
+      this.regionInfo = ProtobufUtil.toRegionInfo(split.getRegion());
       List<String> locationsList = split.getLocationsList();
       this.locations = locationsList.toArray(new String[locationsList.size()]);
 
@@ -213,6 +219,8 @@ public class TableSnapshotInputFormatImpl {
     private Result result = null;
     private ImmutableBytesWritable row = null;
     private ClientSideRegionScanner scanner;
+    private int numOfCompleteRows = 0;
+    private int rowLimitPerSplit;
 
     public ClientSideRegionScanner getScanner() {
       return scanner;
@@ -221,9 +229,10 @@ public class TableSnapshotInputFormatImpl {
     public void initialize(InputSplit split, Configuration conf) throws IOException {
       this.scan = TableMapReduceUtil.convertStringToScan(split.getScan());
       this.split = split;
+      this.rowLimitPerSplit = conf.getInt(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT, 0);
       TableDescriptor htd = split.htd;
-      HRegionInfo hri = this.split.getRegionInfo();
-      FileSystem fs = FSUtils.getCurrentFileSystem(conf);
+      RegionInfo hri = this.split.getRegionInfo();
+      FileSystem fs = CommonFSUtils.getCurrentFileSystem(conf);
 
 
       // region is immutable, this should be fine,
@@ -244,6 +253,9 @@ public class TableSnapshotInputFormatImpl {
         return false;
       }
 
+      if (rowLimitPerSplit > 0 && ++this.numOfCompleteRows > rowLimitPerSplit) {
+        return false;
+      }
       if (this.row == null) {
         this.row = new ImmutableBytesWritable();
       }
@@ -277,12 +289,12 @@ public class TableSnapshotInputFormatImpl {
   public static List<InputSplit> getSplits(Configuration conf) throws IOException {
     String snapshotName = getSnapshotName(conf);
 
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
     SnapshotManifest manifest = getSnapshotManifest(conf, snapshotName, rootDir, fs);
 
-    List<HRegionInfo> regionInfos = getRegionInfosFromManifest(manifest);
+    List<RegionInfo> regionInfos = getRegionInfosFromManifest(manifest);
 
     // TODO: mapred does not support scan as input API. Work around for now.
     Scan scan = extractScanFromConf(conf);
@@ -296,10 +308,11 @@ public class TableSnapshotInputFormatImpl {
     return getSplits(scan, manifest, regionInfos, restoreDir, conf, splitAlgo, numSplits);
   }
 
-  public static RegionSplitter.SplitAlgorithm getSplitAlgo(Configuration conf) throws IOException{
+  public static RegionSplitter.SplitAlgorithm getSplitAlgo(Configuration conf) throws IOException {
     String splitAlgoClassName = conf.get(SPLIT_ALGO);
-    if (splitAlgoClassName == null)
+    if (splitAlgoClassName == null) {
       return null;
+    }
     try {
       return Class.forName(splitAlgoClassName).asSubclass(RegionSplitter.SplitAlgorithm.class)
           .getDeclaredConstructor().newInstance();
@@ -310,16 +323,16 @@ public class TableSnapshotInputFormatImpl {
   }
 
 
-  public static List<HRegionInfo> getRegionInfosFromManifest(SnapshotManifest manifest) {
+  public static List<RegionInfo> getRegionInfosFromManifest(SnapshotManifest manifest) {
     List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
     if (regionManifests == null) {
       throw new IllegalArgumentException("Snapshot seems empty");
     }
 
-    List<HRegionInfo> regionInfos = Lists.newArrayListWithCapacity(regionManifests.size());
+    List<RegionInfo> regionInfos = Lists.newArrayListWithCapacity(regionManifests.size());
 
     for (SnapshotRegionManifest regionManifest : regionManifests) {
-      HRegionInfo hri = HRegionInfo.convert(regionManifest.getRegionInfo());
+      RegionInfo hri = ProtobufUtil.toRegionInfo(regionManifest.getRegionInfo());
       if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
         continue;
       }
@@ -353,23 +366,23 @@ public class TableSnapshotInputFormatImpl {
   }
 
   public static List<InputSplit> getSplits(Scan scan, SnapshotManifest manifest,
-      List<HRegionInfo> regionManifests, Path restoreDir, Configuration conf) throws IOException {
+      List<RegionInfo> regionManifests, Path restoreDir, Configuration conf) throws IOException {
     return getSplits(scan, manifest, regionManifests, restoreDir, conf, null, 1);
   }
 
   public static List<InputSplit> getSplits(Scan scan, SnapshotManifest manifest,
-      List<HRegionInfo> regionManifests, Path restoreDir,
+      List<RegionInfo> regionManifests, Path restoreDir,
       Configuration conf, RegionSplitter.SplitAlgorithm sa, int numSplits) throws IOException {
     // load table descriptor
     TableDescriptor htd = manifest.getTableDescriptor();
 
-    Path tableDir = FSUtils.getTableDir(restoreDir, htd.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(restoreDir, htd.getTableName());
 
     boolean localityEnabled = conf.getBoolean(SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY,
                                               SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT);
 
     List<InputSplit> splits = new ArrayList<>();
-    for (HRegionInfo hri : regionManifests) {
+    for (RegionInfo hri : regionManifests) {
       // load region descriptor
 
       if (numSplits > 1) {
@@ -416,11 +429,11 @@ public class TableSnapshotInputFormatImpl {
    * only when localityEnabled is true.
    */
   private static List<String> calculateLocationsForInputSplit(Configuration conf,
-      TableDescriptor htd, HRegionInfo hri, Path tableDir, boolean localityEnabled)
-      throws IOException {
+    TableDescriptor htd, RegionInfo hri, Path tableDir, boolean localityEnabled)
+    throws IOException {
     if (localityEnabled) { // care block locality
       return getBestLocations(conf,
-                              HRegion.computeHDFSBlocksDistribution(conf, htd, hri, tableDir));
+        HRegion.computeHDFSBlocksDistribution(conf, htd, hri, tableDir));
     } else { // do not care block locality
       return null;
     }
@@ -511,9 +524,9 @@ public class TableSnapshotInputFormatImpl {
    * Configures the job to use TableSnapshotInputFormat to read from a snapshot.
    * @param conf the job to configure
    * @param snapshotName the name of the snapshot to read from
-   * @param restoreDir a temporary directory to restore the snapshot into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * After the job is finished, restoreDir can be deleted.
+   * @param restoreDir a temporary directory to restore the snapshot into. Current user should have
+   *          write permissions to this directory, and this should not be a subdirectory of rootdir.
+   *          After the job is finished, restoreDir can be deleted.
    * @param numSplitsPerRegion how many input splits to generate per one region
    * @param splitAlgo SplitAlgorithm to be used when generating InputSplits
    * @throws IOException if an error occurs
@@ -533,7 +546,7 @@ public class TableSnapshotInputFormatImpl {
       conf.set(SPLIT_ALGO, splitAlgo.getClass().getName());
     }
     conf.setInt(NUM_SPLITS_PER_REGION, numSplitsPerRegion);
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
     restoreDir = new Path(restoreDir, UUID.randomUUID().toString());

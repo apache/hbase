@@ -122,17 +122,11 @@ public class TestRemoteTable {
       admin.deleteTable(TABLE);
     }
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_1)
-        .setMaxVersions(3));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_2)
-        .setMaxVersions(3));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_3)
-        .setMaxVersions(3));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_1).setMaxVersions(3).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_2).setMaxVersions(3).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_3).setMaxVersions(3).build())
+      .build();
     admin.createTable(tableDescriptor);
     try (Table table = TEST_UTIL.getConnection().getTable(TABLE)) {
       Put put = new Put(ROW_1);
@@ -578,6 +572,49 @@ public class TestRemoteTable {
     assertEquals("value1.1", response.getHeader("header1"));
     response.setBody(Bytes.toBytes("body"));
     assertTrue(response.hasBody());
+  }
+
+  /**
+   * Tests scanner with limitation
+   * limit the number of rows each scanner scan fetch at life time
+   * The number of rows returned should be equal to the limit
+   * @throws Exception
+   */
+  @Test
+  public void testLimitedScan() throws Exception {
+    int numTrials = 100;
+    int limit = 60;
+
+    // Truncate the test table for inserting test scenarios rows keys
+    TEST_UTIL.getAdmin().disableTable(TABLE);
+    TEST_UTIL.getAdmin().truncateTable(TABLE, false);
+    String row = "testrow";
+
+    try (Table table = TEST_UTIL.getConnection().getTable(TABLE)) {
+      List<Put> puts = new ArrayList<>();
+      Put put = null;
+      for (int i = 1; i <= numTrials; i++) {
+        put = new Put(Bytes.toBytes(row + i));
+        put.addColumn(COLUMN_1, QUALIFIER_1, TS_2, Bytes.toBytes("testvalue" + i));
+        puts.add(put);
+      }
+      table.put(puts);
+    }
+
+    remoteTable =
+      new RemoteHTable(new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort())),
+        TEST_UTIL.getConfiguration(), TABLE.toBytes());
+
+    Scan scan = new Scan();
+    scan.setLimit(limit);
+    ResultScanner scanner = remoteTable.getScanner(scan);
+    Iterator<Result> resultIterator = scanner.iterator();
+    int counter = 0;
+    while (resultIterator.hasNext()) {
+      resultIterator.next();
+      counter++;
+    }
+    assertEquals(limit, counter);
   }
 
   /**

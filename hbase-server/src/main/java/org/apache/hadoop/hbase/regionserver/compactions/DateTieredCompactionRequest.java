@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -28,18 +29,27 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class DateTieredCompactionRequest extends CompactionRequestImpl {
   private List<Long> boundaries;
+  /** window start boundary to window storage policy map **/
+  private Map<Long, String> boundariesPolicies;
 
-  public DateTieredCompactionRequest(Collection<HStoreFile> files, List<Long> boundaryList) {
+  public DateTieredCompactionRequest(Collection<HStoreFile> files, List<Long> boundaryList,
+      Map<Long, String> boundaryPolicyMap) {
     super(files);
     boundaries = boundaryList;
+    boundariesPolicies = boundaryPolicyMap;
   }
 
   public List<Long> getBoundaries() {
     return boundaries;
   }
 
+  public Map<Long, String> getBoundariesPolicies() {
+    return boundariesPolicies;
+  }
+
   @Override
   public String toString() {
-    return super.toString() + " boundaries=" + Arrays.toString(boundaries.toArray());
+    return super.toString() + " boundaries=" + Arrays.toString(boundaries.toArray())
+      + " boundariesPolicies="+boundariesPolicies.toString();
   }
 }

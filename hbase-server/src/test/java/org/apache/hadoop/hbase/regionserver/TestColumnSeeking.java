@@ -30,7 +30,6 @@ import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -38,7 +37,10 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -70,15 +72,11 @@ public class TestColumnSeeking {
     byte[] familyBytes = Bytes.toBytes("Family");
     TableName table = TableName.valueOf(name.getMethodName());
 
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyBytes)
-        .setMaxVersions(1000);
-    familyDescriptor.setMaxVersions(3);
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(table);
-
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    HRegionInfo info = new HRegionInfo(table, null, null, false);
+    ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(familyBytes)
+      .setMaxVersions(1000).setMaxVersions(3).build();
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(table).setColumnFamily(familyDescriptor).build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(table).build();
     // Set this so that the archiver writes to the temp dir as well.
     HRegion region = TEST_UTIL.createLocalHRegion(info, tableDescriptor);
     try {
@@ -149,7 +147,7 @@ public class TestColumnSeeking {
       for (int i = 0; i < numberOfTests + 1; i++) {
         Collection<KeyValue> kvSet;
         Scan scan = new Scan();
-        scan.setMaxVersions();
+        scan.readAllVersions();
         if (i < numberOfTests) {
           if (columnLists[i].isEmpty()) continue; // HBASE-7700
           kvSet = kvMaps[i].values();
@@ -194,7 +192,7 @@ public class TestColumnSeeking {
         .setMaxVersions(3).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
-    HRegionInfo info = new HRegionInfo(table, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(table).build();
     HRegion region = TEST_UTIL.createLocalHRegion(info, tableDescriptorBuilder.build());
 
     List<String> rows = generateRandomWords(10, "row");
@@ -264,7 +262,7 @@ public class TestColumnSeeking {
     for (int i = 0; i < numberOfTests + 1; i++) {
       Collection<KeyValue> kvSet;
       Scan scan = new Scan();
-      scan.setMaxVersions();
+      scan.readAllVersions();
       if (i < numberOfTests) {
         if (columnLists[i].isEmpty()) continue; // HBASE-7700
         kvSet = kvMaps[i].values();

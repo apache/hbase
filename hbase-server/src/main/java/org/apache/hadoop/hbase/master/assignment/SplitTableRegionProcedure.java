@@ -33,7 +33,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -65,12 +64,14 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -167,12 +168,15 @@ public class SplitTableRegionProcedure
     return daughterTwoRI;
   }
 
+  private boolean hasBestSplitRow() {
+    return bestSplitRow != null && bestSplitRow.length > 0;
+  }
+
   /**
    * Check whether the region is splittable
    * @param env MasterProcedureEnv
    * @param regionToSplit parent Region to be split
    * @param splitRow if splitRow is not specified, will first try to get bestSplitRow from RS
-   * @throws IOException
    */
   private void checkSplittable(final MasterProcedureEnv env,
       final RegionInfo regionToSplit, final byte[] splitRow) throws IOException {
@@ -187,19 +191,20 @@ public class SplitTableRegionProcedure
     boolean splittable = false;
     if (node != null) {
       try {
-        if (bestSplitRow == null || bestSplitRow.length == 0) {
-          LOG
-            .info("splitKey isn't explicitly specified, will try to find a best split key from RS");
-        }
-        // Always set bestSplitRow request as true here,
-        // need to call Region#checkSplit to check it splittable or not
-        GetRegionInfoResponse response = AssignmentManagerUtil.getRegionInfoResponse(env,
-          node.getRegionLocation(), node.getRegionInfo(), true);
-        if(bestSplitRow == null || bestSplitRow.length == 0) {
-          bestSplitRow = response.hasBestSplitRow() ? response.getBestSplitRow().toByteArray() : null;
+        GetRegionInfoResponse response;
+        if (!hasBestSplitRow()) {
+          LOG.info(
+            "{} splitKey isn't explicitly specified, will try to find a best split key from RS {}",
+            node.getRegionInfo().getRegionNameAsString(), node.getRegionLocation());
+          response = AssignmentManagerUtil.getRegionInfoResponse(env, node.getRegionLocation(),
+            node.getRegionInfo(), true);
+          bestSplitRow =
+            response.hasBestSplitRow() ? response.getBestSplitRow().toByteArray() : null;
+        } else {
+          response = AssignmentManagerUtil.getRegionInfoResponse(env, node.getRegionLocation(),
+            node.getRegionInfo(), false);
         }
         splittable = response.hasSplittable() && response.getSplittable();
-
         if (LOG.isDebugEnabled()) {
           LOG.debug("Splittable=" + splittable + " " + node.toShortString());
         }
@@ -597,7 +602,7 @@ public class SplitTableRegionProcedure
   @VisibleForTesting
   public void createDaughterRegions(final MasterProcedureEnv env) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tabledir = FSUtils.getTableDir(mfs.getRootDir(), getTableName());
+    final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), getTableName());
     final FileSystem fs = mfs.getFileSystem();
     HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
       env.getMasterConfiguration(), fs, tabledir, getParentRegion(), false);
@@ -675,7 +680,8 @@ public class SplitTableRegionProcedure
     LOG.info("pid=" + getProcId() + " splitting " + nbFiles + " storefiles, region=" +
         getParentRegion().getShortNameToLog() + ", threads=" + maxThreads);
     final ExecutorService threadPool = Executors.newFixedThreadPool(maxThreads,
-      Threads.newDaemonThreadFactory("StoreFileSplitter-%1$d"));
+      new ThreadFactoryBuilder().setNameFormat("StoreFileSplitter-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     final List<Future<Pair<Path, Path>>> futures = new ArrayList<Future<Pair<Path, Path>>>(nbFiles);
 
     // Split each store file.

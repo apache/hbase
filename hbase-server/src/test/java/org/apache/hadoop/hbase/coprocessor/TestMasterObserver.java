@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -652,13 +651,13 @@ public class TestMasterObserver {
 
     @Override
     public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final RegionInfo regionInfo, final boolean force) throws IOException {
+        final RegionInfo regionInfo) throws IOException {
       preUnassignCalled = true;
     }
 
     @Override
     public void postUnassign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final RegionInfo regionInfo, final boolean force) throws IOException {
+        final RegionInfo regionInfo) throws IOException {
       postUnassignCalled = true;
     }
 
@@ -1324,11 +1323,8 @@ public class TestMasterObserver {
     assertFalse("No table created yet", cp.wasCreateTableCalled());
 
     // create a table
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
     try(Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
         Admin admin = connection.getAdmin()) {
       tableCreationLatch = new CountDownLatch(1);
@@ -1371,7 +1367,8 @@ public class TestMasterObserver {
       assertTrue(admin.isTableDisabled(tableName));
 
       // modify table
-      tableDescriptor.setMaxFileSize(512 * 1024 * 1024);
+      tableDescriptor = TableDescriptorBuilder.newBuilder(tableDescriptor)
+        .setMaxFileSize(512 * 1024 * 1024).build();
       modifyTableSync(admin, tableName, tableDescriptor);
       assertTrue("Test table should have been modified",
         cp.wasModifyTableCalled());
@@ -1412,7 +1409,8 @@ public class TestMasterObserver {
         cp.wasDisableTableActionCalled());
 
       // modify table
-      tableDescriptor.setMaxFileSize(512 * 1024 * 1024);
+      tableDescriptor = TableDescriptorBuilder.newBuilder(tableDescriptor)
+        .setMaxFileSize(512 * 1024 * 1024).build();
       modifyTableSync(admin, tableName, tableDescriptor);
       assertTrue("Test table should have been modified",
         cp.wasModifyTableCalled());
@@ -1455,11 +1453,8 @@ public class TestMasterObserver {
     cp.resetStates();
 
     // create a table
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
     Admin admin = UTIL.getAdmin();
 
     tableCreationLatch = new CountDownLatch(1);
@@ -1535,12 +1530,11 @@ public class TestMasterObserver {
   }
 
   private void modifyTableSync(Admin admin, TableName tableName, TableDescriptor tableDescriptor)
-      throws IOException {
+    throws IOException {
     admin.modifyTable(tableDescriptor);
-    //wait until modify table finishes
-    for (int t = 0; t < 100; t++) { //10 sec timeout
-      HTableDescriptor td = new HTableDescriptor(
-        admin.getDescriptor(tableDescriptor.getTableName()));
+    // wait until modify table finishes
+    for (int t = 0; t < 100; t++) { // 10 sec timeout
+      TableDescriptor td = admin.getDescriptor(tableDescriptor.getTableName());
       if (td.equals(tableDescriptor)) {
         break;
       }

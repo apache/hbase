@@ -63,76 +63,11 @@
            module. Essentially, you must list the same hadoop-* dependencies
            so provided dependencies will not be transitively included.
       -->
-      <profile>
-        <id>hadoop-2.0</id>
-        <activation>
-          <property>
-              <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-              <!--h2--><name>!hadoop.profile</name>
-          </property>
-        </activation>
-        <dependencies>
-          <dependency>
-             <groupId>com.github.stephenc.findbugs</groupId>
-             <artifactId>findbugs-annotations</artifactId>
-             <optional>true</optional>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-auth</artifactId>
-            <scope>provided</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-common</artifactId>
-            <scope>provided</scope>
-          </dependency>
-          <dependency>
-            <groupId>org.codehaus.jackson</groupId>
-            <artifactId>jackson-jaxrs</artifactId>
-            <version>1.9.13</version>
-            <scope>provided</scope>
-            <exclusions>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-          <dependency>
-            <groupId>org.codehaus.jackson</groupId>
-            <artifactId>jackson-xc</artifactId>
-            <version>1.9.13</version>
-            <scope>provided</scope>
-            <exclusions>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-        </dependencies>
-      </profile>
-
-      <!--
-        profile for building against Hadoop 3.0.x. Activate using:
-         mvn -Dhadoop.profile=3.0
-      -->
+      <!-- Profile for building against Hadoop 3.0.0. Activate by default -->
       <profile>
         <id>hadoop-3.0</id>
         <activation>
-          <property>
-            <name>hadoop.profile</name>
-            <value>3.0</value>
-          </property>
+          <property><name>!hadoop.profile</name></property>
         </activation>
         <dependencies>
           <dependency>

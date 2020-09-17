@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -92,6 +92,13 @@ public class TestQuotaObserverChoreRegionReports {
     // Expire the reports after 5 seconds
     conf.setInt(QuotaObserverChore.REGION_REPORT_RETENTION_DURATION_KEY, 5000);
     TEST_UTIL.startMiniCluster(1);
+    // Wait till quota table onlined.
+    TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return TEST_UTIL.getAdmin().tableExists(QuotaTableUtil.QUOTA_TABLE_NAME);
+      }
+    });
 
     final String FAM1 = "f1";
     final HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
@@ -144,6 +151,13 @@ public class TestQuotaObserverChoreRegionReports {
     // Expire the reports after 5 seconds
     conf.setInt(QuotaObserverChore.REGION_REPORT_RETENTION_DURATION_KEY, 5000);
     TEST_UTIL.startMiniCluster(1);
+    // Wait till quota table onlined.
+    TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return TEST_UTIL.getAdmin().tableExists(QuotaTableUtil.QUOTA_TABLE_NAME);
+      }
+    });
 
     final String FAM1 = "f1";
 
@@ -158,6 +172,7 @@ public class TestQuotaObserverChoreRegionReports {
     final SpaceViolationPolicy violationPolicy = SpaceViolationPolicy.NO_INSERTS;
     QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, violationPolicy);
     final Admin admin = TEST_UTIL.getAdmin();
+    LOG.info("SET QUOTA");
     admin.setQuota(settings);
     final Connection conn = TEST_UTIL.getConnection();
 

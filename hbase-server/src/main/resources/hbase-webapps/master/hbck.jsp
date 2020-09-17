@@ -35,11 +35,25 @@
 <%@ page import="org.apache.hadoop.hbase.ServerName" %>
 <%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
 <%@ page import="org.apache.hadoop.hbase.util.Pair" %>
-<%@ page import="org.apache.hadoop.hbase.master.CatalogJanitor" %>
-<%@ page import="org.apache.hadoop.hbase.master.CatalogJanitor.Report" %>
+<%@ page import="org.apache.hadoop.hbase.master.janitor.CatalogJanitor" %>
+<%@ page import="org.apache.hadoop.hbase.master.janitor.Report" %>
 <%
+  final String cacheParameterValue = request.getParameter("cache");
   final HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master HBCK Report: " + master.getServerName());
+  if (!Boolean.parseBoolean(cacheParameterValue)) {
+    // Run the two reporters inline w/ drawing of the page. If exception, will show in page draw.
+    try {
+      master.getMasterRpcServices().runHbckChore(null, null);
+    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
+      out.write("Failed generating a new hbck_chore report; using cache; try again or run hbck_chore_run in the shell: " + se.getMessage() + "\n");
+    } 
+    try {
+      master.getMasterRpcServices().runCatalogScan(null, null);
+    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
+      out.write("Failed generating a new catalogjanitor report; using cache; try again or run catalogjanitor_run in the shell: " + se.getMessage() + "\n");
+    } 
+  }
   HbckChore hbckChore = master.getHbckChore();
   Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions = null;
   Map<String, ServerName> orphanRegionsOnRS = null;
@@ -60,7 +74,7 @@
     ZoneId.systemDefault());
   String iso8601end = startTimestamp == 0? "-1": zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
   CatalogJanitor cj = master.getCatalogJanitor();
-  CatalogJanitor.Report report = cj == null? null: cj.getLastReport();
+  Report report = cj == null? null: cj.getLastReport();
   final ServerManager serverManager = master.getServerManager();
 %>
 <jsp:include page="header.jsp">
@@ -79,7 +93,16 @@
 
   <div class="row">
     <div class="page-header">
-      <p><span>This page displays two reports: the <em>HBCK Chore Report</em> and the <em>CatalogJanitor Consistency Issues</em> report. Only report titles show if there are no problems to list. Note some conditions are <strong>transitory</strong> as regions migrate. See below for how to run reports. ServerNames will be links if server is live, italic if dead, and plain if unknown.</span></p>
+      <p><span>This page displays two reports: the <em>HBCK Chore Report</em> and
+        the <em>CatalogJanitor Consistency Issues</em> report. Only report titles
+        show if there are no problems to list. Note some conditions are
+        <strong>transitory</strong> as regions migrate. Reports are generated
+        when you invoke this page unless you add <em>?cache=true</em> to the URL. Then
+        we display the reports cached from the last time the reports were run.
+        Reports are run by Chores that are hosted by the Master on a cadence.
+        You can also run them on demand from the hbase shell: invoke <em>catalogjanitor_run</em>
+        and/or <em>hbck_chore_run</em>. 
+        ServerNames will be links if server is live, italic if dead, and plain if unknown.</span></p>
     </div>
   </div>
   <div class="row">
@@ -89,11 +112,11 @@
         <% if (hbckChore.isDisabled()) { %>
           <span>HBCK chore is currently disabled. Set hbase.master.hbck.chore.interval > 0 in the config & do a rolling-restart to enable it.</span>
         <% } else if (startTimestamp == 0 && endTimestamp == 0){ %>
-          <span>No report created. Execute <i>hbck_chore_run</i> in hbase shell to generate a new sub-report.</span>
+          <span>No report created.</span>
         <% } else if (startTimestamp > 0 && endTimestamp == 0){ %>
           <span>Checking started at <%= iso8601start %>. Please wait for checking to generate a new sub-report.</span>
         <% } else { %>
-          <span>Checking started at <%= iso8601start %> and generated report at <%= iso8601end %>. Execute <i>hbck_chore_run</i> in hbase shell to generate a new sub-report.</span>
+          <span>Checking started at <%= iso8601start %> and generated report at <%= iso8601end %>.</span>
         <% } %>
       </p>
     </div>
@@ -112,8 +135,7 @@
         need to check the server still exists. If not, schedule <em>ServerCrashProcedure</em> for it. If exists,
         restart Server2 and Server1):
         3. More than one regionserver reports opened this region (Fix: restart the RegionServers).
-        Notice: the reported online regionservers may be not right when there are regions in transition.
-        Please check them in regionserver's web UI.
+        Note: the reported online regionservers may be not be up-to-date when there are regions in transition.
         </span>
       </p>
 
@@ -165,8 +187,10 @@
   </div>
       <p>
         <span>
-          The below are Regions we've lost account of. To be safe, run bulk load of any data found in these Region orphan directories back into the HBase cluster.
-          First make sure <em>hbase:meta</em> is in a healthy state; run <em>hbck2 fixMeta</em> to be sure. Once this is done, per Region below, run a bulk
+          The below are Regions we've lost account of. To be safe, run bulk load of any data found under these Region orphan directories to have the
+          cluster re-adopt data.
+          First make sure <em>hbase:meta</em> is in a healthy state, that there are no holes, overlaps or inconsistencies (else bulk load may fail);
+          run <em>hbck2 fixMeta</em>. Once this is done, per Region below, run a bulk
           load -- <em>$ hbase completebulkload REGION_DIR_PATH TABLE_NAME</em> -- and then delete the desiccated directory content (HFiles are removed upon
           successful load; all that is left are empty directories and occasionally a seqid marking file).
         </span>
@@ -203,9 +227,9 @@
       <h1>CatalogJanitor <em>hbase:meta</em> Consistency Issues</h1>
       <p>
         <% if (report != null) { %>
-          <span>Report created: <%= iso8601reportTime %> (now=<%= iso8601Now %>). Run <i>catalogjanitor_run</i> in hbase shell to generate a new sub-report.</span></p>
+          <span>Report created: <%= iso8601reportTime %> (now=<%= iso8601Now %>).</span></p>
         <% } else { %>
-          <span>No report created. Run <i>catalogjanitor_run</i> in hbase shell to generate a new sub-report.</span>
+          <span>No report created.</span>
         <% } %>
     </div>
   </div>
@@ -223,8 +247,8 @@
             </tr>
             <% for (Pair<RegionInfo, RegionInfo> p : report.getHoles()) { %>
             <tr>
-              <td><%= p.getFirst() %></td>
-              <td><%= p.getSecond() %></td>
+              <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
+              <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getEncodedName() %></span></td>
             </tr>
             <% } %>
 
@@ -235,6 +259,12 @@
             <div class="row inner_header">
               <div class="page-header">
                 <h2>Overlaps</h2>
+                <p>
+                  <span>
+                    Regions highlighted in <font color="blue">blue</font> are recently merged regions, HBase is still doing cleanup for them. Overlaps involving these regions cannot be fixed by <em>hbck2 fixMeta</em> at this moment.
+                    Please wait some time, run <i>catalogjanitor_run</i> in hbase shell, refresh ‘HBCK Report’ page, make sure these regions are not highlighted to start the fix.
+                  </span>
+                </p>
               </div>
             </div>
             <table class="table table-striped">
@@ -244,8 +274,16 @@
               </tr>
               <% for (Pair<RegionInfo, RegionInfo> p : report.getOverlaps()) { %>
               <tr>
-                <td><%= p.getFirst() %></td>
-                <td><%= p.getSecond() %></td>
+                <% if (report.getMergedRegions().containsKey(p.getFirst())) { %>
+                  <td><span style="color:blue;" title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
+                <% } else { %>
+                  <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
+                <% } %>
+                <% if (report.getMergedRegions().containsKey(p.getSecond())) { %>
+                  <td><span style="color:blue;" title="<%= p.getSecond() %>"><%= p.getSecond().getEncodedName() %></span></td>
+                <% } else { %>
+                  <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getEncodedName() %></span></td>
+                <% } %>
               </tr>
               <% } %>
 
@@ -258,6 +296,21 @@
                 <h2>Unknown Servers</h2>
               </div>
             </div>
+            <p>
+              <span>The below are servers mentioned in the hbase:meta table that are no longer 'live' or known 'dead'.
+                The server likely belongs to an older cluster epoch since replaced by a new instance because of a restart/crash.
+                To clear 'Unknown Servers', run 'hbck2 scheduleRecoveries UNKNOWN_SERVERNAME'. This will schedule a ServerCrashProcedure.
+                It will clear out 'Unknown Server' references and schedule reassigns of any Regions that were associated with this host.
+                But first!, be sure the referenced Region is not currently stuck looping trying to OPEN. Does it show as a Region-In-Transition on the
+                Master home page? Is it mentioned in the 'Procedures and Locks' Procedures list? If so, perhaps it stuck in a loop
+                trying to OPEN but unable to because of a missing reference or file.
+                Read the Master log looking for the most recent
+                mentions of the associated Region name. Try and address any such complaint first. If successful, a side-effect
+                should be the clean up of the 'Unknown Servers' list. It may take a while. OPENs are retried forever but the interval
+                between retries grows. The 'Unknown Server' may be cleared because it is just the last RegionServer the Region was
+                successfully opened on; on the next open, the 'Unknown Server' will be purged.
+              </span>
+            </p>
             <table class="table table-striped">
               <tr>
                 <th>RegionInfo</th>
@@ -265,7 +318,7 @@
               </tr>
               <% for (Pair<RegionInfo, ServerName> p: report.getUnknownServers()) { %>
               <tr>
-                <td><%= p.getFirst() %></td>
+                <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
                 <td><%= p.getSecond() %></td>
               </tr>
               <% } %>

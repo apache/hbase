@@ -21,10 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -41,17 +37,6 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.CountResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.HelloResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -66,6 +51,23 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.CountRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.CountResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.HelloRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.HelloResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.IncrementCountRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.IncrementCountResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.NoopRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.NoopResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingRequest;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingResponse;
+import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.PingProtos.PingService;
+
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestServerCustomProtocol {
   @ClassRule
@@ -78,7 +80,7 @@ public class TestServerCustomProtocol {
   static final String HELLO = "Hello, ";
 
   /* Test protocol implementation */
-  public static class PingHandler extends PingProtos.PingService implements RegionCoprocessor {
+  public static class PingHandler extends PingService implements RegionCoprocessor {
     private int counter = 0;
 
     @Override
@@ -200,14 +202,14 @@ public class TestServerCustomProtocol {
     LOG.info("Who are you");
     hello(table, NOBODY, null);
     LOG.info(NOBODY);
-    Map<byte [], Integer> intResults = table.coprocessorService(PingProtos.PingService.class,
+    Map<byte [], Integer> intResults = table.coprocessorService(PingService.class,
       null, null,
-      new Batch.Call<PingProtos.PingService, Integer>() {
+      new Batch.Call<PingService, Integer>() {
         @Override
-        public Integer call(PingProtos.PingService instance) throws IOException {
-          CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.CountResponse> rpcCallback =
+        public Integer call(PingService instance) throws IOException {
+          CoprocessorRpcUtils.BlockingRpcCallback<CountResponse> rpcCallback =
             new CoprocessorRpcUtils.BlockingRpcCallback<>();
-          instance.count(null, PingProtos.CountRequest.newBuilder().build(), rpcCallback);
+          instance.count(null, CountRequest.newBuilder().build(), rpcCallback);
           return rpcCallback.get().getCount();
         }
       });
@@ -217,15 +219,15 @@ public class TestServerCustomProtocol {
       count = e.getValue();
     }
     final int diff = 5;
-    intResults = table.coprocessorService(PingProtos.PingService.class,
+    intResults = table.coprocessorService(PingService.class,
       null, null,
-      new Batch.Call<PingProtos.PingService, Integer>() {
+      new Batch.Call<PingService, Integer>() {
         @Override
-        public Integer call(PingProtos.PingService instance) throws IOException {
-          CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.IncrementCountResponse> rpcCallback =
+        public Integer call(PingService instance) throws IOException {
+          CoprocessorRpcUtils.BlockingRpcCallback<IncrementCountResponse> rpcCallback =
             new CoprocessorRpcUtils.BlockingRpcCallback<>();
           instance.increment(null,
-              PingProtos.IncrementCountRequest.newBuilder().setDiff(diff).build(),
+              IncrementCountRequest.newBuilder().setDiff(diff).build(),
             rpcCallback);
           return rpcCallback.get().getCount();
         }
@@ -254,19 +256,19 @@ public class TestServerCustomProtocol {
 
   private Map<byte [], String> hello(final Table table, final String send, final byte [] start,
           final byte [] end) throws ServiceException, Throwable {
-    return table.coprocessorService(PingProtos.PingService.class,
+    return table.coprocessorService(PingService.class,
         start, end,
-        new Batch.Call<PingProtos.PingService, String>() {
+        new Batch.Call<PingService, String>() {
           @Override
-          public String call(PingProtos.PingService instance) throws IOException {
-            CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.HelloResponse> rpcCallback =
+          public String call(PingService instance) throws IOException {
+            CoprocessorRpcUtils.BlockingRpcCallback<HelloResponse> rpcCallback =
               new CoprocessorRpcUtils.BlockingRpcCallback<>();
-            PingProtos.HelloRequest.Builder builder = PingProtos.HelloRequest.newBuilder();
+            HelloRequest.Builder builder = HelloRequest.newBuilder();
             if (send != null) {
               builder.setName(send);
             }
             instance.hello(null, builder.build(), rpcCallback);
-            PingProtos.HelloResponse r = rpcCallback.get();
+            HelloResponse r = rpcCallback.get();
             return r != null && r.hasResponse()? r.getResponse(): null;
           }
         });
@@ -274,18 +276,18 @@ public class TestServerCustomProtocol {
 
   private Map<byte [], String> compoundOfHelloAndPing(final Table table, final byte [] start,
           final byte [] end) throws ServiceException, Throwable {
-    return table.coprocessorService(PingProtos.PingService.class,
+    return table.coprocessorService(PingService.class,
         start, end,
-        new Batch.Call<PingProtos.PingService, String>() {
+        new Batch.Call<PingService, String>() {
           @Override
-          public String call(PingProtos.PingService instance) throws IOException {
-            CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.HelloResponse> rpcCallback =
+          public String call(PingService instance) throws IOException {
+            CoprocessorRpcUtils.BlockingRpcCallback<HelloResponse> rpcCallback =
               new CoprocessorRpcUtils.BlockingRpcCallback<>();
-            PingProtos.HelloRequest.Builder builder = PingProtos.HelloRequest.newBuilder();
+            HelloRequest.Builder builder = HelloRequest.newBuilder();
             // Call ping on same instance.  Use result calling hello on same instance.
             builder.setName(doPing(instance));
             instance.hello(null, builder.build(), rpcCallback);
-            PingProtos.HelloResponse r = rpcCallback.get();
+            HelloResponse r = rpcCallback.get();
             return r != null && r.hasResponse()? r.getResponse(): null;
           }
         });
@@ -293,13 +295,13 @@ public class TestServerCustomProtocol {
 
   private Map<byte [], String> noop(final Table table, final byte [] start, final byte [] end)
           throws ServiceException, Throwable {
-    return table.coprocessorService(PingProtos.PingService.class, start, end,
-        new Batch.Call<PingProtos.PingService, String>() {
+    return table.coprocessorService(PingService.class, start, end,
+        new Batch.Call<PingService, String>() {
           @Override
-          public String call(PingProtos.PingService instance) throws IOException {
-            CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.NoopResponse> rpcCallback =
+          public String call(PingService instance) throws IOException {
+            CoprocessorRpcUtils.BlockingRpcCallback<NoopResponse> rpcCallback =
               new CoprocessorRpcUtils.BlockingRpcCallback<>();
-            PingProtos.NoopRequest.Builder builder = PingProtos.NoopRequest.newBuilder();
+            NoopRequest.Builder builder = NoopRequest.newBuilder();
             instance.noop(null, builder.build(), rpcCallback);
             rpcCallback.get();
             // Looks like null is expected when void.  That is what the test below is looking for
@@ -312,14 +314,14 @@ public class TestServerCustomProtocol {
   public void testSingleMethod() throws Throwable {
     try (Table table = util.getConnection().getTable(TEST_TABLE);
         RegionLocator locator = util.getConnection().getRegionLocator(TEST_TABLE)) {
-      Map<byte [], String> results = table.coprocessorService(PingProtos.PingService.class,
+      Map<byte [], String> results = table.coprocessorService(PingService.class,
         null, ROW_A,
-        new Batch.Call<PingProtos.PingService, String>() {
+        new Batch.Call<PingService, String>() {
           @Override
-          public String call(PingProtos.PingService instance) throws IOException {
-            CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.PingResponse> rpcCallback =
+          public String call(PingService instance) throws IOException {
+            CoprocessorRpcUtils.BlockingRpcCallback<PingResponse> rpcCallback =
               new CoprocessorRpcUtils.BlockingRpcCallback<>();
-            instance.ping(null, PingProtos.PingRequest.newBuilder().build(), rpcCallback);
+            instance.ping(null, PingRequest.newBuilder().build(), rpcCallback);
             return rpcCallback.get().getPong();
           }
         });
@@ -402,19 +404,19 @@ public class TestServerCustomProtocol {
 
   private Map<byte [], String> ping(final Table table, final byte [] start, final byte [] end)
           throws ServiceException, Throwable {
-    return table.coprocessorService(PingProtos.PingService.class, start, end,
-      new Batch.Call<PingProtos.PingService, String>() {
+    return table.coprocessorService(PingService.class, start, end,
+      new Batch.Call<PingService, String>() {
         @Override
-        public String call(PingProtos.PingService instance) throws IOException {
+        public String call(PingService instance) throws IOException {
           return doPing(instance);
         }
       });
   }
 
-  private static String doPing(PingProtos.PingService instance) throws IOException {
-    CoprocessorRpcUtils.BlockingRpcCallback<PingProtos.PingResponse> rpcCallback =
+  private static String doPing(PingService instance) throws IOException {
+    CoprocessorRpcUtils.BlockingRpcCallback<PingResponse> rpcCallback =
         new CoprocessorRpcUtils.BlockingRpcCallback<>();
-    instance.ping(null, PingProtos.PingRequest.newBuilder().build(), rpcCallback);
+    instance.ping(null, PingRequest.newBuilder().build(), rpcCallback);
     return rpcCallback.get().getPong();
   }
 

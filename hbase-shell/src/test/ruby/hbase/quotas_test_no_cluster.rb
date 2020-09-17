@@ -23,8 +23,6 @@ require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
-include HBaseConstants
-
 java_import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot
 java_import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy
 java_import org.apache.hadoop.hbase.TableName
@@ -32,6 +30,7 @@ java_import org.apache.hadoop.hbase.TableName
 module Hbase
   class NoClusterSpaceQuotasTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     define_test '_parse_size accepts various forms of byte shorthand' do
       qa = ::Hbase::QuotasAdmin.new(nil)

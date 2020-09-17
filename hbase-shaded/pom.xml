@@ -51,15 +51,14 @@
       <dependency>
          <groupId>org.apache.hbase</groupId>
          <artifactId>hbase-resource-bundle</artifactId>
-         <version>${project.version}</version>
          <optional>true</optional>
       </dependency>
-      <!-- log4j has to be non-optional for Hadoop 2 atleast -->
+      <!-- put the log implementations to optional -->
       <dependency>
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
+        <optional>true</optional>
       </dependency>
-      <!-- put the log implementations to optional -->
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
@@ -120,6 +119,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.2.4</version>
                     <executions>
                         <execution>
                             <id>aggregate-into-a-jar-with-relocated-third-parties</id>
@@ -139,6 +139,10 @@
                                              need not be included -->
                                         <exclude>javax.annotation:javax.annotation-api</exclude>
                                         <exclude>javax.activation:javax.activation-api</exclude>
+                                        <exclude>jakarta.ws.rs:jakarta.ws.rs-api</exclude>
+                                        <exclude>jakarta.annotation:jakarta.annotation-api</exclude>
+                                        <exclude>jakarta.validation:jakarta.validation-api</exclude>
+                                        <exclude>org.glassfish.hk2.external:jakarta.inject</exclude>
                                         <!-- default to excluding Hadoop, have module that want
                                              to include it redefine the exclude list -->
                                         <exclude>org.apache.hadoop:*</exclude>
@@ -148,10 +152,12 @@
                                         <exclude>org.slf4j:*</exclude>
                                         <exclude>com.google.code.findbugs:*</exclude>
                                         <exclude>com.github.stephenc.findbugs:*</exclude>
+                                        <exclude>com.github.spotbugs:*</exclude>
                                         <exclude>org.apache.htrace:*</exclude>
                                         <exclude>org.apache.yetus:*</exclude>
                                         <exclude>log4j:*</exclude>
                                         <exclude>commons-logging:*</exclude>
+                                        <exclude>org.javassist:*</exclude>
                                     </excludes>
                                 </artifactSet>
                                 <relocations>

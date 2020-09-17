@@ -66,7 +66,7 @@ public class TestZooKeeperScanPolicyObserver {
         .createTable(TableDescriptorBuilder.newBuilder(NAME)
             .setCoprocessor(ZooKeeperScanPolicyObserver.class.getName())
             .setValue(ZooKeeperScanPolicyObserver.ZK_ENSEMBLE_KEY,
-              "localhost:" + UTIL.getZkCluster().getClientPort())
+              UTIL.getZkCluster().getAddress().toString())
             .setValue(ZooKeeperScanPolicyObserver.ZK_SESSION_TIMEOUT_KEY, "2000")
             .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build()).build());
     TABLE = UTIL.getConnection().getTable(NAME);

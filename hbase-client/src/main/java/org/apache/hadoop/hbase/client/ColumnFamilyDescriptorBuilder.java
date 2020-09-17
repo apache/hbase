@@ -299,7 +299,11 @@ public class ColumnFamilyDescriptorBuilder {
     DEFAULT_VALUES.put(CACHE_BLOOMS_ON_WRITE, String.valueOf(DEFAULT_CACHE_BLOOMS_ON_WRITE));
     DEFAULT_VALUES.put(EVICT_BLOCKS_ON_CLOSE, String.valueOf(DEFAULT_EVICT_BLOCKS_ON_CLOSE));
     DEFAULT_VALUES.put(PREFETCH_BLOCKS_ON_OPEN, String.valueOf(DEFAULT_PREFETCH_BLOCKS_ON_OPEN));
-    DEFAULT_VALUES.put(NEW_VERSION_BEHAVIOR, String.valueOf(DEFAULT_NEW_VERSION_BEHAVIOR));
+    // Do NOT add this key/value by default. NEW_VERSION_BEHAVIOR is NOT defined in hbase1 so
+    // it is not possible to make an hbase1 HCD the same as an hbase2 HCD and so the replication
+    // compare of schemas will fail. It is OK not adding the below to the initial map because of
+    // fetch of this value, we will check for null and if null will return the default.
+    // DEFAULT_VALUES.put(NEW_VERSION_BEHAVIOR, String.valueOf(DEFAULT_NEW_VERSION_BEHAVIOR));
     DEFAULT_VALUES.keySet().forEach(s -> RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(s))));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION)));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION_KEY)));
@@ -572,15 +576,19 @@ public class ColumnFamilyDescriptorBuilder {
     return this;
   }
 
+  public ColumnFamilyDescriptorBuilder setVersionsWithTimeToLive(final int retentionInterval,
+      final int versionAfterInterval) {
+    desc.setVersionsWithTimeToLive(retentionInterval, versionAfterInterval);
+    return this;
+  }
+
   /**
    * An ModifyableFamilyDescriptor contains information about a column family such as the
    * number of versions, compression settings, etc.
    *
    * It is used as input when creating a table or adding a column.
-   * TODO: make this package-private after removing the HColumnDescriptor
    */
-  @InterfaceAudience.Private
-  public static class ModifyableColumnFamilyDescriptor
+  private static final class ModifyableColumnFamilyDescriptor
       implements ColumnFamilyDescriptor, Comparable<ModifyableColumnFamilyDescriptor> {
 
     // Column family name
@@ -680,15 +688,6 @@ public class ColumnFamilyDescriptorBuilder {
         values.put(key, value);
       }
       return this;
-    }
-
-    /**
-     *
-     * @param key Key whose key and value we're to remove from HCD parameters.
-     * @return this (for chained invocation)
-     */
-    public ModifyableColumnFamilyDescriptor removeValue(final Bytes key) {
-      return setValue(key, (Bytes) null);
     }
 
     private static <T> Bytes toBytesOrNull(T t, Function<T, byte[]> f) {
@@ -940,6 +939,23 @@ public class ColumnFamilyDescriptorBuilder {
      */
     public ModifyableColumnFamilyDescriptor setMinVersions(int minVersions) {
       return setValue(MIN_VERSIONS_BYTES, Integer.toString(minVersions));
+    }
+
+    /**
+     * Retain all versions for a given TTL(retentionInterval), and then only a specific number
+     * of versions(versionAfterInterval) after that interval elapses.
+     *
+     * @param retentionInterval Retain all versions for this interval
+     * @param versionAfterInterval Retain no of versions to retain after retentionInterval
+     * @return this (for chained invocation)
+     */
+    public ModifyableColumnFamilyDescriptor setVersionsWithTimeToLive(
+        final int retentionInterval, final int versionAfterInterval) {
+      ModifyableColumnFamilyDescriptor modifyableColumnFamilyDescriptor =
+        setVersions(versionAfterInterval, Integer.MAX_VALUE);
+      modifyableColumnFamilyDescriptor.setTimeToLive(retentionInterval);
+      modifyableColumnFamilyDescriptor.setKeepDeletedCells(KeepDeletedCells.TTL);
+      return modifyableColumnFamilyDescriptor;
     }
 
     @Override

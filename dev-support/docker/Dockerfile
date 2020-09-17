@@ -24,12 +24,46 @@
 FROM ubuntu:18.04 AS BASE_IMAGE
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# hadolint ignore=DL3009
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
   DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
     ca-certificates=20180409 \
-    curl=7.58.0-2ubuntu3.8 \
-    locales=2.27-3ubuntu1
+    curl='7.58.0-*' \
+    locales='2.27-*' \
+##
+# install dependencies from system packages.
+# be careful not to install any system packages (i.e., findbugs) that will
+# pull in the default-jre.
+#
+# bring the base image into conformance with the expectations imposed by
+# Yetus and our personality file of what a build environment looks like.
+    bash='4.4.18-*' \
+    build-essential=12.4ubuntu1 \
+    diffutils='1:3.6-*' \
+    git='1:2.17.1-*' \
+    rsync='3.1.2-*' \
+    tar='1.29b-*' \
+    wget='1.19.4-*' \
+# install the dependencies required in order to enable the sundry precommit
+# checks/features provided by Yetus plugins.
+    bats='0.4.0-*' \
+    libperl-critic-perl='1.130-*' \
+    python3='3.6.7-*' \
+    python3-pip='9.0.1-*' \
+    python3-setuptools='39.0.1-*' \
+    ruby=1:2.5.1 \
+    ruby-dev=1:2.5.1 \
+    shellcheck='0.4.6-*' \
+    && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN python3 -mpip install --upgrade pip && \
+  python3 -mpip install pylint==2.4.4
+
+RUN gem install --no-document \
+  rake:13.0.1 \
+  rubocop:0.80.0 \
+  ruby-lint:2.3.1
 
 RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
@@ -38,14 +72,13 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 # download sundry dependencies
 #
 
-FROM BASE_IMAGE AS FINDBUGS_DOWNLOAD_IMAGE
-# TODO: replace with Spotbugs HBASE-23077, HBASE-22383
-ENV FINDBUGS_VERSION '3.0.1'
-ENV FINDBUGS_URL "https://downloads.sourceforge.net/project/findbugs/findbugs/${FINDBUGS_VERSION}/findbugs-${FINDBUGS_VERSION}.tar.gz"
-ENV FINDBUGS_SHA256 'e80e0da0c213a27504ef3188ef25f107651700ffc66433eac6a7454bbe336419'
+FROM BASE_IMAGE AS SPOTBUGS_DOWNLOAD_IMAGE
+ENV SPOTBUGS_VERSION '3.1.12'
+ENV SPOTBUGS_URL "https://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz"
+ENV SPOTBUGS_SHA256 '9c475d6c7096ed7af783e04dc2db40462145291de75a80029391600b6eb2d401'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN curl --location --fail --silent --show-error --output /tmp/findbugs.tar.gz "${FINDBUGS_URL}" && \
-  echo "${FINDBUGS_SHA256} */tmp/findbugs.tar.gz" | sha256sum -c -
+RUN curl --location --fail --silent --show-error --output /tmp/spotbugs.tgz "${SPOTBUGS_URL}" && \
+  echo "${SPOTBUGS_SHA256} */tmp/spotbugs.tgz" | sha256sum -c -
 
 FROM BASE_IMAGE AS HADOLINT_DOWNLOAD_IMAGE
 ENV HADOLINT_VERSION '1.17.5'
@@ -56,12 +89,12 @@ RUN curl --location --fail --silent --show-error --output /tmp/hadolint "${HADOL
   echo "${HADOLINT_SHA256} */tmp/hadolint" | sha256sum -c -
 
 FROM BASE_IMAGE AS MAVEN_DOWNLOAD_IMAGE
-ENV MAVEN_VERSION='3.5.4'
+ENV MAVEN_VERSION='3.6.3'
 ENV MAVEN_URL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
-ENV MAVEN_SHA256 'ce50b1c91364cb77efe3776f756a6d92b76d9038b0a0782f7d53acf1e997a14d'
+ENV MAVEN_SHA512 'c35a1803a6e70a126e80b2b3ae33eed961f83ed74d18fcd16909b2d44d7dada3203f1ffe726c17ef8dcca2dcaa9fca676987befeadc9b9f759967a8cb77181c0'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/maven.tar.gz "${MAVEN_URL}" && \
-  echo "${MAVEN_SHA256} */tmp/maven.tar.gz" | sha256sum -c -
+  echo "${MAVEN_SHA512} */tmp/maven.tar.gz" | sha512sum -c -
 
 FROM BASE_IMAGE AS OPENJDK7_DOWNLOAD_IMAGE
 ENV OPENJDK7_URL 'https://cdn.azul.com/zulu/bin/zulu7.36.0.5-ca-jdk7.0.252-linux_x64.tar.gz'
@@ -91,52 +124,11 @@ RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk11.ta
 FROM BASE_IMAGE
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-##
-# install dependencies from system packages.
-# be careful not to install any system packages (i.e., findbugs) that will
-# pull in the default-jre.
-#
-
-# bring the base image into conformance with the expectations imposed by
-# Yetus and our personality file of what a build environment looks like.
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
-  bash=4.4.18-2ubuntu1.2 \
-  build-essential=12.4ubuntu1 \
-  curl=7.58.0-2ubuntu3.8 \
-  diffutils=1:3.6-1 \
-  git=1:2.17.1-1ubuntu0.5 \
-  rsync=3.1.2-2.1ubuntu1 \
-  tar=1.29b-2ubuntu0.1 \
-  wget=1.19.4-1ubuntu2.2
-
-# install the dependencies required in order to enable the sundry precommit
-# checks/features provided by Yetus plugins.
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
-  bats=0.4.0-1.1 \
-  libperl-critic-perl=1.130-1 \
-  python3=3.6.7-1~18.04 \
-  python3-pip=9.0.1-2.3~ubuntu1.18.04.1 \
-  python3-setuptools=39.0.1-2 \
-  ruby=1:2.5.1 \
-  ruby-dev=1:2.5.1 \
-  shellcheck=0.4.6-1 \
-  && \
-  apt-get clean && \
-  rm -rf /var/lib/apt/lists/*
-
-RUN python3 -mpip install --upgrade pip && \
-  python3 -mpip install pylint==2.4.4
-
-RUN gem install --no-document \
-  rake:13.0.1 \
-  rubocop:0.80.0 \
-  ruby-lint:2.3.1
-
 # hadolint ignore=DL3010
-COPY --from=FINDBUGS_DOWNLOAD_IMAGE /tmp/findbugs.tar.gz /tmp/findbugs.tar.gz
-RUN tar xzf /tmp/findbugs.tar.gz -C /opt && \
-  ln -s "/opt/$(dirname "$(tar -tf /tmp/findbugs.tar.gz | head -n1)")" /opt/findbugs && \
-  rm /tmp/findbugs.tar.gz
+COPY --from=SPOTBUGS_DOWNLOAD_IMAGE /tmp/spotbugs.tgz /tmp/spotbugs.tgz
+RUN tar xzf /tmp/spotbugs.tgz -C /opt && \
+  ln -s "/opt/$(tar -tf /tmp/spotbugs.tgz | head -n1 | cut -d/ -f1)" /opt/spotbugs && \
+  rm /tmp/spotbugs.tgz
 
 COPY --from=HADOLINT_DOWNLOAD_IMAGE /tmp/hadolint /tmp/hadolint
 RUN mv /tmp/hadolint /usr/local/bin && \
@@ -151,6 +143,9 @@ RUN tar xzf /tmp/maven.tar.gz -C /opt && \
 ##
 # ensure JVMs are available under `/usr/lib/jvm` and prefix each installation
 # as `java-` so as to conform with Yetus's assumptions.
+#
+# when updating java or maven versions here, consider also updating
+# `dev-support/hbase_docker/Dockerfile` as well.
 #
 
 # hadolint ignore=DL3010
@@ -181,9 +176,9 @@ RUN mkdir -p /usr/lib/jvm && \
 # these values to be specified here; the various --foo-path flags do not
 # propigate as expected, while these are honored.
 # TODO (nd): is this really true? investigate and file a ticket.
-ENV FINDBUGS_HOME '/opt/findbugs'
+ENV SPOTBUGS_HOME '/opt/spotbugs'
 ENV MAVEN_HOME '/opt/maven'
-ENV MAVEN_OPTS '-Xms6G -Xmx6G'
+ENV MAVEN_OPTS '-Xmx3.6G'
 
 CMD ["/bin/bash"]
 

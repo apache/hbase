@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.rest.model;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -29,27 +28,24 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.xml.bind.annotation.XmlAnyAttribute;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.namespace.QName;
-
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
-import org.apache.hadoop.hbase.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
-import org.apache.hadoop.hbase.rest.protobuf.generated.TableSchemaMessage.TableSchema;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
+import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableSchemaMessage.TableSchema;
 
 /**
  * A representation of HBase table descriptors.
@@ -69,13 +65,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
-  private static final QName IS_META = new QName(HTableDescriptor.IS_META);
-  private static final QName IS_ROOT = new QName(HTableDescriptor.IS_ROOT);
-  private static final QName READONLY = new QName(HTableDescriptor.READONLY);
-  private static final QName TTL = new QName(HColumnDescriptor.TTL);
+  private static final QName IS_META = new QName(TableDescriptorBuilder.IS_META);
+  private static final QName IS_ROOT = new QName("IS_ROOT");
+  private static final QName READONLY = new QName(TableDescriptorBuilder.READONLY);
+  private static final QName TTL = new QName(ColumnFamilyDescriptorBuilder.TTL);
   private static final QName VERSIONS = new QName(HConstants.VERSIONS);
-  private static final QName COMPRESSION =
-    new QName(HColumnDescriptor.COMPRESSION);
+  private static final QName COMPRESSION = new QName(ColumnFamilyDescriptorBuilder.COMPRESSION);
 
   private String name;
   private Map<QName,Object> attrs = new LinkedHashMap<>();
@@ -241,7 +236,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    */
   public boolean __getReadOnly() {
     Object o = attrs.get(READONLY);
-    return o != null ? Boolean.parseBoolean(o.toString()) : HTableDescriptor.DEFAULT_READONLY;
+    return o != null ? Boolean.parseBoolean(o.toString()) : TableDescriptorBuilder.DEFAULT_READONLY;
   }
 
   /**
@@ -314,7 +309,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
       this.addAttribute(attr.getName(), attr.getValue());
     }
     if (builder.hasReadOnly()) {
-      this.addAttribute(HTableDescriptor.READONLY, builder.getReadOnly());
+      this.addAttribute(TableDescriptorBuilder.READONLY, builder.getReadOnly());
     }
     for (ColumnSchema family : builder.getColumnsList()) {
       ColumnSchemaModel familyModel = new ColumnSchemaModel();
@@ -323,14 +318,14 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
         familyModel.addAttribute(attr.getName(), attr.getValue());
       }
       if (family.hasTtl()) {
-        familyModel.addAttribute(HColumnDescriptor.TTL, family.getTtl());
+        familyModel.addAttribute(ColumnFamilyDescriptorBuilder.TTL, family.getTtl());
       }
       if (family.hasMaxVersions()) {
         familyModel.addAttribute(HConstants.VERSIONS,
           family.getMaxVersions());
       }
       if (family.hasCompression()) {
-        familyModel.addAttribute(HColumnDescriptor.COMPRESSION,
+        familyModel.addAttribute(ColumnFamilyDescriptorBuilder.COMPRESSION,
           family.getCompression());
       }
       this.addColumnFamily(familyModel);

@@ -25,11 +25,9 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -39,6 +37,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -113,10 +112,11 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
     Connection connection = ConnectionFactory.createConnection(conf);
     Table t = connection.getTable(TEST_TABLE);
-    HTableDescriptor htd = new HTableDescriptor(t.getDescriptor());
-    htd.addCoprocessor("net.clayb.hbase.coprocessor.NotWhitelisted",
-      new Path(coprocessorPath),
-      Coprocessor.PRIORITY_USER, null);
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(t.getDescriptor())
+      .setCoprocessor(
+        CoprocessorDescriptorBuilder.newBuilder("net.clayb.hbase.coprocessor.NotWhitelisted")
+          .setJarPath(coprocessorPath).setPriority(Coprocessor.PRIORITY_USER).build())
+      .build();
     LOG.info("Modifying Table");
     try {
       connection.getAdmin().modifyTable(htd);
@@ -158,10 +158,11 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     // coprocessor file
     admin.disableTable(TEST_TABLE);
     Table t = connection.getTable(TEST_TABLE);
-    HTableDescriptor htd = new HTableDescriptor(t.getDescriptor());
-    htd.addCoprocessor("net.clayb.hbase.coprocessor.Whitelisted",
-      new Path(coprocessorPath),
-      Coprocessor.PRIORITY_USER, null);
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(t.getDescriptor())
+      .setCoprocessor(
+        CoprocessorDescriptorBuilder.newBuilder("net.clayb.hbase.coprocessor.Whitelisted")
+          .setJarPath(coprocessorPath).setPriority(Coprocessor.PRIORITY_USER).build())
+      .build();
     LOG.info("Modifying Table");
     admin.modifyTable(htd);
     assertEquals(1, t.getDescriptor().getCoprocessorDescriptors().size());
@@ -268,17 +269,13 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     // set retries low to raise exception quickly
     conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TEST_TABLE);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    tableDescriptor.setCoprocessor(
-      CoprocessorDescriptorBuilder.newBuilder("net.clayb.hbase.coprocessor.NotWhitelisted")
-        .setJarPath("file:///notpermitted/couldnotpossiblyexist.jar")
-        .setPriority(Coprocessor.PRIORITY_USER)
-        .setProperties(Collections.emptyMap())
-        .build());
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TABLE)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
+      .setCoprocessor(
+        CoprocessorDescriptorBuilder.newBuilder("net.clayb.hbase.coprocessor.NotWhitelisted")
+          .setJarPath("file:///notpermitted/couldnotpossiblyexist.jar")
+          .setPriority(Coprocessor.PRIORITY_USER).setProperties(Collections.emptyMap()).build())
+      .build();
     Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
     LOG.info("Creating Table");
@@ -318,12 +315,9 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     // set retries low to raise exception quickly
     conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TEST_TABLE);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    tableDescriptor.setCoprocessor(TestRegionObserver.class.getName());
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TABLE)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
+      .setCoprocessor(TestRegionObserver.class.getName()).build();
     Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
     LOG.info("Creating Table");

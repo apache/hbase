@@ -38,12 +38,15 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -51,14 +54,17 @@ import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -89,18 +95,22 @@ import org.apache.hadoop.hbase.thrift2.generated.TDataBlockEncoding;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
+import org.apache.hadoop.hbase.thrift2.generated.TFilterByOperator;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TIOError;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift2.generated.TLogQueryFilter;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TNamespaceDescriptor;
+import org.apache.hadoop.hbase.thrift2.generated.TOnlineLogRecord;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TReadType;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
+import org.apache.hadoop.hbase.thrift2.generated.TServerName;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
@@ -112,6 +122,7 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -147,13 +158,9 @@ public class TestThriftHBaseServiceHandler {
   private static byte[] qualifierBname = Bytes.toBytes("qualifierB");
   private static byte[] valueAname = Bytes.toBytes("valueA");
   private static byte[] valueBname = Bytes.toBytes("valueB");
-  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[] families =
-    new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor[]{
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyAname)
-        .setMaxVersions(3),
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(familyBname)
-        .setMaxVersions(2)
-    };
+  private static ColumnFamilyDescriptor[] families = new ColumnFamilyDescriptor[] {
+    ColumnFamilyDescriptorBuilder.newBuilder(familyAname).setMaxVersions(3).build(),
+    ColumnFamilyDescriptorBuilder.newBuilder(familyBname).setMaxVersions(2).build() };
 
 
   private static final MetricsAssertHelper metricsHelper =
@@ -192,12 +199,10 @@ public class TestThriftHBaseServiceHandler {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().set("hbase.client.retries.number", "3");
+    UTIL.getConfiguration().setBoolean("hbase.regionserver.slowlog.buffer.enabled", true);
     UTIL.startMiniCluster();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableAname));
-    for (ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor family : families) {
-      tableDescriptor.setColumnFamily(family);
-    }
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(tableAname)).setColumnFamilies(Arrays.asList(families)).build();
     try (Admin admin = UTIL.getAdmin()) {
       admin.createTable(tableDescriptor);
     }
@@ -757,7 +762,13 @@ public class TestThriftHBaseServiceHandler {
    * Tests keeping a HBase scanner alive for long periods of time. Each call to getScannerRow()
    * should reset the ConnectionCache timeout for the scanner's connection.
    */
-  @Test
+  @org.junit.Ignore @Test // Flakey. Diasabled by HBASE-24079. Renable with Fails with HBASE-24083.
+  //  Caused by: java.util.concurrent.RejectedExecutionException:
+  //  Task org.apache.hadoop.hbase.client.ResultBoundedCompletionService$QueueingFuture@e385431
+  //  rejected from java.util.concurrent.ThreadPoolExecutor@   52b027d[Terminated, pool size = 0,
+  //  active threads = 0, queued tasks = 0, completed tasks = 1]
+  //  at org.apache.hadoop.hbase.thrift2.TestThriftHBaseServiceHandler.
+  //  testLongLivedScan(TestThriftHBaseServiceHandler.java:804)
   public void testLongLivedScan() throws Exception {
     int numTrials = 6;
     int trialPause = 1000;
@@ -1068,11 +1079,9 @@ public class TestThriftHBaseServiceHandler {
    */
   private String pad(int n, byte pad) {
     String res = Integer.toString(n);
-
     while (res.length() < pad) {
       res = "0" + res;
     }
-
     return res;
   }
 
@@ -1254,11 +1263,9 @@ public class TestThriftHBaseServiceHandler {
     byte[] col = Bytes.toBytes("c");
     // create a table which will throw exceptions for requests
     TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDesc =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    tableDesc.setCoprocessor(ErrorThrowingGetObserver.class.getName());
-    tableDesc.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+      .setCoprocessor(ErrorThrowingGetObserver.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
 
     Table table = UTIL.createTable(tableDesc, null);
     table.put(new Put(rowkey).addColumn(family, col, Bytes.toBytes("val1")));
@@ -1327,11 +1334,9 @@ public class TestThriftHBaseServiceHandler {
     byte[] col = Bytes.toBytes("c");
     // create a table which will throw exceptions for requests
     TableName tableName = TableName.valueOf("testMetricsPrecision");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    tableDescriptor.setCoprocessor(DelayingRegionObserver.class.getName());
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setCoprocessor(DelayingRegionObserver.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
 
     Table table = null;
     try {
@@ -1735,6 +1740,37 @@ public class TestThriftHBaseServiceHandler {
     } finally {
       THRIFT_TEST_UTIL.stopThriftServer();
     }
+  }
+
+  @Test
+  public void testSlowLogResponses() throws Exception {
+
+    // start a thrift server
+    HBaseThriftTestingUtility THRIFT_TEST_UTIL = new HBaseThriftTestingUtility();
+    Configuration configuration = UTIL.getConfiguration();
+    configuration.setBoolean("hbase.regionserver.slowlog.buffer.enabled", true);
+
+    THRIFT_TEST_UTIL.startThriftServer(configuration, ThriftServerType.ONE);
+    ThriftHBaseServiceHandler thriftHBaseServiceHandler =
+      new ThriftHBaseServiceHandler(configuration,
+        UserProvider.instantiate(configuration));
+    Collection<ServerName> serverNames = UTIL.getAdmin().getRegionServers();
+    Set<TServerName> tServerNames =
+      ThriftUtilities.getServerNamesFromHBase(new HashSet<>(serverNames));
+    List<Boolean> clearedResponses =
+      thriftHBaseServiceHandler.clearSlowLogResponses(tServerNames);
+    clearedResponses.forEach(Assert::assertTrue);
+    TLogQueryFilter tLogQueryFilter = new TLogQueryFilter();
+    tLogQueryFilter.setLimit(15);
+    Assert.assertEquals(tLogQueryFilter.getFilterByOperator(), TFilterByOperator.OR);
+    LogQueryFilter logQueryFilter = ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
+    Assert.assertEquals(logQueryFilter.getFilterByOperator(), LogQueryFilter.FilterByOperator.OR);
+    tLogQueryFilter.setFilterByOperator(TFilterByOperator.AND);
+    logQueryFilter = ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
+    Assert.assertEquals(logQueryFilter.getFilterByOperator(), LogQueryFilter.FilterByOperator.AND);
+    List<TOnlineLogRecord> tLogRecords =
+      thriftHBaseServiceHandler.getSlowLogResponses(tServerNames, tLogQueryFilter);
+    assertEquals(tLogRecords.size(), 0);
   }
 
   public static class DelayingRegionObserver implements RegionCoprocessor, RegionObserver {

@@ -740,7 +740,7 @@ public class TestThriftConnection {
       filterList.addFilter(prefixFilter);
       filterList.addFilter(columnValueFilter);
       Scan scan = new Scan();
-      scan.setMaxVersions(2);
+      scan.readVersions(2);
       scan.setFilter(filterList);
       ResultScanner scanner = table.getScanner(scan);
       Iterator<Result> iterator = scanner.iterator();

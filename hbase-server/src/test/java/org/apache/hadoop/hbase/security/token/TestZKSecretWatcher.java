@@ -185,7 +185,10 @@ public class TestZKSecretWatcher {
 
     // verify that the expired key has been removed
     Waiter.waitFor(TEST_UTIL.getConfiguration(), 30000,
-      () -> KEY_SLAVE.getKey(key1.getKeyId()) == null);
+      () -> {
+      AuthenticationKey k = KEY_SLAVE.getKey(key1.getKeyId());
+      LOG.info("AuthKey1={}", k);
+      return k == null;});
     assertNull("key1=" + KEY_SLAVE.getKey(key1.getKeyId()),
       KEY_SLAVE.getKey(key1.getKeyId()));
 

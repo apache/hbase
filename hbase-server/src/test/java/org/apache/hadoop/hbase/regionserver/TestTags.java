@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -119,13 +120,11 @@ public class TestTags {
 
       byte[] row2 = Bytes.toBytes("rowc");
 
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-      familyDescriptor.setBlockCacheEnabled(true);
-      familyDescriptor.setDataBlockEncoding(DataBlockEncoding.NONE);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      TableDescriptor tableDescriptor =
+        TableDescriptorBuilder
+          .newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam)
+            .setBlockCacheEnabled(true).setDataBlockEncoding(DataBlockEncoding.NONE).build())
+          .build();
       Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(tableDescriptor);
       byte[] value = Bytes.toBytes("value");
@@ -186,12 +185,11 @@ public class TestTags {
 
       byte[] row2 = Bytes.toBytes("rowc");
 
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-      familyDescriptor.setBlockCacheEnabled(true);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      TableDescriptor tableDescriptor =
+        TableDescriptorBuilder.newBuilder(tableName)
+          .setColumnFamily(
+            ColumnFamilyDescriptorBuilder.newBuilder(fam).setBlockCacheEnabled(true).build())
+          .build();
       Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(tableDescriptor);
 
@@ -222,7 +220,7 @@ public class TestTags {
       admin.flush(tableName);
       Thread.sleep(1000);
 
-      Scan s = new Scan(row);
+      Scan s = new Scan().withStartRow(row);
       ResultScanner scanner = table.getScanner(s);
       try {
         Result[] next = scanner.next(3);
@@ -240,7 +238,7 @@ public class TestTags {
       while (admin.getCompactionState(tableName) != CompactionState.NONE) {
         Thread.sleep(10);
       }
-      s = new Scan(row);
+      s = new Scan().withStartRow(row);
       scanner = table.getScanner(s);
       try {
         Result[] next = scanner.next(3);
@@ -277,13 +275,10 @@ public class TestTags {
     byte[] rowe = Bytes.toBytes("rowe");
     Table table = null;
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-      familyDescriptor.setBlockCacheEnabled(true);
-      familyDescriptor.setDataBlockEncoding(encoding);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam).setBlockCacheEnabled(true)
+          .setDataBlockEncoding(encoding).build())
+        .build();
       Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(tableDescriptor);
       try {
@@ -326,7 +321,7 @@ public class TestTags {
         Thread.sleep(1000);
 
         TestCoprocessorForTags.checkTagPresence = true;
-        Scan s = new Scan(row);
+        Scan s = new Scan().withStartRow(row);
         s.setCaching(1);
         ResultScanner scanner = table.getScanner(s);
         try {
@@ -393,11 +388,8 @@ public class TestTags {
     byte[] row1 = Bytes.toBytes("r1");
     byte[] row2 = Bytes.toBytes("r2");
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor colDesc =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(f);
-    tableDescriptor.setColumnFamily(colDesc);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(f)).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
 
     Table table = null;
@@ -452,7 +444,7 @@ public class TestTags {
       increment.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.increment(increment);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row2));
+      scanner = table.getScanner(new Scan().withStartRow(row2));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -472,7 +464,7 @@ public class TestTags {
       append.addColumn(f, q, Bytes.toBytes("b"));
       table.append(append);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row3));
+      scanner = table.getScanner(new Scan().withStartRow(row3));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -486,7 +478,7 @@ public class TestTags {
       append.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.append(append);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row3));
+      scanner = table.getScanner(new Scan().withStartRow(row3));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -510,7 +502,7 @@ public class TestTags {
       append.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.append(append);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(new Scan().setStartRow(row4));
+      scanner = table.getScanner(new Scan().withStartRow(row4));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -527,7 +519,7 @@ public class TestTags {
 
   private void result(byte[] fam, byte[] row, byte[] qual, byte[] row2, Table table, byte[] value,
       byte[] value2, byte[] row1, byte[] value1) throws IOException {
-    Scan s = new Scan(row);
+    Scan s = new Scan().withStartRow(row);
     // If filters are used this attribute can be specifically check for in
     // filterKV method and
     // kvs can be filtered out if the tags of interest is not found in that kv

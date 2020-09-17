@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineTableProcedure;
@@ -29,12 +27,12 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.GCMergedRegionsState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.GCMultipleMergedRegionsStateData;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * GC regions that have been Merged. Caller determines if it is GC time. This Procedure does not
@@ -63,6 +61,26 @@ public class GCMultipleMergedRegionsProcedure extends
     super();
   }
 
+  @Override protected boolean holdLock(MasterProcedureEnv env) {
+    return true;
+  }
+
+  @Override
+  protected LockState acquireLock(final MasterProcedureEnv env) {
+    // It now takes an exclusive lock on the merged child region to make sure
+    // that no two parallel running of two GCMultipleMergedRegionsProcedures on the
+    // region.
+    if (env.getProcedureScheduler().waitRegion(this, mergedChild)) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    return LockState.LOCK_ACQUIRED;
+  }
+
+  @Override
+  protected void releaseLock(final MasterProcedureEnv env) {
+    env.getProcedureScheduler().wakeRegion(this, mergedChild);
+  }
+
   @Override
   public TableOperationType getTableOperationType() {
     return TableOperationType.MERGED_REGIONS_GC;
@@ -77,7 +95,15 @@ public class GCMultipleMergedRegionsProcedure extends
     try {
       switch (state) {
         case GC_MERGED_REGIONS_PREPARE:
-          // Nothing to do to prepare.
+          // If GCMultipleMergedRegionsProcedure processing is slower than the CatalogJanitor's scan
+          // interval, it will end resubmitting GCMultipleMergedRegionsProcedure for the same
+          // region. We can skip duplicate GCMultipleMergedRegionsProcedure while previous finished
+          List<RegionInfo> parents =
+            env.getAssignmentManager().getRegionStateStore().getMergeRegions(mergedChild);
+          if (parents == null || parents.isEmpty()) {
+            LOG.info("{} mergeXXX qualifiers have ALL been deleted", mergedChild.getShortNameToLog());
+            return Flow.NO_MORE_STATE;
+          }
           setNextState(GCMergedRegionsState.GC_MERGED_REGIONS_PURGE);
           break;
         case GC_MERGED_REGIONS_PURGE:
@@ -85,8 +111,7 @@ public class GCMultipleMergedRegionsProcedure extends
           setNextState(GCMergedRegionsState.GC_REGION_EDIT_METADATA);
           break;
         case GC_REGION_EDIT_METADATA:
-          MetaTableAccessor.deleteMergeQualifiers(env.getMasterServices().getConnection(),
-              mergedChild);
+          env.getAssignmentManager().getRegionStateStore().deleteMergeQualifiers(mergedChild);
           return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException(this + " unhandled state=" + state);

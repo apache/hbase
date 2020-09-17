@@ -655,7 +655,7 @@ public class TestWALProcedureStore {
   }
 
   @Test
-  public void testLogFileAleadExists() throws IOException {
+  public void testLogFileAlreadyExists() throws IOException {
     final boolean[] tested = {false};
     WALProcedureStore mStore = Mockito.spy(procStore);
 

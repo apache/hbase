@@ -32,6 +32,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.io.hfile.CacheConfig;
 org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
+org.apache.hadoop.hbase.util.JvmVersion;
 org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 </%import>
 <%doc>If json AND bcn is NOT an empty string presume it a block cache view request.</%doc>
@@ -166,6 +167,11 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
             <th>Description</th>
         </tr>
         <tr>
+            <td>JVM Version</td>
+            <td><% JvmVersion.getVersion() %></td>
+            <td>JVM vendor and version</td>
+        </tr>
+        <tr>
             <td>HBase Version</td>
             <td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, revision=<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td>
             <td>HBase version and revision</td>
@@ -197,8 +203,8 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
         </tr>
         <tr>
             <td>ZooKeeper Client Version</td>
-            <td><% org.apache.zookeeper.Version.getVersion() %>, revision=<% org.apache.zookeeper.Version.getRevision() %></td>
-            <td>ZooKeeper client version and revision</td>
+            <td><% org.apache.zookeeper.Version.getVersion() %>, revision=<% org.apache.zookeeper.Version.getRevisionHash() %></td>
+            <td>ZooKeeper client version and revision hash</td>
         </tr>
         <tr>
             <td>ZooKeeper Client Compiled</td>

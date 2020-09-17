@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase.regionserver.handler;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.log4j.Logger;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A event handler for running procedure.
@@ -29,7 +30,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class RSProcedureHandler extends EventHandler {
 
-  private static final Logger LOG = Logger.getLogger(RSProcedureHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RSProcedureHandler.class);
+
   private final long procId;
 
   private final RSProcedureCallable callable;
@@ -46,7 +48,7 @@ public class RSProcedureHandler extends EventHandler {
     try {
       callable.call();
     } catch (Throwable t) {
-      LOG.error("Error when call RSProcedureCallable: ", t);
+      LOG.error("pid=" + this.procId, t);
       error = t;
     } finally {
       ((HRegionServer) server).remoteProcedureComplete(procId, error);

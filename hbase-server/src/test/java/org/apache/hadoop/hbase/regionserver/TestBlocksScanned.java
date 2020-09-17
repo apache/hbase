@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestCase.addContent;
+import static org.apache.hadoop.hbase.HTestConst.addContent;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -76,34 +75,25 @@ public class TestBlocksScanned {
 
   @Test
   public void testBlocksScanned() throws Exception {
-    byte [] tableName = Bytes.toBytes("TestBlocksScanned");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
-
-    tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
-        .setMaxVersions(10)
-        .setBlockCacheEnabled(true)
-        .setBlocksize(BLOCK_SIZE)
-        .setCompressionType(Compression.Algorithm.NONE)
-        );
+    byte[] tableName = Bytes.toBytes("TestBlocksScanned");
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(10)
+          .setBlockCacheEnabled(true).setBlocksize(BLOCK_SIZE)
+          .setCompressionType(Compression.Algorithm.NONE).build())
+        .build();
     _testBlocksScanned(tableDescriptor);
   }
 
   @Test
   public void testBlocksScannedWithEncoding() throws Exception {
-    byte [] tableName = Bytes.toBytes("TestBlocksScannedWithEncoding");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
-
-    tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
-        .setMaxVersions(10)
-        .setBlockCacheEnabled(true)
-        .setDataBlockEncoding(DataBlockEncoding.FAST_DIFF)
-        .setBlocksize(BLOCK_SIZE)
-        .setCompressionType(Compression.Algorithm.NONE)
-        );
+    byte[] tableName = Bytes.toBytes("TestBlocksScannedWithEncoding");
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(10)
+          .setBlockCacheEnabled(true).setDataBlockEncoding(DataBlockEncoding.FAST_DIFF)
+          .setBlocksize(BLOCK_SIZE).setCompressionType(Compression.Algorithm.NONE).build())
+        .build();
     _testBlocksScanned(tableDescriptor);
   }
 
@@ -122,7 +112,7 @@ public class TestBlocksScanned {
     Scan scan = new Scan().withStartRow(Bytes.toBytes("aaa")).withStopRow(Bytes.toBytes("aaz"))
         .setReadType(Scan.ReadType.PREAD);
     scan.addColumn(FAMILY, COL);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
 
     InternalScanner s = r.getScanner(scan);
     List<Cell> results = new ArrayList<>();

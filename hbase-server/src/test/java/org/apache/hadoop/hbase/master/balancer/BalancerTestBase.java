@@ -201,9 +201,11 @@ public class BalancerTestBase {
     int max = numRegions % numServers == 0 ? min : min + 1;
 
     for (ServerAndLoad server : servers) {
-      assertTrue(server.getLoad() >= 0);
-      assertTrue(server.getLoad() <= max);
-      assertTrue(server.getLoad() >= min);
+      assertTrue("All servers should have a positive load. " + server, server.getLoad() >= 0);
+      assertTrue("All servers should have load no more than " + max + ". " + server,
+          server.getLoad() <= max);
+      assertTrue("All servers should have load no less than " + min + ". " + server,
+          server.getLoad() >= min);
     }
   }
 
@@ -234,8 +236,9 @@ public class BalancerTestBase {
     int max = numRegions % numServers == 0 ? min : min + 1;
 
     for (ServerAndLoad server : servers) {
-      if (server.getLoad() < 0 || server.getLoad() > max + tablenum/2 + 1  ||
-          server.getLoad() < min - tablenum/2 - 1) {
+      // The '5' in below is arbitrary.
+      if (server.getLoad() < 0 || server.getLoad() > max + (tablenum/2 + 5)  ||
+          server.getLoad() < (min - tablenum/2 - 5)) {
         LOG.warn("server={}, load={}, max={}, tablenum={}, min={}",
           server.getServerName(), server.getLoad(), max, tablenum, min);
         return false;
@@ -435,6 +438,26 @@ public class BalancerTestBase {
     return randomRegions(numRegions, -1);
   }
 
+  protected List<RegionInfo> createRegions(int numRegions, TableName tableName) {
+    List<RegionInfo> regions = new ArrayList<>(numRegions);
+    byte[] start = new byte[16];
+    byte[] end = new byte[16];
+    Random rand = ThreadLocalRandom.current();
+    rand.nextBytes(start);
+    rand.nextBytes(end);
+    for (int i = 0; i < numRegions; i++) {
+      Bytes.putInt(start, 0, numRegions << 1);
+      Bytes.putInt(end, 0, (numRegions << 1) + 1);
+      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(start)
+        .setEndKey(end)
+        .setSplit(false)
+        .build();
+      regions.add(hri);
+    }
+    return regions;
+  }
+
   protected List<RegionInfo> randomRegions(int numRegions, int numTables) {
     List<RegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
@@ -537,8 +560,10 @@ public class BalancerTestBase {
 
     loadBalancer.setRackManager(rackManager);
     // Run the balancer.
-    List<RegionPlan> plans = loadBalancer.balanceCluster(serverMap);
-    assertNotNull(plans);
+    Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+        (Map) mockClusterServersWithTables(serverMap);
+    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
+    assertNotNull("Initial cluster balance should produce plans.", plans);
 
     // Check to see that this actually got to a stable place.
     if (assertFullyBalanced || assertFullyBalancedForReplicas) {
@@ -550,8 +575,10 @@ public class BalancerTestBase {
 
       if (assertFullyBalanced) {
         assertClusterAsBalanced(balancedCluster);
-        List<RegionPlan> secondPlans =  loadBalancer.balanceCluster(serverMap);
-        assertNull(secondPlans);
+        LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
+        List<RegionPlan> secondPlans = loadBalancer.balanceCluster(LoadOfAllTable);
+        assertNull("Given a requirement to be fully balanced, second attempt at plans should " +
+            "produce none.", secondPlans);
       }
 
       if (assertFullyBalancedForReplicas) {

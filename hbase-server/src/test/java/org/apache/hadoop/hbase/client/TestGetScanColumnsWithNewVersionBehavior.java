@@ -95,7 +95,7 @@ public class TestGetScanColumnsWithNewVersionBehavior {
       assertArrayEquals(expected, getResult.rawCells());
 
       // check scan request
-      Scan scan = new Scan(ROW);
+      Scan scan = new Scan().withStartRow(ROW);
       scan.addColumn(CF, COLA);
       scan.addColumn(CF, COLC);
       ResultScanner scanner = t.getScanner(scan);

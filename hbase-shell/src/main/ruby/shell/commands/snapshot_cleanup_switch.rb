@@ -34,7 +34,7 @@ Examples:
       end
 
       def command(enable_disable)
-        prev_state = admin.snapshot_cleanup_switch(enable_disable) ? 'true' : 'false'
+        prev_state = !!admin.snapshot_cleanup_switch(enable_disable)
         formatter.row(["Previous snapshot cleanup state : #{prev_state}"])
         prev_state
       end

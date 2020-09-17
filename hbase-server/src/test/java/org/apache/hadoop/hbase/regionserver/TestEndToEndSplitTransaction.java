@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,6 +32,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -121,7 +123,6 @@ public class TestEndToEndSplitTransaction {
       admin.createTable(htd);
       TEST_UTIL.loadTable(source, fam);
       compactSplit.setCompactionsEnabled(false);
-      TEST_UTIL.getHBaseCluster().getRegions(tableName).get(0).forceSplit(null);
       admin.split(tableName);
       TEST_UTIL.waitFor(60000, () -> TEST_UTIL.getHBaseCluster().getRegions(tableName).size() == 2);
 
@@ -401,6 +402,17 @@ public class TestEndToEndSplitTransaction {
   public static void compactAndBlockUntilDone(Admin admin, HRegionServer rs, byte[] regionName)
       throws IOException, InterruptedException {
     log("Compacting region: " + Bytes.toStringBinary(regionName));
+    // Wait till its online before we do compact else it comes back with NoServerForRegionException
+    try {
+      TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+        @Override public boolean evaluate() throws Exception {
+          return rs.getServerName().equals(MetaTableAccessor.
+            getRegionLocation(admin.getConnection(), regionName).getServerName());
+        }
+      });
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
     admin.majorCompactRegion(regionName);
     log("blocking until compaction is complete: " + Bytes.toStringBinary(regionName));
     Threads.sleepWithoutInterrupt(500);
@@ -433,7 +445,7 @@ public class TestEndToEndSplitTransaction {
           break;
         }
 
-        region = MetaTableAccessor.getRegionInfo(result);
+        region = CatalogFamilyFormat.getRegionInfo(result);
         if (region.isSplitParent()) {
           log("found parent region: " + region.toString());
           PairOfSameType<RegionInfo> pair = MetaTableAccessor.getDaughterRegions(result);

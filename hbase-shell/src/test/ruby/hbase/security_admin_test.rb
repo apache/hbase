@@ -22,12 +22,11 @@ require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
-include HBaseConstants
-
 module Hbase
   # Simple secure administration methods tests
   class SecureAdminMethodsTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     def setup
       setup_hbase
@@ -84,6 +83,15 @@ module Hbase
       security_admin.grant(global_user_name, 'W')
       found_permission = false
       security_admin.user_permission do |user, permission|
+        if user == global_user_name
+          assert_match(/WRITE/, permission.to_s)
+          found_permission = true
+        end
+      end
+      assert(found_permission, 'Permission for user ' + global_user_name + ' was not found.')
+
+      found_permission = false
+      security_admin.user_permission('.*') do |user, permission|
         if user == global_user_name
           assert_match(/WRITE/, permission.to_s)
           found_permission = true

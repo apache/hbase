@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -62,7 +61,6 @@ public class TableRecordReaderImpl {
   private ImmutableBytesWritable key = null;
   private Result value = null;
   private TaskAttemptContext context = null;
-  private Method getCounter = null;
   private long numRestarts = 0;
   private long numStale = 0;
   private long timestamp;
@@ -102,10 +100,11 @@ public class TableRecordReaderImpl {
    * In new mapreduce APIs, TaskAttemptContext has two getCounter methods
    * Check if getCounter(String, String) method is available.
    * @return The getCounter method or null if not available.
-   * @throws IOException
+   * @deprecated since 2.4.0 and 2.3.2, will be removed in 4.0.0
    */
+  @Deprecated
   protected static Method retrieveGetCounterWithStringsParams(TaskAttemptContext context)
-  throws IOException {
+    throws IOException {
     Method m = null;
     try {
       m = context.getClass().getMethod("getCounter",
@@ -120,13 +119,11 @@ public class TableRecordReaderImpl {
 
   /**
    * Sets the HBase table.
-   *
-   * @param htable  The {@link org.apache.hadoop.hbase.HTableDescriptor} to scan.
+   * @param htable The table to scan.
    */
   public void setHTable(Table htable) {
     Configuration conf = htable.getConfiguration();
-    logScannerActivity = conf.getBoolean(
-      ConnectionConfiguration.LOG_SCANNER_ACTIVITY, false);
+    logScannerActivity = conf.getBoolean(ConnectionConfiguration.LOG_SCANNER_ACTIVITY, false);
     logPerRowCount = conf.getInt(LOG_PER_ROW_COUNT, 100);
     this.htable = htable;
   }
@@ -142,16 +139,12 @@ public class TableRecordReaderImpl {
 
   /**
    * Build the scanner. Not done in constructor to allow for extension.
-   *
-   * @throws IOException
-   * @throws InterruptedException
    */
   public void initialize(InputSplit inputsplit,
       TaskAttemptContext context) throws IOException,
       InterruptedException {
     if (context != null) {
       this.context = context;
-      getCounter = retrieveGetCounterWithStringsParams(context);
     }
     restart(scan.getStartRow());
   }
@@ -176,7 +169,6 @@ public class TableRecordReaderImpl {
    * Returns the current key.
    *
    * @return The current key.
-   * @throws IOException
    * @throws InterruptedException When the job is aborted.
    */
   public ImmutableBytesWritable getCurrentKey() throws IOException,
@@ -204,18 +196,23 @@ public class TableRecordReaderImpl {
    * @throws InterruptedException When the job was aborted.
    */
   public boolean nextKeyValue() throws IOException, InterruptedException {
-    if (key == null) key = new ImmutableBytesWritable();
-    if (value == null) value = new Result();
+    if (key == null) {
+      key = new ImmutableBytesWritable();
+    }
+    if (value == null) {
+      value = new Result();
+    }
     try {
       try {
         value = this.scanner.next();
-        if (value != null && value.isStale()) numStale++;
+        if (value != null && value.isStale()) {
+          numStale++;
+        }
         if (logScannerActivity) {
           rowcount ++;
           if (rowcount >= logPerRowCount) {
             long now = System.currentTimeMillis();
-            LOG.info("Mapper took " + (now-timestamp)
-              + "ms to process " + rowcount + " rows");
+            LOG.info("Mapper took {}ms to process {} rows", (now - timestamp), rowcount);
             timestamp = now;
             rowcount = 0;
           }
@@ -242,7 +239,9 @@ public class TableRecordReaderImpl {
           scanner.next();    // skip presumed already mapped row
         }
         value = scanner.next();
-        if (value != null && value.isStale()) numStale++;
+        if (value != null && value.isStale()) {
+          numStale++;
+        }
         numRestarts++;
       }
 
@@ -265,8 +264,7 @@ public class TableRecordReaderImpl {
       updateCounters();
       if (logScannerActivity) {
         long now = System.currentTimeMillis();
-        LOG.info("Mapper took " + (now-timestamp)
-          + "ms to process " + rowcount + " rows");
+        LOG.info("Mapper took {}ms to process {} rows", (now - timestamp), rowcount);
         LOG.info(ioe.toString(), ioe);
         String lastRow = lastSuccessfulRow == null ?
           "null" : Bytes.toStringBinary(lastSuccessfulRow);
@@ -281,38 +279,51 @@ public class TableRecordReaderImpl {
    * counters thus can update counters based on scanMetrics.
    * If hbase runs on old version of mapreduce, it won't be able to get
    * access to counters and TableRecorderReader can't update counter values.
-   * @throws IOException
    */
-  private void updateCounters() throws IOException {
+  private void updateCounters() {
     ScanMetrics scanMetrics = scanner.getScanMetrics();
     if (scanMetrics == null) {
       return;
     }
 
-    updateCounters(scanMetrics, numRestarts, getCounter, context, numStale);
+    updateCounters(scanMetrics, numRestarts, context, numStale);
+  }
+
+  /**
+   * @deprecated since 2.4.0 and 2.3.2, will be removed in 4.0.0
+   *   Use {@link #updateCounters(ScanMetrics, long, TaskAttemptContext, long)} instead.
+   */
+  @Deprecated
+  protected static void updateCounters(ScanMetrics scanMetrics, long numScannerRestarts,
+      Method getCounter, TaskAttemptContext context, long numStale) {
+    updateCounters(scanMetrics, numScannerRestarts, context, numStale);
   }
 
   protected static void updateCounters(ScanMetrics scanMetrics, long numScannerRestarts,
-      Method getCounter, TaskAttemptContext context, long numStale) {
+      TaskAttemptContext context, long numStale) {
     // we can get access to counters only if hbase uses new mapreduce APIs
-    if (getCounter == null) {
+    if (context == null) {
       return;
     }
 
-    try {
-      for (Map.Entry<String, Long> entry:scanMetrics.getMetricsMap().entrySet()) {
-        Counter ct = (Counter)getCounter.invoke(context,
-            HBASE_COUNTER_GROUP_NAME, entry.getKey());
-
-        ct.increment(entry.getValue());
+      for (Map.Entry<String, Long> entry : scanMetrics.getMetricsMap().entrySet()) {
+        Counter counter = context.getCounter(HBASE_COUNTER_GROUP_NAME, entry.getKey());
+        if (counter != null) {
+          counter.increment(entry.getValue());
+        }
       }
-      ((Counter) getCounter.invoke(context, HBASE_COUNTER_GROUP_NAME,
-          "NUM_SCANNER_RESTARTS")).increment(numScannerRestarts);
-      ((Counter) getCounter.invoke(context, HBASE_COUNTER_GROUP_NAME,
-          "NUM_SCAN_RESULTS_STALE")).increment(numStale);
-    } catch (Exception e) {
-      LOG.debug("can't update counter." + StringUtils.stringifyException(e));
-    }
+      if (numScannerRestarts != 0L) {
+        Counter counter = context.getCounter(HBASE_COUNTER_GROUP_NAME, "NUM_SCANNER_RESTARTS");
+        if (counter != null) {
+          counter.increment(numScannerRestarts);
+        }
+      }
+      if (numStale != 0L) {
+        Counter counter = context.getCounter(HBASE_COUNTER_GROUP_NAME, "NUM_SCAN_RESULTS_STALE");
+        if (counter != null) {
+          counter.increment(numStale);
+        }
+      }
   }
 
   /**

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -58,11 +59,15 @@ public class TestStochasticLoadBalancerBalanceCluster extends BalancerTestBase {
       Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
       List<ServerAndLoad> list = convertToList(servers);
       LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
-      List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
+
+      Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+          (Map) mockClusterServersWithTables(servers);
+      List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
       List<ServerAndLoad> balancedCluster = reconcile(list, plans, servers);
       LOG.info("Mock Balance : " + printMock(balancedCluster));
       assertClusterAsBalanced(balancedCluster);
-      List<RegionPlan> secondPlans = loadBalancer.balanceCluster(servers);
+      LoadOfAllTable = (Map) mockClusterServersWithTables(servers);
+      List<RegionPlan> secondPlans = loadBalancer.balanceCluster(LoadOfAllTable);
       assertNull(secondPlans);
       for (Map.Entry<ServerName, List<RegionInfo>> entry : servers.entrySet()) {
         returnRegions(entry.getValue());

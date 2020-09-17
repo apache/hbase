@@ -85,6 +85,11 @@ class CustomFSHLog extends FSHLog {
       }
 
       @Override
+      public long getSyncedLength() {
+        return writer.getSyncedLength();
+      }
+
+      @Override
       public void sync(boolean forceSync) throws IOException {
         writerSyncFlag = forceSync;
         writer.sync(forceSync);

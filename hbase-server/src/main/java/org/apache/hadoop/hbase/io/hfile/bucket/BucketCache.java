@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
 import org.apache.hadoop.hbase.util.IdReadWriteLockStrongRef;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
@@ -180,9 +179,13 @@ public class BucketCache implements BlockCache, HeapSize {
   private final AtomicLong accessCount = new AtomicLong();
 
   private static final int DEFAULT_CACHE_WAIT_TIME = 50;
-  // Used in test now. If the flag is false and the cache speed is very fast,
-  // bucket cache will skip some blocks when caching. If the flag is true, we
-  // will wait blocks flushed to IOEngine for some time when caching
+
+  /**
+   * Used in tests. If this flag is false and the cache speed is very fast,
+   * bucket cache will skip some blocks when caching. If the flag is true, we
+   * will wait until blocks are flushed to IOEngine.
+   */
+  @VisibleForTesting
   boolean wait_when_cache = false;
 
   private final BucketCacheStats cacheStats = new BucketCacheStats();
@@ -874,7 +877,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
   // This handles flushing the RAM cache to IOEngine.
   @VisibleForTesting
-  class WriterThread extends HasThread {
+  class WriterThread extends Thread {
     private final BlockingQueue<RAMQueueEntry> inputQueue;
     private volatile boolean writerEnabled = true;
 
@@ -1172,8 +1175,10 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private void checkIOErrorIsTolerated() {
     long now = EnvironmentEdgeManager.currentTime();
-    if (this.ioErrorStartTime > 0) {
-      if (cacheEnabled && (now - ioErrorStartTime) > this.ioErrorsTolerationDuration) {
+    // Do a single read to a local variable to avoid timing issue - HBASE-24454
+    long ioErrorStartTimeTmp = this.ioErrorStartTime;
+    if (ioErrorStartTimeTmp > 0) {
+      if (cacheEnabled && (now - ioErrorStartTimeTmp) > this.ioErrorsTolerationDuration) {
         LOG.error("IO errors duration time has exceeded " + ioErrorsTolerationDuration +
           "ms, disabling cache, please check your IOEngine");
         disableCache();

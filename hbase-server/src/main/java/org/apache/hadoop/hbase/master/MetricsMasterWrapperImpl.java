@@ -134,6 +134,10 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     return serverManager.getDeadServers().size();
   }
 
+  @Override public boolean isRunning() {
+    return !(master.isStopped() || master.isStopping());
+  }
+
   @Override
   public String getServerName() {
     ServerName serverName = master.getServerName();
@@ -155,6 +159,9 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public Map<String,Entry<Long,Long>> getTableSpaceUtilization() {
+    if (master == null) {
+      return Collections.emptyMap();
+    }
     QuotaObserverChore quotaChore = master.getQuotaObserverChore();
     if (quotaChore == null) {
       return Collections.emptyMap();

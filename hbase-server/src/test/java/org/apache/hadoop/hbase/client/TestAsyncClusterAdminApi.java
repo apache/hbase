@@ -22,10 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -65,19 +61,19 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAsyncClusterAdminApi.class);
 
-  private final Path cnfPath = FileSystems.getDefault().getPath("target/test-classes/hbase-site.xml");
-  private final Path cnf2Path = FileSystems.getDefault().getPath("target/test-classes/hbase-site2.xml");
-  private final Path cnf3Path = FileSystems.getDefault().getPath("target/test-classes/hbase-site3.xml");
-
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+
+    setUpConfigurationFiles(TEST_UTIL);
     TEST_UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, 0);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
+
     TEST_UTIL.startMiniCluster(2);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    addResourceToRegionServerConfiguration(TEST_UTIL);
   }
 
   @Test
@@ -135,18 +131,6 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     });
 
     restoreHBaseSiteXML();
-  }
-
-  private void replaceHBaseSiteXML() throws IOException {
-    // make a backup of hbase-site.xml
-    Files.copy(cnfPath, cnf3Path, StandardCopyOption.REPLACE_EXISTING);
-    // update hbase-site.xml by overwriting it
-    Files.copy(cnf2Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
-  }
-
-  private void restoreHBaseSiteXML() throws IOException {
-    // restore hbase-site.xml
-    Files.copy(cnf3Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
   }
 
   @Test

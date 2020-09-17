@@ -33,13 +33,13 @@ import org.junit.rules.ExternalResource;
  *
  * <pre>{@code
  *   public class TestMyClass {
- *     private static final MiniClusterRule miniClusterRule = new MiniClusterRule();
+ *     private static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
  *     private static final ConnectionRule connectionRule =
  *       new ConnectionRule(miniClusterRule::createConnection);
  *
  *     @ClassRule
  *     public static final TestRule rule = RuleChain
- *       .outerRule(connectionRule)
+ *       .outerRule(miniClusterRule)
  *       .around(connectionRule);
  *   }
  * }</pre>

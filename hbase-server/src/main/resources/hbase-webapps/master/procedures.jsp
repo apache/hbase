@@ -33,6 +33,20 @@
   import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
   import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
 %>
+<%@ page import="org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.master.assignment.OpenRegionProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.master.assignment.CloseRegionProcedure" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.OperationMetrics" %>
+<%@ page import="java.util.Map" %>
+<%@ page import="java.util.HashMap" %>
+<%@ page import="org.apache.hadoop.hbase.master.MetricsAssignmentManagerSource" %>
+<%@ page import="org.apache.hadoop.hbase.master.MetricsAssignmentManager" %>
+<%@ page import="org.apache.hadoop.hbase.procedure2.ProcedureMetrics" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.Snapshot" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.Histogram" %>
+<%@ page import="java.util.TreeMap" %>
+<%@ page import="org.apache.hadoop.hbase.metrics.impl.HistogramImpl" %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   ProcedureExecutor<MasterProcedureEnv> procExecutor = master.getMasterProcedureExecutor();
@@ -53,6 +67,55 @@
     <jsp:param name="pageTitle" value="${pageTitle}"/>
 </jsp:include>
 
+<div class="container-fluid content">
+  <div class="row">
+    <div class="page-header">
+      <h1>Procedure Time Statistics</h1>
+    </div>
+  </div>
+  <p>We list proceduces completed successfully of the following types only: ServerCrashProcedure, TransitRegionStateProcedure,
+    OpenRegionProcedure, CloseRegionProcedure.</p>
+  <table class="table table-striped" width="90%" >
+    <tr>
+      <th>Type</th>
+      <th>min(ms)</th>
+      <th>50-percentile(ms)</th>
+      <th>90-percentile(ms)</th>
+      <th>max(ms)</th>
+    </tr>
+    <%
+      Map<String, ProcedureMetrics> latencyMetrics = new TreeMap<>();
+      MetricsAssignmentManager metricsAssignmentManagerSource =
+        procExecutor.getEnvironment().getAssignmentManager().getAssignmentManagerMetrics();
+      latencyMetrics.put("OpenRegionProcedure", metricsAssignmentManagerSource.getOpenProcMetrics());
+      latencyMetrics.put("CloseRegionProcedure", metricsAssignmentManagerSource.getCloseProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#assignRegion", metricsAssignmentManagerSource.getAssignProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#unassignRegion", metricsAssignmentManagerSource.getUnassignProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#moveRegion", metricsAssignmentManagerSource.getMoveProcMetrics());
+      latencyMetrics.put("TransitionRegionProcedure#reopenRegion", metricsAssignmentManagerSource.getReopenProcMetrics());
+      latencyMetrics.put("ServerCrashProcedure", master.getMasterMetrics().getServerCrashProcMetrics());
+
+      double[] percentiles = new double[] { 0.5, 0.9};
+      for (Map.Entry<String, ProcedureMetrics> e : latencyMetrics.entrySet()) {
+        Histogram histogram = e.getValue().getTimeHisto();
+        if (histogram.getCount() == 0 || !(histogram instanceof HistogramImpl)) {
+          continue;
+        }
+        HistogramImpl histogramImpl = (HistogramImpl)histogram;
+        long[] percentileLatencies = histogramImpl.getQuantiles(percentiles);
+
+    %>
+    <tr>
+      <td><%= e.getKey() %></td>
+      <td><%= histogramImpl.getMin() %></td>
+      <td><%= percentileLatencies[0] %></td>
+      <td><%= percentileLatencies[1] %></td>
+      <td><%= histogramImpl.getMax() %></td>
+    </tr>
+    <% } %>
+  </table>
+</div>
+<br />
 <div class="container-fluid content">
   <div class="row">
       <div class="page-header">
@@ -103,6 +166,7 @@
   </table>
 </div>
 <br />
+
 <div class="container-fluid content">
   <div class="row">
       <div class="page-header">

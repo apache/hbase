@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -182,7 +182,7 @@ public class VerifyReplication extends Configured implements Tool {
         int versions = conf.getInt(NAME+".versions", -1);
         LOG.info("Setting number of version inside map as: " + versions);
         if (versions >= 0) {
-          scan.setMaxVersions(versions);
+          scan.readVersions(versions);
         }
         TableName tableName = TableName.valueOf(conf.get(NAME + ".tableName"));
         sourceConnection = ConnectionFactory.createConnection(conf);
@@ -198,17 +198,17 @@ public class VerifyReplication extends Configured implements Tool {
         TableName peerTableName = TableName.valueOf(peerName);
         replicatedConnection = ConnectionFactory.createConnection(peerConf);
         replicatedTable = replicatedConnection.getTable(peerTableName);
-        scan.setStartRow(value.getRow());
+        scan.withStartRow(value.getRow());
 
         byte[] endRow = null;
         if (tableSplit instanceof TableSnapshotInputFormat.TableSnapshotRegionSplit) {
-          endRow = ((TableSnapshotInputFormat.TableSnapshotRegionSplit) tableSplit).getRegionInfo()
-              .getEndKey();
+          endRow = ((TableSnapshotInputFormat.TableSnapshotRegionSplit) tableSplit).getRegion()
+            .getEndKey();
         } else {
           endRow = ((TableSplit) tableSplit).getEndRow();
         }
 
-        scan.setStopRow(endRow);
+        scan.withStopRow(endRow);
 
         String peerSnapshotName = conf.get(NAME + ".peerSnapshotName", null);
         if (peerSnapshotName != null) {
@@ -216,13 +216,13 @@ public class VerifyReplication extends Configured implements Tool {
           String peerFSAddress = conf.get(NAME + ".peerFSAddress", null);
           String peerHBaseRootAddress = conf.get(NAME + ".peerHBaseRootAddress", null);
           FileSystem.setDefaultUri(peerConf, peerFSAddress);
-          FSUtils.setRootDir(peerConf, new Path(peerHBaseRootAddress));
-          LOG.info("Using peer snapshot:" + peerSnapshotName + " with temp dir:"
-              + peerSnapshotTmpDir + " peer root uri:" + FSUtils.getRootDir(peerConf)
-              + " peerFSAddress:" + peerFSAddress);
+          CommonFSUtils.setRootDir(peerConf, new Path(peerHBaseRootAddress));
+          LOG.info("Using peer snapshot:" + peerSnapshotName + " with temp dir:" +
+            peerSnapshotTmpDir + " peer root uri:" + CommonFSUtils.getRootDir(peerConf) +
+            " peerFSAddress:" + peerFSAddress);
 
-          replicatedScanner = new TableSnapshotScanner(peerConf, FSUtils.getRootDir(peerConf),
-              new Path(peerFSAddress, peerSnapshotTmpDir), peerSnapshotName, scan, true);
+          replicatedScanner = new TableSnapshotScanner(peerConf, CommonFSUtils.getRootDir(peerConf),
+            new Path(peerFSAddress, peerSnapshotTmpDir), peerSnapshotName, scan, true);
         } else {
           replicatedScanner = replicatedTable.getScanner(scan);
         }
@@ -367,13 +367,13 @@ public class VerifyReplication extends Configured implements Tool {
   }
 
   private void restoreSnapshotForPeerCluster(Configuration conf, String peerQuorumAddress)
-      throws IOException {
+    throws IOException {
     Configuration peerConf =
-        HBaseConfiguration.createClusterConf(conf, peerQuorumAddress, PEER_CONFIG_PREFIX);
+      HBaseConfiguration.createClusterConf(conf, peerQuorumAddress, PEER_CONFIG_PREFIX);
     FileSystem.setDefaultUri(peerConf, peerFSAddress);
-    FSUtils.setRootDir(peerConf, new Path(peerFSAddress, peerHBaseRootAddress));
+    CommonFSUtils.setRootDir(peerConf, new Path(peerFSAddress, peerHBaseRootAddress));
     FileSystem fs = FileSystem.get(peerConf);
-    RestoreSnapshotHelper.copySnapshotForScanner(peerConf, fs, FSUtils.getRootDir(peerConf),
+    RestoreSnapshotHelper.copySnapshotForScanner(peerConf, fs, CommonFSUtils.getRootDir(peerConf),
       new Path(peerFSAddress, peerSnapshotTmpDir), peerSnapshotName);
   }
 
@@ -459,7 +459,7 @@ public class VerifyReplication extends Configured implements Tool {
       scan.setBatch(batch);
     }
     if (versions >= 0) {
-      scan.setMaxVersions(versions);
+      scan.readVersions(versions);
       LOG.info("Number of versions set to " + versions);
     }
     if(families != null) {
@@ -511,10 +511,10 @@ public class VerifyReplication extends Configured implements Tool {
   }
 
   private static void setStartAndStopRows(Scan scan, byte[] startPrefixRow, byte[] lastPrefixRow) {
-    scan.setStartRow(startPrefixRow);
+    scan.withStartRow(startPrefixRow);
     byte[] stopRow = Bytes.add(Bytes.head(lastPrefixRow, lastPrefixRow.length - 1),
         new byte[]{(byte) (lastPrefixRow[lastPrefixRow.length - 1] + 1)});
-    scan.setStopRow(stopRow);
+    scan.withStopRow(stopRow);
   }
 
   @VisibleForTesting

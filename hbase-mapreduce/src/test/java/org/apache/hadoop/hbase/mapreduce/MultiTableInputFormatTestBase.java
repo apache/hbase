@@ -238,10 +238,10 @@ public abstract class MultiTableInputFormatTestBase {
       scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, Bytes.toBytes(tableName));
 
       if (start != null) {
-        scan.setStartRow(Bytes.toBytes(start));
+        scan.withStartRow(Bytes.toBytes(start));
       }
       if (stop != null) {
-        scan.setStopRow(Bytes.toBytes(stop));
+        scan.withStopRow(Bytes.toBytes(stop));
       }
 
       scans.add(scan);

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -150,13 +151,10 @@ public class TestTimeRangeMapRed {
 
   @Test
   public void testTimeRangeMapRed()
-      throws IOException, InterruptedException, ClassNotFoundException {
-    final TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE_NAME);
-    final ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME);
-    familyDescriptor.setMaxVersions(Integer.MAX_VALUE);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    throws IOException, InterruptedException, ClassNotFoundException {
+    final TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(FAMILY_NAME).setMaxVersions(Integer.MAX_VALUE).build()).build();
     admin.createTable(tableDescriptor);
     List<Put> puts = new ArrayList<>();
     for (Map.Entry<Long, Boolean> entry : TIMESTAMP.entrySet()) {
@@ -182,7 +180,7 @@ public class TestTimeRangeMapRed {
       Scan scan = new Scan();
       scan.addColumn(FAMILY_NAME, COLUMN_NAME);
       scan.setTimeRange(MINSTAMP, MAXSTAMP);
-      scan.setMaxVersions();
+      scan.readAllVersions();
       TableMapReduceUtil.initTableMapperJob(TABLE_NAME,
         scan, ProcessTimeRangeMapper.class, Text.class, Text.class, job);
       job.waitForCompletion(true);
@@ -200,7 +198,7 @@ public class TestTimeRangeMapRed {
   private void verify(final Table table) throws IOException {
     Scan scan = new Scan();
     scan.addColumn(FAMILY_NAME, COLUMN_NAME);
-    scan.setMaxVersions(1);
+    scan.readVersions(1);
     ResultScanner scanner = table.getScanner(scan);
     for (Result r: scanner) {
       for (Cell kv : r.listCells()) {

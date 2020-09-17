@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,18 +19,15 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.net.BindException;
-
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@org.junit.Ignore // See HBASE-24342. This test can't pass 100% of time as written so disabling
 @Category(MediumTests.class)
 public class TestClusterPortAssignment {
   @ClassRule
@@ -69,9 +66,15 @@ public class TestClusterPortAssignment {
           cluster.getRegionServer(0).getRpcServer().getListenerAddress().getPort());
         assertEquals("RS info port is incorrect", rsInfoPort,
           cluster.getRegionServer(0).getInfoServer().getPort());
-      } catch (BindException e) {
-        LOG.info("Failed to bind, need to retry", e);
-        retry = true;
+      } catch (Exception e) {
+        if (e instanceof  BindException || e.getCause() != null &&
+            (e.getCause() instanceof BindException || e.getCause().getCause() != null &&
+              e.getCause().getCause() instanceof BindException)) {
+          LOG.info("Failed bind, need to retry", e);
+          retry = true;
+        } else {
+          throw e;
+        }
       } finally {
         TEST_UTIL.shutdownMiniCluster();
       }

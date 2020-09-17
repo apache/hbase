@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -34,13 +31,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RawCellBuilder;
 import org.apache.hadoop.hbase.RawCellBuilderFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -57,8 +55,6 @@ import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorServiceBackwardCompatiblity;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
 import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
@@ -67,8 +63,6 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.filter.ByteArrayComparable;
-import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -86,6 +80,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.AbstractReferenceMap;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.ReferenceMap;
 
@@ -435,12 +431,6 @@ public class RegionCoprocessorHost
     try {
       if (RegionCoprocessor.class.isAssignableFrom(implClass)) {
         return implClass.asSubclass(RegionCoprocessor.class).getDeclaredConstructor().newInstance();
-      } else if (CoprocessorService.class.isAssignableFrom(implClass)) {
-        // For backward compatibility with old CoprocessorService impl which don't extend
-        // RegionCoprocessor.
-        CoprocessorService cs;
-        cs = implClass.asSubclass(CoprocessorService.class).getDeclaredConstructor().newInstance();
-        return new CoprocessorServiceBackwardCompatiblity.RegionCoprocessorService(cs);
       } else {
         LOG.error("{} is not of type RegionCoprocessor. Check the configuration of {}",
             implClass.getName(), CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
@@ -1051,322 +1041,70 @@ public class RegionCoprocessorHost
 
   /**
    * Supports Coprocessor 'bypass'.
-   * @param row row to check
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param op the comparison operation
-   * @param comparator the comparator
-   * @param put data to put if check succeeds
+   * @param checkAndMutate the CheckAndMutate object
    * @return true or false to return to client if default processing should be bypassed, or null
-   * otherwise
+   *   otherwise
+   * @throws IOException if an error occurred on the coprocessor
    */
-  public Boolean preCheckAndPut(final byte [] row, final byte [] family,
-      final byte [] qualifier, final CompareOperator op,
-      final ByteArrayComparable comparator, final Put put)
-      throws IOException {
-    boolean bypassable = true;
-    boolean defaultResult = false;
-    if (coprocEnvironments.isEmpty()) {
-      return null;
-    }
-    return execOperationWithResult(
-        new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter,
-            defaultResult,  bypassable) {
-          @Override
-          public Boolean call(RegionObserver observer) throws IOException {
-            return observer.preCheckAndPut(this, row, family, qualifier,
-                op, comparator, put, getResult());
-          }
-        });
-  }
-
-  /**
-   * Supports Coprocessor 'bypass'.
-   * @param row row to check
-   * @param filter filter
-   * @param put data to put if check succeeds
-   * @return true or false to return to client if default processing should be bypassed, or null
-   * otherwise
-   */
-  public Boolean preCheckAndPut(final byte [] row, final Filter filter, final Put put)
+  public CheckAndMutateResult preCheckAndMutate(CheckAndMutate checkAndMutate)
     throws IOException {
     boolean bypassable = true;
-    boolean defaultResult = false;
+    CheckAndMutateResult defaultResult = new CheckAndMutateResult(false, null);
     if (coprocEnvironments.isEmpty()) {
       return null;
     }
     return execOperationWithResult(
-      new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter,
-        defaultResult, bypassable) {
+      new ObserverOperationWithResult<RegionObserver, CheckAndMutateResult>(
+        regionObserverGetter, defaultResult, bypassable) {
         @Override
-        public Boolean call(RegionObserver observer) throws IOException {
-          return observer.preCheckAndPut(this, row, filter, put, getResult());
+        public CheckAndMutateResult call(RegionObserver observer) throws IOException {
+          return observer.preCheckAndMutate(this, checkAndMutate, getResult());
         }
       });
   }
 
   /**
    * Supports Coprocessor 'bypass'.
-   * @param row row to check
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param op the comparison operation
-   * @param comparator the comparator
-   * @param put data to put if check succeeds
+   * @param checkAndMutate the CheckAndMutate object
    * @return true or false to return to client if default processing should be bypassed, or null
    *   otherwise
+   * @throws IOException if an error occurred on the coprocessor
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_BOOLEAN_RETURN_NULL",
-      justification="Null is legit")
-  public Boolean preCheckAndPutAfterRowLock(
-      final byte[] row, final byte[] family, final byte[] qualifier, final CompareOperator op,
-      final ByteArrayComparable comparator, final Put put) throws IOException {
-    boolean bypassable = true;
-    boolean defaultResult = false;
-    if (coprocEnvironments.isEmpty()) {
-      return null;
-    }
-    return execOperationWithResult(
-        new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter,
-            defaultResult, bypassable) {
-          @Override
-          public Boolean call(RegionObserver observer) throws IOException {
-            return observer.preCheckAndPutAfterRowLock(this, row, family, qualifier,
-                op, comparator, put, getResult());
-          }
-        });
-  }
-
-  /**
-   * Supports Coprocessor 'bypass'.
-   * @param row row to check
-   * @param filter filter
-   * @param put data to put if check succeeds
-   * @return true or false to return to client if default processing should be bypassed, or null
-   *   otherwise
-   */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_BOOLEAN_RETURN_NULL",
-    justification="Null is legit")
-  public Boolean preCheckAndPutAfterRowLock(
-    final byte[] row, final Filter filter, final Put put) throws IOException {
-    boolean bypassable = true;
-    boolean defaultResult = false;
-    if (coprocEnvironments.isEmpty()) {
-      return null;
-    }
-    return execOperationWithResult(
-      new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter,
-        defaultResult, bypassable) {
-        @Override
-        public Boolean call(RegionObserver observer) throws IOException {
-          return observer.preCheckAndPutAfterRowLock(this, row, filter, put, getResult());
-        }
-      });
-  }
-
-  /**
-   * @param row row to check
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param op the comparison operation
-   * @param comparator the comparator
-   * @param put data to put if check succeeds
-   * @throws IOException e
-   */
-  public boolean postCheckAndPut(final byte [] row, final byte [] family,
-      final byte [] qualifier, final CompareOperator op,
-      final ByteArrayComparable comparator, final Put put,
-      boolean result) throws IOException {
-    if (this.coprocEnvironments.isEmpty()) {
-      return result;
-    }
-    return execOperationWithResult(
-        new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter, result) {
-          @Override
-          public Boolean call(RegionObserver observer) throws IOException {
-            return observer.postCheckAndPut(this, row, family, qualifier,
-                op, comparator, put, getResult());
-          }
-        });
-  }
-
-  /**
-   * @param row row to check
-   * @param filter filter
-   * @param put data to put if check succeeds
-   * @throws IOException e
-   */
-  public boolean postCheckAndPut(final byte [] row, final Filter filter, final Put put,
-    boolean result) throws IOException {
-    if (this.coprocEnvironments.isEmpty()) {
-      return result;
-    }
-    return execOperationWithResult(
-      new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter, result) {
-        @Override
-        public Boolean call(RegionObserver observer) throws IOException {
-          return observer.postCheckAndPut(this, row, filter, put, getResult());
-        }
-      });
-  }
-
-  /**
-   * Supports Coprocessor 'bypass'.
-   * @param row row to check
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param op the comparison operation
-   * @param comparator the comparator
-   * @param delete delete to commit if check succeeds
-   * @return true or false to return to client if default processing should be bypassed, or null
-   *   otherwise
-   */
-  public Boolean preCheckAndDelete(final byte [] row, final byte [] family,
-      final byte [] qualifier, final CompareOperator op,
-      final ByteArrayComparable comparator, final Delete delete)
-      throws IOException {
-    boolean bypassable = true;
-    boolean defaultResult = false;
-    if (coprocEnvironments.isEmpty()) {
-      return null;
-    }
-    return execOperationWithResult(
-        new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter,
-            defaultResult, bypassable) {
-          @Override
-          public Boolean call(RegionObserver observer) throws IOException {
-            return observer.preCheckAndDelete(this, row, family,
-                qualifier, op, comparator, delete, getResult());
-          }
-        });
-  }
-
-  /**
-   * Supports Coprocessor 'bypass'.
-   * @param row row to check
-   * @param filter filter
-   * @param delete delete to commit if check succeeds
-   * @return true or false to return to client if default processing should be bypassed, or null
-   *   otherwise
-   */
-  public Boolean preCheckAndDelete(final byte [] row, final Filter filter, final Delete delete)
+  public CheckAndMutateResult preCheckAndMutateAfterRowLock(CheckAndMutate checkAndMutate)
     throws IOException {
     boolean bypassable = true;
-    boolean defaultResult = false;
+    CheckAndMutateResult defaultResult = new CheckAndMutateResult(false, null);
     if (coprocEnvironments.isEmpty()) {
       return null;
     }
     return execOperationWithResult(
-      new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter,
-        defaultResult, bypassable) {
+      new ObserverOperationWithResult<RegionObserver, CheckAndMutateResult>(
+        regionObserverGetter, defaultResult, bypassable) {
         @Override
-        public Boolean call(RegionObserver observer) throws IOException {
-          return observer.preCheckAndDelete(this, row, filter, delete, getResult());
+        public CheckAndMutateResult call(RegionObserver observer) throws IOException {
+          return observer.preCheckAndMutateAfterRowLock(this, checkAndMutate, getResult());
         }
       });
   }
 
   /**
-   * Supports Coprocessor 'bypass'.
-   * @param row row to check
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param op the comparison operation
-   * @param comparator the comparator
-   * @param delete delete to commit if check succeeds
-   * @return true or false to return to client if default processing should be bypassed,
-   * or null otherwise
+   * @param checkAndMutate the CheckAndMutate object
+   * @param result the result returned by the checkAndMutate
+   * @return true or false to return to client if default processing should be bypassed, or null
+   *   otherwise
+   * @throws IOException if an error occurred on the coprocessor
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_BOOLEAN_RETURN_NULL",
-      justification="Null is legit")
-  public Boolean preCheckAndDeleteAfterRowLock(final byte[] row, final byte[] family,
-      final byte[] qualifier, final CompareOperator op, final ByteArrayComparable comparator,
-      final Delete delete) throws IOException {
-    boolean bypassable = true;
-    boolean defaultResult = false;
-    if (coprocEnvironments.isEmpty()) {
-      return null;
-    }
-    return execOperationWithResult(
-        new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter,
-            defaultResult, bypassable) {
-          @Override
-          public Boolean call(RegionObserver observer) throws IOException {
-            return observer.preCheckAndDeleteAfterRowLock(this, row,
-                family, qualifier, op, comparator, delete, getResult());
-          }
-        });
-  }
-
-  /**
-   * Supports Coprocessor 'bypass'.
-   * @param row row to check
-   * @param filter filter
-   * @param delete delete to commit if check succeeds
-   * @return true or false to return to client if default processing should be bypassed,
-   * or null otherwise
-   */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_BOOLEAN_RETURN_NULL",
-    justification="Null is legit")
-  public Boolean preCheckAndDeleteAfterRowLock(final byte[] row, final Filter filter,
-    final Delete delete) throws IOException {
-    boolean bypassable = true;
-    boolean defaultResult = false;
-    if (coprocEnvironments.isEmpty()) {
-      return null;
-    }
-    return execOperationWithResult(
-      new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter,
-        defaultResult, bypassable) {
-        @Override
-        public Boolean call(RegionObserver observer) throws IOException {
-          return observer.preCheckAndDeleteAfterRowLock(this, row, filter, delete, getResult());
-        }
-      });
-  }
-
-  /**
-   * @param row row to check
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param op the comparison operation
-   * @param comparator the comparator
-   * @param delete delete to commit if check succeeds
-   * @throws IOException e
-   */
-  public boolean postCheckAndDelete(final byte [] row, final byte [] family,
-      final byte [] qualifier, final CompareOperator op,
-      final ByteArrayComparable comparator, final Delete delete,
-      boolean result) throws IOException {
+  public CheckAndMutateResult postCheckAndMutate(CheckAndMutate checkAndMutate,
+    CheckAndMutateResult result) throws IOException {
     if (this.coprocEnvironments.isEmpty()) {
       return result;
     }
     return execOperationWithResult(
-        new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter, result) {
-          @Override
-          public Boolean call(RegionObserver observer) throws IOException {
-            return observer.postCheckAndDelete(this, row, family,
-                qualifier, op, comparator, delete, getResult());
-          }
-        });
-  }
-
-  /**
-   * @param row row to check
-   * @param filter filter
-   * @param delete delete to commit if check succeeds
-   * @throws IOException e
-   */
-  public boolean postCheckAndDelete(final byte [] row, final Filter filter, final Delete delete,
-    boolean result) throws IOException {
-    if (this.coprocEnvironments.isEmpty()) {
-      return result;
-    }
-    return execOperationWithResult(
-      new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter, result) {
+      new ObserverOperationWithResult<RegionObserver, CheckAndMutateResult>(
+        regionObserverGetter, result) {
         @Override
-        public Boolean call(RegionObserver observer) throws IOException {
-          return observer.postCheckAndDelete(this, row, filter, delete, getResult());
+        public CheckAndMutateResult call(RegionObserver observer) throws IOException {
+          return observer.postCheckAndMutate(this, checkAndMutate, getResult());
         }
       });
   }
@@ -1634,9 +1372,9 @@ public class RegionCoprocessorHost
   /**
    * Called before open store scanner for user scan.
    */
-  public ScanInfo preStoreScannerOpen(HStore store) throws IOException {
+  public ScanInfo preStoreScannerOpen(HStore store, Scan scan) throws IOException {
     if (coprocEnvironments.isEmpty()) return store.getScanInfo();
-    CustomizedScanInfoBuilder builder = new CustomizedScanInfoBuilder(store.getScanInfo());
+    CustomizedScanInfoBuilder builder = new CustomizedScanInfoBuilder(store.getScanInfo(), scan);
     execOperation(new RegionObserverOperationWithoutResult() {
       @Override
       public void call(RegionObserver observer) throws IOException {

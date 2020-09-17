@@ -18,19 +18,18 @@
 package org.apache.hadoop.hbase.master.cleaner;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * HFileLink cleaner that determines if a hfile should be deleted.
@@ -62,7 +61,7 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
         // Also check if the HFile is in the HBASE_TEMP_DIRECTORY; this is where the referenced
         // file gets created when cloning a snapshot.
         hfilePath = HFileLink.getHFileFromBackReference(
-            new Path(FSUtils.getRootDir(getConf()), HConstants.HBASE_TEMP_DIRECTORY), filePath);
+          new Path(CommonFSUtils.getRootDir(getConf()), HConstants.HBASE_TEMP_DIRECTORY), filePath);
         if (fs.exists(hfilePath)) {
           return false;
         }
@@ -71,12 +70,13 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
         if (fs.exists(hfilePath)) {
           return false;
         }
-        hfilePath = HFileLink.getHFileFromBackReference(FSUtils.getRootDir(getConf()), filePath);
+        hfilePath =
+          HFileLink.getHFileFromBackReference(CommonFSUtils.getRootDir(getConf()), filePath);
         return !fs.exists(hfilePath);
       } catch (IOException e) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: "
-              + hfilePath);
+          LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: " +
+            hfilePath);
         }
         return false;
       }
@@ -86,7 +86,7 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
     Path backRefDir = null;
     try {
       backRefDir = HFileLink.getBackReferencesDir(parentDir, filePath.getName());
-      return FSUtils.listStatus(fs, backRefDir) == null;
+      return CommonFSUtils.listStatus(fs, backRefDir) == null;
     } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Couldn't get the references, not deleting file, just in case. filePath="

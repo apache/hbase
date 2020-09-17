@@ -112,7 +112,7 @@ public final class ExportUtils {
     // Optional arguments.
     // Set Scan Versions
     int versions = args.length > 2? Integer.parseInt(args[2]): 1;
-    s.setMaxVersions(versions);
+    s.readVersions(versions);
     // Set Scan Range
     long startTime = args.length > 3? Long.parseLong(args[3]): 0L;
     long endTime = args.length > 4? Long.parseLong(args[4]): Long.MAX_VALUE;
@@ -121,10 +121,10 @@ public final class ExportUtils {
     s.setCacheBlocks(false);
     // set Start and Stop row
     if (conf.get(TableInputFormat.SCAN_ROW_START) != null) {
-      s.setStartRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_START)));
+      s.withStartRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_START)));
     }
     if (conf.get(TableInputFormat.SCAN_ROW_STOP) != null) {
-      s.setStopRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_STOP)));
+      s.withStopRow(Bytes.toBytesBinary(conf.get(TableInputFormat.SCAN_ROW_STOP)));
     }
     // Set Scan Column Family
     boolean raw = Boolean.parseBoolean(conf.get(RAW_SCAN));

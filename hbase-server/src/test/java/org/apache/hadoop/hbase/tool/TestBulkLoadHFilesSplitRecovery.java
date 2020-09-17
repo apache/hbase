@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -432,7 +432,8 @@ public class TestBulkLoadHFilesSplitRecovery {
     // HFiles have been splitted, there is TMP_DIR
     assertTrue(fs.exists(tmpPath));
     // TMP_DIR should have been cleaned-up
-    assertNull(BulkLoadHFilesTool.TMP_DIR + " should be empty.", FSUtils.listStatus(fs, tmpPath));
+    assertNull(BulkLoadHFilesTool.TMP_DIR + " should be empty.",
+      CommonFSUtils.listStatus(fs, tmpPath));
     assertExpectedTable(util.getConnection(), table, ROWCOUNT, 2);
   }
 

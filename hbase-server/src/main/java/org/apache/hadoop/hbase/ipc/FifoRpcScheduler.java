@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,14 +61,11 @@ public class FifoRpcScheduler extends RpcScheduler {
   public void start() {
     LOG.info("Using {} as user call queue; handlerCount={}; maxQueueLength={}",
       this.getClass().getSimpleName(), handlerCount, maxQueueLength);
-    this.executor = new ThreadPoolExecutor(
-        handlerCount,
-        handlerCount,
-        60,
-        TimeUnit.SECONDS,
-        new ArrayBlockingQueue<>(maxQueueLength),
-        Threads.newDaemonThreadFactory("FifoRpcScheduler.handler"),
-        new ThreadPoolExecutor.CallerRunsPolicy());
+    this.executor = new ThreadPoolExecutor(handlerCount, handlerCount, 60, TimeUnit.SECONDS,
+      new ArrayBlockingQueue<>(maxQueueLength),
+      new ThreadFactoryBuilder().setNameFormat("FifoRpcScheduler.handler-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+      new ThreadPoolExecutor.CallerRunsPolicy());
   }
 
   @Override

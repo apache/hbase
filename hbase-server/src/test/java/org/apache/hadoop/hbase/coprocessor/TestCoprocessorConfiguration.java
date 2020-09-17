@@ -29,9 +29,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -68,11 +70,12 @@ public class TestCoprocessorConfiguration {
       SystemCoprocessor.class.getName());
   }
   private static final TableName TABLENAME = TableName.valueOf("TestCoprocessorConfiguration");
-  private static final HRegionInfo REGIONINFO = new HRegionInfo(TABLENAME);
-  private static final HTableDescriptor TABLEDESC = new HTableDescriptor(TABLENAME);
+  private static final RegionInfo REGIONINFO = RegionInfoBuilder.newBuilder(TABLENAME).build();
+  private static final TableDescriptor TABLEDESC;
   static {
     try {
-      TABLEDESC.addCoprocessor(TableCoprocessor.class.getName());
+      TABLEDESC = TableDescriptorBuilder.newBuilder(TABLENAME)
+        .setCoprocessor(TableCoprocessor.class.getName()).build();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

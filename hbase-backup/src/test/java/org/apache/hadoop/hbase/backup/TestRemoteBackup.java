@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -56,6 +58,7 @@ public class TestRemoteBackup extends TestBackupBase {
   @Override
   public void setUp() throws Exception {
     useSecondCluster = true;
+    conf1.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 10);
     super.setUp();
   }
 
@@ -92,16 +95,13 @@ public class TestRemoteBackup extends TestBackupBase {
       }
     });
     t.start();
-
-    table1Desc.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam3Name));
     // family 2 is MOB enabled
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam2Name);
-    familyDescriptor.setMobEnabled(true);
-    familyDescriptor.setMobThreshold(0L);
-    table1Desc.setColumnFamily(familyDescriptor);
-    HBaseTestingUtility.modifyTableSync(TEST_UTIL.getAdmin(), table1Desc);
+    TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(table1Desc)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam3Name))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam2Name).setMobEnabled(true)
+        .setMobThreshold(0L).build())
+      .build();
+    TEST_UTIL.getAdmin().modifyTable(newTable1Desc);
 
     SnapshotTestingUtils.loadData(TEST_UTIL, table1, 50, fam2Name);
     Table t1 = conn.getTable(table1);

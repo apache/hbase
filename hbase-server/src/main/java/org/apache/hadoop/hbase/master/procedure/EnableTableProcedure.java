@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -144,7 +145,7 @@ public class EnableTableProcedure
             LOG.info("Number of replicas has increased. Assigning new region replicas." +
                 "The previous replica count was {}. The current replica count is {}.",
                 (currentMaxReplica + 1), configuredReplicaCount);
-            regionsOfTable = RegionReplicaUtil.addReplicas(tableDescriptor, regionsOfTable,
+            regionsOfTable = RegionReplicaUtil.addReplicas(regionsOfTable,
               currentMaxReplica + 1, configuredReplicaCount);
           }
           // Assign all the table regions. (including region replicas if added).
@@ -184,7 +185,7 @@ public class EnableTableProcedure
     for (int i = 1; i < regionReplicaCount; i++) {
       // Since we have already added the entries to the META we will be getting only that here
       List<Cell> columnCells =
-          r.getColumnCells(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(i));
+          r.getColumnCells(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerColumn(i));
       if (!columnCells.isEmpty()) {
         replicasFound++;
       }
@@ -281,9 +282,8 @@ public class EnableTableProcedure
    */
   private boolean prepareEnable(final MasterProcedureEnv env) throws IOException {
     boolean canTableBeEnabled = true;
-
     // Check whether table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
       setFailure("master-enable-table", new TableNotFoundException(tableName));
       canTableBeEnabled = false;
     } else {

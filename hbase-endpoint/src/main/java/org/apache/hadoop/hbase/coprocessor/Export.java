@@ -18,10 +18,6 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -31,7 +27,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,9 +49,6 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.mapreduce.ExportUtils;
 import org.apache.hadoop.hbase.mapreduce.Import;
 import org.apache.hadoop.hbase.mapreduce.ResultSerialization;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken;
-import org.apache.hadoop.hbase.protobuf.generated.ExportProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -64,7 +56,6 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.io.SequenceFile;
@@ -79,7 +70,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.DelegationToken;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ExportProtos;
 
 /**
  * Export an HBase table. Writes content to sequence files up in HDFS. Use
@@ -287,8 +287,8 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     DelegationToken protoToken = null;
     if (userToken != null) {
       protoToken = DelegationToken.newBuilder()
-              .setIdentifier(ByteStringer.wrap(userToken.getIdentifier()))
-              .setPassword(ByteStringer.wrap(userToken.getPassword()))
+              .setIdentifier(UnsafeByteOperations.unsafeWrap(userToken.getIdentifier()))
+              .setPassword(UnsafeByteOperations.unsafeWrap(userToken.getPassword()))
               .setKind(userToken.getKind().toString())
               .setService(userToken.getService().toString()).build();
     }
@@ -361,13 +361,13 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     byte[] originStartKey = scan.getStartRow();
     if (originStartKey == null
             || Bytes.compareTo(originStartKey, regionStartKey) < 0) {
-      scan.setStartRow(regionStartKey);
+      scan.withStartRow(regionStartKey);
     }
     byte[] regionEndKey = region.getEndKey();
     byte[] originEndKey = scan.getStopRow();
     if (originEndKey == null
             || Bytes.compareTo(originEndKey, regionEndKey) > 0) {
-      scan.setStartRow(regionEndKey);
+      scan.withStartRow(regionEndKey);
     }
     return scan;
   }

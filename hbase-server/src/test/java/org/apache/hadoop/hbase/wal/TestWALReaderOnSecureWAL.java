@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -83,9 +83,9 @@ public class TestWALReaderOnSecureWAL {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    conf.setBoolean("hbase.hlog.split.skip.errors", true);
+    conf.setBoolean(WALSplitter.SPLIT_SKIP_ERRORS_KEY, true);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
-    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
+    CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
   }
 
   private Path writeWAL(final WALFactory wals, final String tblName, boolean offheap)
@@ -167,21 +167,14 @@ public class TestWALReaderOnSecureWAL {
       wals.createReader(TEST_UTIL.getTestFileSystem(), walPath);
       assertFalse(true);
     } catch (IOException ioe) {
-      // expected IOE
+      System.out.println("Expected ioe " + ioe.getMessage());
     }
 
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
-    Path rootdir = FSUtils.getRootDir(conf);
-    try {
-      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null, null);
-      s.splitLogFile(listStatus[0], null);
-      Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
-        "corrupt");
-      assertTrue(fs.exists(file));
-      // assertFalse("log splitting should have failed", true);
-    } catch (IOException ioe) {
-      assertTrue("WAL should have been sidelined", false);
-    }
+    Path rootdir = CommonFSUtils.getRootDir(conf);
+    WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null, null);
+    WALSplitter.SplitWALResult swr = s.splitWAL(listStatus[0], null);
+    assertTrue(swr.isCorrupt());
     wals.close();
   }
 
@@ -215,10 +208,10 @@ public class TestWALReaderOnSecureWAL {
     }
 
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
-    Path rootdir = FSUtils.getRootDir(conf);
+    Path rootdir = CommonFSUtils.getRootDir(conf);
     try {
       WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null, null);
-      s.splitLogFile(listStatus[0], null);
+      s.splitWAL(listStatus[0], null);
       Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
         "corrupt");
       assertTrue(!fs.exists(file));

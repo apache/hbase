@@ -68,7 +68,8 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
     rollAllWALs();
   }
 
-  private void waitUntilReplicatedToTheCurrentWALFile(HRegionServer rs) throws Exception {
+  private void waitUntilReplicatedToTheCurrentWALFile(HRegionServer rs, final String oldWalName)
+    throws Exception {
     Path path = ((AbstractFSWAL<?>) rs.getWAL(null)).getCurrentFileName();
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(path.getName());
     UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
@@ -77,7 +78,9 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
       public boolean evaluate() throws Exception {
         ReplicationSourceManager manager =
           ((Replication) rs.getReplicationSourceService()).getReplicationManager();
-        return manager.getWALs().get(PEER_ID).get(logPrefix).size() == 1;
+        // Make sure replication moves to the new file.
+        return (manager.getWALs().get(PEER_ID).get(logPrefix).size() == 1) &&
+          !oldWalName.equals(manager.getWALs().get(PEER_ID).get(logPrefix).first());
       }
 
       @Override
@@ -124,10 +127,14 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
 
     RegionInfo region = UTIL.getAdmin().getRegions(tableName).get(0);
     HRegionServer srcRs = UTIL.getRSForFirstRegionInTable(tableName);
+    // Get the current wal file name
+    String walFileNameBeforeRollover =
+      ((AbstractFSWAL<?>) srcRs.getWAL(null)).getCurrentFileName().getName();
+
     HRegionServer rs = UTIL.getOtherRegionServer(srcRs);
     moveRegionAndArchiveOldWals(region, rs);
     waitUntilReplicationDone(100);
-    waitUntilReplicatedToTheCurrentWALFile(srcRs);
+    waitUntilReplicatedToTheCurrentWALFile(srcRs, walFileNameBeforeRollover);
 
     UTIL.getAdmin().disableReplicationPeer(PEER_ID);
     UTIL.getAdmin().updateReplicationPeerConfig(PEER_ID,
@@ -160,8 +167,16 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
     RegionInfo region = UTIL.getAdmin().getRegions(tableName).get(0);
     HRegionServer srcRs = UTIL.getRSForFirstRegionInTable(tableName);
     HRegionServer rs = UTIL.getOtherRegionServer(srcRs);
+
+    // Get the current wal file name
+    String walFileNameBeforeRollover =
+      ((AbstractFSWAL<?>) srcRs.getWAL(null)).getCurrentFileName().getName();
+
     moveRegionAndArchiveOldWals(region, rs);
-    waitUntilReplicatedToTheCurrentWALFile(rs);
+
+    // Make sure that the replication done for the oldWal at source rs.
+    waitUntilReplicatedToTheCurrentWALFile(srcRs, walFileNameBeforeRollover);
+
     UTIL.getAdmin().disableReplicationPeer(PEER_ID);
     UTIL.getAdmin().updateReplicationPeerConfig(PEER_ID,
       ReplicationPeerConfig.newBuilder(peerConfig)

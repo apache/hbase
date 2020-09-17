@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +38,6 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
@@ -54,10 +54,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
@@ -95,14 +95,20 @@ public class ReplicationSink {
   private WALEntrySinkFilter walEntrySinkFilter;
 
   /**
+   * Row size threshold for multi requests above which a warning is logged
+   */
+  private final int rowSizeWarnThreshold;
+
+  /**
    * Create a sink for replication
    * @param conf conf object
-   * @param stopper boolean to tell this thread to stop
    * @throws IOException thrown when HDFS goes bad or bad file name
    */
-  public ReplicationSink(Configuration conf, Stoppable stopper)
+  public ReplicationSink(Configuration conf)
       throws IOException {
     this.conf = HBaseConfiguration.create(conf);
+    rowSizeWarnThreshold = conf.getInt(
+      HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     decorateConf();
     this.metrics = new MetricsSink();
     this.walEntrySinkFilter = setupWALEntrySinkFilter();
@@ -151,7 +157,7 @@ public class ReplicationSink {
     if (this.conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM) != null) {
       this.conf.unset(HConstants.CLIENT_ZOOKEEPER_QUORUM);
     }
-   }
+  }
 
   /**
    * Replicate this array of entries directly into the local cluster using the native client. Only
@@ -166,7 +172,9 @@ public class ReplicationSink {
   public void replicateEntries(List<WALEntry> entries, final CellScanner cells,
       String replicationClusterId, String sourceBaseNamespaceDirPath,
       String sourceHFileArchiveDirPath) throws IOException {
-    if (entries.isEmpty()) return;
+    if (entries.isEmpty()) {
+      return;
+    }
     // Very simple optimization where we batch sequences of rows going
     // to the same table.
     try {
@@ -210,11 +218,7 @@ public class ReplicationSink {
               // Map of table name Vs list of pair of family and list of
               // hfile paths from its namespace
               Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
-                bulkLoadsPerClusters.get(bld.getClusterIdsList());
-              if (bulkLoadHFileMap == null) {
-                bulkLoadHFileMap = new HashMap<>();
-                bulkLoadsPerClusters.put(bld.getClusterIdsList(), bulkLoadHFileMap);
-              }
+                bulkLoadsPerClusters.computeIfAbsent(bld.getClusterIdsList(), k -> new HashMap<>());
               buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
             }
           } else {
@@ -249,7 +253,7 @@ public class ReplicationSink {
       if (!rowMap.isEmpty()) {
         LOG.debug("Started replicating mutations.");
         for (Entry<TableName, Map<List<UUID>, List<Row>>> entry : rowMap.entrySet()) {
-          batch(entry.getKey(), entry.getValue().values());
+          batch(entry.getKey(), entry.getValue().values(), rowSizeWarnThreshold);
         }
         LOG.debug("Finished replicating mutations.");
       }
@@ -259,18 +263,13 @@ public class ReplicationSink {
             bulkLoadsPerClusters.entrySet()) {
           Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
           if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
-            if(LOG.isDebugEnabled()) {
-              LOG.debug("Started replicating bulk loaded data from cluster ids: {}.",
-                entry.getKey().toString());
-            }
-            HFileReplicator hFileReplicator =
-              new HFileReplicator(this.provider.getConf(this.conf, replicationClusterId),
+            LOG.debug("Replicating {} bulk loaded data", entry.getKey().toString());
+            Configuration providerConf = this.provider.getConf(this.conf, replicationClusterId);
+            try (HFileReplicator hFileReplicator = new HFileReplicator(providerConf,
                 sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
-                getConnection(), entry.getKey());
-            hFileReplicator.replicate();
-            if(LOG.isDebugEnabled()) {
-              LOG.debug("Finished replicating bulk loaded data from cluster id: {}",
-                entry.getKey().toString());
+                getConnection(), entry.getKey())) {
+              hFileReplicator.replicate();
+              LOG.debug("Finished replicating {} bulk loaded data", entry.getKey().toString());
             }
           }
         }
@@ -352,8 +351,6 @@ public class ReplicationSink {
   }
 
   /**
-   * @param previousCell
-   * @param cell
    * @return True if we have crossed over onto a new row or type
    */
   private boolean isNewRowOrType(final Cell previousCell, final Cell cell) {
@@ -368,23 +365,12 @@ public class ReplicationSink {
   /**
    * Simple helper to a map from key to (a list of) values
    * TODO: Make a general utility method
-   * @param map
-   * @param key1
-   * @param key2
-   * @param value
    * @return the list of values corresponding to key1 and key2
    */
-  private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2,List<V>>> map, K1 key1, K2 key2, V value) {
-    Map<K2,List<V>> innerMap = map.get(key1);
-    if (innerMap == null) {
-      innerMap = new HashMap<>();
-      map.put(key1, innerMap);
-    }
-    List<V> values = innerMap.get(key2);
-    if (values == null) {
-      values = new ArrayList<>();
-      innerMap.put(key2, values);
-    }
+  private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2,List<V>>> map, K1 key1,
+      K2 key2, V value) {
+    Map<K2, List<V>> innerMap = map.computeIfAbsent(key1, k -> new HashMap<>());
+    List<V> values = innerMap.computeIfAbsent(key2, k -> new ArrayList<>());
     values.add(value);
     return values;
   }
@@ -412,13 +398,24 @@ public class ReplicationSink {
    * Do the changes and handle the pool
    * @param tableName table to insert into
    * @param allRows list of actions
+   * @param batchRowSizeThreshold rowSize threshold for batch mutation
    */
-  private void batch(TableName tableName, Collection<List<Row>> allRows) throws IOException {
+  private void batch(TableName tableName, Collection<List<Row>> allRows, int batchRowSizeThreshold)
+      throws IOException {
     if (allRows.isEmpty()) {
       return;
     }
     AsyncTable<?> table = getConnection().getTable(tableName);
-    List<Future<?>> futures = allRows.stream().map(table::batchAll).collect(Collectors.toList());
+    List<Future<?>> futures = new ArrayList<>();
+    for (List<Row> rows : allRows) {
+      List<List<Row>> batchRows;
+      if (rows.size() > batchRowSizeThreshold) {
+        batchRows = Lists.partition(rows, batchRowSizeThreshold);
+      } else {
+        batchRows = Collections.singletonList(rows);
+      }
+      futures.addAll(batchRows.stream().map(table::batchAll).collect(Collectors.toList()));
+    }
     for (Future<?> future : futures) {
       try {
         FutureUtils.get(future);
@@ -450,7 +447,7 @@ public class ReplicationSink {
   /**
    * Get a string representation of this sink's metrics
    * @return string with the total replicated edits count and the date
-   * of the last edit that was applied
+   *   of the last edit that was applied
    */
   public String getStats() {
     long total = this.totalReplicatedEdits.get();

@@ -30,7 +30,9 @@ EOF
       end
 
       def command(enableDisable)
-        formatter.row([admin.cleaner_chore_switch(enableDisable) ? 'true' : 'false'])
+        previous_state = !!admin.cleaner_chore_switch(enableDisable)
+        formatter.row([previous_state.to_s])
+        previous_state
       end
     end
   end

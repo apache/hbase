@@ -18,10 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collections;
@@ -41,6 +37,11 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 /**
  * Used to communicate with a single HBase table.
@@ -306,14 +307,22 @@ public interface Table extends Closeable {
    * table.checkAndMutate(row, family).qualifier(qualifier).ifNotExists().thenPut(put);
    * </code>
    * </pre>
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   default CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
     throw new NotImplementedException("Add an implementation!");
   }
 
   /**
    * A helper class for sending checkAndMutate request.
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   interface CheckAndMutateBuilder {
 
     /**
@@ -376,14 +385,22 @@ public interface Table extends Closeable {
    * table.checkAndMutate(row, filter).thenPut(put);
    * </code>
    * </pre>
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   default CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     throw new NotImplementedException("Add an implementation!");
   }
 
   /**
    * A helper class for sending checkAndMutate request with a filter.
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   interface CheckAndMutateWithFilterBuilder {
 
     /**
@@ -408,6 +425,33 @@ public interface Table extends Closeable {
      * @return true if the new mutation was executed, false otherwise.
      */
     boolean thenMutate(RowMutations mutation) throws IOException;
+  }
+
+  /**
+   * checkAndMutate that atomically checks if a row matches the specified condition. If it does,
+   * it performs the specified action.
+   *
+   * @param checkAndMutate The CheckAndMutate object.
+   * @return A CheckAndMutateResult object that represents the result for the CheckAndMutate.
+   * @throws IOException if a remote or network exception occurs.
+   */
+  default CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+    return checkAndMutate(Collections.singletonList(checkAndMutate)).get(0);
+  }
+
+  /**
+   * Batch version of checkAndMutate. The specified CheckAndMutates are batched only in the sense
+   * that they are sent to a RS in one RPC, but each CheckAndMutate operation is still executed
+   * atomically (and thus, each may fail independently of others).
+   *
+   * @param checkAndMutates The list of CheckAndMutate.
+   * @return A list of CheckAndMutateResult objects that represents the result for each
+   *   CheckAndMutate.
+   * @throws IOException if a remote or network exception occurs.
+   */
+  default List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
+    throws IOException {
+    throw new NotImplementedException("Add an implementation!");
   }
 
   /**
@@ -508,18 +552,18 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the table
-   * region containing the specified row. The row given does not actually have to exist. Whichever
-   * region would contain the row based on start and end keys will be used. Note that the
-   * {@code row} parameter is also not passed to the coprocessor handler registered for this
-   * protocol, unless the {@code row} is separately passed as an argument in the service request.
-   * The parameter here is only used to locate the region used to handle the call.
-   * <p>
-   * The obtained {@link com.google.protobuf.RpcChannel} instance can be used to access a published
-   * coprocessor {@link com.google.protobuf.Service} using standard protobuf service invocations:
-   * </p>
+   * Creates and returns a {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel}
+   * instance connected to the table region containing the specified row. The row given does not
+   * actually have to exist. Whichever region would contain the row based on start and end keys will
+   * be used. Note that the {@code row} parameter is also not passed to the coprocessor handler
+   * registered for this protocol, unless the {@code row} is separately passed as an argument in the
+   * service request. The parameter here is only used to locate the region used to handle the call.
+   * <p/>
+   * The obtained {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel} instance can be
+   * used to access a published coprocessor {@link Service} using standard protobuf service
+   * invocations:
+   * <p/>
    * <div style="background-color: #cccccc; padding: 2px"> <blockquote>
-   *
    * <pre>
    * CoprocessorRpcChannel channel = myTable.coprocessorService(rowkey);
    * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
@@ -528,8 +572,8 @@ public interface Table extends Closeable {
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
    * </pre>
-   *
-   * </blockquote></div>
+   * </blockquote>
+   * </div>
    * @param row The row key used to identify the remote region location
    * @return A CoprocessorRpcChannel instance
    * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
@@ -542,10 +586,10 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
-   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), and
-   * invokes the passed {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
-   * with each {@link com.google.protobuf.Service} instance.
+   * Creates an instance of the given {@link Service} subclass for each table region spanning the
+   * range from the {@code startKey} row to {@code endKey} row (inclusive), and invokes the passed
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method with each
+   * {@link Service} instance.
    * @param service the protocol buffer {@code Service} implementation to call
    * @param startKey start region selection with region containing this row. If {@code null}, the
    *          selection will start with the first table region.
@@ -553,9 +597,9 @@ public interface Table extends Closeable {
    *          {@code null}, selection will continue through the last table region.
    * @param callable this instance's
    *          {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method will be
-   *          invoked once per table region, using the {@link com.google.protobuf.Service} instance
-   *          connected to that region.
-   * @param <T> the {@link com.google.protobuf.Service} subclass to connect to
+   *          invoked once per table region, using the {@link Service} instance connected to that
+   *          region.
+   * @param <T> the {@link Service} subclass to connect to
    * @param <R> Return type for the {@code callable} parameter's
    *          {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
    * @return a map of result values keyed by region name
@@ -584,16 +628,15 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
-   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), and
-   * invokes the passed {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
-   * with each {@link Service} instance.
-   * <p>
+   * Creates an instance of the given {@link Service} subclass for each table region spanning the
+   * range from the {@code startKey} row to {@code endKey} row (inclusive), and invokes the passed
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method with each
+   * {@link Service} instance.
+   * <p/>
    * The given
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[],byte[],Object)}
    * method will be called with the return value from each region's
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} invocation.
-   * </p>
    * @param service the protocol buffer {@code Service} implementation to call
    * @param startKey start region selection with region containing this row. If {@code null}, the
    *          selection will start with the first table region.
@@ -621,10 +664,10 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
-   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
-   * the invocations to the same region server will be batched into one call. The coprocessor
-   * service is invoked according to the service instance, method name and parameters.
+   * Creates an instance of the given {@link Service} subclass for each table region spanning the
+   * range from the {@code startKey} row to {@code endKey} row (inclusive), all the invocations to
+   * the same region server will be batched into one call. The coprocessor service is invoked
+   * according to the service instance, method name and parameters.
    * @param methodDescriptor the descriptor for the protobuf service method to call.
    * @param request the method call parameters
    * @param startKey start region selection with region containing this row. If {@code null}, the
@@ -660,15 +703,14 @@ public interface Table extends Closeable {
   }
 
   /**
-   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
-   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
-   * the invocations to the same region server will be batched into one call. The coprocessor
-   * service is invoked according to the service instance, method name and parameters.
-   * <p>
+   * Creates an instance of the given {@link Service} subclass for each table region spanning the
+   * range from the {@code startKey} row to {@code endKey} row (inclusive), all the invocations to
+   * the same region server will be batched into one call. The coprocessor service is invoked
+   * according to the service instance, method name and parameters.
+   * <p/>
    * The given
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[],byte[],Object)}
    * method will be called with the return value from each region's invocation.
-   * </p>
    * @param methodDescriptor the descriptor for the protobuf service method to call.
    * @param request the method call parameters
    * @param startKey start region selection with region containing this row. If {@code null}, the

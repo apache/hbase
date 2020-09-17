@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,9 +45,13 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestServerSideScanMetricsFromClientSide {
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestServerSideScanMetricsFromClientSide.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -168,22 +171,27 @@ public class TestServerSideScanMetricsFromClientSide {
     Scan baseScan;
     baseScan = new Scan();
     baseScan.setScanMetricsEnabled(true);
-    testRowsSeenMetric(baseScan);
+    try {
+      testRowsSeenMetric(baseScan);
 
-    // Test case that only a single result will be returned per RPC to the serer
-    baseScan.setCaching(1);
-    testRowsSeenMetric(baseScan);
+      // Test case that only a single result will be returned per RPC to the serer
+      baseScan.setCaching(1);
+      testRowsSeenMetric(baseScan);
 
-    // Test case that partial results are returned from the server. At most one cell will be
-    // contained in each response
-    baseScan.setMaxResultSize(1);
-    testRowsSeenMetric(baseScan);
+      // Test case that partial results are returned from the server. At most one cell will be
+      // contained in each response
+      baseScan.setMaxResultSize(1);
+      testRowsSeenMetric(baseScan);
 
-    // Test case that size limit is set such that a few cells are returned per partial result from
-    // the server
-    baseScan.setCaching(NUM_ROWS);
-    baseScan.setMaxResultSize(getCellHeapSize() * (NUM_COLS - 1));
-    testRowsSeenMetric(baseScan);
+      // Test case that size limit is set such that a few cells are returned per partial result from
+      // the server
+      baseScan.setCaching(NUM_ROWS);
+      baseScan.setMaxResultSize(getCellHeapSize() * (NUM_COLS - 1));
+      testRowsSeenMetric(baseScan);
+    } catch (Throwable t) {
+      LOG.error("FAIL", t);
+      throw t;
+    }
   }
 
   private void testRowsSeenMetric(Scan baseScan) throws Exception {
@@ -202,7 +210,8 @@ public class TestServerSideScanMetricsFromClientSide {
       scan = new Scan(baseScan);
       scan.withStartRow(ROWS[i - 1]);
       scan.withStopRow(ROWS[ROWS.length - 1]);
-      testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length - i);
+      testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME,
+        ROWS.length - i);
     }
 
     // The filter should filter out all rows, but we still expect to see every row.
@@ -327,6 +336,7 @@ public class TestServerSideScanMetricsFromClientSide {
     ResultScanner scanner = TABLE.getScanner(scan);
     // Iterate through all the results
     while (scanner.next() != null) {
+      continue;
     }
     scanner.close();
     ScanMetrics metrics = scanner.getScanMetrics();

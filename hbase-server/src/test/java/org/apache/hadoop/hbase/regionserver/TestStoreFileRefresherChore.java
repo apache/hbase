@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,7 +50,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.Before;
@@ -76,7 +77,7 @@ public class TestStoreFileRefresherChore {
   public void setUp() throws IOException {
     TEST_UTIL = new HBaseTestingUtility();
     testDir = TEST_UTIL.getDataTestDir("TestStoreFileRefresherChore");
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), testDir);
+    CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), testDir);
   }
 
   private TableDescriptor getTableDesc(TableName tableName, int regionReplication,
@@ -108,16 +109,17 @@ public class TestStoreFileRefresherChore {
   private HRegion initHRegion(TableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId)
       throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
-    Path tableDir = FSUtils.getTableDir(testDir, htd.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
 
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(startKey)
         .setEndKey(stopKey).setRegionId(0L).setReplicaId(replicaId).build();
     HRegionFileSystem fs =
         new FailingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
     final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, tableDir);
+    CommonFSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, "log_" + replicaId);
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     HRegion region =
         new HRegion(fs, wals.getWAL(info),
             conf, htd, null);

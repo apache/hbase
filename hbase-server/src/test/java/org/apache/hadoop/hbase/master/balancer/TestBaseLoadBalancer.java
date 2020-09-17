@@ -37,7 +37,6 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -118,13 +117,14 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
   public static class MockBalancer extends BaseLoadBalancer {
     @Override
-    public List<RegionPlan> balanceCluster(Map<ServerName, List<RegionInfo>> clusterState) {
+    public List<RegionPlan>
+        balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
       return null;
     }
 
     @Override
-    public List<RegionPlan> balanceCluster(TableName tableName,
-        Map<ServerName, List<RegionInfo>> clusterState) throws HBaseIOException {
+    public List<RegionPlan> balanceTable(TableName tableName,
+        Map<ServerName, List<RegionInfo>> loadOfOneTable) {
       return null;
     }
   }
@@ -495,8 +495,8 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     // test move
     ServerName sn = oldServers.get(0);
     int r0 = ArrayUtils.indexOf(cluster.regions, clusterState.get(sn).get(0));
-    int f0 = cluster.serversToIndex.get(sn.getHostAndPort());
-    int t0 = cluster.serversToIndex.get(servers.get(1).getHostAndPort());
+    int f0 = cluster.serversToIndex.get(sn.getAddress());
+    int t0 = cluster.serversToIndex.get(servers.get(1).getAddress());
     cluster.doAction(new MoveRegionAction(r0, f0, t0));
   }
 
@@ -545,11 +545,11 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     int r42 = ArrayUtils.indexOf(cluster.regions, regions.get(42));
     int r43 = ArrayUtils.indexOf(cluster.regions, regions.get(43));
 
-    int s0 = cluster.serversToIndex.get(servers.get(0).getHostAndPort());
-    int s1 = cluster.serversToIndex.get(servers.get(1).getHostAndPort());
-    int s4 = cluster.serversToIndex.get(servers.get(4).getHostAndPort());
-    int s5 = cluster.serversToIndex.get(servers.get(5).getHostAndPort());
-    int s9 = cluster.serversToIndex.get(servers.get(9).getHostAndPort());
+    int s0 = cluster.serversToIndex.get(servers.get(0).getAddress());
+    int s1 = cluster.serversToIndex.get(servers.get(1).getAddress());
+    int s4 = cluster.serversToIndex.get(servers.get(4).getAddress());
+    int s5 = cluster.serversToIndex.get(servers.get(5).getAddress());
+    int s9 = cluster.serversToIndex.get(servers.get(9).getAddress());
 
     // region 0 locations
     assertEquals(1, cluster.regionLocations[r0].length);

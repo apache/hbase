@@ -19,12 +19,12 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Objects;
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 
 /**
@@ -72,9 +72,8 @@ public class RegionCoprocessorServiceExec implements Row {
     return request;
   }
 
-  @Override
   public int compareTo(Row o) {
-    int res = Bytes.compareTo(this.getRow(), o.getRow());
+    int res = Row.COMPARATOR.compare(this, o);
     if ((o instanceof RegionCoprocessorServiceExec) && res == 0) {
       RegionCoprocessorServiceExec exec = (RegionCoprocessorServiceExec) o;
       res = method.getFullName().compareTo(exec.getMethod().getFullName());

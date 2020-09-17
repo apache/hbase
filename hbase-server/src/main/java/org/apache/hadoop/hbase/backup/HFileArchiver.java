@@ -86,7 +86,7 @@ public class HFileArchiver {
    */
   public static boolean exists(Configuration conf, FileSystem fs, RegionInfo info)
       throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, info);
     return fs.exists(regionDir);
   }
@@ -99,8 +99,8 @@ public class HFileArchiver {
    */
   public static void archiveRegion(Configuration conf, FileSystem fs, RegionInfo info)
       throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
-    archiveRegion(fs, rootDir, FSUtils.getTableDir(rootDir, info.getTable()),
+    Path rootDir = CommonFSUtils.getRootDir(conf);
+    archiveRegion(fs, rootDir, CommonFSUtils.getTableDir(rootDir, info.getTable()),
       FSUtils.getRegionDirFromRootDir(rootDir, info));
   }
 
@@ -135,8 +135,7 @@ public class HFileArchiver {
     // make sure the regiondir lives under the tabledir
     Preconditions.checkArgument(regionDir.toString().startsWith(tableDir.toString()));
     Path regionArchiveDir = HFileArchiveUtil.getRegionArchiveDir(rootdir,
-        FSUtils.getTableName(tableDir),
-        regionDir.getName());
+      CommonFSUtils.getTableName(tableDir), regionDir.getName());
 
     FileStatusConverter getAsFile = new FileStatusConverter(fs);
     // otherwise, we attempt to archive the store files
@@ -150,7 +149,7 @@ public class HFileArchiver {
         return dirFilter.accept(file) && !file.getName().startsWith(".");
       }
     };
-    FileStatus[] storeDirs = FSUtils.listStatus(fs, regionDir, nonHidden);
+    FileStatus[] storeDirs = CommonFSUtils.listStatus(fs, regionDir, nonHidden);
     // if there no files, we can just delete the directory and return;
     if (storeDirs == null) {
       LOG.debug("Directory {} empty.", regionDir);
@@ -263,7 +262,7 @@ public class HFileArchiver {
    */
   public static void archiveFamilyByFamilyDir(FileSystem fs, Configuration conf,
       RegionInfo parent, Path familyDir, byte[] family) throws IOException {
-    FileStatus[] storeFiles = FSUtils.listStatus(fs, familyDir);
+    FileStatus[] storeFiles = CommonFSUtils.listStatus(fs, familyDir);
     if (storeFiles == null) {
       LOG.debug("No files to dispose of in {}, family={}", parent.getRegionNameAsString(),
           Bytes.toString(family));
@@ -694,7 +693,7 @@ public class HFileArchiver {
     public boolean moveAndClose(Path dest) throws IOException {
       this.close();
       Path p = this.getPath();
-      return FSUtils.renameAndSetModifyTime(fs, p, dest);
+      return CommonFSUtils.renameAndSetModifyTime(fs, p, dest);
     }
 
     /**

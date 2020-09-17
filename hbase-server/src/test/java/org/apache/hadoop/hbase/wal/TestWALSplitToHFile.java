@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,19 +18,23 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.regionserver.wal.AbstractTestWALReplay.addRegionEdits;
-import static org.apache.hadoop.hbase.wal.BoundedRecoveredHFilesOutputSink.WAL_SPLIT_TO_HFILE;
+import static org.apache.hadoop.hbase.wal.WALSplitter.WAL_SPLIT_TO_HFILE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -51,6 +54,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -61,10 +65,11 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -95,6 +100,12 @@ public class TestWALSplitToHFile {
   private Configuration conf;
   private WALFactory wals;
 
+  private static final byte[] ROW = Bytes.toBytes("row");
+  private static final byte[] QUALIFIER = Bytes.toBytes("q");
+  private static final byte[] VALUE1 = Bytes.toBytes("value1");
+  private static final byte[] VALUE2 = Bytes.toBytes("value2");
+  private static final int countPerFamily = 10;
+
   @Rule
   public final TestName TEST_NAME = new TestName();
 
@@ -105,7 +116,7 @@ public class TestWALSplitToHFile {
     UTIL.startMiniCluster(3);
     Path hbaseRootDir = UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
-    FSUtils.setRootDir(conf, hbaseRootDir);
+    CommonFSUtils.setRootDir(conf, hbaseRootDir);
   }
 
   @AfterClass
@@ -116,8 +127,9 @@ public class TestWALSplitToHFile {
   @Before
   public void setUp() throws Exception {
     this.conf = HBaseConfiguration.create(UTIL.getConfiguration());
+    this.conf.setBoolean(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS, false);
     this.fs = UTIL.getDFSCluster().getFileSystem();
-    this.rootDir = FSUtils.getRootDir(this.conf);
+    this.rootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName =
         ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010, System.currentTimeMillis())
@@ -163,24 +175,211 @@ public class TestWALSplitToHFile {
     return wal;
   }
 
+  private WAL createWAL(FileSystem fs, Path hbaseRootDir, String logName) throws IOException {
+    FSHLog wal = new FSHLog(fs, hbaseRootDir, logName, this.conf);
+    wal.init();
+    return wal;
+  }
+
+  private Pair<TableDescriptor, RegionInfo> setupTableAndRegion() throws IOException {
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final TableDescriptor td = createBasic3FamilyTD(tableName);
+    final RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).build();
+    final Path tableDir = CommonFSUtils.getTableDir(this.rootDir, tableName);
+    deleteDir(tableDir);
+    FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, false);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(ri, rootDir, this.conf, td);
+    HBaseTestingUtility.closeRegionAndWAL(region);
+    return new Pair<>(td, ri);
+  }
+
+  private void writeData(TableDescriptor td, HRegion region) throws IOException {
+    final long timestamp = this.ee.currentTime();
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      region.put(new Put(ROW).addColumn(cfd.getName(), QUALIFIER, timestamp, VALUE1));
+    }
+  }
+
+  @Test
+  public void testDifferentRootDirAndWALRootDir() throws Exception {
+    // Change wal root dir and reset the configuration
+    Path walRootDir = UTIL.createWALRootDir();
+    this.conf = HBaseConfiguration.create(UTIL.getConfiguration());
+
+    FileSystem walFs = CommonFSUtils.getWALFileSystem(this.conf);
+    this.oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    String serverName =
+        ServerName.valueOf(TEST_NAME.getMethodName() + "-manual", 16010, System.currentTimeMillis())
+            .toString();
+    this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
+    this.logDir = new Path(walRootDir, logName);
+    this.wals = new WALFactory(conf, TEST_NAME.getMethodName());
+
+    Pair<TableDescriptor, RegionInfo> pair = setupTableAndRegion();
+    TableDescriptor td = pair.getFirst();
+    RegionInfo ri = pair.getSecond();
+
+    WAL wal = createWAL(walFs, walRootDir, logName);
+    HRegion region = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal);
+    writeData(td, region);
+
+    // Now close the region without flush
+    region.close(true);
+    wal.shutdown();
+    // split the log
+    WALSplitter.split(walRootDir, logDir, oldLogDir, FileSystem.get(this.conf), this.conf, wals);
+
+    WAL wal2 = createWAL(walFs, walRootDir, logName);
+    HRegion region2 = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal2);
+    Result result2 = region2.get(new Get(ROW));
+    assertEquals(td.getColumnFamilies().length, result2.size());
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      assertTrue(Bytes.equals(VALUE1, result2.getValue(cfd.getName(), QUALIFIER)));
+    }
+  }
+
+  @Test
+  public void testCorruptRecoveredHFile() throws Exception {
+    Pair<TableDescriptor, RegionInfo> pair = setupTableAndRegion();
+    TableDescriptor td = pair.getFirst();
+    RegionInfo ri = pair.getSecond();
+
+    WAL wal = createWAL(this.conf, rootDir, logName);
+    HRegion region = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal);
+    writeData(td, region);
+
+    // Now close the region without flush
+    region.close(true);
+    wal.shutdown();
+    // split the log
+    WALSplitter.split(rootDir, logDir, oldLogDir, FileSystem.get(this.conf), this.conf, wals);
+
+    // Write a corrupt recovered hfile
+    Path regionDir =
+        new Path(CommonFSUtils.getTableDir(rootDir, td.getTableName()), ri.getEncodedName());
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      FileStatus[] files =
+          WALSplitUtil.getRecoveredHFiles(this.fs, regionDir, cfd.getNameAsString());
+      assertNotNull(files);
+      assertTrue(files.length > 0);
+      writeCorruptRecoveredHFile(files[0].getPath());
+    }
+
+    // Failed to reopen the region
+    WAL wal2 = createWAL(this.conf, rootDir, logName);
+    try {
+      HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal2);
+      fail("Should fail to open region");
+    } catch (CorruptHFileException che) {
+      // Expected
+    }
+
+    // Set skip errors to true and reopen the region
+    this.conf.setBoolean(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS, true);
+    HRegion region2 = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal2);
+    Result result2 = region2.get(new Get(ROW));
+    assertEquals(td.getColumnFamilies().length, result2.size());
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      assertTrue(Bytes.equals(VALUE1, result2.getValue(cfd.getName(), QUALIFIER)));
+      // Assert the corrupt file was skipped and still exist
+      FileStatus[] files =
+          WALSplitUtil.getRecoveredHFiles(this.fs, regionDir, cfd.getNameAsString());
+      assertNotNull(files);
+      assertEquals(1, files.length);
+      assertTrue(files[0].getPath().getName().contains("corrupt"));
+    }
+  }
+
+  @Test
+  public void testPutWithSameTimestamp() throws Exception {
+    Pair<TableDescriptor, RegionInfo> pair = setupTableAndRegion();
+    TableDescriptor td = pair.getFirst();
+    RegionInfo ri = pair.getSecond();
+
+    WAL wal = createWAL(this.conf, rootDir, logName);
+    HRegion region = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal);
+    final long timestamp = this.ee.currentTime();
+    // Write data and flush
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      region.put(new Put(ROW).addColumn(cfd.getName(), QUALIFIER, timestamp, VALUE1));
+    }
+    region.flush(true);
+
+    // Write data with same timestamp and do not flush
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      region.put(new Put(ROW).addColumn(cfd.getName(), QUALIFIER, timestamp, VALUE2));
+    }
+    // Now close the region without flush
+    region.close(true);
+    wal.shutdown();
+    // split the log
+    WALSplitter.split(rootDir, logDir, oldLogDir, FileSystem.get(this.conf), this.conf, wals);
+
+    // reopen the region
+    WAL wal2 = createWAL(this.conf, rootDir, logName);
+    HRegion region2 = HRegion.openHRegion(conf, this.fs, rootDir, ri, td, wal2);
+    Result result2 = region2.get(new Get(ROW));
+    assertEquals(td.getColumnFamilies().length, result2.size());
+    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+      assertTrue(Bytes.equals(VALUE2, result2.getValue(cfd.getName(), QUALIFIER)));
+    }
+  }
+
+  @Test
+  public void testRecoverSequenceId() throws Exception {
+    Pair<TableDescriptor, RegionInfo> pair = setupTableAndRegion();
+    TableDescriptor td = pair.getFirst();
+    RegionInfo ri = pair.getSecond();
+
+    WAL wal = createWAL(this.conf, rootDir, logName);
+    HRegion region = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal);
+    Map<Integer, Map<String, Long>> seqIdMap = new HashMap<>();
+    // Write data and do not flush
+    for (int i = 0; i < countPerFamily; i++) {
+      for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+        region.put(new Put(Bytes.toBytes(i)).addColumn(cfd.getName(), QUALIFIER, VALUE1));
+        Result result = region.get(new Get(Bytes.toBytes(i)).addFamily(cfd.getName()));
+        assertTrue(Bytes.equals(VALUE1, result.getValue(cfd.getName(), QUALIFIER)));
+        List<Cell> cells = result.listCells();
+        assertEquals(1, cells.size());
+        seqIdMap.computeIfAbsent(i, r -> new HashMap<>()).put(cfd.getNameAsString(),
+          cells.get(0).getSequenceId());
+      }
+    }
+
+    // Now close the region without flush
+    region.close(true);
+    wal.shutdown();
+    // split the log
+    WALSplitter.split(rootDir, logDir, oldLogDir, FileSystem.get(this.conf), this.conf, wals);
+
+    // reopen the region
+    WAL wal2 = createWAL(this.conf, rootDir, logName);
+    HRegion region2 = HRegion.openHRegion(conf, this.fs, rootDir, ri, td, wal2);
+    // assert the seqid was recovered
+    for (int i = 0; i < countPerFamily; i++) {
+      for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+        Result result = region2.get(new Get(Bytes.toBytes(i)).addFamily(cfd.getName()));
+        assertTrue(Bytes.equals(VALUE1, result.getValue(cfd.getName(), QUALIFIER)));
+        List<Cell> cells = result.listCells();
+        assertEquals(1, cells.size());
+        assertEquals((long) seqIdMap.get(i).get(cfd.getNameAsString()),
+          cells.get(0).getSequenceId());
+      }
+    }
+  }
+
   /**
    * Test writing edits into an HRegion, closing it, splitting logs, opening
    * Region again.  Verify seqids.
    */
   @Test
-  public void testReplayEditsWrittenViaHRegion()
+  public void testWrittenViaHRegion()
       throws IOException, SecurityException, IllegalArgumentException, InterruptedException {
-    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    final TableDescriptor td = createBasic3FamilyTD(tableName);
-    final RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).build();
-    final Path tableDir = FSUtils.getTableDir(this.rootDir, tableName);
-    deleteDir(tableDir);
-    FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, false);
-    final byte[] rowName = tableName.getName();
-    final int countPerFamily = 10;
+    Pair<TableDescriptor, RegionInfo> pair = setupTableAndRegion();
+    TableDescriptor td = pair.getFirst();
+    RegionInfo ri = pair.getSecond();
 
-    HRegion region3 = HBaseTestingUtility.createRegionAndWAL(ri, rootDir, this.conf, td);
-    HBaseTestingUtility.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families.  Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
@@ -189,7 +388,7 @@ public class TestWALSplitToHFile {
     long seqid = region.getOpenSeqNum();
     boolean first = true;
     for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-      addRegionEdits(rowName, cfd.getName(), countPerFamily, this.ee, region, "x");
+      addRegionEdits(ROW, cfd.getName(), countPerFamily, this.ee, region, "x");
       if (first) {
         // If first, so we have at least one family w/ different seqid to rest.
         region.flush(true);
@@ -197,7 +396,7 @@ public class TestWALSplitToHFile {
       }
     }
     // Now assert edits made it in.
-    final Get g = new Get(rowName);
+    final Get g = new Get(ROW);
     Result result = region.get(g);
     assertEquals(countPerFamily * td.getColumnFamilies().length, result.size());
     // Now close the region (without flush), split the log, reopen the region and assert that
@@ -222,14 +421,14 @@ public class TestWALSplitToHFile {
     // out from under it and assert that replay of the log adds the edits back
     // correctly when region is opened again.
     for (ColumnFamilyDescriptor hcd : td.getColumnFamilies()) {
-      addRegionEdits(rowName, hcd.getName(), countPerFamily, this.ee, region2, "y");
+      addRegionEdits(ROW, hcd.getName(), countPerFamily, this.ee, region2, "y");
     }
     // Get count of edits.
     final Result result2 = region2.get(g);
     assertEquals(2 * result.size(), result2.size());
     wal2.sync();
     final Configuration newConf = HBaseConfiguration.create(this.conf);
-    User user = HBaseTestingUtility.getDifferentUser(newConf, tableName.getNameAsString());
+    User user = HBaseTestingUtility.getDifferentUser(newConf, td.getTableName().getNameAsString());
     user.runAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
@@ -237,6 +436,7 @@ public class TestWALSplitToHFile {
         FileSystem newFS = FileSystem.get(newConf);
         // Make a new wal for new region open.
         WAL wal3 = createWAL(newConf, rootDir, logName);
+        Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
         HRegion region3 = new HRegion(tableDir, wal3, newFS, newConf, ri, td, null);
         long seqid3 = region3.initialize();
         Result result3 = region3.get(g);
@@ -262,18 +462,12 @@ public class TestWALSplitToHFile {
    * We restart Region again, and verify that the edits were replayed.
    */
   @Test
-  public void testReplayEditsAfterPartialFlush()
+  public void testAfterPartialFlush()
       throws IOException, SecurityException, IllegalArgumentException {
-    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    final RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).build();
-    final Path tableDir = FSUtils.getTableDir(this.rootDir, tableName);
-    deleteDir(tableDir);
-    final byte[] rowName = tableName.getName();
-    final int countPerFamily = 10;
-    final TableDescriptor td = createBasic3FamilyTD(tableName);
-    FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, false);
-    HRegion region3 = HBaseTestingUtility.createRegionAndWAL(ri, rootDir, this.conf, td);
-    HBaseTestingUtility.closeRegionAndWAL(region3);
+    Pair<TableDescriptor, RegionInfo> pair = setupTableAndRegion();
+    TableDescriptor td = pair.getFirst();
+    RegionInfo ri = pair.getSecond();
+
     // Write countPerFamily edits into the three families.  Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
@@ -281,11 +475,11 @@ public class TestWALSplitToHFile {
     HRegion region = HRegion.openHRegion(this.conf, this.fs, rootDir, ri, td, wal);
     long seqid = region.getOpenSeqNum();
     for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-      addRegionEdits(rowName, cfd.getName(), countPerFamily, this.ee, region, "x");
+      addRegionEdits(ROW, cfd.getName(), countPerFamily, this.ee, region, "x");
     }
 
     // Now assert edits made it in.
-    final Get g = new Get(rowName);
+    final Get g = new Get(ROW);
     Result result = region.get(g);
     assertEquals(countPerFamily * td.getColumnFamilies().length, result.size());
 
@@ -323,15 +517,11 @@ public class TestWALSplitToHFile {
    * and flush again, at last verify the data.
    */
   @Test
-  public void testReplayEditsAfterAbortingFlush() throws IOException {
-    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    final RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).build();
-    final Path tableDir = FSUtils.getTableDir(this.rootDir, tableName);
-    deleteDir(tableDir);
-    final TableDescriptor td = createBasic3FamilyTD(tableName);
-    FSTableDescriptors.createTableDescriptorForTableDirectory(fs, tableDir, td, false);
-    HRegion region3 = HBaseTestingUtility.createRegionAndWAL(ri, rootDir, this.conf, td);
-    HBaseTestingUtility.closeRegionAndWAL(region3);
+  public void testAfterAbortingFlush() throws IOException {
+    Pair<TableDescriptor, RegionInfo> pair = setupTableAndRegion();
+    TableDescriptor td = pair.getFirst();
+    RegionInfo ri = pair.getSecond();
+
     // Write countPerFamily edits into the three families. Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
@@ -347,7 +537,7 @@ public class TestWALSplitToHFile {
     int writtenRowCount = 10;
     List<ColumnFamilyDescriptor> families = Arrays.asList(td.getColumnFamilies());
     for (int i = 0; i < writtenRowCount; i++) {
-      Put put = new Put(Bytes.toBytes(tableName + Integer.toString(i)));
+      Put put = new Put(Bytes.toBytes(td.getTableName() + Integer.toString(i)));
       put.addColumn(families.get(i % families.size()).getName(), Bytes.toBytes("q"),
           Bytes.toBytes("val"));
       region.put(put);
@@ -372,7 +562,7 @@ public class TestWALSplitToHFile {
     // writing more data
     int moreRow = 10;
     for (int i = writtenRowCount; i < writtenRowCount + moreRow; i++) {
-      Put put = new Put(Bytes.toBytes(tableName + Integer.toString(i)));
+      Put put = new Put(Bytes.toBytes(td.getTableName() + Integer.toString(i)));
       put.addColumn(families.get(i % families.size()).getName(), Bytes.toBytes("q"),
           Bytes.toBytes("val"));
       region.put(put);
@@ -413,5 +603,22 @@ public class TestWALSplitToHFile {
       results.clear();
     }
     return scannedCount;
+  }
+
+  private void writeCorruptRecoveredHFile(Path recoveredHFile) throws Exception {
+    // Read the recovered hfile
+    int fileSize = (int) fs.listStatus(recoveredHFile)[0].getLen();
+    FSDataInputStream in = fs.open(recoveredHFile);
+    byte[] fileContent = new byte[fileSize];
+    in.readFully(0, fileContent, 0, fileSize);
+    in.close();
+
+    // Write a corrupt hfile by append garbage
+    Path path = new Path(recoveredHFile.getParent(), recoveredHFile.getName() + ".corrupt");
+    FSDataOutputStream out;
+    out = fs.create(path);
+    out.write(fileContent);
+    out.write(Bytes.toBytes("-----"));
+    out.close();
   }
 }

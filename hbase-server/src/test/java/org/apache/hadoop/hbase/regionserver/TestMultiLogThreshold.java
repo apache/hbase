@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,20 +17,25 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.mockito.Mockito.verify;
-
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -46,7 +51,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  * Tests logging of large batch commands via Multi. Tests are fast, but uses a mini-cluster (to test
  * via "Multi" commands) so classified as MediumTests
  */
-@Category(MediumTests.class)
+@RunWith(Parameterized.class)
+@Category(LargeTests.class)
 public class TestMultiLogThreshold {
 
   @ClassRule
@@ -62,22 +68,30 @@ public class TestMultiLogThreshold {
   private static HRegionServer RS;
   private static int THRESHOLD;
 
-  @BeforeClass
-  public static void setup() throws Exception {
+  @Parameterized.Parameter
+  public static boolean rejectLargeBatchOp;
+
+  @Parameterized.Parameters
+  public static List<Object[]> params() {
+    return Arrays.asList(new Object[] { false }, new Object[] { true });
+  }
+
+  @Before
+  public void setupTest() throws Exception {
     final TableName tableName = TableName.valueOf("tableName");
     TEST_UTIL = new HBaseTestingUtility();
     CONF = TEST_UTIL.getConfiguration();
-    THRESHOLD = CONF.getInt(RSRpcServices.BATCH_ROWS_THRESHOLD_NAME,
-      RSRpcServices.BATCH_ROWS_THRESHOLD_DEFAULT);
+    THRESHOLD = CONF.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME,
+      HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
+    CONF.setBoolean("hbase.rpc.rows.size.threshold.reject", rejectLargeBatchOp);
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.createTable(tableName, TEST_FAM);
     RS = TEST_UTIL.getRSForFirstRegionInTable(tableName);
   }
 
-  @Before
-  public void setupTest() throws Exception {
-    LD = Mockito.mock(RSRpcServices.LogDelegate.class);
-    SERVICES = new RSRpcServices(RS, LD);
+  @After
+  public void tearDown() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   private enum ActionType {
@@ -89,8 +103,9 @@ public class TestMultiLogThreshold {
    * "rows" number of RegionActions with one Action each or one RegionAction with "rows" number of
    * Actions
    */
-  private void sendMultiRequest(int rows, ActionType actionType) throws ServiceException {
-    RpcController rpcc = Mockito.mock(RpcController.class);
+  private void sendMultiRequest(int rows, ActionType actionType)
+      throws ServiceException, IOException {
+    RpcController rpcc = Mockito.mock(HBaseRpcController.class);
     MultiRequest.Builder builder = MultiRequest.newBuilder();
     int numRAs = 1;
     int numAs = 1;
@@ -113,35 +128,38 @@ public class TestMultiLogThreshold {
       }
       builder.addRegionAction(rab.build());
     }
-    try {
-      SERVICES.multi(rpcc, builder.build());
-    } catch (ClassCastException e) {
-      // swallow expected exception due to mocked RpcController
-    }
+    LD = Mockito.mock(RSRpcServices.LogDelegate.class);
+    SERVICES = new RSRpcServices(RS, LD);
+    SERVICES.multi(rpcc, builder.build());
   }
 
   @Test
   public void testMultiLogThresholdRegionActions() throws ServiceException, IOException {
-    sendMultiRequest(THRESHOLD + 1, ActionType.REGION_ACTIONS);
-    verify(LD, Mockito.times(1)).logBatchWarning(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt());
-  }
+    try {
+      sendMultiRequest(THRESHOLD + 1, ActionType.REGION_ACTIONS);
+      Assert.assertFalse(rejectLargeBatchOp);
+    } catch (ServiceException e) {
+      Assert.assertTrue(rejectLargeBatchOp);
+    }
+    Mockito.verify(LD, Mockito.times(1))
+      .logBatchWarning(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt());
 
-  @Test
-  public void testMultiNoLogThresholdRegionActions() throws ServiceException, IOException {
     sendMultiRequest(THRESHOLD, ActionType.REGION_ACTIONS);
-    verify(LD, Mockito.never()).logBatchWarning(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt());
-  }
+    Mockito.verify(LD, Mockito.never())
+      .logBatchWarning(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt());
 
-  @Test
-  public void testMultiLogThresholdActions() throws ServiceException, IOException {
-    sendMultiRequest(THRESHOLD + 1, ActionType.ACTIONS);
-    verify(LD, Mockito.times(1)).logBatchWarning(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt());
-  }
+    try {
+      sendMultiRequest(THRESHOLD + 1, ActionType.ACTIONS);
+      Assert.assertFalse(rejectLargeBatchOp);
+    } catch (ServiceException e) {
+      Assert.assertTrue(rejectLargeBatchOp);
+    }
+    Mockito.verify(LD, Mockito.times(1))
+      .logBatchWarning(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt());
 
-  @Test
-  public void testMultiNoLogThresholdAction() throws ServiceException, IOException {
     sendMultiRequest(THRESHOLD, ActionType.ACTIONS);
-    verify(LD, Mockito.never()).logBatchWarning(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt());
+    Mockito.verify(LD, Mockito.never())
+      .logBatchWarning(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt());
   }
 
 }

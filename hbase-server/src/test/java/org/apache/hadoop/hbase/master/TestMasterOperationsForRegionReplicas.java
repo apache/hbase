@@ -33,16 +33,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -163,7 +162,7 @@ public class TestMasterOperationsForRegionReplicas {
       List<Result> metaRows = MetaTableAccessor.fullScanRegions(ADMIN.getConnection());
       int numRows = 0;
       for (Result result : metaRows) {
-        RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
+        RegionLocations locations = CatalogFamilyFormat.getRegionLocations(result);
         RegionInfo hri = locations.getRegionLocation().getRegion();
         if (!hri.getTable().equals(tableName)) continue;
         numRows += 1;
@@ -286,7 +285,6 @@ public class TestMasterOperationsForRegionReplicas {
   }
 
   @Test
-  @Ignore("Enable when we have support for alter_table- HBASE-10361")
   public void testIncompleteMetaTableReplicaInformation() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final int numRegions = 3;
@@ -312,11 +310,11 @@ public class TestMasterOperationsForRegionReplicas {
       for (byte[] row : tableRows) {
         Delete deleteOneReplicaLocation = new Delete(row);
         deleteOneReplicaLocation.addColumns(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getServerColumn(1));
+          CatalogFamilyFormat.getServerColumn(1));
         deleteOneReplicaLocation.addColumns(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getSeqNumColumn(1));
+          CatalogFamilyFormat.getSeqNumColumn(1));
         deleteOneReplicaLocation.addColumns(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getStartCodeColumn(1));
+          CatalogFamilyFormat.getStartCodeColumn(1));
         metaTable.delete(deleteOneReplicaLocation);
       }
       metaTable.close();
@@ -339,10 +337,12 @@ public class TestMasterOperationsForRegionReplicas {
       Connection connection) throws IOException {
     assert (ADMIN.tableExists(table));
     final AtomicInteger count = new AtomicInteger();
-    Visitor visitor = new Visitor() {
+    ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
-        if (MetaTableAccessor.getRegionInfo(r).getTable().equals(table)) count.incrementAndGet();
+        if (CatalogFamilyFormat.getRegionInfo(r).getTable().equals(table)) {
+          count.incrementAndGet();
+        }
         return true;
       }
     };

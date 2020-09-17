@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,7 +38,7 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -126,7 +125,7 @@ public class TestSnapshotWhenChoreCleaning {
   }
 
   private static boolean isAnySnapshots(FileSystem fs) throws IOException {
-    Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(FSUtils.getRootDir(CONF));
+    Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(CommonFSUtils.getRootDir(CONF));
     FileStatus[] snapFiles = fs.listStatus(snapshotDir);
     if (snapFiles.length == 0) {
       return false;
@@ -149,9 +148,9 @@ public class TestSnapshotWhenChoreCleaning {
     cleaner.init(ImmutableMap.of(HMaster.MASTER, TEST_UTIL.getHBaseCluster().getMaster()));
     cleaner.setConf(CONF);
 
-    FileSystem fs = FSUtils.getCurrentFileSystem(CONF);
+    FileSystem fs = CommonFSUtils.getCurrentFileSystem(CONF);
     List<Path> fileNames =
-        listHFileNames(fs, FSUtils.getTableDir(FSUtils.getRootDir(CONF), TABLE_NAME));
+        listHFileNames(fs, CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(CONF), TABLE_NAME));
     List<FileStatus> files = new ArrayList<>();
     for (Path fileName : fileNames) {
       files.add(fs.getFileStatus(fileName));

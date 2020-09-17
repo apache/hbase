@@ -19,13 +19,12 @@ package org.apache.hadoop.hbase.mob;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +61,7 @@ public class ManualMobMaintHFileCleaner extends BaseHFileCleanerDelegate {
       Path region = family.getParent();
       Path table = region.getParent();
 
-      TableName tableName = FSUtils.getTableName(table);
+      TableName tableName = CommonFSUtils.getTableName(table);
 
       String mobRegion = MOB_REGIONS.get(tableName);
       if (mobRegion == null) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -49,7 +50,7 @@ import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles.LoadQueueItem;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -62,9 +63,10 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * It is used for replicating HFile entries. It will first copy parallely all the hfiles to a local
  * staging directory and then it will use ({@link BulkLoadHFiles} to prepare a collection of
  * {@link LoadQueueItem} which will finally be loaded(replicated) into the table of this cluster.
+ * Call {@link #close()} when done.
  */
 @InterfaceAudience.Private
-public class HFileReplicator {
+public class HFileReplicator implements Closeable {
   /** Maximum number of threads to allow in pool to copy hfiles during replication */
   public static final String REPLICATION_BULKLOAD_COPY_MAXTHREADS_KEY =
       "hbase.replication.bulkload.copy.maxthreads";
@@ -107,18 +109,27 @@ public class HFileReplicator {
 
     userProvider = UserProvider.instantiate(conf);
     fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
-    this.hbaseStagingDir = new Path(FSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
+    this.hbaseStagingDir =
+      new Path(CommonFSUtils.getRootDir(conf), HConstants.BULKLOAD_STAGING_DIR_NAME);
     this.maxCopyThreads =
         this.conf.getInt(REPLICATION_BULKLOAD_COPY_MAXTHREADS_KEY,
           REPLICATION_BULKLOAD_COPY_MAXTHREADS_DEFAULT);
     this.exec = Threads.getBoundedCachedThreadPool(maxCopyThreads, 60, TimeUnit.SECONDS,
         new ThreadFactoryBuilder().setDaemon(true)
-            .setNameFormat("HFileReplicationCallable-%1$d").build());
+            .setNameFormat("HFileReplicationCopier-%1$d-" + this.sourceBaseNamespaceDirPath).
+          build());
     this.copiesPerThread =
         conf.getInt(REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_KEY,
           REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_DEFAULT);
 
     sinkFs = FileSystem.get(conf);
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (this.exec != null) {
+      this.exec.shutdown();
+    }
   }
 
   public Void replicate() throws IOException {
@@ -130,7 +141,6 @@ public class HFileReplicator {
     for (Entry<String, Path> tableStagingDir : tableStagingDirsMap.entrySet()) {
       String tableNameString = tableStagingDir.getKey();
       Path stagingDir = tableStagingDir.getValue();
-
       TableName tableName = TableName.valueOf(tableNameString);
 
       // Prepare collection of queue of hfiles to be loaded(replicated)
@@ -139,8 +149,7 @@ public class HFileReplicator {
         false);
 
       if (queue.isEmpty()) {
-        LOG.warn("Replication process did not find any files to replicate in directory "
-            + stagingDir.toUri());
+        LOG.warn("Did not find any files to replicate in directory {}", stagingDir.toUri());
         return null;
       }
       fsDelegationToken.acquireDelegationToken(sinkFs);
@@ -162,13 +171,11 @@ public class HFileReplicator {
     loader.setClusterIds(sourceClusterIds);
     for (int count = 0; !queue.isEmpty(); count++) {
       if (count != 0) {
-        LOG.warn("Error occurred while replicating HFiles, retry attempt " + count + " with " +
-          queue.size() + " files still remaining to replicate.");
+        LOG.warn("Error replicating HFiles; retry={} with {} remaining.", count, queue.size());
       }
 
       if (maxRetries != 0 && count >= maxRetries) {
-        throw new IOException(
-          "Retry attempted " + count + " times without completing, bailing out.");
+        throw new IOException("Retry attempted " + count + " times without completing, bailing.");
       }
 
       // Try bulk load

@@ -322,16 +322,15 @@ documenting your setup process here.
 [[build.basic]]
 === Basic Compile
 
-HBase is compiled using Maven.
-You must use at least Maven 3.0.4.
-To check your Maven version, run the command +mvn -version+.
+HBase is compiled using Maven. You must use at least Maven 3.0.4. To check your Maven version, run
+the command +mvn -version+.
 
-.JDK Version Requirements
-[NOTE]
-====
-Starting with HBase 1.0 you must use Java 7 or later to build from source code.
-See <<java,java>> for more complete information about supported JDK versions.
-====
+[[build.basic.jdk_requirements]]
+==== JDK Version Requirements
+
+HBase has Java version compiler requirements that vary by release branch. At compilation time,
+HBase has the same version requirements as it does for runtime. See <<java,java>> for a complete
+support matrix of Java version by HBase version.
 
 [[maven.build.commands]]
 ==== Maven Build Commands
@@ -397,28 +396,111 @@ mvn clean install -DskipTests
 See the <<hbase.unittests.cmds,hbase.unittests.cmds>> section in <<hbase.unittests,hbase.unittests>>
 
 [[maven.build.hadoop]]
-==== Building against various hadoop versions.
+==== Building against various Hadoop versions
 
-HBase supports building against Apache Hadoop versions: 2.y and 3.y (early release artifacts). By default we build against Hadoop 2.x.
+HBase supports building against Apache Hadoop versions: 2.y and 3.y (early release artifacts).
+Exactly which version of Hadoop is used by default varies by release branch. See the section
+<<hadoop,Hadoop>> for the complete breakdown of supported Hadoop version by HBase release.
 
-To build against a specific release from the Hadoop 2.y line, set e.g. `-Dhadoop-two.version=2.6.3`.
+The mechanism for selecting a Hadoop version at build time is identical across all releases. Which
+version of Hadoop is default varies. We manage Hadoop major version selection by way of Maven
+profiles. Due to the peculiarities of Maven profile mutual exclusion, the profile that builds
+against a particular Hadoop version is activated by setting a property, *not* the usual profile
+activation. Hadoop version profile activation is summarized by the following table.
+
+.Hadoop Profile Activation by HBase Release
+[cols="3*^.^", options="header"]
+|===
+| | Hadoop2 Activation | Hadoop3 Activation
+| HBase 1.3+ | _active by default_ | `-Dhadoop.profile=3.0`
+| HBase 3.0+ | _not supported_ | _active by default_
+|===
+
+[WARNING]
+====
+Please note that where a profile is active by default, `hadoop.profile` must NOT be provided.
+====
+
+Once the Hadoop major version profile is activated, the exact Hadoop version can be
+specified by overriding the appropriate property value. For Hadoop2 versions, the property name
+is `hadoop-two.version`. With Hadoop3 versions, the property name is `hadoop-three.version`.
+
+.Example 1, Building HBase 1.7 against Hadoop 2.10.0
+
+For example, to build HBase 1.7 against Hadoop 2.10.0, the profile is set for Hadoop2 by default,
+so only `hadoop-two.version` must be specified:
 
 [source,bourne]
 ----
-mvn -Dhadoop-two.version=2.6.3 ...
+git checkout branch-1
+mvn -Dhadoop-two.version=2.10.0 ...
 ----
 
-To change the major release line of Hadoop we build against, add a hadoop.profile property when you invoke +mvn+:
+.Example 2, Building HBase 2.3 against Hadoop 3.3.0-SNAPSHOT
+
+This is how a developer might check the compatibility of HBase 2.3 against an unreleased Hadoop
+version (currently 3.3). Both the Hadoop3 profile and version must be specified:
 
 [source,bourne]
 ----
-mvn -Dhadoop.profile=3.0 ...
+git checkout branch-2.3
+mvn -Dhadoop.profile=3.0 -Dhadoop-three.version=3.3.0-SNAPSHOT ...
 ----
 
-The above will build against whatever explicit hadoop 3.y version we have in our _pom.xml_ as our '3.0' version.
-Tests may not all pass so you may need to pass `-DskipTests` unless you are inclined to fix the failing tests.
+.Example 3, Building HBase 3.0 against Hadoop 3.3.0-SNAPSHOT
 
-To pick a particular Hadoop 3.y release, you'd set hadoop-three.version property e.g. `-Dhadoop-three.version=3.0.0`.
+The same developer might want also to check the development version of HBase (currently 3.0)
+against the development version of Hadoop (currently 3.3). In this case, the Hadoop3 profile is
+active by default, so only `hadoop-three.version` must be specified:
+
+[source,bourne]
+----
+git checkout master
+mvn -Dhadoop-three.version=3.3.0-SNAPSHOT ...
+----
+
+[[maven.build.jdk11_hadoop3]]
+==== Building with JDK11 and Hadoop3
+
+HBase manages JDK-specific build settings using Maven profiles. The profile appropriate to the JDK
+in use is automatically activated. Building and running on JDK8 supports both Hadoop2 and Hadoop3.
+For JDK11, only Hadoop3 is supported. Thus, the Hadoop3 profile must be active when building on
+JDK11, and the artifacts used when running HBase on JDK11 must be compiled against Hadoop3.
+Furthermore, the JDK11 profile requires a minimum Hadoop version of 3.2.0. This value is specified
+by the JDK11 profile, but it can be overridden using the `hadoop-three.version` property as normal.
+For details on Hadoop profile activation by HBase branch, see
+<<maven.build.hadoop,Building against various Hadoop versions>>. See <<java,java>> for a complete
+support matrix of Java version by HBase version.
+
+.Example 1, Building HBase 2.3 with JDK11
+
+To build HBase 2.3 with JDK11, the Hadoop3 profile must be activated explicitly.
+
+[source,bourne]
+----
+git checkout branch-2.3
+JAVA_HOME=/usr/lib/jvm/java-11 mvn -Dhadoop.profile=3.0 ...
+----
+
+.Example 2, Building HBase 3.0 with JDK11
+
+For HBase 3.0, the Hadoop3 profile is active by default, no additional properties need be
+specified.
+
+[source,bourne]
+----
+git checkout master
+JAVA_HOME=/usr/lib/jvm/java-11 mvn ...
+----
+
+[[maven.build.jdk11_hadoop3_ide]]
+==== Building and testing in an IDE with JDK11 and Hadoop3
+
+Continuing the discussion from the <<maven.build.jdk11_hadoop3,earlier section>>, building and
+testing with JDK11 and Hadoop3 within an IDE may require additional configuration. Specifically,
+make sure the JVM version used by the IDE is a JDK11, the active JDK Maven profile is for JDK11,
+and the Maven profile for JDK8 is NOT active. Likewise, ensure the Hadoop3 Maven profile is active
+and the Hadoop2 Maven profile is NOT active.
 
 [[build.protobuf]]
 ==== Build Protobuf
@@ -502,6 +584,40 @@ mvn -DskipTests package assembly:single deploy
 If you see `Unable to find resource 'VM_global_library.vm'`, ignore it.
 It's not an error.
 It is link:https://issues.apache.org/jira/browse/MSITE-286[officially ugly] though.
+
+[[build.on.linux.aarch64]]
+=== Build On Linux Aarch64
+HBase runs on both Windows and UNIX-like systems, and it should run on any platform
+that runs a supported version of Java. This should include JVMs on x86_64 and aarch64.
+The documentation below describes how to build hbase on aarch64 platform.
+
+==== Set Environment Variables
+Manually install Java and Maven on aarch64 servers if they are not installed,
+and set environment variables. For example:
+
+[source,bourne]
+----
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-arm64
+export MAVEN_HOME=/opt/maven
+export PATH=${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${PATH}
+----
+
+==== Use Protobuf Supported On Aarch64
+Now HBase uses protobuf of two versions. Version '3.11.4' of protobuf that hbase uses
+internally and version '2.5.0' as external usage.
+Package protoc-2.5.0 does not work on aarch64 platform, we should add maven
+profile '-Paarch64' when building. It downloads protoc-2.5.0 package from maven
+repository which we made on aarch64 platform locally.
+
+[source,bourne]
+----
+mvn clean install -Paarch64 -DskipTests
+----
+
+[NOTE]
+Protobuf is released with aarch64 protoc since version '3.5.0', and we are planning to
+upgrade protobuf later, then we don't have to add the profile '-Paarch64' anymore.
+
 
 [[releasing]]
 == Releasing Apache HBase
@@ -1298,22 +1414,46 @@ Integration Tests (((IntegrationTests)))::
 [[hbase.unittests.cmds]]
 === Running tests
 
+The state of tests on the hbase branches varies. Some branches keep good test hygiene and all tests pass
+reliably with perhaps an unlucky sporadic flakey test failure. On other branches, the case may be less so with
+frequent flakies and even broken tests in need of attention that fail 100% of the time. Try and figure
+the state of tests on the branch you are currently interested in; the current state of nightly
+link:https://builds.apache.org/view/H-L/view/HBase/job/HBase%20Nightly/[apache jenkins builds] is a good
+place to start. Tests on master branch are generally not in the best of condition as releases
+are less frequent off master. This can make it hard landing patches especially given our dictum that
+patches land on master branch first.
+
+The full test suite can take from 5-6 hours on an anemic VM with 4 CPUs and minimal
+parallelism to 50 minutes or less on a linux machine with dozens of CPUs and plenty of
+RAM.
+
+When you go to run the full test suite, make sure you up the test runner user nproc
+(`ulimit -u` -- make sure it > 6000 or more if more parallelism) and the number of
+open files (`ulimit -n` -- make sure it > 10240 or more) limits on your system.
+Errors because the test run hits
+limits are often only opaquely related to the constraint. You can see the current
+user settings by running `ulimit -a`.
+
 [[hbase.unittests.cmds.test]]
 ==== Default: small and medium category tests
 
-Running `mvn test` will execute all small tests in a single JVM (no fork) and then medium tests in a separate JVM for each test instance.
-Medium tests are NOT executed if there is an error in a small test. Large tests are NOT executed.
+Running `mvn test` will execute all small tests in a single JVM (no fork) and then medium tests in a
+forked, separate JVM for each test instance (For definition of 'small' test and so on, see
+<<hbase.unittests>>). Medium tests are NOT executed if there is an error in a
+small test. Large tests are NOT executed.
 
 [[hbase.unittests.cmds.test.runalltests]]
 ==== Running all tests
 
-Running `mvn test -P runAllTests` will execute small tests in a single JVM then medium and large tests in a separate JVM for each test.
-Medium and large tests are NOT executed if there is an error in a small test.
+Running `mvn test -P runAllTests` will execute small tests in a single JVM, then medium and large tests
+in a forked, separate JVM for each test. Medium and large tests are NOT executed if there is an error in
+a small test.
 
 [[hbase.unittests.cmds.test.localtests.mytest]]
 ==== Running a single test or all tests in a package
 
-To run an individual test, e.g. `MyTest`, rum `mvn test -Dtest=MyTest` You can also pass multiple, individual tests as a comma-delimited list:
+To run an individual test, e.g. `MyTest`, rum `mvn test -Dtest=MyTest` You can also pass multiple,
+individual tests as a comma-delimited list:
 [source,bash]
 ----
 mvn test  -Dtest=MyTest1,MyTest2,MyTest3
@@ -1325,10 +1465,12 @@ mvn test '-Dtest=org.apache.hadoop.hbase.client.*'
 ----
 
 When `-Dtest` is specified, the `localTests` profile will be used.
-Each junit test is executed in a separate JVM (A fork per test class). There is no parallelization when tests are running in this mode.
+Each junit test is executed in a separate JVM (A fork per test class).
+There is no parallelization when tests are running in this mode.
 You will see a new message at the end of the -report: `"[INFO] Tests are skipped"`.
-It's harmless.
-However, you need to make sure the sum of `Tests run:` in the `Results:` section of test reports matching the number of tests you specified because no error will be reported when a non-existent test case is specified.
+It's harmless.  However, you need to make sure the sum of
+`Tests run:` in the `Results:` section of test reports matching the number of tests
+you specified because no error will be reported when a non-existent test case is specified.
 
 [[hbase.unittests.cmds.test.profiles]]
 ==== Other test invocation permutations
@@ -1344,17 +1486,36 @@ For convenience, you can run `mvn test -P runDevTests` to execute both small and
 [[hbase.unittests.test.faster]]
 ==== Running tests faster
 
-By default, `$ mvn test -P runAllTests` runs all small tests in 1 forked instance and the medium and large tests in 5 parallel forked instances. Up these counts to get the build to run faster (you may run into
-rare issues of test mutual interference). For example,
-allowing that you want to have 2 tests in parallel per core, and you need about 2GB of memory per test (at the extreme), if you have an 8 core, 24GB box, you can have 16 tests in parallel.
-but the memory available limits it to 12 (24/2), To run all tests with 12 tests in parallel, do this: +mvn test -P runAllTests -Dsurefire.secondPartForkCount=12+.
-If using a version earlier than  2.0, do: +mvn test -P runAllTests -Dsurefire.secondPartThreadCount=12 +.
-You can also increase the fork count for the first party by setting -Dsurefire.firstPartForkCount to a value > 1.
-The values passed as fork counts can be specified as a fraction of CPU as follows: for two forks per available CPU, set the value to 2.0C; for a fork for every two CPUs, set it to 0.5C.
-To increase the speed, you can as well use a ramdisk.
-You will need 2GB  of memory to run all tests.
-You will also need to delete the files between two  test run.
-The typical way to configure a ramdisk on Linux is:
+By default, `$ mvn test -P runAllTests` runs all tests using a quarter of the CPUs available on machine
+hosting the test run (see `surefire.firstPartForkCount` and `surefire.secondPartForkCount` in the top-level
+hbase `pom.xml` which default to 0.25C, or 1/4 of CPU count). Up these counts to get the build to run faster.
+You can also have hbase modules
+run their tests in parrallel when the dependency graph allows by passing `--threads=N` when you invoke
+maven, where `N` is the amount of parallelism wanted.
+maven, where `N` is the amount of _module_ parallelism wanted.
+
+For example, allowing that you want to use all cores on a machine to run tests,
+you could start up the maven test run with:
+
+----
+  $ x="1.0C";  mvn -Dsurefire.firstPartForkCount=$x -Dsurefire.secondPartForkCount=$x test -PrunAllTests
+----
+
+If a 32 core machine, you should see periods during which 32 forked jvms appear in your process listing each running unit tests.
+Your milage may vary. Dependent on hardware, overcommittment of CPU and/or memory can bring the test suite crashing down,
+usually complaining with a spew of test system exits and incomplete test report xml files. Start gently, with the default fork
+and move up gradually.
+
+Adding the `--threads=N`, maven will run N maven modules in parallel (when module inter-dependencies allow). Be aware, if you have
+set the forkcount to `1.0C`, and the `--threads` count to '2', the number of concurrent test runners can approach
+2 * CPU, a count likely to overcommit the host machine (with attendant test exits failures).
+
+You will need ~2.2GB of memory per forked JVM plus the memory used by maven itself (3-4G).
+
+===== RAM Disk
+
+To increase the speed, you can as well use a ramdisk. 2-3G should be sufficient. Be sure to
+delete the files between each test run. The typical way to configure a ramdisk on Linux is:
 
 ----
 $ sudo mkdir /ram2G
@@ -1364,17 +1525,7 @@ sudo mount -t tmpfs -o size=2048M tmpfs /ram2G
 You can then use it to run all HBase tests on 2.0 with the command:
 
 ----
-mvn test
-                        -P runAllTests -Dsurefire.secondPartForkCount=12
-                        -Dtest.build.data.basedirectory=/ram2G
-----
-
-On earlier versions, use:
-
-----
-mvn test
-                        -P runAllTests -Dsurefire.secondPartThreadCount=12
-                        -Dtest.build.data.basedirectory=/ram2G
+mvn test -PrunAllTests -Dtest.build.data.basedirectory=/ram2G
 ----
 
 [[hbase.unittests.cmds.test.hbasetests]]

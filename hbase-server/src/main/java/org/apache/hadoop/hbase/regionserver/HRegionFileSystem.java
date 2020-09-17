@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -26,7 +27,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -46,17 +46,16 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSHDFSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * View to an on-disk Region.
@@ -192,7 +191,7 @@ public class HRegionFileSystem {
    * 'COLD', 'WARM', 'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
    */
   public void setStoragePolicy(String familyName, String policyName) {
-    FSUtils.setStoragePolicy(this.fs, getStoreDir(familyName), policyName);
+    CommonFSUtils.setStoragePolicy(this.fs, getStoreDir(familyName), policyName);
   }
 
   /**
@@ -234,7 +233,7 @@ public class HRegionFileSystem {
   public Collection<StoreFileInfo> getStoreFiles(final String familyName, final boolean validate)
       throws IOException {
     Path familyDir = getStoreDir(familyName);
-    FileStatus[] files = FSUtils.listStatus(this.fs, familyDir);
+    FileStatus[] files = CommonFSUtils.listStatus(this.fs, familyDir);
     if (files == null) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("No StoreFiles for: " + familyDir);
@@ -270,7 +269,7 @@ public class HRegionFileSystem {
       final HRegionFileSystem regionfs, final String familyName,
       final boolean validate) throws IOException {
     Path familyDir = regionfs.getStoreDir(familyName);
-    List<LocatedFileStatus> locatedFileStatuses = FSUtils.listLocatedStatus(
+    List<LocatedFileStatus> locatedFileStatuses = CommonFSUtils.listLocatedStatus(
         regionfs.getFileSystem(), familyDir);
     if (locatedFileStatuses == null) {
       if (LOG.isTraceEnabled()) {
@@ -328,7 +327,7 @@ public class HRegionFileSystem {
    */
   public boolean hasReferences(final String familyName) throws IOException {
     Path storeDir = getStoreDir(familyName);
-    FileStatus[] files = FSUtils.listStatus(fs, storeDir);
+    FileStatus[] files = CommonFSUtils.listStatus(fs, storeDir);
     if (files != null) {
       for(FileStatus stat: files) {
         if(stat.isDirectory()) {
@@ -363,11 +362,12 @@ public class HRegionFileSystem {
    * @throws IOException
    */
   public Collection<String> getFamilies() throws IOException {
-    FileStatus[] fds = FSUtils.listStatus(fs, getRegionDir(), new FSUtils.FamilyDirFilter(fs));
+    FileStatus[] fds =
+      CommonFSUtils.listStatus(fs, getRegionDir(), new FSUtils.FamilyDirFilter(fs));
     if (fds == null) return null;
 
     ArrayList<String> families = new ArrayList<>(fds.length);
-    for (FileStatus status: fds) {
+    for (FileStatus status : fds) {
       families.add(status.getPath().getName());
     }
 
@@ -536,7 +536,7 @@ public class HRegionFileSystem {
     // We can't compare FileSystem instances as equals() includes UGI instance
     // as part of the comparison and won't work when doing SecureBulkLoad
     // TODO deal with viewFS
-    if (!FSHDFSUtils.isSameHdfs(conf, realSrcFs, desFs)) {
+    if (!FSUtils.isSameHdfs(conf, realSrcFs, desFs)) {
       LOG.info("Bulk-load file " + srcPath + " is on different filesystem than " +
           "the destination store. Copying file over to destination filesystem.");
       Path tmpPath = createTempName();
@@ -583,7 +583,7 @@ public class HRegionFileSystem {
     // where we successfully created daughter a but regionserver crashed during
     // the creation of region b.  In this case, there'll be an orphan daughter
     // dir in the filesystem.  TOOD: Fix.
-    FileStatus[] daughters = FSUtils.listStatus(fs, splitdir, new FSUtils.DirFilter(fs));
+    FileStatus[] daughters = CommonFSUtils.listStatus(fs, splitdir, new FSUtils.DirFilter(fs));
     if (daughters != null) {
       for (FileStatus daughter: daughters) {
         Path daughterDir = new Path(getTableDir(), daughter.getPath().getName());
@@ -758,10 +758,10 @@ public class HRegionFileSystem {
 
   static boolean mkdirs(FileSystem fs, Configuration conf, Path dir) throws IOException {
     if (FSUtils.isDistributedFileSystem(fs) ||
-        !conf.getBoolean(HConstants.ENABLE_DATA_FILE_UMASK, false)) {
+      !conf.getBoolean(HConstants.ENABLE_DATA_FILE_UMASK, false)) {
       return fs.mkdirs(dir);
     }
-    FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
+    FsPermission perms = CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     return fs.mkdirs(dir, perms);
   }
 
@@ -845,7 +845,7 @@ public class HRegionFileSystem {
    * @throws IOException if an unexpected exception occurs
    */
   void logFileSystemState(final Logger LOG) throws IOException {
-    FSUtils.logFileSystemState(fs, this.getRegionDir(), LOG);
+    CommonFSUtils.logFileSystemState(fs, this.getRegionDir(), LOG);
   }
 
   /**
@@ -876,18 +876,16 @@ public class HRegionFileSystem {
 
   /**
    * Write the .regioninfo file on-disk.
+   * <p/>
    * Overwrites if exists already.
    */
   private static void writeRegionInfoFileContent(final Configuration conf, final FileSystem fs,
-      final Path regionInfoFile, final byte[] content) throws IOException {
+    final Path regionInfoFile, final byte[] content) throws IOException {
     // First check to get the permissions
-    FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
+    FsPermission perms = CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // Write the RegionInfo file content
-    FSDataOutputStream out = FSUtils.create(conf, fs, regionInfoFile, perms, null);
-    try {
+    try (FSDataOutputStream out = FSUtils.create(conf, fs, regionInfoFile, perms, null)) {
       out.write(content);
-    } finally {
-      out.close();
     }
   }
 
@@ -965,8 +963,8 @@ public class HRegionFileSystem {
       // close the created regioninfo file in the .tmp directory then on next
       // creation we will be getting AlreadyCreatedException.
       // Hence delete and create the file if exists.
-      if (FSUtils.isExists(fs, tmpPath)) {
-        FSUtils.delete(fs, tmpPath, true);
+      if (CommonFSUtils.isExists(fs, tmpPath)) {
+        CommonFSUtils.delete(fs, tmpPath, true);
       }
 
       // Write HRI to a file in case we need to recover hbase:meta
@@ -1079,7 +1077,7 @@ public class HRegionFileSystem {
     }
 
     // Archive region
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     HFileArchiver.archiveRegion(fs, rootDir, tableDir, regionDir);
 
     // Delete empty region dir

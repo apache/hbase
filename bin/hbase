@@ -57,35 +57,15 @@
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
 
-# This will set HBASE_HOME, etc.
-. "$bin"/hbase-config.sh
-
-cygwin=false
-case "`uname`" in
-CYGWIN*) cygwin=true;;
-esac
-
-# Detect if we are in hbase sources dir
-in_dev_env=false
-if [ -d "${HBASE_HOME}/target" ]; then
-  in_dev_env=true
-fi
-
-# Detect if we are in the omnibus tarball
-in_omnibus_tarball="false"
-if [ -f "${HBASE_HOME}/bin/hbase-daemons.sh" ]; then
-  in_omnibus_tarball="true"
-fi
-
 read -d '' options_string << EOF
 Options:
   --config DIR         Configuration direction to use. Default: ./conf
   --hosts HOSTS        Override the list in 'regionservers' file
   --auth-as-server     Authenticate to ZooKeeper using servers configuration
   --internal-classpath Skip attempting to use client facing jars (WARNING: unstable results between versions)
+  --help or -h         Print this help message
 EOF
-# if no args specified, show usage
-if [ $# = 0 ]; then
+show_usage() {
   echo "Usage: hbase [<options>] <command> [<args>]"
   echo "$options_string"
   echo ""
@@ -122,6 +102,36 @@ if [ $# = 0 ]; then
   echo "  pre-upgrade      Run Pre-Upgrade validator tool"
   echo "  hbtop            Run HBTop tool"
   echo "  CLASSNAME        Run the class named CLASSNAME"
+}
+
+if [ "--help" = "$1" ] || [ "-h" = "$1" ]; then
+  show_usage
+  exit 0
+fi
+
+# This will set HBASE_HOME, etc.
+. "$bin"/hbase-config.sh
+
+cygwin=false
+case "`uname`" in
+CYGWIN*) cygwin=true;;
+esac
+
+# Detect if we are in hbase sources dir
+in_dev_env=false
+if [ -d "${HBASE_HOME}/target" ]; then
+  in_dev_env=true
+fi
+
+# Detect if we are in the omnibus tarball
+in_omnibus_tarball="false"
+if [ -f "${HBASE_HOME}/bin/hbase-daemons.sh" ]; then
+  in_omnibus_tarball="true"
+fi
+
+# if no args specified, show usage
+if [ $# = 0 ]; then
+  show_usage
   exit 1
 fi
 
@@ -134,6 +144,21 @@ JAVA=$JAVA_HOME/bin/java
 # override default settings for this command, if applicable
 if [ -f "$HBASE_HOME/conf/hbase-env-$COMMAND.sh" ]; then
   . "$HBASE_HOME/conf/hbase-env-$COMMAND.sh"
+fi
+
+# establish a default value for HBASE_OPTS if it's not already set. For now,
+# all we set is the garbage collector.
+if [ -z "${HBASE_OPTS}" ] ; then
+  major_version_number="$(parse_java_major_version "$(read_java_version)")"
+  case "$major_version_number" in
+  8|9|10)
+    HBASE_OPTS="-XX:+UseConcMarkSweepGC"
+    ;;
+  11|*)
+    HBASE_OPTS="-XX:+UseG1GC"
+    ;;
+  esac
+  export HBASE_OPTS
 fi
 
 add_size_suffix() {
@@ -706,18 +731,15 @@ if [ "${HBASE_JDK11}" != "" ]; then
   fi
 else
   # Use JDK detection
-  JAVA=$JAVA_HOME/bin/java
-
-  version=$($JAVA -version 2>&1 | awk -F '"' '/version/ {print $2}')
-  # '-' check is for cases such as "13-ea"
-  version_number=$(echo "$version" | cut -d'.' -f1 | cut -d'-' -f1)
+  version="$(read_java_version)"
+  major_version_number="$(parse_java_major_version "$version")"
 
   if [ "${DEBUG}" = "true" ]; then
     echo "HBASE_JDK11 not set hence using JDK detection."
-    echo "Extracted JDK version - ${version}, version_number - ${version_number}"
+    echo "Extracted JDK version - ${version}, major_version_number - ${major_version_number}"
   fi
 
-  if [[ "$version_number" -ge "11" ]]; then
+  if [[ "$major_version_number" -ge "11" ]]; then
     if [ "${DEBUG}" = "true" ]; then
       echo "Version ${version} is greater-than/equal to 11 hence adding JDK11 jars to classpath."
     fi

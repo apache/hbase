@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -69,7 +68,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.ClassRule;
@@ -97,8 +96,8 @@ public class TestMobStoreCompaction {
   private Configuration conf = null;
 
   private HRegion region = null;
-  private TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor = null;
-  private ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor = null;
+  private TableDescriptor tableDescriptor = null;
+  private ColumnFamilyDescriptor familyDescriptor = null;
   private long mobCellThreshold = 1000;
 
   private FileSystem fs;
@@ -113,13 +112,10 @@ public class TestMobStoreCompaction {
     HBaseTestingUtility UTIL = new HBaseTestingUtility(conf);
 
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
-    tableDescriptor = UTIL.createModifyableTableDescriptor(name.getMethodName());
-    familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(COLUMN_FAMILY);
-    familyDescriptor.setMobEnabled(true);
-    familyDescriptor.setMobThreshold(mobThreshold);
-    familyDescriptor.setMaxVersions(1);
-    tableDescriptor.modifyColumnFamily(familyDescriptor);
+    familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY).setMobEnabled(true)
+      .setMobThreshold(mobThreshold).setMaxVersions(1).build();
+    tableDescriptor = UTIL.createModifyableTableDescriptor(name.getMethodName())
+      .modifyColumnFamily(familyDescriptor).build();
 
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     region = HBaseTestingUtility.createRegionAndWAL(regionInfo,
@@ -229,7 +225,7 @@ public class TestMobStoreCompaction {
     init(UTIL.getConfiguration(), 300);
     byte[] dummyData = makeDummyData(600);
 
-    Path hbaseRootDir = FSUtils.getRootDir(conf);
+    Path hbaseRootDir = CommonFSUtils.getRootDir(conf);
     Path basedir = new Path(hbaseRootDir, tableDescriptor.getTableName().getNameAsString());
     List<Pair<byte[], String>> hfiles = new ArrayList<>(1);
     for (int i = 0; i < compactionThreshold; i++) {

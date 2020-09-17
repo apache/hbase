@@ -23,28 +23,30 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestRegionLocations {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionLocations.class);
+    HBaseClassTestRule.forClass(TestRegionLocations.class);
 
   ServerName sn0 = ServerName.valueOf("host0", 10, 10);
   ServerName sn1 = ServerName.valueOf("host1", 10, 10);
   ServerName sn2 = ServerName.valueOf("host2", 10, 10);
   ServerName sn3 = ServerName.valueOf("host3", 10, 10);
 
-  HRegionInfo info0 = hri(0);
-  HRegionInfo info1 = hri(1);
-  HRegionInfo info2 = hri(2);
-  HRegionInfo info9 = hri(9);
+  RegionInfo info0 = hri(0);
+  RegionInfo info1 = hri(1);
+  RegionInfo info2 = hri(2);
+  RegionInfo info9 = hri(9);
 
   long regionId1 = 1000;
   long regionId2 = 2000;
@@ -56,18 +58,18 @@ public class TestRegionLocations {
     assertEquals(0, list.size());
     assertEquals(0, list.numNonNullElements());
 
-    list = hrll((HRegionLocation)null);
+    list = hrll((HRegionLocation) null);
     assertTrue(list.isEmpty());
     assertEquals(1, list.size());
     assertEquals(0, list.numNonNullElements());
 
-    HRegionInfo info0 = hri(0);
+    RegionInfo info0 = hri(0);
     list = hrll(hrl(info0, null));
     assertTrue(list.isEmpty());
     assertEquals(1, list.size());
     assertEquals(0, list.numNonNullElements());
 
-    HRegionInfo info9 = hri(9);
+    RegionInfo info9 = hri(9);
     list = hrll(hrl(info9, null));
     assertTrue(list.isEmpty());
     assertEquals(10, list.size());
@@ -79,27 +81,28 @@ public class TestRegionLocations {
     assertEquals(0, list.numNonNullElements());
   }
 
-  private HRegionInfo hri(int replicaId) {
+  private RegionInfo hri(int replicaId) {
     return hri(regionId1, replicaId);
   }
 
-  private HRegionInfo hri(long regionId, int replicaId) {
+  private RegionInfo hri(long regionId, int replicaId) {
     TableName table = TableName.valueOf("table");
     byte[] startKey = HConstants.EMPTY_START_ROW;
     byte[] endKey = HConstants.EMPTY_END_ROW;
-    HRegionInfo info = new HRegionInfo(table, startKey, endKey, false, regionId, replicaId);
+    RegionInfo info = RegionInfoBuilder.newBuilder(table).setStartKey(startKey).setEndKey(endKey)
+      .setRegionId(regionId).setReplicaId(replicaId).build();
     return info;
   }
 
-  private HRegionLocation hrl(HRegionInfo hri, ServerName sn) {
+  private HRegionLocation hrl(RegionInfo hri, ServerName sn) {
     return new HRegionLocation(hri, sn);
   }
 
-  private HRegionLocation hrl(HRegionInfo hri, ServerName sn, long seqNum) {
+  private HRegionLocation hrl(RegionInfo hri, ServerName sn, long seqNum) {
     return new HRegionLocation(hri, sn, seqNum);
   }
 
-  private RegionLocations hrll(HRegionLocation ... locations) {
+  private RegionLocations hrll(HRegionLocation... locations) {
     return new RegionLocations(locations);
   }
 
@@ -167,7 +170,6 @@ public class TestRegionLocations {
     assertEquals(sn2, list.getRegionLocation(2).getServerName());
     assertNull(list.getRegionLocation(5));
     assertNull(list.getRegionLocation(9));
-
 
     // test multi-element remove from multi element list
     list = hrll(hrl(info0, sn1), hrl(info1, sn1), hrl(info2, sn0), hrl(info9, sn0));
@@ -292,9 +294,9 @@ public class TestRegionLocations {
     RegionLocations list1, list2;
 
     // test merging two lists. But the list2 contains region replicas with a different region id
-    HRegionInfo info0 = hri(regionId1, 0);
-    HRegionInfo info1 = hri(regionId1, 1);
-    HRegionInfo info2 = hri(regionId2, 2);
+    RegionInfo info0 = hri(regionId1, 0);
+    RegionInfo info1 = hri(regionId1, 1);
+    RegionInfo info2 = hri(regionId2, 2);
 
     list1 = hrll(hrl(info2, sn1));
     list2 = hrll(hrl(info0, sn2), hrl(info1, sn2));
@@ -318,9 +320,9 @@ public class TestRegionLocations {
   public void testUpdateLocationWithDifferentRegionId() {
     RegionLocations list;
 
-    HRegionInfo info0 = hri(regionId1, 0);
-    HRegionInfo info1 = hri(regionId2, 1);
-    HRegionInfo info2 = hri(regionId1, 2);
+    RegionInfo info0 = hri(regionId1, 0);
+    RegionInfo info1 = hri(regionId2, 1);
+    RegionInfo info2 = hri(regionId1, 2);
 
     list = new RegionLocations(hrl(info0, sn1), hrl(info2, sn1));
 
@@ -334,12 +336,11 @@ public class TestRegionLocations {
     assertEquals(3, list.size());
   }
 
-
   @Test
   public void testConstructWithNullElements() {
     // RegionLocations can contain null elements as well. These null elements can
 
-    RegionLocations list = new RegionLocations((HRegionLocation)null);
+    RegionLocations list = new RegionLocations((HRegionLocation) null);
     assertTrue(list.isEmpty());
     assertEquals(1, list.size());
     assertEquals(0, list.numNonNullElements());

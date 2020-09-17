@@ -57,12 +57,12 @@ public class TestSequenceIdAccounting {
     Map<byte[], Long> m = new HashMap<>();
     m.put(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     assertEquals(HConstants.NO_SEQNUM, (long)sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES));
-    sida.completeCacheFlush(ENCODED_REGION_NAME);
+    sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     long sequenceid = 1;
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid, true);
     // Only one family so should return NO_SEQNUM still.
     assertEquals(HConstants.NO_SEQNUM, (long)sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES));
-    sida.completeCacheFlush(ENCODED_REGION_NAME);
+    sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     long currentSequenceId = sequenceid;
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid, true);
     final Set<byte[]> otherFamily = new HashSet<>(1);
@@ -70,7 +70,7 @@ public class TestSequenceIdAccounting {
     sida.update(ENCODED_REGION_NAME, FAMILIES, ++sequenceid, true);
     // Should return oldest sequence id in the region.
     assertEquals(currentSequenceId, (long)sida.startCacheFlush(ENCODED_REGION_NAME, otherFamily));
-    sida.completeCacheFlush(ENCODED_REGION_NAME);
+    sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
   }
 
   @Test
@@ -101,7 +101,7 @@ public class TestSequenceIdAccounting {
     m.put(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     assertTrue(sida.areAllLower(m, null));
     // Let the flush complete and if we ask if the sequenceid is lower, should be yes since no edits
-    sida.completeCacheFlush(ENCODED_REGION_NAME);
+    sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     m.put(ENCODED_REGION_NAME, sequenceid);
     assertTrue(sida.areAllLower(m, null));
     // Flush again but add sequenceids while we are flushing.
@@ -114,7 +114,7 @@ public class TestSequenceIdAccounting {
     sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES);
     // The cache flush will clear out all sequenceid accounting by region.
     assertEquals(HConstants.NO_SEQNUM, sida.getLowestSequenceId(ENCODED_REGION_NAME));
-    sida.completeCacheFlush(ENCODED_REGION_NAME);
+    sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     // No new edits have gone in so no sequenceid to work with.
     assertEquals(HConstants.NO_SEQNUM, sida.getLowestSequenceId(ENCODED_REGION_NAME));
     // Make an edit behind all we'll put now into sida.
@@ -137,7 +137,7 @@ public class TestSequenceIdAccounting {
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid++, true);
     assertTrue(sida.findLower(m) == null);
     m.put(ENCODED_REGION_NAME, sida.getLowestSequenceId(ENCODED_REGION_NAME));
-    assertTrue(sida.findLower(m).length == 1);
+    assertTrue(sida.findLower(m).size() == 1);
     m.put(ENCODED_REGION_NAME, sida.getLowestSequenceId(ENCODED_REGION_NAME) - 1);
     assertTrue(sida.findLower(m) == null);
   }

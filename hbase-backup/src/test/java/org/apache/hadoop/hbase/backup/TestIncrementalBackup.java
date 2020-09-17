@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -82,14 +84,11 @@ public class TestIncrementalBackup extends TestBackupBase {
     final byte[] fam3Name = Bytes.toBytes("f3");
     final byte[] mobName = Bytes.toBytes("mob");
 
-    table1Desc.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam3Name));
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor mobHcd =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(mobName);
-    mobHcd.setMobEnabled(true);
-    mobHcd.setMobThreshold(5L);
-    table1Desc.setColumnFamily(mobHcd);
-    HBaseTestingUtility.modifyTableSync(TEST_UTIL.getAdmin(), table1Desc);
+    TableDescriptor newTable1Desc = TableDescriptorBuilder.newBuilder(table1Desc)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam3Name))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(mobName).setMobEnabled(true)
+        .setMobThreshold(5L).build()).build();
+    TEST_UTIL.getAdmin().modifyTable(newTable1Desc);
 
     try (Connection conn = ConnectionFactory.createConnection(conf1)) {
       int NB_ROWS_FAM3 = 6;
@@ -150,13 +149,12 @@ public class TestIncrementalBackup extends TestBackupBase {
       assertTrue(checkSucceeded(backupIdIncMultiple));
 
       // add column family f2 to table1
-      final byte[] fam2Name = Bytes.toBytes("f2");
-      table1Desc.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam2Name));
-
       // drop column family f3
-      table1Desc.removeColumnFamily(fam3Name);
-      HBaseTestingUtility.modifyTableSync(TEST_UTIL.getAdmin(), table1Desc);
+      final byte[] fam2Name = Bytes.toBytes("f2");
+      newTable1Desc = TableDescriptorBuilder.newBuilder(newTable1Desc)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam2Name)).removeColumnFamily(fam3Name)
+        .build();
+      TEST_UTIL.getAdmin().modifyTable(newTable1Desc);
 
       int NB_ROWS_FAM2 = 7;
       Table t3 = insertIntoTable(conn, table1, fam2Name, 2, NB_ROWS_FAM2);

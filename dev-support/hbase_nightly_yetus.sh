@@ -65,8 +65,6 @@ YETUS_ARGS=("--sentinel" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--branch=${BRANCH_NAME}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--tests-filter=${TESTS_FILTER}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--ignore-unknown-options=true" "${YETUS_ARGS[@]}")
-# Why are these not being picked up from hbase-personality?
-YETUS_ARGS=("--proclimit=10000" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--dockermemlimit=20g" "${YETUS_ARGS[@]}")
 
 if [[ -n "${EXCLUDE_TESTS_URL}" ]]; then
@@ -78,7 +76,11 @@ fi
 
 # For testing with specific hadoop version. Activates corresponding profile in maven runs.
 if [[ -n "${HADOOP_PROFILE}" ]]; then
-  YETUS_ARGS=("--hadoop-profile=${HADOOP_PROFILE}" "${YETUS_ARGS[@]}")
+  # Master has only Hadoop3 support. We don't need to activate any profile.
+  # The Jenkinsfile should not attempt to run any Hadoop2 tests.
+  if [[ "${BRANCH_NAME}" =~ branch-2* ]]; then
+    YETUS_ARGS=("--hadoop-profile=${HADOOP_PROFILE}" "${YETUS_ARGS[@]}")
+  fi
 fi
 
 if [[ -n "${SKIP_ERROR_PRONE}" ]]; then

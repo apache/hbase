@@ -169,8 +169,8 @@ public class TestTableInputFormat {
     org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl trr =
         new org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl();
     Scan s = new Scan();
-    s.setStartRow(Bytes.toBytes("aaa"));
-    s.setStopRow(Bytes.toBytes("zzz"));
+    s.withStartRow(Bytes.toBytes("aaa"));
+    s.withStopRow(Bytes.toBytes("zzz"));
     s.addFamily(FAMILY);
     trr.setScan(s);
     trr.setHTable(table);

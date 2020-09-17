@@ -21,7 +21,7 @@ module Shell
   module Commands
     class MajorCompact < Command
       def help
-        <<-EOF
+        <<~EOF
           Run major compaction on passed table or pass a region row
           to major compact an individual region. To compact a single
           column family within a region specify the region name

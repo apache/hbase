@@ -18,15 +18,13 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -52,7 +50,7 @@ public class TestMasterNotCarryTable {
   public static void setUp() throws Exception {
     Configuration c = UTIL.getConfiguration();
     // We use local filesystem.  Set it so it writes into the testdir.
-    FSUtils.setRootDir(c, UTIL.getDataTestDir());
+    CommonFSUtils.setRootDir(c, UTIL.getDataTestDir());
     UTIL.startMiniZKCluster();
     master = new HMaster(UTIL.getConfiguration());
     master.start();

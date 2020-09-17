@@ -23,12 +23,14 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -65,6 +67,8 @@ import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * The administrative API for HBase. Obtain an instance from {@link Connection#getAdmin()} and
@@ -512,12 +516,31 @@ public interface Admin extends Abortable, Closeable {
   void flush(TableName tableName) throws IOException;
 
   /**
+   * Flush the specified column family stores on all regions of the passed table.
+   * This runs as a synchronous operation.
+   *
+   * @param tableName table to flush
+   * @param columnFamily column family within a table
+   * @throws IOException if a remote or network exception occurs
+   */
+  void flush(TableName tableName, byte[] columnFamily) throws IOException;
+
+  /**
    * Flush an individual region. Synchronous operation.
    *
    * @param regionName region to flush
    * @throws IOException if a remote or network exception occurs
    */
   void flushRegion(byte[] regionName) throws IOException;
+
+  /**
+   * Flush a column family within a region. Synchronous operation.
+   *
+   * @param regionName region to flush
+   * @param columnFamily column family within a region
+   * @throws IOException if a remote or network exception occurs
+   */
+  void flushRegion(byte[] regionName, byte[] columnFamily) throws IOException;
 
   /**
    * Flush all regions on the region server. Synchronous operation.
@@ -755,6 +778,13 @@ public interface Admin extends Abortable, Closeable {
   void assign(byte[] regionName) throws IOException;
 
   /**
+   * Unassign a Region.
+   * @param regionName Region name to assign.
+   * @throws IOException if a remote or network exception occurs
+   */
+  void unassign(byte[] regionName) throws IOException;
+
+  /**
    * Unassign a region from current hosting regionserver.  Region will then be assigned to a
    * regionserver chosen at random.  Region could be reassigned back to the same server.  Use {@link
    * #move(byte[], ServerName)} if you want to control the region movement.
@@ -763,9 +793,14 @@ public interface Admin extends Abortable, Closeable {
    * @param force If <code>true</code>, force unassign (Will remove region from regions-in-transition too if
    * present. If results in double assignment use hbck -fix to resolve. To be used by experts).
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link #unassign(byte[])}
+   *   instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-24875">HBASE-24875</a>
    */
-  void unassign(byte[] regionName, boolean force)
-      throws IOException;
+  @Deprecated
+  default void unassign(byte[] regionName, boolean force) throws IOException {
+    unassign(regionName);
+  }
 
   /**
    * Offline specified region from master's in-memory state. It will not attempt to reassign the
@@ -831,11 +866,28 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Invoke region normalizer. Can NOT run for various reasons.  Check logs.
+   * This is a non-blocking invocation to region normalizer. If return value is true, it means
+   * the request was submitted successfully. We need to check logs for the details of which regions
+   * were split/merged.
    *
-   * @return <code>true</code> if region normalizer ran, <code>false</code> otherwise.
+   * @return {@code true} if region normalizer ran, {@code false} otherwise.
    * @throws IOException if a remote or network exception occurs
    */
-  boolean normalize() throws IOException;
+  default boolean normalize() throws IOException {
+    return normalize(new NormalizeTableFilterParams.Builder().build());
+  }
+
+  /**
+   * Invoke region normalizer. Can NOT run for various reasons.  Check logs.
+   * This is a non-blocking invocation to region normalizer. If return value is true, it means
+   * the request was submitted successfully. We need to check logs for the details of which regions
+   * were split/merged.
+   *
+   * @param ntfp limit to tables matching the specified filter.
+   * @return {@code true} if region normalizer ran, {@code false} otherwise.
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean normalize(NormalizeTableFilterParams ntfp) throws IOException;
 
   /**
    * Query the current state of the region normalizer.
@@ -865,7 +917,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Ask for a scan of the catalog table.
    *
-   * @return the number of entries cleaned
+   * @return the number of entries cleaned. Returns -1 if previous run is in progress.
    * @throws IOException if a remote or network exception occurs
    */
   int runCatalogJanitor() throws IOException;
@@ -1064,7 +1116,28 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default Collection<ServerName> getRegionServers() throws IOException {
-    return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).getServersName();
+    return getRegionServers(false);
+  }
+
+  /**
+   * Retrieve all current live region servers including decommissioned
+   * if excludeDecommissionedRS is false, else non-decommissioned ones only
+   *
+   * @param excludeDecommissionedRS should we exclude decommissioned RS nodes
+   * @return all current live region servers including/excluding decommissioned hosts
+   * @throws IOException if a remote or network exception occurs
+   */
+  default Collection<ServerName> getRegionServers(boolean excludeDecommissionedRS)
+      throws IOException {
+    List<ServerName> allServers =
+      getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).getServersName();
+    if (!excludeDecommissionedRS) {
+      return allServers;
+    }
+    List<ServerName> decommissionedRegionServers = listDecommissionedRegionServers();
+    return allServers.stream()
+      .filter(s -> !decommissionedRegionServers.contains(s))
+      .collect(ImmutableList.toImmutableList());
   }
 
   /**
@@ -1700,19 +1773,26 @@ public interface Admin extends Abortable, Closeable {
   List<QuotaSettings> getQuota(QuotaFilter filter) throws IOException;
 
   /**
-   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the active
-   * master. <p> The obtained {@link com.google.protobuf.RpcChannel} instance can be used to access
-   * a published coprocessor {@link com.google.protobuf.Service} using standard protobuf service
-   * invocations: </p> <div style="background-color: #cccccc; padding: 2px">
-   * <blockquote><pre>
+   * Creates and returns a {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel}
+   * instance connected to the active master.
+   * <p/>
+   * The obtained {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel} instance can be
+   * used to access a published coprocessor
+   * {@link org.apache.hbase.thirdparty.com.google.protobuf.Service} using standard protobuf service
+   * invocations:
+   * <p/>
+   * <div style="background-color: #cccccc; padding: 2px">
+   * <blockquote>
+   * <pre>
    * CoprocessorRpcChannel channel = myAdmin.coprocessorService();
    * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
    * MyCallRequest request = MyCallRequest.newBuilder()
    *     ...
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
-   * </pre></blockquote></div>
-   *
+   * </pre>
+   * </blockquote>
+   * </div>
    * @return A MasterCoprocessorRpcChannel instance
    * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
    *             more. Use the coprocessorService methods in {@link AsyncAdmin} instead.
@@ -1722,24 +1802,25 @@ public interface Admin extends Abortable, Closeable {
 
 
   /**
-   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance
-   * connected to the passed region server.
-   *
-   * <p>
-   * The obtained {@link com.google.protobuf.RpcChannel} instance can be used to access a published
-   * coprocessor {@link com.google.protobuf.Service} using standard protobuf service invocations:
-   * </p>
-   *
-   * <div style="background-color: #cccccc; padding: 2px">
-   * <blockquote><pre>
+   * Creates and returns a {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel}
+   * instance connected to the passed region server.
+   * <p/>
+   * The obtained {@link org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel} instance can be
+   * used to access a published coprocessor
+   * {@link org.apache.hbase.thirdparty.com.google.protobuf.Service} using standard protobuf service
+   * invocations:
+   * <p/>
+   * <div style="background-color: #cccccc; padding: 2px"> <blockquote>
+   * <pre>
    * CoprocessorRpcChannel channel = myAdmin.coprocessorService(serverName);
    * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
    * MyCallRequest request = MyCallRequest.newBuilder()
    *     ...
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
-   * </pre></blockquote></div>
-   *
+   * </pre>
+   * </blockquote>
+   * </div>
    * @param serverName the server name to which the endpoint call is made
    * @return A RegionServerCoprocessorRpcChannel instance
    * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
@@ -2265,19 +2346,40 @@ public interface Admin extends Abortable, Closeable {
   boolean isSnapshotCleanupEnabled() throws IOException;
 
   /**
-   * Retrieves online slow RPC logs from the provided list of
+   * Retrieves online slow/large RPC logs from the provided list of
    * RegionServers
    *
    * @param serverNames Server names to get slowlog responses from
-   * @param slowLogQueryFilter filter to be used if provided
+   * @param logQueryFilter filter to be used if provided (determines slow / large RPC logs)
    * @return online slowlog response list
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.4.0 and will be removed in 4.0.0.
+   *   Use {@link #getLogEntries(Set, String, ServerType, int, Map)} instead.
    */
-  List<SlowLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-      final SlowLogQueryFilter slowLogQueryFilter) throws IOException;
+  @Deprecated
+  default List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
+      final LogQueryFilter logQueryFilter) throws IOException {
+    String logType;
+    if (LogQueryFilter.Type.LARGE_LOG.equals(logQueryFilter.getType())) {
+      logType = "LARGE_LOG";
+    } else {
+      logType = "SLOW_LOG";
+    }
+    Map<String, Object> filterParams = new HashMap<>();
+    filterParams.put("regionName", logQueryFilter.getRegionName());
+    filterParams.put("clientAddress", logQueryFilter.getClientAddress());
+    filterParams.put("tableName", logQueryFilter.getTableName());
+    filterParams.put("userName", logQueryFilter.getUserName());
+    filterParams.put("filterByOperator", logQueryFilter.getFilterByOperator().toString());
+    List<LogEntry> logEntries =
+      getLogEntries(serverNames, logType, ServerType.REGION_SERVER, logQueryFilter.getLimit(),
+        filterParams);
+    return logEntries.stream().map(logEntry -> (OnlineLogRecord) logEntry)
+      .collect(Collectors.toList());
+  }
 
   /**
-   * Clears online slow RPC logs from the provided list of
+   * Clears online slow/large RPC logs from the provided list of
    * RegionServers
    *
    * @param serverNames Set of Server names to clean slowlog responses from
@@ -2388,4 +2490,37 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   boolean balanceRSGroup(String groupName) throws IOException;
+
+  /**
+   * Rename rsgroup
+   * @param oldName old rsgroup name
+   * @param newName new rsgroup name
+   * @throws IOException if a remote or network exception occurs
+   */
+  void renameRSGroup(String oldName, String newName) throws IOException;
+
+  /**
+   * Update RSGroup configuration
+   * @param groupName the group name
+   * @param configuration new configuration of the group name to be set
+   * @throws IOException if a remote or network exception occurs
+   */
+  void updateRSGroupConfig(String groupName, Map<String, String> configuration) throws IOException;
+
+  /**
+   * Retrieve recent online records from HMaster / RegionServers.
+   * Examples include slow/large RPC logs, balancer decisions by master.
+   *
+   * @param serverNames servers to retrieve records from, useful in case of records maintained
+   *  by RegionServer as we can select specific server. In case of servertype=MASTER, logs will
+   *  only come from the currently active master.
+   * @param logType string representing type of log records
+   * @param serverType enum for server type: HMaster or RegionServer
+   * @param limit put a limit to list of records that server should send in response
+   * @param filterParams additional filter params
+   * @return Log entries representing online records from servers
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+    ServerType serverType, int limit, Map<String, Object> filterParams) throws IOException;
 }

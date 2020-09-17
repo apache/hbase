@@ -26,17 +26,16 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -58,7 +57,7 @@ public class HFileTestUtil {
         + "compression) to use for data blocks in the test column family, "
         + "one of " + Arrays.toString(DataBlockEncoding.values()) + ".";
   public static final String OPT_DATA_BLOCK_ENCODING =
-      HColumnDescriptor.DATA_BLOCK_ENCODING.toLowerCase(Locale.ROOT);
+      ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING.toLowerCase(Locale.ROOT);
   /** Column family used by the test */
   public static byte[] DEFAULT_COLUMN_FAMILY = Bytes.toBytes("test_cf");
   /** Column families used by the test */

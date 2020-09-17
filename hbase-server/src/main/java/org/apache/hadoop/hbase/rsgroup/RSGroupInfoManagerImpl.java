@@ -36,6 +36,7 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -73,12 +75,6 @@ import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -86,6 +82,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hadoop.util.Shell;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -96,13 +93,20 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupProtos;
 /**
  * This is an implementation of {@link RSGroupInfoManager} which makes use of an HBase table as the
  * persistence store for the group information. It also makes use of zookeeper to store group
  * information needed for bootstrapping during offline mode.
  * <h2>Concurrency</h2> RSGroup state is kept locally in Maps. There is a rsgroup name to cached
- * RSGroupInfo Map at {@link #rsGroupMap}. These Maps are persisted to the hbase:rsgroup table
- * (and cached in zk) on each modification.
+ * RSGroupInfo Map at {@link RSGroupInfoHolder#groupName2Group}.
+ * These Maps are persisted to the hbase:rsgroup table (and cached in zk) on each modification.
  * <p/>
  * Mutations on state are synchronized but reads can continue without having to wait on an instance
  * monitor, mutations do wholesale replace of the Maps on update -- Copy-On-Write; the local Maps of
@@ -199,11 +203,52 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   // contains list of groups that were last flushed to persistent store
   private Set<String> prevRSGroups = new HashSet<>();
 
+  // Package visibility for testing
+  static class RSGroupMappingScript {
+    static final String RS_GROUP_MAPPING_SCRIPT = "hbase.rsgroup.table.mapping.script";
+    static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT =
+      "hbase.rsgroup.table.mapping.script.timeout";
+    private Shell.ShellCommandExecutor rsgroupMappingScript;
+
+    RSGroupMappingScript(Configuration conf) {
+      String script = conf.get(RS_GROUP_MAPPING_SCRIPT);
+      if (script == null || script.isEmpty()) {
+        return;
+      }
+
+      rsgroupMappingScript = new Shell.ShellCommandExecutor(
+        new String[] { script, "", "" }, null, null,
+        conf.getLong(RS_GROUP_MAPPING_SCRIPT_TIMEOUT, 5000) // 5 seconds
+      );
+    }
+
+    String getRSGroup(String namespace, String tablename) {
+      if (rsgroupMappingScript == null) {
+        return null;
+      }
+      String[] exec = rsgroupMappingScript.getExecString();
+      exec[1] = namespace;
+      exec[2] = tablename;
+      try {
+        rsgroupMappingScript.execute();
+      } catch (IOException e) {
+        // This exception may happen, like process doesn't have permission to run this script.
+        LOG.error("{}, placing {} back to default rsgroup",
+          e.getMessage(),
+          TableName.valueOf(namespace, tablename));
+        return RSGroupInfo.DEFAULT_GROUP;
+      }
+      return rsgroupMappingScript.getOutput().trim();
+    }
+  }
+  private RSGroupMappingScript script;
+
   private RSGroupInfoManagerImpl(MasterServices masterServices) {
     this.masterServices = masterServices;
     this.watcher = masterServices.getZooKeeper();
     this.conn = masterServices.getAsyncClusterConnection();
     this.rsGroupStartupWorker = new RSGroupStartupWorker();
+    this.script = new RSGroupMappingScript(masterServices.getConfiguration());
   }
 
   private synchronized void updateDefaultServers() {
@@ -547,7 +592,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     // This is added to the last of the list so it overwrites the 'default' rsgroup loaded
     // from region group table or zk
-    groupList.add(new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP, getDefaultServers()));
+    groupList.add(new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP, getDefaultServers(groupList)));
 
     // populate the data
     HashMap<String, RSGroupInfo> newGroupMap = Maps.newHashMap();
@@ -651,7 +696,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           ZKUtil.createAndFailSilent(watcher, znode);
           zkOps.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(znode));
           zkOps.add(ZKUtil.ZKUtilOp.createAndFailSilent(znode,
-              ProtobufUtil.prependPBMagic(proto.toByteArray())));
+            ProtobufUtil.prependPBMagic(proto.toByteArray())));
         }
       }
       LOG.debug("Writing ZK GroupInfo count: " + zkOps.size());
@@ -682,9 +727,14 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   // Called by ServerEventsListenerThread. Presume it has lock on this manager when it runs.
   private SortedSet<Address> getDefaultServers() {
+    return getDefaultServers(listRSGroups()/* get from rsGroupMap */);
+  }
+
+  // Called by ServerEventsListenerThread. Presume it has lock on this manager when it runs.
+  private SortedSet<Address> getDefaultServers(List<RSGroupInfo> rsGroupInfoList) {
     // Build a list of servers in other groups than default group, from rsGroupMap
     Set<Address> serversInOtherGroup = new HashSet<>();
-    for (RSGroupInfo group : listRSGroups() /* get from rsGroupMap */) {
+    for (RSGroupInfo group : rsGroupInfoList) {
       if (!RSGroupInfo.DEFAULT_GROUP.equals(group.getName())) { // not default group
         serversInOtherGroup.addAll(group.getServers());
       }
@@ -1015,19 +1065,33 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     return rit;
   }
 
-  private Map<TableName, Map<ServerName, List<RegionInfo>>> getRSGroupAssignmentsByTable(
-      String groupName) throws IOException {
+  /**
+   * This is an EXPENSIVE clone. Cloning though is the safest thing to do. Can't let out original
+   * since it can change and at least the load balancer wants to iterate this exported list. Load
+   * balancer should iterate over this list because cloned list will ignore disabled table and split
+   * parent region cases. This method is invoked by {@link #balanceRSGroup}
+   * @return A clone of current assignments for this group.
+   */
+  @VisibleForTesting
+  Map<TableName, Map<ServerName, List<RegionInfo>>> getRSGroupAssignmentsByTable(
+    TableStateManager tableStateManager, String groupName) throws IOException {
     Map<TableName, Map<ServerName, List<RegionInfo>>> result = Maps.newHashMap();
     Set<TableName> tablesInGroupCache = new HashSet<>();
-    for (Map.Entry<RegionInfo, ServerName> entry :
-        masterServices.getAssignmentManager().getRegionStates()
-        .getRegionAssignments().entrySet()) {
+    for (Map.Entry<RegionInfo, ServerName> entry : masterServices.getAssignmentManager()
+      .getRegionStates().getRegionAssignments().entrySet()) {
       RegionInfo region = entry.getKey();
       TableName tn = region.getTable();
       ServerName server = entry.getValue();
       if (isTableInGroup(tn, groupName, tablesInGroupCache)) {
+        if (tableStateManager
+          .isTableState(tn, TableState.State.DISABLED, TableState.State.DISABLING)) {
+          continue;
+        }
+        if (region.isSplitParent()) {
+          continue;
+        }
         result.computeIfAbsent(tn, k -> new HashMap<>())
-            .computeIfAbsent(server, k -> new ArrayList<>()).add(region);
+          .computeIfAbsent(server, k -> new ArrayList<>()).add(region);
       }
     }
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
@@ -1038,7 +1102,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         }
       }
     }
-
     return result;
   }
 
@@ -1069,18 +1132,9 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       }
 
       // We balance per group instead of per table
-      List<RegionPlan> plans = new ArrayList<>();
       Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
-          getRSGroupAssignmentsByTable(groupName);
-      for (Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> tableMap : assignmentsByTable
-          .entrySet()) {
-        LOG.info("Creating partial plan for table {} : {}", tableMap.getKey(), tableMap.getValue());
-        List<RegionPlan> partialPlans = balancer.balanceCluster(tableMap.getValue());
-        LOG.info("Partial plan for table {} : {}", tableMap.getKey(), partialPlans);
-        if (partialPlans != null) {
-          plans.addAll(partialPlans);
-        }
-      }
+          getRSGroupAssignmentsByTable(masterServices.getTableStateManager(), groupName);
+      List<RegionPlan> plans = balancer.balanceCluster(assignmentsByTable);
       boolean balancerRan = !plans.isEmpty();
       if (balancerRan) {
         LOG.info("RSGroup balance {} starting with plan count: {}", groupName, plans.size());
@@ -1181,4 +1235,50 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
   }
 
+  @Override
+  public String determineRSGroupInfoForTable(TableName tableName) {
+    return script.getRSGroup(tableName.getNamespaceAsString(), tableName.getQualifierAsString());
+  }
+
+  @Override
+  public synchronized void renameRSGroup(String oldName, String newName) throws IOException {
+    if (oldName.equals(RSGroupInfo.DEFAULT_GROUP)) {
+      throw new ConstraintException(RSGroupInfo.DEFAULT_GROUP + " can't be rename");
+    }
+    checkGroupName(newName);
+    //getRSGroupInfo validates old RSGroup existence.
+    RSGroupInfo oldRSG = getRSGroupInfo(oldName);
+    Map<String, RSGroupInfo> rsGroupMap = holder.groupName2Group;
+    if (rsGroupMap.containsKey(newName)) {
+      throw new ConstraintException("Group already exists: " + newName);
+    }
+
+    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
+    newGroupMap.remove(oldRSG.getName());
+    RSGroupInfo newRSG = new RSGroupInfo(newName, oldRSG.getServers());
+    newGroupMap.put(newName, newRSG);
+    flushConfig(newGroupMap);
+    Set<TableName> updateTables =
+      masterServices.getTableDescriptors().getAll().values()
+                    .stream()
+                    .filter(t -> oldName.equals(t.getRegionServerGroup().orElse(null)))
+                    .map(TableDescriptor::getTableName)
+                    .collect(Collectors.toSet());
+    setRSGroup(updateTables, newName);
+  }
+
+  @Override
+  public synchronized void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    if (RSGroupInfo.DEFAULT_GROUP.equals(groupName)) {
+      // We do not persist anything of default group, therefore, it is not supported to update
+      // default group's configuration which lost once master down.
+      throw new ConstraintException("configuration of " + RSGroupInfo.DEFAULT_GROUP
+        + " can't be stored persistently");
+    }
+    RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
+    rsGroupInfo.getConfiguration().forEach((k, v) -> rsGroupInfo.removeConfiguration(k));
+    configuration.forEach((k, v) -> rsGroupInfo.setConfiguration(k, v));
+    flushConfig();
+  }
 }

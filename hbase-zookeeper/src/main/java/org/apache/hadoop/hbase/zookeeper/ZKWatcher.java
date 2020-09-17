@@ -23,14 +23,22 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.AuthUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.security.Superusers;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -79,7 +87,22 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   // listeners to be notified
   private final List<ZKListener> listeners = new CopyOnWriteArrayList<>();
 
+  // Single threaded executor pool that processes event notifications from Zookeeper. Events are
+  // processed in the order in which they arrive (pool backed by an unbounded fifo queue). We do
+  // this to decouple the event processing from Zookeeper's ClientCnxn's EventThread context.
+  // EventThread internally runs a single while loop to serially process all the events. When events
+  // are processed by the listeners in the same thread, that blocks the EventThread from processing
+  // subsequent events. Processing events in a separate thread frees up the event thread to continue
+  // and further prevents deadlocks if the process method itself makes other zookeeper calls.
+  // It is ok to do it in a single thread because the Zookeeper ClientCnxn already serializes the
+  // requests using a single while loop and hence there is no performance degradation.
+  private final ExecutorService zkEventProcessor = Executors.newSingleThreadExecutor(
+    new ThreadFactoryBuilder().setNameFormat("zk-event-processor-pool-%d")
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+
   private final Configuration conf;
+
+  private final long zkSyncTimeout;
 
   /* A pattern that matches a Kerberos name, borrowed from Hadoop's KerberosName */
   private static final Pattern NAME_PATTERN = Pattern.compile("([^/@]*)(/([^/@]*))?@([^/@]*)");
@@ -169,6 +192,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         throw zce;
       }
     }
+    this.zkSyncTimeout = conf.getLong(HConstants.ZK_SYNC_BLOCKING_TIMEOUT_MS,
+        HConstants.ZK_SYNC_BLOCKING_TIMEOUT_DEFAULT_MS);
   }
 
   private void createBaseZNodes() throws ZooKeeperConnectionException {
@@ -479,21 +504,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     return znodePaths;
   }
 
-  /**
-   * Method called from ZooKeeper for events and connection status.
-   * <p>
-   * Valid events are passed along to listeners.  Connection status changes
-   * are dealt with locally.
-   */
-  @Override
-  public void process(WatchedEvent event) {
-    LOG.debug(prefix("Received ZooKeeper Event, " +
-        "type=" + event.getType() + ", " +
-        "state=" + event.getState() + ", " +
-        "path=" + event.getPath()));
-
+  private void processEvent(WatchedEvent event) {
     switch(event.getType()) {
-
       // If event type is NONE, this is a connection status change
       case None: {
         connectionEvent(event);
@@ -501,7 +513,6 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
       }
 
       // Otherwise pass along to the listeners
-
       case NodeCreated: {
         for(ZKListener listener : listeners) {
           listener.nodeCreated(event.getPath());
@@ -530,8 +541,24 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         break;
       }
       default:
-        throw new IllegalStateException("Received event is not valid: " + event.getState());
+        LOG.error("Invalid event of type {} received for path {}. Ignoring.",
+            event.getState(), event.getPath());
     }
+  }
+
+  /**
+   * Method called from ZooKeeper for events and connection status.
+   * <p>
+   * Valid events are passed along to listeners.  Connection status changes
+   * are dealt with locally.
+   */
+  @Override
+  public void process(WatchedEvent event) {
+    LOG.debug(prefix("Received ZooKeeper Event, " +
+        "type=" + event.getType() + ", " +
+        "state=" + event.getState() + ", " +
+        "path=" + event.getPath()));
+    zkEventProcessor.submit(() -> processEvent(event));
   }
 
   // Connection management
@@ -560,6 +587,10 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         LOG.debug(prefix("Received Disconnected from ZooKeeper, ignoring"));
         break;
 
+      case Closed:
+        LOG.debug(prefix("ZooKeeper client closed, ignoring"));
+        break;
+
       case Expired:
         String msg = prefix(this.identifier + " received expired from " +
           "ZooKeeper, aborting");
@@ -581,7 +612,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   }
 
   /**
-   * Forces a synchronization of this ZooKeeper client connection.
+   * Forces a synchronization of this ZooKeeper client connection within a timeout. Enforcing a
+   * timeout lets the callers fail-fast rather than wait forever for the sync to finish.
    * <p>
    * Executing this method before running other methods will ensure that the
    * subsequent operations are up-to-date and consistent as of the time that
@@ -591,9 +623,28 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * data of an existing node and delete or transition that node, utilizing the
    * previously read version and data.  We want to ensure that the version read
    * is up-to-date from when we begin the operation.
+   * <p>
    */
-  public void sync(String path) throws KeeperException {
-    this.recoverableZooKeeper.sync(path, null, null);
+  public void syncOrTimeout(String path) throws KeeperException {
+    final CountDownLatch latch = new CountDownLatch(1);
+    long startTime = EnvironmentEdgeManager.currentTime();
+    this.recoverableZooKeeper.sync(path, (i, s, o) -> latch.countDown(), null);
+    try {
+      if (!latch.await(zkSyncTimeout, TimeUnit.MILLISECONDS)) {
+        LOG.warn("sync() operation to ZK timed out. Configured timeout: {}ms. This usually points "
+            + "to a ZK side issue. Check ZK server logs and metrics.", zkSyncTimeout);
+        throw new KeeperException.RequestTimeoutException();
+      }
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted waiting for ZK sync() to finish.", e);
+      Thread.currentThread().interrupt();
+      return;
+    }
+    if (LOG.isDebugEnabled()) {
+      // TODO: Switch to a metric once server side ZK watcher metrics are implemented. This is a
+      // useful metric to have since the latency of sync() impacts the callers.
+      LOG.debug("ZK sync() operation took {}ms", EnvironmentEdgeManager.currentTime() - startTime);
+    }
   }
 
   /**
@@ -647,6 +698,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
       recoverableZooKeeper.close();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+    } finally {
+      zkEventProcessor.shutdownNow();
     }
   }
 

@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.client;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +26,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -38,7 +36,6 @@ import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -69,7 +66,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  */
 @InterfaceAudience.Public
 public interface RegionInfo extends Comparable<RegionInfo> {
+  /**
+   * @deprecated since 2.3.2/3.0.0; to be removed in 4.0.0 with no replacement (for internal use).
+   */
+  @Deprecated
+  @InterfaceAudience.Private
   RegionInfo UNDEFINED = RegionInfoBuilder.newBuilder(TableName.valueOf("__UNDEFINED__")).build();
+
   /**
    * Separator used to demarcate the encodedName in a region name
    * in the new format. See description on new format above.
@@ -304,12 +307,11 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   }
 
   /**
-   * @return Return a String of short, printable names for <code>hris</code>
-   * (usually encoded name) for us logging.
+   * @return Return a String of short, printable names for <code>hris</code> (usually encoded name)
+   *   for us logging.
    */
   static String getShortNameToLog(final List<RegionInfo> ris) {
-    return ris.stream().map(ri -> ri.getShortNameToLog()).
-    collect(Collectors.toList()).toString();
+    return ris.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()).toString();
   }
 
   /**
@@ -586,8 +588,8 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @return the MOB {@link RegionInfo}.
    */
   static RegionInfo createMobRegionInfo(TableName tableName) {
-    return RegionInfoBuilder.newBuilder(tableName)
-        .setStartKey(Bytes.toBytes(".mob")).setRegionId(0).build();
+    return RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes(".mob")).
+      setRegionId(0).build();
   }
 
   /**
@@ -769,7 +771,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @return True if this is last Region in Table
    */
   default boolean isLast() {
-    return Bytes.equals(getEndKey(), HConstants.EMPTY_START_ROW);
+    return Bytes.equals(getEndKey(), HConstants.EMPTY_END_ROW);
   }
 
   /**

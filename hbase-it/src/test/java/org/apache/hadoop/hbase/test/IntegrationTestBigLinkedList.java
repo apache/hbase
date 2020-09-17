@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -756,24 +757,20 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       try (Connection conn = ConnectionFactory.createConnection(conf);
           Admin admin = conn.getAdmin()) {
         if (!admin.tableExists(tableName)) {
-          TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-            new TableDescriptorBuilder.ModifyableTableDescriptor(getTableName(getConf()));
-
-          ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME);
-          // if -DuseMob=true force all data through mob path.
-          setMobProperties(conf, familyDescriptor);
-          tableDescriptor.setColumnFamily(familyDescriptor);
-          // Always add these families. Just skip writing to them when we do not test per CF flush.
-          familyDescriptor =
-            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(BIG_FAMILY_NAME);
-          setMobProperties(conf, familyDescriptor);
-          tableDescriptor.setColumnFamily(familyDescriptor);
-
-          familyDescriptor =
-            new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TINY_FAMILY_NAME);
-          setMobProperties(conf, familyDescriptor);
-          tableDescriptor.setColumnFamily(familyDescriptor);
+          TableDescriptor tableDescriptor = TableDescriptorBuilder
+            .newBuilder(getTableName(getConf()))
+            // if -DuseMob=true force all data through mob path.
+            .setColumnFamily(
+              setMobProperties(conf, ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_NAME)).build())
+            // Always add these families. Just skip writing to them when we do not test per CF
+            // flush.
+            .setColumnFamily(
+              setMobProperties(conf, ColumnFamilyDescriptorBuilder.newBuilder(BIG_FAMILY_NAME))
+                .build())
+            .setColumnFamily(
+              setMobProperties(conf, ColumnFamilyDescriptorBuilder.newBuilder(TINY_FAMILY_NAME))
+                .build())
+            .build();
 
           // If we want to pre-split compute how many splits.
           if (conf.getBoolean(HBaseTestingUtility.PRESPLIT_TEST_TABLE_KEY,
@@ -914,12 +911,13 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
   }
 
-  private static void setMobProperties(final Configuration conf,
-      final ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor) {
+  private static ColumnFamilyDescriptorBuilder setMobProperties(final Configuration conf,
+    final ColumnFamilyDescriptorBuilder builder) {
     if (conf.getBoolean("useMob", false)) {
-      familyDescriptor.setMobEnabled(true);
-      familyDescriptor.setMobThreshold(4);
+      builder.setMobEnabled(true);
+      builder.setMobThreshold(4);
     }
+    return builder;
   }
 
   /**
@@ -1562,6 +1560,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           throw new RuntimeException("Generator.verify failed");
         }
       }
+      LOG.info("Generator finished with success. Total nodes=" + numNodes);
     }
 
     protected void runVerify(String outputDir,
@@ -1653,10 +1652,11 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       scan.setBatch(10000);
 
       if (cmd.hasOption("s"))
-        scan.setStartRow(Bytes.toBytesBinary(cmd.getOptionValue("s")));
+        scan.withStartRow(Bytes.toBytesBinary(cmd.getOptionValue("s")));
 
-      if (cmd.hasOption("e"))
-        scan.setStopRow(Bytes.toBytesBinary(cmd.getOptionValue("e")));
+      if (cmd.hasOption("e")) {
+        scan.withStopRow(Bytes.toBytesBinary(cmd.getOptionValue("e")));
+      }
 
       int limit = 0;
       if (cmd.hasOption("l"))
@@ -1711,7 +1711,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   abstract static class WalkerBase extends Configured{
     protected static CINode findStartNode(Table table, byte[] startKey) throws IOException {
       Scan scan = new Scan();
-      scan.setStartRow(startKey);
+      scan.withStartRow(startKey);
       scan.setBatch(1);
       scan.addColumn(FAMILY_NAME, COLUMN_PREV);
 

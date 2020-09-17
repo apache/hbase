@@ -119,18 +119,24 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    * Whether to run validation on hfiles before loading.
    */
   private static final String VALIDATE_HFILES = "hbase.loadincremental.validate.hfile";
+  /**
+   * HBASE-24221 Support bulkLoadHFile by family to avoid long time waiting of bulkLoadHFile because
+   * of compacting at server side
+   */
+  public static final String BULK_LOAD_HFILES_BY_FAMILY = "hbase.mapreduce.bulkload.by.family";
 
   // We use a '.' prefix which is ignored when walking directory trees
   // above. It is invalid family name.
   static final String TMP_DIR = ".tmp";
 
-  private final int maxFilesPerRegionPerFamily;
-  private final boolean assignSeqIds;
+  private int maxFilesPerRegionPerFamily;
+  private boolean assignSeqIds;
+  private boolean bulkLoadByFamily;
 
   // Source delegation token
-  private final FsDelegationToken fsDelegationToken;
-  private final UserProvider userProvider;
-  private final int nrThreads;
+  private FsDelegationToken fsDelegationToken;
+  private UserProvider userProvider;
+  private int nrThreads;
   private final AtomicInteger numRetries = new AtomicInteger(0);
   private String bulkToken;
 
@@ -140,14 +146,20 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   public BulkLoadHFilesTool(Configuration conf) {
     // make a copy, just to be sure we're not overriding someone else's config
     super(new Configuration(conf));
+    initialize();
+  }
+
+  public void initialize() {
+    Configuration conf = getConf();
     // disable blockcache for tool invocation, see HBASE-10500
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
     userProvider = UserProvider.instantiate(conf);
     fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
     maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
-    nrThreads =
-      conf.getInt("hbase.loadincremental.threads.max", Runtime.getRuntime().availableProcessors());
+    nrThreads = conf.getInt("hbase.loadincremental.threads.max",
+      Runtime.getRuntime().availableProcessors());
+    bulkLoadByFamily = conf.getBoolean(BULK_LOAD_HFILES_BY_FAMILY, false);
   }
 
   // Initialize a thread pool
@@ -363,6 +375,60 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   }
 
   /**
+   * Attempts to do an atomic load of many hfiles into a region. If it fails, it returns a list of
+   * hfiles that need to be retried. If it is successful it will return an empty list. NOTE: To
+   * maintain row atomicity guarantees, region server side should succeed atomically and fails
+   * atomically.
+   * @param conn Connection to use
+   * @param tableName Table to which these hfiles should be loaded to
+   * @param copyFiles whether replicate to peer cluster while bulkloading
+   * @param first the start key of region
+   * @param lqis hfiles should be loaded
+   * @return empty list if success, list of items to retry on recoverable failure
+   */
+  @VisibleForTesting
+  protected CompletableFuture<Collection<LoadQueueItem>> tryAtomicRegionLoad(
+      final AsyncClusterConnection conn, final TableName tableName, boolean copyFiles,
+      final byte[] first, Collection<LoadQueueItem> lqis) {
+    List<Pair<byte[], String>> familyPaths =
+        lqis.stream().map(lqi -> Pair.newPair(lqi.getFamily(), lqi.getFilePath().toString()))
+            .collect(Collectors.toList());
+    CompletableFuture<Collection<LoadQueueItem>> future = new CompletableFuture<>();
+    FutureUtils
+        .addListener(
+          conn.bulkLoad(tableName, familyPaths, first, assignSeqIds,
+            fsDelegationToken.getUserToken(), bulkToken, copyFiles, clusterIds, replicate),
+          (loaded, error) -> {
+            if (error != null) {
+              LOG.error("Encountered unrecoverable error from region server", error);
+              if (getConf().getBoolean(RETRY_ON_IO_EXCEPTION, false)
+                  && numRetries.get() < getConf().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+                    HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)) {
+                LOG.warn("Will attempt to retry loading failed HFiles. Retry #"
+                    + numRetries.incrementAndGet());
+                // return lqi's to retry
+                future.complete(lqis);
+              } else {
+                LOG.error(RETRY_ON_IO_EXCEPTION
+                    + " is disabled or we have reached retry limit. Unable to recover");
+                future.completeExceptionally(error);
+              }
+            } else {
+              if (loaded) {
+                future.complete(Collections.emptyList());
+              } else {
+                LOG.warn("Attempt to bulk load region containing " + Bytes.toStringBinary(first)
+                    + " into table " + tableName + " with files " + lqis
+                    + " failed.  This is recoverable and they will be retried.");
+                // return lqi's to retry
+                future.complete(lqis);
+              }
+            }
+          });
+    return future;
+  }
+
+  /**
    * This takes the LQI's grouped by likely regions and attempts to bulk load them. Any failures are
    * re-queued for another pass with the groupOrSplitPhase.
    * <p/>
@@ -375,43 +441,15 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     // atomically bulk load the groups.
     List<Future<Collection<LoadQueueItem>>> loadingFutures = new ArrayList<>();
     for (Entry<ByteBuffer, ? extends Collection<LoadQueueItem>> entry : regionGroups.asMap()
-      .entrySet()) {
+        .entrySet()) {
       byte[] first = entry.getKey().array();
       final Collection<LoadQueueItem> lqis = entry.getValue();
-      List<Pair<byte[], String>> familyPaths =
-        lqis.stream().map(lqi -> Pair.newPair(lqi.getFamily(), lqi.getFilePath().toString()))
-          .collect(Collectors.toList());
-      CompletableFuture<Collection<LoadQueueItem>> future = new CompletableFuture<>();
-      FutureUtils.addListener(conn.bulkLoad(tableName, familyPaths, first, assignSeqIds,
-        fsDelegationToken.getUserToken(), bulkToken, copyFiles, clusterIds, replicate),
-        (loaded, error) -> {
-          if (error != null) {
-            LOG.error("Encountered unrecoverable error from region server", error);
-            if (getConf().getBoolean(RETRY_ON_IO_EXCEPTION, false) &&
-              numRetries.get() < getConf().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-                HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)) {
-              LOG.warn("Will attempt to retry loading failed HFiles. Retry #" +
-                numRetries.incrementAndGet());
-              // return lqi's to retry
-              future.complete(lqis);
-            } else {
-              LOG.error(RETRY_ON_IO_EXCEPTION +
-                " is disabled or we have reached retry limit. Unable to recover");
-              future.completeExceptionally(error);
-            }
-          } else {
-            if (loaded) {
-              future.complete(Collections.emptyList());
-            } else {
-              LOG.warn("Attempt to bulk load region containing " + Bytes.toStringBinary(first) +
-                " into table " + tableName + " with files " + lqis +
-                " failed.  This is recoverable and they will be retried.");
-              // return lqi's to retry
-              future.complete(lqis);
-            }
-          }
-        });
-      loadingFutures.add(future);
+      if (bulkLoadByFamily) {
+        groupByFamilies(lqis).values().forEach(familyQueue -> loadingFutures
+            .add(tryAtomicRegionLoad(conn, tableName, copyFiles, first, familyQueue)));
+      } else {
+        loadingFutures.add(tryAtomicRegionLoad(conn, tableName, copyFiles, first, lqis));
+      }
       if (item2RegionMap != null) {
         for (LoadQueueItem lqi : lqis) {
           item2RegionMap.put(lqi, entry.getKey());
@@ -445,6 +483,14 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
         throw (InterruptedIOException) new InterruptedIOException().initCause(e1);
       }
     }
+  }
+
+  private Map<byte[], Collection<LoadQueueItem>>
+      groupByFamilies(Collection<LoadQueueItem> itemsInRegion) {
+    Map<byte[], Collection<LoadQueueItem>> families2Queue = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    itemsInRegion.forEach(item -> families2Queue
+        .computeIfAbsent(item.getFamily(), queue -> new ArrayList<>()).add(item));
+    return families2Queue;
   }
 
   private boolean checkHFilesCountPerRegionPerFamily(
@@ -1032,6 +1078,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       usage();
       return -1;
     }
+    // Re-initialize to apply -D options from the command line parameters
+    initialize();
     Path dirPath = new Path(args[0]);
     TableName tableName = TableName.valueOf(args[1]);
     if (args.length == 2) {

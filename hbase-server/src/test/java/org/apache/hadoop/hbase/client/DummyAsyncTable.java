@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.RpcChannel;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +24,8 @@ import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.Filter;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
  * Can be overridden in UT if you only want to implement part of the methods in {@link AsyncTable}.
@@ -108,6 +109,17 @@ public class DummyAsyncTable<C extends ScanResultConsumerBase> implements AsyncT
 
   @Override
   public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
+    return null;
+  }
+
+  @Override
+  public CompletableFuture<CheckAndMutateResult> checkAndMutate(CheckAndMutate checkAndMutate) {
+    return null;
+  }
+
+  @Override
+  public List<CompletableFuture<CheckAndMutateResult>> checkAndMutate(
+    List<CheckAndMutate> checkAndMutates) {
     return null;
   }
 

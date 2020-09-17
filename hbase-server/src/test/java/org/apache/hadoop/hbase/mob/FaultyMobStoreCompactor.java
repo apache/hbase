@@ -24,6 +24,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.compactions.CloseChecker;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -93,7 +96,6 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
     if (major) {
       totalMajorCompactions.incrementAndGet();
     }
-    long bytesWrittenProgressForCloseCheck = 0;
     long bytesWrittenProgressForLog = 0;
     long bytesWrittenProgressForShippedCall = 0;
     // Clear old mob references
@@ -119,11 +121,12 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
     // we have to use a do/while loop.
     List<Cell> cells = new ArrayList<>();
     // Limit to "hbase.hstore.compaction.kv.max" (default 10) to avoid OOME
-    int closeCheckSizeLimit = HStore.getCloseCheckInterval();
+    long currentTime = EnvironmentEdgeManager.currentTime();
     long lastMillis = 0;
     if (LOG.isDebugEnabled()) {
-      lastMillis = EnvironmentEdgeManager.currentTime();
+      lastMillis = currentTime;
     }
+    CloseChecker closeChecker = new CloseChecker(conf, currentTime);
     String compactionName = ThroughputControlUtil.getNameForThrottling(store, "compaction");
     long now = 0;
     boolean hasMore;
@@ -164,12 +167,17 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
         // Add the only reference we get for compact MOB case
         // because new store file will have only one MOB reference
         // in this case - of newly compacted MOB file
-        mobRefSet.get().add(mobFileWriter.getPath().getName());
+        mobRefSet.get().put(store.getTableName(), mobFileWriter.getPath().getName());
       }
       do {
         hasMore = scanner.next(cells, scannerContext);
+        currentTime = EnvironmentEdgeManager.currentTime();
         if (LOG.isDebugEnabled()) {
-          now = EnvironmentEdgeManager.currentTime();
+          now = currentTime;
+        }
+        if (closeChecker.isTimeLimit(store, currentTime)) {
+          progress.cancel();
+          return false;
         }
         for (Cell c : cells) {
           counter++;
@@ -237,9 +245,15 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
               if (size > mobSizeThreshold) {
                 // If the value size is larger than the threshold, it's regarded as a mob. Since
                 // its value is already in the mob file, directly write this cell to the store file
-                writer.append(c);
-                // Add MOB reference to a set
-                mobRefSet.get().add(MobUtils.getMobFileName(c));
+                Optional<TableName> refTable = MobUtils.getTableName(c);
+                if (refTable.isPresent()) {
+                  mobRefSet.get().put(refTable.get(), MobUtils.getMobFileName(c));
+                  writer.append(c);
+                } else {
+                  throw new IOException(String.format("MOB cell did not contain a tablename " +
+                      "tag. should not be possible. see ref guide on mob troubleshooting. " +
+                      "store=%s cell=%s", getStoreInfo(), c));
+                }
               } else {
                 // If the value is not larger than the threshold, it's not regarded a mob. Retrieve
                 // the mob cell from the mob file, and write it back to the store file.
@@ -255,9 +269,15 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
                   // directly write the cell to the store file, and leave it to be handled by the
                   // next compaction.
                   LOG.error("Empty value for: " + c);
-                  writer.append(c);
-                  // Add MOB reference to a set
-                  mobRefSet.get().add(MobUtils.getMobFileName(c));
+                  Optional<TableName> refTable = MobUtils.getTableName(c);
+                  if (refTable.isPresent()) {
+                    mobRefSet.get().put(refTable.get(), MobUtils.getMobFileName(c));
+                    writer.append(c);
+                  } else {
+                    throw new IOException(String.format("MOB cell did not contain a tablename " +
+                        "tag. should not be possible. see ref guide on mob troubleshooting. " +
+                        "store=%s cell=%s", getStoreInfo(), c));
+                  }
                 }
               }
             } else {
@@ -280,7 +300,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
             cellsCountCompactedToMob++;
             cellsSizeCompactedToMob += c.getValueLength();
             // Add ref we get for compact MOB case
-            mobRefSet.get().add(mobFileWriter.getPath().getName());
+            mobRefSet.get().put(store.getTableName(), mobFileWriter.getPath().getName());
           }
 
           int len = c.getSerializedSize();
@@ -291,16 +311,9 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
             bytesWrittenProgressForLog += len;
           }
           throughputController.control(compactionName, len);
-          // check periodically to see if a system stop is requested
-          if (closeCheckSizeLimit > 0) {
-            bytesWrittenProgressForCloseCheck += len;
-            if (bytesWrittenProgressForCloseCheck > closeCheckSizeLimit) {
-              bytesWrittenProgressForCloseCheck = 0;
-              if (!store.areWritesEnabled()) {
-                progress.cancel();
-                return false;
-              }
-            }
+          if (closeChecker.isSizeLimit(store, len)) {
+            progress.cancel();
+            return false;
           }
           if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
             ((ShipperListener) writer).beforeShipped();

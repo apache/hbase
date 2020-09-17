@@ -542,7 +542,7 @@ public class IntegrationTestMTTR {
         s.setBatch(2);
         s.addFamily(FAMILY);
         s.setFilter(new KeyOnlyFilter());
-        s.setMaxVersions(1);
+        s.readVersions(1);
 
         rs = table.getScanner(s);
         Result result = rs.next();

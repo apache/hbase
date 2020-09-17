@@ -58,6 +58,8 @@ Usage: shell [OPTIONS] [SCRIPTFILE [ARGUMENTS]]
  -h | --help             This help.
  -n | --noninteractive   Do not run within an IRB session and exit with non-zero
                          status on first error.
+ --top-level-defs        Compatibility flag to export HBase shell commands onto
+                         Ruby's main object
  -Dkey=value             Pass hbase-*.xml Configuration overrides. For example, to
                          use an alternate zookeeper ensemble, pass:
                            -Dhbase.zookeeper.quorum=zookeeper.example.org
@@ -81,6 +83,7 @@ script2run = nil
 log_level = org.apache.log4j.Level::ERROR
 @shell_debug = false
 interactive = true
+top_level_definitions = false
 _configuration = nil
 D_ARG = '-D'.freeze
 while (arg = ARGV.shift)
@@ -108,6 +111,8 @@ while (arg = ARGV.shift)
     warn '[INFO] the -r | --return-values option is ignored. we always behave '\
          'as though it was given.'
     found.push(arg)
+  elsif arg == '--top-level-defs'
+    top_level_definitions = true
   else
     # Presume it a script. Save it off for running later below
     # after we've set up some environment.
@@ -143,21 +148,10 @@ require 'shell/formatter'
 @shell = Shell::Shell.new(@hbase, interactive)
 @shell.debug = @shell_debug
 
-# Add commands to this namespace
-# TODO avoid polluting main namespace by using a binding
-@shell.export_commands(self)
-
-# Add help command
-def help(command = nil)
-  @shell.help(command)
-end
-
-# Backwards compatibility method
-def tools
-  @shell.help_group('tools')
-end
-
-# Debugging method
+##
+# Toggle shell debugging
+#
+# @return [Boolean] true if debug is turned on after updating the flag
 def debug
   if @shell_debug
     @shell_debug = false
@@ -173,26 +167,38 @@ def debug
   debug?
 end
 
+##
+# Print whether debug is on or off
 def debug?
   puts "Debug mode is #{@shell_debug ? 'ON' : 'OFF'}\n\n"
   nil
 end
 
-# Include hbase constants
-include HBaseConstants
+
+# For backwards compatibility, this will export all the HBase shell commands, constants, and
+# instance variables (@hbase and @shell) onto Ruby's top-level receiver object known as "main".
+@shell.export_all(self) if top_level_definitions
 
 # If script2run, try running it.  If we're in interactive mode, will go on to run the shell unless
 # script calls 'exit' or 'exit 0' or 'exit errcode'.
-load(script2run) if script2run
+require 'shell/hbase_loader'
+if script2run
+  ::Shell::Shell.exception_handler(!$fullBackTrace) { @shell.eval_io(Hbase::Loader.file_for_load(script2run), filename = script2run) }
+end
+
+# If we are not running interactively, evaluate standard input
+::Shell::Shell.exception_handler(!$fullBackTrace) { @shell.eval_io(STDIN) } unless interactive
 
 if interactive
   # Output a banner message that tells users where to go for help
   @shell.print_banner
 
   require 'irb'
+  require 'irb/ext/change-ws'
   require 'irb/hirb'
 
   module IRB
+    # Override of the default IRB.start
     def self.start(ap_path = nil)
       $0 = File.basename(ap_path, '.rb') if ap_path
 
@@ -207,7 +213,12 @@ if interactive
                HIRB.new
              end
 
+      shl = TOPLEVEL_BINDING.receiver.instance_variable_get :'@shell'
+      hirb.context.change_workspace shl.get_workspace
+
       @CONF[:IRB_RC].call(hirb.context) if @CONF[:IRB_RC]
+      # Storing our current HBase IRB Context as the main context is imperative for several reasons,
+      # including auto-completion.
       @CONF[:MAIN_CONTEXT] = hirb.context
 
       catch(:IRB_EXIT) do
@@ -217,48 +228,4 @@ if interactive
   end
 
   IRB.start
-else
-  begin
-    # Noninteractive mode: if there is input on stdin, do a simple REPL.
-    # XXX Note that this purposefully uses STDIN and not Kernel.gets
-    #     in order to maintain compatibility with previous behavior where
-    #     a user could pass in script2run and then still pipe commands on
-    #     stdin.
-    require 'irb/ruby-lex'
-    require 'irb/workspace'
-    workspace = IRB::WorkSpace.new(binding)
-    scanner = RubyLex.new
-
-    # RubyLex claims to take an IO but really wants an InputMethod
-    module IOExtensions
-      def encoding
-        external_encoding
-      end
-    end
-    IO.include IOExtensions
-
-    scanner.set_input(STDIN)
-    scanner.each_top_level_statement do |statement, linenum|
-      puts(workspace.evaluate(nil, statement, 'stdin', linenum))
-    end
-  # XXX We're catching Exception on purpose, because we want to include
-  #     unwrapped java exceptions, syntax errors, eval failures, etc.
-  rescue Exception => exception
-    message = exception.to_s
-    # exception unwrapping in shell means we'll have to handle Java exceptions
-    # as a special case in order to format them properly.
-    if exception.is_a? java.lang.Exception
-      warn 'java exception'
-      message = exception.get_message
-    end
-    # Include the 'ERROR' string to try to make transition easier for scripts that
-    # may have already been relying on grepping output.
-    puts "ERROR #{exception.class}: #{message}"
-    if $fullBacktrace
-      # re-raising the will include a backtrace and exit.
-      raise exception
-    else
-      exit 1
-    end
-  end
 end

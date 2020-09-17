@@ -19,12 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
 
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -65,6 +59,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.primitives.Booleans;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * The table implementation based on {@link AsyncTable}.
@@ -298,6 +300,17 @@ class TableOverAsyncTable implements Table {
   }
 
   @Override
+  public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+    return FutureUtils.get(table.checkAndMutate(checkAndMutate));
+  }
+
+  @Override
+  public List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
+    throws IOException {
+    return FutureUtils.get(table.checkAndMutateAll(checkAndMutates));
+  }
+
+  @Override
   public void mutateRow(RowMutations rm) throws IOException {
     FutureUtils.get(table.mutateRow(rm));
   }
@@ -493,7 +506,7 @@ class TableOverAsyncTable implements Table {
   public <T extends Service, R> void coprocessorService(Class<T> service, byte[] startKey,
       byte[] endKey, Call<T, R> callable, Callback<R> callback) throws ServiceException, Throwable {
     coprocssorService(service.getName(), startKey, endKey, callback, channel -> {
-      T instance = org.apache.hadoop.hbase.protobuf.ProtobufUtil.newServiceStub(service, channel);
+      T instance = ProtobufUtil.newServiceStub(service, channel);
       return callable.call(instance);
     });
   }

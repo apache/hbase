@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +20,11 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Queue;
-
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
@@ -60,19 +61,23 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
     START
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
-    LOG.info(String.format("Performing action: Rolling batch restarting %d%% of region servers",
-        (int)(ratio * 100)));
+    getLogger().info("Performing action: Rolling batch restarting {}% of region servers",
+        (int)(ratio * 100));
     List<ServerName> selectedServers = selectServers();
 
     Queue<ServerName> serversToBeKilled = new LinkedList<>(selectedServers);
-    Queue<ServerName> deadServers = new LinkedList<>();
+    LinkedList<ServerName> deadServers = new LinkedList<>();
 
     // loop while there are servers to be killed or dead servers to be restarted
     while ((!serversToBeKilled.isEmpty() || !deadServers.isEmpty())  && !context.isStopping()) {
-      KillOrStart action = KillOrStart.KILL;
 
+      final KillOrStart action;
       if (serversToBeKilled.isEmpty()) { // no more servers to kill
         action = KillOrStart.START;
       } else if (deadServers.isEmpty()) {
@@ -95,18 +100,22 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
           } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
             // We've seen this in test runs where we timeout but the kill went through. HBASE-9743
             // So, add to deadServers even if exception so the start gets called.
-            LOG.info("Problem killing but presume successful; code=" + e.getExitCode(), e);
+            getLogger().info("Problem killing but presume successful; code={}", e.getExitCode(), e);
           }
           deadServers.add(server);
           break;
         case START:
+          server = Objects.requireNonNull(deadServers.peek());
           try {
-            server = deadServers.remove();
             startRs(server);
+            // only remove the server from the known dead list if `startRs` succeeds.
+            deadServers.remove(server);
           } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
             // The start may fail but better to just keep going though we may lose server.
-            //
-            LOG.info("Problem starting, will retry; code=" + e.getExitCode(), e);
+            // Shuffle the dead list to avoid getting stuck on a single stubborn host.
+            Collections.shuffle(deadServers);
+            getLogger().info(
+              "Problem starting {}, will retry; code={}", server, e.getExitCode(), e);
           }
           break;
       }
@@ -121,25 +130,23 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
 
   /**
    * Small test to ensure the class basically works.
-   * @param args
-   * @throws Exception
    */
   public static void main(final String[] args) throws Exception {
     RollingBatchRestartRsAction action = new RollingBatchRestartRsAction(1, 1.0f) {
       private int invocations = 0;
       @Override
-      protected ServerName[] getCurrentServers() throws IOException {
+      protected ServerName[] getCurrentServers() {
         final int count = 4;
         List<ServerName> serverNames = new ArrayList<>(count);
         for (int i = 0; i < 4; i++) {
           serverNames.add(ServerName.valueOf(i + ".example.org", i, i));
         }
-        return serverNames.toArray(new ServerName[serverNames.size()]);
+        return serverNames.toArray(new ServerName[0]);
       }
 
       @Override
       protected void killRs(ServerName server) throws IOException {
-        LOG.info("Killed " + server);
+        LOG.info("Killed {}", server);
         if (this.invocations++ % 3 == 0) {
           throw new org.apache.hadoop.util.Shell.ExitCodeException(-1, "Failed");
         }
@@ -147,7 +154,7 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
 
       @Override
       protected void startRs(ServerName server) throws IOException {
-        LOG.info("Started " + server);
+        LOG.info("Started {}", server);
         if (this.invocations++ % 3 == 0) {
           throw new org.apache.hadoop.util.Shell.ExitCodeException(-1, "Failed");
         }

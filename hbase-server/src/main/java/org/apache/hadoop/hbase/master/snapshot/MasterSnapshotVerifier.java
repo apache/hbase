@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -209,7 +209,7 @@ public final class MasterSnapshotVerifier {
     // Verify Snapshot HFiles
     // Requires the root directory file system as HFiles are stored in the root directory
     SnapshotReferenceUtil.verifySnapshot(services.getConfiguration(),
-        FSUtils.getRootDirFileSystem(services.getConfiguration()), manifest);
+      CommonFSUtils.getRootDirFileSystem(services.getConfiguration()), manifest);
   }
 
   /**

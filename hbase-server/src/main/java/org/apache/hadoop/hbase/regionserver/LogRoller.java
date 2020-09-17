@@ -18,7 +18,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.List;
 import java.util.Map;
+
 import org.apache.hadoop.hbase.wal.AbstractWALRoller;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -45,7 +47,7 @@ public class LogRoller extends AbstractWALRoller<RegionServerServices> {
     super("LogRoller", services.getConfiguration(), services);
   }
 
-  protected void scheduleFlush(String encodedRegionName) {
+  protected void scheduleFlush(String encodedRegionName, List<byte[]> families) {
     RegionServerServices services = this.abortable;
     HRegion r = (HRegion) services.getRegion(encodedRegionName);
     if (r == null) {
@@ -58,12 +60,12 @@ public class LogRoller extends AbstractWALRoller<RegionServerServices> {
         encodedRegionName, r);
       return;
     }
-    // force flushing all stores to clean old logs
-    requester.requestFlush(r, true, FlushLifeCycleTracker.DUMMY);
+    // flush specified stores to clean old logs
+    requester.requestFlush(r, families, FlushLifeCycleTracker.DUMMY);
   }
 
   @VisibleForTesting
-  Map<WAL, Boolean> getWalNeedsRoll() {
-    return this.walNeedsRoll;
+  Map<WAL, RollController> getWalNeedsRoll() {
+    return this.wals;
   }
 }

@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
@@ -40,7 +39,6 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.master.CatalogJanitor;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -56,13 +54,14 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -134,8 +133,8 @@ public class MergeTableRegionsProcedure
           throw new MergeRegionException(msg);
         }
         if (!force && !ri.isAdjacent(previous) && !ri.isOverlap(previous)) {
-          String msg = "Unable to merge non-adjacent or non-overlapping regions " +
-              previous.getShortNameToLog() + ", " + ri.getShortNameToLog() + " when force=false";
+          String msg = "Unable to merge non-adjacent or non-overlapping regions '" +
+              previous.getShortNameToLog() + "', '" + ri.getShortNameToLog() + "' when force=false";
           LOG.warn(msg);
           throw new MergeRegionException(msg);
         }
@@ -460,7 +459,7 @@ public class MergeTableRegionsProcedure
     if (!env.getMasterServices().isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
       String regionsStr = Arrays.deepToString(this.regionsToMerge);
       LOG.warn("Merge switch is off! skip merge of " + regionsStr);
-      super.setFailure(getClass().getSimpleName(),
+      setFailure(getClass().getSimpleName(),
           new IOException("Merge of " + regionsStr + " failed because merge switch is off"));
       return false;
     }
@@ -468,36 +467,44 @@ public class MergeTableRegionsProcedure
     if (!env.getMasterServices().getTableDescriptors().get(getTableName()).isMergeEnabled()) {
       String regionsStr = Arrays.deepToString(regionsToMerge);
       LOG.warn("Merge is disabled for the table! Skipping merge of {}", regionsStr);
-      super.setFailure(getClass().getSimpleName(), new IOException(
+      setFailure(getClass().getSimpleName(), new IOException(
           "Merge of " + regionsStr + " failed as region merge is disabled for the table"));
       return false;
     }
 
-    CatalogJanitor catalogJanitor = env.getMasterServices().getCatalogJanitor();
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
-    for (RegionInfo ri: this.regionsToMerge) {
-      if (!catalogJanitor.cleanMergeQualifier(ri)) {
+    RegionStateStore regionStateStore = env.getAssignmentManager().getRegionStateStore();
+    for (RegionInfo ri : this.regionsToMerge) {
+      if (regionStateStore.hasMergeRegions(ri)) {
         String msg = "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge) +
-            ", because parent " + RegionInfo.getShortNameToLog(ri) + " has a merge qualifier";
+          ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier " +
+          "(if a 'merge column' in parent, it was recently merged but still has outstanding " +
+          "references to its parents that must be cleared before it can participate in merge -- " +
+          "major compact it to hurry clearing of its references)";
         LOG.warn(msg);
         throw new MergeRegionException(msg);
       }
       RegionState state = regionStates.getRegionState(ri.getEncodedName());
       if (state == null) {
-        throw new UnknownRegionException("No state for " + RegionInfo.getShortNameToLog(ri));
+        throw new UnknownRegionException(RegionInfo.getShortNameToLog(ri) +
+          " UNKNOWN (Has it been garbage collected?)");
       }
       if (!state.isOpened()) {
-        throw new MergeRegionException("Unable to merge regions that are not online: " + ri);
+        throw new MergeRegionException("Unable to merge regions that are NOT online: " + ri);
       }
       // Ask the remote regionserver if regions are mergeable. If we get an IOE, report it
       // along with the failure, so we can see why regions are not mergeable at this time.
       try {
         if (!isMergeable(env, state)) {
+          setFailure(getClass().getSimpleName(),
+            new MergeRegionException(
+              "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge) +
+                ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", is not mergeable"));
           return false;
         }
       } catch (IOException e) {
         IOException ioe = new IOException(RegionInfo.getShortNameToLog(ri) + " NOT mergeable", e);
-        super.setFailure(getClass().getSimpleName(), ioe);
+        setFailure(getClass().getSimpleName(), ioe);
         return false;
       }
     }
@@ -575,7 +582,7 @@ public class MergeTableRegionsProcedure
    */
   private void createMergedRegion(final MasterProcedureEnv env) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tabledir = FSUtils.getTableDir(mfs.getRootDir(), regionsToMerge[0].getTable());
+    final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), regionsToMerge[0].getTable());
     final FileSystem fs = mfs.getFileSystem();
     HRegionFileSystem mergeRegionFs = null;
     for (RegionInfo ri: this.regionsToMerge) {
@@ -624,7 +631,7 @@ public class MergeTableRegionsProcedure
   private void cleanupMergedRegion(final MasterProcedureEnv env) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     TableName tn = this.regionsToMerge[0].getTable();
-    final Path tabledir = FSUtils.getTableDir(mfs.getRootDir(), tn);
+    final Path tabledir = CommonFSUtils.getTableDir(mfs.getRootDir(), tn);
     final FileSystem fs = mfs.getFileSystem();
     // See createMergedRegion above where we specify the merge dir as being in the
     // FIRST merge parent region.

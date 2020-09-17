@@ -212,6 +212,7 @@ public class CompactingMemStore extends AbstractMemStore {
       // region level lock ensures pushing active to pipeline is done in isolation
       // no concurrent update operations trying to flush the active segment
       pushActiveToPipeline(getActive());
+      resetTimeOfOldestEdit();
       snapshotId = EnvironmentEdgeManager.currentTime();
       // in both cases whatever is pushed to snapshot is cleared from the pipeline
       if (compositeSnapshot) {
@@ -501,7 +502,7 @@ public class CompactingMemStore extends AbstractMemStore {
   @VisibleForTesting
   protected boolean shouldFlushInMemory(MutableSegment currActive, Cell cellToAdd,
       MemStoreSizing memstoreSizing) {
-    long cellSize = currActive.getCellLength(cellToAdd);
+    long cellSize = MutableSegment.getCellLength(cellToAdd);
     long segmentDataSize = currActive.getDataSize();
     while (segmentDataSize + cellSize < inmemoryFlushSize || inWalReplay) {
       // when replaying edits from WAL there is no need in in-memory flush regardless the size

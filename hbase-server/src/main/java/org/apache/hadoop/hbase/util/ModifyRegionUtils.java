@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,7 +111,7 @@ public abstract class ModifyRegionUtils {
     if (newRegions == null) return null;
     int regionNumber = newRegions.length;
     ThreadPoolExecutor exec = getRegionOpenAndInitThreadPool(conf,
-        "RegionOpenAndInitThread-" + tableDescriptor.getTableName(), regionNumber);
+        "RegionOpenAndInit-" + tableDescriptor.getTableName(), regionNumber);
     try {
       return createRegions(exec, conf, rootDir, tableDescriptor, newRegions, task);
     } finally {
@@ -227,12 +228,12 @@ public abstract class ModifyRegionUtils {
    * "hbase.hregion.open.and.init.threads.max" property.
    */
   static ThreadPoolExecutor getRegionOpenAndInitThreadPool(final Configuration conf,
-      final String threadNamePrefix, int regionNumber) {
-    int maxThreads = Math.min(regionNumber, conf.getInt(
-        "hbase.hregion.open.and.init.threads.max", 16));
-    ThreadPoolExecutor regionOpenAndInitThreadPool = Threads
-    .getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-        Threads.newDaemonThreadFactory(threadNamePrefix));
+    final String threadNamePrefix, int regionNumber) {
+    int maxThreads =
+      Math.min(regionNumber, conf.getInt("hbase.hregion.open.and.init.threads.max", 16));
+    ThreadPoolExecutor regionOpenAndInitThreadPool = Threads.getBoundedCachedThreadPool(maxThreads,
+      30L, TimeUnit.SECONDS, new ThreadFactoryBuilder().setNameFormat(threadNamePrefix + "-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     return regionOpenAndInitThreadPool;
   }
 }

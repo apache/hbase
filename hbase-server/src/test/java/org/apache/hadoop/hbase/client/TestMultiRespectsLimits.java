@@ -64,7 +64,7 @@ public class TestMultiRespectsLimits {
   private static final MetricsAssertHelper METRICS_ASSERT =
       CompatibilityFactory.getInstance(MetricsAssertHelper.class);
   private final static byte[] FAMILY = Bytes.toBytes("D");
-  public static final int MAX_SIZE = 500;
+  public static final int MAX_SIZE = 100;
 
   @Rule
   public TestName name = new TestName();

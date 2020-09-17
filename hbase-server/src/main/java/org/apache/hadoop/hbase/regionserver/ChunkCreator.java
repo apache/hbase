@@ -80,7 +80,7 @@ public class ChunkCreator {
   @VisibleForTesting
   static boolean chunkPoolDisabled = false;
   private MemStoreChunkPool dataChunksPool;
-  private int chunkSize;
+  private final int chunkSize;
   private MemStoreChunkPool indexChunksPool;
 
   @VisibleForTesting
@@ -125,13 +125,13 @@ public class ChunkCreator {
   @VisibleForTesting
   public static ChunkCreator initialize(int chunkSize, boolean offheap, long globalMemStoreSize,
                                         float poolSizePercentage, float initialCountPercentage,
-                                        HeapMemoryManager heapMemoryManager) {
+                                        HeapMemoryManager heapMemoryManager,
+                                        float indexChunkSizePercent) {
     if (instance != null) {
       return instance;
     }
     instance = new ChunkCreator(chunkSize, offheap, globalMemStoreSize, poolSizePercentage,
-            initialCountPercentage, heapMemoryManager,
-            MemStoreLABImpl.INDEX_CHUNK_PERCENTAGE_DEFAULT);
+            initialCountPercentage, heapMemoryManager, indexChunkSizePercent);
     return instance;
   }
 

@@ -35,11 +35,13 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
@@ -1084,8 +1086,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     // After we create the stream but before we attempt to use it at all
     // ensure that we can provide the level of data safety we're configured
     // to provide.
-    final String durability = useHsync ? "hsync" : "hflush";
-    if (enforceStreamCapability && !(CommonFSUtils.hasCapability(newStream, durability))) {
+    final String durability = useHsync ? StreamCapabilities.HSYNC : StreamCapabilities.HFLUSH;
+    if (enforceStreamCapability && !newStream.hasCapability(durability)) {
       throw new IllegalStateException("The procedure WAL relies on the ability to " + durability +
           " for proper operation during component failures, but the underlying filesystem does " +
           "not support doing so. Please check the config value of '" + USE_HSYNC_CONF_KEY +
@@ -1151,12 +1153,12 @@ public class WALProcedureStore extends ProcedureStoreBase {
           log.addToSize(trailerSize);
         }
       }
-    } catch (IOException e) {
+    } catch (IOException | FSError e) {
       LOG.warn("Unable to write the trailer", e);
     }
     try {
       stream.close();
-    } catch (IOException e) {
+    } catch (IOException | FSError e) {
       LOG.error("Unable to close the stream", e);
     }
     stream = null;

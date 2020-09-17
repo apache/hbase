@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,19 +19,20 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Normalization plan to merge regions (smallest region in the table with its smallest neighbor).
  */
 @InterfaceAudience.Private
 public class MergeNormalizationPlan implements NormalizationPlan {
-  private static final Logger LOG = LoggerFactory.getLogger(MergeNormalizationPlan.class.getName());
 
   private final RegionInfo firstRegion;
   private final RegionInfo secondRegion;
@@ -39,6 +40,19 @@ public class MergeNormalizationPlan implements NormalizationPlan {
   public MergeNormalizationPlan(RegionInfo firstRegion, RegionInfo secondRegion) {
     this.firstRegion = firstRegion;
     this.secondRegion = secondRegion;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public long submit(MasterServices masterServices) throws IOException {
+    // Do not use force=true as corner cases can happen, non adjacent regions,
+    // merge with a merged child region with no GC done yet, it is going to
+    // cause all different issues.
+    return masterServices
+      .mergeRegions(new RegionInfo[] { firstRegion, secondRegion }, false, HConstants.NO_NONCE,
+        HConstants.NO_NONCE);
   }
 
   @Override
@@ -56,23 +70,35 @@ public class MergeNormalizationPlan implements NormalizationPlan {
 
   @Override
   public String toString() {
-    return "MergeNormalizationPlan{" +
-      "firstRegion=" + firstRegion +
-      ", secondRegion=" + secondRegion +
-      '}';
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .append("firstRegion", firstRegion)
+      .append("secondRegion", secondRegion)
+      .toString();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public void execute(Admin admin) {
-    LOG.info("Executing merging normalization plan: " + this);
-    try {
-      admin.mergeRegionsAsync(firstRegion.getEncodedNameAsBytes(),
-        secondRegion.getEncodedNameAsBytes(), true);
-    } catch (IOException ex) {
-      LOG.error("Error during region merge: ", ex);
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
     }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    MergeNormalizationPlan that = (MergeNormalizationPlan) o;
+
+    return new EqualsBuilder()
+      .append(firstRegion, that.firstRegion)
+      .append(secondRegion, that.secondRegion)
+      .isEquals();
+  }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder(17, 37)
+      .append(firstRegion)
+      .append(secondRegion)
+      .toHashCode();
   }
 }

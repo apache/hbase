@@ -160,4 +160,26 @@ public interface RegionMetrics {
    *   of this region
    */
   int getMaxCompactedStoreFileRefCount();
+
+  /**
+   * Different from dataLocality,this metric's numerator only include the data stored on ssd
+   * @return the data locality for ssd of region in the regionserver
+   */
+  float getDataLocalityForSsd();
+
+  /**
+   * @return the data at local weight of this region in the regionserver
+   */
+  long getBlocksLocalWeight();
+
+  /**
+   * Different from blocksLocalWeight,this metric's numerator only include the data stored on ssd
+   * @return the data at local with ssd weight of this region in the regionserver
+   */
+  long getBlocksLocalWithSsdWeight();
+
+  /**
+   * @return the block total weight of this region
+   */
+  long getBlocksTotalWeight();
 }

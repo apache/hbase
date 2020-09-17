@@ -25,7 +25,6 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
-
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -78,7 +77,7 @@ public class TestReplicationProcedureRetry {
     Admin admin = UTIL.getAdmin();
     String peerId = "1";
     ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-        .setClusterKey("localhost:" + UTIL.getZkCluster().getClientPort() + ":/hbase2").build();
+        .setClusterKey(UTIL.getZkCluster().getAddress().toString() + ":/hbase2").build();
     admin.addReplicationPeer(peerId, peerConfig, true);
 
     assertEquals(peerConfig.getClusterKey(),

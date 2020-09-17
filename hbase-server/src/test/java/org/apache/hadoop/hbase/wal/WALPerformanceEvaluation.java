@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.util.Tool;
@@ -171,7 +171,6 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       WAL wal = region.getWAL();
 
       try (TraceScope threadScope = TraceUtil.createTrace("WALPerfEval." + Thread.currentThread().getName())) {
-        long startTime = System.currentTimeMillis();
         int lastSync = 0;
         TraceUtil.addSampler(loopSampler);
         for (int i = 0; i < numIterations; ++i) {
@@ -304,7 +303,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     }
     // Run WAL Performance Evaluation
     // First set the fs from configs.  In case we are on hadoop1
-    FSUtils.setFsDefault(getConf(), FSUtils.getRootDir(getConf()));
+    CommonFSUtils.setFsDefault(getConf(), CommonFSUtils.getRootDir(getConf()));
     FileSystem fs = FileSystem.get(getConf());
     LOG.info("FileSystem={}, rootDir={}", fs, rootRegionDir);
 
@@ -316,13 +315,13 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     try {
       rootRegionDir = rootRegionDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
       cleanRegionRootDir(fs, rootRegionDir);
-      FSUtils.setRootDir(getConf(), rootRegionDir);
+      CommonFSUtils.setRootDir(getConf(), rootRegionDir);
       final WALFactory wals = new WALFactory(getConf(), "wals");
       final HRegion[] regions = new HRegion[numRegions];
       final Runnable[] benchmarks = new Runnable[numRegions];
       final MockRegionServerServices mockServices = new MockRegionServerServices(getConf());
       final LogRoller roller = new LogRoller(mockServices);
-      Threads.setDaemonThreadRunning(roller.getThread(), "WALPerfEval.logRoller");
+      Threads.setDaemonThreadRunning(roller, "WALPerfEval.logRoller");
 
       try {
         for(int i = 0; i < numRegions; i++) {
@@ -349,7 +348,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         }
         if (verify) {
           LOG.info("verifying written log entries.");
-          Path dir = new Path(FSUtils.getRootDir(getConf()),
+          Path dir = new Path(CommonFSUtils.getRootDir(getConf()),
             AbstractFSWALProvider.getWALDirectoryName("wals"));
           long editCount = 0;
           FileStatus [] fsss = fs.listStatus(dir);

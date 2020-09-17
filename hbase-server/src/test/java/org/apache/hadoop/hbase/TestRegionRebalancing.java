@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
@@ -77,7 +78,7 @@ public class TestRegionRebalancing {
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionRebalancing.class);
   private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private RegionLocator regionLocator;
-  private TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
+  private TableDescriptor tableDescriptor;
   private String balancerName;
 
   public TestRegionRebalancing(String balancerName) {
@@ -96,10 +97,8 @@ public class TestRegionRebalancing {
     // set minCostNeedBalance to 0, make sure balancer run
     UTIL.startMiniCluster(1);
 
-    this.tableDescriptor = new TableDescriptorBuilder.ModifyableTableDescriptor(
-      TableName.valueOf("test"));
-    this.tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME));
+    this.tableDescriptor = TableDescriptorBuilder.newBuilder(TableName.valueOf("test"))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME)).build();
   }
 
   /**

@@ -24,10 +24,9 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.store.LeaseRecovery;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureLoader;
 
@@ -36,14 +35,17 @@ final class RegionProcedureStoreTestHelper {
   private RegionProcedureStoreTestHelper() {
   }
 
-  static RegionProcedureStore createStore(Configuration conf, ChoreService choreService,
-    DirScanPool cleanerPool, ProcedureLoader loader) throws IOException {
+  static Server mockServer(Configuration conf) {
     Server server = mock(Server.class);
     when(server.getConfiguration()).thenReturn(conf);
     when(server.getServerName())
       .thenReturn(ServerName.valueOf("localhost", 12345, System.currentTimeMillis()));
-    when(server.getChoreService()).thenReturn(choreService);
-    RegionProcedureStore store = new RegionProcedureStore(server, cleanerPool, new LeaseRecovery() {
+    return server;
+  }
+
+  static RegionProcedureStore createStore(Server server, MasterRegion region,
+    ProcedureLoader loader) throws IOException {
+    RegionProcedureStore store = new RegionProcedureStore(server, region, new LeaseRecovery() {
 
       @Override
       public void recoverFileLease(FileSystem fs, Path path) throws IOException {

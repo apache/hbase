@@ -19,6 +19,10 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.hadoop.hbase.TableName;
@@ -38,12 +42,15 @@ public class RSGroupInfo {
   // Keep servers in a sorted set so has an expected ordering when displayed.
   private final SortedSet<Address> servers;
   // Keep tables sorted too.
+
   /**
    * @deprecated Since 3.0.0, will be removed in 4.0.0. The rsgroup information will be stored in
    *             the configuration of a table so this will be removed.
    */
   @Deprecated
   private final SortedSet<TableName> tables;
+
+  private final Map<String, String> configuration;
 
   public RSGroupInfo(String name) {
     this(name, new TreeSet<Address>(), new TreeSet<TableName>());
@@ -53,6 +60,7 @@ public class RSGroupInfo {
     this.name = name;
     this.servers = servers == null ? new TreeSet<>() : new TreeSet<>(servers);
     this.tables = new TreeSet<>();
+    configuration = new HashMap<>();
   }
 
   /**
@@ -64,6 +72,7 @@ public class RSGroupInfo {
     this.name = name;
     this.servers = (servers == null) ? new TreeSet<>() : new TreeSet<>(servers);
     this.tables = (tables == null) ? new TreeSet<>() : new TreeSet<>(tables);
+    configuration = new HashMap<>();
   }
 
   public RSGroupInfo(RSGroupInfo src) {
@@ -111,6 +120,30 @@ public class RSGroupInfo {
    */
   public boolean removeServer(Address hostPort) {
     return servers.remove(hostPort);
+  }
+
+  /**
+   * Getter for fetching an unmodifiable {@link #configuration} map.
+   */
+  public Map<String, String> getConfiguration() {
+    // shallow pointer copy
+    return Collections.unmodifiableMap(configuration);
+  }
+
+  /**
+   * Setter for storing a configuration setting in {@link #configuration} map.
+   * @param key Config key.
+   * @param value String value.
+   */
+  public void setConfiguration(String key, String value) {
+    configuration.put(key, Objects.requireNonNull(value));
+  }
+
+  /**
+   * Remove a config setting represented by the key from the {@link #configuration} map
+   */
+  public void removeConfiguration(final String key) {
+    configuration.remove(key);
   }
 
   /**
@@ -183,15 +216,18 @@ public class RSGroupInfo {
       return false;
     }
 
-    RSGroupInfo RSGroupInfo = (RSGroupInfo) o;
+    RSGroupInfo rsGroupInfo = (RSGroupInfo) o;
 
-    if (!name.equals(RSGroupInfo.name)) {
+    if (!name.equals(rsGroupInfo.name)) {
       return false;
     }
-    if (!servers.equals(RSGroupInfo.servers)) {
+    if (!servers.equals(rsGroupInfo.servers)) {
       return false;
     }
-    if (!tables.equals(RSGroupInfo.tables)) {
+    if (!tables.equals(rsGroupInfo.tables)) {
+      return false;
+    }
+    if (!configuration.equals(rsGroupInfo.configuration)) {
       return false;
     }
 

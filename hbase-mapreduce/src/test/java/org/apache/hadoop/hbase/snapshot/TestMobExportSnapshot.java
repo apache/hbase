@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.snapshot;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -26,11 +27,13 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test Export Snapshot Tool
  */
+@Ignore // HBASE-24493
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestMobExportSnapshot extends TestExportSnapshot {
 
@@ -51,7 +54,7 @@ public class TestMobExportSnapshot extends TestExportSnapshot {
   }
 
   @Override
-  protected void createTable() throws Exception {
+  protected void createTable(TableName tableName) throws Exception {
     MobSnapshotTestingUtils.createPreSplitMobTable(TEST_UTIL, tableName, 2, FAMILY);
   }
 

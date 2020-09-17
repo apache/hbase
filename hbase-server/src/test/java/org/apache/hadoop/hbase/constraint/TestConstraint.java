@@ -44,15 +44,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Do the complex testing of constraints against a minicluster
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestConstraint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestConstraint.class);
+    HBaseClassTestRule.forClass(TestConstraint.class);
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestConstraint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestConstraint.class);
 
   private static HBaseTestingUtility util;
   private static final TableName tableName = TableName.valueOf("test");
@@ -69,24 +68,20 @@ public class TestConstraint {
 
   /**
    * Test that we run a passing constraint
-   * @throws Exception
    */
-  @SuppressWarnings("unchecked")
   @Test
   public void testConstraintPasses() throws Exception {
     // create the table
     // it would be nice if this was also a method on the util
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
-    for (byte[] family : new byte[][]{dummy, test}) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    for (byte[] family : new byte[][] { dummy, test }) {
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     // add a constraint
-    Constraints.add(tableDescriptor, CheckWasRunConstraint.class);
+    Constraints.add(builder, CheckWasRunConstraint.class);
 
-    util.getAdmin().createTable(tableDescriptor);
+    util.getAdmin().createTable(builder.build());
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail on a valid put
@@ -103,25 +98,20 @@ public class TestConstraint {
 
   /**
    * Test that constraints will fail properly
-   * @throws Exception
    */
-  @SuppressWarnings("unchecked")
   @Test
   public void testConstraintFails() throws Exception {
-
     // create the table
     // it would be nice if this was also a method on the util
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    for (byte[] family : new byte[][]{dummy, test}) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+    for (byte[] family : new byte[][] { dummy, test }) {
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
 
     // add a constraint that is sure to fail
-    Constraints.add(tableDescriptor, AllFailConstraint.class);
+    Constraints.add(builder, AllFailConstraint.class);
 
-    util.getAdmin().createTable(tableDescriptor);
+    util.getAdmin().createTable(builder.build());
     Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
@@ -140,29 +130,25 @@ public class TestConstraint {
 
   /**
    * Check that if we just disable one constraint, then
-   * @throws Throwable
    */
-  @SuppressWarnings("unchecked")
   @Test
-  public void testDisableConstraint() throws Throwable {
+  public void testDisableConstraint() throws Exception {
     // create the table
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     // add a family to the table
-    for (byte[] family : new byte[][]{dummy, test}) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    for (byte[] family : new byte[][] { dummy, test }) {
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     // add a constraint to make sure it others get run
-    Constraints.add(tableDescriptor, CheckWasRunConstraint.class);
+    Constraints.add(builder, CheckWasRunConstraint.class);
 
     // Add Constraint to check
-    Constraints.add(tableDescriptor, AllFailConstraint.class);
+    Constraints.add(builder, AllFailConstraint.class);
 
     // and then disable the failing constraint
-    Constraints.disableConstraint(tableDescriptor, AllFailConstraint.class);
+    Constraints.disableConstraint(builder, AllFailConstraint.class);
 
-    util.getAdmin().createTable(tableDescriptor);
+    util.getAdmin().createTable(builder.build());
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail because its disabled
@@ -178,27 +164,23 @@ public class TestConstraint {
 
   /**
    * Test that if we disable all constraints, then nothing gets run
-   * @throws Throwable
    */
-  @SuppressWarnings("unchecked")
   @Test
-  public void testDisableConstraints() throws Throwable {
+  public void testDisableConstraints() throws Exception {
     // create the table
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
     // add a family to the table
-    for (byte[] family : new byte[][]{dummy, test}) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    for (byte[] family : new byte[][] { dummy, test }) {
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     // add a constraint to check to see if is run
-    Constraints.add(tableDescriptor, CheckWasRunConstraint.class);
+    Constraints.add(builder, CheckWasRunConstraint.class);
 
     // then disable all the constraints
-    Constraints.disable(tableDescriptor);
+    Constraints.disable(builder);
 
-    util.getAdmin().createTable(tableDescriptor);
+    util.getAdmin().createTable(builder.build());
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we do fail on violation
@@ -215,26 +197,23 @@ public class TestConstraint {
 
   /**
    * Check to make sure a constraint is unloaded when it fails
-   * @throws Exception
    */
   @Test
   public void testIsUnloaded() throws Exception {
     // create the table
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
     // add a family to the table
-    for (byte[] family : new byte[][]{dummy, test}) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+    for (byte[] family : new byte[][] { dummy, test }) {
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     // make sure that constraints are unloaded
-    Constraints.add(tableDescriptor, RuntimeFailConstraint.class);
+    Constraints.add(builder, RuntimeFailConstraint.class);
     // add a constraint to check to see if is run
-    Constraints.add(tableDescriptor, CheckWasRunConstraint.class);
+    Constraints.add(builder, CheckWasRunConstraint.class);
     CheckWasRunConstraint.wasRun = false;
 
-    util.getAdmin().createTable(tableDescriptor);
+    util.getAdmin().createTable(builder.build());
     Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
@@ -242,9 +221,9 @@ public class TestConstraint {
     byte[] qualifier = new byte[0];
     put.addColumn(dummy, qualifier, Bytes.toBytes("pass"));
 
-    try{
-    table.put(put);
-    fail("RuntimeFailConstraint wasn't triggered - this put shouldn't work!");
+    try {
+      table.put(put);
+      fail("RuntimeFailConstraint wasn't triggered - this put shouldn't work!");
     } catch (Exception e) {// NOOP
     }
 

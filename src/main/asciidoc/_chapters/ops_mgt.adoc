@@ -562,21 +562,22 @@ $ ./bin/hbase org.apache.hadoop.hbase.mapreduce.HashTable --help
 Usage: HashTable [options] <tablename> <outputpath>
 
 Options:
- batchsize     the target amount of bytes to hash in each batch
-               rows are added to the batch until this size is reached
-               (defaults to 8000 bytes)
- numhashfiles  the number of hash files to create
-               if set to fewer than number of regions then
-               the job will create this number of reducers
-               (defaults to 1/100 of regions -- at least 1)
- startrow      the start row
- stoprow       the stop row
- starttime     beginning of the time range (unixtime in millis)
-               without endtime means from starttime to forever
- endtime       end of the time range.  Ignored if no starttime specified.
- scanbatch     scanner batch size to support intra row scans
- versions      number of cell versions to include
- families      comma-separated list of families to include
+ batchsize         the target amount of bytes to hash in each batch
+                   rows are added to the batch until this size is reached
+                   (defaults to 8000 bytes)
+ numhashfiles      the number of hash files to create
+                   if set to fewer than number of regions then
+                   the job will create this number of reducers
+                   (defaults to 1/100 of regions -- at least 1)
+ startrow          the start row
+ stoprow           the stop row
+ starttime         beginning of the time range (unixtime in millis)
+                   without endtime means from starttime to forever
+ endtime           end of the time range.  Ignored if no starttime specified.
+ scanbatch         scanner batch size to support intra row scans
+ versions          number of cell versions to include
+ families          comma-separated list of families to include
+ ignoreTimestamps  if true, ignores cell timestamps
 
 Args:
  tablename     Name of the table to hash
@@ -615,6 +616,10 @@ Options:
                   (defaults to true)
  doPuts           if false, does not perform puts
                   (defaults to true)
+ ignoreTimestamps if true, ignores cells timestamps while comparing
+                  cell values. Any missing cell on target then gets
+                  added with current time as timestamp
+                  (defaults to false)
 
 Args:
  sourcehashdir    path to HashTable output dir for source table
@@ -628,6 +633,13 @@ Examples:
  $ bin/hbase org.apache.hadoop.hbase.mapreduce.SyncTable --dryrun=true --sourcezkcluster=zk1.example.com,zk2.example.com,zk3.example.com:2181:/hbase hdfs://nn:9000/hashes/tableA tableA tableA
 ----
 
+Cell comparison takes ROW/FAMILY/QUALIFIER/TIMESTAMP/VALUE into account for equality. When syncing at the target, missing cells will be
+added with original timestamp value from source. That may cause unexpected results after SyncTable completes, for example, if missing
+cells on target have a delete marker with a timestamp T2 (say, a bulk delete performed by mistake), but source cells timestamps have an
+older value T1, then those cells would still be unavailable at target because of the newer delete marker timestamp. Since cell timestamps
+might not be relevant to all use cases, _ignoreTimestamps_ option adds the flexibility to avoid using cells timestamp in the comparison.
+When using _ignoreTimestamps_ set to true, this option must be specified for both HashTable and SyncTable steps.
+
 The *dryrun* option is useful when a read only, diff report is wanted, as it will produce only COUNTERS indicating the differences, but will not perform
 any actual changes. It can be used as an alternative to VerifyReplication tool.
 
@@ -637,6 +649,7 @@ Setting doDeletes to false modifies default behaviour to not delete target cells
 Similarly, setting doPuts to false modifies default behaviour to not add missing cells on target. Setting both doDeletes
 and doPuts to false would give same effect as setting dryrun to true.
 
+
 .Additional info on doDeletes/doPuts
 [NOTE]
 ====
@@ -645,6 +658,16 @@ link:https://jira.apache.org/jira/browse/HBASE-20305[HBASE-20305], so these may 
 all released versions.
 For major 1.x versions, minimum minor release including it is *1.4.10*.
 For major 2.x versions, minimum minor release including it is *2.1.5*.
+====
+
+.Additional info on ignoreTimestamps
+[NOTE]
+====
+"ignoreTimestamps" was only added by
+link:https://issues.apache.org/jira/browse/HBASE-24302[HBASE-24302], so it may not be available on
+all released versions.
+For major 1.x versions, minimum minor release including it is *1.4.14*.
+For major 2.x versions, minimum minor release including it is *2.2.5*.
 ====
 
 .Set doDeletes to false on Two-Way Replication scenarios
@@ -1362,13 +1385,19 @@ Here is its usage:
 
 ----
 $ ./bin/graceful_stop.sh
-Usage: graceful_stop.sh [--config &conf-dir>] [--restart] [--reload] [--thrift] [--rest] &hostname>
- thrift      If we should stop/start thrift before/after the hbase stop/start
- rest        If we should stop/start rest before/after the hbase stop/start
- restart     If we should restart after graceful stop
- reload      Move offloaded regions back on to the stopped server
- debug       Move offloaded regions back on to the stopped server
- hostname    Hostname of server we are to stop
+Usage: graceful_stop.sh [--config <conf-dir>] [-e] [--restart [--reload]] [--thrift] [--rest] [-n |--noack] [--maxthreads <number of threads>] [--movetimeout <timeout in seconds>] [-nob |--nobalancer] [-d |--designatedfile <file path>] [-x |--excludefile <file path>] <hostname>
+ thrift         If we should stop/start thrift before/after the hbase stop/start
+ rest           If we should stop/start rest before/after the hbase stop/start
+ restart        If we should restart after graceful stop
+ reload         Move offloaded regions back on to the restarted server
+ n|noack        Enable noAck mode in RegionMover. This is a best effort mode for moving regions
+ maxthreads xx  Limit the number of threads used by the region mover. Default value is 1.
+ movetimeout xx Timeout for moving regions. If regions are not moved by the timeout value,exit with error. Default value is INT_MAX.
+ hostname       Hostname of server we are to stop
+ e|failfast     Set -e so exit immediately if any command exits with non-zero status
+ nob|nobalancer Do not manage balancer states. This is only used as optimization in rolling_restart.sh to avoid multiple calls to hbase shell
+ d|designatedfile xx Designated file with <hostname:port> per line as unload targets
+ x|excludefile xx Exclude file should have <hostname:port> per line. We do not unload regions to hostnames given in exclude file
 ----
 
 To decommission a loaded RegionServer, run the following: +$
@@ -2000,6 +2029,29 @@ Examples:
 
 ----
 
+All of above queries with filters have default OR operation applied i.e. all
+records with any of the provided filters applied will be returned. However,
+we can also apply AND operator i.e. all records that match all (not any) of
+the provided filters should be returned.
+
+----
+  hbase> get_slowlog_responses '*', {'REGION_NAME' => 'hbase:meta,,1', 'TABLE_NAME' => 't1', 'FILTER_BY_OP' => 'AND'}
+                                                                   => get slowlog responses with given region name
+                                                                      and table name, both should match
+
+  hbase> get_slowlog_responses '*', {'REGION_NAME' => 'hbase:meta,,1', 'TABLE_NAME' => 't1', 'FILTER_BY_OP' => 'OR'}
+                                                                   => get slowlog responses with given region name
+                                                                      or table name, any one can match
+
+  hbase> get_slowlog_responses '*', {'TABLE_NAME' => 't1', 'CLIENT_IP' => '192.163.41.53:52781', 'FILTER_BY_OP' => 'AND'}
+                                                                   => get slowlog responses with given region name
+                                                                      and client IP address, both should match
+
+----
+Since OR is the default filter operator, without providing 'FILTER_BY_OP', query will have
+same result as providing 'FILTER_BY_OP' => 'OR'.
+
+
 Sometimes output can be long pretty printed json for user to scroll in
 a single screen and hence user might prefer
 redirecting output of get_slowlog_responses to a file.
@@ -2009,8 +2061,48 @@ Example:
 echo "get_slowlog_responses '*'" | hbase shell > xyz.out 2>&1
 ----
 
+Similar to slow RPC logs, client can also retrieve large RPC logs.
+Sometimes, slow logs important to debug perf issues turn out to be
+larger in size.
 
-shell command to clear slowlog responses from RegionServer:
+----
+
+  hbase> get_largelog_responses '*'                                 => get largelog responses from all RS
+  hbase> get_largelog_responses '*', {'LIMIT' => 50}                => get largelog responses from all RS
+                                                                       with 50 records limit (default limit: 10)
+  hbase> get_largelog_responses ['SERVER_NAME1', 'SERVER_NAME2']    => get largelog responses from SERVER_NAME1,
+                                                                       SERVER_NAME2
+  hbase> get_largelog_responses '*', {'REGION_NAME' => 'hbase:meta,,1'}
+                                                                    => get largelog responses only related to meta
+                                                                       region
+  hbase> get_largelog_responses '*', {'TABLE_NAME' => 't1'}         => get largelog responses only related to t1 table
+  hbase> get_largelog_responses '*', {'CLIENT_IP' => '192.162.1.40:60225', 'LIMIT' => 100}
+                                                                    => get largelog responses with given client
+                                                                       IP address and get 100 records limit
+                                                                       (default limit: 10)
+  hbase> get_largelog_responses '*', {'REGION_NAME' => 'hbase:meta,,1', 'TABLE_NAME' => 't1'}
+                                                                    => get largelog responses with given region name
+                                                                       or table name
+  hbase> get_largelog_responses '*', {'USER' => 'user_name', 'CLIENT_IP' => '192.162.1.40:60225'}
+                                                                    => get largelog responses that match either
+                                                                       provided client IP address or user name
+
+  hbase> get_largelog_responses '*', {'REGION_NAME' => 'hbase:meta,,1', 'TABLE_NAME' => 't1', 'FILTER_BY_OP' => 'AND'}
+                                                                   => get largelog responses with given region name
+                                                                      and table name, both should match
+
+  hbase> get_largelog_responses '*', {'REGION_NAME' => 'hbase:meta,,1', 'TABLE_NAME' => 't1', 'FILTER_BY_OP' => 'OR'}
+                                                                   => get largelog responses with given region name
+                                                                      or table name, any one can match
+
+  hbase> get_largelog_responses '*', {'TABLE_NAME' => 't1', 'CLIENT_IP' => '192.163.41.53:52781', 'FILTER_BY_OP' => 'AND'}
+                                                                   => get largelog responses with given region name
+                                                                      and client IP address, both should match
+
+----
+
+
+shell command to clear slow/largelog responses from RegionServer:
 
 ----
 Clears SlowLog Responses maintained by each or specific RegionServers.
@@ -2027,6 +2119,9 @@ Examples:
 
 
 ----
+
+include::slow_log_responses_from_systable.adoc[]
+
 
 === Block Cache Monitoring
 
@@ -2539,6 +2634,91 @@ You can use the HBase Shell command `status 'replication'` to monitor the replic
 * `status 'replication'` -- prints the status of each source and its sinks, sorted by hostname.
 * `status 'replication', 'source'` -- prints the status for each replication source, sorted by hostname.
 * `status 'replication', 'sink'` -- prints the status for each replication sink, sorted by hostname.
+
+==== Understanding the output
+
+The command output will vary according to the state of replication. For example right after a restart
+and if destination peer is not reachable, no replication source threads would be running,
+so no metrics would get displayed:
+
+----
+hbase01.home:
+SOURCE: PeerID=1
+Normal Queue: 1
+No Reader/Shipper threads runnning yet.
+SINK: TimeStampStarted=1591985197350, Waiting for OPs...
+----
+
+Under normal circumstances, a healthy, active-active replication deployment would
+show the following:
+
+----
+    hbase01.home:
+      SOURCE: PeerID=1
+         Normal Queue: 1
+           AgeOfLastShippedOp=0, TimeStampOfLastShippedOp=Fri Jun 12 18:49:23 BST 2020, SizeOfLogQueue=1, EditsReadFromLogQueue=1, OpsShippedToTarget=1, TimeStampOfNextToReplicate=Fri Jun 12 18:49:23 BST 2020, Replication Lag=0
+      SINK: TimeStampStarted=1591983663458, AgeOfLastAppliedOp=0, TimeStampsOfLastAppliedOp=Fri Jun 12 18:57:18 BST 2020
+----
+
+The definition for each of these metrics is detailed below:
+
+[cols="1,1,1", options="header"]
+|===
+| Type
+| Metric Name
+| Description
+
+| Source
+| AgeOfLastShippedOp
+| How long last successfully shipped edit took to effectively get replicated on target.
+
+| Source
+| TimeStampOfLastShippedOp
+| The actual date of last successful edit shipment.
+
+| Source
+| SizeOfLogQueue
+| Number of wal files on this given queue.
+
+| Source
+| EditsReadFromLogQueue
+| How many edits have been read from this given queue since this source thread started.
+
+| Source
+| OpsShippedToTarget
+| How many edits have been shipped to target since this source thread started.
+
+| Source
+| TimeStampOfNextToReplicate
+| Date of the current edit been attempted to replicate.
+
+| Source
+| Replication Lag
+| The elapsed time (in millis), since the last edit to replicate was read by this source
+thread and effectively replicated to target
+
+| Sink
+| TimeStampStarted
+| Date (in millis) of when this Sink thread started.
+
+| Sink
+| AgeOfLastAppliedOp
+| How long it took to apply the last successful shipped edit.
+
+| Sink
+| TimeStampsOfLastAppliedOp
+| Date of last successful applied edit.
+
+|===
+
+Growing values for `Source.TimeStampsOfLastAppliedOp` and/or
+`Source.Replication Lag` would indicate replication delays. If those numbers keep going
+up, while `Source.TimeStampOfLastShippedOp`, `Source.EditsReadFromLogQueue`,
+`Source.OpsShippedToTarget` or `Source.TimeStampOfNextToReplicate` do not change at all,
+ then replication flow is failing to progress, and there might be problems within
+clusters communication. This could also happen if replication is manually paused
+(via hbase shell `disable_peer` command, for example), but date keeps getting ingested
+in the source cluster tables.
 
 == Running Multiple Workloads On a Single Cluster
 
@@ -3648,14 +3828,23 @@ interested.
 [[normalizer]]
 == Region Normalizer
 
-The Region Normalizer tries to make Regions all in a table about the same in size.
-It does this by finding a rough average. Any region that is larger than twice this
-size is split. Any region that is much smaller is merged into an adjacent region.
-It is good to run the Normalizer on occasion on a down time after the cluster has
+The Region Normalizer tries to make Regions all in a table about the same in
+size. It does this by first calculating total table size and average size per
+region. It splits any region that is larger than twice this size. Any region
+that is much smaller is merged into an adjacent region. The Normalizer runs on
+a regular schedule, which is configurable. It can also be disabled entirely via
+a runtime "switch". It can be run manually via the shell or Admin API call.
+Even if normally disabled, it is good to run manually after the cluster has
 been running a while or say after a burst of activity such as a large delete.
 
+The Normalizer works well for bringing a table's region boundaries into
+alignment with the reality of data distribution after an initial effort at
+pre-splitting a table. It is also a nice compliment to the data TTL feature
+when the schema includes timestamp in the rowkey, as it will automatically
+merge away regions whose contents have expired.
+
 (The bulk of the below detail was copied wholesale from the blog by Romil Choksi at
-link:https://community.hortonworks.com/articles/54987/hbase-region-normalizer.html[HBase Region Normalizer])
+link:https://community.hortonworks.com/articles/54987/hbase-region-normalizer.html[HBase Region Normalizer]).
 
 The Region Normalizer is feature available since HBase-1.2. It runs a set of
 pre-calculated merge/split actions to resize regions that are either too

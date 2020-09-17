@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.protobuf.BlockingRpcChannel;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -39,10 +38,11 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -58,6 +58,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.AccessControlService;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestNamespaceCommands extends SecureTestUtil {
@@ -164,9 +167,13 @@ public class TestNamespaceCommands extends SecureTestUtil {
         UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
       ACCESS_CONTROLLER = rst.getRegionServer().getRegionServerCoprocessorHost().
         findCoprocessor(AccessController.class);
-      if (ACCESS_CONTROLLER != null) break;
+      if (ACCESS_CONTROLLER != null) {
+        break;
+      }
     }
-    if (ACCESS_CONTROLLER == null) throw new NullPointerException();
+    if (ACCESS_CONTROLLER == null) {
+      throw new NullPointerException();
+    }
 
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE).build());
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE2).build());
@@ -355,9 +362,12 @@ public class TestNamespaceCommands extends SecureTestUtil {
     assertEquals(0, ((List)USER_GROUP_WRITE.runAs(listAction)).size());
   }
 
-  @Test
+  @SuppressWarnings("checkstyle:MethodLength") @Test
   public void testGrantRevoke() throws Exception {
     final String testUser = "testUser";
+    // Set this else in test context, with limit on the number of threads for
+    // netty eventloopgroup, we can run out of threads if one group used throughout.
+    NettyRpcClientConfigHelper.createEventLoopPerClient(conf);
     // Test if client API actions are authorized
     AccessTestAction grantAction = new AccessTestAction() {
       @Override
@@ -511,20 +521,20 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-          new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TEST_TABLE));
-        tableDescriptor.setColumnFamily(
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+        TableDescriptor tableDescriptor =
+          TableDescriptorBuilder.newBuilder(TableName.valueOf(TEST_TABLE))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
         ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
           tableDescriptor, null);
         return null;
       }
     };
 
-    //createTable            : superuser | global(C) | NS(C)
-    verifyAllowed(createTable, SUPERUSER, USER_GLOBAL_CREATE, USER_NS_CREATE, USER_GROUP_CREATE);
-    verifyDenied(createTable, USER_GLOBAL_ADMIN, USER_GLOBAL_WRITE, USER_GLOBAL_READ,
-      USER_GLOBAL_EXEC, USER_NS_ADMIN, USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC,
-      USER_TABLE_CREATE, USER_TABLE_WRITE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_ADMIN);
+    //createTable            : superuser | global(AC) | NS(AC)
+    verifyAllowed(createTable, SUPERUSER, USER_GLOBAL_CREATE, USER_NS_CREATE, USER_GROUP_CREATE,
+      USER_GLOBAL_ADMIN, USER_NS_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(createTable, USER_GLOBAL_WRITE, USER_GLOBAL_READ, USER_GLOBAL_EXEC,
+      USER_NS_WRITE, USER_NS_READ, USER_NS_EXEC, USER_TABLE_CREATE, USER_TABLE_WRITE,
+      USER_GROUP_READ, USER_GROUP_WRITE);
   }
 }

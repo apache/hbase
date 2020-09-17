@@ -26,6 +26,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReadWriteLock;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -133,10 +135,10 @@ public class TableStateManager {
   Set<TableName> getTablesInStates(TableState.State... states) throws IOException {
     // Only be called in region normalizer, will not use cache.
     final Set<TableName> rv = Sets.newHashSet();
-    MetaTableAccessor.fullScanTables(master.getConnection(), new MetaTableAccessor.Visitor() {
+    MetaTableAccessor.fullScanTables(master.getConnection(), new ClientMetaTableAccessor.Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
-        TableState tableState = MetaTableAccessor.getTableState(r);
+        TableState tableState = CatalogFamilyFormat.getTableState(r);
         if (tableState != null && tableState.inStates(states)) {
           rv.add(tableState.getTableName());
         }
@@ -212,10 +214,10 @@ public class TableStateManager {
       throws IOException {
     Map<String, TableState> states = new HashMap<>();
     // NOTE: Full hbase:meta table scan!
-    MetaTableAccessor.fullScanTables(connection, new MetaTableAccessor.Visitor() {
+    MetaTableAccessor.fullScanTables(connection, new ClientMetaTableAccessor.Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
-        TableState state = MetaTableAccessor.getTableState(r);
+        TableState state = CatalogFamilyFormat.getTableState(r);
         states.put(state.getTableName().getNameAsString(), state);
         return true;
       }

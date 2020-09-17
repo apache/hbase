@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
 
-import com.google.protobuf.RpcChannel;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +32,8 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
  * Just a wrapper of {@link RawAsyncTableImpl}. The difference is that users need to provide a
@@ -202,6 +203,18 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
         return wrap(builder.thenMutate(mutation));
       }
     };
+  }
+
+  @Override
+  public CompletableFuture<CheckAndMutateResult> checkAndMutate(CheckAndMutate checkAndMutate) {
+    return wrap(rawTable.checkAndMutate(checkAndMutate));
+  }
+
+  @Override
+  public List<CompletableFuture<CheckAndMutateResult>> checkAndMutate(
+    List<CheckAndMutate> checkAndMutates) {
+    return rawTable.checkAndMutate(checkAndMutates).stream()
+      .map(this::wrap).collect(toList());
   }
 
   @Override

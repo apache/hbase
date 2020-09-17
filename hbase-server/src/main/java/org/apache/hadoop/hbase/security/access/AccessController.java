@@ -18,10 +18,6 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -37,7 +33,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
@@ -99,11 +94,6 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.HasPermissionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.HasPermissionResponse;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
@@ -126,7 +116,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -136,6 +125,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
@@ -143,6 +133,17 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasPermissionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasPermissionResponse;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -772,7 +773,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       familyMap.put(family, null);
     }
     requireNamespacePermission(c, "createTable",
-        desc.getTableName().getNamespaceAsString(), desc.getTableName(), familyMap, Action.CREATE);
+        desc.getTableName().getNamespaceAsString(), desc.getTableName(), familyMap, Action.ADMIN,
+        Action.CREATE);
   }
 
   @Override
@@ -983,8 +985,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, RegionInfo regionInfo,
-      boolean force) throws IOException {
+  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, RegionInfo regionInfo)
+      throws IOException {
     requirePermission(c, "unassign",
         regionInfo.getTable(), null, null, Action.ADMIN);
   }
@@ -1504,8 +1506,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           if (m instanceof Put) {
             checkForReservedTagPresence(user, m);
             opType = OpType.PUT;
-          } else {
+          } else if (m instanceof Delete) {
             opType = OpType.DELETE;
+          } else {
+            // If the operation type is not Put or Delete, do nothing
+            continue;
           }
           AuthResult authResult = null;
           if (checkCoveringPermission(user, opType, c.getEnvironment(), m.getRow(),
@@ -1915,7 +1920,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   /**
-   * Verifies user has CREATE privileges on
+   * Verifies user has CREATE or ADMIN privileges on
    * the Column Families involved in the bulkLoadHFile
    * request. Specific Column Write privileges are presently
    * ignored.
@@ -1927,7 +1932,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     for(Pair<byte[],String> el : familyPaths) {
       accessChecker.requirePermission(user, "preBulkLoadHFile",
         ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), el.getFirst(), null,
-        null, Action.CREATE);
+        null, Action.ADMIN, Action.CREATE);
     }
   }
 
@@ -1941,7 +1946,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
   throws IOException {
     requireAccess(ctx, "prePrepareBulkLoad",
-        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.CREATE);
+        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.ADMIN,
+        Action.CREATE);
   }
 
   /**
@@ -1954,7 +1960,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
   throws IOException {
     requireAccess(ctx, "preCleanupBulkLoad",
-        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.CREATE);
+        ctx.getEnvironment().getRegion().getTableDescriptor().getTableName(), Action.ADMIN,
+        Action.CREATE);
   }
 
   /* ---- EndpointObserver implementation ---- */
@@ -2583,7 +2590,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           result = AuthResult.allow(request, "Self user validation allowed", caller, null, null,
             null, null);
         }
-        accessChecker.logResult(result);
+        AccessChecker.logResult(result);
       }
     }
   }
@@ -2681,4 +2688,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         null, Permission.Action.ADMIN);
   }
 
+  @Override
+  public void preRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
+      String newName) throws IOException {
+    accessChecker.requirePermission(getActiveUser(ctx), "renameRSGroup",
+      null, Permission.Action.ADMIN);
+  }
 }

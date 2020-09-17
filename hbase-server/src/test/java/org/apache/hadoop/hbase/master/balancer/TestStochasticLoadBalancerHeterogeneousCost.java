@@ -31,6 +31,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -148,7 +149,8 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     TestStochasticLoadBalancerHeterogeneousCostRules.createRulesFile(RULES_FILE);
     final Map<ServerName, List<RegionInfo>> serverMap =
         this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
-    final List<RegionPlan> plans = BalancerTestBase.loadBalancer.balanceCluster(serverMap);
+    final List<RegionPlan> plans =
+        BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     // As we disabled all the other cost functions, balancing only according to
     // the heterogeneous cost function should return nothing.
     assertNull(plans);
@@ -172,7 +174,8 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     BalancerTestBase.loadBalancer.setRackManager(rackManager);
 
     // Run the balancer.
-    final List<RegionPlan> plans = BalancerTestBase.loadBalancer.balanceCluster(serverMap);
+    final List<RegionPlan> plans =
+        BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     assertNotNull(plans);
 
     // Check to see that this actually got to a stable place.
@@ -185,7 +188,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
 
       if (assertFullyBalanced) {
         final List<RegionPlan> secondPlans =
-            BalancerTestBase.loadBalancer.balanceCluster(serverMap);
+            BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
         assertNull(secondPlans);
 
         // create external cost function to retrieve limit

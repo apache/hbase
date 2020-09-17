@@ -32,7 +32,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Common methods and attributes used by SplitLogManager and SplitLogWorker running distributed
  * splitting of WAL logs.
+ * @deprecated  since 2.4.0 and 3.0.0 replaced by procedure-based WAL splitting; see
+ *    SplitWALManager.
  */
+@Deprecated
 @InterfaceAudience.Private
 public final class ZKSplitLog {
   private static final Logger LOG = LoggerFactory.getLogger(ZKSplitLog.class);

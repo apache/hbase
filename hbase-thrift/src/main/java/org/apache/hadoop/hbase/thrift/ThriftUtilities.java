@@ -25,12 +25,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.TreeMap;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
@@ -59,7 +58,7 @@ public final class ThriftUtilities {
    * @return ModifyableColumnFamilyDescriptor
    * @throws IllegalArgument if the column name is empty
    */
-  static public ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor colDescFromThrift(
+  public static ColumnFamilyDescriptor colDescFromThrift(
       ColumnDescriptor in) throws IllegalArgument {
     Compression.Algorithm comp =
       Compression.getCompressionAlgorithmByName(in.compression.toLowerCase(Locale.ROOT));
@@ -70,15 +69,10 @@ public final class ThriftUtilities {
       throw new IllegalArgument("column name is empty");
     }
     byte [] parsedName = CellUtil.parseColumn(Bytes.getBytes(in.name))[0];
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(parsedName)
-        .setMaxVersions(in.maxVersions)
-        .setCompressionType(comp)
-        .setInMemory(in.inMemory)
-        .setBlockCacheEnabled(in.blockCacheEnabled)
-        .setTimeToLive(in.timeToLive > 0 ? in.timeToLive : Integer.MAX_VALUE)
-        .setBloomFilterType(bt);
-    return familyDescriptor;
+    return ColumnFamilyDescriptorBuilder.newBuilder(parsedName).setMaxVersions(in.maxVersions)
+      .setCompressionType(comp).setInMemory(in.inMemory).setBlockCacheEnabled(in.blockCacheEnabled)
+      .setTimeToLive(in.timeToLive > 0 ? in.timeToLive : Integer.MAX_VALUE).setBloomFilterType(bt)
+      .build();
   }
 
   /**
@@ -89,7 +83,7 @@ public final class ThriftUtilities {
    *          Hbase HColumnDescriptor object
    * @return Thrift ColumnDescriptor
    */
-  static public ColumnDescriptor colDescFromHbase(HColumnDescriptor in) {
+  public static ColumnDescriptor colDescFromHbase(ColumnFamilyDescriptor in) {
     ColumnDescriptor col = new ColumnDescriptor();
     col.name = ByteBuffer.wrap(Bytes.add(in.getName(), KeyValue.COLUMN_FAMILY_DELIM_ARRAY));
     col.maxVersions = in.getMaxVersions();
@@ -109,7 +103,7 @@ public final class ThriftUtilities {
    *          Hbase Cell object
    * @return Thrift TCell array
    */
-  static public List<TCell> cellFromHBase(Cell in) {
+  public static List<TCell> cellFromHBase(Cell in) {
     List<TCell> list = new ArrayList<>(1);
     if (in != null) {
       list.add(new TCell(ByteBuffer.wrap(CellUtil.cloneValue(in)), in.getTimestamp()));
@@ -123,7 +117,7 @@ public final class ThriftUtilities {
    * @param in Hbase Cell array
    * @return Thrift TCell array
    */
-  static public List<TCell> cellFromHBase(Cell[] in) {
+  public static List<TCell> cellFromHBase(Cell[] in) {
     List<TCell> list = null;
     if (in != null) {
       list = new ArrayList<>(in.length);
@@ -151,7 +145,7 @@ public final class ThriftUtilities {
    *                        a map of columnName and TCell struct
    * @return Thrift TRowResult array
    */
-  static public List<TRowResult> rowResultFromHBase(Result[] in, boolean sortColumns) {
+  public static List<TRowResult> rowResultFromHBase(Result[] in, boolean sortColumns) {
     List<TRowResult> results = new ArrayList<>(in.length);
     for (Result result_ : in) {
       if(result_ == null || result_.isEmpty()) {
@@ -194,11 +188,11 @@ public final class ThriftUtilities {
    *          Array of Hbase RowResult objects
    * @return Thrift TRowResult array
    */
-  static public List<TRowResult> rowResultFromHBase(Result[] in) {
+  public static List<TRowResult> rowResultFromHBase(Result[] in) {
     return rowResultFromHBase(in, false);
   }
 
-  static public List<TRowResult> rowResultFromHBase(Result in) {
+  public static List<TRowResult> rowResultFromHBase(Result in) {
     Result [] result = { in };
     return rowResultFromHBase(result);
   }

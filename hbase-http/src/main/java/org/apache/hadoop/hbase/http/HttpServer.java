@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -61,38 +60,39 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.util.Shell;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.eclipse.jetty.http.HttpVersion;
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.HttpConnectionFactory;
-import org.eclipse.jetty.server.RequestLog;
-import org.eclipse.jetty.server.SecureRequestCustomizer;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.SslConnectionFactory;
-import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.server.handler.RequestLogHandler;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.FilterMapping;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.MultiException;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.webapp.WebAppContext;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Handler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.HandlerCollection;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.DefaultServlet;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterMapping;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.MultiException;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.webapp.WebAppContext;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -127,6 +127,10 @@ public class HttpServer implements FilterContainer {
   static final String HTTP_SPNEGO_AUTHENTICATION_KRB_NAME_SUFFIX = "kerberos.name.rules";
   public static final String HTTP_SPNEGO_AUTHENTICATION_KRB_NAME_KEY =
       HTTP_SPNEGO_AUTHENTICATION_PREFIX + HTTP_SPNEGO_AUTHENTICATION_KRB_NAME_SUFFIX;
+  static final String HTTP_SPNEGO_AUTHENTICATION_PROXYUSER_ENABLE_SUFFIX = "kerberos.proxyuser.enable";
+  public static final String HTTP_SPNEGO_AUTHENTICATION_PROXYUSER_ENABLE_KEY =
+      HTTP_SPNEGO_AUTHENTICATION_PREFIX + HTTP_SPNEGO_AUTHENTICATION_PROXYUSER_ENABLE_SUFFIX;
+  public static final boolean  HTTP_SPNEGO_AUTHENTICATION_PROXYUSER_ENABLE_DEFAULT = false;
   static final String HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_SUFFIX =
       "signature.secret.file";
   public static final String HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_KEY =
@@ -145,6 +149,7 @@ public class HttpServer implements FilterContainer {
   public static final String ADMINS_ACL = "admins.acl";
   public static final String BIND_ADDRESS = "bind.address";
   public static final String SPNEGO_FILTER = "SpnegoFilter";
+  public static final String SPNEGO_PROXYUSER_FILTER = "SpnegoProxyUserFilter";
   public static final String NO_CACHE_FILTER = "NoCacheFilter";
   public static final String APP_DIR = "webapps";
 
@@ -852,6 +857,8 @@ public class HttpServer implements FilterContainer {
       fmap.setFilterName(AdminAuthorizedFilter.class.getSimpleName());
       webAppContext.getServletHandler().addFilter(filter, fmap);
     }
+    webAppContext.getSessionHandler().getSessionCookieConfig().setHttpOnly(true);
+    webAppContext.getSessionHandler().getSessionCookieConfig().setSecure(true);
     webAppContext.addServlet(holder, pathSpec);
   }
 
@@ -1026,7 +1033,18 @@ public class HttpServer implements FilterContainer {
           + "to enable SPNEGO/Kerberos authentication for the Web UI");
     }
 
-    addGlobalFilter(SPNEGO_FILTER, AuthenticationFilter.class.getName(), params);
+    if (conf.getBoolean(HTTP_SPNEGO_AUTHENTICATION_PROXYUSER_ENABLE_KEY,
+        HTTP_SPNEGO_AUTHENTICATION_PROXYUSER_ENABLE_DEFAULT)) {
+        //Copy/rename standard hadoop proxyuser settings to filter
+        for(Map.Entry<String, String> proxyEntry :
+            conf.getPropsWithPrefix(ProxyUsers.CONF_HADOOP_PROXYUSER).entrySet()) {
+            params.put(ProxyUserAuthenticationFilter.PROXYUSER_PREFIX + proxyEntry.getKey(),
+                proxyEntry.getValue());
+        }
+        addGlobalFilter(SPNEGO_PROXYUSER_FILTER, ProxyUserAuthenticationFilter.class.getName(), params);
+    } else {
+        addGlobalFilter(SPNEGO_FILTER, AuthenticationFilter.class.getName(), params);
+    }
   }
 
   /**
@@ -1120,7 +1138,10 @@ public class HttpServer implements FilterContainer {
           listener.open();
           LOG.info("Jetty bound to port " + listener.getLocalPort());
           break;
-        } catch (BindException ex) {
+        } catch (IOException ex) {
+          if(!(ex instanceof BindException) && !(ex.getCause() instanceof BindException)) {
+            throw ex;
+          }
           if (port == 0 || !findPort) {
             BindException be = new BindException("Port in use: "
                 + listener.getHost() + ":" + listener.getPort());

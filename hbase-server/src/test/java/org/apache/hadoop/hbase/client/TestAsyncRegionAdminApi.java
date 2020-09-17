@@ -24,7 +24,6 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +32,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -359,10 +360,25 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testCompact() throws Exception {
-    compactionTest(TableName.valueOf("testCompact1"), 8, CompactionState.MAJOR, false);
-    compactionTest(TableName.valueOf("testCompact2"), 15, CompactionState.MINOR, false);
-    compactionTest(TableName.valueOf("testCompact3"), 8, CompactionState.MAJOR, true);
-    compactionTest(TableName.valueOf("testCompact4"), 15, CompactionState.MINOR, true);
+    compactionTest(TableName.valueOf("testCompact1"), 15, CompactionState.MINOR, false);
+    compactionTest(TableName.valueOf("testCompact2"), 15, CompactionState.MINOR, true);
+
+    // For major compaction, set up a higher hbase.hstore.compaction.min to avoid
+    // minor compactions. It is a hack to avoid random delays introduced by Admins's
+    // updateConfiguration() method.
+    TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().forEach(thread -> {
+      Configuration conf = thread.getRegionServer().getConfiguration();
+      conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 25);
+    });
+
+    compactionTest(TableName.valueOf("testCompact3"), 8, CompactionState.MAJOR, false);
+    compactionTest(TableName.valueOf("testCompact4"), 8, CompactionState.MAJOR, true);
+
+    // Restore to default
+    TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().forEach(thread -> {
+      Configuration conf = thread.getRegionServer().getConfiguration();
+      conf.unset(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY);
+    });
   }
 
   private void compactionTest(final TableName tableName, final int flushes,
@@ -372,7 +388,18 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     byte[][] families =
         { family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3")) };
     createTableWithDefaultConf(tableName, null, families);
-    loadData(tableName, families, 3000, flushes);
+
+    byte[][] singleFamilyArray = { family };
+
+    // When singleFamily is true, only load data for the family being tested. This is to avoid
+    // the case that while major compaction is going on for the family, minor compaction could
+    // happen for other families at the same time (Two compaction threads long/short), thus
+    // pollute the compaction and store file numbers for the region.
+    if (singleFamily) {
+      loadData(tableName, singleFamilyArray, 3000, flushes);
+    } else {
+      loadData(tableName, families, 3000, flushes);
+    }
 
     List<Region> regions = new ArrayList<>();
     TEST_UTIL
@@ -399,11 +426,11 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     }
 
     long curt = System.currentTimeMillis();
-    long waitTime = 5000;
+    long waitTime = 10000;
     long endt = curt + waitTime;
     CompactionState state = admin.getCompactionState(tableName).get();
     while (state == CompactionState.NONE && curt < endt) {
-      Thread.sleep(10);
+      Thread.sleep(1);
       state = admin.getCompactionState(tableName).get();
       curt = System.currentTimeMillis();
     }
@@ -429,16 +456,19 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     int countAfterSingleFamily = countStoreFilesInFamily(regions, family);
     assertTrue(countAfter < countBefore);
     if (!singleFamily) {
-      if (expectedState == CompactionState.MAJOR) assertTrue(families.length == countAfter);
-      else assertTrue(families.length < countAfter);
+      if (expectedState == CompactionState.MAJOR) {
+        assertEquals(families.length, countAfter);
+      } else {
+        assertTrue(families.length <= countAfter);
+      }
     } else {
       int singleFamDiff = countBeforeSingleFamily - countAfterSingleFamily;
       // assert only change was to single column family
-      assertTrue(singleFamDiff == (countBefore - countAfter));
+      assertEquals(singleFamDiff, (countBefore - countAfter));
       if (expectedState == CompactionState.MAJOR) {
-        assertTrue(1 == countAfterSingleFamily);
+        assertEquals(1, countAfterSingleFamily);
       } else {
-        assertTrue(1 < countAfterSingleFamily);
+        assertTrue("" + countAfterSingleFamily, 1 <= countAfterSingleFamily);
       }
     }
   }

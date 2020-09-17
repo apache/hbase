@@ -36,13 +36,14 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
@@ -105,7 +106,7 @@ public class TestSnapshotStoreFileSize {
       }
     }
     List<RegionInfo> regionsInfo = admin.getRegions(TABLE_NAME);
-    Path path = FSUtils.getTableDir(UTIL.getDefaultRootDirPath(), TABLE_NAME);
+    Path path = CommonFSUtils.getTableDir(UTIL.getDefaultRootDirPath(), TABLE_NAME);
     for (RegionInfo regionInfo : regionsInfo) {
       HRegionFileSystem hRegionFileSystem =
           HRegionFileSystem.openRegionFromFileSystem(conf, fs, path, regionInfo, true);
@@ -113,7 +114,7 @@ public class TestSnapshotStoreFileSize {
       Iterator<StoreFileInfo> sfIterator = storeFilesFS.iterator();
       while (sfIterator.hasNext()) {
         StoreFileInfo sfi = sfIterator.next();
-        FileStatus[] fileStatus = FSUtils.listStatus(fs, sfi.getPath());
+        FileStatus[] fileStatus = CommonFSUtils.listStatus(fs, sfi.getPath());
         storeFileName = fileStatus[0].getPath().getName();
         storeFilesize = fileStatus[0].getLen();
         storeFileInfoFromFS.put(storeFileName, storeFilesize);

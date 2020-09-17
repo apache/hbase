@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,6 +24,7 @@ import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -48,12 +49,15 @@ import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ServerType;
+import org.apache.hadoop.hbase.client.LogEntry;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
+import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.SlowLogQueryFilter;
-import org.apache.hadoop.hbase.client.SlowLogRecord;
+import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -62,8 +66,6 @@ import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotView;
@@ -87,6 +89,9 @@ import org.apache.zookeeper.KeeperException;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupProtos;
 
 @InterfaceAudience.Private
 public class VerifyingRSGroupAdmin implements Admin, Closeable {
@@ -219,8 +224,16 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.flush(tableName);
   }
 
+  public void flush(TableName tableName, byte[] columnFamily) throws IOException {
+    admin.flush(tableName, columnFamily);
+  }
+
   public void flushRegion(byte[] regionName) throws IOException {
     admin.flushRegion(regionName);
+  }
+
+  public void flushRegion(byte[] regionName, byte[] columnFamily) throws IOException {
+    admin.flushRegion(regionName, columnFamily);
   }
 
   public void flushRegionServer(ServerName serverName) throws IOException {
@@ -304,8 +317,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.assign(regionName);
   }
 
-  public void unassign(byte[] regionName, boolean force) throws IOException {
-    admin.unassign(regionName, force);
+  public void unassign(byte[] regionName) throws IOException {
+    admin.unassign(regionName);
   }
 
   public void offline(byte[] regionName) throws IOException {
@@ -332,8 +345,9 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.clearBlockCache(tableName);
   }
 
-  public boolean normalize() throws IOException {
-    return admin.normalize();
+  @Override
+  public boolean normalize(NormalizeTableFilterParams ntfp) throws IOException {
+    return admin.normalize(ntfp);
   }
 
   public boolean isNormalizerEnabled() throws IOException {
@@ -815,6 +829,26 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.balanceRSGroup(groupName);
   }
 
+  @Override
+  public void renameRSGroup(String oldName, String newName) throws IOException {
+    admin.renameRSGroup(oldName, newName);
+    verify();
+  }
+
+  @Override
+  public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
+      throws IOException {
+    admin.updateRSGroupConfig(groupName, configuration);
+    verify();
+  }
+
+  @Override
+  public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+      ServerType serverType, int limit, Map<String, Object> filterParams)
+      throws IOException {
+    return Collections.emptyList();
+  }
+
   private void verify() throws IOException {
     Map<String, RSGroupInfo> groupMap = Maps.newHashMap();
     Set<RSGroupInfo> zList = Sets.newHashSet();
@@ -885,8 +919,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
-  public List<SlowLogRecord> getSlowLogResponses(Set<ServerName> serverNames,
-    SlowLogQueryFilter slowLogQueryFilter) throws IOException {
+  public List<OnlineLogRecord> getSlowLogResponses(Set<ServerName> serverNames,
+      LogQueryFilter logQueryFilter) throws IOException {
     return null;
   }
 

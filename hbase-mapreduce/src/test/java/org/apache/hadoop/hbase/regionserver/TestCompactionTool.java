@@ -19,9 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.File;
-import java.io.FileOutputStream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +31,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -60,12 +57,6 @@ public class TestCompactionTool {
   public void setUp() throws Exception {
     this.testUtil.startMiniCluster();
     testUtil.createTable(tableName, HBaseTestingUtility.fam1);
-    String defaultFS = testUtil.getMiniHBaseCluster().getConfiguration().get("fs.defaultFS");
-    Configuration config = HBaseConfiguration.create();
-    config.set("fs.defaultFS", defaultFS);
-    String configPath = this.getClass().getClassLoader()
-      .getResource("hbase-site.xml").getFile();
-    config.writeXml(new FileOutputStream(new File(configPath)));
     rootDir = testUtil.getDefaultRootDirPath();
     this.region = testUtil.getMiniHBaseCluster().getRegions(tableName).get(0);
   }
@@ -83,13 +74,16 @@ public class TestCompactionTool {
     }
     HStore store = region.getStore(HBaseTestingUtility.fam1);
     assertEquals(10, store.getStorefilesCount());
-    Path tableDir = FSUtils.getTableDir(rootDir, region.getRegionInfo().getTable());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, region.getRegionInfo().getTable());
     FileSystem fs = store.getFileSystem();
     String storePath = tableDir + "/" + region.getRegionInfo().getEncodedName() + "/"
       + Bytes.toString(HBaseTestingUtility.fam1);
     FileStatus[] regionDirFiles = fs.listStatus(new Path(storePath));
     assertEquals(10, regionDirFiles.length);
-    int result = ToolRunner.run(HBaseConfiguration.create(), new CompactionTool(),
+    String defaultFS = testUtil.getMiniHBaseCluster().getConfiguration().get("fs.defaultFS");
+    Configuration config = HBaseConfiguration.create();
+    config.set("fs.defaultFS", defaultFS);
+    int result = ToolRunner.run(config, new CompactionTool(),
       new String[]{"-compactOnce", "-major", storePath});
     assertEquals(0,result);
     regionDirFiles = fs.listStatus(new Path(storePath));

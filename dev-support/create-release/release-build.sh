@@ -20,34 +20,58 @@
 trap cleanup EXIT
 
 # Source in utils.
-SELF=$(cd $(dirname $0) && pwd)
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=SCRIPTDIR/release-util.sh
 . "$SELF/release-util.sh"
 
 # Print usage and exit.
 function exit_with_usage {
-  cat << EOF
-Usage: release-build.sh <build|publish-snapshot|publish-release>
-Creates build deliverables from a tag/commit.
-Arguments:
- build             Create binary packages and commit to dist.apache.org/repos/dist/dev/hbase/
- publish-snapshot  Publish snapshot release to Apache snapshots
- publish-release   Publish a release to Apache release repo
+  cat <<'EOF'
+Usage: release-build.sh <tag|publish-dist|publish-snapshot|publish-release>
+Creates release deliverables from a tag or commit.
+Argument: one of 'tag', 'publish-dist', 'publish-snapshot', or 'publish-release'
+  tag               Prepares for release on specified git branch: Set release version,
+                    update CHANGES and RELEASENOTES, create release tag,
+                    increment version for ongoing dev, and publish to Apache git repo.
+  publish-dist      Build and publish distribution packages (tarballs) to Apache dist repo
+  publish-snapshot  Build and publish maven artifacts snapshot release to Apache snapshots repo
+  publish-release   Build and publish maven artifacts release to Apache release repo, and
+                    construct vote email from template
 
-All other inputs are environment variables:
- GIT_REF - Release tag or commit to build from
- PACKAGE_VERSION - Release identifier in top level package directory (e.g. 2.1.2RC1)
- VERSION - (optional) Version of project being built (e.g. 2.1.2)
- ASF_USERNAME - Username of ASF committer account
- ASF_PASSWORD - Password of ASF committer account
- GPG_KEY - GPG key used to sign release artifacts
- GPG_PASSPHRASE - Passphrase for GPG key
- PROJECT - The project to build. No default.
+All other inputs are environment variables.  Please use do-release-docker.sh or
+do-release.sh to set up the needed environment variables.  This script, release-build.sh,
+is not intended to be called stand-alone, and such use is untested.  The env variables used are:
 
-Set REPO environment to full path to repo to use
-to avoid re-downloading dependencies on each run.
+Used for 'tag' and 'publish' stages:
+  PROJECT - The project to build. No default.
+  RELEASE_VERSION - Version used in pom files for release (e.g. 2.1.2)
+    Required for 'tag'; defaults for 'publish' to the version in pom at GIT_REF
+  RELEASE_TAG - Name of release tag (e.g. 2.1.2RC0), also used by
+    publish-dist as package version name in dist directory path
+  ASF_USERNAME - Username of ASF committer account
+  ASF_PASSWORD - Password of ASF committer account
+  DRY_RUN - 1:true (default), 0:false. If "1", does almost all the work, but doesn't actually
+    publish anything to upstream source or object repositories. It defaults to "1", so if you want
+    to actually publish you have to set '-f' (force) flag in do-release.sh or do-release-docker.sh.
+
+Used only for 'tag':
+  YETUS_HOME - installation location for Apache Yetus
+  GIT_NAME - Name to use with git
+  GIT_EMAIL - E-mail address to use with git
+  GIT_BRANCH - Git branch on which to make release. Tag is always placed at HEAD of this branch.
+  NEXT_VERSION - Development version after release (e.g. 2.1.3-SNAPSHOT)
+
+Used only for 'publish':
+  GIT_REF - Release tag or commit to build from (defaults to $RELEASE_TAG; only need to
+    separately define GIT_REF if RELEASE_TAG is not actually present as a tag at publish time)
+    If both RELEASE_TAG and GIT_REF are undefined it will default to HEAD of master.
+  GPG_KEY - GPG key id (usually email addr) used to sign release artifacts
+  REPO - Set to full path of a directory to use as maven local repo (dependencies cache)
+    to avoid re-downloading dependencies for each stage.  It is automatically set if you
+    request full sequence of stages (tag, publish-dist, publish-release) in do-release.sh.
 
 For example:
- $ PROJECT="hbase-operator-tools" ASF_USERNAME=NAME ASF_PASSWORD=PASSWORD GPG_PASSPHRASE=PASSWORD GPG_KEY=stack@apache.org ./release-build.sh build
+ $ PROJECT="hbase-operator-tools" ASF_USERNAME=NAME ASF_PASSWORD=PASSWORD GPG_KEY=stack@apache.org ./release-build.sh publish-dist
 EOF
   exit 1
 }
@@ -55,79 +79,118 @@ EOF
 set -e
 
 function cleanup {
-  echo "Cleaning up temp settings file." >&2
-  rm "${tmp_settings}" &> /dev/null || true
   # If REPO was set, then leave things be. Otherwise if we defined a repo clean it out.
-  if [[ -z "${REPO}" ]] && [[ -n "${tmp_repo}" ]]; then
-    echo "Cleaning up temp repo in '${tmp_repo}'. set REPO to reuse downloads." >&2
-    rm -rf "${tmp_repo}" &> /dev/null || true
+  if [[ -z "${REPO}" ]] && [[ -n "${MAVEN_LOCAL_REPO}" ]]; then
+    echo "Cleaning up temp repo in '${MAVEN_LOCAL_REPO}'. Set REPO to reuse downloads." >&2
+    rm -f "${MAVEN_SETTINGS_FILE}" &> /dev/null || true
+    rm -rf "${MAVEN_LOCAL_REPO}" &> /dev/null || true
   fi
 }
 
-if [ $# -eq 0 ]; then
+if [ $# -ne 1 ]; then
   exit_with_usage
 fi
 
-if [[ $@ == *"help"* ]]; then
+if [[ "$*" == *"help"* ]]; then
   exit_with_usage
 fi
 
-# Read in the ASF password.
-if [[ -z "$ASF_PASSWORD" ]]; then
-  echo 'The environment variable ASF_PASSWORD is not set. Enter the password.'
-  echo
-  stty -echo && printf "ASF password: " && read ASF_PASSWORD && printf '\n' && stty echo
-fi
-
-# Read in the GPG passphrase
-if [[ -z "$GPG_PASSPHRASE" ]]; then
-  echo 'The environment variable GPG_PASSPHRASE is not set. Enter the passphrase to'
-  echo 'unlock the GPG signing key that will be used to sign the release!'
-  echo
-  stty -echo && printf "GPG passphrase: " && read GPG_PASSPHRASE && printf '\n' && stty echo
-  export GPG_PASSPHRASE
-  export GPG_TTY=$(tty)
-fi
-
-for env in ASF_USERNAME GPG_PASSPHRASE GPG_KEY; do
-  if [ -z "${!env}" ]; then
-    echo "ERROR: $env must be set to run this script"
-    exit_with_usage
-  fi
-done
-
-export LC_ALL=C.UTF-8
-export LANG=C.UTF-8
-
-# Commit ref to checkout when building
-GIT_REF=${GIT_REF:-master}
-RELEASE_STAGING_LOCATION="https://dist.apache.org/repos/dist/dev/hbase"
-BASE_DIR=$(pwd)
-
+init_locale
 init_java
 init_mvn
 init_python
-# Print out subset of perl version.
+# Print out subset of perl version (used in git hooks and japi-compliance-checker)
 perl --version | grep 'This is'
 
-rm -rf ${PROJECT}
-ASF_REPO="${ASF_REPO:-https://gitbox.apache.org/repos/asf/${PROJECT}.git}"
-git clone "$ASF_REPO"
-cd ${PROJECT}
-git checkout $GIT_REF
-git_hash=`git rev-parse --short HEAD`
-echo "Checked out ${PROJECT} git hash $git_hash"
+rm -rf "${PROJECT}"
 
-if [ -z "$VERSION" ]; then
-  # Run $MVN in a separate command so that 'set -e' does the right thing.
-  TMP=$(mktemp)
-  $MVN help:evaluate -Dexpression=project.version > $TMP
-  VERSION=$(cat $TMP | grep -v INFO | grep -v WARNING | grep -v Download)
-  rm $TMP
+if is_debug; then
+  set -x  # detailed logging during action
 fi
 
-# Profiles for publishing snapshots and release to Maven Central
-PUBLISH_PROFILES="-P apache-release,release"
+if [[ "$1" == "tag" ]]; then
+  init_yetus
+  # for 'tag' stage
+  set -o pipefail
+  check_get_passwords ASF_PASSWORD
+  check_needed_vars PROJECT RELEASE_VERSION RELEASE_TAG NEXT_VERSION GIT_EMAIL GIT_NAME GIT_BRANCH
+  if [ -z "${GIT_REPO}" ]; then
+    check_needed_vars ASF_USERNAME ASF_PASSWORD
+  fi
+  git_clone_overwrite
+
+  # 'update_releasenotes' searches the project's Jira for issues where 'Fix Version' matches specified
+  # $jira_fix_version. For most projects this is same as ${RELEASE_VERSION}. However, all the 'hbase-*'
+  # projects share the same HBASE jira name.  To make this work, by convention, the HBASE jira "Fix Version"
+  # field values have the sub-project name pre-pended, as in "hbase-operator-tools-1.0.0".
+  # So, here we prepend the project name to the version, but only for the hbase sub-projects.
+  jira_fix_version="${RELEASE_VERSION}"
+  shopt -s nocasematch
+  if [[ "${PROJECT}" =~ ^hbase- ]]; then
+    jira_fix_version="${PROJECT}-${RELEASE_VERSION}"
+  fi
+  shopt -u nocasematch
+  update_releasenotes "$(pwd)/${PROJECT}" "${jira_fix_version}"
+
+  cd "${PROJECT}"
+
+  git config user.name "$GIT_NAME"
+  git config user.email "$GIT_EMAIL"
+
+  # Create release version
+  maven_set_version "$RELEASE_VERSION"
+  git add RELEASENOTES.md CHANGES.md
+
+  git commit -a -m "Preparing ${PROJECT} release $RELEASE_TAG; tagging and updates to CHANGES.md and RELEASENOTES.md"
+  echo "Creating tag $RELEASE_TAG at the head of $GIT_BRANCH"
+  git tag "$RELEASE_TAG"
+
+  # Create next version
+  maven_set_version "$NEXT_VERSION"
+
+  git commit -a -m "Preparing development version $NEXT_VERSION"
+
+  if ! is_dry_run; then
+    # Push changes
+    git push origin "$RELEASE_TAG"
+    git push origin "HEAD:$GIT_BRANCH"
+    cd ..
+    rm -rf "${PROJECT}"
+  else
+    cd ..
+    mv "${PROJECT}" "${PROJECT}.tag"
+    echo "Dry run: Clone with version changes and tag available as ${PROJECT}.tag in the output directory."
+  fi
+  exit 0
+fi
+
+### Below is for 'publish-*' stages ###
+check_get_passwords ASF_PASSWORD
+check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD GPG_KEY
+
+# Commit ref to checkout when building
+BASE_DIR=$(pwd)
+GIT_REF=${GIT_REF:-master}
+if [[ "$PROJECT" =~ ^hbase ]]; then
+  RELEASE_STAGING_LOCATION="https://dist.apache.org/repos/dist/dev/hbase"
+else
+  RELEASE_STAGING_LOCATION="https://dist.apache.org/repos/dist/dev/${PROJECT}"
+fi
+
+# in case of dry run, enable publish steps to chain from tag step
+if is_dry_run && [[ "${TAG_SAME_DRY_RUN:-}" == "true" && -d "${PROJECT}.tag" ]]; then
+  ln -s "${PROJECT}.tag" "${PROJECT}"
+else
+  git_clone_overwrite
+fi
+cd "${PROJECT}"
+git checkout "$GIT_REF"
+git_hash="$(git rev-parse --short HEAD)"
+echo "Checked out ${PROJECT} at ${GIT_REF} commit $git_hash"
+
+if [ -z "${RELEASE_VERSION}" ]; then
+  RELEASE_VERSION="$(maven_get_version)"
+fi
 
 # This is a band-aid fix to avoid the failure of Maven nightly snapshot in some Jenkins
 # machines by explicitly calling /usr/sbin/lsof. Please see SPARK-22377 and the discussion
@@ -137,120 +200,105 @@ if ! hash $LSOF 2>/dev/null; then
   LSOF=/usr/sbin/lsof
 fi
 
-if [ -z "$PACKAGE_VERSION" ]; then
-  PACKAGE_VERSION="${VERSION}-$(date +%Y_%m_%d_%H_%M)-${git_hash}"
+package_version_name="$RELEASE_TAG"
+if [ -z "$package_version_name" ]; then
+  package_version_name="${RELEASE_VERSION}-$(date +%Y_%m_%d_%H_%M)-${git_hash}"
 fi
-
-DEST_DIR_NAME="$PACKAGE_VERSION"
 
 git clean -d -f -x
 cd ..
 
-tmp_repo="${REPO:-`pwd`/$(mktemp -d hbase-repo-XXXXX)}"
-tmp_settings="/${tmp_repo}/tmp-settings.xml"
-echo "<settings><servers>" > "$tmp_settings"
-echo "<server><id>apache.snapshots.https</id><username>$ASF_USERNAME</username>" >> "$tmp_settings"
-echo "<password>$ASF_PASSWORD</password></server>" >> "$tmp_settings"
-echo "<server><id>apache.releases.https</id><username>$ASF_USERNAME</username>" >> "$tmp_settings"
-echo "<password>$ASF_PASSWORD</password></server>" >> "$tmp_settings"
-echo "</servers>" >> "$tmp_settings"
-echo "</settings>" >> "$tmp_settings"
-export tmp_settings
-
-if [[ "$1" == "build" ]]; then
+if [[ "$1" == "publish-dist" ]]; then
   # Source and binary tarballs
   echo "Packaging release source tarballs"
-  make_src_release "${PROJECT}" "${VERSION}"
+  make_src_release "${PROJECT}" "${RELEASE_VERSION}"
 
-  # Add timestamps to mvn logs.
-  MAVEN_OPTS="-Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss ${MAVEN_OPTS}"
+  # we do not have binary tarballs for hbase-thirdparty
+  if [[ "${PROJECT}" != "hbase-thirdparty" ]]; then
+    make_binary_release "${PROJECT}" "${RELEASE_VERSION}"
+  fi
 
-  echo "`date -u +'%Y-%m-%dT%H:%M:%SZ'` Building binary dist"
-  make_binary_release "${PROJECT}" "${VERSION}"
-  echo "`date -u +'%Y-%m-%dT%H:%M:%SZ'` Done building binary distribution"
+  if [[ "$PROJECT" =~ ^hbase- ]]; then
+    DEST_DIR_NAME="${PROJECT}-${package_version_name}"
+  else
+    DEST_DIR_NAME="$package_version_name"
+  fi
+  svn_target="svn-${PROJECT}"
+  svn co --depth=empty "$RELEASE_STAGING_LOCATION" "$svn_target"
+  rm -rf "${svn_target:?}/${DEST_DIR_NAME}"
+  mkdir -p "$svn_target/${DEST_DIR_NAME}"
+
+  echo "Copying release tarballs"
+  cp "${PROJECT}"-*.tar.* "$svn_target/${DEST_DIR_NAME}/"
+  cp "${PROJECT}/CHANGES.md" "$svn_target/${DEST_DIR_NAME}/"
+  cp "${PROJECT}/RELEASENOTES.md" "$svn_target/${DEST_DIR_NAME}/"
+  shopt -s nocasematch
+  # Generate api report only if project is hbase for now.
+  if [ "${PROJECT}" == "hbase" ]; then
+    # This script usually reports an errcode along w/ the report.
+    generate_api_report "./${PROJECT}" "${API_DIFF_TAG}" "${GIT_REF}" || true
+    cp api*.html "$svn_target/${DEST_DIR_NAME}/"
+  fi
+  shopt -u nocasematch
+
+  svn add "$svn_target/${DEST_DIR_NAME}"
 
   if ! is_dry_run; then
-    svn co --depth=empty $RELEASE_STAGING_LOCATION svn-hbase
-    rm -rf "svn-hbase/${DEST_DIR_NAME}"
-    mkdir -p "svn-hbase/${DEST_DIR_NAME}"
-
-    echo "Copying release tarballs"
-    cp ${PROJECT}-*.tar.* "svn-hbase/${DEST_DIR_NAME}/"
-    cp ${PROJECT}/CHANGES.md "svn-hbase/${DEST_DIR_NAME}/"
-    cp ${PROJECT}/RELEASENOTES.md "svn-hbase/${DEST_DIR_NAME}/"
-    shopt -s nocasematch
-    # Generate api report only if project is hbase for now.
-    if [ "${PROJECT}" == "hbase" ]; then
-      # This script usually reports an errcode along w/ the report.
-      generate_api_report ./${PROJECT} "${API_DIFF_TAG}" "${PACKAGE_VERSION}" || true
-      cp api*.html "svn-hbase/${DEST_DIR_NAME}/"
-    fi
-    shopt -u nocasematch
-
-    svn add "svn-hbase/${DEST_DIR_NAME}"
-
-    cd svn-hbase
-    svn ci --username $ASF_USERNAME --password "$ASF_PASSWORD" -m"Apache ${PROJECT} $PACKAGE_VERSION" --no-auth-cache
+    cd "$svn_target"
+    svn ci --username "$ASF_USERNAME" --password "$ASF_PASSWORD" -m"Apache ${PROJECT} $package_version_name" --no-auth-cache
     cd ..
-    rm -rf svn-hbase
+    rm -rf "$svn_target"
+  else
+    mv "$svn_target/${DEST_DIR_NAME}" "${svn_target}_${DEST_DIR_NAME}.dist"
+    echo "Dry run: svn-managed 'dist' directory with release tarballs, CHANGES.md and RELEASENOTES.md available as $(pwd)/${svn_target}_${DEST_DIR_NAME}.dist"
+    rm -rf "$svn_target"
   fi
 
   exit 0
 fi
 
 if [[ "$1" == "publish-snapshot" ]]; then
+  (
   cd "${PROJECT}"
-  # Publish ${PROJECT} to Maven release repo
-  echo "Deploying ${PROJECT} SNAPSHOT at '$GIT_REF' ($git_hash)"
-  echo "Publish version is $VERSION"
-  if [[ ! $VERSION == *"SNAPSHOT"* ]]; then
-    echo "ERROR: Snapshots must have a version containing SNAPSHOT"
-    echo "ERROR: You gave version '$VERSION'"
-    exit 1
+  mvn_log="${BASE_DIR}/mvn_deploy_snapshot.log"
+  echo "Publishing snapshot to nexus"
+  maven_deploy snapshot "$mvn_log"
+  if ! is_dry_run; then
+    echo "Snapshot artifacts successfully published to repo."
+    rm "$mvn_log"
+  else
+    echo "Dry run: Snapshot artifacts successfully built, but not published due to dry run."
   fi
-  # Coerce the requested version
-  $MVN versions:set -DnewVersion=$VERSION
-  $MVN --settings $tmp_settings -DskipTests "$PUBLISH_PROFILES" deploy
-  cd ..
-  exit 0
+  )
+  exit $?
 fi
 
 if [[ "$1" == "publish-release" ]]; then
   (
   cd "${PROJECT}"
-  # Publish ${PROJECT} to Maven release repo
-  echo "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
-  echo "Publish version is $VERSION"
-  # Coerce the requested version
-  $MVN versions:set -DnewVersion=$VERSION
-  declare -a mvn_goals=(clean install)
+  mvn_log="${BASE_DIR}/mvn_deploy_release.log"
+  echo "Staging release in nexus"
+  maven_deploy release "$mvn_log"
   declare staged_repo_id="dryrun-no-repo"
   if ! is_dry_run; then
-    mvn_goals=("${mvn_goals[@]}" deploy)
-  fi
-  echo "Staging release in nexus"
-  if ! MAVEN_OPTS="${MAVEN_OPTS}" ${MVN} --settings "$tmp_settings" \
-      -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES}" \
-      -Dmaven.repo.local="${tmp_repo}" \
-      "${mvn_goals[@]}" > "${BASE_DIR}/mvn_deploy.log"; then
-    echo "Staging build failed, see 'mvn_deploy.log' for details." >&2
-    exit 1
-  fi
-  if ! is_dry_run; then
-    staged_repo_id=$(grep -o "Closing staging repository with ID .*" "${BASE_DIR}/mvn_deploy.log" \
+    staged_repo_id=$(grep -o "Closing staging repository with ID .*" "$mvn_log" \
         | sed -e 's/Closing staging repository with ID "\([^"]*\)"./\1/')
-    echo "Artifacts successfully staged to repo ${staged_repo_id}"
+    echo "Release artifacts successfully published to repo ${staged_repo_id}"
+    rm "$mvn_log"
   else
-    echo "Artifacts successfully built. not staged due to dry run."
+    echo "Dry run: Release artifacts successfully built, but not published due to dry run."
   fi
   # Dump out email to send. Where we find vote.tmpl depends
   # on where this script is run from
-  export PROJECT_TEXT=$(echo "${PROJECT}" | sed "s/-/ /g")
-  eval "echo \"$(< ${SELF}/vote.tmpl)\"" |tee "${BASE_DIR}/vote.txt"
+  PROJECT_TEXT="${PROJECT//-/ }" #substitute like 's/-/ /g'
+  export PROJECT_TEXT
+  eval "echo \"$(< "${SELF}/vote.tmpl")\"" |tee "${BASE_DIR}/vote.txt"
   )
-  exit 0
+  exit $?
 fi
 
+set +x  # done with detailed logging
 cd ..
 rm -rf "${PROJECT}"
-echo "ERROR: expects to be called with 'install', 'publish-release' or 'publish-snapshot'"
+echo "ERROR: expects to be called with 'tag', 'publish-dist', 'publish-release', or 'publish-snapshot'" >&2
+exit_with_usage

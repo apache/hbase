@@ -30,7 +30,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.ScheduledReporter;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.IOException;
@@ -43,11 +42,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -59,12 +58,12 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -73,11 +72,10 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -209,10 +207,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     if (cmd.hasOption("r")) {
       String regionName = cmd.getOptionValue("r");
       byte[] rn = Bytes.toBytes(regionName);
-      byte[][] hri = HRegionInfo.parseRegionName(rn);
-      Path rootDir = FSUtils.getRootDir(getConf());
-      Path tableDir = FSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
-      String enc = HRegionInfo.encodeRegionName(rn);
+      byte[][] hri = RegionInfo.parseRegionName(rn);
+      Path rootDir = CommonFSUtils.getRootDir(getConf());
+      Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
+      String enc = RegionInfo.encodeRegionName(rn);
       Path regionDir = new Path(tableDir, enc);
       if (verbose)
         out.println("region dir -> " + regionDir);
@@ -253,9 +251,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       throw new RuntimeException("A Configuration instance must be provided.");
     }
     try {
-      FSUtils.setFsDefault(getConf(), FSUtils.getRootDir(getConf()));
-      if (!parseOptions(args))
+      CommonFSUtils.setFsDefault(getConf(), CommonFSUtils.getRootDir(getConf()));
+      if (!parseOptions(args)) {
         return 1;
+      }
     } catch (IOException ex) {
       LOG.error("Error parsing command-line options", ex);
       return 1;
@@ -291,8 +290,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     }
 
     if (checkRootDir) {
-      Path rootPath = FSUtils.getRootDir(getConf());
-      String rootString = rootPath + rootPath.SEPARATOR;
+      Path rootPath = CommonFSUtils.getRootDir(getConf());
+      String rootString = rootPath + Path.SEPARATOR;
       if (!file.toString().startsWith(rootString)) {
         // First we see if fully-qualified URI matches the root dir. It might
         // also be an absolute path in the same filesystem, so we prepend the FS
@@ -437,17 +436,16 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       }
       // check if mob files are missing.
       if (checkMobIntegrity && MobUtils.isMobReferenceCell(cell)) {
-        Tag tnTag = MobUtils.getTableNameTag(cell);
-        if (tnTag == null) {
+        Optional<TableName> tn = MobUtils.getTableName(cell);
+        if (! tn.isPresent()) {
           System.err.println("ERROR, wrong tag format in mob reference cell "
             + CellUtil.getCellKeyAsString(cell));
         } else if (!MobUtils.hasValidMobRefCellValue(cell)) {
           System.err.println("ERROR, wrong value format in mob reference cell "
             + CellUtil.getCellKeyAsString(cell));
         } else {
-          TableName tn = TableName.valueOf(Tag.cloneValue(tnTag));
           String mobFileName = MobUtils.getMobFileName(cell);
-          boolean exist = mobFileExists(fs, tn, mobFileName,
+          boolean exist = mobFileExists(fs, tn.get(), mobFileName,
             Bytes.toString(CellUtil.cloneFamily(cell)), foundMobFiles, missingMobFiles);
           if (!exist) {
             // report error

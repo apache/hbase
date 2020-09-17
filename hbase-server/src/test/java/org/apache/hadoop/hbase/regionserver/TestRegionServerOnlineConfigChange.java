@@ -22,11 +22,16 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
@@ -34,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -56,6 +62,7 @@ public class TestRegionServerOnlineConfigChange {
 
   private static final Logger LOG =
           LoggerFactory.getLogger(TestRegionServerOnlineConfigChange.class.getName());
+  private static final long WAIT_TIMEOUT = TimeUnit.MINUTES.toMillis(2);
   private static HBaseTestingUtility hbaseTestingUtility = new HBaseTestingUtility();
   private static Configuration conf = null;
 
@@ -71,22 +78,26 @@ public class TestRegionServerOnlineConfigChange {
 
 
   @BeforeClass
-  public static void setUp() throws Exception {
+  public static void setUpBeforeClass() throws Exception {
     conf = hbaseTestingUtility.getConfiguration();
-    hbaseTestingUtility.startMiniCluster();
+    hbaseTestingUtility.startMiniCluster(2);
     t1 = hbaseTestingUtility.createTable(TABLE1, COLUMN_FAMILY1);
-    try (RegionLocator locator = hbaseTestingUtility.getConnection().getRegionLocator(TABLE1)) {
-      RegionInfo firstHRI = locator.getAllRegionLocations().get(0).getRegion();
-      r1name = firstHRI.getRegionName();
-      rs1 = hbaseTestingUtility.getHBaseCluster().getRegionServer(
-          hbaseTestingUtility.getHBaseCluster().getServerWith(r1name));
-      r1 = rs1.getRegion(r1name);
-    }
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
     hbaseTestingUtility.shutdownMiniCluster();
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    try (RegionLocator locator = hbaseTestingUtility.getConnection().getRegionLocator(TABLE1)) {
+      RegionInfo firstHRI = locator.getAllRegionLocations().get(0).getRegion();
+      r1name = firstHRI.getRegionName();
+      rs1 = hbaseTestingUtility.getHBaseCluster().getRegionServer(
+        hbaseTestingUtility.getHBaseCluster().getServerWith(r1name));
+      r1 = rs1.getRegion(r1name);
+    }
   }
 
   /**
@@ -224,5 +235,28 @@ public class TestRegionServerOnlineConfigChange {
     rs1.getConfigurationManager().notifyAllObservers(conf);
     assertEquals(newMajorCompactionJitter,
       hstore.getStoreEngine().getCompactionPolicy().getConf().getMajorCompactionJitter(), 0.00001);
+  }
+
+  @Test
+  public void removeClosedRegionFromConfigurationManager() throws Exception {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      Admin admin = connection.getAdmin();
+      assertTrue("The open region doesn't register as a ConfigurationObserver",
+        rs1.getConfigurationManager().containsObserver(r1));
+      admin.move(r1name);
+      hbaseTestingUtility.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+        @Override public boolean evaluate() throws Exception {
+          return rs1.getOnlineRegion(r1name) == null;
+        }
+      });
+      assertFalse("The closed region is not removed from ConfigurationManager",
+        rs1.getConfigurationManager().containsObserver(r1));
+      admin.move(r1name, rs1.getServerName());
+      hbaseTestingUtility.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+        @Override public boolean evaluate() throws Exception {
+          return rs1.getOnlineRegion(r1name) != null;
+        }
+      });
+    }
   }
 }

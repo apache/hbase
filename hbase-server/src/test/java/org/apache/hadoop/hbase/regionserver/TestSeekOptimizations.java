@@ -214,14 +214,14 @@ public class TestSeekOptimizations {
       scan.addColumn(FAMILY_BYTES, Bytes.toBytes(qualStr));
       qualSet.add(qualStr);
     }
-    scan.setMaxVersions(maxVersions);
-    scan.setStartRow(rowBytes(startRow));
+    scan.readVersions(maxVersions);
+    scan.withStartRow(rowBytes(startRow));
 
     // Adjust for the fact that for multi-row queries the end row is exclusive.
-    {
-      final byte[] scannerStopRow =
-          rowBytes(endRow + (startRow != endRow ? 1 : 0));
-      scan.setStopRow(scannerStopRow);
+    if (startRow != endRow) {
+      scan.withStopRow(rowBytes(endRow + 1));
+    } else {
+      scan.withStopRow(rowBytes(endRow), true);
     }
 
     final long initialSeekCount = StoreFileScanner.getSeekCount();

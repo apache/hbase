@@ -25,7 +25,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ZooKeeper-based implementation of {@link org.apache.hadoop.hbase.CoordinatedStateManager}.
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *   distributed WAL splitter (see SplitWALManager) which doesn't use this zk-based coordinator.
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ZkCoordinatedStateManager implements CoordinatedStateManager {
   protected ZKWatcher watcher;

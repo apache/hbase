@@ -23,12 +23,12 @@ require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
-include HBaseConstants
-
 module Hbase
   # rubocop:disable Metrics/ClassLength
   class SpaceQuotasTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
+    include HBaseQuotasConstants
 
     def setup
       setup_hbase
@@ -180,7 +180,7 @@ module Hbase
     define_test 'can set and remove quota' do
       command(:set_quota, TYPE => SPACE, LIMIT => '1G', POLICY => NO_INSERTS, TABLE => @test_name)
       output = capture_stdout{ command(:list_quotas) }
-      assert(output.include?("LIMIT => 1G"))
+      assert(output.include?("LIMIT => 1.00G"))
       assert(output.include?("VIOLATION_POLICY => NO_INSERTS"))
       assert(output.include?("TYPE => SPACE"))
       assert(output.include?("TABLE => #{@test_name}"))
@@ -245,11 +245,15 @@ module Hbase
     end
 
     define_test 'switch rpc throttle' do
-      output = capture_stdout { command(:disable_rpc_throttle) }
+      result = nil
+      output = capture_stdout { result = command(:disable_rpc_throttle) }
       assert(output.include?('Previous rpc throttle state : true'))
+      assert(result == true)
 
-      output = capture_stdout { command(:enable_rpc_throttle) }
+      result = nil
+      output = capture_stdout { result = command(:enable_rpc_throttle) }
       assert(output.include?('Previous rpc throttle state : false'))
+      assert(result == false)
     end
 
     define_test 'can set and remove region server quota' do
@@ -275,11 +279,17 @@ module Hbase
 
     define_test 'switch exceed throttle quota' do
       command(:set_quota, TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => '1CU/sec')
-      output = capture_stdout { command(:enable_exceed_throttle_quota) }
-      assert(output.include?('Previous exceed throttle quota enabled : false'))
 
-      output = capture_stdout { command(:disable_exceed_throttle_quota) }
+      result = nil
+      output = capture_stdout { result = command(:enable_exceed_throttle_quota) }
+      assert(output.include?('Previous exceed throttle quota enabled : false'))
+      assert(result == false)
+
+      result = nil
+      output = capture_stdout { result = command(:disable_exceed_throttle_quota) }
       assert(output.include?('Previous exceed throttle quota enabled : true'))
+      assert(result == true)
+
       command(:set_quota, TYPE => THROTTLE, REGIONSERVER => 'all', LIMIT => NONE)
     end
 

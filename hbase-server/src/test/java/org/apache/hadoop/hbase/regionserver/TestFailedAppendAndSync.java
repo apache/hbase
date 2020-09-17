@@ -23,6 +23,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -113,8 +115,9 @@ public class TestFailedAppendAndSync {
     }
 
     @Override
-    public byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException {
-      byte[][] regions = super.rollWriter(force);
+    public Map<byte[], List<byte[]>> rollWriter(boolean force)
+        throws FailedLogCloseException, IOException {
+      Map<byte[], List<byte[]>> regions = super.rollWriter(force);
       rolls.getAndIncrement();
       return regions;
     }
@@ -147,6 +150,11 @@ public class TestFailedAppendAndSync {
         @Override
         public long getLength() {
           return w.getLength();
+        }
+
+        @Override
+        public long getSyncedLength() {
+          return w.getSyncedLength();
         }
       };
     }
@@ -272,7 +280,8 @@ public class TestFailedAppendAndSync {
    */
   public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, WAL wal)
   throws IOException {
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, false, Durability.SYNC_WAL,
       wal, COLUMN_FAMILY_BYTES);
   }

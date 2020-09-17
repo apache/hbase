@@ -206,6 +206,12 @@ public abstract class TestRSGroupsBase {
       }
     }
     ADMIN.setRSGroup(tables, RSGroupInfo.DEFAULT_GROUP);
+    for (NamespaceDescriptor nd : ADMIN.listNamespaceDescriptors()) {
+      if (groupName.equals(nd.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP))) {
+        nd.removeConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP);
+        ADMIN.modifyNamespace(nd);
+      }
+    }
     RSGroupInfo groupInfo = ADMIN.getRSGroup(groupName);
     ADMIN.moveServersToRSGroup(groupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
     ADMIN.removeRSGroup(groupName);
@@ -331,6 +337,8 @@ public abstract class TestRSGroupsBase {
     boolean postListTablesInRSGroupCalled = false;
     boolean preGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
     boolean postGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
+    boolean preRenameRSGroup = false;
+    boolean postRenameRSGroup = false;
 
     public void resetFlags() {
       preBalanceRSGroupCalled = false;
@@ -361,6 +369,8 @@ public abstract class TestRSGroupsBase {
       postListTablesInRSGroupCalled = false;
       preGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
       postGetConfiguredNamespacesAndTablesInRSGroupCalled = false;
+      preRenameRSGroup = false;
+      postRenameRSGroup = false;
     }
 
     @Override
@@ -522,6 +532,18 @@ public abstract class TestRSGroupsBase {
     public void postGetConfiguredNamespacesAndTablesInRSGroup(
       ObserverContext<MasterCoprocessorEnvironment> ctx, String groupName) throws IOException {
       postGetConfiguredNamespacesAndTablesInRSGroupCalled = true;
+    }
+
+    @Override
+    public void preRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
+      String newName) throws IOException {
+      preRenameRSGroup = true;
+    }
+
+    @Override
+    public void postRenameRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String oldName,
+      String newName) throws IOException {
+      postRenameRSGroup = true;
     }
   }
 }

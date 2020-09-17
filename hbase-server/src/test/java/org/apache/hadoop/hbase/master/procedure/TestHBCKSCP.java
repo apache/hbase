@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -103,7 +103,7 @@ public class TestHBCKSCP extends TestSCPBase {
     // Assert region is OPEN.
     assertEquals(RegionState.State.OPEN.toString(),
         Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
-    ServerName serverName = MetaTableAccessor.getServerName(r, 0);
+    ServerName serverName = CatalogFamilyFormat.getServerName(r, 0);
     assertEquals(rsServerName, serverName);
     // moveFrom adds to dead servers and adds it to processing list only we will
     // not be processing this server 'normally'. Remove it from processing by
@@ -129,7 +129,7 @@ public class TestHBCKSCP extends TestSCPBase {
     r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
     assertEquals(RegionState.State.OPEN.toString(),
         Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
-    serverName = MetaTableAccessor.getServerName(r, 0);
+    serverName = CatalogFamilyFormat.getServerName(r, 0);
     assertNotNull(cluster.getRegionServer(serverName));
     assertEquals(rsServerName, serverName);
 
@@ -149,12 +149,11 @@ public class TestHBCKSCP extends TestSCPBase {
     r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
     assertEquals(RegionState.State.OPEN.toString(),
         Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
-    serverName = MetaTableAccessor.getServerName(r, 0);
+    serverName = CatalogFamilyFormat.getServerName(r, 0);
     assertNotNull(cluster.getRegionServer(serverName));
     assertNotEquals(rsServerName, serverName);
     // Make sure no mention of old server post SCP.
     assertFalse(searchMeta(master, rsServerName));
-    assertFalse(master.getServerManager().getDeadServers().isDeadServer(rsServerName));
   }
 
   /**

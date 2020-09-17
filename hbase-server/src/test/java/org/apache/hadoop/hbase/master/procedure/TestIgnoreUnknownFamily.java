@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -80,7 +81,7 @@ public class TestIgnoreUnknownFamily {
   private void addStoreFileToKnownFamily(RegionInfo region) throws IOException {
     MasterFileSystem mfs = UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path regionDir =
-        FSUtils.getRegionDirFromRootDir(FSUtils.getRootDir(mfs.getConfiguration()), region);
+      FSUtils.getRegionDirFromRootDir(CommonFSUtils.getRootDir(mfs.getConfiguration()), region);
     Path familyDir = new Path(regionDir, Bytes.toString(UNKNOWN_FAMILY));
     StoreFileWriter writer =
         new StoreFileWriter.Builder(mfs.getConfiguration(), mfs.getFileSystem())

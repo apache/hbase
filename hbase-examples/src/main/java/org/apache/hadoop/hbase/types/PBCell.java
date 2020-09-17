@@ -17,26 +17,27 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
 import java.io.IOException;
-import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
+import org.apache.hadoop.hbase.example.protobuf.generated.CellMessage;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
+import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 
 /**
  * An example for using protobuf objects with {@link DataType} API.
  */
 @InterfaceAudience.Private
-public class PBCell extends PBType<CellProtos.Cell> {
+public class PBCell extends PBType<CellMessage.Cell> {
   @Override
-  public Class<CellProtos.Cell> encodedClass() {
-    return CellProtos.Cell.class;
+  public Class<CellMessage.Cell> encodedClass() {
+    return CellMessage.Cell.class;
   }
 
   @Override
   public int skip(PositionedByteRange src) {
-    CellProtos.Cell.Builder builder = CellProtos.Cell.newBuilder();
+    CellMessage.Cell.Builder builder = CellMessage.Cell.newBuilder();
     CodedInputStream is = inputStreamFromByteRange(src);
     is.setSizeLimit(src.getLength());
     try {
@@ -50,12 +51,12 @@ public class PBCell extends PBType<CellProtos.Cell> {
   }
 
   @Override
-  public CellProtos.Cell decode(PositionedByteRange src) {
-    CellProtos.Cell.Builder builder = CellProtos.Cell.newBuilder();
+  public CellMessage.Cell decode(PositionedByteRange src) {
+    CellMessage.Cell.Builder builder = CellMessage.Cell.newBuilder();
     CodedInputStream is = inputStreamFromByteRange(src);
     is.setSizeLimit(src.getLength());
     try {
-      CellProtos.Cell ret = builder.mergeFrom(is).build();
+      CellMessage.Cell ret = builder.mergeFrom(is).build();
       src.setPosition(src.getPosition() + is.getTotalBytesRead());
       return ret;
     } catch (IOException e) {
@@ -64,7 +65,7 @@ public class PBCell extends PBType<CellProtos.Cell> {
   }
 
   @Override
-  public int encode(PositionedByteRange dst, CellProtos.Cell val) {
+  public int encode(PositionedByteRange dst, CellMessage.Cell val) {
     CodedOutputStream os = outputStreamFromByteRange(dst);
     try {
       int before = os.spaceLeft(), after, written;

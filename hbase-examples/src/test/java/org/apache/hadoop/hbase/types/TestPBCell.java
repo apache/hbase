@@ -18,31 +18,24 @@
 package org.apache.hadoop.hbase.types;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
+import org.apache.hadoop.hbase.example.protobuf.generated.CellMessage;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class, MiscTests.class})
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
+@Category({ SmallTests.class, MiscTests.class })
 public class TestPBCell {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPBCell.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestPBCell.class);
 
   private static final PBCell CODEC = new PBCell();
 
@@ -51,16 +44,14 @@ public class TestPBCell {
    */
   @Test
   public void testRoundTrip() {
-    final Cell cell = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("fam"),
-        Bytes.toBytes("qual"), Bytes.toBytes("val"));
-    CellProtos.Cell c = ProtobufUtil.toCell(cell), decoded;
-    PositionedByteRange pbr = new SimplePositionedByteRange(c.getSerializedSize());
+    CellMessage.Cell cell =
+      CellMessage.Cell.newBuilder().setRow(ByteString.copyFromUtf8("row")).build();
+    PositionedByteRange pbr = new SimplePositionedByteRange(cell.getSerializedSize());
     pbr.setPosition(0);
-    int encodedLength = CODEC.encode(pbr, c);
+    int encodedLength = CODEC.encode(pbr, cell);
     pbr.setPosition(0);
-    decoded = CODEC.decode(pbr);
+    CellMessage.Cell decoded = CODEC.decode(pbr);
     assertEquals(encodedLength, pbr.getPosition());
-    assertTrue(CellUtil.equals(cell, ProtobufUtil
-        .toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), decoded)));
+    assertEquals("row", decoded.getRow().toStringUtf8());
   }
 }

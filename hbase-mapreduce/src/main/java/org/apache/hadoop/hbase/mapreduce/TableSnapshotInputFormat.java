@@ -21,16 +21,13 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -99,7 +96,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       this.delegate = delegate;
     }
 
-    public TableSnapshotRegionSplit(HTableDescriptor htd, HRegionInfo regionInfo,
+    public TableSnapshotRegionSplit(TableDescriptor htd, RegionInfo regionInfo,
         List<String> locations, Scan scan, Path restoreDir) {
       this.delegate =
           new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
@@ -125,15 +122,6 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       delegate.readFields(in);
     }
 
-    /**
-     * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-     *             Use {@link #getRegion()}
-     */
-    @Deprecated
-    public HRegionInfo getRegionInfo() {
-      return delegate.getRegionInfo();
-    }
-
     public RegionInfo getRegion() {
       return delegate.getRegionInfo();
     }
@@ -149,13 +137,11 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     private TableSnapshotInputFormatImpl.RecordReader delegate =
       new TableSnapshotInputFormatImpl.RecordReader();
     private TaskAttemptContext context;
-    private Method getCounter;
 
     @Override
     public void initialize(InputSplit split, TaskAttemptContext context) throws IOException,
         InterruptedException {
       this.context = context;
-      getCounter = TableRecordReaderImpl.retrieveGetCounterWithStringsParams(context);
       delegate.initialize(
         ((TableSnapshotRegionSplit) split).delegate,
         context.getConfiguration());
@@ -167,7 +153,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       if (result) {
         ScanMetrics scanMetrics = delegate.getScanner().getScanMetrics();
         if (scanMetrics != null && context != null) {
-          TableRecordReaderImpl.updateCounters(scanMetrics, 0, getCounter, context, 0);
+          TableRecordReaderImpl.updateCounters(scanMetrics, 0, context, 0);
         }
       }
       return result;
