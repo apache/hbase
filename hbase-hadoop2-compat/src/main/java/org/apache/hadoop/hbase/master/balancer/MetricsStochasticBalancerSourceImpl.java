@@ -37,7 +37,7 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
   private int metricsSize = 1000;
   private int mruCap = calcMruCap(metricsSize);
 
-  private Map<String, Map<String, Double>> stochasticCosts =
+  private final Map<String, Map<String, Double>> stochasticCosts =
           new LinkedHashMap<String, Map<String, Double>>(mruCap, MRU_LOAD_FACTOR, true) {
     private static final long serialVersionUID = 8204713453436906599L;
 
@@ -71,7 +71,6 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
     if (tableName == null || costFunctionName == null || cost == null) {
       return;
     }
-
     if (functionDesc != null) {
       costFunctionDescs.put(costFunctionName, functionDesc);
     }
@@ -81,7 +80,6 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
       if (costs == null) {
         costs = new ConcurrentHashMap<>();
       }
-
       costs.put(costFunctionName, cost);
       stochasticCosts.put(tableName, costs);
     }

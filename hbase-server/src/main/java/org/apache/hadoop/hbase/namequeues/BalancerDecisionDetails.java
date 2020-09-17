@@ -19,39 +19,33 @@
 
 package org.apache.hadoop.hbase.namequeues;
 
-import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
- * An envelope to carry payload in the ring buffer that serves as online buffer
- * to provide latest events
+ * Balancer decision details that would be passed on to ring buffer for history
  */
 @InterfaceAudience.Private
-final class RingBufferEnvelope {
+public class BalancerDecisionDetails extends NamedQueuePayload {
 
-  private NamedQueuePayload namedQueuePayload;
+  public static final int BALANCER_DECISION_EVENT = 1;
 
-  /**
-   * Load the Envelope with {@link RpcCall}
-   *
-   * @param namedQueuePayload all details of rpc call that would be useful for ring buffer
-   *   consumers
-   */
-  public void load(NamedQueuePayload namedQueuePayload) {
-    this.namedQueuePayload = namedQueuePayload;
+  private final BalancerDecision balancerDecision;
+
+  public BalancerDecisionDetails(BalancerDecision balancerDecision) {
+    super(BALANCER_DECISION_EVENT);
+    this.balancerDecision = balancerDecision;
   }
 
-  /**
-   * Retrieve current namedQueue payload {@link NamedQueuePayload} available on Envelope and
-   * free up the Envelope
-   *
-   * @return Retrieve rpc log details
-   */
-  public NamedQueuePayload getPayload() {
-    final NamedQueuePayload namedQueuePayload = this.namedQueuePayload;
-    this.namedQueuePayload = null;
-    return namedQueuePayload;
+  public BalancerDecision getBalancerDecision() {
+    return balancerDecision;
   }
 
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this)
+      .append("balancerDecision", balancerDecision)
+      .toString();
+  }
 }

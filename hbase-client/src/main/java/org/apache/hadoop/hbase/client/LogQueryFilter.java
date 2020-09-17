@@ -23,12 +23,16 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Slow/Large Log Query Filter with all filter and limit parameters
- * Used by Admin API: getSlowLogResponses
+ * Extends generic LogRequest used by Admin API getLogEntries
+ * @deprecated as of 2.4.0. Will be removed in 4.0.0.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+@Deprecated
 public class LogQueryFilter {
 
   private String regionName;
@@ -153,4 +157,5 @@ public class LogQueryFilter {
       .append("filterByOperator", filterByOperator)
       .toString();
   }
+
 }
