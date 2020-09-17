@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
@@ -73,6 +74,11 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class BaseLoadBalancer implements LoadBalancer {
+
+  public static final String BALANCER_DECISION_BUFFER_ENABLED =
+    "hbase.master.balancer.decision.buffer.enabled";
+  public static final boolean DEFAULT_BALANCER_DECISION_BUFFER_ENABLED = false;
+
   protected static final int MIN_SERVER_BALANCE = 2;
   private volatile boolean stopped = false;
 
@@ -84,6 +90,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected RegionLocationFinder regionFinder;
   protected boolean useRegionFinder;
   protected boolean isByTable = false;
+
+  /**
+   * Use to add balancer decision history to ring-buffer
+   */
+  protected NamedQueueRecorder namedQueueRecorder;
 
   private static class DefaultRackManager extends RackManager {
     @Override

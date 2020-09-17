@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -74,13 +75,10 @@ public class TestAsyncTableGetMultiThreaded {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static TableName TABLE_NAME = TableName.valueOf("async");
-
-  private static byte[] FAMILY = Bytes.toBytes("cf");
-
-  private static byte[] QUALIFIER = Bytes.toBytes("cq");
-
-  private static int COUNT = 1000;
+  private static final TableName TABLE_NAME = TableName.valueOf("async");
+  private static final byte[] FAMILY = Bytes.toBytes("cf");
+  private static final byte[] QUALIFIER = Bytes.toBytes("cq");
+  private static final int COUNT = 1000;
 
   private static AsyncConnection CONN;
 
@@ -99,6 +97,7 @@ public class TestAsyncTableGetMultiThreaded {
     TEST_UTIL.getConfiguration().setInt(MAX_BUFFER_COUNT_KEY, 100);
     TEST_UTIL.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
       String.valueOf(memoryCompaction));
+    TEST_UTIL.getConfiguration().setBoolean("hbase.master.balancer.decision.buffer.enabled", true);
 
     TEST_UTIL.startMiniCluster(3);
     SPLIT_KEYS = new byte[8][];
@@ -211,6 +210,9 @@ public class TestAsyncTableGetMultiThreaded {
       LOG.info("====== Move meta done ======");
       Thread.sleep(5000);
     }
+    List<LogEntry> balancerDecisionRecords =
+      admin.getLogEntries(null, "BALANCER_DECISION", ServerType.MASTER, 2, null);
+    Assert.assertEquals(balancerDecisionRecords.size(), 2);
     LOG.info("====== Read test finished, shutdown thread pool ======");
     stop.set(true);
     executor.shutdown();
