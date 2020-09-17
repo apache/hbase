@@ -37,7 +37,7 @@ Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-
                                 e.g. https://dist.apache.org/repos/dist/dev/hbase/hbase-<version>RC0/
   -k | --key '<signature>'      A signature of the public key, e.g. 9AD2AE49
   -f | --keys-file-url '<url>'   the URL of the key file, default is
-                                http://www.apache.org/dist/hbase/KEYS
+                                https://downloads.apache.org/hbase/KEYS
   -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
   -P |                          list of maven profiles to activate for test UT/IT, i.e. <-P runSmallTests> Defaults to runAllTests
 __EOF
@@ -103,7 +103,7 @@ BUILD_FROM_SOURCE_PASSED=0
 UNIT_TEST_PASSED=0
 
 function download_and_import_keys() {
-    KEY_FILE_URL="${KEY_FILE_URL:-https://www.apache.org/dist/hbase/KEYS}"
+    KEY_FILE_URL="${KEY_FILE_URL:-https://downloads.apache.org/hbase/KEYS}"
     echo "Obtain and import the publisher key(s) from ${KEY_FILE_URL}"
     # download the keys file into file KEYS
     wget -O KEYS "${KEY_FILE_URL}"
