@@ -132,7 +132,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
    *
    * @param table
    * @param family
-   * @return Subprocedure to submit to the ProcedureMemeber.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(String table, String family) {
 

@@ -150,7 +150,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
    * the snapshot verification step.
    *
    * @param snapshot
-   * @return Subprocedure to submit to the ProcedureMemeber.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(SnapshotDescription snapshot) {
 
