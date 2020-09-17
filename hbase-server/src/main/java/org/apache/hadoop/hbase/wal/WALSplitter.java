@@ -325,6 +325,7 @@ public class WALSplitter {
           }
           lastFlushedSequenceIds.put(encodedRegionNameAsStr, lastFlushedSequenceId);
         }
+        editsCount++;
         if (lastFlushedSequenceId >= entry.getKey().getSequenceId()) {
           editsSkipped++;
           continue;
@@ -335,7 +336,6 @@ public class WALSplitter {
           continue;
         }
         entryBuffers.appendEntry(entry);
-        editsCount++;
         int moreWritersFromLastCheck = this.getNumOpenWriters() - numOpenedFilesLastCheck;
         // If sufficient edits have passed, check if we should report progress.
         if (editsCount % interval == 0
