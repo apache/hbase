@@ -92,7 +92,7 @@ public class AssignRegionHandler extends EventHandler {
     String regionName = regionInfo.getRegionNameAsString();
     Region onlineRegion = rs.getRegion(encodedName);
     if (onlineRegion != null) {
-      LOG.warn("Received OPEN for the region:{}, which is already online", regionName);
+      LOG.warn("Received OPEN for {} which is already online", regionName);
       // Just follow the old behavior, do we need to call reportRegionStateTransition? Maybe not?
       // For normal case, it could happen that the rpc call to schedule this handler is succeeded,
       // but before returning to master the connection is broken. And when master tries again, we
@@ -104,7 +104,7 @@ public class AssignRegionHandler extends EventHandler {
     if (previous != null) {
       if (previous) {
         // The region is opening and this maybe a retry on the rpc call, it is safe to ignore it.
-        LOG.info("Receiving OPEN for the region:{}, which we are already trying to OPEN" +
+        LOG.info("Receiving OPEN for {} which we are already trying to OPEN" +
           " - ignoring this new request for this region.", regionName);
       } else {
         // The region is closing. This is possible as we will update the region state to CLOSED when
@@ -113,7 +113,7 @@ public class AssignRegionHandler extends EventHandler {
         // closing process.
         long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
         LOG.info(
-          "Receiving OPEN for the region:{}, which we are trying to close, try again after {}ms",
+          "Receiving OPEN for {} which we are trying to close, try again after {}ms",
           regionName, backoff);
         rs.getExecutorService().delayedSubmit(this, backoff, TimeUnit.MILLISECONDS);
       }
@@ -145,11 +145,10 @@ public class AssignRegionHandler extends EventHandler {
     Boolean current = rs.getRegionsInTransitionInRS().remove(regionInfo.getEncodedNameAsBytes());
     if (current == null) {
       // Should NEVER happen, but let's be paranoid.
-      LOG.error("Bad state: we've just opened a region that was NOT in transition. Region={}",
-        regionName);
+      LOG.error("Bad state: we've just opened {} which was NOT in transition", regionName);
     } else if (!current) {
       // Should NEVER happen, but let's be paranoid.
-      LOG.error("Bad state: we've just opened a region that was closing. Region={}", regionName);
+      LOG.error("Bad state: we've just opened {} which was closing", regionName);
     }
   }
 
@@ -168,7 +167,7 @@ public class AssignRegionHandler extends EventHandler {
       long openProcId, TableDescriptor tableDesc, long masterSystemTime) {
     EventType eventType;
     if (regionInfo.isMetaRegion()) {
-      eventType = EventType.M_RS_CLOSE_META;
+      eventType = EventType.M_RS_OPEN_META;
     } else if (regionInfo.getTable().isSystemTable() ||
       (tableDesc != null && tableDesc.getPriority() >= HConstants.ADMIN_QOS)) {
       eventType = EventType.M_RS_OPEN_PRIORITY_REGION;
