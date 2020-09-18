@@ -310,6 +310,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   // Request counter for rpc scan
   final LongAdder rpcScanRequestCount = new LongAdder();
+  
+  // Request counter for scans that might end up in full scans
+  final LongAdder rpcFullScanRequestCount = new LongAdder();
 
   // Request counter for rpc multi
   final LongAdder rpcMultiRequestCount = new LongAdder();
@@ -455,15 +458,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     private final RpcCallback shippedCallback;
     private byte[] rowOfLastPartialResult;
     private boolean needCursor;
+    private boolean fullRegionScan;
 
     public RegionScannerHolder(String scannerName, RegionScanner s, HRegion r,
-        RpcCallback closeCallBack, RpcCallback shippedCallback, boolean needCursor) {
+        RpcCallback closeCallBack, RpcCallback shippedCallback, boolean needCursor,
+        boolean fullRegionScan) {
       this.scannerName = scannerName;
       this.s = s;
       this.r = r;
       this.closeCallBack = closeCallBack;
       this.shippedCallback = shippedCallback;
       this.needCursor = needCursor;
+      this.fullRegionScan = fullRegionScan;
     }
 
     public long getNextCallSeq() {
@@ -1322,7 +1328,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Shipper shipper,
-      HRegion r, boolean needCursor) throws LeaseStillHeldException {
+      HRegion r, boolean needCursor, boolean fullRegionScan) throws LeaseStillHeldException {
     Lease lease = regionServer.getLeaseManager().createLease(
         scannerName, this.scannerLeaseTimeoutPeriod, new ScannerListener(scannerName));
     RpcCallback shippedCallback = new RegionScannerShippedCallBack(scannerName, shipper, lease);
@@ -1332,12 +1338,28 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } else {
       closeCallback = new RegionScannerCloseCallBack(s);
     }
+
     RegionScannerHolder rsh =
-        new RegionScannerHolder(scannerName, s, r, closeCallback, shippedCallback, needCursor);
+        new RegionScannerHolder(scannerName, s, r, closeCallback, shippedCallback,
+          needCursor, fullRegionScan);
     RegionScannerHolder existing = scanners.putIfAbsent(scannerName, rsh);
     assert existing == null : "scannerId must be unique within regionserver's whole lifecycle! " +
       scannerName;
     return rsh;
+  }
+
+  private boolean isFullRegionScan(Scan scan, HRegion region) {
+    // If the scan start row equals or less than the start key of the region
+    // and stop row greater than equals end key (if stop row present)
+    // or if the stop row is empty
+    // account this as a full region scan
+    if (Bytes.compareTo(scan.getStartRow(), region.getRegionInfo().getStartKey())  <= 0
+      && (Bytes.compareTo(scan.getStopRow(), region.getRegionInfo().getEndKey()) >= 0 &&
+      !Bytes.equals(region.getRegionInfo().getEndKey(), HConstants.EMPTY_END_ROW)
+      || Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW))) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -3083,7 +3105,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     builder.setMvccReadPoint(scanner.getMvccReadPoint());
     builder.setTtl(scannerLeaseTimeoutPeriod);
     String scannerName = String.valueOf(scannerId);
-    return addScanner(scannerName, scanner, shipper, region, scan.isNeedCursorResult());
+
+    boolean fullRegionScan = !region.getRegionInfo().getTable().isSystemTable() &&
+      isFullRegionScan(scan, region);
+
+    return addScanner(scannerName, scanner, shipper, region, scan.isNeedCursorResult(),
+      fullRegionScan);
   }
 
   private void checkScanNextCallSeq(ScanRequest request, RegionScannerHolder rsh)
@@ -3396,6 +3423,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         return builder.build();
       }
       throw new ServiceException(e);
+    }
+    if (rsh.fullRegionScan) {
+      rpcFullScanRequestCount.increment();
     }
     HRegion region = rsh.r;
     String scannerName = rsh.scannerName;
