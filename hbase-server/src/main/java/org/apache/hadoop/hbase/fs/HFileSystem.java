@@ -85,8 +85,6 @@ public class HFileSystem extends FilterFileSystem {
     this.fs = FileSystem.get(conf);
     this.useHBaseChecksum = useHBaseChecksum;
 
-    fs.initialize(getDefaultUri(conf), conf);
-
     // disable checksum verification for local fileSystem, see HBASE-11218
     if (fs instanceof LocalFileSystem) {
       fs.setWriteChecksum(false);
