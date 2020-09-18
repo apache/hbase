@@ -382,13 +382,8 @@ public class RESTServer implements Constants {
       this.infoServer.setAttribute("hbase.conf", conf);
       this.infoServer.start();
     }
-    try {
-      // start server
-      server.start();
-    } catch (Exception e) {
-      LOG.error(HBaseMarkers.FATAL, "Failed to start server", e);
-      throw e;
-    }
+    // start server
+    server.start();
   }
 
   public synchronized void join() throws Exception {
@@ -442,6 +437,7 @@ public class RESTServer implements Constants {
       server.run();
       server.join();
     } catch (Exception e) {
+      LOG.error(HBaseMarkers.FATAL, "Failed to start server", e);
       System.exit(1);
     }
 
