@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.client.ClientUtil;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Cursor;
@@ -83,6 +84,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
@@ -151,6 +153,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableReques
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.protobuf.generated.RecentLogs;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
@@ -177,6 +180,7 @@ import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
@@ -3727,7 +3731,7 @@ public final class ProtobufUtil {
    * @param slowLogPayload SlowLog Payload protobuf instance
    * @return SlowLog Payload for client usecase
    */
-  private static OnlineLogRecord getSlowLogRecord(
+  private static LogEntry getSlowLogRecord(
       final TooSlowLog.SlowLogPayload slowLogPayload) {
     OnlineLogRecord onlineLogRecord = new OnlineLogRecord.OnlineLogRecordBuilder()
       .setCallDetails(slowLogPayload.getCallDetails())
@@ -3751,16 +3755,29 @@ public final class ProtobufUtil {
   /**
    * Convert  AdminProtos#SlowLogResponses to list of {@link OnlineLogRecord}
    *
-   * @param slowLogResponses slowlog response protobuf instance
+   * @param logEntry slowlog response protobuf instance
    * @return list of SlowLog payloads for client usecase
    */
-  public static List<OnlineLogRecord> toSlowLogPayloads(
-      final SlowLogResponses slowLogResponses) {
-    List<OnlineLogRecord> slowLogRecords = new ArrayList<>();
-    for (TooSlowLog.SlowLogPayload slowLogPayload : slowLogResponses.getSlowLogPayloadsList()) {
-      slowLogRecords.add(ProtobufUtil.getSlowLogRecord(slowLogPayload));
+  public static List<LogEntry> toSlowLogPayloads(
+      final HBaseProtos.LogEntry logEntry) {
+    try {
+      final String logClassName = logEntry.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("SlowLogResponses")) {
+        SlowLogResponses slowLogResponses = (SlowLogResponses) method
+          .invoke(null, logEntry.getLogMessage());
+        List<LogEntry> logEntries = new ArrayList<>();
+        for (TooSlowLog.SlowLogPayload slowLogPayload : slowLogResponses.getSlowLogPayloadsList()) {
+          logEntries.add(ProtobufUtil.getSlowLogRecord(slowLogPayload));
+        }
+        return logEntries;
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      throw new RuntimeException("Error while retrieving response from server");
     }
-    return slowLogRecords;
+    throw new RuntimeException("Invalid response from server");
   }
 
   /**
@@ -3771,6 +3788,54 @@ public final class ProtobufUtil {
    */
   public static boolean toClearSlowLogPayload(final ClearSlowLogResponses clearSlowLogResponses) {
     return clearSlowLogResponses.getIsCleaned();
+  }
+
+  public static List<LogEntry> toBalancerDecisionResponse(
+      HBaseProtos.LogEntry logEntry) {
+    try {
+      final String logClassName = logEntry.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("BalancerDecisionsResponse")) {
+        MasterProtos.BalancerDecisionsResponse response =
+          (MasterProtos.BalancerDecisionsResponse) method
+            .invoke(null, logEntry.getLogMessage());
+        return getBalancerDecisionEntries(response);
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      throw new RuntimeException("Error while retrieving response from server");
+    }
+    throw new RuntimeException("Invalid response from server");
+  }
+
+  public static List<LogEntry> getBalancerDecisionEntries(
+      MasterProtos.BalancerDecisionsResponse response) {
+    List<RecentLogs.BalancerDecision> balancerDecisions = response.getBalancerDecisionList();
+    if (CollectionUtils.isEmpty(balancerDecisions)) {
+      return Collections.emptyList();
+    }
+    List<LogEntry> logEntries = new ArrayList<>();
+    for (RecentLogs.BalancerDecision balancerDecision : balancerDecisions) {
+      BalancerDecision bd =
+        new BalancerDecision.Builder().setInitTotalCost(balancerDecision.getInitTotalCost())
+          .setInitialFunctionCosts(balancerDecision.getInitialFunctionCosts())
+          .setComputedTotalCost(balancerDecision.getComputedTotalCost())
+          .setFinalFunctionCosts(balancerDecision.getFinalFunctionCosts())
+          .setComputedSteps(balancerDecision.getComputedSteps())
+          .setRegionPlans(balancerDecision.getRegionPlansList()).build();
+      logEntries.add(bd);
+    }
+    return logEntries;
+  }
+
+  public static HBaseProtos.LogRequest toBalancerDecisionRequest(int limit) {
+    MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest =
+      MasterProtos.BalancerDecisionsRequest.newBuilder().setLimit(limit).build();
+    return HBaseProtos.LogRequest.newBuilder()
+      .setLogClassName(balancerDecisionsRequest.getClass().getName())
+      .setLogMessage(balancerDecisionsRequest.toByteString())
+      .build();
   }
 
 }

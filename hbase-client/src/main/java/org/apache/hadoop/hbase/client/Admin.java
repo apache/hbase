@@ -1683,18 +1683,6 @@ public interface Admin extends Abortable, Closeable {
   boolean isSnapshotCleanupEnabled() throws IOException;
 
   /**
-   * Retrieves online slow/large RPC logs from the provided list of
-   * RegionServers
-   *
-   * @param serverNames Server names to get slowlog responses from
-   * @param logQueryFilter filter to be used if provided (determines slow / large RPC logs)
-   * @return online slowlog response list
-   * @throws IOException if a remote or network exception occurs
-   */
-  List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-    final LogQueryFilter logQueryFilter) throws IOException;
-
-  /**
    * Clears online slow/large RPC logs from the provided list of
    * RegionServers
    *
@@ -1706,4 +1694,21 @@ public interface Admin extends Abortable, Closeable {
   List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
     throws IOException;
 
+
+  /**
+   * Retrieve recent online records from HMaster / RegionServers.
+   * Examples include slow/large RPC logs, balancer decisions by master.
+   *
+   * @param serverNames servers to retrieve records from, useful in case of records maintained
+   *   by RegionServer as we can select specific server. In case of servertype=MASTER, logs will
+   *   only come from the currently active master.
+   * @param logType string representing type of log records
+   * @param serverType enum for server type: HMaster or RegionServer
+   * @param limit put a limit to list of records that server should send in response
+   * @param filterParams additional filter params
+   * @return Log entries representing online records from servers
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+    ServerType serverType, int limit, Map<String, Object> filterParams) throws IOException;
 }

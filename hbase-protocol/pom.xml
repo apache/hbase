@@ -191,6 +191,7 @@
                           <include>Procedure.proto</include>
                           <include>Quota.proto</include>
                           <include>RPC.proto</include>
+                          <include>RecentLogs.proto</include>
                           <include>RegionNormalizer.proto</include>
                           <include>RegionServerStatus.proto</include>
                           <include>RowProcessor.proto</include>

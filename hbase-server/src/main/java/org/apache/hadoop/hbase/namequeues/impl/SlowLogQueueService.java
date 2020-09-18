@@ -195,7 +195,7 @@ public class SlowLogQueueService implements NamedQueueService {
       slowLogPayloads = getSlowLogPayloads(slowLogResponseRequest);
     }
     NamedQueueGetResponse response = new NamedQueueGetResponse();
-    response.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    response.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
     response.setSlowLogPayloads(slowLogPayloads);
     return response;
   }

@@ -25,6 +25,7 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.GsonUtil;
 
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
@@ -37,8 +38,9 @@ import org.apache.hbase.thirdparty.com.google.gson.JsonSerializer;
  * Slow/Large Log payload for hbase-client, to be used by Admin API get_slow_responses and
  * get_large_responses
  */
-@InterfaceAudience.Private
-final public class OnlineLogRecord {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+final public class OnlineLogRecord extends LogEntry {
   // used to convert object to pretty printed format
   // used by toJsonPrettyPrint()
   private static final Gson GSON = GsonUtil.createGson().setPrettyPrinting()
@@ -61,22 +63,22 @@ final public class OnlineLogRecord {
       }
     }).create();
 
-  private long startTime;
-  private int processingTime;
-  private int queueTime;
-  private long responseSize;
-  private String clientAddress;
-  private String serverClass;
-  private String methodName;
-  private String callDetails;
-  private String param;
+  private final long startTime;
+  private final int processingTime;
+  private final int queueTime;
+  private final long responseSize;
+  private final String clientAddress;
+  private final String serverClass;
+  private final String methodName;
+  private final String callDetails;
+  private final String param;
   // we don't want to serialize region name, it is just for the filter purpose
   // hence avoiding deserialization
-  private transient String regionName;
-  private String userName;
-  private int multiGetsCount;
-  private int multiMutationsCount;
-  private int multiServiceCalls;
+  private final transient String regionName;
+  private final String userName;
+  private final int multiGetsCount;
+  private final int multiMutationsCount;
+  private final int multiServiceCalls;
 
   public long getStartTime() {
     return startTime;

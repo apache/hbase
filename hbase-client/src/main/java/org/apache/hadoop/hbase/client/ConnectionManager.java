@@ -2138,6 +2138,12 @@ class ConnectionManager {
         }
 
         @Override
+        public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+            HBaseProtos.LogRequest request) throws ServiceException {
+          return stub.getLogEntries(controller, request);
+        }
+
+        @Override
         public ListNamespaceDescriptorsResponse listNamespaceDescriptors(RpcController controller,
             ListNamespaceDescriptorsRequest request) throws ServiceException {
           return stub.listNamespaceDescriptors(controller, request);

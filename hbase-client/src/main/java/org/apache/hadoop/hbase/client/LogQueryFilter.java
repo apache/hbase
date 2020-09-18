@@ -23,12 +23,16 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Slow/Large Log Query Filter with all filter and limit parameters
- * Used by Admin API: getSlowLogResponses
+ * Extends generic LogRequest used by Admin API getLogEntries
+ * @deprecated as of 2.4.0. Will be removed in 4.0.0.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+@Deprecated
 public class LogQueryFilter {
 
   private String regionName;

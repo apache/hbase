@@ -17,40 +17,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.namequeues;
+package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
- * An envelope to carry payload in the ring buffer that serves as online buffer
- * to provide latest events
+ * Abstract response class representing online logs response from ring-buffer use-cases
+ * e.g slow/large RPC logs, balancer decision logs
  */
-@InterfaceAudience.Private
-final class RingBufferEnvelope {
-
-  private NamedQueuePayload namedQueuePayload;
-
-  /**
-   * Load the Envelope with NamedQueuePayload
-   *
-   * @param namedQueuePayload all details of rpc call that would be useful for ring buffer
-   *   consumers
-   */
-  public void load(NamedQueuePayload namedQueuePayload) {
-    this.namedQueuePayload = namedQueuePayload;
-  }
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public abstract class LogEntry {
 
   /**
-   * Retrieve current namedQueue payload {@link NamedQueuePayload} available on Envelope and
-   * free up the Envelope
-   *
-   * @return Retrieve rpc log details
+   * Based on response sent by server, provide pretty printed Json representation in string
+   * @return Pretty printed Json representation
    */
-  public NamedQueuePayload getPayload() {
-    final NamedQueuePayload namedQueuePayload = this.namedQueuePayload;
-    this.namedQueuePayload = null;
-    return namedQueuePayload;
-  }
+  public abstract String toJsonPrettyPrint();
 
 }

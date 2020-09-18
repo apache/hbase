@@ -18680,6 +18680,1242 @@ public final class HBaseProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.SnapshotDescription)
   }
 
+  public interface LogRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required string log_class_name = 1;
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    boolean hasLogClassName();
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    java.lang.String getLogClassName();
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getLogClassNameBytes();
+
+    // required bytes log_message = 2;
+    /**
+     * <code>required bytes log_message = 2;</code>
+     */
+    boolean hasLogMessage();
+    /**
+     * <code>required bytes log_message = 2;</code>
+     */
+    com.google.protobuf.ByteString getLogMessage();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.LogRequest}
+   */
+  public static final class LogRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements LogRequestOrBuilder {
+    // Use LogRequest.newBuilder() to construct.
+    private LogRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private LogRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final LogRequest defaultInstance;
+    public static LogRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public LogRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private LogRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              logClassName_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              logMessage_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LogRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LogRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<LogRequest> PARSER =
+        new com.google.protobuf.AbstractParser<LogRequest>() {
+      public LogRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new LogRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<LogRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required string log_class_name = 1;
+    public static final int LOG_CLASS_NAME_FIELD_NUMBER = 1;
+    private java.lang.Object logClassName_;
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    public boolean hasLogClassName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    public java.lang.String getLogClassName() {
+      java.lang.Object ref = logClassName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          logClassName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getLogClassNameBytes() {
+      java.lang.Object ref = logClassName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        logClassName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required bytes log_message = 2;
+    public static final int LOG_MESSAGE_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString logMessage_;
+    /**
+     * <code>required bytes log_message = 2;</code>
+     */
+    public boolean hasLogMessage() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required bytes log_message = 2;</code>
+     */
+    public com.google.protobuf.ByteString getLogMessage() {
+      return logMessage_;
+    }
+
+    private void initFields() {
+      logClassName_ = "";
+      logMessage_ = com.google.protobuf.ByteString.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasLogClassName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasLogMessage()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getLogClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, logMessage_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getLogClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, logMessage_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest other = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest) obj;
+
+      boolean result = true;
+      result = result && (hasLogClassName() == other.hasLogClassName());
+      if (hasLogClassName()) {
+        result = result && getLogClassName()
+            .equals(other.getLogClassName());
+      }
+      result = result && (hasLogMessage() == other.hasLogMessage());
+      if (hasLogMessage()) {
+        result = result && getLogMessage()
+            .equals(other.getLogMessage());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasLogClassName()) {
+        hash = (37 * hash) + LOG_CLASS_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getLogClassName().hashCode();
+      }
+      if (hasLogMessage()) {
+        hash = (37 * hash) + LOG_MESSAGE_FIELD_NUMBER;
+        hash = (53 * hash) + getLogMessage().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.LogRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LogRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LogRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        logClassName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        logMessage_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LogRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest result = new org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.logClassName_ = logClassName_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.logMessage_ = logMessage_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.getDefaultInstance()) return this;
+        if (other.hasLogClassName()) {
+          bitField0_ |= 0x00000001;
+          logClassName_ = other.logClassName_;
+          onChanged();
+        }
+        if (other.hasLogMessage()) {
+          setLogMessage(other.getLogMessage());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasLogClassName()) {
+          
+          return false;
+        }
+        if (!hasLogMessage()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required string log_class_name = 1;
+      private java.lang.Object logClassName_ = "";
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public boolean hasLogClassName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public java.lang.String getLogClassName() {
+        java.lang.Object ref = logClassName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          logClassName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getLogClassNameBytes() {
+        java.lang.Object ref = logClassName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          logClassName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public Builder setLogClassName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        logClassName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public Builder clearLogClassName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        logClassName_ = getDefaultInstance().getLogClassName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public Builder setLogClassNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        logClassName_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required bytes log_message = 2;
+      private com.google.protobuf.ByteString logMessage_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes log_message = 2;</code>
+       */
+      public boolean hasLogMessage() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required bytes log_message = 2;</code>
+       */
+      public com.google.protobuf.ByteString getLogMessage() {
+        return logMessage_;
+      }
+      /**
+       * <code>required bytes log_message = 2;</code>
+       */
+      public Builder setLogMessage(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        logMessage_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bytes log_message = 2;</code>
+       */
+      public Builder clearLogMessage() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        logMessage_ = getDefaultInstance().getLogMessage();
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.LogRequest)
+    }
+
+    static {
+      defaultInstance = new LogRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.LogRequest)
+  }
+
+  public interface LogEntryOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required string log_class_name = 1;
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    boolean hasLogClassName();
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    java.lang.String getLogClassName();
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getLogClassNameBytes();
+
+    // required bytes log_message = 2;
+    /**
+     * <code>required bytes log_message = 2;</code>
+     */
+    boolean hasLogMessage();
+    /**
+     * <code>required bytes log_message = 2;</code>
+     */
+    com.google.protobuf.ByteString getLogMessage();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.LogEntry}
+   */
+  public static final class LogEntry extends
+      com.google.protobuf.GeneratedMessage
+      implements LogEntryOrBuilder {
+    // Use LogEntry.newBuilder() to construct.
+    private LogEntry(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private LogEntry(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final LogEntry defaultInstance;
+    public static LogEntry getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public LogEntry getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private LogEntry(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              logClassName_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              logMessage_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LogEntry_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LogEntry_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<LogEntry> PARSER =
+        new com.google.protobuf.AbstractParser<LogEntry>() {
+      public LogEntry parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new LogEntry(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<LogEntry> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required string log_class_name = 1;
+    public static final int LOG_CLASS_NAME_FIELD_NUMBER = 1;
+    private java.lang.Object logClassName_;
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    public boolean hasLogClassName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    public java.lang.String getLogClassName() {
+      java.lang.Object ref = logClassName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          logClassName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string log_class_name = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getLogClassNameBytes() {
+      java.lang.Object ref = logClassName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        logClassName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required bytes log_message = 2;
+    public static final int LOG_MESSAGE_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString logMessage_;
+    /**
+     * <code>required bytes log_message = 2;</code>
+     */
+    public boolean hasLogMessage() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required bytes log_message = 2;</code>
+     */
+    public com.google.protobuf.ByteString getLogMessage() {
+      return logMessage_;
+    }
+
+    private void initFields() {
+      logClassName_ = "";
+      logMessage_ = com.google.protobuf.ByteString.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasLogClassName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasLogMessage()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getLogClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, logMessage_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getLogClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, logMessage_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry other = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry) obj;
+
+      boolean result = true;
+      result = result && (hasLogClassName() == other.hasLogClassName());
+      if (hasLogClassName()) {
+        result = result && getLogClassName()
+            .equals(other.getLogClassName());
+      }
+      result = result && (hasLogMessage() == other.hasLogMessage());
+      if (hasLogMessage()) {
+        result = result && getLogMessage()
+            .equals(other.getLogMessage());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasLogClassName()) {
+        hash = (37 * hash) + LOG_CLASS_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getLogClassName().hashCode();
+      }
+      if (hasLogMessage()) {
+        hash = (37 * hash) + LOG_MESSAGE_FIELD_NUMBER;
+        hash = (53 * hash) + getLogMessage().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.LogEntry}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntryOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LogEntry_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LogEntry_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        logClassName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        logMessage_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LogEntry_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry build() {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry result = new org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.logClassName_ = logClassName_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.logMessage_ = logMessage_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance()) return this;
+        if (other.hasLogClassName()) {
+          bitField0_ |= 0x00000001;
+          logClassName_ = other.logClassName_;
+          onChanged();
+        }
+        if (other.hasLogMessage()) {
+          setLogMessage(other.getLogMessage());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasLogClassName()) {
+          
+          return false;
+        }
+        if (!hasLogMessage()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required string log_class_name = 1;
+      private java.lang.Object logClassName_ = "";
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public boolean hasLogClassName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public java.lang.String getLogClassName() {
+        java.lang.Object ref = logClassName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          logClassName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getLogClassNameBytes() {
+        java.lang.Object ref = logClassName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          logClassName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public Builder setLogClassName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        logClassName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public Builder clearLogClassName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        logClassName_ = getDefaultInstance().getLogClassName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string log_class_name = 1;</code>
+       */
+      public Builder setLogClassNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        logClassName_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required bytes log_message = 2;
+      private com.google.protobuf.ByteString logMessage_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes log_message = 2;</code>
+       */
+      public boolean hasLogMessage() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required bytes log_message = 2;</code>
+       */
+      public com.google.protobuf.ByteString getLogMessage() {
+        return logMessage_;
+      }
+      /**
+       * <code>required bytes log_message = 2;</code>
+       */
+      public Builder setLogMessage(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        logMessage_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bytes log_message = 2;</code>
+       */
+      public Builder clearLogMessage() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        logMessage_ = getDefaultInstance().getLogMessage();
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.LogEntry)
+    }
+
+    static {
+      defaultInstance = new LogEntry(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.LogEntry)
+  }
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_TableSchema_descriptor;
   private static
@@ -18795,6 +20031,16 @@ public final class HBaseProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_LogRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_LogRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_LogEntry_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_LogEntry_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -18857,14 +20103,17 @@ public final class HBaseProtos {
       "owner\030\006 \001(\t\022<\n\025users_and_permissions\030\007 \001" +
       "(\0132\035.hbase.pb.UsersAndPermissions\022\016\n\003ttl" +
       "\030\010 \001(\003:\0010\".\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH" +
-      "\020\001\022\r\n\tSKIPFLUSH\020\002*r\n\013CompareType\022\010\n\004LESS" +
-      "\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_" +
-      "EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER" +
-      "\020\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSECONDS" +
-      "\020\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLISECONDS\020\003\022\013" +
-      "\n\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006\022\010\n\004D" +
-      "AYS\020\007B>\n*org.apache.hadoop.hbase.protobu",
-      "f.generatedB\013HBaseProtosH\001\240\001\001"
+      "\020\001\022\r\n\tSKIPFLUSH\020\002\"9\n\nLogRequest\022\026\n\016log_c" +
+      "lass_name\030\001 \002(\t\022\023\n\013log_message\030\002 \002(\014\"7\n\010" +
+      "LogEntry\022\026\n\016log_class_name\030\001 \002(\t\022\023\n\013log_" +
+      "message\030\002 \002(\014*r\n\013CompareType\022\010\n\004LESS\020\000\022\021" +
+      "\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUA" +
+      "L\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t" +
+      "\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSECONDS\020\001\022\020",
+      "\n\014MICROSECONDS\020\002\022\020\n\014MILLISECONDS\020\003\022\013\n\007SE" +
+      "CONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006\022\010\n\004DAYS\020" +
+      "\007B>\n*org.apache.hadoop.hbase.protobuf.ge" +
+      "neratedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -19009,6 +20258,18 @@ public final class HBaseProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SnapshotDescription_descriptor,
               new java.lang.String[] { "Name", "Table", "CreationTime", "Type", "Version", "Owner", "UsersAndPermissions", "Ttl", });
+          internal_static_hbase_pb_LogRequest_descriptor =
+            getDescriptor().getMessageTypes().get(23);
+          internal_static_hbase_pb_LogRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_LogRequest_descriptor,
+              new java.lang.String[] { "LogClassName", "LogMessage", });
+          internal_static_hbase_pb_LogEntry_descriptor =
+            getDescriptor().getMessageTypes().get(24);
+          internal_static_hbase_pb_LogEntry_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_LogEntry_descriptor,
+              new java.lang.String[] { "LogClassName", "LogMessage", });
           return null;
         }
       };

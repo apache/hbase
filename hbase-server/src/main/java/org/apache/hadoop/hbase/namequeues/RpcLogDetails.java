@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class RpcLogDetails extends NamedQueuePayload {
 
+  public static final int SLOW_LOG_EVENT = 0;
+
   private final Descriptors.MethodDescriptor methodDescriptor;
   private final Message param;
   private final String clientAddress;
@@ -44,7 +46,7 @@ public class RpcLogDetails extends NamedQueuePayload {
   public RpcLogDetails(Descriptors.MethodDescriptor methodDescriptor, Message param,
       String clientAddress, long responseSize, String className, boolean isSlowLog,
       boolean isLargeLog, long receiveTime, long startTime, String userName) {
-    super(NamedQueueEvent.SLOW_LOG);
+    super(SLOW_LOG_EVENT);
     this.methodDescriptor = methodDescriptor;
     this.param = param;
     this.clientAddress = clientAddress;

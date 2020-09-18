@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.protobuf;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
@@ -38,7 +40,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionCoprocessorServiceExec;
@@ -79,6 +80,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Col
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -1886,45 +1888,67 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer {@link SlowLogResponseRequest}
+   * Build RPC request payload for getLogEntries
    *
-   * @param logQueryFilter filter to use if provided
-   * @return a protocol buffer SlowLogResponseRequest
+   * @param filterParams map of filter params
+   * @param limit limit for no of records that server returns
+   * @param logType type of the log records
+   * @return request payload {@link HBaseProtos.LogRequest}
    */
-  public static SlowLogResponseRequest buildSlowLogResponseRequest(
-    final LogQueryFilter logQueryFilter) {
+  public static HBaseProtos.LogRequest buildSlowLogResponseRequest(
+      final Map<String, Object> filterParams, final int limit, final String logType) {
     SlowLogResponseRequest.Builder builder = SlowLogResponseRequest.newBuilder();
-    if (logQueryFilter == null) {
-      return builder.build();
+    builder.setLimit(limit);
+    if (logType.equals("SLOW_LOG")) {
+      builder.setLogType(SlowLogResponseRequest.LogType.SLOW_LOG);
+    } else if (logType.equals("LARGE_LOG")) {
+      builder.setLogType(SlowLogResponseRequest.LogType.LARGE_LOG);
     }
-    final String clientAddress = logQueryFilter.getClientAddress();
-    if (StringUtils.isNotEmpty(clientAddress)) {
-      builder.setClientAddress(clientAddress);
+    boolean filterByAnd = false;
+    if (MapUtils.isNotEmpty(filterParams)) {
+      if (filterParams.containsKey("clientAddress")) {
+        final String clientAddress = (String) filterParams.get("clientAddress");
+        if (StringUtils.isNotEmpty(clientAddress)) {
+          builder.setClientAddress(clientAddress);
+        }
+      }
+      if (filterParams.containsKey("regionName")) {
+        final String regionName = (String) filterParams.get("regionName");
+        if (StringUtils.isNotEmpty(regionName)) {
+          builder.setRegionName(regionName);
+        }
+      }
+      if (filterParams.containsKey("tableName")) {
+        final String tableName = (String) filterParams.get("tableName");
+        if (StringUtils.isNotEmpty(tableName)) {
+          builder.setTableName(tableName);
+        }
+      }
+      if (filterParams.containsKey("userName")) {
+        final String userName = (String) filterParams.get("userName");
+        if (StringUtils.isNotEmpty(userName)) {
+          builder.setUserName(userName);
+        }
+      }
+      if (filterParams.containsKey("filterByOperator")) {
+        final String filterByOperator = (String) filterParams.get("filterByOperator");
+        if (StringUtils.isNotEmpty(filterByOperator)) {
+          if (filterByOperator.toUpperCase().equals("AND")) {
+            filterByAnd = true;
+          }
+        }
+      }
     }
-    final String regionName = logQueryFilter.getRegionName();
-    if (StringUtils.isNotEmpty(regionName)) {
-      builder.setRegionName(regionName);
-    }
-    final String tableName = logQueryFilter.getTableName();
-    if (StringUtils.isNotEmpty(tableName)) {
-      builder.setTableName(tableName);
-    }
-    final String userName = logQueryFilter.getUserName();
-    if (StringUtils.isNotEmpty(userName)) {
-      builder.setUserName(userName);
-    }
-    LogQueryFilter.FilterByOperator filterByOperator = logQueryFilter.getFilterByOperator();
-    if (LogQueryFilter.FilterByOperator.AND.equals(filterByOperator)) {
+    if (filterByAnd) {
       builder.setFilterByOperator(SlowLogResponseRequest.FilterByOperator.AND);
     } else {
       builder.setFilterByOperator(SlowLogResponseRequest.FilterByOperator.OR);
     }
-    if (LogQueryFilter.Type.SLOW_LOG.equals(logQueryFilter.getType())) {
-      builder.setLogType(SlowLogResponseRequest.LogType.SLOW_LOG);
-    } else {
-      builder.setLogType(SlowLogResponseRequest.LogType.LARGE_LOG);
-    }
-    return builder.setLimit(logQueryFilter.getLimit()).build();
+    SlowLogResponseRequest slowLogResponseRequest = builder.build();
+    return HBaseProtos.LogRequest.newBuilder()
+      .setLogClassName(slowLogResponseRequest.getClass().getName())
+      .setLogMessage(slowLogResponseRequest.toByteString())
+      .build();
   }
 
   /**

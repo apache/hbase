@@ -228,7 +228,7 @@ public class TestNamedQueueRecorder {
   private List<TooSlowLog.SlowLogPayload> getSlowLogPayloads(
       AdminProtos.SlowLogResponseRequest request) {
     NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-    namedQueueGetRequest.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    namedQueueGetRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
     namedQueueGetRequest.setSlowLogResponseRequest(request);
     NamedQueueGetResponse namedQueueGetResponse =
       namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);

@@ -5093,37 +5093,31 @@ public class HBaseAdmin implements Admin {
 
   }
 
-  @Override
-  public List<OnlineLogRecord> getSlowLogResponses(Set<ServerName> serverNames,
-      LogQueryFilter logQueryFilter) throws IOException {
+  private List<LogEntry> getSlowLogResponses(
+      final Map<String, Object> filterParams, final Set<ServerName> serverNames, final int limit,
+      final String logType) {
     if (CollectionUtils.isEmpty(serverNames)) {
       return Collections.emptyList();
     }
-    List<OnlineLogRecord> logRecords = new ArrayList<>();
+    List<LogEntry> logRecords = new ArrayList<>();
     for (ServerName serverName : serverNames) {
       try {
-        logRecords.addAll(getSlowLogs(serverName, logQueryFilter));
-      } catch (ServiceException e) {
+        logRecords.addAll(getSlowLogs(serverName, filterParams, limit, logType));
+      } catch (ServiceException | IOException e) {
         throw new RuntimeException(e);
       }
     }
     return logRecords;
   }
 
-  private List<OnlineLogRecord> getSlowLogs(ServerName serverName, LogQueryFilter logQueryFilter)
-      throws IOException, ServiceException {
+  private List<LogEntry> getSlowLogs(ServerName serverName, Map<String, Object> filterParams,
+      int limit, String logType) throws IOException, ServiceException {
     AdminService.BlockingInterface admin = this.connection.getAdmin(serverName);
     HBaseRpcController controller = rpcControllerFactory.newController();
-    if (logQueryFilter.getType() == null
-        || logQueryFilter.getType() == LogQueryFilter.Type.SLOW_LOG) {
-      AdminProtos.SlowLogResponses slowLogResponses = admin.getSlowLogResponses(controller,
-        RequestConverter.buildSlowLogResponseRequest(logQueryFilter));
-      return ProtobufUtil.toSlowLogPayloads(slowLogResponses);
-    } else {
-      AdminProtos.SlowLogResponses slowLogResponses = admin.getLargeLogResponses(controller,
-        RequestConverter.buildSlowLogResponseRequest(logQueryFilter));
-      return ProtobufUtil.toSlowLogPayloads(slowLogResponses);
-    }
+    HBaseProtos.LogRequest logRequest =
+      RequestConverter.buildSlowLogResponseRequest(filterParams, limit, logType);
+    HBaseProtos.LogEntry logEntry = admin.getLogEntries(controller, logRequest);
+    return ProtobufUtil.toSlowLogPayloads(logEntry);
   }
 
   @Override
@@ -5151,6 +5145,40 @@ public class HBaseAdmin implements Admin {
       admin.clearSlowLogsResponses(controller,
         RequestConverter.buildClearSlowLogResponseRequest());
     return ProtobufUtil.toClearSlowLogPayload(clearSlowLogResponses);
+  }
+
+  @Override
+  public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+    ServerType serverType, int limit, Map<String, Object> filterParams) throws IOException {
+    if (logType == null || serverType == null) {
+      throw new IllegalArgumentException("logType and/or serverType cannot be empty");
+    }
+    if (logType.equals("SLOW_LOG") || logType.equals("LARGE_LOG")) {
+      if (ServerType.MASTER.equals(serverType)) {
+        throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
+      }
+      return getSlowLogResponses(filterParams, serverNames, limit, logType);
+    } else if (logType.equals("BALANCER_DECISION")) {
+      if (ServerType.REGION_SERVER.equals(serverType)) {
+        throw new IllegalArgumentException(
+          "Balancer Decision logs are not maintained by HRegionServer");
+      }
+      return getBalancerDecisions(limit);
+    }
+    return Collections.emptyList();
+  }
+
+  private List<LogEntry> getBalancerDecisions(final int limit) throws IOException {
+    return executeCallable(new MasterCallable<List<LogEntry>>(getConnection()) {
+      @Override
+      public List<LogEntry> call(int callTimeout) throws Exception {
+        HBaseRpcController controller = rpcControllerFactory.newController();
+        controller.setCallTimeout(callTimeout);
+        HBaseProtos.LogEntry logEntry =
+          master.getLogEntries(controller, ProtobufUtil.toBalancerDecisionRequest(limit));
+        return ProtobufUtil.toBalancerDecisionResponse(logEntry);
+      }
+    });
   }
 
 }

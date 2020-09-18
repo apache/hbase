@@ -23399,6 +23399,15 @@ public final class AdminProtos {
   }
   /**
    * Protobuf type {@code hbase.pb.SlowLogResponseRequest}
+   *
+   * <pre>
+   **
+   * Slow/Large log (LogRequest) use-case specific RPC request. This request payload will be
+   * converted in bytes and sent to generic RPC API: GetLogEntries
+   * LogRequest message has two params:
+   * 1. log_class_name: SlowLogResponseRequest (for Slow/Large log use-case)
+   * 2. log_message: SlowLogResponseRequest converted in bytes (for Slow/Large log use-case)
+   * </pre>
    */
   public static final class SlowLogResponseRequest extends
       com.google.protobuf.GeneratedMessage
@@ -24170,6 +24179,15 @@ public final class AdminProtos {
     }
     /**
      * Protobuf type {@code hbase.pb.SlowLogResponseRequest}
+     *
+     * <pre>
+     **
+     * Slow/Large log (LogRequest) use-case specific RPC request. This request payload will be
+     * converted in bytes and sent to generic RPC API: GetLogEntries
+     * LogRequest message has two params:
+     * 1. log_class_name: SlowLogResponseRequest (for Slow/Large log use-case)
+     * 2. log_message: SlowLogResponseRequest converted in bytes (for Slow/Large log use-case)
+     * </pre>
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
@@ -24790,6 +24808,15 @@ public final class AdminProtos {
   }
   /**
    * Protobuf type {@code hbase.pb.SlowLogResponses}
+   *
+   * <pre>
+   **
+   * Slow/Large log (LogEntry) use-case specific RPC response. This response payload will be
+   * converted in bytes by servers and sent as response to generic RPC API: GetLogEntries
+   * LogEntry message has two params:
+   * 1. log_class_name: SlowLogResponses (for Slow/Large log use-case)
+   * 2. log_message: SlowLogResponses converted in bytes (for Slow/Large log use-case)
+   * </pre>
    */
   public static final class SlowLogResponses extends
       com.google.protobuf.GeneratedMessage
@@ -25077,6 +25104,15 @@ public final class AdminProtos {
     }
     /**
      * Protobuf type {@code hbase.pb.SlowLogResponses}
+     *
+     * <pre>
+     **
+     * Slow/Large log (LogEntry) use-case specific RPC response. This response payload will be
+     * converted in bytes by servers and sent as response to generic RPC API: GetLogEntries
+     * LogEntry message has two params:
+     * 1. log_class_name: SlowLogResponses (for Slow/Large log use-case)
+     * 2. log_message: SlowLogResponses converted in bytes (for Slow/Large log use-case)
+     * </pre>
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
@@ -26414,28 +26450,20 @@ public final class AdminProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse> done);
 
       /**
-       * <code>rpc GetSlowLogResponses(.hbase.pb.SlowLogResponseRequest) returns (.hbase.pb.SlowLogResponses);</code>
-       */
-      public abstract void getSlowLogResponses(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses> done);
-
-      /**
-       * <code>rpc GetLargeLogResponses(.hbase.pb.SlowLogResponseRequest) returns (.hbase.pb.SlowLogResponses);</code>
-       */
-      public abstract void getLargeLogResponses(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses> done);
-
-      /**
        * <code>rpc ClearSlowLogsResponses(.hbase.pb.ClearSlowLogResponseRequest) returns (.hbase.pb.ClearSlowLogResponses);</code>
        */
       public abstract void clearSlowLogsResponses(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses> done);
+
+      /**
+       * <code>rpc GetLogEntries(.hbase.pb.LogRequest) returns (.hbase.pb.LogEntry);</code>
+       */
+      public abstract void getLogEntries(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry> done);
 
     }
 
@@ -26587,27 +26615,19 @@ public final class AdminProtos {
         }
 
         @java.lang.Override
-        public  void getSlowLogResponses(
-            com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request,
-            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses> done) {
-          impl.getSlowLogResponses(controller, request, done);
-        }
-
-        @java.lang.Override
-        public  void getLargeLogResponses(
-            com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request,
-            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses> done) {
-          impl.getLargeLogResponses(controller, request, done);
-        }
-
-        @java.lang.Override
         public  void clearSlowLogsResponses(
             com.google.protobuf.RpcController controller,
             org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses> done) {
           impl.clearSlowLogsResponses(controller, request, done);
+        }
+
+        @java.lang.Override
+        public  void getLogEntries(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry> done) {
+          impl.getLogEntries(controller, request, done);
         }
 
       };
@@ -26669,11 +26689,9 @@ public final class AdminProtos {
             case 17:
               return impl.updateConfiguration(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest)request);
             case 18:
-              return impl.getSlowLogResponses(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest)request);
-            case 19:
-              return impl.getLargeLogResponses(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest)request);
-            case 20:
               return impl.clearSlowLogsResponses(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest)request);
+            case 19:
+              return impl.getLogEntries(controller, (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -26725,11 +26743,9 @@ public final class AdminProtos {
             case 17:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest.getDefaultInstance();
             case 18:
-              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.getDefaultInstance();
-            case 19:
-              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.getDefaultInstance();
-            case 20:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest.getDefaultInstance();
+            case 19:
+              return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -26781,11 +26797,9 @@ public final class AdminProtos {
             case 17:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance();
             case 18:
-              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance();
-            case 19:
-              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance();
-            case 20:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance();
+            case 19:
+              return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -26939,28 +26953,20 @@ public final class AdminProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse> done);
 
     /**
-     * <code>rpc GetSlowLogResponses(.hbase.pb.SlowLogResponseRequest) returns (.hbase.pb.SlowLogResponses);</code>
-     */
-    public abstract void getSlowLogResponses(
-        com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request,
-        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses> done);
-
-    /**
-     * <code>rpc GetLargeLogResponses(.hbase.pb.SlowLogResponseRequest) returns (.hbase.pb.SlowLogResponses);</code>
-     */
-    public abstract void getLargeLogResponses(
-        com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request,
-        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses> done);
-
-    /**
      * <code>rpc ClearSlowLogsResponses(.hbase.pb.ClearSlowLogResponseRequest) returns (.hbase.pb.ClearSlowLogResponses);</code>
      */
     public abstract void clearSlowLogsResponses(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses> done);
+
+    /**
+     * <code>rpc GetLogEntries(.hbase.pb.LogRequest) returns (.hbase.pb.LogEntry);</code>
+     */
+    public abstract void getLogEntries(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry> done);
 
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
@@ -27075,18 +27081,13 @@ public final class AdminProtos {
               done));
           return;
         case 18:
-          this.getSlowLogResponses(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest)request,
-            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses>specializeCallback(
+          this.clearSlowLogsResponses(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses>specializeCallback(
               done));
           return;
         case 19:
-          this.getLargeLogResponses(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest)request,
-            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses>specializeCallback(
-              done));
-          return;
-        case 20:
-          this.clearSlowLogsResponses(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest)request,
-            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses>specializeCallback(
+          this.getLogEntries(controller, (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry>specializeCallback(
               done));
           return;
         default:
@@ -27140,11 +27141,9 @@ public final class AdminProtos {
         case 17:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest.getDefaultInstance();
         case 18:
-          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.getDefaultInstance();
-        case 19:
-          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.getDefaultInstance();
-        case 20:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest.getDefaultInstance();
+        case 19:
+          return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -27196,11 +27195,9 @@ public final class AdminProtos {
         case 17:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance();
         case 18:
-          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance();
-        case 19:
-          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance();
-        case 20:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance();
+        case 19:
+          return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -27492,42 +27489,12 @@ public final class AdminProtos {
             org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance()));
       }
 
-      public  void getSlowLogResponses(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses> done) {
-        channel.callMethod(
-          getDescriptor().getMethods().get(18),
-          controller,
-          request,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance(),
-          com.google.protobuf.RpcUtil.generalizeCallback(
-            done,
-            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.class,
-            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance()));
-      }
-
-      public  void getLargeLogResponses(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses> done) {
-        channel.callMethod(
-          getDescriptor().getMethods().get(19),
-          controller,
-          request,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance(),
-          com.google.protobuf.RpcUtil.generalizeCallback(
-            done,
-            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.class,
-            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance()));
-      }
-
       public  void clearSlowLogsResponses(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(20),
+          getDescriptor().getMethods().get(18),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance(),
@@ -27535,6 +27502,21 @@ public final class AdminProtos {
             done,
             org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.class,
             org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance()));
+      }
+
+      public  void getLogEntries(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(19),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.class,
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance()));
       }
     }
 
@@ -27634,19 +27616,14 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest request)
           throws com.google.protobuf.ServiceException;
 
-      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses getSlowLogResponses(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request)
-          throws com.google.protobuf.ServiceException;
-
-      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses getLargeLogResponses(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request)
-          throws com.google.protobuf.ServiceException;
-
       public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses clearSlowLogsResponses(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry getLogEntries(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -27873,39 +27850,27 @@ public final class AdminProtos {
       }
 
 
-      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses getSlowLogResponses(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request)
-          throws com.google.protobuf.ServiceException {
-        return (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(18),
-          controller,
-          request,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance());
-      }
-
-
-      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses getLargeLogResponses(
-          com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest request)
-          throws com.google.protobuf.ServiceException {
-        return (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(19),
-          controller,
-          request,
-          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance());
-      }
-
-
       public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses clearSlowLogsResponses(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(20),
+          getDescriptor().getMethods().get(18),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry getLogEntries(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(19),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance());
       }
 
     }
@@ -28221,7 +28186,7 @@ public final class AdminProtos {
       "\020\001\"G\n\020SlowLogResponses\0223\n\021slow_log_paylo" +
       "ads\030\001 \003(\0132\030.hbase.pb.SlowLogPayload\"\035\n\033C" +
       "learSlowLogResponseRequest\"+\n\025ClearSlowL" +
-      "ogResponses\022\022\n\nis_cleaned\030\001 \002(\0102\357\r\n\014Admi",
+      "ogResponses\022\022\n\nis_cleaned\030\001 \002(\0102\377\014\n\014Admi",
       "nService\022P\n\rGetRegionInfo\022\036.hbase.pb.Get" +
       "RegionInfoRequest\032\037.hbase.pb.GetRegionIn" +
       "foResponse\022M\n\014GetStoreFile\022\035.hbase.pb.Ge" +
@@ -28259,15 +28224,13 @@ public final class AdminProtos {
       "st\032$.hbase.pb.UpdateFavoredNodesResponse" +
       "\022b\n\023UpdateConfiguration\022$.hbase.pb.Updat" +
       "eConfigurationRequest\032%.hbase.pb.UpdateC" +
-      "onfigurationResponse\022S\n\023GetSlowLogRespon" +
-      "ses\022 .hbase.pb.SlowLogResponseRequest\032\032." +
-      "hbase.pb.SlowLogResponses\022T\n\024GetLargeLog",
-      "Responses\022 .hbase.pb.SlowLogResponseRequ" +
-      "est\032\032.hbase.pb.SlowLogResponses\022`\n\026Clear" +
-      "SlowLogsResponses\022%.hbase.pb.ClearSlowLo" +
-      "gResponseRequest\032\037.hbase.pb.ClearSlowLog" +
-      "ResponsesBA\n*org.apache.hadoop.hbase.pro" +
-      "tobuf.generatedB\013AdminProtosH\001\210\001\001\240\001\001"
+      "onfigurationResponse\022`\n\026ClearSlowLogsRes" +
+      "ponses\022%.hbase.pb.ClearSlowLogResponseRe" +
+      "quest\032\037.hbase.pb.ClearSlowLogResponses\0229",
+      "\n\rGetLogEntries\022\024.hbase.pb.LogRequest\032\022." +
+      "hbase.pb.LogEntryBA\n*org.apache.hadoop.h" +
+      "base.protobuf.generatedB\013AdminProtosH\001\210\001" +
+      "\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

@@ -30,6 +30,8 @@ import com.google.protobuf.TextFormat;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -107,6 +109,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -177,6 +180,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResul
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
@@ -273,7 +277,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   final RpcServerInterface rpcServer;
   final InetSocketAddress isa;
 
-  private final HRegionServer regionServer;
+  protected final HRegionServer regionServer;
   private final long maxScannerResultSize;
 
   // The reference to the priority extraction function
@@ -3340,19 +3344,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return UpdateConfigurationResponse.getDefaultInstance();
   }
 
-  @Override
-  @QosPriority(priority=HConstants.ADMIN_QOS)
-  public SlowLogResponses getSlowLogResponses(RpcController controller,
-      SlowLogResponseRequest request) throws ServiceException {
-    final NamedQueueRecorder namedQueueRecorder =
-      this.regionServer.getNamedQueueRecorder();
-    final List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request, namedQueueRecorder);
-    SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
-      .addAllSlowLogPayloads(slowLogPayloads)
-      .build();
-    return slowLogResponses;
-  }
-
   private List<SlowLogPayload> getSlowLogPayloads(SlowLogResponseRequest request,
     NamedQueueRecorder namedQueueRecorder) {
     if (namedQueueRecorder == null) {
@@ -3360,26 +3351,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     List<SlowLogPayload> slowLogPayloads;
     NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-    namedQueueGetRequest.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    namedQueueGetRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
     namedQueueGetRequest.setSlowLogResponseRequest(request);
     NamedQueueGetResponse namedQueueGetResponse =
       namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
     slowLogPayloads = namedQueueGetResponse != null ?
       namedQueueGetResponse.getSlowLogPayloads() : new ArrayList<SlowLogPayload>();
     return slowLogPayloads;
-  }
-
-  @Override
-  @QosPriority(priority=HConstants.ADMIN_QOS)
-  public SlowLogResponses getLargeLogResponses(RpcController controller,
-      SlowLogResponseRequest request) throws ServiceException {
-    final NamedQueueRecorder namedQueueRecorder =
-      this.regionServer.getNamedQueueRecorder();
-    final List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request, namedQueueRecorder);
-    SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
-      .addAllSlowLogPayloads(slowLogPayloads)
-      .build();
-    return slowLogResponses;
   }
 
   @Override
@@ -3397,5 +3375,36 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       .setIsCleaned(slowLogsCleaned)
       .build();
     return clearSlowLogResponses;
+  }
+
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+      HBaseProtos.LogRequest request) throws ServiceException {
+    try {
+      final String logClassName = request.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName)
+        .asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("SlowLogResponseRequest")) {
+        SlowLogResponseRequest slowLogResponseRequest =
+          (SlowLogResponseRequest) method.invoke(null, request.getLogMessage());
+        final NamedQueueRecorder namedQueueRecorder =
+          this.regionServer.getNamedQueueRecorder();
+        final List<SlowLogPayload> slowLogPayloads =
+          getSlowLogPayloads(slowLogResponseRequest, namedQueueRecorder);
+        SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
+          .addAllSlowLogPayloads(slowLogPayloads)
+          .build();
+        return HBaseProtos.LogEntry.newBuilder()
+          .setLogClassName(slowLogResponses.getClass().getName())
+          .setLogMessage(slowLogResponses.toByteString()).build();
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      LOG.error("Error while retrieving log entries.", e);
+      throw new ServiceException(e);
+    }
+    throw new ServiceException("Invalid request params");
   }
 }
