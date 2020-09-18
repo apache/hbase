@@ -1160,7 +1160,7 @@ Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-f
                                 e.g. https://dist.apache.org/repos/dist/dev/hbase/hbase-<version>RC0/
   -k | --key '<signature>'      A signature of the public key, e.g. 9AD2AE49
   -f | --keys-file-url '<url>'   the URL of the key file, default is
-                                http://www.apache.org/dist/hbase/KEYS
+                                https://downloads.apache.org/hbase/KEYS
   -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
 ----
 * If you see any unit test failures, please call out the solo test result and whether it's part of flaky (nightly) tests dashboard, e.g. link:https://builds.apache.org/view/H-L/view/HBase/job/HBase-Find-Flaky-Tests/job/master/lastSuccessfulBuild/artifact/dashboard.html[dashboard of master branch] (please change the test branch accordingly).
