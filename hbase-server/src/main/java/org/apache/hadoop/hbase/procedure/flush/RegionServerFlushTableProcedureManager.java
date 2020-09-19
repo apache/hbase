@@ -132,7 +132,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
    *
    * @param table table to flush
    * @param family column family within a table
-   * @return Subprocedure to submit to the ProcedureMemeber.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(String table, String family) {
 
