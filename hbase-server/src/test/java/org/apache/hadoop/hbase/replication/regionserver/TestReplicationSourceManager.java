@@ -182,7 +182,8 @@ public abstract class TestReplicationSourceManager {
     logDir = new Path(utility.getDataTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
     replication = new Replication();
-    replication.initialize(new DummyServer(), fs, logDir, oldLogDir, null);
+    replication.initialize(new DummyServer(), fs, logDir, oldLogDir,
+      new WALFactory(conf, "test"));
     managerOfCluster = getManagerFromCluster();
     if (managerOfCluster != null) {
       // After replication procedure, we need to add peer by hand (other than by receiving
