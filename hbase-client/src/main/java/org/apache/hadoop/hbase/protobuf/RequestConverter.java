@@ -1893,7 +1893,7 @@ public final class RequestConverter {
    * @param filterParams map of filter params
    * @param limit limit for no of records that server returns
    * @param logType type of the log records
-   * @return request payload {@link HBaseProtos.LogRequest}
+   * @return request payload HBaseProtos.LogRequest
    */
   public static HBaseProtos.LogRequest buildSlowLogResponseRequest(
       final Map<String, Object> filterParams, final int limit, final String logType) {

@@ -19,12 +19,12 @@
 
 package org.apache.hadoop.hbase.namequeues.impl;
 
+import com.google.common.collect.Lists;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.namequeues.NamedQueueService;
 import org.apache.hadoop.hbase.namequeues.queue.EvictingQueue;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.RecentLogs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

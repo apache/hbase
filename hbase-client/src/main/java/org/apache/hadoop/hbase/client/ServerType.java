@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Select server type i.e destination for RPC request associated with ring buffer.
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * are maintained by HMaster.
  */
 @InterfaceAudience.Public
+@InterfaceStability.Stable
 public enum ServerType {
   MASTER,
   REGION_SERVER
