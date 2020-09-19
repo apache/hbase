@@ -1943,8 +1943,7 @@ public class HRegionServer extends Thread implements
         throw new IOException("Can not create wal directory " + logDir);
       }
       // Instantiate replication if replication enabled. Pass it the log directories.
-      createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir,
-        factory.getWALProvider());
+      createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir, factory);
     }
     this.walFactory = factory;
   }
@@ -3096,7 +3095,7 @@ public class HRegionServer extends Thread implements
    * Load the replication executorService objects, if any
    */
   private static void createNewReplicationInstance(Configuration conf, HRegionServer server,
-      FileSystem walFs, Path walDir, Path oldWALDir, WALProvider walProvider) throws IOException {
+      FileSystem walFs, Path walDir, Path oldWALDir, WALFactory walFactory) throws IOException {
     // read in the name of the source replication class from the config file.
     String sourceClassname = conf.get(HConstants.REPLICATION_SOURCE_SERVICE_CLASSNAME,
       HConstants.REPLICATION_SERVICE_CLASSNAME_DEFAULT);
@@ -3109,21 +3108,21 @@ public class HRegionServer extends Thread implements
     // only one object.
     if (sourceClassname.equals(sinkClassname)) {
       server.replicationSourceHandler = newReplicationInstance(sourceClassname,
-        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
+        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walFactory);
       server.replicationSinkHandler = (ReplicationSinkService) server.replicationSourceHandler;
       server.sameReplicationSourceAndSink = true;
     } else {
       server.replicationSourceHandler = newReplicationInstance(sourceClassname,
-        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
+        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walFactory);
       server.replicationSinkHandler = newReplicationInstance(sinkClassname,
-        ReplicationSinkService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
+        ReplicationSinkService.class, conf, server, walFs, walDir, oldWALDir, walFactory);
       server.sameReplicationSourceAndSink = false;
     }
   }
 
   private static <T extends ReplicationService> T newReplicationInstance(String classname,
       Class<T> xface, Configuration conf, HRegionServer server, FileSystem walFs, Path logDir,
-      Path oldLogDir, WALProvider walProvider) throws IOException {
+      Path oldLogDir, WALFactory walFactory) throws IOException {
     final Class<? extends T> clazz;
     try {
       ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -3132,7 +3131,7 @@ public class HRegionServer extends Thread implements
       throw new IOException("Could not find class for " + classname);
     }
     T service = ReflectionUtils.newInstance(clazz, conf);
-    service.initialize(server, walFs, logDir, oldLogDir, walProvider);
+    service.initialize(server, walFs, logDir, oldLogDir, walFactory);
     return service;
   }
 
