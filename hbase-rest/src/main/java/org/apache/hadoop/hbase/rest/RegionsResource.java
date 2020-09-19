@@ -76,6 +76,9 @@ public class RegionsResource extends ResourceBase {
     servlet.getMetrics().incrementRequests(1);
     try {
       TableName tableName = TableName.valueOf(tableResource.getName());
+      if (!tableResource.exists()) {
+        throw new TableNotFoundException(tableName);
+      }
       TableInfoModel model = new TableInfoModel(tableName.getNameAsString());
 
       Connection connection = ConnectionFactory.createConnection(servlet.getConfiguration());
