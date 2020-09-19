@@ -261,5 +261,14 @@ public class TestTableResource {
     checkTableInfo(model);
   }
 
+  @Test
+  public void testTableNotFound() throws IOException {
+    String notExistTable = "notexist";
+    Response response1 = client.get("/" + notExistTable + "/schema", Constants.MIMETYPE_JSON);
+    assertEquals(404, response1.getCode());
+    Response response2 = client.get("/" + notExistTable + "/regions", Constants.MIMETYPE_XML);
+    assertEquals(404, response2.getCode());
+  }
+
 }
 
