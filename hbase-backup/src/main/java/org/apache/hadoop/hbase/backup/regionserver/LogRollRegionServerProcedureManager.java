@@ -116,7 +116,7 @@ public class LogRollRegionServerProcedureManager extends RegionServerProcedureMa
 
   /**
    * If in a running state, creates the specified subprocedure for handling a backup procedure.
-   * @return Subprocedure to submit to the ProcedureMemeber.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(byte[] data) {
     // don't run a backup if the parent is stop(ping)
