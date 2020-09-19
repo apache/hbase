@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -89,7 +90,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
 
   @Override
   public void initialize(Server server, FileSystem fs, Path logDir, Path oldLogDir,
-      WALProvider walProvider) throws IOException {
+      WALFactory walFactory) throws IOException {
     this.server = server;
     this.conf = this.server.getConfiguration();
     this.isReplicationForBulkLoadDataEnabled =
@@ -128,6 +129,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     SyncReplicationPeerMappingManager mapping = new SyncReplicationPeerMappingManager();
     this.globalMetricsSource = CompatibilitySingletonFactory
         .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+    WALProvider walProvider = walFactory.getWALProvider();
     this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers,
         replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId,
         walProvider != null ? walProvider.getWALFileLengthProvider() : p -> OptionalLong.empty(),
@@ -198,7 +200,6 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
    * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
    *          directory required for replicating hfiles
    * @param sourceHFileArchiveDirPath Path that point to the source cluster hfile archive directory
-   * @throws IOException
    */
   @Override
   public void replicateLogEntries(List<WALEntry> entries, CellScanner cells,
@@ -211,7 +212,6 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   /**
    * If replication is enabled and this cluster is a master,
    * it starts
-   * @throws IOException
    */
   @Override
   public void startReplicationService() throws IOException {
