@@ -393,12 +393,6 @@ service AdminService {
   rpc ExecuteProcedures(ExecuteProceduresRequest)
     returns(ExecuteProceduresResponse);
 
-  rpc GetSlowLogResponses(SlowLogResponseRequest)
-    returns(SlowLogResponses);
-
-  rpc GetLargeLogResponses(SlowLogResponseRequest)
-    returns(SlowLogResponses);
-
   rpc ClearSlowLogsResponses(ClearSlowLogResponseRequest)
     returns(ClearSlowLogResponses);
 

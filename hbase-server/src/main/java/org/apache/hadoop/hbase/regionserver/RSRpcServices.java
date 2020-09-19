@@ -3851,19 +3851,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
-  public SlowLogResponses getSlowLogResponses(final RpcController controller,
-    final SlowLogResponseRequest request) {
-    final NamedQueueRecorder namedQueueRecorder =
-      this.regionServer.getNamedQueueRecorder();
-    final List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request, namedQueueRecorder);
-    SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
-      .addAllSlowLogPayloads(slowLogPayloads)
-      .build();
-    return slowLogResponses;
-  }
-
   private List<SlowLogPayload> getSlowLogPayloads(SlowLogResponseRequest request,
       NamedQueueRecorder namedQueueRecorder) {
     if (namedQueueRecorder == null) {
@@ -3883,19 +3870,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
-  public SlowLogResponses getLargeLogResponses(final RpcController controller,
-      final SlowLogResponseRequest request) {
-    final NamedQueueRecorder namedQueueRecorder =
-      this.regionServer.getNamedQueueRecorder();
-    final List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request, namedQueueRecorder);
-    SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
-      .addAllSlowLogPayloads(slowLogPayloads)
-      .build();
-    return slowLogResponses;
-  }
-
-  @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
   public ClearSlowLogResponses clearSlowLogsResponses(final RpcController controller,
     final ClearSlowLogResponseRequest request) {
     final NamedQueueRecorder namedQueueRecorder =
@@ -3911,6 +3885,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public HBaseProtos.LogEntry getLogEntries(RpcController controller,
       HBaseProtos.LogRequest request) throws ServiceException {
     try {

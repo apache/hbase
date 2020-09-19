@@ -1714,8 +1714,8 @@ public interface AsyncAdmin {
    * Examples include slow/large RPC logs, balancer decisions by master.
    *
    * @param serverNames servers to retrieve records from, useful in case of records maintained
-   *  by RegionServer as we can select specific server. In case of servertype=MASTER, logs will
-   *  only come from the currently active master.
+   *   by RegionServer as we can select specific server. In case of servertype=MASTER, logs will
+   *   only come from the currently active master.
    * @param logType string representing type of log records
    * @param serverType enum for server type: HMaster or RegionServer
    * @param limit put a limit to list of records that server should send in response

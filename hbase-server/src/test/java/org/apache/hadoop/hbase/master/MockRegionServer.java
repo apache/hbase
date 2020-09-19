@@ -680,18 +680,6 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public SlowLogResponses getSlowLogResponses(RpcController controller,
-      SlowLogResponseRequest request) throws ServiceException {
-    return null;
-  }
-
-  @Override
-  public SlowLogResponses getLargeLogResponses(RpcController controller,
-      SlowLogResponseRequest request) throws ServiceException {
-    return null;
-  }
-
-  @Override
   public ClearSlowLogResponses clearSlowLogsResponses(RpcController controller,
       ClearSlowLogResponseRequest request) throws ServiceException {
     return null;
