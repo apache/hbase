@@ -77,13 +77,6 @@ public class TestRSChoresScheduled {
 
   @Test
   public void testDefaultScheduledChores() throws Exception {
-    // test if movedRegionsCleaner chore is scheduled by default in HRegionServer init
-    TestChoreField<HRegionServer.MovedRegionsCleaner> movedRegionsCleanerTestChoreField =
-      new TestChoreField<>();
-    HRegionServer.MovedRegionsCleaner movedRegionsCleaner = movedRegionsCleanerTestChoreField
-      .getChoreObj("movedRegionsCleaner");
-    movedRegionsCleanerTestChoreField.testIfChoreScheduled(movedRegionsCleaner);
-
     // test if compactedHFilesDischarger chore is scheduled by default in HRegionServer init
     TestChoreField<CompactedHFilesDischarger> compactedHFilesDischargerTestChoreField =
       new TestChoreField<>();

@@ -272,6 +272,13 @@ public class HRegionServer extends HasThread implements
   // Cache flushing
   protected MemStoreFlusher cacheFlusher;
 
+  /**
+   * Used to cache the moved-out regions
+   */
+  private final Cache<String, MovedRegionInfo> movedRegionInfoCache =
+      CacheBuilder.newBuilder().expireAfterWrite(movedRegionCacheExpiredTime(),
+        TimeUnit.MILLISECONDS).build();
+
   protected HeapMemoryManager hMemManager;
 
   /**
@@ -486,11 +493,6 @@ public class HRegionServer extends HasThread implements
    * Unique identifier for the cluster we are a part of.
    */
   protected String clusterId;
-
-  /**
-   * Chore to clean periodically the moved region list
-   */
-  private MovedRegionsCleaner movedRegionsCleaner;
 
   // chore for refreshing store files for secondary regions
   private StorefileRefresherChore storefileRefresher;
@@ -1108,10 +1110,6 @@ public class HRegionServer extends HasThread implements
     }
     if (mobFileCache != null) {
       mobFileCache.shutdown();
-    }
-
-    if (movedRegionsCleaner != null) {
-      movedRegionsCleaner.stop("Region Server stopping");
     }
 
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
@@ -2008,13 +2006,24 @@ public class HRegionServer extends HasThread implements
     Threads.setDaemonThreadRunning(this.procedureResultReporter,
       getName() + ".procedureResultReporter", uncaughtExceptionHandler);
 
-    if (this.compactionChecker != null) choreService.scheduleChore(compactionChecker);
-    if (this.periodicFlusher != null) choreService.scheduleChore(periodicFlusher);
-    if (this.healthCheckChore != null) choreService.scheduleChore(healthCheckChore);
-    if (this.nonceManagerChore != null) choreService.scheduleChore(nonceManagerChore);
-    if (this.storefileRefresher != null) choreService.scheduleChore(storefileRefresher);
-    if (this.movedRegionsCleaner != null) choreService.scheduleChore(movedRegionsCleaner);
-    if (this.fsUtilizationChore != null) choreService.scheduleChore(fsUtilizationChore);
+    if (this.compactionChecker != null) {
+      choreService.scheduleChore(compactionChecker);
+    }
+    if (this.periodicFlusher != null) {
+      choreService.scheduleChore(periodicFlusher);
+    }
+    if (this.healthCheckChore != null) {
+      choreService.scheduleChore(healthCheckChore);
+    }
+    if (this.nonceManagerChore != null) {
+      choreService.scheduleChore(nonceManagerChore);
+    }
+    if (this.storefileRefresher != null) {
+      choreService.scheduleChore(storefileRefresher);
+    }
+    if (this.fsUtilizationChore != null) {
+      choreService.scheduleChore(fsUtilizationChore);
+    }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -2059,9 +2068,6 @@ public class HRegionServer extends HasThread implements
     this.compactionChecker = new CompactionChecker(this, this.compactionCheckFrequency, this);
     this.periodicFlusher = new PeriodicMemStoreFlusher(this.flushCheckFrequency, this);
     this.leases = new Leases(this.threadWakeFrequency);
-
-    // Create the thread to clean the moved regions list
-    movedRegionsCleaner = MovedRegionsCleaner.create(this);
 
     if (this.nonceManager != null) {
       // Create the scheduled chore that cleans up nonces.
@@ -2523,7 +2529,6 @@ public class HRegionServer extends HasThread implements
       choreService.cancelChore(periodicFlusher);
       choreService.cancelChore(healthCheckChore);
       choreService.cancelChore(storefileRefresher);
-      choreService.cancelChore(movedRegionsCleaner);
       choreService.cancelChore(fsUtilizationChore);
       // clean up the remaining scheduled chores (in case we missed out any)
       choreService.shutdown();
@@ -3475,12 +3480,10 @@ public class HRegionServer extends HasThread implements
   private static class MovedRegionInfo {
     private final ServerName serverName;
     private final long seqNum;
-    private final long ts;
 
     public MovedRegionInfo(ServerName serverName, long closeSeqNum) {
       this.serverName = serverName;
       this.seqNum = closeSeqNum;
-      ts = EnvironmentEdgeManager.currentTime();
      }
 
     public ServerName getServerName() {
@@ -3490,18 +3493,12 @@ public class HRegionServer extends HasThread implements
     public long getSeqNum() {
       return seqNum;
     }
-
-    public long getMoveTime() {
-      return ts;
-    }
   }
 
-  // This map will contains all the regions that we closed for a move.
-  // We add the time it was moved as we don't want to keep too old information
-  protected Map<String, MovedRegionInfo> movedRegions = new ConcurrentHashMap<>(3000);
-
-  // We need a timeout. If not there is a risk of giving a wrong information: this would double
-  //  the number of network calls instead of reducing them.
+  /**
+   * We need a timeout. If not there is a risk of giving a wrong information: this would double
+   * the number of network calls instead of reducing them.
+   */
   private static final int TIMEOUT_REGION_MOVED = (2 * 60 * 1000);
 
   protected void addToMovedRegions(String encodedName, ServerName destination
@@ -3512,90 +3509,21 @@ public class HRegionServer extends HasThread implements
     }
     LOG.info("Adding " + encodedName + " move to " + destination + " record at close sequenceid=" +
         closeSeqNum);
-    movedRegions.put(encodedName, new MovedRegionInfo(destination, closeSeqNum));
+    movedRegionInfoCache.put(encodedName, new MovedRegionInfo(destination, closeSeqNum));
   }
 
   void removeFromMovedRegions(String encodedName) {
-    movedRegions.remove(encodedName);
+    movedRegionInfoCache.invalidate(encodedName);
   }
 
-  private MovedRegionInfo getMovedRegion(final String encodedRegionName) {
-    MovedRegionInfo dest = movedRegions.get(encodedRegionName);
-
-    long now = EnvironmentEdgeManager.currentTime();
-    if (dest != null) {
-      if (dest.getMoveTime() > (now - TIMEOUT_REGION_MOVED)) {
-        return dest;
-      } else {
-        movedRegions.remove(encodedRegionName);
-      }
-    }
-
-    return null;
+  @VisibleForTesting
+  public MovedRegionInfo getMovedRegion(String encodedRegionName) {
+    return movedRegionInfoCache.getIfPresent(encodedRegionName);
   }
 
-  /**
-   * Remove the expired entries from the moved regions list.
-   */
-  protected void cleanMovedRegions() {
-    final long cutOff = System.currentTimeMillis() - TIMEOUT_REGION_MOVED;
-    Iterator<Entry<String, MovedRegionInfo>> it = movedRegions.entrySet().iterator();
-
-    while (it.hasNext()){
-      Map.Entry<String, MovedRegionInfo> e = it.next();
-      if (e.getValue().getMoveTime() < cutOff) {
-        it.remove();
-      }
-    }
-  }
-
-  /*
-   * Use this to allow tests to override and schedule more frequently.
-   */
-
-  protected int movedRegionCleanerPeriod() {
+  @VisibleForTesting
+  public int movedRegionCacheExpiredTime() {
         return TIMEOUT_REGION_MOVED;
-  }
-
-  /**
-   * Creates a Chore thread to clean the moved region cache.
-   */
-  protected final static class MovedRegionsCleaner extends ScheduledChore implements Stoppable {
-    private HRegionServer regionServer;
-    Stoppable stoppable;
-
-    private MovedRegionsCleaner(
-      HRegionServer regionServer, Stoppable stoppable){
-      super("MovedRegionsCleaner for region " + regionServer, stoppable,
-          regionServer.movedRegionCleanerPeriod());
-      this.regionServer = regionServer;
-      this.stoppable = stoppable;
-    }
-
-    static MovedRegionsCleaner create(HRegionServer rs){
-      Stoppable stoppable = new Stoppable() {
-        private volatile boolean isStopped = false;
-        @Override public void stop(String why) { isStopped = true;}
-        @Override public boolean isStopped() {return isStopped;}
-      };
-
-      return new MovedRegionsCleaner(rs, stoppable);
-    }
-
-    @Override
-    protected void chore() {
-      regionServer.cleanMovedRegions();
-    }
-
-    @Override
-    public void stop(String why) {
-      stoppable.stop(why);
-    }
-
-    @Override
-    public boolean isStopped() {
-      return stoppable.isStopped();
-    }
   }
 
   private String getMyEphemeralNodePath() {
