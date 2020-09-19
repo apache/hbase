@@ -129,7 +129,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
    * there is a possibility of a race where regions may be missed.
    *
    * @param table
-   * @return Subprocedure to submit to the ProcedureMemeber.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(String table) {
 

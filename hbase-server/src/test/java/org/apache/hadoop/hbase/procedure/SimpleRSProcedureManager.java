@@ -83,7 +83,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
 
   /**
    * If in a running state, creates the specified subprocedure for handling a procedure.
-   * @return Subprocedure to submit to the ProcedureMemeber.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(String name) {
 
