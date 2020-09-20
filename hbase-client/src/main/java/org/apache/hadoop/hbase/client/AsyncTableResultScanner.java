@@ -23,13 +23,13 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
-
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 /**
  * The {@link ResultScanner} implementation for {@link AsyncTable}. It will fetch data automatically
@@ -140,8 +140,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
         return null;
       }
       if (error != null) {
-        Throwables.propagateIfPossible(error, IOException.class);
-        throw new IOException(error);
+        FutureUtils.rethrow(error);
       }
       try {
         wait();
