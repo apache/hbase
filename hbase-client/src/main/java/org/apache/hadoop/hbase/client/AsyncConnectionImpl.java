@@ -296,8 +296,8 @@ class AsyncConnectionImpl implements AsyncConnection {
   ReplicationServerService.Interface getReplicationServerStub(ServerName serverName)
       throws IOException {
     return ConcurrentMapUtils.computeIfAbsentEx(replStubs,
-        getStubKey(ReplicationServerService.Interface.class.getSimpleName(), serverName,
-            hostnameCanChange), () -> createReplicationServerStub(serverName));
+        getStubKey(ReplicationServerService.Interface.class.getSimpleName(), serverName),
+      () -> createReplicationServerStub(serverName));
   }
 
   CompletableFuture<MasterService.Interface> getMasterStub() {

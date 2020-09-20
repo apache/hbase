@@ -43,6 +43,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -72,6 +73,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationSourceController;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
@@ -817,10 +819,11 @@ public abstract class TestReplicationSourceManager {
 
   static class FailInitializeDummyReplicationSource extends ReplicationSourceDummy {
 
-    @Override public void init(Configuration conf, FileSystem fs, Path walDir,
-      ReplicationSourceManager manager, ReplicationQueueStorage rq, ReplicationPeer rp,
-      Server server, String peerClusterId, UUID clusterId,
-      WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
+    @Override
+    public void init(Configuration conf, FileSystem fs, Path walDir,
+      ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
+      ReplicationPeer replicationPeer, Server server, String queueId, UUID clusterId,
+      WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException{
       throw new IOException("Failing deliberately");
     }
   }

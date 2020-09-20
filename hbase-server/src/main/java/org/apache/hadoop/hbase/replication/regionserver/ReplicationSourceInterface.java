@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationSourceController;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -42,14 +43,22 @@ public interface ReplicationSourceInterface {
   /**
    * Initializer for the source
    *
-   * @param conf   the configuration to use
-   * @param fs     the file system to use
-   * @param server the server for this region server
+   * @param conf configuration to use
+   * @param fs file system to use
+   * @param walDir the directory where the WAL is located
+   * @param overallController the overall controller of all replication sources
+   * @param queueStorage the replication queue storage
+   * @param replicationPeer the replication peer
+   * @param server the server which start and run this replication source
+   * @param queueId the id of our replication queue
+   * @param clusterId unique UUID for the cluster
+   * @param walFileLengthProvider used to get the WAL length
+   * @param metrics metrics for this replication source
    */
-  void init(Configuration conf, FileSystem fs, Path walDir, ReplicationSourceManager manager,
-    ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-    String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-    MetricsSource metrics) throws IOException;
+  void init(Configuration conf, FileSystem fs, Path walDir,
+    ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
+    ReplicationPeer replicationPeer, Server server, String queueId, UUID clusterId,
+    WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException;
 
   /**
    * Add a log to the list of logs to replicate
