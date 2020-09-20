@@ -247,8 +247,8 @@
             </tr>
             <% for (Pair<RegionInfo, RegionInfo> p : report.getHoles()) { %>
             <tr>
-              <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
-              <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getEncodedName() %></span></td>
+              <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getRegionNameAsString() %></span></td>
+              <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getRegionNameAsString() %></span></td>
             </tr>
             <% } %>
 
@@ -275,14 +275,14 @@
               <% for (Pair<RegionInfo, RegionInfo> p : report.getOverlaps()) { %>
               <tr>
                 <% if (report.getMergedRegions().containsKey(p.getFirst())) { %>
-                  <td><span style="color:blue;" title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
+                  <td><span style="color:blue;" title="<%= p.getFirst() %>"><%= p.getFirst().getRegionNameAsString() %></span></td>
                 <% } else { %>
-                  <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
+                  <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getRegionNameAsString() %></span></td>
                 <% } %>
                 <% if (report.getMergedRegions().containsKey(p.getSecond())) { %>
-                  <td><span style="color:blue;" title="<%= p.getSecond() %>"><%= p.getSecond().getEncodedName() %></span></td>
+                  <td><span style="color:blue;" title="<%= p.getSecond() %>"><%= p.getSecond().getRegionNameAsString() %></span></td>
                 <% } else { %>
-                  <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getEncodedName() %></span></td>
+                  <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getRegionNameAsString() %></span></td>
                 <% } %>
               </tr>
               <% } %>
@@ -318,7 +318,7 @@
               </tr>
               <% for (Pair<RegionInfo, ServerName> p: report.getUnknownServers()) { %>
               <tr>
-                <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
+                <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getRegionNameAsString() %></span></td>
                 <td><%= p.getSecond() %></td>
               </tr>
               <% } %>
