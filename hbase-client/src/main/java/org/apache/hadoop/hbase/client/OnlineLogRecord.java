@@ -157,6 +157,8 @@ final public class OnlineLogRecord extends LogEntry {
     this.multiServiceCalls = multiServiceCalls;
   }
 
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static class OnlineLogRecordBuilder {
     private long startTime;
     private int processingTime;

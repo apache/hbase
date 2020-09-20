@@ -111,6 +111,8 @@ final public class BalancerDecision extends LogEntry {
     return GSON.toJson(this);
   }
 
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static class Builder {
     private String initialFunctionCosts;
     private String finalFunctionCosts;
