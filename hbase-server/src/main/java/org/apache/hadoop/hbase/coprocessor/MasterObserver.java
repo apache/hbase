@@ -1782,4 +1782,20 @@ public interface MasterObserver {
   default void postHasUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
       String userName, List<Permission> permissions) throws IOException {
   }
+
+  /**
+   * Called before getting servers for replication sink.
+   * @param ctx the coprocessor instance's environment
+   */
+  default void preListReplicationSinkServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
+
+  /**
+   * Called after getting servers for replication sink.
+   * @param ctx the coprocessor instance's environment
+   */
+  default void postListReplicationSinkServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
 }

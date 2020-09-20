@@ -118,6 +118,10 @@ public class TestGlobalReplicationThrottler {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    Admin admin1 = utility1.getAdmin();
+    admin1.removeReplicationPeer("peer1");
+    admin1.removeReplicationPeer("peer2");
+    admin1.removeReplicationPeer("peer3");
     utility2.shutdownMiniCluster();
     utility1.shutdownMiniCluster();
   }

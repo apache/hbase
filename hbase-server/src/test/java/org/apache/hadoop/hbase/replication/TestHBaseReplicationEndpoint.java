@@ -199,6 +199,11 @@ public class TestHBaseReplicationEndpoint {
     }
 
     @Override
+    public List<ServerName> fetchSlavesAddressesByZK() {
+      return regionServers;
+    }
+
+    @Override
     public boolean replicate(ReplicateContext replicateContext) {
       return false;
     }
