@@ -155,12 +155,13 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   }
 
   @Override
-  public Connection toConnection() {
+  public CompletableFuture<Pair<Long, List<HRegionLocation>>> syncRoot(long lastSyncSeqId,
+    int callTimeoutMs) {
     return null;
   }
 
   @Override
-  public CompletableFuture<List<HRegionLocation>> getAllMetaRegionLocations(int callTimeoutMs) {
+  public Connection toConnection() {
     return null;
   }
 }

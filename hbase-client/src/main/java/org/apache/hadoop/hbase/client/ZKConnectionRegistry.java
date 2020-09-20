@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_READ_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.tryClearMasterStubCache;
 import static org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
 import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMagic;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
@@ -58,6 +59,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetAllMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.LocateMetaRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
@@ -298,8 +300,27 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   @Override
   public CompletableFuture<List<HRegionLocation>>
     getAllMetaRegionLocations(boolean excludeOfflinedSplitParents) {
-    return ConnectionUtils.getAllMetaRegionLocations(excludeOfflinedSplitParents, getStub(),
-      cachedStub, rpcControllerFactory, -1);
+    CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
+    addListener(getStub(), (stub, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      HBaseRpcController controller = rpcControllerFactory.newController();
+      stub.getAllMetaRegionLocations(controller, GetAllMetaRegionLocationsRequest.newBuilder()
+        .setExcludeOfflinedSplitParents(excludeOfflinedSplitParents).build(), resp -> {
+          if (controller.failed()) {
+            IOException ex = controller.getFailed();
+            tryClearMasterStubCache(ex, stub, cachedStub);
+            future.completeExceptionally(ex);
+            return;
+          }
+          List<HRegionLocation> locs = resp.getMetaLocationsList().stream()
+            .map(ProtobufUtil::toRegionLocation).collect(Collectors.toList());
+          future.complete(locs);
+        });
+    });
+    return future;
   }
 
   @Override

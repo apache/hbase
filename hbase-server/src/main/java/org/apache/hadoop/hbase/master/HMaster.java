@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.client.RegionLocateType;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -150,6 +151,7 @@ import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.master.replication.AbstractPeerProcedure;
 import org.apache.hadoop.hbase.master.replication.AddPeerProcedure;
 import org.apache.hadoop.hbase.master.replication.DisablePeerProcedure;
@@ -470,7 +472,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   private ProcedureStore procedureStore;
 
   // the master local storage to store procedure data, root table, etc.
-  private MasterRegion masterRegion;
+  @VisibleForTesting
+  MasterRegion masterRegion;
+
+  // a wrapper of MasterRegion to provide root table storage
+  private RootStore rootStore;
 
   // handle table states
   private TableStateManager tableStateManager;
@@ -902,8 +908,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Will be overriden in test to inject customized AssignmentManager
   @VisibleForTesting
   protected AssignmentManager createAssignmentManager(MasterServices master,
-    MasterRegion masterRegion) {
-    return new AssignmentManager(master, masterRegion);
+    RootStore rootStore) {
+    return new AssignmentManager(master, rootStore);
   }
 
   /**
@@ -1066,6 +1072,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // initialize master local region
     masterRegion = MasterRegionFactory.create(this);
+    rootStore = new RootStore(masterRegion);
 
     tryMigrateRootTableFromZooKeeper();
 
@@ -1079,7 +1086,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         .collect(Collectors.groupingBy(p -> p.getClass()));
 
     // Create Assignment Manager
-    this.assignmentManager = createAssignmentManager(this, masterRegion);
+    this.assignmentManager = createAssignmentManager(this, rootStore);
     this.assignmentManager.start();
     // TODO: TRSP can perform as the sub procedure for other procedures, so even if it is marked as
     // completed, it could still be in the procedure list. This is a bit strange but is another
@@ -4005,16 +4012,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     Scan scan =
       CatalogFamilyFormat.createRegionLocateScan(TableName.META_TABLE_NAME, row, locateType, 1);
-    try (RegionScanner scanner = masterRegion.getScanner(scan)) {
-      boolean moreRows;
-      List<Cell> cells = new ArrayList<>();
-      do {
-        moreRows = scanner.next(cells);
-        if (cells.isEmpty()) {
-          continue;
+    try (ResultScanner scanner = rootStore.getScanner(scan)) {
+      for (;;) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
         }
-        Result result = Result.create(cells);
-        cells.clear();
         RegionLocations locs = CatalogFamilyFormat.getRegionLocations(result);
         if (locs == null || locs.getDefaultRegionLocation() == null) {
           LOG.warn("No location found when locating meta region with row='{}', locateType={}",
@@ -4032,7 +4035,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           continue;
         }
         return locs;
-      } while (moreRows);
+      }
       LOG.warn("No location available when locating meta region with row='{}', locateType={}",
         Bytes.toStringBinary(row), locateType);
       return null;
@@ -4041,39 +4044,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   public List<RegionLocations> getAllMetaRegionLocations(boolean excludeOfflinedSplitParents)
     throws IOException {
-    Scan scan = new Scan().addFamily(HConstants.CATALOG_FAMILY);
-    List<RegionLocations> list = new ArrayList<>();
-    try (RegionScanner scanner = masterRegion.getScanner(scan)) {
-      boolean moreRows;
-      List<Cell> cells = new ArrayList<>();
-      do {
-        moreRows = scanner.next(cells);
-        if (cells.isEmpty()) {
-          continue;
-        }
-        Result result = Result.create(cells);
-        cells.clear();
-        RegionLocations locs = CatalogFamilyFormat.getRegionLocations(result);
-        if (locs == null) {
-          LOG.warn("No locations in {}", result);
-          continue;
-        }
-        HRegionLocation loc = locs.getRegionLocation();
-        if (loc == null) {
-          LOG.warn("No non null location in {}", result);
-          continue;
-        }
-        RegionInfo info = loc.getRegion();
-        if (info == null) {
-          LOG.warn("No serialized RegionInfo in {}", result);
-          continue;
-        }
-        if (excludeOfflinedSplitParents && info.isSplitParent()) {
-          continue;
-        }
-        list.add(locs);
-      } while (moreRows);
-    }
-    return list;
+    return rootStore.getAllMetaRegionLocations(excludeOfflinedSplitParents);
+  }
+
+  public Pair<Long, List<RegionLocations>> syncRoot(long lastSyncSeqId) throws IOException {
+    return rootStore.sync(lastSyncSeqId);
   }
 }

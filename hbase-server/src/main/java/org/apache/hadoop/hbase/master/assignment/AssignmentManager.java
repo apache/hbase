@@ -34,7 +34,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -47,6 +46,7 @@ import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
@@ -67,13 +67,12 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
-import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureInMemoryChore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.SequenceId;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -172,22 +171,22 @@ public class AssignmentManager {
   private final int assignMaxAttempts;
   private final int assignRetryImmediatelyMaxAttempts;
 
-  private final MasterRegion masterRegion;
+  private final RootStore rootStore;
 
   private final Object checkIfShouldMoveSystemRegionLock = new Object();
 
   private Thread assignThread;
 
-  public AssignmentManager(MasterServices master, MasterRegion masterRegion) {
-    this(master, masterRegion, new RegionStateStore(master, masterRegion));
+  public AssignmentManager(MasterServices master, RootStore rootStore) {
+    this(master, rootStore, new RegionStateStore(master, rootStore));
   }
 
   @VisibleForTesting
-  AssignmentManager(MasterServices master, MasterRegion masterRegion, RegionStateStore stateStore) {
+  AssignmentManager(MasterServices master, RootStore rootStore, RegionStateStore stateStore) {
     this.master = master;
     this.regionStateStore = stateStore;
     this.metrics = new MetricsAssignmentManager();
-    this.masterRegion = masterRegion;
+    this.rootStore = rootStore;
 
     final Configuration conf = master.getConfiguration();
 
@@ -231,17 +230,13 @@ public class AssignmentManager {
     // load meta region states.
     // notice that, here we will load all replicas, and in MasterMetaBootstrap we may assign new
     // replicas, or remove excess replicas.
-    try (RegionScanner scanner =
-      masterRegion.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
-      List<Cell> cells = new ArrayList<>();
-      boolean moreRows;
-      do {
-        moreRows = scanner.next(cells);
-        if (cells.isEmpty()) {
-          continue;
+    try (ResultScanner scanner =
+      rootStore.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
+      for(;;) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
         }
-        Result result = Result.create(cells);
-        cells.clear();
         RegionStateStore
           .visitMetaEntry((r, regionInfo, state, regionLocation, lastHost, openSeqNum) -> {
             RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
@@ -265,7 +260,7 @@ public class AssignmentManager {
               }
             }
           }, result);
-      } while (moreRows);
+      }
     }
   }
 

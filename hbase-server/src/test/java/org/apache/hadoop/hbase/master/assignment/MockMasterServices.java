@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -110,9 +111,10 @@ public class MockMasterServices extends MockNoopMasterServices {
       conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)?
         null: new SplitWALManager(this);
     this.masterRegion = MasterRegionFactory.create(this);
+    RootStore rootStore = new RootStore(masterRegion);
     // Mock an AM.
     this.assignmentManager =
-      new AssignmentManager(this, masterRegion, new MockRegionStateStore(this, masterRegion)) {
+      new AssignmentManager(this, rootStore, new MockRegionStateStore(this, rootStore)) {
 
         @Override
         public boolean isTableEnabled(final TableName tableName) {
@@ -302,8 +304,8 @@ public class MockMasterServices extends MockNoopMasterServices {
   }
 
   private static class MockRegionStateStore extends RegionStateStore {
-    public MockRegionStateStore(MasterServices master, MasterRegion masterRegion) {
-      super(master, masterRegion);
+    public MockRegionStateStore(MasterServices master, RootStore rootStore) {
+      super(master, rootStore);
     }
 
     @Override

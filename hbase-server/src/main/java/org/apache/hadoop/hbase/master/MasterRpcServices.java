@@ -293,6 +293,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.Recommissi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RootSyncService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
@@ -328,6 +329,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExce
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchExceedThrottleQuotaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SwitchRpcThrottleResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SyncRootRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SyncRootResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
@@ -410,9 +413,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
-public class MasterRpcServices extends RSRpcServices implements MasterService.BlockingInterface,
-  RegionServerStatusService.BlockingInterface, LockService.BlockingInterface,
-  HbckService.BlockingInterface, ClientMetaService.BlockingInterface {
+public class MasterRpcServices extends RSRpcServices
+  implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
+  LockService.BlockingInterface, HbckService.BlockingInterface, ClientMetaService.BlockingInterface,
+  RootSyncService.BlockingInterface {
 
   private static final Logger LOG = LoggerFactory.getLogger(MasterRpcServices.class.getName());
   private static final Logger AUDITLOG =
@@ -546,7 +550,7 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
    */
   @Override
   protected List<BlockingServiceAndInterface> getServices() {
-    List<BlockingServiceAndInterface> bssi = new ArrayList<>(5);
+    List<BlockingServiceAndInterface> bssi = new ArrayList<>();
     bssi.add(new BlockingServiceAndInterface(MasterService.newReflectiveBlockingService(this),
       MasterService.BlockingInterface.class));
     bssi.add(
@@ -558,6 +562,8 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
       HbckService.BlockingInterface.class));
     bssi.add(new BlockingServiceAndInterface(ClientMetaService.newReflectiveBlockingService(this),
       ClientMetaService.BlockingInterface.class));
+    bssi.add(new BlockingServiceAndInterface(RootSyncService.newReflectiveBlockingService(this),
+      RootSyncService.BlockingInterface.class));
     bssi.addAll(super.getServices());
     return bssi;
   }
@@ -3417,6 +3423,18 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
     }
   }
 
+  private static List<HRegionLocation> locs2Loc(List<RegionLocations> locs) {
+    List<HRegionLocation> list = new ArrayList<>();
+    for (RegionLocations ls : locs) {
+      for (HRegionLocation loc : ls) {
+        if (loc != null) {
+          list.add(loc);
+        }
+      }
+    }
+    return list;
+  }
+
   @Override
   public GetAllMetaRegionLocationsResponse getAllMetaRegionLocations(RpcController controller,
     GetAllMetaRegionLocationsRequest request) throws ServiceException {
@@ -3431,16 +3449,7 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
         list = cache.getAllMetaRegionLocations(excludeOfflinedSplitParents);
       } else {
         List<RegionLocations> locs = master.getAllMetaRegionLocations(excludeOfflinedSplitParents);
-        list = new ArrayList<>();
-        if (locs != null) {
-          for (RegionLocations ls : locs) {
-            for (HRegionLocation loc : ls) {
-              if (loc != null) {
-                list.add(loc);
-              }
-            }
-          }
-        }
+        list = locs2Loc(locs);
       }
       GetAllMetaRegionLocationsResponse.Builder builder =
         GetAllMetaRegionLocationsResponse.newBuilder();
@@ -3450,6 +3459,31 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postGetAllMetaRegionLocations(excludeOfflinedSplitParents,
           list);
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public SyncRootResponse syncRoot(RpcController controller, SyncRootRequest request)
+    throws ServiceException {
+    long lastSyncSeqId = request.getLastSyncSeqId();
+    try {
+      master.checkServiceStarted();
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preSyncRoot(lastSyncSeqId);
+      }
+      Pair<Long, List<RegionLocations>> pair = master.syncRoot(lastSyncSeqId);
+      List<HRegionLocation> locs = locs2Loc(pair.getSecond());
+      SyncRootResponse.Builder builder = SyncRootResponse.newBuilder();
+      builder.setLastModifiedSeqId(pair.getFirst());
+      for (HRegionLocation loc : locs) {
+        builder.addMetaLocations(ProtobufUtil.toRegionLocation(loc));
+      }
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postSyncRoot(lastSyncSeqId, pair.getFirst(), locs);
       }
       return builder.build();
     } catch (IOException e) {

@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -55,10 +56,9 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -92,11 +92,11 @@ public class RegionStateStore {
 
   private final MasterServices master;
 
-  private final MasterRegion masterRegion;
+  private final RootStore rootStore;
 
-  public RegionStateStore(MasterServices master, MasterRegion masterRegion) {
+  public RegionStateStore(MasterServices master, RootStore rootStore) {
     this.master = master;
-    this.masterRegion = masterRegion;
+    this.rootStore = rootStore;
   }
 
   @FunctionalInterface
@@ -238,21 +238,9 @@ public class RegionStateStore {
     // scan meta first
     MetaTableAccessor.fullScanRegions(master.getConnection(), visitor);
     // scan root
-    try (RegionScanner scanner =
-      masterRegion.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
-      boolean moreRows;
-      List<Cell> cells = new ArrayList<>();
-      do {
-        moreRows = scanner.next(cells);
-        if (cells.isEmpty()) {
-          continue;
-        }
-        Result result = Result.create(cells);
-        cells.clear();
-        if (!visitor.visit(result)) {
-          break;
-        }
-      } while (moreRows);
+    try (ResultScanner scanner =
+      rootStore.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
+      ClientMetaTableAccessor.visit(scanner, visitor, -1);
     }
   }
 
@@ -270,7 +258,7 @@ public class RegionStateStore {
     throws IOException {
     try {
       if (regionInfo.isMetaRegion()) {
-        masterRegion.update(r -> r.put(put));
+        rootStore.put(put);
       } else {
         try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
           table.put(put);
@@ -301,11 +289,7 @@ public class RegionStateStore {
   private void multiMutate(RegionInfo ri, List<Mutation> mutations) throws IOException {
     debugLogMutations(mutations);
     if (ri.isMetaRegion()) {
-      masterRegion.update(region -> {
-        List<byte[]> rowsToLock =
-          mutations.stream().map(Mutation::getRow).collect(Collectors.toList());
-        region.mutateRowsWithLocks(mutations, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
-      });
+      rootStore.multiMutate(mutations);
     } else {
       byte[] row =
         Bytes.toBytes(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionNameAsString() +
@@ -342,7 +326,7 @@ public class RegionStateStore {
     Get get =
       new Get(CatalogFamilyFormat.getMetaKeyForRegion(region)).addFamily(HConstants.CATALOG_FAMILY);
     if (region.isMetaRegion()) {
-      return masterRegion.get(get);
+      return rootStore.get(get);
     } else {
       try (Table table = getMetaTable()) {
         return table.get(get);
@@ -505,7 +489,7 @@ public class RegionStateStore {
     }
     debugLogMutation(delete);
     if (mergeRegion.isMetaRegion()) {
-      masterRegion.update(r -> r.delete(delete));
+      rootStore.delete(delete);
     } else {
       try (Table table = getMetaTable()) {
         table.delete(delete);
@@ -576,9 +560,7 @@ public class RegionStateStore {
     if (!metaRegions.isEmpty()) {
       List<Delete> deletes = makeDeleteRegionInfos(metaRegions, ts);
       debugLogMutations(deletes);
-      for (Delete d : deletes) {
-        masterRegion.update(r -> r.delete(d));
-      }
+      rootStore.delete(deletes);
       LOG.info("Deleted {} regions from ROOT", metaRegions.size());
       LOG.debug("Deleted regions: {}", metaRegions);
     }

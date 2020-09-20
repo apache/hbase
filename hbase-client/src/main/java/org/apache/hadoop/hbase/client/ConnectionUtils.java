@@ -38,7 +38,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -53,7 +52,6 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.security.User;
@@ -77,8 +75,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetAllMetaRegionLocationsRequest;
 
 /**
  * Utility used by client connections.
@@ -649,8 +645,8 @@ public final class ConnectionUtils {
     }
   }
 
-  public static void tryClearMasterStubCache(IOException error,
-    ClientMetaService.Interface currentStub, AtomicReference<ClientMetaService.Interface> stub) {
+  public static <T> void tryClearMasterStubCache(IOException error,
+    T currentStub, AtomicReference<T> stub) {
     if (ClientExceptionsUtil.isConnectionException(error) ||
       error instanceof ServerNotRunningYetException) {
       stub.compareAndSet(currentStub, null);
@@ -724,36 +720,5 @@ public final class ConnectionUtils {
         }
       }
     }
-  }
-
-  public static CompletableFuture<List<HRegionLocation>> getAllMetaRegionLocations(
-    boolean excludeOfflinedSplitParents,
-    CompletableFuture<ClientMetaService.Interface> getStubFuture,
-    AtomicReference<ClientMetaService.Interface> stubRef,
-    RpcControllerFactory rpcControllerFactory, int callTimeoutMs) {
-    CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
-    addListener(getStubFuture, (stub, error) -> {
-      if (error != null) {
-        future.completeExceptionally(error);
-        return;
-      }
-      HBaseRpcController controller = rpcControllerFactory.newController();
-      if (callTimeoutMs > 0) {
-        controller.setCallTimeout(callTimeoutMs);
-      }
-      stub.getAllMetaRegionLocations(controller, GetAllMetaRegionLocationsRequest.newBuilder()
-        .setExcludeOfflinedSplitParents(excludeOfflinedSplitParents).build(), resp -> {
-          if (controller.failed()) {
-            IOException ex = controller.getFailed();
-            tryClearMasterStubCache(ex, stub, stubRef);
-            future.completeExceptionally(ex);
-            return;
-          }
-          List<HRegionLocation> locs = resp.getMetaLocationsList().stream()
-            .map(ProtobufUtil::toRegionLocation).collect(Collectors.toList());
-          future.complete(locs);
-        });
-    });
-    return future;
   }
 }

@@ -103,5 +103,6 @@ public interface AsyncClusterConnection extends AsyncConnection {
   /**
    * Fetch all meta region locations from active master, used by backup masters for caching.
    */
-  CompletableFuture<List<HRegionLocation>> getAllMetaRegionLocations(int callTimeoutMs);
+  CompletableFuture<Pair<Long, List<HRegionLocation>>> syncRoot(long lastSyncSeqId,
+    int callTimeoutMs);
 }
