@@ -325,7 +325,6 @@ public class MasterRegistry implements ConnectionRegistry {
   }
 
   CompletableFuture<List<ServerName>> getMasters() {
-    System.out.println("getMasters()");
     return this
         .<GetMastersResponse> call((c, s, d) -> s.getMasters(
             c, GetMastersRequest.getDefaultInstance(), d), r -> r.getMasterServersCount() != 0,
