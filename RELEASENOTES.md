@@ -27,6 +27,19 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-24896](https://issues.apache.org/jira/browse/HBASE-24896) | *Major* | **'Stuck' in static initialization creating RegionInfo instance**
+
+1. Untangle RegionInfo, RegionInfoBuilder, and MutableRegionInfo static
+initializations.
+2. Undo static initializing references from RegionInfo to RegionInfoBuilder.
+3. Mark RegionInfo#UNDEFINED IA.Private and deprecated;
+it is for internal use only and likely to be removed in HBase4. (sub-task HBASE-24918)
+4. Move MutableRegionInfo from inner-class of
+RegionInfoBuilder to be (package private) standalone. (sub-task HBASE-24918)
+
+
+---
+
 * [HBASE-24956](https://issues.apache.org/jira/browse/HBASE-24956) | *Major* | **ConnectionManager#locateRegionInMeta waits for user region lock indefinitely.**
 
 <!-- markdown -->
