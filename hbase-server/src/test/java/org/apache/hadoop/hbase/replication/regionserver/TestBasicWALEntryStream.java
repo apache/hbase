@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
+import org.apache.hadoop.hbase.replication.ReplicationSourceController;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -271,19 +272,19 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     when(source.getWALFileLengthProvider()).thenReturn(log);
     when(source.getServer()).thenReturn(mockServer);
     when(source.isRecovered()).thenReturn(recovered);
-    source.manager = mockReplicationSourceManager();
+    source.controller = mockReplicationSourceController();
     return source;
   }
 
-  private ReplicationSourceManager mockReplicationSourceManager() {
-    ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
+  private ReplicationSourceController mockReplicationSourceController() {
+    ReplicationSourceController controller = Mockito.mock(ReplicationSourceController.class);
     MetricsReplicationGlobalSourceSource globalMetrics =
       Mockito.mock(MetricsReplicationGlobalSourceSource.class);
-    when(mockSourceManager.getGlobalMetrics()).thenReturn(globalMetrics);
-    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
-    when(mockSourceManager.getTotalBufferLimit())
+    when(controller.getGlobalMetrics()).thenReturn(globalMetrics);
+    when(controller.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
+    when(controller.getTotalBufferLimit())
       .thenReturn((long) HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
-    return mockSourceManager;
+    return controller;
   }
 
   private ReplicationSourceWALReader createReader(boolean recovered, Configuration conf) {

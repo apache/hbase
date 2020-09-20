@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationSourceController;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -93,7 +94,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * </ul>
  */
 @InterfaceAudience.Private
-public class ReplicationSourceManager {
+public class ReplicationSourceManager implements ReplicationSourceController {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceManager.class);
   // all the sources that read this RS's logs and every peer only has one replication source
   private final ConcurrentMap<String, ReplicationSourceInterface> sources;
@@ -134,12 +135,6 @@ public class ReplicationSourceManager {
 
   private AtomicLong totalBufferUsed = new AtomicLong();
 
-  // How long should we sleep for each retry when deleting remote wal files for sync replication
-  // peer.
-  private final long sleepForRetries;
-  // Maximum number of retries before taking bold actions when deleting remote wal files for sync
-  // replication peer.
-  private final int maxRetriesMultiplier;
   // Total buffer size on this RegionServer for holding batched edits to be shipped.
   private final long totalBufferLimit;
   private final MetricsReplicationGlobalSourceSource globalMetrics;
@@ -153,6 +148,12 @@ public class ReplicationSourceManager {
    * presence and if absent, while creating so only created and started once.
    */
   AtomicReference<ReplicationSourceInterface> catalogReplicationSource = new AtomicReference<>();
+
+  /**
+   * When enable replication offload, will not create replication source and only write WAL to
+   * replication queue storage. The replication source will be started by ReplicationServer.
+   */
+  private final boolean replicationOffload;
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
@@ -197,12 +198,11 @@ public class ReplicationSourceManager {
     this.latestPaths = new HashMap<>();
     this.replicationForBulkLoadDataEnabled = conf.getBoolean(
       HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
-    this.sleepForRetries = this.conf.getLong("replication.source.sync.sleepforretries", 1000);
-    this.maxRetriesMultiplier =
-      this.conf.getInt("replication.source.sync.maxretriesmultiplier", 60);
     this.totalBufferLimit = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
         HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
     this.globalMetrics = globalMetrics;
+    this.replicationOffload = conf.getBoolean(HConstants.REPLICATION_OFFLOAD_ENABLE_KEY,
+      HConstants.REPLICATION_OFFLOAD_ENABLE_DEFAULT);
   }
 
   /**
@@ -338,7 +338,9 @@ public class ReplicationSourceManager {
     if (peerConfig.isSyncReplication()) {
       syncReplicationPeerMappingManager.add(peer.getId(), peerConfig);
     }
-    src.startup();
+    if (!replicationOffload) {
+      src.startup();
+    }
     return src;
   }
 
@@ -431,7 +433,9 @@ public class ReplicationSourceManager {
         .forEach(wal -> src.enqueueLog(new Path(this.logDir, wal)));
     }
     LOG.info("Startup replication source for " + src.getPeerId());
-    src.startup();
+    if (!replicationOffload) {
+      src.startup();
+    }
 
     List<ReplicationSourceInterface> toStartup = new ArrayList<>();
     // synchronized on oldsources to avoid race with NodeFailoverWorker
@@ -454,8 +458,10 @@ public class ReplicationSourceManager {
         toStartup.add(recoveredReplicationSource);
       }
     }
-    for (ReplicationSourceInterface replicationSource : toStartup) {
-      replicationSource.startup();
+    if (!replicationOffload) {
+      for (ReplicationSourceInterface replicationSource : toStartup) {
+        replicationSource.startup();
+      }
     }
   }
 
@@ -473,7 +479,8 @@ public class ReplicationSourceManager {
     return true;
   }
 
-  void finishRecoveredSource(ReplicationSourceInterface src) {
+  @Override
+  public void finishRecoveredSource(RecoveredReplicationSource src) {
     synchronized (oldsources) {
       if (!removeRecoveredSource(src)) {
         return;
@@ -487,8 +494,7 @@ public class ReplicationSourceManager {
    * Clear the metrics and related replication queue of the specified old source
    * @param src source to clear
    */
-  void removeSource(ReplicationSourceInterface src) {
-    LOG.info("Done with the queue " + src.getQueueId());
+  private void removeSource(ReplicationSourceInterface src) {
     this.sources.remove(src.getPeerId());
     // Delete queue from storage and memory
     deleteQueue(src.getQueueId());
@@ -532,7 +538,7 @@ public class ReplicationSourceManager {
     }
   }
 
-  // public because of we call it in TestReplicationEmptyWALRecovery
+  @InterfaceAudience.Private
   public void preLogRoll(Path newLog) throws IOException {
     String logName = newLog.getName();
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(logName);
@@ -550,8 +556,8 @@ public class ReplicationSourceManager {
     }
   }
 
-  // public because of we call it in TestReplicationEmptyWALRecovery
-  public void postLogRoll(Path newLog) throws IOException {
+  @InterfaceAudience.Private
+  public void postLogRoll(Path newLog) {
     // This only updates the sources we own, not the recovered ones
     for (ReplicationSourceInterface source : this.sources.values()) {
       source.enqueueLog(newLog);
@@ -758,6 +764,7 @@ public class ReplicationSourceManager {
     }
   }
 
+  @Override
   public AtomicLong getTotalBufferUsed() {
     return totalBufferUsed;
   }
@@ -766,6 +773,7 @@ public class ReplicationSourceManager {
    * Returns the maximum size in bytes of edits held in memory which are pending replication
    * across all sources inside this RegionServer.
    */
+  @Override
   public long getTotalBufferLimit() {
     return totalBufferLimit;
   }
@@ -856,7 +864,8 @@ public class ReplicationSourceManager {
     return executor.getActiveCount();
   }
 
-  MetricsReplicationGlobalSourceSource getGlobalMetrics() {
+  @Override
+  public MetricsReplicationGlobalSourceSource getGlobalMetrics() {
     return this.globalMetrics;
   }
 

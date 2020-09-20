@@ -315,7 +315,7 @@ public class TestReplicationSource {
     reader.addEntryToBatch(batch, mockEntry);
     reader.entryBatchQueue.put(batch);
     source.terminate("test");
-    assertEquals(0, source.manager.getTotalBufferUsed().get());
+    assertEquals(0, source.controller.getTotalBufferUsed().get());
   }
 
   /**
