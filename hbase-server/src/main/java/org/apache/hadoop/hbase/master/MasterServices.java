@@ -578,4 +578,10 @@ public interface MasterServices extends Server {
    * We need to get this in MTP to tell the syncer the new meta replica count.
    */
   MetaLocationSyncer getMetaLocationSyncer();
+
+  /**
+   * Get a list of servers' addresses for replication sink.
+   * @return a list of servers' address
+   */
+  List<ServerName> listReplicationSinkServers() throws IOException;
 }

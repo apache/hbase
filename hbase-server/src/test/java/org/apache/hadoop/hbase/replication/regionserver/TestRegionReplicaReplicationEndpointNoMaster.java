@@ -256,11 +256,13 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
 
     ReplicationEndpoint.Context context = mock(ReplicationEndpoint.Context.class);
     when(context.getConfiguration()).thenReturn(HTU.getConfiguration());
+    when(context.getLocalConfiguration()).thenReturn(HTU.getConfiguration());
     when(context.getMetrics()).thenReturn(mock(MetricsSource.class));
     when(context.getServer()).thenReturn(rs0);
     when(context.getTableDescriptors()).thenReturn(rs0.getTableDescriptors());
     replicator.init(context);
     replicator.startAsync();
+    HTU.waitFor(30000, replicator::isRunning);
 
     //load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);

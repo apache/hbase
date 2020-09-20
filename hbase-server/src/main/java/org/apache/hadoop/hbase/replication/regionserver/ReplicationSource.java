@@ -344,9 +344,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
         Threads.setDaemonThreadRunning(
             walReader, Thread.currentThread().getName()
             + ".replicationSource.wal-reader." + walGroupId + "," + queueId,
-          (t,e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
+          (t,e) -> this.uncaughtException(t, e, null, this.getPeerId()));
         worker.setWALReader(walReader);
-        worker.startup((t,e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
+        worker.startup((t,e) -> this.uncaughtException(t, e, null, this.getPeerId()));
         return worker;
       }
     });
