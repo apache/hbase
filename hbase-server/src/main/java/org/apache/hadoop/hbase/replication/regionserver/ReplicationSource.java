@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationSourceController;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
@@ -99,8 +100,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
   protected Configuration conf;
   protected ReplicationQueueInfo replicationQueueInfo;
 
-  // The manager of all sources to which we ping back our progress
-  ReplicationSourceManager manager;
+  protected Path walDir;
+
+  protected ReplicationSourceController controller;
   // Should we stop everything?
   protected Server server;
   // How long should we sleep for each retry
@@ -187,23 +189,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.baseFilterOutWALEntries = Collections.unmodifiableList(baseFilterOutWALEntries);
   }
 
-  /**
-   * Instantiation method used by region servers
-   * @param conf configuration to use
-   * @param fs file system to use
-   * @param manager replication manager to ping to
-   * @param server the server for this region server
-   * @param queueId the id of our replication queue
-   * @param clusterId unique UUID for the cluster
-   * @param metrics metrics for replication source
-   */
   @Override
-  public void init(Configuration conf, FileSystem fs, Path walDir, ReplicationSourceManager manager,
-      ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-      String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-      MetricsSource metrics) throws IOException {
+  public void init(Configuration conf, FileSystem fs, Path walDir,
+    ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
+    ReplicationPeer replicationPeer, Server server, String queueId, UUID clusterId,
+    WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
     this.server = server;
     this.conf = HBaseConfiguration.create(conf);
+    this.walDir = walDir;
     this.waitOnEndpointSeconds =
       this.conf.getInt(WAIT_ON_ENDPOINT_SECONDS, DEFAULT_WAIT_ON_ENDPOINT_SECONDS);
     decorateConf();
@@ -214,7 +207,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.queueSizePerGroup = this.conf.getInt("hbase.regionserver.maxlogs", 32);
     this.queueStorage = queueStorage;
     this.replicationPeer = replicationPeer;
-    this.manager = manager;
+    this.controller = overallController;
     this.fs = fs;
     this.metrics = metrics;
     this.clusterId = clusterId;
@@ -767,9 +760,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
       throttler.addPushSize(batchSize);
     }
     totalReplicatedEdits.addAndGet(entries.size());
-    long newBufferUsed = manager.getTotalBufferUsed().addAndGet(-batchSize);
+    long newBufferUsed = controller.getTotalBufferUsed().addAndGet(-batchSize);
     // Record the new buffer usage
-    this.manager.getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
+    controller.getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
   }
 
   @Override
