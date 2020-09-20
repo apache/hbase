@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.replication;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,21 +31,26 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.AsyncReplicationServerAdmin;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.zookeeper.ZKListener;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.AuthFailedException;
 import org.apache.zookeeper.KeeperException.ConnectionLossException;
@@ -52,6 +60,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListReplicationSinkServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListReplicationSinkServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 
 /**
  * A {@link BaseReplicationEndpoint} for replication endpoints whose
@@ -62,6 +76,13 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   implements Abortable {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseReplicationEndpoint.class);
+
+  public static final String FETCH_SERVERS_USE_ZK_CONF_KEY =
+      "hbase.replication.fetch.servers.usezk";
+
+  public static final String FETCH_SERVERS_INTERVAL_CONF_KEY =
+      "hbase.replication.fetch.servers.interval";
+  public static final int DEFAULT_FETCH_SERVERS_INTERVAL = 10 * 60 * 1000; // 10 mins
 
   private ZKWatcher zkw = null;
   private final Object zkwLock = new Object();
@@ -93,6 +114,11 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   private Map<ServerName, Integer> badReportCounts;
 
   private List<ServerName> sinkServers = new ArrayList<>(0);
+
+  private AsyncClusterConnection peerConnection;
+  private boolean fetchServersUseZk = false;
+  private FetchServersChore fetchServersChore;
+  private int shortOperationTimeout;
 
   /*
    * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
@@ -129,6 +155,19 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
         LOG.warn("{} Failed to close the connection", ctx.getPeerId());
       }
     }
+    if (fetchServersChore != null) {
+      ChoreService choreService = ctx.getServer().getChoreService();
+      if (null != choreService) {
+        choreService.cancelChore(fetchServersChore);
+      }
+    }
+    if (peerConnection != null) {
+      try {
+        peerConnection.close();
+      } catch (IOException e) {
+        LOG.warn("Attempt to close peerConnection failed.", e);
+      }
+    }
   }
 
   /**
@@ -159,8 +198,27 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   @Override
-  protected void doStart() {
+  protected synchronized void doStart() {
+    this.shortOperationTimeout = ctx.getLocalConfiguration().getInt(
+        HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY, DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT);
     try {
+      if (ctx.getLocalConfiguration().getBoolean(FETCH_SERVERS_USE_ZK_CONF_KEY, false)) {
+        fetchServersUseZk = true;
+      } else {
+        try {
+          if (ReplicationUtils.isPeerClusterSupportReplicationOffload(getPeerConnection())) {
+            fetchServersChore = new FetchServersChore(ctx.getServer(), this);
+            ctx.getServer().getChoreService().scheduleChore(fetchServersChore);
+            fetchServersUseZk = false;
+          } else {
+            fetchServersUseZk = true;
+          }
+        } catch (Throwable t) {
+          fetchServersUseZk = true;
+          LOG.warn("Peer {} try to fetch servers by admin failed. Using zk impl.",
+              ctx.getPeerId(), t);
+        }
+      }
       reloadZkWatcher();
       connectPeerCluster();
       notifyStarted();
@@ -203,7 +261,9 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
       }
       zkw = new ZKWatcher(ctx.getConfiguration(),
           "connection to cluster: " + ctx.getPeerId(), this);
-      zkw.registerListener(new PeerRegionServerListener(this));
+      if (fetchServersUseZk) {
+        zkw.registerListener(new PeerRegionServerListener(this));
+      }
     }
   }
 
@@ -229,11 +289,46 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   /**
+   * Get the connection to peer cluster
+   * @return connection to peer cluster
+   * @throws IOException If anything goes wrong connecting
+   */
+  private synchronized AsyncClusterConnection getPeerConnection() throws IOException {
+    if (peerConnection == null) {
+      Configuration conf = ctx.getConfiguration();
+      peerConnection = ClusterConnectionFactory.createAsyncClusterConnection(conf, null,
+          UserProvider.instantiate(conf).getCurrent());
+    }
+    return peerConnection;
+  }
+
+  /**
+   * Get the list of all the servers that are responsible for replication sink
+   * from the specified peer master
+   * @return list of server addresses or an empty list if the slave is unavailable
+   */
+  protected List<ServerName> fetchSlavesAddresses() {
+    try {
+      AsyncClusterConnection peerConn = getPeerConnection();
+      ServerName master = FutureUtils.get(peerConn.getAdmin().getMaster());
+      MasterService.BlockingInterface masterStub = MasterService.newBlockingStub(
+        peerConn.getRpcClient()
+          .createBlockingRpcChannel(master, User.getCurrent(), shortOperationTimeout));
+      ListReplicationSinkServersResponse resp = masterStub
+        .listReplicationSinkServers(null, ListReplicationSinkServersRequest.newBuilder().build());
+      return ProtobufUtil.toServerNameList(resp.getServerNameList());
+    } catch (ServiceException | IOException e) {
+      LOG.error("Peer {} fetches servers failed", ctx.getPeerId(), e);
+    }
+    return Collections.emptyList();
+  }
+
+  /**
    * Get the list of all the region servers from the specified peer
    *
    * @return list of region server addresses or an empty list if the slave is unavailable
    */
-  protected List<ServerName> fetchSlavesAddresses() {
+  protected List<ServerName> fetchSlavesAddressesByZK() {
     List<String> children = null;
     try {
       synchronized (zkwLock) {
@@ -256,7 +351,12 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   protected synchronized void chooseSinks() {
-    List<ServerName> slaveAddresses = fetchSlavesAddresses();
+    List<ServerName> slaveAddresses = Collections.emptyList();
+    if (fetchServersUseZk) {
+      slaveAddresses = fetchSlavesAddressesByZK();
+    } else {
+      slaveAddresses = fetchSlavesAddresses();
+    }
     if (slaveAddresses.isEmpty()) {
       LOG.warn("No sinks available at peer. Will not be able to replicate");
     }
@@ -285,6 +385,14 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     ServerName serverName =
       sinkServers.get(ThreadLocalRandom.current().nextInt(sinkServers.size()));
     return createSinkPeer(serverName);
+  }
+
+  private SinkPeer createSinkPeer(ServerName serverName) throws IOException {
+    if (ReplicationUtils.isPeerClusterSupportReplicationOffload(conn)) {
+      return new ReplicationServerSinkPeer(serverName, conn.getReplicationServerAdmin(serverName));
+    } else {
+      return new RegionServerSinkPeer(serverName, conn.getRegionServerAdmin(serverName));
+    }
   }
 
   /**
@@ -396,11 +504,23 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     }
   }
 
-  private SinkPeer createSinkPeer(ServerName serverName) throws IOException {
-    if (ReplicationUtils.isPeerClusterSupportReplicationOffload(conn)) {
-      return new ReplicationServerSinkPeer(serverName, conn.getReplicationServerAdmin(serverName));
-    } else {
-      return new RegionServerSinkPeer(serverName, conn.getRegionServerAdmin(serverName));
+  /**
+   * Chore that will fetch the list of servers from peer master.
+   */
+  public static class FetchServersChore extends ScheduledChore {
+
+    private HBaseReplicationEndpoint endpoint;
+
+    public FetchServersChore(Server server, HBaseReplicationEndpoint endpoint) {
+      super("Peer-" + endpoint.ctx.getPeerId() + "-FetchServersChore", server,
+        server.getConfiguration()
+          .getInt(FETCH_SERVERS_INTERVAL_CONF_KEY, DEFAULT_FETCH_SERVERS_INTERVAL));
+      this.endpoint = endpoint;
+    }
+
+    @Override
+    protected void chore() {
+      endpoint.chooseSinks();
     }
   }
 }

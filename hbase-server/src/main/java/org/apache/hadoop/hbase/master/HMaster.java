@@ -3856,4 +3856,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     return compactionState;
   }
+
+  @Override
+  public List<ServerName> listReplicationSinkServers() throws IOException {
+    return this.serverManager.getOnlineServersList();
+  }
 }

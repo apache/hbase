@@ -514,4 +514,9 @@ public class MockNoopMasterServices implements MasterServices {
   public boolean normalizeRegions(NormalizeTableFilterParams ntfp, boolean isHighPriority) {
     return false;
   }
+
+  @Override
+  public List<ServerName> listReplicationSinkServers() throws IOException {
+    return null;
+  }
 }

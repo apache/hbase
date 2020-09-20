@@ -570,4 +570,10 @@ public interface MasterServices extends Server {
    */
   boolean normalizeRegions(
     final NormalizeTableFilterParams ntfp, final boolean isHighPriority) throws IOException;
+
+  /**
+   * Get a list of servers' addresses for replication sink.
+   * @return a list of servers' address
+   */
+  List<ServerName> listReplicationSinkServers() throws IOException;
 }
