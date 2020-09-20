@@ -3900,4 +3900,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   public RSGroupInfoManager getRSGroupInfoManager() {
     return rsGroupInfoManager;
   }
+
+  @Override
+  public List<ServerName> listReplicationSinkServers() throws IOException {
+    return this.serverManager.getOnlineServersList();
+  }
 }
