@@ -71,7 +71,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    */
   @Deprecated
   @InterfaceAudience.Private
-  // Not using RegionInfoBuilder intentionally to avoid a static loading deadlock: HBASE-24627
+  // Not using RegionInfoBuilder intentionally to avoid a static loading deadlock: HBASE-24896
   RegionInfo UNDEFINED = new MutableRegionInfo(0, TableName.valueOf("__UNDEFINED__"),
     RegionInfo.DEFAULT_REPLICA_ID);
 
