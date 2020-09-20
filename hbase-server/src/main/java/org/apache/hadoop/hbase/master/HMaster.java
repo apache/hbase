@@ -3782,4 +3782,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   public MetaLocationSyncer getMetaLocationSyncer() {
     return metaLocationSyncer;
   }
+
+  @Override
+  public List<ServerName> listReplicationSinkServers() throws IOException {
+    return this.serverManager.getOnlineServersList();
+  }
 }

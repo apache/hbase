@@ -520,4 +520,9 @@ public class MockNoopMasterServices implements MasterServices {
   public MetaLocationSyncer getMetaLocationSyncer() {
     return null;
   }
+
+  @Override
+  public List<ServerName> listReplicationSinkServers() throws IOException {
+    return null;
+  }
 }
