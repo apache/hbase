@@ -693,6 +693,13 @@ message SwitchExceedThrottleQuotaResponse {
   required bool previous_exceed_throttle_quota_enabled = 1;
 }
 
+message ListReplicationSinkServersRequest {
+}
+
+message ListReplicationSinkServersResponse {
+  repeated ServerName server_name = 1;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -1122,7 +1129,10 @@ service MasterService {
     returns (RenameRSGroupResponse);
 
   rpc UpdateRSGroupConfig(UpdateRSGroupConfigRequest)
-  returns (UpdateRSGroupConfigResponse);
+    returns (UpdateRSGroupConfigResponse);
+
+  rpc ListReplicationSinkServers(ListReplicationSinkServersRequest)
+    returns (ListReplicationSinkServersResponse);
 }
 
 // HBCK Service definitions.

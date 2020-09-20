@@ -2039,4 +2039,22 @@ public class MasterCoprocessorHost
       }
     });
   }
+
+  public void preListReplicationSinkServers() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preListReplicationSinkServers(this);
+      }
+    });
+  }
+
+  public void postListReplicationSinkServers() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postListReplicationSinkServers(this);
+      }
+    });
+  }
 }
