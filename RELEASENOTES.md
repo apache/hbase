@@ -27,6 +27,15 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-24956](https://issues.apache.org/jira/browse/HBASE-24956) | *Major* | **ConnectionManager#locateRegionInMeta waits for user region lock indefinitely.**
+
+<!-- markdown -->
+
+Without this fix there are situations in which locateRegionInMeta() on a client is not bound by a timeout. This happens because of a global lock whose acquisition was not under any lock scope. This affects client facing API calls that rely on this method to locate a table region in meta. This fix brings the lock acquisition under the scope of "hbase.client.meta.operation.timeout" and that guarantees a bounded wait time.
+
+
+---
+
 * [HBASE-24776](https://issues.apache.org/jira/browse/HBASE-24776) | *Major* | **[hbtop] Support Batch mode**
 
 HBASE-24776 added the following command line parameters to hbtop:
