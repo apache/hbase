@@ -42,11 +42,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyTableState;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
@@ -294,7 +294,7 @@ public class ModifyTableProcedure
         env.getMasterServices().getTableDescriptors().get(getTableName());
 
     if (env.getMasterServices().getAssignmentManager().getTableStateManager()
-        .isTableState(getTableName(), ZooKeeperProtos.Table.State.ENABLED)) {
+        .isTableState(getTableName(), TableState.State.ENABLED)) {
       // We only execute this procedure with table online if online schema change config is set.
       if (!MasterDDLOperationHelper.isOnlineSchemaChangeAllowed(env)) {
         throw new TableNotDisabledException(getTableName());
@@ -432,7 +432,7 @@ public class ModifyTableProcedure
   private void reOpenAllRegionsIfTableIsOnline(final MasterProcedureEnv env) throws IOException {
     // This operation only run when the table is enabled.
     if (!env.getMasterServices().getAssignmentManager().getTableStateManager()
-        .isTableState(getTableName(), ZooKeeperProtos.Table.State.ENABLED)) {
+        .isTableState(getTableName(), TableState.State.ENABLED)) {
       return;
     }
 

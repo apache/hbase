@@ -760,6 +760,8 @@ See <<hbase_metrics>>  for more information.
   This could indicate that read requests are often slow, or that hedged reads are triggered too quickly.
 * hedgeReadOpsWin - the number of times the hedged read thread was faster than the original thread.
   This could indicate that a given RegionServer is having trouble servicing requests.
+* hedgedReadOpsInCurThread - the number of times hedged read was rejected from executor and needed to fallback to be executed in current thread.
+  This could indicate that current hedged read thread pool size is not appropriate.
 
 [[perf.deleting]]
 == Deleting from HBase

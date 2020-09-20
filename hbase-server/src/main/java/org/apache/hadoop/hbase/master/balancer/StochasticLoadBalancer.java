@@ -218,18 +218,18 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
 
     costFunctions = new ArrayList<>();
-    costFunctions.add(new RegionCountSkewCostFunction(conf));
-    costFunctions.add(new PrimaryRegionCountSkewCostFunction(conf));
-    costFunctions.add(new MoveCostFunction(conf));
-    costFunctions.add(localityCost);
-    costFunctions.add(rackLocalityCost);
-    costFunctions.add(new TableSkewCostFunction(conf));
-    costFunctions.add(regionReplicaHostCostFunction);
-    costFunctions.add(regionReplicaRackCostFunction);
-    costFunctions.add(regionLoadFunctions[0]);
-    costFunctions.add(regionLoadFunctions[1]);
-    costFunctions.add(regionLoadFunctions[2]);
-    costFunctions.add(regionLoadFunctions[3]);
+    addCostFunction(new RegionCountSkewCostFunction(conf));
+    addCostFunction(new PrimaryRegionCountSkewCostFunction(conf));
+    addCostFunction(new MoveCostFunction(conf));
+    addCostFunction(localityCost);
+    addCostFunction(rackLocalityCost);
+    addCostFunction(new TableSkewCostFunction(conf));
+    addCostFunction(regionReplicaHostCostFunction);
+    addCostFunction(regionReplicaRackCostFunction);
+    addCostFunction(regionLoadFunctions[0]);
+    addCostFunction(regionLoadFunctions[1]);
+    addCostFunction(regionLoadFunctions[2]);
+    addCostFunction(regionLoadFunctions[3]);
     loadCustomCostFunctions(conf);
 
     curFunctionCosts = new Double[costFunctions.size()];
@@ -567,6 +567,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         balancer.updateStochasticCost(tableName.getNameAsString(), costFunctionName,
           "The percent of " + costFunctionName, costPercent);
       }
+    }
+  }
+
+  private void addCostFunction(CostFunction costFunction) {
+    if (costFunction.getMultiplier() > 0) {
+      costFunctions.add(costFunction);
     }
   }
 

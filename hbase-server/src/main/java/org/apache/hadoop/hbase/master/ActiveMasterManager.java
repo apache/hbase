@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,8 +17,10 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
-
+import com.google.common.collect.ImmutableList;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -36,9 +38,10 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Handles everything on master-side related to master election.
+ * Handles everything on master-side related to master election. Keeps track of
+ * currently active master and registered backup masters.
  *
- * <p>Listens and responds to ZooKeeper notifications on the master znode,
+ * <p>Listens and responds to ZooKeeper notifications on the master znodes,
  * both <code>nodeCreated</code> and <code>nodeDeleted</code>.
  *
  * <p>Contains blocking methods which will hold up backup masters, waiting
@@ -57,20 +60,31 @@ public class ActiveMasterManager extends ZooKeeperListener {
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
   final AtomicBoolean clusterShutDown = new AtomicBoolean(false);
 
+  // This server's information.
   private final ServerName sn;
   private int infoPort;
   private final Server master;
 
+  // Active master's server name. Invalidated anytime active master changes (based on ZK
+  // notifications) and lazily fetched on-demand.
+  // ServerName is immutable, so we don't need heavy synchronization around it.
+  volatile ServerName activeMasterServerName;
+  // Registered backup masters. List is kept up to date based on ZK change notifications to
+  // backup znode.
+  private volatile ImmutableList<ServerName> backupMasters;
+
   /**
-   * @param watcher
+   * @param watcher ZK watcher
    * @param sn ServerName
    * @param master In an instance of a Master.
    */
-  ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, Server master) {
+  ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, Server master)
+      throws InterruptedIOException {
     super(watcher);
     watcher.registerListener(this);
     this.sn = sn;
     this.master = master;
+    updateBackupMasters();
   }
 
   // will be set after jetty server is started
@@ -84,8 +98,18 @@ public class ActiveMasterManager extends ZooKeeperListener {
   }
 
   @Override
-  public void nodeDeleted(String path) {
+  public void nodeChildrenChanged(String path) {
+    if (path.equals(watcher.backupMasterAddressesZNode)) {
+      try {
+        updateBackupMasters();
+      } catch (InterruptedIOException ioe) {
+        LOG.error("Error updating backup masters", ioe);
+      }
+    }
+  }
 
+  @Override
+  public void nodeDeleted(String path) {
     // We need to keep track of the cluster's shutdown status while
     // we wait on the current master. We consider that, if the cluster
     // was already in a "shutdown" state when we started, that this master
@@ -96,7 +120,6 @@ public class ActiveMasterManager extends ZooKeeperListener {
     if(path.equals(watcher.clusterStateZNode) && !master.isStopped()) {
       clusterShutDown.set(true);
     }
-
     handle(path);
   }
 
@@ -104,6 +127,38 @@ public class ActiveMasterManager extends ZooKeeperListener {
     if (path.equals(watcher.getMasterAddressZNode()) && !master.isStopped()) {
       handleMasterNodeChange();
     }
+  }
+
+  private void updateBackupMasters() throws InterruptedIOException {
+    backupMasters =
+        ImmutableList.copyOf(MasterAddressTracker.getBackupMastersAndRenewWatch(watcher));
+  }
+
+  /**
+   * Fetches the active master's ServerName from zookeeper.
+   */
+  private void fetchAndSetActiveMasterServerName() {
+    LOG.debug("Attempting to fetch active master sn from zk");
+    try {
+      activeMasterServerName = MasterAddressTracker.getMasterAddress(watcher);
+    } catch (IOException | KeeperException e) {
+      // Log and ignore for now and re-fetch later if needed.
+      LOG.error("Error fetching active master information", e);
+    }
+  }
+
+  /**
+   * @return the currently active master as seen by us or null if one does not exist.
+   */
+  public ServerName getActiveMasterServerName() {
+    if (!clusterHasActiveMaster.get()) {
+      return null;
+    }
+    if (activeMasterServerName == null) {
+      fetchAndSetActiveMasterServerName();
+    }
+    // It could still be null, but return whatever we have.
+    return activeMasterServerName;
   }
 
   /**
@@ -134,6 +189,9 @@ public class ActiveMasterManager extends ZooKeeperListener {
           // Notify any thread waiting to become the active master
           clusterHasActiveMaster.notifyAll();
         }
+        // Reset the active master sn. Will be re-fetched later if needed.
+        // We don't want to make a synchronous RPC under a monitor.
+        activeMasterServerName = null;
       }
     } catch (KeeperException ke) {
       master.abort("Received an unexpected KeeperException, aborting", ke);
@@ -151,8 +209,8 @@ public class ActiveMasterManager extends ZooKeeperListener {
    * @param checkInterval the interval to check if the master is stopped
    * @param startupStatus the monitor status to track the progress
    * @return True if no issue becoming active master else false if another
-   * master was running or if some other problem (zookeeper, stop flag has been
-   * set on this Master)
+   *   master was running or if some other problem (zookeeper, stop flag has been
+   *   set on this Master)
    */
   boolean blockUntilBecomingActiveMaster(
       int checkInterval, MonitoredTask startupStatus) {
@@ -179,9 +237,13 @@ public class ActiveMasterManager extends ZooKeeperListener {
           startupStatus.setStatus("Successfully registered as active master.");
           this.clusterHasActiveMaster.set(true);
           LOG.info("Registered Active Master=" + this.sn);
+          activeMasterServerName = sn;
           return true;
         }
 
+        // Invalidate the active master name so that subsequent requests do not get any stale
+        // master information. Will be re-fetched if needed.
+        activeMasterServerName = null;
         // There is another active master running elsewhere or this is a restart
         // and the master ephemeral node has not expired yet.
         this.clusterHasActiveMaster.set(true);
@@ -208,7 +270,8 @@ public class ActiveMasterManager extends ZooKeeperListener {
             ZKUtil.deleteNode(this.watcher, this.watcher.getMasterAddressZNode());
 
             // We may have failed to delete the znode at the previous step, but
-            //  we delete the file anyway: a second attempt to delete the znode is likely to fail again.
+            //  we delete the file anyway: a second attempt to delete the znode is likely to fail
+            //  again.
             ZNodeClearer.deleteMyEphemeralNodeOnDisk();
           } else {
             msg = "Another master is the active master, " + currentMaster +
@@ -279,5 +342,12 @@ public class ActiveMasterManager extends ZooKeeperListener {
     } catch (KeeperException e) {
       LOG.error(this.watcher.prefix("Error deleting our own master address node"), e);
     }
+  }
+
+  /**
+   * @return list of registered backup masters.
+   */
+  public List<ServerName> getBackupMasters() {
+    return backupMasters;
   }
 }

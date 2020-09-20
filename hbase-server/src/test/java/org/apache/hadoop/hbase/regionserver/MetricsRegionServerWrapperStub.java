@@ -371,6 +371,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getHedgedReadOpsInCurThread() {
+    return 5;
+  }
+
+  @Override
   public long getTotalBytesRead() {
     return 0;
   }

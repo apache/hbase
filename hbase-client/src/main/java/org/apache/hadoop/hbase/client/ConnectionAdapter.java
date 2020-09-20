@@ -185,6 +185,11 @@ abstract class ConnectionAdapter implements ClusterConnection {
   }
 
   @Override
+  public TableState getTableState(TableName tableName) throws IOException {
+    return wrappedConnection.getTableState(tableName);
+  }
+
+  @Override
   public HTableDescriptor[] listTables() throws IOException {
     return wrappedConnection.listTables();
   }
@@ -495,5 +500,10 @@ abstract class ConnectionAdapter implements ClusterConnection {
   @Override
   public RpcControllerFactory getRpcControllerFactory() {
     return wrappedConnection.getRpcControllerFactory();
+  }
+
+  @Override
+  public String getClusterId() throws IOException {
+    return wrappedConnection.getClusterId();
   }
 }

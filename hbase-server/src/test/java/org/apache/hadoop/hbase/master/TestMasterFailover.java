@@ -43,20 +43,20 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -71,10 +71,8 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.data.Stat;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -302,8 +300,8 @@ public class TestMasterFailover {
     log("Beginning to mock scenarios");
 
     // Disable the disabledTable in ZK
-    TableStateManager zktable = new ZKTableStateManager(zkw);
-    zktable.setTableState(disabledTable, ZooKeeperProtos.Table.State.DISABLED);
+    TableStateManager tsm = master.getTableStateManager();
+    tsm.setTableState(disabledTable, TableState.State.DISABLED);
 
     /*
      *  ZK = OFFLINE
@@ -619,7 +617,7 @@ public class TestMasterFailover {
 
     assertTrue(" Table must be enabled.", master.getAssignmentManager()
         .getTableStateManager().isTableState(TableName.valueOf("enabledTable"),
-        ZooKeeperProtos.Table.State.ENABLED));
+        TableState.State.ENABLED));
     // we also need regions assigned out on the dead server
     List<HRegionInfo> enabledAndOnDeadRegions = new ArrayList<HRegionInfo>();
     enabledAndOnDeadRegions.addAll(enabledRegions.subList(0, 6));
@@ -679,13 +677,11 @@ public class TestMasterFailover {
     log("Beginning to mock scenarios");
 
     // Disable the disabledTable in ZK
-    TableStateManager zktable = new ZKTableStateManager(zkw);
-    zktable.setTableState(disabledTable, ZooKeeperProtos.Table.State.DISABLED);
+    TableStateManager tsm = master.getTableStateManager();
+    tsm.setTableState(disabledTable, TableState.State.DISABLED);
 
     assertTrue(" The enabled table should be identified on master fail over.",
-        zktable.isTableState(TableName.valueOf("enabledTable"),
-          ZooKeeperProtos.Table.State.ENABLED));
-
+        tsm.isTableState(TableName.valueOf("enabledTable"), TableState.State.ENABLED));
     /*
      * ZK = CLOSING
      */
@@ -1143,10 +1139,16 @@ public class TestMasterFailover {
 
     // Check that ClusterStatus reports the correct active and backup masters
     assertNotNull(active);
+    final HMaster finalActive = active;
+    TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        ClusterStatus status = finalActive.getClusterStatus();
+        return status.getBackupMastersSize() == 1 && status.getBackupMasters().size() == 1;
+      }
+    });
     status = active.getClusterStatus();
     assertTrue(status.getMaster().equals(activeName));
-    assertEquals(1, status.getBackupMastersSize());
-    assertEquals(1, status.getBackupMasters().size());
 
     // kill the active master
     LOG.debug("\n\nStopping the active master " + active.getServerName() + "\n");

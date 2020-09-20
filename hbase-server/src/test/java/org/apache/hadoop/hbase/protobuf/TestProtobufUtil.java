@@ -19,19 +19,22 @@
 package org.apache.hadoop.hbase.protobuf;
 
 import static org.junit.Assert.assertEquals;
-
+import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
@@ -40,13 +43,12 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Col
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.protobuf.ByteString;
 
 /**
  * Class to test ProtobufUtil.
@@ -349,5 +351,32 @@ public class TestProtobufUtil {
     ClientProtos.Scan actualProto = ProtobufUtil.toScan(
         ProtobufUtil.toScan(expectedProto));
     assertEquals(expectedProto, actualProto);
+  }
+
+  @Test
+  public void testMetaRegionState() throws Exception {
+    ServerName serverName = ServerName.valueOf("localhost", 1234, 5678);
+    // New region state style.
+    for (RegionState.State state: RegionState.State.values()) {
+      RegionState regionState =
+          new RegionState(HRegionInfo.FIRST_META_REGIONINFO, state, serverName);
+      MetaRegionServer metars = MetaRegionServer.newBuilder()
+          .setServer(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toServerName(serverName))
+          .setRpcVersion(HConstants.RPC_CURRENT_VERSION)
+          .setState(state.convert()).build();
+      // Serialize
+      byte[] data = ProtobufUtil.prependPBMagic(metars.toByteArray());
+      ProtobufUtil.prependPBMagic(data);
+      // Deserialize
+      RegionState regionStateNew = ProtobufUtil.parseMetaRegionStateFrom(data, 1);
+      assertEquals(regionState.getServerName(), regionStateNew.getServerName());
+      assertEquals(regionState.getState(), regionStateNew.getState());
+    }
+    // old style.
+    RegionState rs =
+        org.apache.hadoop.hbase.protobuf.ProtobufUtil.parseMetaRegionStateFrom(
+            serverName.getVersionedBytes(), 1);
+    assertEquals(serverName, rs.getServerName());
+    assertEquals(rs.getState(), RegionState.State.OPEN);
   }
 }

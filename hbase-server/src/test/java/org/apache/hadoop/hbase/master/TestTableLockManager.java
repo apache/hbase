@@ -36,7 +36,6 @@ import java.util.concurrent.Future;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,7 +52,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.exceptions.LockTimeoutException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -388,12 +386,14 @@ public class TestTableLockManager {
     choreService.scheduleChore(alterThread);
     choreService.scheduleChore(splitThread);
     TEST_UTIL.waitTableEnabled(tableName);
+
     while (true) {
       List<HRegionInfo> regions = admin.getTableRegions(tableName);
       LOG.info(String.format("Table #regions: %d regions: %s:", regions.size(), regions));
       assertEquals(admin.getTableDescriptor(tableName), desc);
       for (HRegion region : TEST_UTIL.getMiniHBaseCluster().getRegions(tableName)) {
-        assertEquals(desc, region.getTableDesc());
+        HTableDescriptor regionTableDesc = region.getTableDesc();
+        assertEquals(desc, regionTableDesc);
       }
       if (regions.size() >= 5) {
         break;

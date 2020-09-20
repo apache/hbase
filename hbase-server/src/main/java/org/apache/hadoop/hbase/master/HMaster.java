@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Service;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
@@ -28,7 +29,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -85,8 +85,8 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -141,7 +141,6 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
@@ -169,6 +168,7 @@ import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.hbase.util.ZKDataMigrator;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
@@ -190,12 +190,8 @@ import org.mortbay.jetty.servlet.ServletHolder;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Service;
 
 /**
- * HMaster is the "master server" for HBase. An HBase cluster has one active
- * master.  If many masters are started, all compete.  Whichever wins goes on to
  * run the cluster.  All others park themselves in their constructor until
  * master or cluster shutdown or until the active master loses its lease in
  * zookeeper.  Thereafter, all running master jostle to take over master role.
@@ -308,6 +304,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private RegionsRecoveryConfigManager regionsRecoveryConfigManager = null;
 
+  /**
+   * Cache for the meta region replica's locations. Also tracks their changes to avoid stale
+   * cache entries.
+   */
+  private final MetaRegionLocationCache metaRegionLocationCache;
+
   // buffer for "fatal error" notices from region servers
   // in the cluster. This is only used for assisting
   // operations/debugging.
@@ -381,11 +383,17 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private long splitPlanCount;
   private long mergePlanCount;
 
+  // handle table states
+  private TableStateManager tableStateManager;
+
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
 
   /** jetty server for master to redirect requests to regionserver infoServer */
   private org.mortbay.jetty.Server masterJettyServer;
+
+  // Cached clusterId on stand by masters to serve clusterID requests from clients.
+  private final CachedClusterId cachedClusterId;
 
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302473L;
@@ -515,13 +523,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Some unit tests don't need a cluster, so no zookeeper at all
     if (!conf.getBoolean("hbase.testing.nocluster", false)) {
+      this.metaRegionLocationCache = new MetaRegionLocationCache(this.zooKeeper);
       setInitLatch(new CountDownLatch(1));
       activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
       int infoPort = putUpJettyServer();
       startActiveMasterManager(infoPort);
     } else {
+      this.metaRegionLocationCache = null;
       activeMasterManager = null;
     }
+    cachedClusterId = new CachedClusterId(conf);
   }
 
   // return the actual infoPort, -1 means disable info server.
@@ -684,9 +695,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     this.assignmentManager = new AssignmentManager(this, serverManager,
       this.balancer, this.service, this.metricsMaster,
-      this.tableLockManager);
+      this.tableLockManager, tableStateManager);
     zooKeeper.registerListenerFirst(assignmentManager);
-
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
         this.serverManager);
     this.regionServerTracker.start();
@@ -718,6 +728,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.mpmHost.register(new MasterFlushTableProcedureManager());
     this.mpmHost.loadProcedures(conf);
     this.mpmHost.initialize(this, this.metricsMaster);
+
+    // migrating existent table state from zk
+    for (Map.Entry<TableName, TableState.State> entry : ZKDataMigrator
+        .queryForTableStates(getZooKeeper()).entrySet()) {
+      LOG.info("Converting state from zk to new states:" + entry);
+      tableStateManager.setTableState(entry.getKey(), entry.getValue());
+    }
+    ZKUtil.deleteChildrenRecursively(getZooKeeper(), getZooKeeper().tableZNode);
   }
 
   /**
@@ -781,6 +799,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
+
+    this.tableStateManager = new TableStateManager(this);
+    this.tableStateManager.start();
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -1179,8 +1200,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   private void enableMeta(TableName metaTableName) {
-    if (!this.assignmentManager.getTableStateManager().isTableState(metaTableName,
-        ZooKeeperProtos.Table.State.ENABLED)) {
+    if (!this.tableStateManager.isTableState(metaTableName,
+            TableState.State.ENABLED)) {
       this.assignmentManager.setEnabledTable(metaTableName);
     }
   }
@@ -1222,6 +1243,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public TableNamespaceManager getTableNamespaceManager() {
     return tableNamespaceManager;
+  }
+
+  @Override
+  public TableStateManager getTableStateManager() {
+    return tableStateManager;
   }
 
   /*
@@ -1656,7 +1682,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       // Don't run the normalizer concurrently
       List<TableName> allEnabledTables = new ArrayList<>(
         this.assignmentManager.getTableStateManager().getTablesInStates(
-          ZooKeeperProtos.Table.State.ENABLED));
+          TableState.State.ENABLED));
 
       Collections.shuffle(allEnabledTables);
 
@@ -2501,7 +2527,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       throw new TableNotFoundException(tableName);
     }
     if (!getAssignmentManager().getTableStateManager().
-        isTableState(tableName, ZooKeeperProtos.Table.State.DISABLED)) {
+        isTableState(tableName, TableState.State.DISABLED)) {
       throw new TableNotDisabledException(tableName);
     }
   }
@@ -2522,56 +2548,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    */
   public ClusterStatus getClusterStatusWithoutCoprocessor() throws InterruptedIOException {
     // Build Set of backup masters from ZK nodes
-    List<String> backupMasterStrings;
-    try {
-      backupMasterStrings = ZKUtil.listChildrenNoWatch(this.zooKeeper,
-        this.zooKeeper.backupMasterAddressesZNode);
-    } catch (KeeperException e) {
-      LOG.warn(this.zooKeeper.prefix("Unable to list backup servers"), e);
-      backupMasterStrings = null;
-    }
-
-    List<ServerName> backupMasters = null;
-    if (backupMasterStrings != null && !backupMasterStrings.isEmpty()) {
-      backupMasters = new ArrayList<ServerName>(backupMasterStrings.size());
-      for (String s: backupMasterStrings) {
-        try {
-          byte [] bytes;
-          try {
-            bytes = ZKUtil.getData(this.zooKeeper, ZKUtil.joinZNode(
-                this.zooKeeper.backupMasterAddressesZNode, s));
-          } catch (InterruptedException e) {
-            throw new InterruptedIOException();
-          }
-          if (bytes != null) {
-            ServerName sn;
-            try {
-              sn = ServerName.parseFrom(bytes);
-            } catch (DeserializationException e) {
-              LOG.warn("Failed parse, skipping registering backup server", e);
-              continue;
-            }
-            backupMasters.add(sn);
-          }
-        } catch (KeeperException e) {
-          LOG.warn(this.zooKeeper.prefix("Unable to get information about " +
-                   "backup servers"), e);
-        }
-      }
-      Collections.sort(backupMasters, new Comparator<ServerName>() {
-        @Override
-        public int compare(ServerName s1, ServerName s2) {
-          return s1.getServerName().compareTo(s2.getServerName());
-        }});
-    }
-
+    List<ServerName> backupMasters = getBackupMasters();
     String clusterId = fileSystemManager != null ?
-      fileSystemManager.getClusterId().toString() : null;
+        fileSystemManager.getClusterId().toString() : null;
     Set<RegionState> regionsInTransition = assignmentManager != null ?
-      assignmentManager.getRegionStates().getRegionsInTransition() : null;
+        assignmentManager.getRegionStates().getRegionsInTransition() : null;
     String[] coprocessors = cpHost != null ? getMasterCoprocessors() : null;
     boolean balancerOn = loadBalancerTracker != null ?
-      loadBalancerTracker.isBalancerOn() : false;
+        loadBalancerTracker.isBalancerOn() : false;
     Map<ServerName, ServerLoad> onlineServers = null;
     Set<ServerName> deadServers = null;
     if (serverManager != null) {
@@ -2579,8 +2563,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       onlineServers = serverManager.getOnlineServers();
     }
     return new ClusterStatus(VersionInfo.getVersion(), clusterId,
-      onlineServers, deadServers, serverName, backupMasters,
-      regionsInTransition, coprocessors, balancerOn);
+        onlineServers, deadServers, serverName, backupMasters,
+        regionsInTransition, coprocessors, balancerOn);
+  }
+
+  List<ServerName> getBackupMasters() {
+    return activeMasterManager.getBackupMasters();
   }
 
   /**
@@ -2613,6 +2601,21 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    */
   public long getMasterFinishedInitializationTime() {
     return masterFinishedInitializationTime;
+  }
+
+  /**
+   * @return number of live region servers tracked by this master.
+   * @throws KeeperException if there is an issue with zookeeper connection.
+   */
+  public int getNumLiveRegionServers() throws KeeperException {
+    if (isActiveMaster()) {
+      return regionServerTracker.getOnlineServers().size();
+    }
+    // If the master is not active, we fall back to ZK to fetch the number of live region servers.
+    // This is an extra hop but that is okay since the ConnectionRegistry call that is serviced by
+    // this method is already deprecated and is not used in any active code paths. This method is
+    // here to only for the test code.
+    return ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
   }
 
   public int getNumWALFiles() {
@@ -3432,5 +3435,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
     return replicationLoadSourceMap;
+  }
+
+  public ServerName getActiveMaster() {
+    return activeMasterManager.getActiveMasterServerName();
+  }
+
+  public String getClusterId() {
+    if (activeMaster) {
+      return super.getClusterId();
+    }
+    return cachedClusterId.getFromCacheOrFetch();
+  }
+
+  public MetaRegionLocationCache getMetaRegionLocationCache() {
+    return this.metaRegionLocationCache;
   }
 }

@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -501,8 +502,8 @@ public final class SnapshotTestingUtils {
         this.desc = desc;
         this.tableRegions = tableRegions;
         this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir, conf);
-        new FSTableDescriptors(conf, snapshotDir.getFileSystem(conf), rootDir)
-          .createTableDescriptorForTableDirectory(snapshotDir, htd, false);
+        new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(snapshotDir,
+              new TableDescriptor(htd), false);
       }
 
       public HTableDescriptor getTableDescriptor() {
@@ -719,7 +720,8 @@ public final class SnapshotTestingUtils {
     private RegionData[] createTable(final HTableDescriptor htd, final int nregions)
         throws IOException {
       Path tableDir = FSUtils.getTableDir(rootDir, htd.getTableName());
-      new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(tableDir, htd, false);
+      new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(tableDir,
+          new TableDescriptor(htd), false);
 
       assertTrue(nregions % 2 == 0);
       RegionData[] regions = new RegionData[nregions];

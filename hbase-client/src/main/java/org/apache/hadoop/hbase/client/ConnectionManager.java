@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
+import org.apache.hadoop.hbase.exceptions.LockTimeoutException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
@@ -82,7 +83,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.*;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
@@ -123,6 +124,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescripto
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
@@ -632,7 +635,7 @@ class ConnectionManager {
     /**
      * Cluster registry of basic info such as clusterid and meta region location.
      */
-    Registry registry;
+    ConnectionRegistry registry;
 
     private final ClientBackoffPolicy backoffPolicy;
 
@@ -822,6 +825,11 @@ class ConnectionManager {
     }
 
     @Override
+    public String getClusterId() throws IOException {
+      return registry.getClusterId();
+    }
+
+    @Override
     public MetricsConnection getConnectionMetrics() {
       return this.metrics;
     }
@@ -917,8 +925,8 @@ class ConnectionManager {
      * @return The cluster registry implementation to use.
      * @throws IOException
      */
-    private Registry setupRegistry() throws IOException {
-      return RegistryFactory.getRegistry(this);
+    private ConnectionRegistry setupRegistry() throws IOException {
+      return ConnectionRegistryFactory.getRegistry(this);
     }
 
     /**
@@ -939,7 +947,7 @@ class ConnectionManager {
 
     protected String clusterId = null;
 
-    void retrieveClusterId() {
+    void retrieveClusterId() throws IOException {
       if (clusterId != null) return;
       this.clusterId = this.registry.getClusterId();
       if (clusterId == null) {
@@ -1005,7 +1013,7 @@ class ConnectionManager {
 
     @Override
     public boolean isTableEnabled(TableName tableName) throws IOException {
-      return this.registry.isTableOnlineState(tableName, true);
+      return getTableState(tableName).inStates(TableState.State.ENABLED);
     }
 
     @Override
@@ -1015,7 +1023,7 @@ class ConnectionManager {
 
     @Override
     public boolean isTableDisabled(TableName tableName) throws IOException {
-      return this.registry.isTableOnlineState(tableName, false);
+      return getTableState(tableName).inStates(TableState.State.DISABLED);
     }
 
     @Override
@@ -1256,7 +1264,7 @@ class ConnectionManager {
           }
         }
         // Look up from zookeeper
-        metaLocations = this.registry.getMetaRegionLocation();
+        metaLocations = this.registry.getMetaRegionLocations();
         lastMetaLookupTime = EnvironmentEdgeManager.currentTime();
         if (metaLocations != null &&
             metaLocations.getRegionLocation(replicaId) != null) {
@@ -1316,13 +1324,15 @@ class ConnectionManager {
 
         // Query the meta region
         long pauseBase = this.pause;
-        userRegionLock.lock();
+        takeUserRegionLock();
         try {
-          if (useCache) {// re-check cache after get lock
-            RegionLocations locations = getCachedLocation(tableName, row);
-            if (locations != null && locations.getRegionLocation(replicaId) != null) {
-              return locations;
-            }
+          // We don't need to check if useCache is enabled or not. Even if useCache is false
+          // we already cleared the cache for this row before acquiring userRegion lock so if this
+          // row is present in cache that means some other thread has populated it while we were
+          // waiting to acquire user region lock.
+          RegionLocations locations = getCachedLocation(tableName, row);
+          if (locations != null && locations.getRegionLocation(replicaId) != null) {
+            return locations;
           }
           Result regionInfoRow = null;
           s.resetMvccReadPoint();
@@ -1339,7 +1349,7 @@ class ConnectionManager {
           }
 
           // convert the row result into the HRegionLocation we need!
-          RegionLocations locations = MetaTableAccessor.getRegionLocations(regionInfoRow);
+          locations = MetaTableAccessor.getRegionLocations(regionInfoRow);
           if (locations == null || locations.getRegionLocation(replicaId) == null) {
             throw new IOException("HRegionInfo was null in " +
               tableName + ", row=" + regionInfoRow);
@@ -1420,6 +1430,19 @@ class ConnectionManager {
           throw new InterruptedIOException("Giving up trying to location region in " +
             "meta: thread is interrupted.");
         }
+      }
+    }
+
+    void takeUserRegionLock() throws IOException {
+      try {
+        long waitTime = connectionConfig.getMetaOperationTimeout();
+        if (!userRegionLock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
+          throw new LockTimeoutException("Failed to get user region lock in"
+            + waitTime + " ms. " + " for accessing meta region server.");
+        }
+      } catch (InterruptedException ie) {
+        LOG.error("Interrupted while waiting for a lock", ie);
+        throw ExceptionUtil.asInterrupt(ie);
       }
     }
 
@@ -1571,43 +1594,31 @@ class ConnectionManager {
        * @throws KeeperException
        * @throws ServiceException
        */
-      private Object makeStubNoRetries() throws IOException, KeeperException, ServiceException {
-        ZooKeeperKeepAliveConnection zkw;
-        try {
-          zkw = getKeepAliveZooKeeperWatcher();
-        } catch (IOException e) {
-          ExceptionUtil.rethrowIfInterrupt(e);
-          throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
+      private Object makeStubNoRetries() throws IOException, ServiceException {
+        ServerName sn = registry.getActiveMaster();
+        if (sn == null) {
+          String msg = "No active master location found";
+          LOG.info(msg);
+          throw new MasterNotRunningException(msg);
         }
-        try {
-          checkIfBaseNodeAvailable(zkw);
-          ServerName sn = MasterAddressTracker.getMasterAddress(zkw);
-          if (sn == null) {
-            String msg = "ZooKeeper available but no active master location found";
-            LOG.info(msg);
-            throw new MasterNotRunningException(msg);
-          }
-          if (isDeadServer(sn)) {
-            throw new MasterNotRunningException(sn + " is dead.");
-          }
-          // Use the security info interface name as our stub key
-          String key = getStubKey(getServiceName(),
-              sn.getHostname(), sn.getPort(), hostnamesCanChange);
-          connectionLock.putIfAbsent(key, key);
-          Object stub = null;
-          synchronized (connectionLock.get(key)) {
-            stub = stubs.get(key);
-            if (stub == null) {
-              BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
-              stub = makeStub(channel);
-              isMasterRunning();
-              stubs.put(key, stub);
-            }
-          }
-          return stub;
-        } finally {
-          zkw.close();
+        if (isDeadServer(sn)) {
+          throw new MasterNotRunningException(sn + " is dead.");
         }
+        // Use the security info interface name as our stub key
+        String key = getStubKey(getServiceName(),
+            sn.getHostname(), sn.getPort(), hostnamesCanChange);
+        connectionLock.putIfAbsent(key, key);
+        Object stub = null;
+        synchronized (connectionLock.get(key)) {
+          stub = stubs.get(key);
+          if (stub == null) {
+            BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
+            stub = makeStub(channel);
+            isMasterRunning();
+            stubs.put(key, stub);
+          }
+        }
+        return stub;
       }
 
       /**
@@ -1625,12 +1636,9 @@ class ConnectionManager {
               return makeStubNoRetries();
             } catch (IOException e) {
               exceptionCaught = e;
-            } catch (KeeperException e) {
-              exceptionCaught = e;
             } catch (ServiceException e) {
               exceptionCaught = e;
             }
-
             throw new MasterNotRunningException(exceptionCaught);
           } else {
             throw new DoNotRetryIOException("Connection was closed while trying to get master");
@@ -2164,6 +2172,13 @@ class ConnectionManager {
         }
 
         @Override
+        public GetTableStateResponse getTableState(
+                RpcController controller, GetTableStateRequest request)
+                throws ServiceException {
+          return stub.getTableState(controller, request);
+        }
+
+        @Override
         public void close() {
           release(this.mss);
         }
@@ -2583,6 +2598,9 @@ class ConnectionManager {
       if (this.closed) {
         return;
       }
+      if (this.registry != null) {
+        this.registry.close();
+      }
       closeMaster();
       shutdownPools();
       if (this.metrics != null) {
@@ -2789,6 +2807,19 @@ class ConnectionManager {
     @Override
     public RpcControllerFactory getRpcControllerFactory() {
       return this.rpcControllerFactory;
+    }
+
+    public TableState getTableState(TableName tableName) throws IOException {
+      MasterKeepAliveConnection master = getKeepAliveMasterService();
+      try {
+        GetTableStateResponse resp = master.getTableState(null,
+                RequestConverter.buildGetTableStateRequest(tableName));
+        return TableState.convert(resp.getTableState());
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      } finally {
+        master.close();
+      }
     }
   }
 

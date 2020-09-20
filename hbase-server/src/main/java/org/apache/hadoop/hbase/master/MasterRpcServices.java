@@ -30,6 +30,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,10 +42,12 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -77,6 +80,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClearDeadServersResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClientMetaService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
@@ -99,12 +103,21 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableReques
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMastersRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMastersResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMastersResponseEntry;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
@@ -227,7 +240,8 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
 public class MasterRpcServices extends RSRpcServices
-    implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface {
+    implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
+    ClientMetaService.BlockingInterface {
   private static final Log LOG = LogFactory.getLog(MasterRpcServices.class.getName());
 
   private final HMaster master;
@@ -381,6 +395,9 @@ public class MasterRpcServices extends RSRpcServices
     bssi.add(new BlockingServiceAndInterface(
       RegionServerStatusService.newReflectiveBlockingService(this),
       RegionServerStatusService.BlockingInterface.class));
+    bssi.add(new BlockingServiceAndInterface(
+        ClientMetaService.newReflectiveBlockingService(this),
+        ClientMetaService.BlockingInterface.class));
     bssi.addAll(super.getServices());
     return bssi;
   }
@@ -991,13 +1008,11 @@ public class MasterRpcServices extends RSRpcServices
   public GetTableNamesResponse getTableNames(RpcController controller,
       GetTableNamesRequest req) throws ServiceException {
     try {
-      master.checkInitialized();
-
+      master.checkServiceStarted();
       final String regex = req.hasRegex() ? req.getRegex() : null;
       final String namespace = req.hasNamespace() ? req.getNamespace() : null;
       List<TableName> tableNames = master.listTableNames(namespace, regex,
           req.getIncludeSysTables());
-
       GetTableNamesResponse.Builder builder = GetTableNamesResponse.newBuilder();
       if (tableNames != null && tableNames.size() > 0) {
         // Add the table names to the response
@@ -1005,6 +1020,26 @@ public class MasterRpcServices extends RSRpcServices
           builder.addTableNames(ProtobufUtil.toProtoTableName(table));
         }
       }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public MasterProtos.GetTableStateResponse getTableState(RpcController controller,
+      MasterProtos.GetTableStateRequest request) throws ServiceException {
+    try {
+      master.checkServiceStarted();
+      TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+      TableState.State state = master.getTableStateManager()
+              .getTableState(tableName);
+      if (state == null) {
+        throw new TableNotFoundException(tableName);
+      }
+      MasterProtos.GetTableStateResponse.Builder builder =
+              MasterProtos.GetTableStateResponse.newBuilder();
+      builder.setTableState(new TableState(tableName, state).convert());
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1807,5 +1842,58 @@ public class MasterRpcServices extends RSRpcServices
         break;
     }
     return null;
+  }
+
+  @Override
+  public GetClusterIdResponse getClusterId(RpcController rpcController, GetClusterIdRequest request)
+      throws ServiceException {
+    GetClusterIdResponse.Builder resp = GetClusterIdResponse.newBuilder();
+    String clusterId = master.getClusterId();
+    if (clusterId != null) {
+      resp.setClusterId(clusterId);
+    }
+    return resp.build();
+  }
+
+  @Override
+  public GetMastersResponse getMasters(RpcController rpcController, GetMastersRequest request)
+      throws ServiceException {
+    GetMastersResponse.Builder resp = GetMastersResponse.newBuilder();
+    // Active master
+    ServerName serverName = master.getActiveMaster();
+    if (serverName != null) {
+      resp.addMasterServers(GetMastersResponseEntry.newBuilder()
+          .setServerName(ProtobufUtil.toServerName(serverName)).setIsActive(true).build());
+    }
+    // Backup masters
+    for (ServerName backupMaster: master.getBackupMasters()) {
+      resp.addMasterServers(GetMastersResponseEntry.newBuilder().setServerName(
+          ProtobufUtil.toServerName(backupMaster)).setIsActive(false).build());
+    }
+    return resp.build();
+  }
+
+  @Override
+  public GetMetaRegionLocationsResponse getMetaRegionLocations(RpcController rpcController,
+     GetMetaRegionLocationsRequest request) throws ServiceException {
+    GetMetaRegionLocationsResponse.Builder response = GetMetaRegionLocationsResponse.newBuilder();
+    List<HRegionLocation> metaLocations =
+        master.getMetaRegionLocationCache().getMetaRegionLocations();
+    for (HRegionLocation location: metaLocations) {
+      response.addMetaLocations(ProtobufUtil.toRegionLocation(location));
+    }
+    return response.build();
+  }
+
+  @Override
+  public GetNumLiveRSResponse getNumLiveRS(RpcController rpcController, GetNumLiveRSRequest request)
+      throws ServiceException {
+    GetNumLiveRSResponse.Builder response = GetNumLiveRSResponse.newBuilder();
+    try {
+      response.setNumRegionServers(master.getNumLiveRegionServers());
+    } catch (KeeperException ke) {
+      throw new ServiceException(ke);
+    }
+    return response.build();
   }
 }

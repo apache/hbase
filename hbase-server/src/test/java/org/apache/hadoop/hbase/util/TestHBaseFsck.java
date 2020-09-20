@@ -68,7 +68,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
@@ -106,7 +105,6 @@ import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -2889,55 +2887,6 @@ public class TestHBaseFsck {
     writeLock.acquire(); // this should not block.
     writeLock.release(); // release for clean state
     tableLockManager.tableDeleted(tableName);
-  }
-
-  /**
-   * Test orphaned table ZNode (for table states)
-   */
-  @Test
-  public void testOrphanedTableZNode() throws Exception {
-    TableName table = TableName.valueOf("testOrphanedZKTableEntry");
-
-    try {
-      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getTableStateManager()
-      .setTableState(table, ZooKeeperProtos.Table.State.ENABLING);
-
-      try {
-        setupTable(table);
-        Assert.fail(
-          "Create table should fail when its ZNode has already existed with ENABLING state.");
-      } catch(TableExistsException t) {
-        //Expected exception
-      }
-      // The setup table was interrupted in some state that needs to some cleanup.
-      try {
-        cleanupTable(table);
-      } catch (IOException e) {
-        // Because create table failed, it is expected that the cleanup table would
-        // throw some exception.  Ignore and continue.
-      }
-
-      HBaseFsck hbck = doFsck(conf, false);
-      assertTrue(hbck.getErrors().getErrorList().contains(ERROR_CODE.ORPHANED_ZK_TABLE_ENTRY));
-
-      // fix the orphaned ZK entry
-      hbck = doFsck(conf, true);
-
-      // check that orpahned ZK table entry is gone.
-      hbck = doFsck(conf, false);
-      assertFalse(hbck.getErrors().getErrorList().contains(ERROR_CODE.ORPHANED_ZK_TABLE_ENTRY));
-      // Now create table should succeed.
-      setupTable(table);
-    } finally {
-      // This code could be called that either a table was created successfully or set up
-      // table failed in some unknown state.  Therefore, clean up can either succeed or fail.
-      try {
-        cleanupTable(table);
-      } catch (IOException e) {
-        // The cleanup table would throw some exception if create table failed in some state.
-        // Ignore this exception
-      }
-    }
   }
 
   @Test (timeout=180000)

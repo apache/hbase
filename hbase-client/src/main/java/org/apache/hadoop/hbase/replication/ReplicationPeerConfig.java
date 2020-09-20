@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.replication;
 
+import com.google.common.base.Splitter;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -42,6 +45,9 @@ public class ReplicationPeerConfig {
   private final Map<String, String> configuration;
   private Map<TableName, ? extends Collection<String>> tableCFsMap = null;
   private long bandwidth = 0;
+
+  public static final String HBASE_REPLICATION_PEER_BASE_CONFIG =
+    "hbase.replication.peer.default.config";
 
   public ReplicationPeerConfig() {
     this.peerData = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
@@ -97,6 +103,35 @@ public class ReplicationPeerConfig {
   public ReplicationPeerConfig setBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
     return this;
+  }
+
+  /**
+   * Helper method to add base peer configs from Configuration to ReplicationPeerConfig
+   * if not present in latter.
+   *
+   * This merges the user supplied peer configuration
+   * {@link org.apache.hadoop.hbase.replication.ReplicationPeerConfig} with peer configs
+   * provided as property hbase.replication.peer.base.configs in hbase configuration.
+   * Expected format for this hbase configuration is "k1=v1;k2=v2,v2_1". Original value
+   * of conf is retained if already present in ReplicationPeerConfig.
+   *
+   * @param conf Configuration
+   */
+  public void addBasePeerConfigsIfNotPresent(Configuration conf) {
+    String basePeerConfigs = conf.get(HBASE_REPLICATION_PEER_BASE_CONFIG, "");
+
+    if (basePeerConfigs.length() != 0) {
+      Map<String, String> basePeerConfigMap = Splitter.on(';').trimResults().omitEmptyStrings()
+        .withKeyValueSeparator("=").split(basePeerConfigs);
+      for (Map.Entry<String,String> entry : basePeerConfigMap.entrySet()) {
+        String configName = entry.getKey();
+        String configValue = entry.getValue();
+        // Only override if base config does not exist in existing replication peer configs
+        if (!this.getConfiguration().containsKey(configName)) {
+          this.getConfiguration().put(configName, configValue);
+        }
+      }
+    }
   }
 
   @Override

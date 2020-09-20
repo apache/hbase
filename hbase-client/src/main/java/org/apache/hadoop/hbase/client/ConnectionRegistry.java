@@ -19,42 +19,46 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.TableName;
 
 /**
- * Cluster registry.
  * Implementations hold cluster information such as this cluster's id, location of hbase:meta, etc.
+ * needed by cluster connections.
  * Internal use only.
  */
 @InterfaceAudience.Private
-interface Registry {
+interface ConnectionRegistry {
   /**
    * @param connection
    */
-  void init(Connection connection);
+  void init(Connection connection) throws IOException;
+
+  /**
+   * @return the currently active master, null if none exists.
+   */
+  ServerName getActiveMaster() throws IOException;
 
   /**
    * @return Meta region location
    * @throws IOException
    */
-  RegionLocations getMetaRegionLocation() throws IOException;
+  RegionLocations getMetaRegionLocations() throws IOException;
 
   /**
    * @return Cluster id.
    */
-  String getClusterId();
-
-  /**
-   * @param enabled Return true if table is enabled
-   * @throws IOException
-   */
-  boolean isTableOnlineState(TableName tableName, boolean enabled) throws IOException;
+  String getClusterId() throws IOException;
 
   /**
    * @return Count of 'running' regionservers
    * @throws IOException
    */
   int getCurrentNrHRS() throws IOException;
+
+  /**
+   * Cleanup state, if any.
+   */
+  void close();
 }

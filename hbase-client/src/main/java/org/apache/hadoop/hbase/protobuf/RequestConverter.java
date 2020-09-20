@@ -25,6 +25,8 @@ import java.util.regex.Pattern;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.ByteStringer;
+
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -101,6 +103,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusR
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCleanerChoreEnabledRequest;
@@ -123,7 +126,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSplitOrMergeEn
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1415,6 +1417,18 @@ public final class RequestConverter {
     if (pattern != null) builder.setRegex(pattern.toString());
     builder.setIncludeSysTables(includeSysTables);
     return builder.build();
+  }
+
+  /*
+   * Creates a protocol buffer GetTableStateRequest
+   *
+   * @param tableName table to get request for
+   * @return a GetTableStateRequest
+   */
+  public static GetTableStateRequest buildGetTableStateRequest(final TableName tableName) {
+    return GetTableStateRequest.newBuilder()
+            .setTableName(ProtobufUtil.toProtoTableName(tableName))
+            .build();
   }
 
   /**

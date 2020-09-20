@@ -4070,13 +4070,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.memstoreSize.get() > this.blockingMemStoreSize) {
       blockedRequestsCount.increment();
       requestFlush();
-      throw new RegionTooBusyException("Above memstore limit, " +
-          "regionName=" + (this.getRegionInfo() == null ? "unknown" :
-          this.getRegionInfo().getRegionNameAsString()) +
-          ", server=" + (this.getRegionServerServices() == null ? "unknown" :
-          this.getRegionServerServices().getServerName()) +
-          ", memstoreSize=" + memstoreSize.get() +
-          ", blockingMemStoreSize=" + blockingMemStoreSize);
+      final String regionName =
+        this.getRegionInfo() == null ? "unknown" : this.getRegionInfo().getRegionNameAsString();
+      final String serverName = this.getRegionServerServices() == null ?
+        "unknown" : (this.getRegionServerServices().getServerName() == null ? "unknown" :
+        this.getRegionServerServices().getServerName().toString());
+      RegionTooBusyException rtbe = new RegionTooBusyException(
+        "Above memstore limit, " + "regionName=" + regionName + ", server=" + serverName
+          + ", memstoreSize=" + memstoreSize.get()
+          + ", blockingMemStoreSize=" + blockingMemStoreSize);
+      LOG.warn("Region is too busy due to exceeding memstore size limit.", rtbe);
+      throw rtbe;
     }
   }
 
@@ -8853,12 +8857,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       final long waitTime = Math.min(maxBusyWaitDuration,
           busyWaitDuration * Math.min(multiplier, maxBusyWaitMultiplier));
       if (!lock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
-        throw new RegionTooBusyException(
-            "failed to get a lock in " + waitTime + " ms. " +
-                "regionName=" + (this.getRegionInfo() == null ? "unknown" :
-                this.getRegionInfo().getRegionNameAsString()) +
-                ", server=" + (this.getRegionServerServices() == null ? "unknown" :
-                this.getRegionServerServices().getServerName()));
+        final String regionName =
+          this.getRegionInfo() == null ? "unknown" : this.getRegionInfo().getRegionNameAsString();
+        final String serverName = this.getRegionServerServices() == null ? "unknown" :
+          (this.getRegionServerServices().getServerName() == null ? "unknown" :
+            this.getRegionServerServices().getServerName().toString());
+        RegionTooBusyException rtbe = new RegionTooBusyException(
+          "failed to get a lock in " + waitTime + " ms. " + "regionName=" + regionName + ", server="
+            + serverName);
+        LOG.warn("Region is too busy to allow lock acquisition.", rtbe);
+        throw rtbe;
       }
     } catch (InterruptedException ie) {
       LOG.info("Interrupted while waiting for a lock");

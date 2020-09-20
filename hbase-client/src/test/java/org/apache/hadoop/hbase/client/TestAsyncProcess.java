@@ -460,12 +460,17 @@ public class TestAsyncProcess {
    * Returns our async process.
    */
   static class MyConnectionImpl extends ConnectionManager.HConnectionImplementation {
-    public static class TestRegistry implements Registry {
+    public static class TestConnectionRegistry implements ConnectionRegistry {
       @Override
       public void init(Connection connection) {}
 
       @Override
-      public RegionLocations getMetaRegionLocation() throws IOException {
+      public ServerName getActiveMaster() {
+        return null;
+      }
+
+      @Override
+      public RegionLocations getMetaRegionLocations() throws IOException {
         return null;
       }
 
@@ -475,13 +480,12 @@ public class TestAsyncProcess {
       }
 
       @Override
-      public boolean isTableOnlineState(TableName tableName, boolean enabled) throws IOException {
-        return false;
+      public int getCurrentNrHRS() throws IOException {
+        return 1;
       }
 
       @Override
-      public int getCurrentNrHRS() throws IOException {
-        return 1;
+      public void close() {
       }
     }
 
@@ -492,7 +496,7 @@ public class TestAsyncProcess {
     }
 
     private static Configuration setupConf(Configuration conf) {
-      conf.setClass(RegistryFactory.REGISTRY_IMPL_CONF_KEY, TestRegistry.class, Registry.class);
+      conf.setClass(HConstants.REGISTRY_IMPL_CONF_KEY, TestConnectionRegistry.class, ConnectionRegistry.class);
       return conf;
     }
 

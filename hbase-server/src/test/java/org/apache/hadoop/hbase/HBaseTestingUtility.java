@@ -1110,6 +1110,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     Configuration c = new Configuration(this.conf);
     this.hbaseCluster =
         new MiniHBaseCluster(c, numMasters, numSlaves, masterClass, regionserverClass);
+    // Populate the master address configuration from mini cluster configuration.
+    conf.set(HConstants.MASTER_ADDRS_KEY,
+        c.get(HConstants.MASTER_ADDRS_KEY, HConstants.MASTER_ADDRS_DEFAULT));
     // Don't leave here till we've done a successful scan of the hbase:meta
     Table t = new HTable(c, TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
@@ -3390,6 +3393,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
+
   /**
    * Make sure that at least the specified number of region servers
    * are running
@@ -4222,7 +4226,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
       @Override
       public boolean evaluate() throws IOException {
-        return getHBaseAdmin().tableExists(tableName) && getHBaseAdmin().isTableEnabled(tableName);
+        try {
+          return getHBaseAdmin().tableExists(tableName)
+              && getHBaseAdmin().isTableEnabled(tableName);
+        } catch (TableNotFoundException tnfe) {
+          // Ignore TNFE
+          return false;
+        }
       }
     };
   }
