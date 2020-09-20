@@ -267,10 +267,11 @@ class ReplicationSourceWALReader extends Thread {
   //returns false if we've already exceeded the global quota
   private boolean checkQuota() {
     // try not to go over total quota
-    if (source.manager.getTotalBufferUsed().get() > source.manager.getTotalBufferLimit()) {
+    if (source.controller.getTotalBufferUsed().get() > source.controller
+      .getTotalBufferLimit()) {
       LOG.warn("peer={}, can't read more edits from WAL as buffer usage {}B exceeds limit {}B",
-        this.source.getPeerId(), source.manager.getTotalBufferUsed().get(),
-        source.manager.getTotalBufferLimit());
+        this.source.getPeerId(), source.controller.getTotalBufferUsed().get(),
+        source.controller.getTotalBufferLimit());
       Threads.sleep(sleepForRetries);
       return false;
     }
@@ -399,10 +400,10 @@ class ReplicationSourceWALReader extends Thread {
    * @return true if we should clear buffer and push all
    */
   private boolean acquireBufferQuota(long size) {
-    long newBufferUsed = source.manager.getTotalBufferUsed().addAndGet(size);
+    long newBufferUsed = source.controller.getTotalBufferUsed().addAndGet(size);
     // Record the new buffer usage
-    source.manager.getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
-    return newBufferUsed >= source.manager.getTotalBufferLimit();
+    source.controller.getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
+    return newBufferUsed >= source.controller.getTotalBufferLimit();
   }
 
   /**
