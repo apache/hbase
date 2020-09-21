@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -71,8 +71,8 @@ public class TestCloseAnOpeningRegion {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
-      return new AssignmentManager(master, masterRegion) {
+      RootStore rootStore) {
+      return new AssignmentManager(master, rootStore) {
 
         @Override
         public ReportRegionStateTransitionResponse reportRegionStateTransition(

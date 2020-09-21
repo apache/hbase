@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -69,8 +69,8 @@ public class TestReportOnlineRegionsRace {
 
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
-    public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
-      super(master, masterRegion);
+    public AssignmentManagerForTest(MasterServices master, RootStore rootStore) {
+      super(master, rootStore);
     }
 
     @Override
@@ -112,8 +112,8 @@ public class TestReportOnlineRegionsRace {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
-      return new AssignmentManagerForTest(master, masterRegion);
+      RootStore rootStore) {
+      return new AssignmentManagerForTest(master, rootStore);
     }
   }
 

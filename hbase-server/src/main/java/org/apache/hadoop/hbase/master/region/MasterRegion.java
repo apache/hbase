@@ -138,6 +138,14 @@ public final class MasterRegion {
     return region.getScanner(scan);
   }
 
+  WAL getWAL() {
+    return region.getWAL();
+  }
+
+  public long getReadPoint() {
+    return region.getMVCC().getReadPoint();
+  }
+
   public FlushResult flush(boolean force) throws IOException {
     return region.flush(force);
   }

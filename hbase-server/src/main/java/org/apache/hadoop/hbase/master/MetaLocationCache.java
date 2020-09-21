@@ -30,7 +30,9 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -48,7 +50,7 @@ import org.slf4j.LoggerFactory;
  * A cache of meta region locations.
  */
 @InterfaceAudience.Private
-class MetaLocationCache implements Stoppable {
+public class MetaLocationCache implements Stoppable {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetaLocationCache.class);
 
@@ -64,13 +66,16 @@ class MetaLocationCache implements Stoppable {
   // default timeout 1 second
   private static final int DEFAULT_FETCH_TIMEOUT_MS = 1000;
 
-  private static final class CacheHolder {
+  static final class CacheHolder {
+
+    final long lastSyncSeqId;
 
     final NavigableMap<byte[], RegionLocations> cache;
 
     final List<HRegionLocation> all;
 
-    CacheHolder(List<HRegionLocation> all) {
+    CacheHolder(long lastSyncSeqId, List<HRegionLocation> all) {
+      this.lastSyncSeqId = lastSyncSeqId;
       this.all = Collections.unmodifiableList(all);
       NavigableMap<byte[], SortedSet<HRegionLocation>> startKeyToLocs =
         new TreeMap<>(MetaCellComparator.ROW_COMPARATOR);
@@ -89,7 +94,9 @@ class MetaLocationCache implements Stoppable {
     }
   }
 
-  private volatile CacheHolder holder;
+  final AtomicReference<CacheHolder> holder = new AtomicReference<>();
+
+  private final ScheduledChore refreshChore;
 
   private volatile boolean stopped = false;
 
@@ -98,34 +105,42 @@ class MetaLocationCache implements Stoppable {
       master.getConfiguration().getInt(SYNC_INTERVAL_SECONDS, DEFAULT_SYNC_INTERVAL_SECONDS);
     int fetchTimeoutMs =
       master.getConfiguration().getInt(FETCH_TIMEOUT_MS, DEFAULT_FETCH_TIMEOUT_MS);
-    master.getChoreService().scheduleChore(new ScheduledChore(
-      getClass().getSimpleName() + "-Sync-Chore", this, syncIntervalSeconds, 0, TimeUnit.SECONDS) {
+    refreshChore = new ScheduledChore(getClass().getSimpleName() + "-Sync-Chore", this,
+      syncIntervalSeconds, 0, TimeUnit.SECONDS) {
 
       @Override
       protected void chore() {
         AsyncClusterConnection conn = master.getAsyncClusterConnection();
         if (conn != null) {
-          addListener(conn.getAllMetaRegionLocations(fetchTimeoutMs), (locs, error) -> {
+          final CacheHolder ch = holder.get();
+          long lastSyncSeqId = ch != null ? ch.lastSyncSeqId : HConstants.NO_SEQNUM;
+          addListener(conn.syncRoot(lastSyncSeqId, fetchTimeoutMs), (resp, error) -> {
             if (error != null) {
-              LOG.warn("Failed to fetch all meta region locations from active master", error);
+              LOG.warn("Failed to sync root data from active master", error);
               return;
             }
-            holder = new CacheHolder(locs);
+            long lastModifiedSeqId = resp.getFirst().longValue();
+            if (ch == null || lastModifiedSeqId > ch.lastSyncSeqId && holder.get() == ch) {
+              // since we may trigger cache refresh when locating, here we use CAS to avoid race
+              holder.compareAndSet(ch, new CacheHolder(lastModifiedSeqId, resp.getSecond()));
+            }
           });
         }
       }
-    });
+    };
+    master.getChoreService().scheduleChore(refreshChore);
   }
 
-  RegionLocations locateMeta(byte[] row, RegionLocateType locateType) {
+  public RegionLocations locateMeta(byte[] row, RegionLocateType locateType) {
     if (locateType == RegionLocateType.AFTER) {
       // as we know the exact row after us, so we can just create the new row, and use the same
       // algorithm to locate it.
       row = Arrays.copyOf(row, row.length + 1);
       locateType = RegionLocateType.CURRENT;
     }
-    CacheHolder holder = this.holder;
+    CacheHolder holder = this.holder.get();
     if (holder == null) {
+      refreshChore.triggerNow();
       return null;
     }
     return locateType.equals(RegionLocateType.BEFORE) ?
@@ -134,8 +149,9 @@ class MetaLocationCache implements Stoppable {
   }
 
   List<HRegionLocation> getAllMetaRegionLocations(boolean excludeOfflinedSplitParents) {
-    CacheHolder holder = this.holder;
+    CacheHolder holder = this.holder.get();
     if (holder == null) {
+      refreshChore.triggerNow();
       return Collections.emptyList();
     }
     if (!excludeOfflinedSplitParents) {

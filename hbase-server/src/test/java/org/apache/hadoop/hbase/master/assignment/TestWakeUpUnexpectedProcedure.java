@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -136,8 +136,8 @@ public class TestWakeUpUnexpectedProcedure {
 
   private static final class AMForTest extends AssignmentManager {
 
-    public AMForTest(MasterServices master, MasterRegion masterRegion) {
-      super(master, masterRegion);
+    public AMForTest(MasterServices master, RootStore rootStore) {
+      super(master, rootStore);
     }
 
     @Override
@@ -204,8 +204,8 @@ public class TestWakeUpUnexpectedProcedure {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
-      return new AMForTest(master, masterRegion);
+      RootStore rootStore) {
+      return new AMForTest(master, rootStore);
     }
 
     @Override

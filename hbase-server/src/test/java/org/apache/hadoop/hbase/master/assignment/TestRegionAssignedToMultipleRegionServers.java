@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -81,8 +81,8 @@ public class TestRegionAssignedToMultipleRegionServers {
 
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
-    public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
-      super(master, masterRegion);
+    public AssignmentManagerForTest(MasterServices master, RootStore rootStore) {
+      super(master, rootStore);
     }
 
     @Override
@@ -116,8 +116,8 @@ public class TestRegionAssignedToMultipleRegionServers {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
-      return new AssignmentManagerForTest(master, masterRegion);
+      RootStore rootStore) {
+      return new AssignmentManagerForTest(master, rootStore);
     }
 
     @Override
