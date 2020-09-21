@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -266,12 +266,12 @@ public class SyncReplicationTestBase {
         new Entry(new WALKeyImpl(HConstants.EMPTY_BYTE_ARRAY, TABLE_NAME, 0), new WALEdit());
     }
     if (!expectedRejection) {
-      ReplicationProtbufUtil.replicateWALEntry(
+      ReplicationProtobufUtil.replicateWALEntry(
         connection.getRegionServerAdmin(regionServer.getServerName()), entries, null, null, null,
         HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT);
     } else {
       try {
-        ReplicationProtbufUtil.replicateWALEntry(
+        ReplicationProtobufUtil.replicateWALEntry(
           connection.getRegionServerAdmin(regionServer.getServerName()), entries, null, null, null,
           HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT);
         fail("Should throw IOException when sync-replication state is in A or DA");

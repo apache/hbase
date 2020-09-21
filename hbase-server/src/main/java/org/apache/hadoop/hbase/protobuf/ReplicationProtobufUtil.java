@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 @InterfaceAudience.Private
-public class ReplicationProtbufUtil {
+public class ReplicationProtobufUtil {
 
   /**
    * A helper to replicate a list of WAL entries using region server admin
