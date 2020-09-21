@@ -255,10 +255,10 @@ public class HbckChore extends ScheduledChore {
     for (Map.Entry<String, HbckRegionInfo> entry : regionInfoMap.entrySet()) {
       HbckRegionInfo hri = entry.getValue();
       ServerName locationInMeta = hri.getMetaEntry().getRegionServer();
+      if (locationInMeta == null) {
+        continue;
+      }
       if (hri.getDeployedOn().size() == 0) {
-        if (locationInMeta == null) {
-          continue;
-        }
         // skip the offline region which belong to disabled table.
         if (disabledTableRegions.contains(hri.getRegionNameAsString())) {
           continue;
