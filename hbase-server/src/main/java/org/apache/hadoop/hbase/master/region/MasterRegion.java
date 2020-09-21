@@ -79,9 +79,9 @@ import org.apache.hbase.thirdparty.com.google.common.math.IntMath;
  * Notice that, you can use different root file system and WAL file system. Then the above directory
  * will be on two file systems, the root file system will have the data directory while the WAL
  * filesystem will have the WALs directory. The archived HFile will be moved to the global HFile
- * archived directory with the {@link MasterRegionParams#archivedWalSuffix()} suffix. The archived
+ * archived directory with the {@link MasterRegionParams#archivedHFileSuffix()} suffix. The archived
  * WAL will be moved to the global WAL archived directory with the
- * {@link MasterRegionParams#archivedHFileSuffix()} suffix.
+ * {@link MasterRegionParams#archivedWalSuffix()} suffix.
  */
 @InterfaceAudience.Private
 public final class MasterRegion {
