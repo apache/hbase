@@ -1518,7 +1518,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @VisibleForTesting
   public MultiVersionConcurrencyControl getMVCC() {
     return mvcc;
   }

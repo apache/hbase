@@ -1371,3 +1371,17 @@ service ClientMetaService {
   rpc GetAllMetaRegionLocations(GetAllMetaRegionLocationsRequest)
     returns(GetAllMetaRegionLocationsResponse);
 }
+
+message SyncRootRequest {
+  required int64 lastSyncSeqId = 1;
+}
+
+message SyncRootResponse {
+  required int64 lastModifiedSeqId = 1;
+  repeated RegionLocation meta_locations = 2;
+}
+
+service RootSyncService {
+  rpc SyncRoot(SyncRootRequest)
+    returns(SyncRootResponse);
+}

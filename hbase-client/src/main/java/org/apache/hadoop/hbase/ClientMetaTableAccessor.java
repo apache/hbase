@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.TableState;
@@ -485,5 +486,27 @@ public final class ClientMetaTableAccessor {
       }
     }
     return stopRow;
+  }
+
+  /**
+   * Visit all the result of the given {@code scanner}.
+   * <p/>
+   * It is the caller's duty to close the {@code scanner}.
+   * @param maxRows maximum rows to visit, or -1 means unlimited.
+   */
+  public static void visit(ResultScanner scanner, Visitor visitor, int maxRows) throws IOException {
+    for (int rows = 0;;) {
+      Result result = scanner.next();
+      if (result == null) {
+        return;
+      }
+      if (!visitor.visit(result)) {
+        return;
+      }
+      rows++;
+      if (maxRows > 0 && rows >= maxRows) {
+        return;
+      }
+    }
   }
 }

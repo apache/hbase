@@ -67,6 +67,11 @@ public class TestRegionMover2 {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
+  // when moving region, we first need to get the location of meta so it will call master inside the
+  // master rpc handler thread, which may cause dead lock if we have more than 3 threads here since
+  // we only have 3 rpc handlers for master in UT.
+  private static final int MAX_THREADS = 2;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
@@ -116,7 +121,7 @@ public class TestRegionMover2 {
       .collect(Collectors.toList());
     RegionMover.RegionMoverBuilder rmBuilder =
       new RegionMover.RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true)
-        .maxthreads(8);
+        .maxthreads(MAX_THREADS);
     try (RegionMover rm = rmBuilder.build()) {
       LOG.debug("Unloading {}", regionServer.getServerName());
       rm.unload();
@@ -153,7 +158,7 @@ public class TestRegionMover2 {
 
     RegionMover.RegionMoverBuilder rmBuilder =
       new RegionMover.RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true)
-        .maxthreads(8);
+        .maxthreads(MAX_THREADS);
     try (RegionMover rm = rmBuilder.build()) {
       LOG.debug("Unloading {}", regionServer.getServerName());
       rm.unload();
@@ -194,13 +199,13 @@ public class TestRegionMover2 {
     admin.flush(tableName);
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getAddress().toString();
-    int numRegions = regionServer.getNumberOfOnlineRegions();
+    regionServer.getNumberOfOnlineRegions();
     List<HRegion> hRegions = regionServer.getRegions().stream()
       .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
       .collect(Collectors.toList());
     RegionMover.RegionMoverBuilder rmBuilder =
       new RegionMover.RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true)
-        .maxthreads(8);
+        .maxthreads(MAX_THREADS);
     try (RegionMover rm = rmBuilder.build()) {
       LOG.debug("Unloading {}", regionServer.getServerName());
       rm.unload();

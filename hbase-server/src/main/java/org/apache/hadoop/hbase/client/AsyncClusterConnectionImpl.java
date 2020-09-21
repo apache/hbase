@@ -17,17 +17,23 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.tryClearMasterStubCache;
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
@@ -46,7 +52,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBul
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RootSyncService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SyncRootRequest;
 
 /**
  * The implementation of AsyncClusterConnection.
@@ -54,11 +61,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMeta
 @InterfaceAudience.Private
 class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClusterConnection {
 
-  private final AtomicReference<ClientMetaService.Interface> cachedClientMetaStub =
+  private final AtomicReference<RootSyncService.Interface> cachedRootSyncStub =
     new AtomicReference<>();
 
-  private final AtomicReference<CompletableFuture<ClientMetaService.Interface>>
-    clientMetaStubMakeFuture = new AtomicReference<>();
+  private final AtomicReference<CompletableFuture<RootSyncService.Interface>>
+    rootSyncStubMakeFuture = new AtomicReference<>();
 
   public AsyncClusterConnectionImpl(Configuration conf, ConnectionRegistry registry,
     String clusterId, SocketAddress localAddress, User user) {
@@ -143,15 +150,38 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
       .call();
   }
 
-  private CompletableFuture<ClientMetaService.Interface> getClientMetaStub() {
-    return ConnectionUtils.getMasterStub(registry, cachedClientMetaStub, clientMetaStubMakeFuture,
-      rpcClient, user, rpcTimeout, TimeUnit.MILLISECONDS, ClientMetaService::newStub,
-      "ClientMetaService");
+  private CompletableFuture<RootSyncService.Interface> getRootSyncStub() {
+    return ConnectionUtils.getMasterStub(registry, cachedRootSyncStub, rootSyncStubMakeFuture,
+      rpcClient, user, rpcTimeout, TimeUnit.MILLISECONDS, RootSyncService::newStub,
+      "RootSyncService");
   }
 
   @Override
-  public CompletableFuture<List<HRegionLocation>> getAllMetaRegionLocations(int callTimeoutMs) {
-    return ConnectionUtils.getAllMetaRegionLocations(false, getClientMetaStub(),
-      cachedClientMetaStub, rpcControllerFactory, callTimeoutMs);
+  public CompletableFuture<Pair<Long, List<HRegionLocation>>> syncRoot(long lastSyncSeqId,
+    int callTimeoutMs) {
+    CompletableFuture<Pair<Long, List<HRegionLocation>>> future = new CompletableFuture<>();
+    addListener(getRootSyncStub(), (stub, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      HBaseRpcController controller = rpcControllerFactory.newController();
+      if (callTimeoutMs > 0) {
+        controller.setCallTimeout(callTimeoutMs);
+      }
+      stub.syncRoot(controller,
+        SyncRootRequest.newBuilder().setLastSyncSeqId(lastSyncSeqId).build(), resp -> {
+          if (controller.failed()) {
+            IOException ex = controller.getFailed();
+            tryClearMasterStubCache(ex, stub, cachedRootSyncStub);
+            future.completeExceptionally(ex);
+            return;
+          }
+          List<HRegionLocation> locs = resp.getMetaLocationsList().stream()
+            .map(ProtobufUtil::toRegionLocation).collect(Collectors.toList());
+          future.complete(Pair.newPair(resp.getLastModifiedSeqId(), locs));
+        });
+    });
+    return future;
   }
 }

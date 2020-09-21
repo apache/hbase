@@ -361,8 +361,12 @@ public class MasterRegistry implements ConnectionRegistry {
     LocateMetaRegionRequest request =
       LocateMetaRegionRequest.newBuilder().setRow(ByteString.copyFrom(row))
         .setLocateType(ProtobufUtil.toProtoRegionLocateType(locateType)).build();
-    return this.<LocateMetaRegionResponse> call((c, s, d) -> s.locateMetaRegion(c, request, d),
-      r -> true, "locateMeta()").thenApply(this::transformRegionLocations);
+    return this
+      .<LocateMetaRegionResponse> call((c, s, d) -> s.locateMetaRegion(c, request, d),
+        r -> r.getMetaLocationsList().stream()
+          .anyMatch(l -> l.hasRegionInfo() && l.hasServerName()),
+        "locateMeta()")
+      .thenApply(this::transformRegionLocations);
   }
 
   private List<HRegionLocation>
@@ -378,7 +382,8 @@ public class MasterRegistry implements ConnectionRegistry {
       .setExcludeOfflinedSplitParents(excludeOfflinedSplitParents).build();
     return this
       .<GetAllMetaRegionLocationsResponse> call(
-        (c, s, d) -> s.getAllMetaRegionLocations(c, request, d), r -> true,
+        (c, s, d) -> s.getAllMetaRegionLocations(c, request, d),
+        r -> r.getMetaLocationsCount() > 0,
         "getAllMetaRegionLocations(" + excludeOfflinedSplitParents + ")")
       .thenApply(this::transformRegionLocationList);
   }
