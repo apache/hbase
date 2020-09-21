@@ -2078,4 +2078,23 @@ public class MasterCoprocessorHost
       }
     });
   }
+
+  public void preSyncRoot(long lastSyncSeqId) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preSyncRoot(this, lastSyncSeqId);
+      }
+    });
+  }
+
+  public void postSyncRoot(long lastSyncSeqId, long lastModifiedSeqId, List<HRegionLocation> locs)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postSyncRoot(this, lastSyncSeqId, lastModifiedSeqId, locs);
+      }
+    });
+  }
 }

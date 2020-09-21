@@ -56,16 +56,17 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -93,11 +94,11 @@ public class RegionStateStore {
 
   private final MasterServices master;
 
-  private final MasterRegion masterRegion;
+  private final RootStore rootStore;
 
-  public RegionStateStore(MasterServices master, MasterRegion masterRegion) {
+  public RegionStateStore(MasterServices master, RootStore rootStore) {
     this.master = master;
-    this.masterRegion = masterRegion;
+    this.rootStore = rootStore;
   }
 
   @FunctionalInterface
@@ -231,21 +232,9 @@ public class RegionStateStore {
     // scan meta first
     MetaTableAccessor.fullScanRegions(master.getConnection(), visitor);
     // scan root
-    try (RegionScanner scanner =
-      masterRegion.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
-      boolean moreRows;
-      List<Cell> cells = new ArrayList<>();
-      do {
-        moreRows = scanner.next(cells);
-        if (cells.isEmpty()) {
-          continue;
-        }
-        Result result = Result.create(cells);
-        cells.clear();
-        if (!visitor.visit(result)) {
-          break;
-        }
-      } while (moreRows);
+    try (ResultScanner scanner =
+      rootStore.getScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
+      ClientMetaTableAccessor.visit(scanner, visitor, -1);
     }
   }
 
@@ -263,7 +252,7 @@ public class RegionStateStore {
     throws IOException {
     try {
       if (regionInfo.isMetaRegion()) {
-        masterRegion.update(r -> r.put(put));
+        rootStore.put(put);
       } else {
         try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
           table.put(put);
@@ -294,11 +283,7 @@ public class RegionStateStore {
   private void multiMutate(RegionInfo ri, List<Mutation> mutations) throws IOException {
     debugLogMutations(mutations);
     if (ri.isMetaRegion()) {
-      masterRegion.update(region -> {
-        List<byte[]> rowsToLock =
-          mutations.stream().map(Mutation::getRow).collect(Collectors.toList());
-        region.mutateRowsWithLocks(mutations, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
-      });
+      rootStore.multiMutate(mutations);
     } else {
       byte[] row =
         Bytes.toBytes(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionNameAsString() +
@@ -335,7 +320,7 @@ public class RegionStateStore {
     Get get =
       new Get(CatalogFamilyFormat.getMetaKeyForRegion(region)).addFamily(HConstants.CATALOG_FAMILY);
     if (region.isMetaRegion()) {
-      return masterRegion.get(get);
+      return rootStore.get(get);
     } else {
       try (Table table = getMetaTable()) {
         return table.get(get);
@@ -497,7 +482,7 @@ public class RegionStateStore {
     }
     debugLogMutation(delete);
     if (mergeRegion.isMetaRegion()) {
-      masterRegion.update(r -> r.delete(delete));
+      rootStore.delete(delete);
     } else {
       try (Table table = getMetaTable()) {
         table.delete(delete);
@@ -568,9 +553,7 @@ public class RegionStateStore {
     if (!metaRegions.isEmpty()) {
       List<Delete> deletes = makeDeleteRegionInfos(metaRegions, ts);
       debugLogMutations(deletes);
-      for (Delete d : deletes) {
-        masterRegion.update(r -> r.delete(d));
-      }
+      rootStore.delete(deletes);
       LOG.info("Deleted {} regions from ROOT", metaRegions.size());
       LOG.debug("Deleted regions: {}", metaRegions);
     }
@@ -613,64 +596,57 @@ public class RegionStateStore {
       .addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
   }
 
-  private Delete deleteRegionReplicas(Result result, int oldReplicaCount, int newReplicaCount,
-    long now) {
-    RegionInfo primaryRegionInfo = CatalogFamilyFormat.getRegionInfo(result);
-    if (primaryRegionInfo == null || primaryRegionInfo.isSplitParent()) {
-      return null;
+  private List<Delete> deleteRegionReplicas(ResultScanner scanner, int oldReplicaCount,
+    int newReplicaCount, long now) throws IOException {
+    List<Delete> deletes = new ArrayList<>();
+    for (;;) {
+      Result result = scanner.next();
+      if (result == null) {
+        break;
+      }
+      RegionInfo primaryRegionInfo = CatalogFamilyFormat.getRegionInfo(result);
+      if (primaryRegionInfo == null || primaryRegionInfo.isSplitParent()) {
+        continue;
+      }
+      Delete delete = new Delete(result.getRow());
+      for (int i = newReplicaCount; i < oldReplicaCount; i++) {
+        delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerColumn(i), now);
+        delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getSeqNumColumn(i), now);
+        delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getStartCodeColumn(i),
+          now);
+        delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerNameColumn(i),
+          now);
+        delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getRegionStateColumn(i),
+          now);
+      }
+      deletes.add(delete);
     }
-    Delete delete = new Delete(result.getRow());
-    for (int i = newReplicaCount; i < oldReplicaCount; i++) {
-      delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerColumn(i), now);
-      delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getSeqNumColumn(i), now);
-      delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getStartCodeColumn(i), now);
-      delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerNameColumn(i), now);
-      delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getRegionStateColumn(i),
-        now);
-    }
-    return delete;
+    return deletes;
   }
 
   public void removeRegionReplicas(TableName tableName, int oldReplicaCount, int newReplicaCount)
     throws IOException {
     Scan scan = getScanForUpdateRegionReplicas(tableName);
-    List<Delete> deletes = new ArrayList<>();
     long now = EnvironmentEdgeManager.currentTime();
     if (TableName.isMetaTableName(tableName)) {
-      try (RegionScanner scanner = masterRegion.getScanner(scan)) {
-        List<Cell> cells = new ArrayList<>();
-        boolean moreRows;
-        do {
-          cells.clear();
-          moreRows = scanner.next(cells);
-          if (cells.isEmpty()) {
-            continue;
-          }
-          Result result = Result.create(cells);
-          Delete delete = deleteRegionReplicas(result, oldReplicaCount, newReplicaCount, now);
-          if (delete != null) {
-            deletes.add(delete);
-          }
-        } while (moreRows);
+      List<Delete> deletes;
+      try (ResultScanner scanner = rootStore.getScanner(scan)) {
+        deletes = deleteRegionReplicas(scanner, oldReplicaCount, newReplicaCount, now);
       }
       debugLogMutations(deletes);
-      masterRegion.update(r -> {
-        for (Delete d : deletes) {
-          r.delete(d);
+      rootStore.delete(deletes);
+      // also delete the mirrored location on zk
+      ZKWatcher zk = master.getZooKeeper();
+      try {
+        for (int i = newReplicaCount; i < oldReplicaCount; i++) {
+          ZKUtil.deleteNode(zk, zk.getZNodePaths().getZNodeForReplica(i));
         }
-      });
+      } catch (KeeperException e) {
+        throw new IOException(e);
+      }
     } else {
       try (Table metaTable = getMetaTable(); ResultScanner scanner = metaTable.getScanner(scan)) {
-        for (;;) {
-          Result result = scanner.next();
-          if (result == null) {
-            break;
-          }
-          Delete delete = deleteRegionReplicas(result, oldReplicaCount, newReplicaCount, now);
-          if (delete != null) {
-            deletes.add(delete);
-          }
-        }
+        List<Delete> deletes = deleteRegionReplicas(scanner, oldReplicaCount, newReplicaCount, now);
         debugLogMutations(deletes);
         metaTable.delete(deletes);
       }

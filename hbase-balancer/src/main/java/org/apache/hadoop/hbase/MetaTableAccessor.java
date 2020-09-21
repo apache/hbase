@@ -465,8 +465,7 @@ public final class MetaTableAccessor {
   public static void scanMeta(Connection connection, @Nullable final byte[] startRow,
     @Nullable final byte[] stopRow, QueryType type, @Nullable Filter filter, int maxRows,
     final ClientMetaTableAccessor.Visitor visitor) throws IOException {
-    int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
-    Scan scan = getMetaScan(connection.getConfiguration(), rowUpperLimit);
+    Scan scan = getMetaScan(connection.getConfiguration(), maxRows);
 
     for (byte[] family : type.getFamilies()) {
       scan.addFamily(family);
@@ -483,26 +482,12 @@ public final class MetaTableAccessor {
 
     if (LOG.isTraceEnabled()) {
       LOG.trace("Scanning META" + " starting at row=" + Bytes.toStringBinary(startRow) +
-        " stopping at row=" + Bytes.toStringBinary(stopRow) + " for max=" + rowUpperLimit +
+        " stopping at row=" + Bytes.toStringBinary(stopRow) + " for max=" + maxRows +
         " with caching=" + scan.getCaching());
     }
-
-    int currentRow = 0;
     try (Table metaTable = getMetaHTable(connection)) {
       try (ResultScanner scanner = metaTable.getScanner(scan)) {
-        Result data;
-        while ((data = scanner.next()) != null) {
-          if (data.isEmpty()) {
-            continue;
-          }
-          // Break if visit returns false.
-          if (!visitor.visit(data)) {
-            break;
-          }
-          if (++currentRow >= rowUpperLimit) {
-            break;
-          }
-        }
+        ClientMetaTableAccessor.visit(scanner, visitor, maxRows);
       }
     }
   }

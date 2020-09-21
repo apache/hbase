@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
-import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -70,8 +70,8 @@ public class TestRaceBetweenSCPAndTRSP {
 
   private static final class AssignmentManagerForTest extends AssignmentManager {
 
-    public AssignmentManagerForTest(MasterServices master, MasterRegion masterRegion) {
-      super(master, masterRegion);
+    public AssignmentManagerForTest(MasterServices master, RootStore rootStore) {
+      super(master, rootStore);
     }
 
     @Override
@@ -110,8 +110,8 @@ public class TestRaceBetweenSCPAndTRSP {
 
     @Override
     protected AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
-      return new AssignmentManagerForTest(master, masterRegion);
+      RootStore rootStore) {
+      return new AssignmentManagerForTest(master, rootStore);
     }
   }
 

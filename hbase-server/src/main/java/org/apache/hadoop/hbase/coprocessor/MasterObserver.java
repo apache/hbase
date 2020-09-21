@@ -1824,4 +1824,24 @@ public interface MasterObserver {
   default void postGetAllMetaRegionLocations(ObserverContext<MasterCoprocessorEnvironment> ctx,
     boolean excludeOfflinedSplitParents, List<HRegionLocation> locs) {
   }
+
+  /**
+   * Called before syncing root
+   * @param ctx ctx the coprocessor instance's environment
+   * @param lastSyncSeqId the sequence id when we call sync root last time
+   */
+  default void preSyncRoot(ObserverContext<MasterCoprocessorEnvironment> ctx, long lastSyncSeqId) {
+  }
+
+  /**
+   * Called before syncing root
+   * @param ctx ctx the coprocessor instance's environment
+   * @param lastSyncSeqId the sequence id when we call sync root last time
+   * @param lastModifiedSeqId the sequence id for this sync operation, it could be less than or
+   *          equal to {@code lastSyncSeqId}, then it usually means we do not sync anything.
+   * @param locs the locations of all meta regions, including meta replicas if any.
+   */
+  default void postSyncRoot(ObserverContext<MasterCoprocessorEnvironment> ctx, long lastSyncSeqId,
+    long lastModifiedSeqId, List<HRegionLocation> locs) {
+  }
 }

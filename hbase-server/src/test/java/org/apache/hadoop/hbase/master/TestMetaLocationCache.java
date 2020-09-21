@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -99,7 +101,7 @@ public class TestMetaLocationCache {
   @Test
   public void testError() throws InterruptedException {
     AsyncClusterConnection conn = mock(AsyncClusterConnection.class);
-    when(conn.getAllMetaRegionLocations(anyInt()))
+    when(conn.syncRoot(anyLong(), anyInt()))
       .thenReturn(FutureUtils.failedFuture(new RuntimeException("inject error")));
     when(master.getAsyncClusterConnection()).thenReturn(conn);
     Thread.sleep(2000);
@@ -109,8 +111,8 @@ public class TestMetaLocationCache {
     HRegionLocation loc =
       new HRegionLocation(RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).build(),
         ServerName.valueOf("localhost", 12345, System.currentTimeMillis()));
-    when(conn.getAllMetaRegionLocations(anyInt()))
-      .thenReturn(CompletableFuture.completedFuture(Arrays.asList(loc)));
+    when(conn.syncRoot(anyLong(), anyInt()))
+      .thenReturn(CompletableFuture.completedFuture(Pair.newPair(1L, Arrays.asList(loc))));
     Thread.sleep(2000);
     List<HRegionLocation> list = cache.getAllMetaRegionLocations(false);
     assertEquals(1, list.size());
@@ -131,8 +133,8 @@ public class TestMetaLocationCache {
       ServerName.valueOf("127.0.0.2", 12345, System.currentTimeMillis()));
     HRegionLocation daughter2Loc = new HRegionLocation(daughter2,
       ServerName.valueOf("127.0.0.3", 12345, System.currentTimeMillis()));
-    when(conn.getAllMetaRegionLocations(anyInt())).thenReturn(
-      CompletableFuture.completedFuture(Arrays.asList(parentLoc, daughter1Loc, daughter2Loc)));
+    when(conn.syncRoot(anyLong(), anyInt())).thenReturn(CompletableFuture
+      .completedFuture(Pair.newPair(1L, Arrays.asList(parentLoc, daughter1Loc, daughter2Loc))));
     when(master.getAsyncClusterConnection()).thenReturn(conn);
     Thread.sleep(2000);
   }

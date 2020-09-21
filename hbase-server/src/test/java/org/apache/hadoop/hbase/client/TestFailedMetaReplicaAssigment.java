@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.region.MasterRegion;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
@@ -130,8 +130,8 @@ public class TestFailedMetaReplicaAssigment {
 
     @Override
     public AssignmentManager createAssignmentManager(MasterServices master,
-      MasterRegion masterRegion) {
-      return new BrokenMasterMetaAssignmentManager(master, masterRegion);
+      RootStore rootStore) {
+      return new BrokenMasterMetaAssignmentManager(master, rootStore);
     }
   }
 
@@ -139,8 +139,8 @@ public class TestFailedMetaReplicaAssigment {
     MasterServices master;
 
     public BrokenMasterMetaAssignmentManager(final MasterServices master,
-      MasterRegion masterRegion) {
-      super(master, masterRegion);
+      RootStore rootStore) {
+      super(master, rootStore);
       this.master = master;
     }
 
