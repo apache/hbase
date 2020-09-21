@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
@@ -632,7 +632,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       sinkPeer = replicationSinkMgr.getReplicationSink();
       AsyncRegionServerAdmin rsAdmin = sinkPeer.getRegionServer();
       try {
-        ReplicationProtbufUtil.replicateWALEntry(rsAdmin,
+        ReplicationProtobufUtil.replicateWALEntry(rsAdmin,
           entries.toArray(new Entry[entries.size()]), replicationClusterId, baseNamespaceDir,
           hfileArchiveDir, timeout);
         if (LOG.isTraceEnabled()) {

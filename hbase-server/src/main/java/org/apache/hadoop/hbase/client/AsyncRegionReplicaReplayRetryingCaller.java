@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -104,7 +104,7 @@ public class AsyncRegionReplicaReplayRetryingCaller extends AsyncRpcRetryingCall
         err -> conn.getLocator().updateCachedLocationOnError(loc, err));
       return;
     }
-    Pair<ReplicateWALEntryRequest, CellScanner> p = ReplicationProtbufUtil
+    Pair<ReplicateWALEntryRequest, CellScanner> p = ReplicationProtobufUtil
       .buildReplicateWALEntryRequest(entries, encodedRegionName, null, null, null);
     resetCallTimeout();
     controller.setCellScanner(p.getSecond());

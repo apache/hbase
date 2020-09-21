@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
-import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.util.KeyLocker;
@@ -123,7 +123,7 @@ public class ReplaySyncReplicationWALCallable implements RSProcedureCallable {
     try (Reader reader = getReader(wal)) {
       List<Entry> entries = readWALEntries(reader);
       while (!entries.isEmpty()) {
-        Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtbufUtil
+        Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtobufUtil
             .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
         ReplicateWALEntryRequest request = pair.getFirst();
         rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(),
