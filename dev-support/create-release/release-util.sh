@@ -19,6 +19,7 @@
 DRY_RUN=${DRY_RUN:-1} #default to dry run
 DEBUG=${DEBUG:-0}
 GPG=${GPG:-gpg}
+IGNORE_SVN_CI=${IGNORE_SVN_CI:-0} # default to svn checkin in the presence of -f
 GPG_ARGS=(--no-autostart --batch)
 if [ -n "${GPG_KEY}" ]; then
   GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
@@ -247,6 +248,7 @@ GPG_KEY:         $GPG_KEY
 GIT_NAME:        $GIT_NAME
 GIT_EMAIL:       $GIT_EMAIL
 DRY_RUN:         $(is_dry_run && echo "yes" || echo "NO, THIS BUILD WILL BE PUBLISHED!")
+IGNORE_SVN_CI:   $(is_svn_ci_disabled && echo "yes" || echo "NO, WE WILL PERFORM SVN CHECKIN!")
 ================
 EOF
 
@@ -302,6 +304,10 @@ function check_needed_vars {
   done
   (( missing > 0 )) && exit_with_usage
   return 0
+}
+
+function is_svn_ci_disabled {
+  [[ "$DRY_RUN" = 1 ]] || [[ "$IGNORE_SVN_CI" = 1 ]]
 }
 
 function init_locale {

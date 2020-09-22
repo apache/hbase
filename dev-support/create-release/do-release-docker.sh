@@ -77,6 +77,10 @@ Options:
                If none specified, runs tag, then publish-dist, and then publish-release.
                'publish-snapshot' is also an allowed, less used, option.
   -x           debug. do less clean up. (env file, gpg forwarding on mac)
+  -i [ignore-svn-ci]
+               ignores svn checkin, specifically used in the presence of -f "force" if user
+               of the script doesn't have svn checkin access, all artifacts will be present under
+               /output dir and not checked-in to svn repo.
 EOF
   exit 1
 }
@@ -86,7 +90,7 @@ IMGTAG=latest
 JAVA=
 RELEASE_STEP=
 GIT_REPO=
-while getopts "d:fhj:p:r:s:t:x" opt; do
+while getopts "d:fhj:p:r:s:t:x:i" opt; do
   case $opt in
     d) WORKDIR="$OPTARG" ;;
     f) DRY_RUN=0 ;;
@@ -96,6 +100,7 @@ while getopts "d:fhj:p:r:s:t:x" opt; do
     r) GIT_REPO="$OPTARG" ;;
     s) RELEASE_STEP="$OPTARG" ;;
     x) DEBUG=1 ;;
+    i) IGNORE_SVN_CI=1 ;;
     h) usage ;;
     ?) error "Invalid option. Run with -h for help." ;;
   esac
@@ -222,6 +227,7 @@ ASF_PASSWORD=$ASF_PASSWORD
 RELEASE_STEP=$RELEASE_STEP
 API_DIFF_TAG=$API_DIFF_TAG
 HOST_OS=$HOST_OS
+IGNORE_SVN_CI=$IGNORE_SVN_CI
 EOF
 
 JAVA_MOUNT=()
