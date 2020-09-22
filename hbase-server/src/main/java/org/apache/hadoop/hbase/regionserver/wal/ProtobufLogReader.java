@@ -412,14 +412,14 @@ public class ProtobufLogReader extends ReaderBase {
           + "because originalPosition is negative. last offset={}", this.inputStream.getPos(), eof);
         throw eof;
       }
-      // If stuck at the same place and we got and exception, lets go back at the beginning.
+      // If stuck at the same place and we got an exception, lets go back at the beginning.
       if (inputStream.getPos() == originalPosition) {
         if (resetPosition) {
           LOG.warn("Encountered a malformed edit, seeking to the beginning of the WAL since "
             + "current position and original position match at {}", originalPosition);
           seekOnFs(0);
         } else {
-          LOG.debug("Reached the end of file at position {}", originalPosition);
+          LOG.debug("EOF at position {}", originalPosition);
         }
       } else {
         // Else restore our position to original location in hope that next time through we will
