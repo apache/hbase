@@ -313,12 +313,24 @@ public final class CommonFSUtils {
     return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
+  public static String getRootDirUri(final Configuration c) throws IOException {
+    Path p = new Path(c.get(HConstants.HBASE_DIR));
+    if (p.toUri().getScheme() != null) {
+      return p.toUri().getScheme().toString();
+    }
+    return null;
+  }
+
   public static void setRootDir(final Configuration c, final Path root) {
     c.set(HConstants.HBASE_DIR, root.toString());
   }
 
   public static void setFsDefault(final Configuration c, final Path root) {
     c.set("fs.defaultFS", root.toString());    // for hadoop 0.21+
+  }
+
+  public static void setFsDefault(final Configuration c, final String uri) {
+    c.set("fs.defaultFS", uri); // for hadoop 0.21+
   }
 
   public static FileSystem getRootDirFileSystem(final Configuration c) throws IOException {
@@ -339,6 +351,14 @@ public final class CommonFSUtils {
     }
     FileSystem fs = p.getFileSystem(c);
     return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
+  }
+
+  public static String getWALDirUri(final Configuration c) throws IOException {
+    Path p = new Path(c.get(HBASE_WAL_DIR, c.get(HConstants.HBASE_DIR)));
+    if (p.toUri().getScheme() != null) {
+      return p.toUri().getScheme().toString();
+    }
+    return null;
   }
 
   @VisibleForTesting

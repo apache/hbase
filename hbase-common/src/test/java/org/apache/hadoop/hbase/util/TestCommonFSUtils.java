@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
@@ -101,6 +102,22 @@ public class TestCommonFSUtils {
     CommonFSUtils.setRootDir(conf, root);
     assertEquals(root, CommonFSUtils.getRootDir(conf));
     assertEquals(root, CommonFSUtils.getWALRootDir(conf));
+    CommonFSUtils.setWALRootDir(conf, walRoot);
+    assertEquals(walRoot, CommonFSUtils.getWALRootDir(conf));
+  }
+
+  @Test
+  public void testGetWALRootDirUsingUri() throws IOException {
+    Path root = new Path("file:///hbase/root");
+    conf.set(HConstants.HBASE_DIR, root.toString());
+    Path walRoot = new Path("file:///hbase/logroot");
+    conf.set(CommonFSUtils.HBASE_WAL_DIR, walRoot.toString());
+    String walDirUri = CommonFSUtils.getWALDirUri(conf);
+    String rootDirUri = CommonFSUtils.getRootDirUri(conf);
+    CommonFSUtils.setFsDefault(this.conf, rootDirUri);
+    CommonFSUtils.setRootDir(conf, root);
+    assertEquals(root, CommonFSUtils.getRootDir(conf));
+    CommonFSUtils.setFsDefault(this.conf, walDirUri);
     CommonFSUtils.setWALRootDir(conf, walRoot);
     assertEquals(walRoot, CommonFSUtils.getWALRootDir(conf));
   }

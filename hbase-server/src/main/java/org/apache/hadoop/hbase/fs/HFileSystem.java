@@ -82,7 +82,7 @@ public class HFileSystem extends FilterFileSystem {
     // Create the default filesystem with checksum verification switched on.
     // By default, any operation to this FilterFileSystem occurs on
     // the underlying filesystem that has checksums switched on.
-    this.fs = FileSystem.get(conf);
+    this.fs = FileSystem.get(getDefaultUri(conf), conf);
     this.useHBaseChecksum = useHBaseChecksum;
 
     // disable checksum verification for local fileSystem, see HBASE-11218
