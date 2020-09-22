@@ -1152,7 +1152,7 @@ hbase-vote. A script for standard vote which verifies the following items
 4. Built from source
 5. Unit tests
 
-Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>]
+Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>] [-P runSmallTests] [-D property[=value]]
        hbase-vote.sh -h | --help
 
   -h | --help                   Show this screen.
@@ -1162,6 +1162,8 @@ Usage: hbase-vote.sh -s | --source <url> [-k | --key <signature>] [-f | --keys-f
   -f | --keys-file-url '<url>'   the URL of the key file, default is
                                 https://downloads.apache.org/hbase/KEYS
   -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
+  -P |                          list of maven profiles to activate for test UT/IT, i.e. <-P runSmallTests> Defaults to runAllTests
+  -D |                          list of maven properties to set for the mvn invocations, i.e. <-D hadoop.profile=3.0> Defaults to unset
 ----
 * If you see any unit test failures, please call out the solo test result and whether it's part of flaky (nightly) tests dashboard, e.g. link:https://builds.apache.org/view/H-L/view/HBase/job/HBase-Find-Flaky-Tests/job/master/lastSuccessfulBuild/artifact/dashboard.html[dashboard of master branch] (please change the test branch accordingly).
 
