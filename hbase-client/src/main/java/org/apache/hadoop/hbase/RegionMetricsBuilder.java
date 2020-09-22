@@ -272,6 +272,7 @@ public final class RegionMetricsBuilder {
     this.compactionState = compactionState;
     return this;
   }
+
   public RegionMetrics build() {
     return new RegionMetricsImpl(name,
         storeCount,

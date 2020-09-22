@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -238,7 +239,7 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.webapp.WebAppContext;
 
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
@@ -3454,12 +3455,12 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @param tableName The current table name.
    * @return If a given table is in mob file compaction now.
    */
-  public CompactionState getMobCompactionState(TableName tableName) {
+  public GetRegionInfoResponse.CompactionState getMobCompactionState(TableName tableName) {
     AtomicInteger compactionsCount = mobCompactionStates.get(tableName);
     if (compactionsCount != null && compactionsCount.get() != 0) {
-      return CompactionState.MAJOR_AND_MINOR;
+      return GetRegionInfoResponse.CompactionState.MAJOR_AND_MINOR;
     }
-    return CompactionState.NONE;
+    return GetRegionInfoResponse.CompactionState.NONE;
   }
 
   public void reportMobCompactionStart(TableName tableName) throws IOException {
@@ -3916,10 +3917,8 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @param tableName The table name
    * @return CompactionState Compaction state of the table
    */
-  public org.apache.hadoop.hbase.client.CompactionState getCompactionState(
-      final TableName tableName) {
-    org.apache.hadoop.hbase.client.CompactionState compactionState =
-      org.apache.hadoop.hbase.client.CompactionState.NONE;
+  public CompactionState getCompactionState(final TableName tableName) {
+    CompactionState compactionState = CompactionState.NONE;
     try {
       List<RegionInfo> regions =
         assignmentManager.getRegionStates().getRegionsOfTable(tableName, false);
@@ -3934,19 +3933,17 @@ public class HMaster extends HRegionServer implements MasterServices {
           continue;
         }
         RegionMetrics regionMetrics = sl.getRegionMetrics().get(regionInfo.getRegionName());
-        if (regionMetrics.getCompactionState()
-          == org.apache.hadoop.hbase.client.CompactionState.MAJOR) {
-          if (compactionState == org.apache.hadoop.hbase.client.CompactionState.MINOR) {
-            compactionState = org.apache.hadoop.hbase.client.CompactionState.MAJOR_AND_MINOR;
+        if (regionMetrics.getCompactionState() == CompactionState.MAJOR) {
+          if (compactionState == CompactionState.MINOR) {
+            compactionState = CompactionState.MAJOR_AND_MINOR;
           } else {
-            compactionState = org.apache.hadoop.hbase.client.CompactionState.MAJOR;
+            compactionState = CompactionState.MAJOR;
           }
-        } else if (regionMetrics.getCompactionState()
-          == org.apache.hadoop.hbase.client.CompactionState.MINOR) {
-          if (compactionState == org.apache.hadoop.hbase.client.CompactionState.MAJOR) {
-            compactionState = org.apache.hadoop.hbase.client.CompactionState.MAJOR_AND_MINOR;
+        } else if (regionMetrics.getCompactionState() == CompactionState.MINOR) {
+          if (compactionState == CompactionState.MAJOR) {
+            compactionState = CompactionState.MAJOR_AND_MINOR;
           } else {
-            compactionState = org.apache.hadoop.hbase.client.CompactionState.MINOR;
+            compactionState = CompactionState.MINOR;
           }
         }
       }
