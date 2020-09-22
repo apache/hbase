@@ -80,9 +80,9 @@ function personality_globals
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
   # Yetus 0.7.0 enforces limits. Default proclimit is 1000.
-  # Up it. See HBASE-19902 for how we arrived at this number.
+  # Up it. See HBASE-25081 for how we arrived at this number.
   #shellcheck disable=SC2034
-  PROC_LIMIT=12500
+  PROC_LIMIT=30000
 
   # Set docker container to run with 20g. Default is 4g in yetus.
   # See HBASE-19902 for how we arrived at 20g.
