@@ -2438,11 +2438,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     status.setStatus("Acquiring readlock on region");
     // block waiting for the lock for flushing cache
     lock.readLock().lock();
+    boolean flushed = true;
     try {
       if (this.closed.get()) {
         String msg = "Skipping flush on " + this + " because closed";
         LOG.debug(msg);
         status.abort(msg);
+        flushed = false;
         return new FlushResultImpl(FlushResult.Result.CANNOT_FLUSH, msg, false);
       }
       if (coprocessorHost != null) {
@@ -2459,15 +2461,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (!writestate.flushing && writestate.writesEnabled) {
           this.writestate.flushing = true;
         } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("NOT flushing memstore for region " + this
-                + ", flushing=" + writestate.flushing + ", writesEnabled="
-                + writestate.writesEnabled);
-          }
-          String msg = "Not flushing since "
-              + (writestate.flushing ? "already flushing"
-              : "writes not enabled");
+          String msg = "NOT flushing " + this + " as " + (writestate.flushing ? "already flushing"
+            : "writes are not enabled");
+          LOG.debug(msg);
           status.abort(msg);
+          flushed = false;
           return new FlushResultImpl(FlushResult.Result.CANNOT_FLUSH, msg, false);
         }
       }
@@ -2505,8 +2503,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     } finally {
       lock.readLock().unlock();
-      LOG.debug("Flush status journal for {}:\n{}", this.getRegionInfo().getEncodedName(),
-        status.prettyPrintJournal());
+      if (flushed) {
+        // Don't log this journal stuff if no flush -- confusing.
+        LOG.debug("Flush status journal for {}:\n{}", this.getRegionInfo().getEncodedName(),
+          status.prettyPrintJournal());
+      }
       status.cleanup();
     }
   }
@@ -5032,7 +5033,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public void setReadsEnabled(boolean readsEnabled) {
    if (readsEnabled && !this.writestate.readsEnabled) {
-     LOG.info(getRegionInfo().getEncodedName() + " : Enabling reads for region.");
+     LOG.info("Enabling reads for {}", getRegionInfo().getEncodedName());
     }
     this.writestate.setReadsEnabled(readsEnabled);
   }
