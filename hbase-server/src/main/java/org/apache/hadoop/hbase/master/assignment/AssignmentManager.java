@@ -232,7 +232,7 @@ public class AssignmentManager {
     // Start the Assignment Thread
     startAssignmentThread();
 
-    // load meta region state
+    // load root region state
     ZKWatcher zkw = master.getZooKeeper();
     // it could be null in some tests
     if (zkw == null) {
@@ -697,7 +697,7 @@ public class AssignmentManager {
         ri.getRegionNameAsString(), rs, optProc.isPresent());
       // Check once-a-minute.
       if (rc == null) {
-        rc = new RetryCounterFactory(1000).create();
+        rc = new RetryCounterFactory(Integer.MAX_VALUE, 1000, 60_000).create();
       }
       Threads.sleep(rc.getBackoffTimeAndIncrementAttempts());
     }
@@ -961,6 +961,15 @@ public class AssignmentManager {
 
   @VisibleForTesting
   static int compare(TransitRegionStateProcedure left, TransitRegionStateProcedure right) {
+    //TODO francis this is broken once we have more meta entries
+    if (left.getRegion().isRootRegion()) {
+      if (right.getRegion().isRootRegion()) {
+        return RegionInfo.COMPARATOR.compare(left.getRegion(), right.getRegion());
+      }
+      return -1;
+    } else if (right.getRegion().isRootRegion()) {
+      return +1;
+    }
     if (left.getRegion().isMetaRegion()) {
       if (right.getRegion().isMetaRegion()) {
         return RegionInfo.COMPARATOR.compare(left.getRegion(), right.getRegion());
@@ -1653,7 +1662,14 @@ public class AssignmentManager {
   // ============================================================================================
   //  TODO: Master load/bootstrap
   // ============================================================================================
-  public void joinCluster() throws IOException {
+  public void joinCluster(boolean loadRoot) throws IOException {
+    joinCluster(loadRoot, true, true);
+  }
+
+  @VisibleForTesting
+  public void joinCluster(boolean loadRoot, boolean shouldWaitForRootOnline,
+    boolean shouldWaitForMetaOnline)
+    throws IOException {
     long startTime = System.nanoTime();
     LOG.debug("Joining cluster...");
 
@@ -1667,15 +1683,18 @@ public class AssignmentManager {
 
 
     LOG.debug("Waiting for hbase:root to be online.");
-    if (!waitForRootOnline()) {
+    if (shouldWaitForRootOnline && !waitForRootOnline()) {
       throw new IOException("Waited too long for hbase:root to be online");
     }
 
-    //load hbase:root to build regionstate for hbase:meta regions
-    loadRoot();
+    //could have been run in initrootproc already
+    if (loadRoot) {
+      //load hbase:root to build regionstate for hbase:meta regions
+      loadRoot();
+    }
 
     LOG.debug("Waiting for hbase:meta to be online.");
-    if (!waitForMetaOnline()) {
+    if (shouldWaitForMetaOnline && !waitForMetaOnline()) {
       throw new IOException("Waited too long for hbase:meta to be online");
     }
 
@@ -1801,26 +1820,26 @@ public class AssignmentManager {
   }
 
   public void loadRoot() throws IOException {
-    synchronized (rootLoadEvent) {
-      if (!isRootLoaded()) {
-        // TODO: use a thread pool
-        LOG.debug("Loaded hbase:root");
-        regionStateStore.visitCatalogTable(TableName.ROOT_TABLE_NAME,
-            new RegionCatalogLoadingVisitor());
-        wakeRootLoadedEvent();
-      } else {
-        LOG.debug("Not loading hbase:root, already loaded");
-      }
+    if (!isRootLoaded()) {
+      // TODO: use a thread pool
+      LOG.debug("Loading hbase:root");
+      regionStateStore.visitCatalogTable(TableName.ROOT_TABLE_NAME,
+          new RegionCatalogLoadingVisitor());
+      wakeRootLoadedEvent();
+      LOG.debug("Loaded hbase:root");
+    } else {
+      LOG.debug("Not loading hbase:root, already loaded");
     }
   }
 
   private void loadMeta() throws IOException {
     // TODO: use a thread pool
-    LOG.debug("Loaded hbase:meta");
+    LOG.debug("Loading hbase:meta");
     regionStateStore.visitCatalogTable(TableName.META_TABLE_NAME,
         new RegionCatalogLoadingVisitor());
     // every assignment is blocked until meta is loaded.
     wakeMetaLoadedEvent();
+    LOG.debug("Loading hbase:meta");
   }
 
   /**

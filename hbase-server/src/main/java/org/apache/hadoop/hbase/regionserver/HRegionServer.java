@@ -139,6 +139,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
+import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
@@ -1115,13 +1116,13 @@ public class HRegionServer extends Thread implements
       }
     }
     // Closing the compactSplit thread before closing meta regions
-    if (!this.killed && containsMetaTableRegions()) {
+    if (!this.killed && containsCatalogTableRegions()) {
       if (!abortRequested.get() || this.dataFsOk) {
         if (this.compactSplitThread != null) {
           this.compactSplitThread.join();
           this.compactSplitThread = null;
         }
-        closeMetaTableRegions(abortRequested.get());
+        closeCatalogTableRegions(abortRequested.get());
       }
     }
 
@@ -1187,16 +1188,17 @@ public class HRegionServer extends Thread implements
     LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
   }
 
-  //TODO francis update this
-  private boolean containsMetaTableRegions() {
-    return onlineRegions.containsKey(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
+  private boolean containsCatalogTableRegions() {
+    return onlineRegions.containsKey(RegionInfoBuilder.ROOT_REGIONINFO.getEncodedName()) ||
+      onlineRegions.containsKey(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
   }
 
   private boolean areAllUserRegionsOffline() {
     if (getNumberOfOnlineRegions() > 2) return false;
     boolean allUserRegionsOffline = true;
     for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
-      if (!e.getValue().getRegionInfo().isMetaRegion()) {
+      if (!e.getValue().getRegionInfo().isRootRegion() &&
+        !e.getValue().getRegionInfo().isMetaRegion()) {
         allUserRegionsOffline = false;
         break;
       }
@@ -2015,6 +2017,8 @@ public class HRegionServer extends Thread implements
         conf.getInt("hbase.regionserver.executor.openpriorityregion.threads", 3));
     this.executorService.startExecutorService(ExecutorType.RS_CLOSE_REGION,
         conf.getInt("hbase.regionserver.executor.closeregion.threads", 3));
+    this.executorService.startExecutorService(ExecutorType.RS_CLOSE_ROOT,
+      conf.getInt("hbase.regionserver.executor.closeroot.threads", 1));
     this.executorService.startExecutorService(ExecutorType.RS_CLOSE_META,
         conf.getInt("hbase.regionserver.executor.closemeta.threads", 1));
     if (conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false)) {
@@ -2355,7 +2359,7 @@ public class HRegionServer extends Thread implements
 
     if (code == TransitionCode.OPENED) {
       Preconditions.checkArgument(hris != null && hris.length == 1);
-      if (hris[0].isMetaRegion()) {
+      if (hris[0].isRootRegion()) {
         try {
           RootTableLocator.setRootLocation(getZooKeeper(), serverName,
               hris[0].getReplicaId(), RegionState.State.OPEN);
@@ -2412,6 +2416,7 @@ public class HRegionServer extends Thread implements
     // Time to pause if master says 'please hold'. Make configurable if needed.
     final long initPauseTime = 1000;
     int tries = 0;
+    int pausedTries = 0;
     long pauseTime;
     // Keep looping till we get an error. We want to send reports even though server is going down.
     // Only go down if clusterConnection is null. It is set to null almost as last thing as the
@@ -2443,12 +2448,15 @@ public class HRegionServer extends Thread implements
                 || ioe instanceof CallQueueTooBigException;
         if (pause) {
           // Do backoff else we flood the Master with requests.
-          pauseTime = ConnectionUtils.getPauseTime(initPauseTime, tries);
+          pauseTime = ConnectionUtils.getPauseTime(initPauseTime, pausedTries);
+          pausedTries++;
         } else {
           pauseTime = initPauseTime; // Reset.
+          pausedTries = 0;
         }
         LOG.info("Failed report transition " +
           TextFormat.shortDebugString(request) + "; retry (#" + tries + ")" +
+            "; paused retry (#" + pausedTries + ")" +
             (pause?
                 " after " + pauseTime + "ms delay (Master is coming online...).":
                 " immediately."),
@@ -2852,21 +2860,26 @@ public class HRegionServer extends Thread implements
    * Close meta region if we carry it
    * @param abort Whether we're running an abort.
    */
-  private void closeMetaTableRegions(final boolean abort) {
+  private void closeCatalogTableRegions(final boolean abort) {
+    HRegion root = null;
     HRegion meta = null;
     this.onlineRegionsLock.writeLock().lock();
     try {
       for (Map.Entry<String, HRegion> e: onlineRegions.entrySet()) {
         RegionInfo hri = e.getValue().getRegionInfo();
+        if (hri.isRootRegion()) {
+          root = e.getValue();
+        }
         if (hri.isMetaRegion()) {
           meta = e.getValue();
         }
-        if (meta != null) break;
+        if (root != null && meta != null) break;
       }
     } finally {
       this.onlineRegionsLock.writeLock().unlock();
     }
     if (meta != null) closeRegionIgnoreErrors(meta.getRegionInfo(), abort);
+    if (root != null) closeRegionIgnoreErrors(root.getRegionInfo(), abort);
   }
 
   /**
@@ -2880,7 +2893,8 @@ public class HRegionServer extends Thread implements
     try {
       for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
-        if (!r.getRegionInfo().isMetaRegion() && r.isAvailable()) {
+        if (!r.getRegionInfo().isRootRegion() && !r.getRegionInfo().isMetaRegion()
+          && r.isAvailable()) {
           // Don't update zk with this close transition; pass false.
           closeRegionIgnoreErrors(r.getRegionInfo(), abort);
         }
@@ -3327,7 +3341,9 @@ public class HRegionServer extends Thread implements
 
     CloseRegionHandler crh;
     final RegionInfo hri = actualRegion.getRegionInfo();
-    if (hri.isMetaRegion()) {
+    if (hri.isRootRegion()) {
+      crh = new CloseRootHandler(this, this, hri, abort);
+    } else if (hri.isMetaRegion()) {
       crh = new CloseMetaHandler(this, this, hri, abort);
     } else {
       crh = new CloseRegionHandler(this, this, hri, abort, destination);

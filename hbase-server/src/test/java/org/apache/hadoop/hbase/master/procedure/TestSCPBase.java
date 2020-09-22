@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaTestHelper;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -75,10 +76,11 @@ public class TestSCPBase {
    * Run server crash procedure steps twice to test idempotency and that we are persisting all
    * needed state.
    */
-  protected void testRecoveryAndDoubleExecution(boolean carryingMeta, boolean doubleExecution)
+  protected void testRecoveryAndDoubleExecution(
+    boolean carryingRoot, boolean carryingMeta, boolean doubleExecution)
       throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution-carryingMeta-" +
-      carryingMeta + "-doubleExecution-" + doubleExecution);
+    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution-carryingRoot-" +
+      carryingRoot + "-doubleExecution-" + doubleExecution);
     try (Table t = createTable(tableName)) {
       // Load the table with a bit of data so some logs to split and some edits in each region.
       this.util.loadTable(t, HBaseTestingUtility.COLUMNS[0]);
@@ -90,13 +92,30 @@ public class TestSCPBase {
       final HMaster master = this.util.getHBaseCluster().getMaster();
       final ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
       // find the first server that match the request and executes the test
-      ServerName rsToKill = null;
+      ServerName otherRS = null;
+      ServerName rootRs = null;
+      ServerName metaRs = null;
       for (RegionInfo hri : util.getAdmin().getRegions(tableName)) {
         final ServerName serverName = AssignmentTestingUtil.getServerHoldingRegion(util, hri);
-        if (AssignmentTestingUtil.isServerHoldingMeta(util, serverName) == carryingMeta) {
-          rsToKill = serverName;
-          break;
+        if (AssignmentTestingUtil.isServerHoldingRoot(util, serverName) == carryingRoot) {
+          rootRs = serverName;
         }
+        if (AssignmentTestingUtil.isServerHoldingMeta(util, serverName) == carryingMeta) {
+          metaRs = serverName;
+        }
+        if (!AssignmentTestingUtil.isServerHoldingRoot(util, serverName) &&
+          !AssignmentTestingUtil.isServerHoldingMeta(util, serverName)) {
+          otherRS = serverName;
+        }
+      }
+      ServerName rsToKill = rootRs;
+      if (carryingRoot) {
+        util.moveRegionAndWait(RegionInfoBuilder.FIRST_META_REGIONINFO, otherRS);
+      } else if (carryingMeta) {
+        util.moveRegionAndWait(RegionInfoBuilder.ROOT_REGIONINFO, otherRS);
+        rsToKill = metaRs;
+      } else {
+        rsToKill = otherRS;
       }
       // Enable test flags and then queue the crash procedure.
       ProcedureTestingUtility.waitNoProcedureRunning(procExec);

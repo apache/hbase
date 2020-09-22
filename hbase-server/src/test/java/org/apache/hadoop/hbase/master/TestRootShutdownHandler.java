@@ -17,19 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
-import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -45,18 +35,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import static org.junit.Assert.*;
 
-
-//TODO francis fix this to work for meta
 /**
  * Tests handling of meta-carrying region server failover.
  */
 @Category(MediumTests.class)
-public class TestMetaShutdownHandler {
-  private static final Logger LOG = LoggerFactory.getLogger(TestMetaShutdownHandler.class);
+public class TestRootShutdownHandler {
+  private static final Logger LOG = LoggerFactory.getLogger(TestRootShutdownHandler.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetaShutdownHandler.class);
+      HBaseClassTestRule.forClass(TestRootShutdownHandler.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   final static Configuration conf = TEST_UTIL.getConfiguration();
@@ -84,56 +74,56 @@ public class TestMetaShutdownHandler {
    * We will check that the master SSH is still successfully done.
    */
   @Test
-  public void testExpireMetaRegionServer() throws Exception {
+  public void testExpireRootRegionServer() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-    ServerName metaServerName =
-      regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    if (master.getServerName().equals(metaServerName) || metaServerName == null ||
-      !metaServerName.equals(cluster.getServerHoldingMeta())) {
+    ServerName rootServerName =
+      regionStates.getRegionServerOfRegion(RegionInfoBuilder.ROOT_REGIONINFO);
+    if (master.getServerName().equals(rootServerName) || rootServerName == null ||
+      !rootServerName.equals(cluster.getServerHoldingMeta())) {
       // Move meta off master
-      metaServerName =
+      rootServerName =
         cluster.getLiveRegionServerThreads().get(0).getRegionServer().getServerName();
-      master.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-        Bytes.toBytes(metaServerName.getServerName()));
+      master.move(RegionInfoBuilder.ROOT_REGIONINFO.getEncodedNameAsBytes(),
+        Bytes.toBytes(rootServerName.getServerName()));
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-      metaServerName =
-        regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
+      rootServerName =
+        regionStates.getRegionServerOfRegion(RegionInfoBuilder.ROOT_REGIONINFO);
     }
-    RegionState metaState = RootTableLocator.getRootRegionState(master.getZooKeeper());
-    assertEquals("Wrong state for meta!", RegionState.State.OPEN, metaState.getState());
-    assertNotEquals("Meta is on master!", metaServerName, master.getServerName());
+    RegionState rootState = RootTableLocator.getRootRegionState(master.getZooKeeper());
+    assertEquals("Wrong state for meta!", RegionState.State.OPEN, rootState.getState());
+    assertNotEquals("Meta is on master!", rootServerName, master.getServerName());
 
     // Delete the ephemeral node of the meta-carrying region server.
     // This is trigger the expire of this region server on the master.
     String rsEphemeralNodePath =
         ZNodePaths.joinZNode(master.getZooKeeper().getZNodePaths().rsZNode,
-                metaServerName.toString());
+                rootServerName.toString());
     ZKUtil.deleteNode(master.getZooKeeper(), rsEphemeralNodePath);
     LOG.info("Deleted the znode for the RegionServer hosting hbase:meta; waiting on SSH");
     // Wait for SSH to finish
     final ServerManager serverManager = master.getServerManager();
-    final ServerName priorMetaServerName = metaServerName;
+    final ServerName priorRootServerName = rootServerName;
     TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return !serverManager.isServerOnline(priorMetaServerName)
+        return !serverManager.isServerOnline(priorRootServerName)
             && !serverManager.areDeadServersInProgress();
       }
     });
     LOG.info("Past wait on RIT");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     // Now, make sure meta is assigned
-    assertTrue("Meta should be assigned",
-      regionStates.isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO));
+    assertTrue("Root should be assigned",
+      regionStates.isRegionOnline(RegionInfoBuilder.ROOT_REGIONINFO));
     // Now, make sure meta is registered in zk
-    metaState = RootTableLocator.getRootRegionState(master.getZooKeeper());
-    assertEquals("Meta should not be in transition", RegionState.State.OPEN, metaState.getState());
-    assertEquals("Meta should be assigned", metaState.getServerName(),
-      regionStates.getRegionServerOfRegion(RegionInfoBuilder.FIRST_META_REGIONINFO));
-    assertNotEquals("Meta should be assigned on a different server", metaState.getServerName(),
-      metaServerName);
+    rootState = RootTableLocator.getRootRegionState(master.getZooKeeper());
+    assertEquals("Root should not be in transition", RegionState.State.OPEN, rootState.getState());
+    assertEquals("Root should be assigned", rootState.getServerName(),
+      regionStates.getRegionServerOfRegion(RegionInfoBuilder.ROOT_REGIONINFO));
+    assertNotEquals("root should be assigned on a different server", rootState.getServerName(),
+      rootServerName);
   }
 
   public static class MyRegionServer extends MiniHBaseClusterRegionServer {

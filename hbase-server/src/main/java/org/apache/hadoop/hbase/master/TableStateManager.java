@@ -224,7 +224,7 @@ public class TableStateManager {
     });
     for (TableDescriptor tableDesc : tableDescriptors.getAll().values()) {
       TableName tableName = tableDesc.getTableName();
-      if (TableName.isMetaTableName(tableName)) {
+      if (TableName.isRootTableName(tableName) || TableName.isMetaTableName(tableName)) {
         // This table is always enabled. No fixup needed. No entry in hbase:meta needed.
         // Call through to fixTableState though in case a super class wants to do something.
         fixTableState(new TableState(tableName, TableState.State.ENABLED));

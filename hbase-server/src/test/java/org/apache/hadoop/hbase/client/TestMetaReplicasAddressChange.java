@@ -77,7 +77,7 @@ public class TestMetaReplicasAddressChange extends MetaWithReplicasTestBase {
     final TableName tableName = name.getTableName();
     TEST_UTIL.createTable(tableName, "f");
     assertTrue(TEST_UTIL.getAdmin().tableExists(tableName));
-    TEST_UTIL.getAdmin().move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+    TEST_UTIL.getAdmin().move(RegionInfoBuilder.ROOT_REGIONINFO.getEncodedNameAsBytes(),
       moveToServer);
     assertNotEquals(currentServer, moveToServer);
     LOG.debug("CurrentServer={}, moveToServer={}", currentServer, moveToServer);

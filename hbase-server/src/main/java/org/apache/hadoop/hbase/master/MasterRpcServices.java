@@ -2994,6 +2994,7 @@ public class MasterRpcServices extends RSRpcServices implements
     return resp.build();
   }
 
+  //TODO francis this needs to be get RootLocation now?
   @Override
   public GetMetaRegionLocationsResponse getMetaRegionLocations(RpcController rpcController,
       GetMetaRegionLocationsRequest request) throws ServiceException {

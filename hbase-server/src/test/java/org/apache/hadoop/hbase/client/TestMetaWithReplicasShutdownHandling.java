@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -97,7 +98,7 @@ public class TestMetaWithReplicasShutdownHandling extends MetaWithReplicasTestBa
     ServerName master = null;
     try (Connection c = ConnectionFactory.createConnection(util.getConfiguration())) {
       try (Table htable = util.createTable(TABLE, FAMILIES)) {
-        util.getAdmin().flush(TableName.META_TABLE_NAME);
+        util.getAdmin().flush(TableName.ROOT_TABLE_NAME);
         Thread.sleep(
           conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 30000) * 6);
         List<RegionInfo> regions = MetaTableAccessor.getTableRegions(c, TABLE);
@@ -112,9 +113,9 @@ public class TestMetaWithReplicasShutdownHandling extends MetaWithReplicasTestBa
           // wait for the move to complete
           do {
             Thread.sleep(10);
-            hrl = MetaTableAccessor.getRegionLocation(c, regions.get(0));
+            hrl = CatalogAccessor .getRegionLocation(c, regions.get(0));
           } while (primary.equals(hrl.getServerName()));
-          util.getAdmin().flush(TableName.META_TABLE_NAME);
+          util.getAdmin().flush(TableName.ROOT_TABLE_NAME);
           Thread.sleep(
             conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 30000) * 3);
         }

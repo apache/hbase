@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Base class for testing the scenarios where replicas are enabled for the meta table.
  */
+//TODO francis rename this and subclasses
 public class MetaWithReplicasTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetaWithReplicasTestBase.class);
@@ -71,11 +72,11 @@ public class MetaWithReplicasTestBase {
     sns.add(hbaseMetaServerName);
     for (int replicaId = 1; replicaId < 3; replicaId++) {
       RegionInfo h = RegionReplicaUtil
-        .getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId);
+        .getRegionInfoForReplica(RegionInfoBuilder.ROOT_REGIONINFO, replicaId);
       AssignmentTestingUtil.waitForAssignment(am, h);
       ServerName sn = am.getRegionStates().getRegionServerOfRegion(h);
       assertNotNull(sn);
-      LOG.info("HBASE:META DEPLOY: " + h.getRegionNameAsString() + " on " + sn);
+      LOG.info("HBASE:ROOT DEPLOY: " + h.getRegionNameAsString() + " on " + sn);
       sns.add(sn);
     }
     // Fun. All meta region replicas have ended up on the one server. This will cause this test
@@ -83,7 +84,7 @@ public class MetaWithReplicasTestBase {
     if (sns.size() == 1) {
       int count = TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size();
       assertTrue("count=" + count, count == REGIONSERVERS_COUNT);
-      LOG.warn("All hbase:meta replicas are on the one server; moving hbase:meta: " + sns);
+      LOG.warn("All hbase:root replicas are on the one server; moving hbase:meta: " + sns);
       int metaServerIndex = TEST_UTIL.getHBaseCluster().getServerWithMeta();
       int newServerIndex = metaServerIndex;
       while (newServerIndex == metaServerIndex) {
@@ -95,7 +96,7 @@ public class MetaWithReplicasTestBase {
       ServerName metaServerName =
         TEST_UTIL.getHBaseCluster().getRegionServer(metaServerIndex).getServerName();
       assertNotEquals(destinationServerName, metaServerName);
-      TEST_UTIL.getAdmin().move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+      TEST_UTIL.getAdmin().move(RegionInfoBuilder.ROOT_REGIONINFO.getEncodedNameAsBytes(),
         destinationServerName);
     }
     // Disable the balancer

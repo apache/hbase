@@ -145,8 +145,9 @@ public class UnassignRegionHandler extends EventHandler {
     // if we put the handler into a wrong executor.
     Region region = server.getRegion(encodedName);
     EventType eventType =
-      region != null && region.getRegionInfo().isMetaRegion() ? EventType.M_RS_CLOSE_META
-        : EventType.M_RS_CLOSE_REGION;
+      region != null && region.getRegionInfo().isRootRegion() ?
+        EventType.M_RS_CLOSE_ROOT : region.getRegionInfo().isMetaRegion() ?
+          EventType.M_RS_CLOSE_META : EventType.M_RS_CLOSE_REGION;
     return new UnassignRegionHandler(server, encodedName, closeProcId, abort, destination,
       eventType);
   }

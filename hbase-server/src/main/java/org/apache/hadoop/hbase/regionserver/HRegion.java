@@ -5007,7 +5007,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   */
   void checkResources() throws RegionTooBusyException {
     // If catalog region, do not impose resource constraints or block updates.
-    if (this.getRegionInfo().isMetaRegion()) return;
+    if (this.getRegionInfo().isRootRegion() || this.getRegionInfo().isMetaRegion()) return;
 
     MemStoreSize mss = this.memStoreSizing.getMemStoreSize();
     if (mss.getHeapSize() + mss.getOffHeapSize() > this.blockingMemStoreSize) {
@@ -8676,7 +8676,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Return the split point. An empty result indicates the region isn't splittable.
    */
   public Optional<byte[]> checkSplit(boolean force) {
-    // Can't split META
+    // Can't split ROOT
     if (this.getRegionInfo().isRootRegion()) {
       return Optional.empty();
     }
@@ -8883,7 +8883,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException If anything goes wrong with DFS
    */
   private void sync(long txid, Durability durability) throws IOException {
-    if (this.getRegionInfo().isMetaRegion()) {
+    if (this.getRegionInfo().isRootRegion() || this.getRegionInfo().isMetaRegion()) {
       this.wal.sync(txid);
     } else {
       switch(durability) {
@@ -9041,6 +9041,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     StringBuilder buf = new StringBuilder();
     buf.append(title + ", ");
     buf.append(getRegionInfo().toString());
+    buf.append(getRegionInfo().isRootRegion() ? " root region " : " ");
     buf.append(getRegionInfo().isMetaRegion() ? " meta region " : " ");
     buf.append("stores: ");
     for (HStore s : stores.values()) {

@@ -1211,7 +1211,7 @@ public final class HConstants {
    *             use this priority, and you should not use this directly. Will be removed in 3.0.0.
    */
   @Deprecated
-  public static final int META_QOS = 300;
+  public static final int META_QOS = 299;
 
   /** Directory under /hbase where archived hfiles are stored */
   public static final String HFILE_ARCHIVE_DIRECTORY = "archive";

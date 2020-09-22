@@ -1165,8 +1165,15 @@ public class TableDescriptorBuilder {
           userKeys.add(entry.getKey());
           continue;
         }
-        // only print out IS_META if true
+        // only print out IS_ROOT if true
         String value = Bytes.toString(entry.getValue().get());
+        if (key.equalsIgnoreCase(IS_ROOT)) {
+          if (Boolean.valueOf(value) == false) {
+            continue;
+          }
+        }
+        // only print out IS_META if true
+        value = Bytes.toString(entry.getValue().get());
         if (key.equalsIgnoreCase(IS_META)) {
           if (Boolean.valueOf(value) == false) {
             continue;

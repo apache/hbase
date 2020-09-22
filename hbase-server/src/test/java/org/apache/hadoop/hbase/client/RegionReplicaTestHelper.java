@@ -101,7 +101,7 @@ public final class RegionReplicaTestHelper {
     ServerName newServerName = util.getHBaseCluster().getRegionServerThreads().stream()
       .map(t -> t.getRegionServer().getServerName()).filter(sn -> !sn.equals(serverName)).findAny()
       .get();
-    util.getAdmin().move(regionInfo.getEncodedNameAsBytes(), newServerName);
+    util.getAdmin().move(regionInfo.getRegionName(), newServerName);
     util.waitFor(30000, new ExplainingPredicate<Exception>() {
 
       @Override

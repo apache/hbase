@@ -132,7 +132,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // We may still miss regions that need to be flushed.
     List<Pair<RegionInfo, ServerName>> regionsAndLocations;
 
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
+    if (TableName.ROOT_TABLE_NAME.equals(tableName)) {
       regionsAndLocations = RootTableLocator.getRootRegionsAndLocations(
         master.getZooKeeper());
     } else {

@@ -137,11 +137,18 @@ public class TestAsyncAdminWithRegionReplicas extends TestAsyncAdminBase {
 
   @Test
   public void testGetTableRegions() throws InterruptedException, ExecutionException, IOException {
-    List<RegionInfo> rootRegions = admin.getRegions(TableName.META_TABLE_NAME).get();
+    List<RegionInfo> rootRegions = admin.getRegions(TableName.ROOT_TABLE_NAME).get();
     assertEquals(3, rootRegions.size());
     for (int i = 0; i < 3; i++) {
-      RegionInfo metaRegion = rootRegions.get(i);
-      assertEquals(TableName.ROOT_TABLE_NAME, metaRegion.getTable());
+      RegionInfo rootRegion = rootRegions.get(i);
+      assertEquals(TableName.ROOT_TABLE_NAME, rootRegion.getTable());
+      assertEquals(i, rootRegion.getReplicaId());
+    }
+    List<RegionInfo> metaRegions = admin.getRegions(TableName.META_TABLE_NAME).get();
+    assertEquals(3, metaRegions.size());
+    for (int i = 0; i < 3; i++) {
+      RegionInfo metaRegion = metaRegions.get(i);
+      assertEquals(TableName.META_TABLE_NAME, metaRegion.getTable());
       assertEquals(i, metaRegion.getReplicaId());
     }
     createTableWithDefaultConf(tableName, 3);

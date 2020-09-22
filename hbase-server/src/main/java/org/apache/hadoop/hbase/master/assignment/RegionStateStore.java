@@ -295,14 +295,15 @@ public class RegionStateStore {
     FutureUtils.get(future);
   }
 
-  private Table getMetaTable() throws IOException {
-    return master.getConnection().getTable(TableName.META_TABLE_NAME);
+  private Table getCatalogTableForTable(TableName tableName) throws IOException {
+    return master.getConnection().getTable(
+      TableName.isMetaTableName(tableName) ? TableName.ROOT_TABLE_NAME : TableName.META_TABLE_NAME);
   }
 
   private Result getRegionCatalogResult(RegionInfo region) throws IOException {
     Get get =
       new Get(CatalogFamilyFormat.getMetaKeyForRegion(region)).addFamily(HConstants.CATALOG_FAMILY);
-    try (Table table = getMetaTable()) {
+    try (Table table = getCatalogTableForTable(region.getTable())) {
       return table.get(get);
     }
   }
@@ -511,7 +512,7 @@ public class RegionStateStore {
       e.addFamily(HConstants.CATALOG_FAMILY, ts);
       deletes.add(e);
     }
-    try (Table table = getMetaTable()) {
+    try (Table table = getCatalogTableForTable(regions.get(0).getTable())) {
       debugLogMutations(deletes);
       table.delete(deletes);
     }
@@ -549,7 +550,7 @@ public class RegionStateStore {
 
   public void removeRegionReplicas(TableName tableName, int oldReplicaCount, int newReplicaCount)
     throws IOException {
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName)) {
       ZKWatcher zk = master.getZooKeeper();
       try {
         for (int i = newReplicaCount; i < oldReplicaCount; i++) {
@@ -562,7 +563,8 @@ public class RegionStateStore {
       Scan scan = getScanForUpdateRegionReplicas(tableName);
       List<Delete> deletes = new ArrayList<>();
       long now = EnvironmentEdgeManager.currentTime();
-      try (Table metaTable = getMetaTable(); ResultScanner scanner = metaTable.getScanner(scan)) {
+      try (Table catalogTable = getCatalogTableForTable(tableName);
+        ResultScanner scanner = catalogTable.getScanner(scan)) {
         for (;;) {
           Result result = scanner.next();
           if (result == null) {
@@ -588,7 +590,7 @@ public class RegionStateStore {
           deletes.add(delete);
         }
         debugLogMutations(deletes);
-        metaTable.delete(deletes);
+        catalogTable.delete(deletes);
       }
     }
   }

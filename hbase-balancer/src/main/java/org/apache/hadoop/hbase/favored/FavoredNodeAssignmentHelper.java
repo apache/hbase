@@ -132,7 +132,7 @@ public class FavoredNodeAssignmentHelper {
         puts.add(put);
       }
     }
-    MetaTableAccessor.putsToMetaTable(connection, puts);
+    MetaTableAccessor.putsToCatalogTable(connection, TableName.META_TABLE_NAME, puts);
     LOG.info("Added " + puts.size() + " regions in META");
   }
 

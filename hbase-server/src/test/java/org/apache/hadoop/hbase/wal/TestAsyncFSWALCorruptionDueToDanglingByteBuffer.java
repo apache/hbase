@@ -82,7 +82,9 @@ public class TestAsyncFSWALCorruptionDueToDanglingByteBuffer
       return new PauseWAL(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
         getWALDirectoryName(factory.factoryId), getWALArchiveDirectoryName(conf, factory.factoryId),
         conf, listeners, true, logPrefix,
-        META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null, eventLoopGroup,
+        ROOT_WAL_PROVIDER_ID.equals(providerId) ? ROOT_WAL_PROVIDER_ID :
+          META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null,
+        eventLoopGroup,
         channelClass);
     }
 

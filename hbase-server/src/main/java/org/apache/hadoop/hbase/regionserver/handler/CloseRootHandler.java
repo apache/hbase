@@ -20,21 +20,21 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Handles opening of a root region on a region server.
- * <p>
- * This is executed after receiving an OPEN RPC from the master for root.
+ * Handles closing of the meta region on a region server.
  */
 @InterfaceAudience.Private
-public class OpenRootHandler extends OpenRegionHandler {
-  public OpenRootHandler(final Server server,
-                         final RegionServerServices rsServices, RegionInfo regionInfo,
-                         final TableDescriptor htd, long masterSystemTime) {
-    super(server, rsServices, regionInfo, htd, masterSystemTime, EventType.M_RS_OPEN_ROOT);
+public class CloseRootHandler extends CloseRegionHandler {
+
+  // Called when regionserver determines its to go down; not master orchestrated
+  public CloseRootHandler(final Server server,
+                          final RegionServerServices rsServices,
+                          final RegionInfo regionInfo,
+                          final boolean abort) {
+    super(server, rsServices, regionInfo, abort, EventType.M_RS_CLOSE_ROOT, null);
   }
 }

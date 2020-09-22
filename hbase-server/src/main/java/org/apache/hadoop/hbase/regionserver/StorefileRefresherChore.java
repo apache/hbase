@@ -91,7 +91,8 @@ public class StorefileRefresherChore extends ScheduledChore {
       }
       // don't refresh unless enabled for all files, or it the meta region
       // meta region don't have WAL replication for replicas enabled yet
-      if (onlyMetaRefresh && !r.getRegionInfo().isMetaRegion()) continue;
+      if (onlyMetaRefresh &&
+        !r.getRegionInfo().isRootRegion() && !r.getRegionInfo().isMetaRegion()) continue;
       String encodedName = r.getRegionInfo().getEncodedName();
       long time = EnvironmentEdgeManager.currentTime();
       if (!lastRefreshTimes.containsKey(encodedName)) {

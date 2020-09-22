@@ -170,7 +170,9 @@ public final class MasterProcedureUtil {
    * user tables are 1.
    */
   public static int getTablePriority(TableName tableName) {
-    if (TableName.isMetaTableName(tableName)) {
+    if (TableName.isRootTableName(tableName)) {
+      return 4;
+    } else if (TableName.isMetaTableName(tableName)) {
       return 3;
     } else if (tableName.isSystemTable()) {
       return 2;

@@ -422,7 +422,7 @@ public class CatalogAccessor {
     final boolean excludeOfflinedSplitParents) throws IOException {
     if (tableName != null && tableName.equals(TableName.ROOT_TABLE_NAME)) {
       throw new IOException(
-        "This method can't be used to locate meta regions; use RootTableLocator instead");
+        "This method can't be used to locate root regions; use RootTableLocator instead");
     }
     // Make a version of CollectingVisitor that collects RegionInfo and ServerAddress
     ClientMetaTableAccessor.CollectRegionLocationsVisitor visitor =
@@ -430,7 +430,7 @@ public class CatalogAccessor {
     byte[] startRow = ClientMetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REGION);
     byte[] stopRow = ClientMetaTableAccessor.getTableStopRowForMeta(tableName, QueryType.REGION);
     TableName parentTable = TableName.META_TABLE_NAME;
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
       parentTable = TableName.ROOT_TABLE_NAME;
       startRow = null;
       stopRow = null;

@@ -50,7 +50,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 @InterfaceAudience.Private
 public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPriorityFunction {
 
-  public static final int META_TRANSITION_QOS = 300;
+  public static final int ROOT_TRANSITION_QOS = 300;
+  public static final int META_TRANSITION_QOS = 299;
 
   public MasterAnnotationReadingPriorityFunction(final RSRpcServices rpcServices) {
     this(rpcServices, rpcServices.getClass());
@@ -69,7 +70,7 @@ public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPr
     // every single RPC request.
     int priorityByAnnotation = getAnnotatedPriority(header);
     if (priorityByAnnotation >= 0) {
-      // no one can have higher priority than meta transition.
+      // No one can have higher priority than ROOT and META transition.
       if (priorityByAnnotation >= META_TRANSITION_QOS) {
         return META_TRANSITION_QOS - 1;
       } else {
@@ -77,7 +78,7 @@ public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPr
       }
     }
 
-    // If meta is moving then all the other of reports of state transitions will be
+    // If ROOT or meta are moving then all the other of reports of state transitions will be
     // un able to edit meta. Those blocked reports should not keep the report that opens meta from
     // running. Hence all reports of meta transition should always be in a different thread.
     // This keeps from deadlocking the cluster.
@@ -89,7 +90,9 @@ public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPr
         if (rst.getRegionInfoList() != null) {
           for (HBaseProtos.RegionInfo info : rst.getRegionInfoList()) {
             TableName tn = ProtobufUtil.toTableName(info.getTableName());
-            if (TableName.META_TABLE_NAME.equals(tn)) {
+            if (TableName.ROOT_TABLE_NAME.equals(tn)) {
+              return ROOT_TRANSITION_QOS;
+            } else if (TableName.META_TABLE_NAME.equals(tn)) {
               return META_TRANSITION_QOS;
             }
           }

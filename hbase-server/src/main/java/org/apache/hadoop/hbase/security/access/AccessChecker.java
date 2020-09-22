@@ -556,9 +556,9 @@ public class AccessChecker {
    */
   public AuthResult permissionGranted(String request, User user, Action permRequest,
       TableName tableName, Map<byte[], ? extends Collection<?>> families) {
-    // 1. All users need read access to hbase:meta table.
+    // 1. All users need read access to hbase:root and hbase:meta table.
     // this is a very common operation, so deal with it quickly.
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
+    if (TableName.ROOT_TABLE_NAME.equals(tableName) || TableName.META_TABLE_NAME.equals(tableName)) {
       if (permRequest == Action.READ) {
         return AuthResult.allow(request, "All users allowed", user, permRequest, tableName,
           families);
