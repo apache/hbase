@@ -19,18 +19,21 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 
 /**
  * Constructs a {@link ReplicationSourceInterface}
+ * Note, not used to create specialized ReplicationSources
+ * @see HBaseMetaReplicationSource
  */
 @InterfaceAudience.Private
-public class ReplicationSourceFactory {
-
+public final class ReplicationSourceFactory {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceFactory.class);
+
+  private ReplicationSourceFactory() {}
 
   static ReplicationSourceInterface create(Configuration conf, String queueId) {
     ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);

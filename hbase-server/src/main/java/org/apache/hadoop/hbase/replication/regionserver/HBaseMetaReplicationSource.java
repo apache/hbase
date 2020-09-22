@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,21 +17,25 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.util.OptionalLong;
-
-import org.apache.hadoop.fs.Path;
+import java.util.Collections;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used by replication to prevent replicating unacked log entries. See
- * https://issues.apache.org/jira/browse/HBASE-14004 for more details.
- * WALFileLengthProvider exists because we do not want to reference WALFactory and WALProvider
- * directly in the replication code so in the future it will be easier to decouple them.
- * Each walProvider will have its own implementation.
+ * ReplicationSource that reads hbase:meta WAL files and lets through all WALEdits from these WALs.
+ * NOT created via {@link ReplicationSourceFactory} -- specialized.
  */
 @InterfaceAudience.Private
-@FunctionalInterface
-public interface WALFileLengthProvider {
+class HBaseMetaReplicationSource extends ReplicationSource {
+  HBaseMetaReplicationSource() {
+    // Filters in hbase:meta WAL files and allows all edits, including 'meta' edits (these are
+    // filtered out in the 'super' class default implementation).
+    super(p -> AbstractFSWALProvider.isMetaFile(p), Collections.emptyList());
+  }
 
-  OptionalLong getLogFileSizeIfBeingWritten(Path path);
+  @Override
+  public void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
+    // Noop. This implementation does not persist state to backing storage nor does it keep its
+    // WALs in a general map up in ReplicationSourceManager from it has to help maintain.
+  }
 }
