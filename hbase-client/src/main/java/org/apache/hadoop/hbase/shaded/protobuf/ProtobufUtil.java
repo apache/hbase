@@ -2957,16 +2957,18 @@ public final class ProtobufUtil {
 
   /**
    * Creates {@link CompactionState} from
-   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad.CompactionState}
-   * state
+   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos
+   * .RegionLoad.CompactionState} state
    * @param state the protobuf CompactionState
    * @return CompactionState
    */
-  public static CompactionState createCompactionStateForRegionLoad(RegionLoad.CompactionState state) {
+  public static CompactionState createCompactionStateForRegionLoad(
+      RegionLoad.CompactionState state) {
     return CompactionState.valueOf(state.toString());
   }
 
-  public static RegionLoad.CompactionState createCompactionStateForRegionLoad(CompactionState state) {
+  public static RegionLoad.CompactionState createCompactionStateForRegionLoad(
+      CompactionState state) {
     return RegionLoad.CompactionState.valueOf(state.toString());
   }
 

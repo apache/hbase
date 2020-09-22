@@ -105,12 +105,14 @@ public class TestCompactionState {
   }
 
   @Test
-  public void testMajorCompactionOnFamilyStateFromMaster() throws IOException, InterruptedException {
+  public void testMajorCompactionOnFamilyStateFromMaster()
+      throws IOException, InterruptedException {
     compaction(name.getMethodName(), 8, CompactionState.MAJOR, true, StateSource.MASTER);
   }
 
   @Test
-  public void testMinorCompactionOnFamilyStateFromMaster() throws IOException, InterruptedException {
+  public void testMinorCompactionOnFamilyStateFromMaster()
+      throws IOException, InterruptedException {
     compaction(name.getMethodName(), 15, CompactionState.MINOR, true, StateSource.MASTER);
   }
 
