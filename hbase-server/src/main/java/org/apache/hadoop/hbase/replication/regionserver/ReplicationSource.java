@@ -66,10 +66,10 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -222,6 +222,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.replicationQueueInfo = new ReplicationQueueInfo(queueId);
     this.logQueueWarnThreshold = this.conf.getInt("replication.source.log.queue.warn", 2);
 
+    // A defaultBandwidth of '0' means no bandwidth; i.e. no throttling.
     defaultBandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
     currentBandwidth = getCurrentBandwidth();
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
@@ -375,7 +376,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
         LOG.debug("{} preempted start of worker walGroupId={}", logPeerId(), walGroupId);
         return value;
       } else {
-       LOG.debug("{} starting worker for walGroupId={}", logPeerId(), walGroupId);
+        LOG.debug("{} starting worker for walGroupId={}", logPeerId(), walGroupId);
         ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
         ReplicationSourceWALReader walReader =
             createNewWALReader(walGroupId, queue, worker.getStartPosition());
@@ -520,8 +521,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   private long getCurrentBandwidth() {
     long peerBandwidth = replicationPeer.getPeerBandwidth();
-    // user can set peer bandwidth to 0 to use default bandwidth
-    return peerBandwidth != 0 ? peerBandwidth : defaultBandwidth;
+    // User can set peer bandwidth to 0 to use default bandwidth.
+    return peerBandwidth != 0? peerBandwidth : defaultBandwidth;
   }
 
   /**

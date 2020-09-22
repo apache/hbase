@@ -2455,9 +2455,9 @@ public class HRegionServer extends Thread implements
     if (ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
       return;
     }
-    if (!ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(region.conf) ||
-        !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(
-          region.conf)) {
+    TableName tn = region.getTableDescriptor().getTableName();
+    if (!ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(region.conf, tn) ||
+        !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(region.conf)) {
       region.setReadsEnabled(true);
       return;
     }
