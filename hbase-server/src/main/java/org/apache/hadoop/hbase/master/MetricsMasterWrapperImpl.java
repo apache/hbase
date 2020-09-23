@@ -50,12 +50,12 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public long getSplitPlanCount() {
-    return master.getSplitPlanCount();
+    return master.getRegionNormalizerManager().getSplitPlanCount();
   }
 
   @Override
   public long getMergePlanCount() {
-    return master.getMergePlanCount();
+    return master.getRegionNormalizerManager().getMergePlanCount();
   }
 
   @Override

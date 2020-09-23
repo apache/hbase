@@ -18,41 +18,35 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
-import java.io.IOException;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * Normalization plan to merge regions (smallest region in the table with its smallest neighbor).
+ * Normalization plan to merge adjacent regions. As with any call to
+ * {@link MasterServices#mergeRegions(RegionInfo[], boolean, long, long)}
+ * with {@code forcible=false}, Region order and adjacency are important. It's the caller's
+ * responsibility to ensure the provided parameters are ordered according to the
+ * {code mergeRegions} method requirements.
  */
 @InterfaceAudience.Private
-public class MergeNormalizationPlan implements NormalizationPlan {
+final class MergeNormalizationPlan implements NormalizationPlan {
 
-  private final RegionInfo firstRegion;
-  private final RegionInfo secondRegion;
+  private final List<NormalizationTarget> normalizationTargets;
 
-  public MergeNormalizationPlan(RegionInfo firstRegion, RegionInfo secondRegion) {
-    this.firstRegion = firstRegion;
-    this.secondRegion = secondRegion;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public long submit(MasterServices masterServices) throws IOException {
-    // Do not use force=true as corner cases can happen, non adjacent regions,
-    // merge with a merged child region with no GC done yet, it is going to
-    // cause all different issues.
-    return masterServices
-      .mergeRegions(new RegionInfo[] { firstRegion, secondRegion }, false, HConstants.NO_NONCE,
-        HConstants.NO_NONCE);
+  private MergeNormalizationPlan(List<NormalizationTarget> normalizationTargets) {
+    Preconditions.checkNotNull(normalizationTargets);
+    Preconditions.checkState(normalizationTargets.size() >= 2,
+      "normalizationTargets.size() must be >= 2 but was %s", normalizationTargets.size());
+    this.normalizationTargets = Collections.unmodifiableList(normalizationTargets);
   }
 
   @Override
@@ -60,19 +54,14 @@ public class MergeNormalizationPlan implements NormalizationPlan {
     return PlanType.MERGE;
   }
 
-  RegionInfo getFirstRegion() {
-    return firstRegion;
-  }
-
-  RegionInfo getSecondRegion() {
-    return secondRegion;
+  public List<NormalizationTarget> getNormalizationTargets() {
+    return normalizationTargets;
   }
 
   @Override
   public String toString() {
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-      .append("firstRegion", firstRegion)
-      .append("secondRegion", secondRegion)
+      .append("normalizationTargets", normalizationTargets)
       .toString();
   }
 
@@ -89,16 +78,31 @@ public class MergeNormalizationPlan implements NormalizationPlan {
     MergeNormalizationPlan that = (MergeNormalizationPlan) o;
 
     return new EqualsBuilder()
-      .append(firstRegion, that.firstRegion)
-      .append(secondRegion, that.secondRegion)
+      .append(normalizationTargets, that.normalizationTargets)
       .isEquals();
   }
 
   @Override
   public int hashCode() {
     return new HashCodeBuilder(17, 37)
-      .append(firstRegion)
-      .append(secondRegion)
+      .append(normalizationTargets)
       .toHashCode();
+  }
+
+  /**
+   * A helper for constructing instances of {@link MergeNormalizationPlan}.
+   */
+  static class Builder {
+
+    private final List<NormalizationTarget> normalizationTargets = new LinkedList<>();
+
+    public Builder addTarget(final RegionInfo regionInfo, final long regionSizeMb) {
+      normalizationTargets.add(new NormalizationTarget(regionInfo, regionSizeMb));
+      return this;
+    }
+
+    public MergeNormalizationPlan build() {
+      return new MergeNormalizationPlan(normalizationTargets);
+    }
   }
 }

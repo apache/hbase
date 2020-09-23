@@ -60,9 +60,7 @@ import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -535,8 +533,10 @@ public class MergeTableRegionsProcedure
     try {
       env.getMasterServices().getMasterQuotaManager().onRegionMerged(this.mergedRegion);
     } catch (QuotaExceededException e) {
-      env.getMasterServices().getRegionNormalizer().planSkipped(this.mergedRegion,
-          NormalizationPlan.PlanType.MERGE);
+      // TODO: why is this here? merge requests can be submitted by actors other than the normalizer
+      env.getMasterServices()
+        .getRegionNormalizerManager()
+        .planSkipped(NormalizationPlan.PlanType.MERGE);
       throw e;
     }
   }

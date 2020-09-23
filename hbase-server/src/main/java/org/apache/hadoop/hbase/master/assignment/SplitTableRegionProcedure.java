@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -71,13 +71,11 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -181,9 +179,10 @@ public class SplitTableRegionProcedure
   private void checkSplittable(final MasterProcedureEnv env,
       final RegionInfo regionToSplit, final byte[] splitRow) throws IOException {
     // Ask the remote RS if this region is splittable.
-    // If we get an IOE, report it along w/ the failure so can see why we are not splittable at this time.
+    // If we get an IOE, report it along w/ the failure so can see why we are not splittable at
+    // this time.
     if(regionToSplit.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
-      throw new IllegalArgumentException ("Can't invoke split on non-default regions directly");
+      throw new IllegalArgumentException("Can't invoke split on non-default regions directly");
     }
     RegionStateNode node =
         env.getAssignmentManager().getRegionStates().getRegionStateNode(getParentRegion());
@@ -570,8 +569,10 @@ public class SplitTableRegionProcedure
     try {
       env.getMasterServices().getMasterQuotaManager().onRegionSplit(this.getParentRegion());
     } catch (QuotaExceededException e) {
-      env.getMasterServices().getRegionNormalizer().planSkipped(this.getParentRegion(),
-          NormalizationPlan.PlanType.SPLIT);
+      // TODO: why is this here? split requests can be submitted by actors other than the normalizer
+      env.getMasterServices()
+        .getRegionNormalizerManager()
+        .planSkipped(NormalizationPlan.PlanType.SPLIT);
       throw e;
     }
   }
