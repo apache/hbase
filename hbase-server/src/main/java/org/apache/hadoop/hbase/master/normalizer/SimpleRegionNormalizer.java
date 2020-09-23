@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -54,29 +53,9 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  *   <li>Otherwise, for the next region in the chain R1, if R0 + R1 is smaller then S, R0 and R1
  *     are kindly requested to merge.</li>
  * </ol>
- * <p>
- * The following parameters are configurable:
- * <ol>
- *   <li>Whether to split a region as part of normalization. Configuration:
- *     {@value #SPLIT_ENABLED_KEY}, default: {@value #DEFAULT_SPLIT_ENABLED}.</li>
- *   <li>Whether to merge a region as part of normalization. Configuration:
- *     {@value #MERGE_ENABLED_KEY}, default: {@value #DEFAULT_MERGE_ENABLED}.</li>
- *   <li>The minimum number of regions in a table to consider it for merge normalization.
- *     Configuration: {@value #MIN_REGION_COUNT_KEY}, default:
- *     {@value #DEFAULT_MIN_REGION_COUNT}.</li>
- *   <li>The minimum age for a region to be considered for a merge, in days. Configuration:
- *     {@value #MERGE_MIN_REGION_AGE_DAYS_KEY}, default:
- *     {@value #DEFAULT_MERGE_MIN_REGION_AGE_DAYS}.</li>
- *   <li>The minimum size for a region to be considered for a merge, in whole MBs. Configuration:
- *     {@value #MERGE_MIN_REGION_SIZE_MB_KEY}, default:
- *     {@value #DEFAULT_MERGE_MIN_REGION_SIZE_MB}.</li>
- * </ol>
- * <p>
- * To see detailed logging of the application of these configuration values, set the log level for
- * this class to `TRACE`.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class SimpleRegionNormalizer implements RegionNormalizer {
+class SimpleRegionNormalizer implements RegionNormalizer {
   private static final Logger LOG = LoggerFactory.getLogger(SimpleRegionNormalizer.class);
 
   static final String SPLIT_ENABLED_KEY = "hbase.normalizer.split.enabled";
@@ -92,7 +71,6 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
   static final String MERGE_MIN_REGION_SIZE_MB_KEY = "hbase.normalizer.merge.min_region_size.mb";
   static final int DEFAULT_MERGE_MIN_REGION_SIZE_MB = 1;
 
-  private final long[] skippedCount;
   private Configuration conf;
   private MasterServices masterServices;
   private boolean splitEnabled;
@@ -102,7 +80,6 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
   private int mergeMinRegionSizeMb;
 
   public SimpleRegionNormalizer() {
-    skippedCount = new long[NormalizationPlan.PlanType.values().length];
     splitEnabled = DEFAULT_SPLIT_ENABLED;
     mergeEnabled = DEFAULT_MERGE_ENABLED;
     minRegionCount = DEFAULT_MIN_REGION_COUNT;
@@ -201,16 +178,6 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
   @Override
   public void setMasterServices(final MasterServices masterServices) {
     this.masterServices = masterServices;
-  }
-
-  @Override
-  public void planSkipped(final RegionInfo hri, final PlanType type) {
-    skippedCount[type.ordinal()]++;
-  }
-
-  @Override
-  public long getSkippedCount(NormalizationPlan.PlanType type) {
-    return skippedCount[type.ordinal()];
   }
 
   @Override
@@ -371,7 +338,11 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       final long nextSizeMb = getRegionSizeMB(next);
       // always merge away empty regions when they present themselves.
       if (currentSizeMb == 0 || nextSizeMb == 0 || currentSizeMb + nextSizeMb < avgRegionSizeMb) {
-        plans.add(new MergeNormalizationPlan(current, next));
+        final MergeNormalizationPlan plan = new MergeNormalizationPlan.Builder()
+          .addTarget(current, currentSizeMb)
+          .addTarget(next, nextSizeMb)
+          .build();
+        plans.add(plan);
         candidateIdx++;
       }
     }
@@ -408,11 +379,11 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       if (skipForSplit(ctx.getRegionStates().getRegionState(hri), hri)) {
         continue;
       }
-      final long regionSize = getRegionSizeMB(hri);
-      if (regionSize > 2 * avgRegionSize) {
+      final long regionSizeMb = getRegionSizeMB(hri);
+      if (regionSizeMb > 2 * avgRegionSize) {
         LOG.info("Table {}, large region {} has size {}, more than twice avg size {}, splitting",
-          ctx.getTableName(), hri.getRegionNameAsString(), regionSize, avgRegionSize);
-        plans.add(new SplitNormalizationPlan(hri));
+          ctx.getTableName(), hri.getRegionNameAsString(), regionSizeMb, avgRegionSize);
+        plans.add(new SplitNormalizationPlan(hri, regionSizeMb));
       }
     }
     return plans;

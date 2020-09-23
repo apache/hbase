@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -34,7 +35,7 @@ import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
@@ -54,7 +55,6 @@ import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
@@ -122,9 +122,9 @@ public interface MasterServices extends Server {
   MasterQuotaManager getMasterQuotaManager();
 
   /**
-   * @return Master's instance of {@link RegionNormalizer}
+   * @return Master's instance of {@link RegionNormalizerManager}
    */
-  RegionNormalizer getRegionNormalizer();
+  RegionNormalizerManager getRegionNormalizerManager();
 
   /**
    * @return Master's instance of {@link CatalogJanitor}
@@ -355,6 +355,13 @@ public interface MasterServices extends Server {
   boolean isInMaintenanceMode();
 
   /**
+   * Checks master state before initiating action over region topology.
+   * @param action the name of the action under consideration, for logging.
+   * @return {@code true} when the caller should exit early, {@code false} otherwise.
+   */
+  boolean skipRegionManagementAction(final String action);
+
+  /**
    * Abort a procedure.
    * @param procId ID of the procedure
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
@@ -553,4 +560,14 @@ public interface MasterServices extends Server {
    * @return The state of the load balancer, or false if the load balancer isn't defined.
    */
   boolean isBalancerOn();
+
+  /**
+   * Perform normalization of cluster.
+   * @param ntfp Selection criteria for identifying which tables to normalize.
+   * @param isHighPriority {@code true} when these requested tables should skip to the front of
+   *   the queue.
+   * @return {@code true} when the request was submitted, {@code false} otherwise.
+   */
+  boolean normalizeRegions(
+    final NormalizeTableFilterParams ntfp, final boolean isHighPriority) throws IOException;
 }
