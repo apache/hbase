@@ -24,7 +24,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -253,7 +252,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal.getName());
     PriorityBlockingQueue<Path> queue = queues.get(walPrefix);
     if (queue == null) {
-      queue = new PriorityBlockingQueue<>(queueSizePerGroup, new LogsComparator());
+      queue = new PriorityBlockingQueue<>(queueSizePerGroup,
+        new AbstractFSWALProvider.WALStartTimeComparator());
       // make sure that we do not use an empty queue when setting up a ReplicationSource, otherwise
       // the shipper may quit immediately
       queue.put(wal);
@@ -757,31 +757,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   @Override
   public boolean isSourceActive() {
     return !this.server.isStopped() && this.sourceRunning;
-  }
-
-  /**
-   * Comparator used to compare logs together based on their start time
-   */
-  public static class LogsComparator implements Comparator<Path> {
-
-    @Override
-    public int compare(Path o1, Path o2) {
-      return Long.compare(getTS(o1), getTS(o2));
-    }
-
-    /**
-     * <p>
-     * Split a path to get the start time
-     * </p>
-     * <p>
-     * For example: 10.20.20.171%3A60020.1277499063250
-     * </p>
-     * @param p path to split
-     * @return start time
-     */
-    private static long getTS(Path p) {
-      return AbstractFSWALProvider.getWALStartTimeFromWALName(p.getName());
-    }
   }
 
   public ReplicationQueueInfo getReplicationQueueInfo() {
