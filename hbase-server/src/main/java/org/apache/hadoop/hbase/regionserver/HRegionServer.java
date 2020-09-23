@@ -752,7 +752,9 @@ public class HRegionServer extends Thread implements
     boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
     String walDirUri = CommonFSUtils.getWALDirUri(this.conf);
     // set WAL's uri
-    CommonFSUtils.setFsDefault(this.conf, walDirUri);
+    if (walDirUri != null) {
+      CommonFSUtils.setFsDefault(this.conf, walDirUri);
+    }
     // init the WALFs
     this.walFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.walRootDir = CommonFSUtils.getWALRootDir(this.conf);
@@ -760,7 +762,9 @@ public class HRegionServer extends Thread implements
     // underlying hadoop hdfs accessors will be going against wrong filesystem
     // (unless all is set to defaults).
     String rootDirUri = CommonFSUtils.getRootDirUri(this.conf);
-    CommonFSUtils.setFsDefault(this.conf, rootDirUri);
+    if (rootDirUri != null) {
+      CommonFSUtils.setFsDefault(this.conf, rootDirUri);
+    }
     // init the filesystem
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
