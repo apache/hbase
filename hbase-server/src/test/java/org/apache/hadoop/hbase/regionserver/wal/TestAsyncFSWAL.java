@@ -83,9 +83,9 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    GROUP = new NioEventLoopGroup(1,
-      new ThreadFactoryBuilder().setNameFormat("TestAsyncFSWAL-pool-%d")
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+    GROUP =
+      new NioEventLoopGroup(1, new ThreadFactoryBuilder().setNameFormat("TestAsyncFSWAL-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     CHANNEL_CLASS = NioSocketChannel.class;
     AbstractTestFSWAL.setUpBeforeClass();
   }

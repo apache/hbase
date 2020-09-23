@@ -360,8 +360,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public void unassign(byte[] regionName, boolean force) throws IOException {
-    get(admin.unassign(regionName, force));
+  public void unassign(byte[] regionName) throws IOException {
+    get(admin.unassign(regionName));
   }
 
   @Override
@@ -975,12 +975,6 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<OnlineLogRecord> getSlowLogResponses(final Set<ServerName> serverNames,
-      final LogQueryFilter logQueryFilter) throws IOException {
-    return get(admin.getSlowLogResponses(serverNames, logQueryFilter));
-  }
-
-  @Override
   public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
       throws IOException {
     return get(admin.clearSlowLogResponses(serverNames));
@@ -1056,5 +1050,12 @@ class AdminOverAsyncAdmin implements Admin {
   public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
       throws IOException {
     get(admin.updateRSGroupConfig(groupName, configuration));
+  }
+
+  @Override
+  public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+      ServerType serverType, int limit, Map<String, Object> filterParams)
+      throws IOException {
+    return get(admin.getLogEntries(serverNames, logType, serverType, limit, filterParams));
   }
 }

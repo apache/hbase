@@ -985,8 +985,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, RegionInfo regionInfo,
-      boolean force) throws IOException {
+  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, RegionInfo regionInfo)
+      throws IOException {
     requirePermission(c, "unassign",
         regionInfo.getTable(), null, null, Action.ADMIN);
   }

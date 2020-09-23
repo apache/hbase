@@ -85,7 +85,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
 
   /**
    * If in a running state, creates the specified subprocedure for handling a procedure.
-   * @return Subprocedure to submit to the ProcedureMemeber.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(String name) {
 
@@ -128,7 +128,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
       this.name = name;
       executor = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-procedure-pool-%d")
-          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+          .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       taskPool = new ExecutorCompletionService<>(executor);
     }
 

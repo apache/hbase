@@ -367,8 +367,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> unassign(byte[] regionName, boolean forcible) {
-    return wrap(rawAdmin.unassign(regionName, forcible));
+  public CompletableFuture<Void> unassign(byte[] regionName) {
+    return wrap(rawAdmin.unassign(regionName));
   }
 
   @Override
@@ -853,12 +853,6 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
-      final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
-    return wrap(rawAdmin.getSlowLogResponses(serverNames, logQueryFilter));
-  }
-
-  @Override
   public CompletableFuture<List<Boolean>> clearSlowLogResponses(Set<ServerName> serverNames) {
     return wrap(rawAdmin.clearSlowLogResponses(serverNames));
   }
@@ -933,5 +927,12 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void>
     updateRSGroupConfig(String groupName, Map<String, String> configuration) {
     return wrap(rawAdmin.updateRSGroupConfig(groupName, configuration));
+  }
+
+  @Override
+  public CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames,
+      String logType, ServerType serverType, int limit,
+      Map<String, Object> filterParams) {
+    return wrap(rawAdmin.getLogEntries(serverNames, logType, serverType, limit, filterParams));
   }
 }

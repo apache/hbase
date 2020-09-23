@@ -508,19 +508,17 @@ public interface MasterObserver {
    * Called prior to unassigning a given region.
    * @param ctx the environment to interact with the framework and master
    * @param regionInfo
-   * @param force whether to force unassignment or not
    */
   default void preUnassign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final RegionInfo regionInfo, final boolean force) throws IOException {}
+    final RegionInfo regionInfo) throws IOException {}
 
   /**
    * Called after the region unassignment has been requested.
    * @param ctx the environment to interact with the framework and master
    * @param regionInfo
-   * @param force whether to force unassignment or not
    */
   default void postUnassign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final RegionInfo regionInfo, final boolean force) throws IOException {}
+    final RegionInfo regionInfo) throws IOException {}
 
   /**
    * Called prior to marking a given region as offline.
@@ -528,7 +526,7 @@ public interface MasterObserver {
    * @param regionInfo
    */
   default void preRegionOffline(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final RegionInfo regionInfo) throws IOException {}
+    final RegionInfo regionInfo) throws IOException {}
 
   /**
    * Called after the region has been marked offline.
@@ -536,7 +534,7 @@ public interface MasterObserver {
    * @param regionInfo
    */
   default void postRegionOffline(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final RegionInfo regionInfo) throws IOException {}
+    final RegionInfo regionInfo) throws IOException {}
 
   /**
    * Called prior to requesting rebalancing of the cluster regions, though after

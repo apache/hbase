@@ -150,7 +150,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
    * the snapshot verification step.
    *
    * @param snapshot
-   * @return Subprocedure to submit to the ProcedureMemeber.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(SnapshotDescription snapshot) {
 
@@ -285,7 +285,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
       this.name = name;
       executor = Threads.getBoundedCachedThreadPool(threads, keepAlive, TimeUnit.MILLISECONDS,
         new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-snapshot-pool-%d")
-          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+          .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       taskPool = new ExecutorCompletionService<>(executor);
     }
 

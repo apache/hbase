@@ -24,6 +24,7 @@ import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,8 @@ import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ServerType;
+import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -314,8 +317,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.assign(regionName);
   }
 
-  public void unassign(byte[] regionName, boolean force) throws IOException {
-    admin.unassign(regionName, force);
+  public void unassign(byte[] regionName) throws IOException {
+    admin.unassign(regionName);
   }
 
   public void offline(byte[] regionName) throws IOException {
@@ -837,6 +840,13 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
       throws IOException {
     admin.updateRSGroupConfig(groupName, configuration);
     verify();
+  }
+
+  @Override
+  public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+      ServerType serverType, int limit, Map<String, Object> filterParams)
+      throws IOException {
+    return Collections.emptyList();
   }
 
   private void verify() throws IOException {

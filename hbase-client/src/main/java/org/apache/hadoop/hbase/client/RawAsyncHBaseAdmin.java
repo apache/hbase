@@ -1553,7 +1553,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> unassign(byte[] regionName, boolean forcible) {
+  public CompletableFuture<Void> unassign(byte[] regionName) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(getRegionInfo(regionName), (regionInfo, err) -> {
       if (err != null) {
@@ -1564,7 +1564,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         this.<Void> newMasterCaller().priority(regionInfo.getTable())
           .action(((controller, stub) -> this
             .<UnassignRegionRequest, UnassignRegionResponse, Void> call(controller, stub,
-              RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName(), forcible),
+              RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName()),
               (s, c, req, done) -> s.unassignRegion(c, req, done), resp -> null)))
           .call(),
         (ret, err2) -> {
@@ -3982,49 +3982,26 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .call();
   }
 
-  @Override
-  public CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
-      @Nullable final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
+  private CompletableFuture<List<LogEntry>> getSlowLogResponses(
+      final Map<String, Object> filterParams, final Set<ServerName> serverNames, final int limit,
+      final String logType) {
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }
-    if (logQueryFilter.getType() == null
-        || logQueryFilter.getType() == LogQueryFilter.Type.SLOW_LOG) {
-      return CompletableFuture.supplyAsync(() -> serverNames.stream()
-        .map((ServerName serverName) ->
-          getSlowLogResponseFromServer(serverName, logQueryFilter))
-        .map(CompletableFuture::join)
-        .flatMap(List::stream)
-        .collect(Collectors.toList()));
-    } else {
-      return CompletableFuture.supplyAsync(() -> serverNames.stream()
-        .map((ServerName serverName) ->
-          getLargeLogResponseFromServer(serverName, logQueryFilter))
-        .map(CompletableFuture::join)
-        .flatMap(List::stream)
-        .collect(Collectors.toList()));
-    }
+    return CompletableFuture.supplyAsync(() -> serverNames.stream()
+      .map((ServerName serverName) ->
+        getSlowLogResponseFromServer(serverName, filterParams, limit, logType))
+      .map(CompletableFuture::join)
+      .flatMap(List::stream)
+      .collect(Collectors.toList()));
   }
 
-  private CompletableFuture<List<OnlineLogRecord>> getSlowLogResponseFromServer(
-      final ServerName serverName, final LogQueryFilter logQueryFilter) {
-    return this.<List<OnlineLogRecord>>newAdminCaller()
-      .action((controller, stub) -> this
-        .adminCall(
-          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
-          AdminService.Interface::getSlowLogResponses,
-          ProtobufUtil::toSlowLogPayloads))
-      .serverName(serverName).call();
-  }
-
-  private CompletableFuture<List<OnlineLogRecord>> getLargeLogResponseFromServer(
-    final ServerName serverName, final LogQueryFilter logQueryFilter) {
-    return this.<List<OnlineLogRecord>>newAdminCaller()
-      .action((controller, stub) -> this
-        .adminCall(
-          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
-          AdminService.Interface::getLargeLogResponses,
-          ProtobufUtil::toSlowLogPayloads))
+  private CompletableFuture<List<LogEntry>> getSlowLogResponseFromServer(ServerName serverName,
+      Map<String, Object> filterParams, int limit, String logType) {
+    return this.<List<LogEntry>>newAdminCaller().action((controller, stub) -> this
+      .adminCall(controller, stub,
+        RequestConverter.buildSlowLogResponseRequest(filterParams, limit, logType),
+        AdminService.Interface::getLogEntries, ProtobufUtil::toSlowLogPayloads))
       .serverName(serverName).call();
   }
 
@@ -4212,4 +4189,36 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               (s, c, req, done) -> s.updateRSGroupConfig(c, req, done), resp -> null))
         ).call();
   }
+
+  private CompletableFuture<List<LogEntry>> getBalancerDecisions(final int limit) {
+    return this.<List<LogEntry>>newMasterCaller()
+      .action((controller, stub) ->
+        this.call(controller, stub,
+          ProtobufUtil.toBalancerDecisionRequest(limit),
+          MasterService.Interface::getLogEntries, ProtobufUtil::toBalancerDecisionResponse))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames,
+      String logType, ServerType serverType, int limit,
+      Map<String, Object> filterParams) {
+    if (logType == null || serverType == null) {
+      throw new IllegalArgumentException("logType and/or serverType cannot be empty");
+    }
+    if (logType.equals("SLOW_LOG") || logType.equals("LARGE_LOG")) {
+      if (ServerType.MASTER.equals(serverType)) {
+        throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
+      }
+      return getSlowLogResponses(filterParams, serverNames, limit, logType);
+    } else if (logType.equals("BALANCER_DECISION")) {
+      if (ServerType.REGION_SERVER.equals(serverType)) {
+        throw new IllegalArgumentException(
+          "Balancer Decision logs are not maintained by HRegionServer");
+      }
+      return getBalancerDecisions(limit);
+    }
+    return CompletableFuture.completedFuture(Collections.emptyList());
+  }
+
 }

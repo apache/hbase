@@ -63,7 +63,7 @@ public class TestRegionStates {
   @BeforeClass
   public static void setUp() throws Exception {
     threadPool = Threads.getBoundedCachedThreadPool(32, 60L, TimeUnit.SECONDS,
-      new ThreadFactoryBuilder().setNameFormat("ProcedureDispatcher-pool-%d")
+      new ThreadFactoryBuilder().setNameFormat("ProcedureDispatcher-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler((t, e) -> LOG.warn("Failed thread " + t.getName(), e))
         .build());
     executorService = new ExecutorCompletionService(threadPool);

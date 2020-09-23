@@ -142,9 +142,9 @@ public class EnableTableProcedure
             }
           } else {
             // the replicasFound is less than the regionReplication
-            LOG.info("Number of replicas has increased. Assigning new region replicas." +
+            LOG.info("Number of replicas has increased for {}. Assigning new region replicas." +
                 "The previous replica count was {}. The current replica count is {}.",
-                (currentMaxReplica + 1), configuredReplicaCount);
+              this.tableName, (currentMaxReplica + 1), configuredReplicaCount);
             regionsOfTable = RegionReplicaUtil.addReplicas(regionsOfTable,
               currentMaxReplica + 1, configuredReplicaCount);
           }

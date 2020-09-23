@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.CompactType;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ServerType;
+import org.apache.hadoop.hbase.client.LogEntry;
 import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
@@ -602,9 +604,8 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
-  public void unassign(byte[] regionName, boolean force) {
+  public void unassign(byte[] regionName) {
     throw new NotImplementedException("unassign not supported in ThriftAdmin");
-
   }
 
   @Override
@@ -1276,5 +1277,12 @@ public class ThriftAdmin implements Admin {
   public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
       throws IOException {
     throw new NotImplementedException("updateRSGroupConfig not supported in ThriftAdmin");
+  }
+
+  @Override
+  public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
+      ServerType serverType, int limit, Map<String, Object> filterParams)
+      throws IOException {
+    throw new NotImplementedException("getLogEntries not supported in ThriftAdmin");
   }
 }

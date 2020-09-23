@@ -93,7 +93,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
 
     ThreadPoolExecutor tpe =
       new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
-        new ThreadFactoryBuilder().setNameFormat(toString() + "-shared-pool-%d")
+        new ThreadFactoryBuilder().setNameFormat(toString() + "-shared-pool-%d").setDaemon(true)
           .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     tpe.allowCoreThreadTimeOut(true);
     return tpe;

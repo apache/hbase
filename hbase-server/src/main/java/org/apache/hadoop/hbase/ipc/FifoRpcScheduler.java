@@ -63,7 +63,7 @@ public class FifoRpcScheduler extends RpcScheduler {
       this.getClass().getSimpleName(), handlerCount, maxQueueLength);
     this.executor = new ThreadPoolExecutor(handlerCount, handlerCount, 60, TimeUnit.SECONDS,
       new ArrayBlockingQueue<>(maxQueueLength),
-      new ThreadFactoryBuilder().setNameFormat("FifoRpcScheduler.handler-pool-%d")
+      new ThreadFactoryBuilder().setNameFormat("FifoRpcScheduler.handler-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
       new ThreadPoolExecutor.CallerRunsPolicy());
   }

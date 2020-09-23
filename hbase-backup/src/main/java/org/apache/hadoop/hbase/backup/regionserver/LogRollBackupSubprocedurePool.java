@@ -63,10 +63,10 @@ public class LogRollBackupSubprocedurePool implements Closeable, Abortable {
           LogRollRegionServerProcedureManager.BACKUP_TIMEOUT_MILLIS_DEFAULT);
     int threads = conf.getInt(CONCURENT_BACKUP_TASKS_KEY, DEFAULT_CONCURRENT_BACKUP_TASKS);
     this.name = name;
-    executor = new ThreadPoolExecutor(1, threads, keepAlive, TimeUnit.SECONDS,
-      new LinkedBlockingQueue<>(),
-      new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-backup-pool-%d")
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+    executor =
+      new ThreadPoolExecutor(1, threads, keepAlive, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+        new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-backup-pool-%d").setDaemon(true)
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     taskPool = new ExecutorCompletionService<>(executor);
   }
 

@@ -77,9 +77,9 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @VisibleForTesting
   static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
-    new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d")
-      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(), 10,
-    TimeUnit.MILLISECONDS);
+    new ThreadFactoryBuilder().setNameFormat("Async-Client-Retry-Timer-pool-%d").setDaemon(true)
+      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+    10, TimeUnit.MILLISECONDS);
 
   private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
 
@@ -254,7 +254,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
     return ConcurrentMapUtils.computeIfAbsentEx(rsStubs,
-      getStubKey(ClientService.Interface.class.getSimpleName(), serverName, hostnameCanChange),
+      getStubKey(ClientService.getDescriptor().getName(), serverName, hostnameCanChange),
       () -> createRegionServerStub(serverName));
   }
 
@@ -268,7 +268,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   AdminService.Interface getAdminStub(ServerName serverName) throws IOException {
     return ConcurrentMapUtils.computeIfAbsentEx(adminSubs,
-      getStubKey(AdminService.Interface.class.getSimpleName(), serverName, hostnameCanChange),
+      getStubKey(AdminService.getDescriptor().getName(), serverName, hostnameCanChange),
       () -> createAdminServerStub(serverName));
   }
 

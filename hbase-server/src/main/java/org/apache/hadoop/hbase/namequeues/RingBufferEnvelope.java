@@ -43,7 +43,7 @@ final class RingBufferEnvelope {
   }
 
   /**
-   * Retrieve current rpcCall details {@link RpcLogDetails} available on Envelope and
+   * Retrieve current namedQueue payload {@link NamedQueuePayload} available on Envelope and
    * free up the Envelope
    *
    * @return Retrieve rpc log details

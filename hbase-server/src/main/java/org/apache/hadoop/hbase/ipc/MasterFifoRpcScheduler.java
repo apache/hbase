@@ -74,14 +74,13 @@ public class MasterFifoRpcScheduler extends FifoRpcScheduler {
     this.executor = new ThreadPoolExecutor(handlerCount, handlerCount, 60, TimeUnit.SECONDS,
       new ArrayBlockingQueue<>(maxQueueLength),
       new ThreadFactoryBuilder().setNameFormat("MasterFifoRpcScheduler.call.handler-pool-%d")
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
       new ThreadPoolExecutor.CallerRunsPolicy());
-    this.rsReportExecutor =
-      new ThreadPoolExecutor(rsReportHandlerCount, rsReportHandlerCount, 60, TimeUnit.SECONDS,
-        new ArrayBlockingQueue<>(rsRsreportMaxQueueLength),
-        new ThreadFactoryBuilder().setNameFormat("MasterFifoRpcScheduler.RSReport.handler-pool-%d")
-          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-        new ThreadPoolExecutor.CallerRunsPolicy());
+    this.rsReportExecutor = new ThreadPoolExecutor(rsReportHandlerCount, rsReportHandlerCount, 60,
+      TimeUnit.SECONDS, new ArrayBlockingQueue<>(rsRsreportMaxQueueLength),
+      new ThreadFactoryBuilder().setNameFormat("MasterFifoRpcScheduler.RSReport.handler-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+      new ThreadPoolExecutor.CallerRunsPolicy());
   }
 
   @Override

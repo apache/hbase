@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CellUtil;
@@ -56,11 +55,10 @@ import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -100,8 +98,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   public static final String REPLICATION_DROP_ON_DELETED_COLUMN_FAMILY_KEY =
       "hbase.replication.drop.on.deleted.columnfamily";
 
-  private AsyncClusterConnection conn;
-  private Configuration conf;
   // How long should we sleep for each retry
   private long sleepForRetries;
   // Maximum number of retries before taking bold actions
@@ -114,8 +110,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private int replicationRpcLimit;
   //Metrics for this source
   private MetricsSource metrics;
-  // Handles connecting to peer region servers
-  private ReplicationSinkManager replicationSinkMgr;
   private boolean peersSelected = false;
   private String replicationClusterId = "";
   private ThreadPoolExecutor exec;
@@ -129,25 +123,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private boolean isSerial = false;
   //Initialising as 0 to guarantee at least one logging message
   private long lastSinkFetchTime = 0;
-
-  /*
-   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
-   * Connection implementations, or initialize it in a different way, so defining createConnection
-   * as protected for possible overridings.
-   */
-  protected AsyncClusterConnection createConnection(Configuration conf) throws IOException {
-    return ClusterConnectionFactory.createAsyncClusterConnection(conf,
-      null, User.getCurrent());
-  }
-
-  /*
-   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
-   * ReplicationSinkManager implementations, or initialize it in a different way,
-   * so defining createReplicationSinkManager as protected for possible overridings.
-   */
-  protected ReplicationSinkManager createReplicationSinkManager(AsyncClusterConnection conn) {
-    return new ReplicationSinkManager(conn, this, this.conf);
-  }
 
   @Override
   public void init(Context context) throws IOException {
@@ -171,8 +146,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.metrics = context.getMetrics();
-    // ReplicationQueueInfo parses the peerId out of the znode for us
-    this.replicationSinkMgr = createReplicationSinkManager(conn);
     // per sink thread pool
     this.maxThreads = this.conf.getInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY,
       HConstants.REPLICATION_SOURCE_MAXTHREADS_DEFAULT);
@@ -211,14 +184,11 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   }
 
   private void connectToPeers() {
-    getRegionServers();
-
     int sleepMultiplier = 1;
-
     // Connect to peer cluster first, unless we have to stop
-    while (this.isRunning() && replicationSinkMgr.getNumSinks() == 0) {
-      replicationSinkMgr.chooseSinks();
-      if (this.isRunning() && replicationSinkMgr.getNumSinks() == 0) {
+    while (this.isRunning() && getNumSinks() == 0) {
+      chooseSinks();
+      if (this.isRunning() && getNumSinks() == 0) {
         if (sleepForRetries("Waiting for peers", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -253,7 +223,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   }
 
   private List<List<Entry>> createParallelBatches(final List<Entry> entries) {
-    int numSinks = Math.max(replicationSinkMgr.getNumSinks(), 1);
+    int numSinks = Math.max(getNumSinks(), 1);
     int n = Math.min(Math.min(this.maxThreads, entries.size() / 100 + 1), numSinks);
     List<List<Entry>> entryLists =
         Stream.generate(ArrayList<Entry>::new).limit(n).collect(Collectors.toList());
@@ -513,7 +483,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       peersSelected = true;
     }
 
-    int numSinks = replicationSinkMgr.getNumSinks();
+    int numSinks = getNumSinks();
     if (numSinks == 0) {
       if((System.currentTimeMillis() - lastSinkFetchTime) >= (maxRetriesMultiplier*1000)) {
         LOG.warn(
@@ -542,20 +512,26 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         parallelReplicate(pool, replicateContext, batches);
         return true;
       } catch (IOException ioe) {
-        if (dropOnDeletedTables && isTableNotFoundException(ioe)) {
-          // Only filter the edits to replicate and don't change the entries in replicateContext
-          // as the upper layer rely on it.
-          batches = filterNotExistTableEdits(batches);
-          if (batches.isEmpty()) {
-            LOG.warn("After filter not exist table's edits, 0 edits to replicate, just return");
-            return true;
-          }
-        } else if (dropOnDeletedColumnFamilies && isNoSuchColumnFamilyException(ioe)) {
-          batches = filterNotExistColumnFamilyEdits(batches);
-          if (batches.isEmpty()) {
-            LOG.warn(
-                "After filter not exist column family's edits, 0 edits to replicate, just return");
-            return true;
+        if (ioe instanceof RemoteException) {
+          if (dropOnDeletedTables && isTableNotFoundException(ioe)) {
+            // Only filter the edits to replicate and don't change the entries in replicateContext
+            // as the upper layer rely on it.
+            batches = filterNotExistTableEdits(batches);
+            if (batches.isEmpty()) {
+              LOG.warn("After filter not exist table's edits, 0 edits to replicate, just return");
+              return true;
+            }
+          } else if (dropOnDeletedColumnFamilies && isNoSuchColumnFamilyException(ioe)) {
+            batches = filterNotExistColumnFamilyEdits(batches);
+            if (batches.isEmpty()) {
+              LOG.warn("After filter not exist column family's edits, 0 edits to replicate, " +
+                  "just return");
+              return true;
+            }
+          } else {
+            LOG.warn("{} Peer encountered RemoteException, rechecking all sinks: ", logPeerId(),
+                ioe);
+            chooseSinks();
           }
         } else {
           if (ioe instanceof SocketTimeoutException) {
@@ -568,7 +544,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
               this.socketTimeoutMultiplier);
           } else if (ioe instanceof ConnectException || ioe instanceof UnknownHostException) {
             LOG.warn("{} Peer is unavailable, rechecking all sinks: ", logPeerId(), ioe);
-            replicationSinkMgr.chooseSinks();
+            chooseSinks();
           } else {
             LOG.warn("{} Can't replicate because of a local or network error: ", logPeerId(), ioe);
           }
@@ -623,10 +599,10 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         LOG.trace("{} Replicating batch {} of {} entries with total size {} bytes to {}",
           logPeerId(), entriesHashCode, entries.size(), size, replicationClusterId);
       }
-      sinkPeer = replicationSinkMgr.getReplicationSink();
+      sinkPeer = getReplicationSink();
       AsyncRegionServerAdmin rsAdmin = sinkPeer.getRegionServer();
       try {
-        ReplicationProtbufUtil.replicateWALEntry(rsAdmin,
+        ReplicationProtobufUtil.replicateWALEntry(rsAdmin,
           entries.toArray(new Entry[entries.size()]), replicationClusterId, baseNamespaceDir,
           hfileArchiveDir, timeout);
         if (LOG.isTraceEnabled()) {
@@ -638,10 +614,10 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         }
         throw e;
       }
-      replicationSinkMgr.reportSinkSuccess(sinkPeer);
+      reportSinkSuccess(sinkPeer);
     } catch (IOException ioe) {
       if (sinkPeer != null) {
-        replicationSinkMgr.reportBadSink(sinkPeer);
+        reportBadSink(sinkPeer);
       }
       throw ioe;
     }
@@ -677,5 +653,4 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private String logPeerId(){
     return "[Source for peer " + this.ctx.getPeerId() + "]:";
   }
-
 }
