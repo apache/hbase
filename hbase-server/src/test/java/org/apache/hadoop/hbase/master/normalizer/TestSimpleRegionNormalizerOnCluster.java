@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
@@ -161,6 +160,7 @@ public class TestSimpleRegionNormalizerOnCluster {
         tn2 + " should not have split.",
         tn2RegionCount,
         getRegionCount(tn2));
+      LOG.debug("waiting for t3 to settle...");
       waitForTableRegionCount(tn3, tn3RegionCount);
     } finally {
       dropIfExists(tn1);
@@ -187,7 +187,7 @@ public class TestSimpleRegionNormalizerOnCluster {
         : TableName.valueOf(name.getMethodName());
 
       final int currentRegionCount = createTableBegsSplit(tableName, true, false);
-      final long existingSkippedSplitCount = master.getRegionNormalizer()
+      final long existingSkippedSplitCount = master.getRegionNormalizerManager()
         .getSkippedCount(PlanType.SPLIT);
       assertFalse(admin.normalizerSwitch(true).get());
       assertTrue(admin.normalize().get());
@@ -332,7 +332,8 @@ public class TestSimpleRegionNormalizerOnCluster {
         return "waiting to observe split attempt and skipped.";
       }
       @Override public boolean evaluate() {
-        final long skippedSplitCount = master.getRegionNormalizer().getSkippedCount(PlanType.SPLIT);
+        final long skippedSplitCount = master.getRegionNormalizerManager()
+          .getSkippedCount(PlanType.SPLIT);
         return skippedSplitCount > existingSkippedSplitCount;
       }
     });

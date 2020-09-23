@@ -72,8 +72,10 @@ public class TestMasterMetricsWrapper {
   public void testInfo() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MetricsMasterWrapperImpl info = new MetricsMasterWrapperImpl(master);
-    assertEquals(master.getSplitPlanCount(), info.getSplitPlanCount(), 0);
-    assertEquals(master.getMergePlanCount(), info.getMergePlanCount(), 0);
+    assertEquals(
+      master.getRegionNormalizerManager().getSplitPlanCount(), info.getSplitPlanCount(), 0);
+    assertEquals(
+      master.getRegionNormalizerManager().getMergePlanCount(), info.getMergePlanCount(), 0);
     assertEquals(master.getAverageLoad(), info.getAverageLoad(), 0);
     assertEquals(master.getClusterId(), info.getClusterId());
     assertEquals(master.getMasterActiveTime(), info.getActiveTime());
