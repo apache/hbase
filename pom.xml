@@ -744,6 +744,8 @@
               <!-- MIT https://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
               <exclude>**/jquery.tablesorter.min.js</exclude>
+              <!-- MIT: bootstrap -->
+              <exclude>**/src/main/resources/hbase-webapps/static/*/bootstrap*</exclude>
               <!-- vector graphics -->
               <exclude>**/*.vm</exclude>
               <!-- apache doxia generated -->
