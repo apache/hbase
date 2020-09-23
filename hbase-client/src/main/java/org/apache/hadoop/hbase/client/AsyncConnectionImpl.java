@@ -240,7 +240,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
     return ConcurrentMapUtils.computeIfAbsentEx(rsStubs,
-      getStubKey(ClientService.Interface.class.getSimpleName(), serverName, hostnameCanChange),
+      getStubKey(ClientService.getDescriptor().getName(), serverName, hostnameCanChange),
       () -> createRegionServerStub(serverName));
   }
 
@@ -254,7 +254,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   AdminService.Interface getAdminStub(ServerName serverName) throws IOException {
     return ConcurrentMapUtils.computeIfAbsentEx(adminSubs,
-      getStubKey(AdminService.Interface.class.getSimpleName(), serverName, hostnameCanChange),
+      getStubKey(AdminService.getDescriptor().getName(), serverName, hostnameCanChange),
       () -> createAdminServerStub(serverName));
   }
 
