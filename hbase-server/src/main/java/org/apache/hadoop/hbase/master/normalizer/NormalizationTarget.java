@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,31 +25,24 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Normalization plan to split a region.
+ * A POJO that caries details about a region selected for normalization through the pipeline.
  */
 @InterfaceAudience.Private
-final class SplitNormalizationPlan implements NormalizationPlan {
+class NormalizationTarget {
+  private final RegionInfo regionInfo;
+  private final long regionSizeMb;
 
-  private final NormalizationTarget splitTarget;
-
-  SplitNormalizationPlan(final RegionInfo splitTarget, final long splitTargetSizeMb) {
-    this.splitTarget = new NormalizationTarget(splitTarget, splitTargetSizeMb);
+  NormalizationTarget(final RegionInfo regionInfo, final long regionSizeMb) {
+    this.regionInfo = regionInfo;
+    this.regionSizeMb = regionSizeMb;
   }
 
-  @Override
-  public PlanType getType() {
-    return PlanType.SPLIT;
+  public RegionInfo getRegionInfo() {
+    return regionInfo;
   }
 
-  public NormalizationTarget getSplitTarget() {
-    return splitTarget;
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-      .append("splitTarget", splitTarget)
-      .toString();
+  public long getRegionSizeMb() {
+    return regionSizeMb;
   }
 
   @Override
@@ -63,16 +55,26 @@ final class SplitNormalizationPlan implements NormalizationPlan {
       return false;
     }
 
-    SplitNormalizationPlan that = (SplitNormalizationPlan) o;
+    NormalizationTarget that = (NormalizationTarget) o;
 
     return new EqualsBuilder()
-      .append(splitTarget, that.splitTarget)
+      .append(regionSizeMb, that.regionSizeMb)
+      .append(regionInfo, that.regionInfo)
       .isEquals();
   }
 
-  @Override public int hashCode() {
+  @Override
+  public int hashCode() {
     return new HashCodeBuilder(17, 37)
-      .append(splitTarget)
+      .append(regionInfo)
+      .append(regionSizeMb)
       .toHashCode();
+  }
+
+  @Override public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+      .append("regionInfo", regionInfo)
+      .append("regionSizeMb", regionSizeMb)
+      .toString();
   }
 }

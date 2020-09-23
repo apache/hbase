@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,8 +19,12 @@ package org.apache.hadoop.hbase.master.normalizer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Factory to create instance of {@link RegionNormalizer} as configured.
@@ -32,13 +35,30 @@ public final class RegionNormalizerFactory {
   private RegionNormalizerFactory() {
   }
 
+  public static RegionNormalizerManager createNormalizerManager(
+    final Configuration conf,
+    final ZKWatcher zkWatcher,
+    final HMaster master // TODO: consolidate this down to MasterServices
+  ) {
+    final RegionNormalizer regionNormalizer = getRegionNormalizer(conf);
+    regionNormalizer.setMasterServices(master);
+    final RegionNormalizerTracker tracker = new RegionNormalizerTracker(zkWatcher, master);
+    final RegionNormalizerChore chore =
+      master.isInMaintenanceMode() ? null : new RegionNormalizerChore(master);
+    final RegionNormalizerWorkQueue<TableName> workQueue =
+      master.isInMaintenanceMode() ? null : new RegionNormalizerWorkQueue<>();
+    final RegionNormalizerWorker worker = master.isInMaintenanceMode()
+      ? null
+      : new RegionNormalizerWorker(conf, master, regionNormalizer, workQueue);
+    return new RegionNormalizerManager(tracker, chore, workQueue, worker);
+  }
+
   /**
    * Create a region normalizer from the given conf.
    * @param conf configuration
    * @return {@link RegionNormalizer} implementation
    */
-  public static RegionNormalizer getRegionNormalizer(Configuration conf) {
-
+  private static RegionNormalizer getRegionNormalizer(Configuration conf) {
     // Create instance of Region Normalizer
     Class<? extends RegionNormalizer> balancerKlass =
       conf.getClass(HConstants.HBASE_MASTER_NORMALIZER_CLASS, SimpleRegionNormalizer.class,

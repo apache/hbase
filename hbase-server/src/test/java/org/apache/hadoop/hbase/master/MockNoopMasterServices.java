@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -40,7 +41,7 @@ import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -107,11 +108,6 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
-  public RegionNormalizer getRegionNormalizer() {
-    return null;
-  }
-
-  @Override
   public CatalogJanitor getCatalogJanitor() {
     return null;
   }
@@ -133,6 +129,10 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public MasterQuotaManager getMasterQuotaManager() {
+    return null;
+  }
+
+  @Override public RegionNormalizerManager getRegionNormalizerManager() {
     return null;
   }
 
@@ -338,6 +338,10 @@ public class MockNoopMasterServices implements MasterServices {
     return false;
   }
 
+  @Override public boolean skipRegionManagementAction(String action) {
+    return false;
+  }
+
   @Override
   public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
     return 0;
@@ -483,4 +487,9 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public void runReplicationBarrierCleaner() {}
+
+  @Override
+  public boolean normalizeRegions(NormalizeTableFilterParams ntfp, boolean isHighPriority) {
+    return false;
+  }
 }
