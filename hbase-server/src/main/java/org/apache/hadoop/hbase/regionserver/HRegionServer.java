@@ -753,7 +753,7 @@ public class HRegionServer extends Thread implements
     String walDirUri = CommonFSUtils.getWALDirUri(this.conf);
     // set WAL's uri
     CommonFSUtils.setFsDefault(this.conf, walDirUri);
-    // init the filesystem
+    // init the WALFs
     this.walFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.walRootDir = CommonFSUtils.getWALRootDir(this.conf);
     // Set 'fs.defaultFS' to match the filesystem on hbase.rootdir else

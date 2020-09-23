@@ -315,10 +315,7 @@ public final class CommonFSUtils {
 
   public static String getRootDirUri(final Configuration c) throws IOException {
     Path p = new Path(c.get(HConstants.HBASE_DIR));
-    if (p.toUri().getScheme() != null) {
-      return p.toUri().getScheme().toString();
-    }
-    return null;
+    return p.toUri().toString();
   }
 
   public static void setRootDir(final Configuration c, final Path root) {
@@ -355,10 +352,7 @@ public final class CommonFSUtils {
 
   public static String getWALDirUri(final Configuration c) throws IOException {
     Path p = new Path(c.get(HBASE_WAL_DIR, c.get(HConstants.HBASE_DIR)));
-    if (p.toUri().getScheme() != null) {
-      return p.toUri().getScheme().toString();
-    }
-    return null;
+    return p.toUri().toString();
   }
 
   @VisibleForTesting
