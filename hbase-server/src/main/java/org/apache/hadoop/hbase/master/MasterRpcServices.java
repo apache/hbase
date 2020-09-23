@@ -1927,9 +1927,7 @@ public class MasterRpcServices extends RSRpcServices implements
           master.cpHost.postSetSplitOrMergeEnabled(newValue, switchType);
         }
       }
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    } catch (KeeperException e) {
+    } catch (IOException | KeeperException e) {
       throw new ServiceException(e);
     }
     return response.build();
@@ -1954,7 +1952,8 @@ public class MasterRpcServices extends RSRpcServices implements
         .namespace(request.hasNamespace() ? request.getNamespace() : null)
         .build();
       return NormalizeResponse.newBuilder()
-        .setNormalizerRan(master.normalizeRegions(ntfp))
+        // all API requests are considered priority requests.
+        .setNormalizerRan(master.normalizeRegions(ntfp, true))
         .build();
     } catch (IOException ex) {
       throw new ServiceException(ex);
@@ -1967,20 +1966,27 @@ public class MasterRpcServices extends RSRpcServices implements
     rpcPreCheck("setNormalizerRunning");
 
     // Sets normalizer on/off flag in ZK.
-    boolean prevValue = master.getRegionNormalizerTracker().isNormalizerOn();
-    boolean newValue = request.getOn();
-    try {
-      master.getRegionNormalizerTracker().setNormalizerOn(newValue);
-    } catch (KeeperException ke) {
-      LOG.warn("Error flipping normalizer switch", ke);
-    }
+    // TODO: this method is totally broken in terms of atomicity of actions and values read.
+    //  1. The contract has this RPC returning the previous value. There isn't a ZKUtil method
+    //     that lets us retrieve the previous value as part of setting a new value, so we simply
+    //     perform a read before issuing the update. Thus we have a data race opportunity, between
+    //     when the `prevValue` is read and whatever is actually overwritten.
+    //  2. Down in `setNormalizerOn`, the call to `createAndWatch` inside of the catch clause can
+    //     itself fail in the event that the znode already exists. Thus, another data race, between
+    //     when the initial `setData` call is notified of the absence of the target znode and the
+    //     subsequent `createAndWatch`, with another client creating said node.
+    //  That said, there's supposed to be only one active master and thus there's supposed to be
+    //  only one process with the authority to modify the value.
+    final boolean prevValue = master.getRegionNormalizerManager().isNormalizerOn();
+    final boolean newValue = request.getOn();
+    master.getRegionNormalizerManager().setNormalizerOn(newValue);
     LOG.info("{} set normalizerSwitch={}", master.getClientIdAuditPrefix(), newValue);
     return SetNormalizerRunningResponse.newBuilder().setPrevNormalizerValue(prevValue).build();
   }
 
   @Override
   public IsNormalizerEnabledResponse isNormalizerEnabled(RpcController controller,
-      IsNormalizerEnabledRequest request) throws ServiceException {
+    IsNormalizerEnabledRequest request) {
     IsNormalizerEnabledResponse.Builder response = IsNormalizerEnabledResponse.newBuilder();
     response.setEnabled(master.isNormalizerOn());
     return response.build();

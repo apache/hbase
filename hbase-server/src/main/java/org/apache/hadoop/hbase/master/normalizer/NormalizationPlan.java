@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
-import java.io.IOException;
 
 /**
- * Interface for normalization plan.
+ * A {@link NormalizationPlan} describes some modification to region split points as identified
+ * by an instance of {@link RegionNormalizer}. It is a POJO describing what action needs taken
+ * and the regions it targets.
  */
 @InterfaceAudience.Private
 public interface NormalizationPlan {
@@ -32,15 +31,6 @@ public interface NormalizationPlan {
     MERGE,
     NONE
   }
-
-  /**
-   * Submits normalization plan on cluster (does actual splitting/merging work) and
-   * returns proc Id to caller.
-   * @param masterServices instance of {@link MasterServices}
-   * @return Proc Id for the submitted task
-   * @throws IOException If plan submission to Admin fails
-   */
-  long submit(MasterServices masterServices) throws IOException;
 
   /**
    * @return the type of this plan
