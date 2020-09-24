@@ -1189,24 +1189,16 @@ module Hbase
         server_names = getServerNames(server_names_list)
       end
       filter_params = get_filter_params(args)
-      if args.key? 'LIMIT'
-        limit = args['LIMIT']
-      else
-        limit = 10
-      end
-      if is_large_log
-        log_type = 'LARGE_LOG'
-      else
-        log_type = 'SLOW_LOG'
-      end
+      (args.key? 'LIMIT') ? limit = args['LIMIT'] : limit = 10
+      is_large_log ? log_type = 'LARGE_LOG' : log_type = 'SLOW_LOG'
       log_dest = org.apache.hadoop.hbase.client.ServerType::REGION_SERVER
       server_names_set = java.util.HashSet.new(server_names)
       slow_log_responses = @admin.getLogEntries(server_names_set, log_type, log_dest, limit,
                                                 filter_params)
       slow_log_responses_arr = []
-      slow_log_responses.each { |slow_log_response|
+      slow_log_responses.each do |slow_log_response|
         slow_log_responses_arr << slow_log_response.toJsonPrettyPrint
-      }
+      end
       slow_log_responses_arr
     end
 
@@ -1231,11 +1223,10 @@ module Hbase
       if args.key? 'FILTER_BY_OP'
         filter_by_op = args['FILTER_BY_OP']
         if filter_by_op != 'OR' && filter_by_op != 'AND'
-          raise(ArgumentError, "FILTER_BY_OP should be either OR / AND")
+          raise(ArgumentError, 'FILTER_BY_OP should be either OR / AND')
         end
-        if filter_by_op == 'AND'
-          filter_params.put('filterByOperator', 'AND')
-        end
+
+        filter_params.put('filterByOperator', 'AND') if filter_by_op == 'AND'
       end
       filter_params
     end
@@ -1276,9 +1267,9 @@ module Hbase
       log_dest = org.apache.hadoop.hbase.client.ServerType::MASTER
       balancer_decisions_responses = @admin.getLogEntries(nil, log_type, log_dest, limit, nil)
       balancer_decisions_resp_arr = []
-      balancer_decisions_responses.each { |balancer_dec_resp|
+      balancer_decisions_responses.each do |balancer_dec_resp|
         balancer_decisions_resp_arr << balancer_dec_resp.toJsonPrettyPrint
-      }
+      end
       balancer_decisions_resp_arr
     end
 

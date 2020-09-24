@@ -36,9 +36,7 @@ Examples:
       end
 
       def command(args = {})
-        unless args.is_a? Hash
-          raise 'Filter parameters are not Hash'
-        end
+        raise 'Filter parameters are not Hash' unless args.is_a? Hash
 
         balancer_decisions_resp_arr = admin.get_balancer_decisions(args)
         puts 'Retrieved BalancerDecision Responses'
