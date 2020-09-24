@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -171,58 +172,37 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   }
 
   @Override
+  @NonNull
   public Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
-    List<ServerName> servers) throws HBaseIOException {
+      List<ServerName> servers) throws HBaseIOException {
     Map<ServerName, List<RegionInfo>> assignments = Maps.newHashMap();
     List<Pair<List<RegionInfo>, List<ServerName>>> pairs =
       generateGroupAssignments(regions, servers);
     for (Pair<List<RegionInfo>, List<ServerName>> pair : pairs) {
-      Map<ServerName, List<RegionInfo>> result = this.internalBalancer
-        .roundRobinAssignment(pair.getFirst(), pair.getSecond());
-      if (result != null) {
-        result.forEach((server, regionInfos) ->
-          assignments.computeIfAbsent(server, s -> Lists.newArrayList()).addAll(regionInfos));
-      }
+      Map<ServerName, List<RegionInfo>> result =
+          this.internalBalancer.roundRobinAssignment(pair.getFirst(), pair.getSecond());
+      result.forEach((server, regionInfos) -> assignments
+          .computeIfAbsent(server, s -> Lists.newArrayList()).addAll(regionInfos));
     }
     return assignments;
   }
 
   @Override
+  @NonNull
   public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
-    List<ServerName> servers) throws HBaseIOException {
+      List<ServerName> servers) throws HBaseIOException {
     try {
       Map<ServerName, List<RegionInfo>> assignments = new TreeMap<>();
-      ListMultimap<String, RegionInfo> groupToRegion = ArrayListMultimap.create();
-      for (RegionInfo region : regions.keySet()) {
-        String groupName = rsGroupInfoManager.getRSGroupOfTable(region.getTable());
-        if (groupName == null) {
-          LOG.debug("Group not found for table " + region.getTable() + ", using default");
-          groupName = RSGroupInfo.DEFAULT_GROUP;
-        }
-        groupToRegion.put(groupName, region);
-      }
-      for (String group : groupToRegion.keySet()) {
-        Map<RegionInfo, ServerName> currentAssignmentMap = new TreeMap<RegionInfo, ServerName>();
-        List<RegionInfo> regionList = groupToRegion.get(group);
-        RSGroupInfo info = rsGroupInfoManager.getRSGroup(group);
-        List<ServerName> candidateList = filterOfflineServers(info, servers);
-        if (fallbackEnabled && candidateList.isEmpty()) {
-          candidateList = getFallBackCandidates(servers);
-        }
-        for (RegionInfo region : regionList) {
-          currentAssignmentMap.put(region, regions.get(region));
-        }
-        if (candidateList.size() > 0) {
-          assignments
-            .putAll(this.internalBalancer.retainAssignment(currentAssignmentMap, candidateList));
-        } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("No available servers for group {} to assign regions: {}", group,
-              RegionInfo.getShortNameToLog(regionList));
-          }
-          assignments.computeIfAbsent(LoadBalancer.BOGUS_SERVER_NAME, s -> new ArrayList<>())
-            .addAll(regionList);
-        }
+      List<Pair<List<RegionInfo>, List<ServerName>>> pairs =
+          generateGroupAssignments(Lists.newArrayList(regions.keySet()), servers);
+      for (Pair<List<RegionInfo>, List<ServerName>> pair : pairs) {
+        List<RegionInfo> regionList = pair.getFirst();
+        Map<RegionInfo, ServerName> currentAssignmentMap = Maps.newTreeMap();
+        regionList.forEach(r -> currentAssignmentMap.put(r, regions.get(r)));
+        Map<ServerName, List<RegionInfo>> pairResult =
+            this.internalBalancer.retainAssignment(currentAssignmentMap, pair.getSecond());
+        pairResult.forEach((server, rs) -> assignments
+            .computeIfAbsent(server, s -> Lists.newArrayList()).addAll(rs));
       }
       return assignments;
     } catch (IOException e) {
