@@ -301,6 +301,7 @@ public class HRegionServer extends Thread implements
   // Replication services. If no replication, this handler will be null.
   private ReplicationSourceService replicationSourceHandler;
   private ReplicationSinkService replicationSinkHandler;
+  private boolean sameReplicationSourceAndSink;
 
   // Compactions
   public CompactSplit compactSplitThread;
@@ -1390,20 +1391,32 @@ public class HRegionServer extends Thread implements
         serverLoad.addUserLoads(createUserLoad(entry.getKey(), entry.getValue()));
       }
     }
-    // for the replicationLoad purpose. Only need to get from one executorService
-    // either source or sink will get the same info
-    ReplicationSourceService rsources = getReplicationSourceService();
 
-    if (rsources != null) {
+    if (sameReplicationSourceAndSink && replicationSourceHandler != null) {
       // always refresh first to get the latest value
-      ReplicationLoad rLoad = rsources.refreshAndGetReplicationLoad();
+      ReplicationLoad rLoad = replicationSourceHandler.refreshAndGetReplicationLoad();
       if (rLoad != null) {
         serverLoad.setReplLoadSink(rLoad.getReplicationLoadSink());
-        for (ClusterStatusProtos.ReplicationLoadSource rLS :
-            rLoad.getReplicationLoadSourceEntries()) {
+        for (ClusterStatusProtos.ReplicationLoadSource rLS : rLoad
+          .getReplicationLoadSourceEntries()) {
           serverLoad.addReplLoadSource(rLS);
         }
-
+      }
+    } else {
+      if (replicationSourceHandler != null) {
+        ReplicationLoad rLoad = replicationSourceHandler.refreshAndGetReplicationLoad();
+        if (rLoad != null) {
+          for (ClusterStatusProtos.ReplicationLoadSource rLS : rLoad
+            .getReplicationLoadSourceEntries()) {
+            serverLoad.addReplLoadSource(rLS);
+          }
+        }
+      }
+      if (replicationSinkHandler != null) {
+        ReplicationLoad rLoad = replicationSinkHandler.refreshAndGetReplicationLoad();
+        if (rLoad != null) {
+          serverLoad.setReplLoadSink(rLoad.getReplicationLoadSink());
+        }
       }
     }
 
@@ -1921,8 +1934,7 @@ public class HRegionServer extends Thread implements
    * Start up replication source and sink handlers.
    */
   private void startReplicationService() throws IOException {
-    if (this.replicationSourceHandler == this.replicationSinkHandler &&
-        this.replicationSourceHandler != null) {
+    if (sameReplicationSourceAndSink && this.replicationSourceHandler != null) {
       this.replicationSourceHandler.startReplicationService();
     } else {
       if (this.replicationSourceHandler != null) {
@@ -2628,9 +2640,10 @@ public class HRegionServer extends Thread implements
     if (this.compactSplitThread != null) {
       this.compactSplitThread.join();
     }
-    if (this.executorService != null) this.executorService.shutdown();
-    if (this.replicationSourceHandler != null &&
-        this.replicationSourceHandler == this.replicationSinkHandler) {
+    if (this.executorService != null) {
+      this.executorService.shutdown();
+    }
+    if (sameReplicationSourceAndSink && this.replicationSourceHandler != null) {
       this.replicationSourceHandler.stopReplicationService();
     } else {
       if (this.replicationSourceHandler != null) {
@@ -3070,7 +3083,7 @@ public class HRegionServer extends Thread implements
 
     // read in the name of the sink replication class from the config file.
     String sinkClassname = conf.get(HConstants.REPLICATION_SINK_SERVICE_CLASSNAME,
-      HConstants.REPLICATION_SERVICE_CLASSNAME_DEFAULT);
+      HConstants.REPLICATION_SINK_SERVICE_CLASSNAME_DEFAULT);
 
     // If both the sink and the source class names are the same, then instantiate
     // only one object.
@@ -3078,11 +3091,13 @@ public class HRegionServer extends Thread implements
       server.replicationSourceHandler = newReplicationInstance(sourceClassname,
         ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
       server.replicationSinkHandler = (ReplicationSinkService) server.replicationSourceHandler;
+      server.sameReplicationSourceAndSink = true;
     } else {
       server.replicationSourceHandler = newReplicationInstance(sourceClassname,
         ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
       server.replicationSinkHandler = newReplicationInstance(sinkClassname,
         ReplicationSinkService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
+      server.sameReplicationSourceAndSink = false;
     }
   }
 
