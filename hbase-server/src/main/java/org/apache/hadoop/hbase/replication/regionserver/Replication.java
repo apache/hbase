@@ -132,6 +132,8 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     this.syncReplicationPeerInfoProvider =
         new SyncReplicationPeerInfoProviderImpl(replicationPeers, mapping);
     PeerActionListener peerActionListener = PeerActionListener.DUMMY;
+    // Get the user-space WAL provider
+    WALProvider walProvider = walFactory != null? walFactory.getMetaProvider(): null;
     if (walProvider != null) {
       walProvider
         .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));
