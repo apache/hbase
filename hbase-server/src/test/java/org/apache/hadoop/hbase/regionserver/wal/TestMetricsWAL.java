@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,11 +19,15 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.concurrent.TimeUnit;
-
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -65,10 +68,46 @@ public class TestMetricsWAL {
   public void testWalWrittenInBytes() throws Exception {
     MetricsWALSource source = mock(MetricsWALSourceImpl.class);
     MetricsWAL metricsWAL = new MetricsWAL(source);
-    metricsWAL.postAppend(100, 900, null, null);
-    metricsWAL.postAppend(200, 2000, null, null);
+    TableName tableName = TableName.valueOf("foo");
+    WALKey walKey = new WALKey(null, tableName, -1);
+    metricsWAL.postAppend(100, 900, walKey, null);
+    metricsWAL.postAppend(200, 2000, walKey, null);
     verify(source, times(1)).incrementWrittenBytes(100);
     verify(source, times(1)).incrementWrittenBytes(200);
   }
 
+  @Test
+  public void testPerTableWALMetrics() throws Exception {
+    final MetricsWALSourceImpl source = new MetricsWALSourceImpl("foo", "foo", "foo", "foo");
+    final int numThreads = 10;
+    final int numIters = 10;
+    final CountDownLatch latch = new CountDownLatch(numThreads);
+    for (int i = 0; i < numThreads; i++) {
+      final TableName tableName = TableName.valueOf("tab_" + i);
+      final long size = i;
+      new Thread(new Runnable() {
+        @Override
+        public void run() {
+          for (int j = 0; j < numIters; j++) {
+            source.incrementAppendCount(tableName);
+            source.incrementAppendSize(tableName, size);
+          }
+          latch.countDown();
+        }
+      }).start();
+    }
+    // Wait for threads to finish.
+    latch.await();
+    DynamicMetricsRegistry registry = source.getMetricsRegistry();
+    // Validate the metrics
+    for (int i = 0; i < numThreads; i++) {
+      TableName tableName = TableName.valueOf("tab_" + i);
+      long tableAppendCount =
+          registry.getCounter(tableName + "." + MetricsWALSource.APPEND_COUNT, -1).value();
+      assertEquals(numIters, tableAppendCount);
+      long tableAppendSize =
+          registry.getCounter(tableName + "." + MetricsWALSource.APPEND_SIZE, -1).value();
+      assertEquals(i * numIters, tableAppendSize);
+    }
+  }
 }

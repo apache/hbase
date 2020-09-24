@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 
 /**
@@ -77,7 +78,7 @@ public interface MetricsWALSource extends BaseSource {
   /**
    * Add the append size.
    */
-  void incrementAppendSize(long size);
+  void incrementAppendSize(TableName tableName, long size);
 
   /**
    * Add the time it took to append.
@@ -87,7 +88,7 @@ public interface MetricsWALSource extends BaseSource {
   /**
    * Increment the count of wal appends
    */
-  void incrementAppendCount();
+  void incrementAppendCount(TableName tableName);
 
   /**
    * Increment the number of appends that were slow
@@ -110,6 +111,4 @@ public interface MetricsWALSource extends BaseSource {
   void incrementSizeLogRoll();
 
   void incrementWrittenBytes(long val);
-
-  long getWrittenBytes();
 }
