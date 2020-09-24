@@ -231,7 +231,7 @@ public class TestReplicationBase {
     htable2 = UTIL2.getConnection().getTable(tableName);
   }
 
-  private static void startClusters() throws Exception {
+  static void startClusters() throws Exception {
     UTIL1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = UTIL1.getZkCluster();
     LOG.info("Setup first Zk");

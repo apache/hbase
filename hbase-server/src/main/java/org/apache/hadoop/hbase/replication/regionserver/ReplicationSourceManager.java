@@ -360,8 +360,8 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
     MetricsSource metrics = new MetricsSource(queueId);
     sourceMetrics.put(queueId, metrics);
     // init replication source
-    src.init(conf, fs, logDir, this, queueStorage, replicationPeer, server, queueId, clusterId,
-      walFileLengthProvider, metrics);
+    src.init(conf, fs, logDir, this, queueStorage, replicationPeer, server, server.getServerName(),
+      queueId, clusterId, walFileLengthProvider, metrics);
     return src;
   }
 

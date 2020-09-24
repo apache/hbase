@@ -24,9 +24,21 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+import "HBase.proto";
 import "server/region/Admin.proto";
+
+message StartReplicationSourceRequest {
+  required ServerName server_name = 1;
+  required string queue_id = 2;
+}
+
+message StartReplicationSourceResponse {
+}
 
 service ReplicationServerService {
   rpc ReplicateWALEntry(ReplicateWALEntryRequest)
     returns(ReplicateWALEntryResponse);
+
+  rpc StartReplicationSource(StartReplicationSourceRequest)
+    returns(StartReplicationSourceResponse);
 }
