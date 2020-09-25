@@ -498,11 +498,12 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 if (!ritTotalNum || ritTotalNum < 1) {
                   return;
                 }
+                var ritPerPage = parseInt($("#rit_per_page").val());
 
                  $("#rit_pagination").sPage({
                       page:1,
                       total:ritTotalNum,
-                      pageSize:5,
+                      pageSize:ritPerPage,
                       noData: false,
                       showPN:true,
                       prevPage:"prev",
