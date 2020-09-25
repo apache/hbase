@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -64,7 +66,7 @@ public class Replication implements ReplicationSourceService {
   private SyncReplicationPeerInfoProvider syncReplicationPeerInfoProvider;
   // Hosting server
   private Server server;
-  private int statsPeriod;
+  private int statsPeriodInSecond;
   // ReplicationLoad to access replication metrics
   private ReplicationLoad replicationLoad;
   private MetricsReplicationGlobalSourceSource globalMetricsSource;
@@ -139,7 +141,7 @@ public class Replication implements ReplicationSourceService {
               p.getSyncReplicationState(), p.getNewSyncReplicationState(), 0));
       }
     }
-    this.statsPeriod =
+    this.statsPeriodInSecond =
         this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
     this.replicationLoad = new ReplicationLoad();
 
@@ -169,7 +171,8 @@ public class Replication implements ReplicationSourceService {
   public void startReplicationService() throws IOException {
     this.replicationManager.init();
     this.server.getChoreService().scheduleChore(
-      new ReplicationStatisticsChore("ReplicationSourceStatistics", server, statsPeriod));
+      new ReplicationStatisticsChore("ReplicationSourceStatistics", server,
+          (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
     LOG.info("{} started", this.server.toString());
   }
 
