@@ -674,6 +674,12 @@
       <email>meiyi@apache.org</email>
       <timezone>+8</timezone>
     </developer>
+    <developer>
+      <id>wangzheng</id>
+      <name>Zheng (bsglz) Wang</name>
+      <email>wangzheng@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
   </developers>
   <build>
     <extensions>
