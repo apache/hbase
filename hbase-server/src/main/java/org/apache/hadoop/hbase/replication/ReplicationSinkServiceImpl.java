@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -51,7 +52,7 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
   // ReplicationLoad to access replication metrics
   private ReplicationLoad replicationLoad;
 
-  private int statsPeriod;
+  private int statsPeriodInSecond;
 
   @Override
   public void replicateLogEntries(List<AdminProtos.WALEntry> entries, CellScanner cells,
@@ -66,7 +67,7 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
     WALProvider walProvider) throws IOException {
     this.server = server;
     this.conf = server.getConfiguration();
-    this.statsPeriod =
+    this.statsPeriodInSecond =
       this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
     this.replicationLoad = new ReplicationLoad();
   }
@@ -75,7 +76,8 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
   public void startReplicationService() throws IOException {
     this.replicationSink = new ReplicationSink(this.conf);
     this.server.getChoreService().scheduleChore(
-      new ReplicationStatisticsChore("ReplicationSinkStatistics", server, statsPeriod));
+        new ReplicationStatisticsChore("ReplicationSinkStatistics", server,
+            (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
   }
 
   @Override
