@@ -325,12 +325,7 @@ public class MetaTableAccessor {
     long regionId = Long.parseLong(Bytes.toString(fields[2]));
     int replicaId = fields.length > 3 ? Integer.parseInt(Bytes.toString(fields[3]), 16) : 0;
     return RegionInfoBuilder.newBuilder(TableName.valueOf(fields[0]))
-              .setStartKey(fields[1])
-              .setEndKey(fields[2])
-              .setSplit(false)
-              .setRegionId(regionId)
-              .setReplicaId(replicaId)
-              .build();
+      .setStartKey(fields[1]).setRegionId(regionId).setReplicaId(replicaId).build();
   }
 
   /**
