@@ -105,12 +105,16 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     (n, k) -> n.compareKey((String) k);
   private final static AvlKeyComparator<MetaQueue> META_QUEUE_KEY_COMPARATOR =
     (n, k) -> n.compareKey((TableName) k);
+  private static final AvlKeyComparator<ServerQueue> SERVER_HIGHPRIORITY_QUEUE_KEY_COMPARATOR =
+    (n, k) -> n.compareKey((ServerName) k);
 
+  private final FairQueue<ServerName> serverHighPriorityRunQueue = new FairQueue<>();
   private final FairQueue<ServerName> serverRunQueue = new FairQueue<>();
   private final FairQueue<TableName> tableRunQueue = new FairQueue<>();
   private final FairQueue<String> peerRunQueue = new FairQueue<>();
   private final FairQueue<TableName> metaRunQueue = new FairQueue<>();
 
+  private final ServerQueue[] serverHighPriorityBuckets = new ServerQueue[4];
   private final ServerQueue[] serverBuckets = new ServerQueue[128];
   private TableQueue tableMap = null;
   private PeerQueue peerMap = null;
@@ -135,7 +139,11 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       doAdd(tableRunQueue, getTableQueue(getTableName(proc)), proc, addFront);
     } else if (isServerProcedure(proc)) {
       ServerProcedureInterface spi = (ServerProcedureInterface) proc;
-      doAdd(serverRunQueue, getServerQueue(spi.getServerName(), spi), proc, addFront);
+      if (spi.hasMetaTableRegion()) {
+        doAdd(serverHighPriorityRunQueue, getServerQueue(proc), proc, addFront);
+      } else {
+        doAdd(serverRunQueue, getServerQueue(proc), proc, addFront);
+      }
     } else if (isPeerProcedure(proc)) {
       doAdd(peerRunQueue, getPeerQueue(getPeerId(proc)), proc, addFront);
     } else {
@@ -173,25 +181,30 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   @Override
   protected boolean queueHasRunnables() {
-    return metaRunQueue.hasRunnables() || tableRunQueue.hasRunnables() ||
-      serverRunQueue.hasRunnables() || peerRunQueue.hasRunnables();
+    return metaRunQueue.hasRunnables() || tableRunQueue.hasRunnables() || serverRunQueue
+      .hasRunnables() || peerRunQueue.hasRunnables() || serverHighPriorityRunQueue.hasRunnables();
   }
 
   @Override
-  protected Procedure dequeue() {
+  protected Procedure dequeue(boolean highPriority) {
     // meta procedure is always the first priority
     Procedure<?> pollResult = doPoll(metaRunQueue);
     // For now, let server handling have precedence over table handling; presumption is that it
     // is more important handling crashed servers than it is running the
     // enabling/disabling tables, etc.
     if (pollResult == null) {
-      pollResult = doPoll(serverRunQueue);
+      pollResult = doPoll(serverHighPriorityRunQueue);
     }
-    if (pollResult == null) {
-      pollResult = doPoll(peerRunQueue);
-    }
-    if (pollResult == null) {
-      pollResult = doPoll(tableRunQueue);
+    if (!highPriority) {
+      if (pollResult == null) {
+        pollResult = doPoll(serverRunQueue);
+      }
+      if (pollResult == null) {
+        pollResult = doPoll(peerRunQueue);
+      }
+      if (pollResult == null) {
+        pollResult = doPoll(tableRunQueue);
+      }
     }
     return pollResult;
   }
@@ -269,6 +282,11 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       clear(serverBuckets[i], serverRunQueue, SERVER_QUEUE_KEY_COMPARATOR);
       serverBuckets[i] = null;
     }
+    for (int i = 0; i < serverHighPriorityBuckets.length; ++i) {
+      clear(serverHighPriorityBuckets[i], serverHighPriorityRunQueue,
+        SERVER_HIGHPRIORITY_QUEUE_KEY_COMPARATOR);
+      serverHighPriorityBuckets[i] = null;
+    }
 
     // Remove Tables
     clear(tableMap, tableRunQueue, TABLE_QUEUE_KEY_COMPARATOR);
@@ -307,6 +325,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     for (ServerQueue serverMap : serverBuckets) {
       count += queueSize(serverMap);
     }
+    for (ServerQueue serverMap : serverHighPriorityBuckets) {
+      count += queueSize(serverMap);
+    }
     count += queueSize(tableMap);
     count += queueSize(peerMap);
     count += queueSize(metaMap);
@@ -338,7 +359,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     } else if (proc instanceof PeerProcedureInterface) {
       tryCleanupPeerQueue(getPeerId(proc), proc);
     } else if (proc instanceof ServerProcedureInterface) {
-      tryCleanupServerQueue(getServerName(proc), proc);
+      tryCleanupServerQueue(proc);
     } else {
       // No cleanup for other procedure types, yet.
       return;
@@ -391,12 +412,28 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     return ((TableProcedureInterface)proc).getTableName();
   }
 
+  private ServerQueue getServerQueue(Procedure<?> proc) {
+    if (isServerProcedure(proc)) {
+      ServerProcedureInterface spi = (ServerProcedureInterface) proc;
+      if (spi.hasMetaTableRegion()) {
+        return getServerQueue(serverHighPriorityBuckets, SERVER_HIGHPRIORITY_QUEUE_KEY_COMPARATOR,
+          spi.getServerName(), spi);
+      } else {
+        return getServerQueue(serverBuckets, SERVER_QUEUE_KEY_COMPARATOR, spi.getServerName(), spi);
+      }
+    } else {
+      return null;
+    }
+  }
+
   // ============================================================================
   //  Server Queue Lookup Helpers
   // ============================================================================
-  private ServerQueue getServerQueue(ServerName serverName, ServerProcedureInterface proc) {
+  private ServerQueue getServerQueue(ServerQueue[] serverBuckets,
+    AvlKeyComparator<ServerQueue> keyComparator, ServerName serverName,
+    ServerProcedureInterface proc) {
     final int index = getBucketIndex(serverBuckets, serverName.hashCode());
-    ServerQueue node = AvlTree.get(serverBuckets[index], serverName, SERVER_QUEUE_KEY_COMPARATOR);
+    ServerQueue node = AvlTree.get(serverBuckets[index], serverName, keyComparator);
     if (node != null) {
       return node;
     }
@@ -411,18 +448,32 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     return node;
   }
 
-  private void removeServerQueue(ServerName serverName) {
+  private void removeServerQueue(ServerQueue[] serverBuckets,
+    AvlKeyComparator<ServerQueue> keyComparator, ServerName serverName) {
     int index = getBucketIndex(serverBuckets, serverName.hashCode());
-    serverBuckets[index] =
-      AvlTree.remove(serverBuckets[index], serverName, SERVER_QUEUE_KEY_COMPARATOR);
+    serverBuckets[index] = AvlTree.remove(serverBuckets[index], serverName, keyComparator);
     locking.removeServerLock(serverName);
   }
 
-  private void tryCleanupServerQueue(ServerName serverName, Procedure<?> proc) {
+  private void tryCleanupServerQueue(Procedure<?> proc) {
+    ServerName serverName = getServerName(proc);
+    ServerProcedureInterface spi = (ServerProcedureInterface) proc;
+    if (spi.hasMetaTableRegion()) {
+      tryCleanupServerQueue(this.serverHighPriorityBuckets, this.serverHighPriorityRunQueue,
+        SERVER_HIGHPRIORITY_QUEUE_KEY_COMPARATOR, serverName, proc);
+    } else {
+      tryCleanupServerQueue(this.serverBuckets, this.serverRunQueue, SERVER_QUEUE_KEY_COMPARATOR,
+        serverName, proc);
+    }
+  }
+
+  private void tryCleanupServerQueue(ServerQueue[] serverBuckets,
+    FairQueue<ServerName> serverRunQueue, AvlKeyComparator<ServerQueue> keyComparator,
+    ServerName serverName, Procedure<?> proc) {
     schedLock();
     try {
       int index = getBucketIndex(serverBuckets, serverName.hashCode());
-      ServerQueue node = AvlTree.get(serverBuckets[index], serverName, SERVER_QUEUE_KEY_COMPARATOR);
+      ServerQueue node = AvlTree.get(serverBuckets[index], serverName, keyComparator);
       if (node == null) {
         return;
       }
@@ -431,7 +482,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       if (node.isEmpty() && lock.tryExclusiveLock(proc)) {
         removeFromRunQueue(serverRunQueue, node,
           () -> "clean up server queue after " + proc + " completed");
-        removeServerQueue(serverName);
+        removeServerQueue(serverBuckets, keyComparator, serverName);
       }
     } finally {
       schedUnlock();
@@ -873,13 +924,14 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     try {
       final LockAndQueue lock = locking.getServerLock(serverName);
       if (lock.tryExclusiveLock(procedure)) {
-        // In tests we may pass procedures other than ServerProcedureInterface, just pass null if
-        // so.
-        removeFromRunQueue(serverRunQueue,
-          getServerQueue(serverName,
-            procedure instanceof ServerProcedureInterface ? (ServerProcedureInterface) procedure
-              : null),
-          () -> procedure + " held exclusive lock");
+        ServerProcedureInterface spi = (ServerProcedureInterface) procedure;
+        if (spi.hasMetaTableRegion()) {
+          removeFromRunQueue(serverHighPriorityRunQueue, getServerQueue(procedure),
+            () -> procedure + " held exclusive lock");
+        } else {
+          removeFromRunQueue(serverRunQueue, getServerQueue(procedure),
+            () -> procedure + " held exclusive lock");
+        }
         return false;
       }
       waitProcedure(lock, procedure);
@@ -902,12 +954,14 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       final LockAndQueue lock = locking.getServerLock(serverName);
       // Only SCP will acquire/release server lock so do not need to check the return value here.
       lock.releaseExclusiveLock(procedure);
-      // In tests we may pass procedures other than ServerProcedureInterface, just pass null if
-      // so.
-      addToRunQueue(serverRunQueue,
-        getServerQueue(serverName,
-          procedure instanceof ServerProcedureInterface ? (ServerProcedureInterface) procedure
-            : null), () -> procedure + " released exclusive lock");
+      ServerProcedureInterface spi = (ServerProcedureInterface) procedure;
+      if (spi.hasMetaTableRegion()) {
+        addToRunQueue(serverHighPriorityRunQueue, getServerQueue(procedure),
+          () -> procedure + " released exclusive lock");
+      } else {
+        addToRunQueue(serverRunQueue, getServerQueue(procedure),
+          () -> procedure + " released exclusive lock");
+      }
       int waitingCount = wakeWaitingProcedures(lock);
       wakePollIfNeeded(waitingCount);
     } finally {

@@ -1967,13 +1967,14 @@ public class ProcedureExecutor<TEnvironment> {
     public void sendStopSignal() {
       scheduler.signalAll();
     }
+
     @Override
     public void run() {
       long lastUpdate = EnvironmentEdgeManager.currentTime();
       try {
         while (isRunning() && keepAlive(lastUpdate)) {
           @SuppressWarnings("unchecked")
-          Procedure<TEnvironment> proc = scheduler.poll(keepAliveTime, TimeUnit.MILLISECONDS);
+          Procedure<TEnvironment> proc = getProcedure();
           if (proc == null) {
             continue;
           }
@@ -2025,6 +2026,10 @@ public class ProcedureExecutor<TEnvironment> {
     protected boolean keepAlive(long lastUpdate) {
       return true;
     }
+
+    protected Procedure<TEnvironment> getProcedure() {
+      return scheduler.poll(keepAliveTime, TimeUnit.MILLISECONDS);
+    }
   }
 
   // A worker thread which can be added when core workers are stuck. Will timeout after
@@ -2040,6 +2045,25 @@ public class ProcedureExecutor<TEnvironment> {
     }
   }
 
+  private final class HighPriorityWorkerThread extends WorkerThread {
+    private Procedure<TEnvironment> procedure;
+
+    public HighPriorityWorkerThread(ThreadGroup group, Procedure<TEnvironment> proc) {
+      super(group, "HighPriorityPEWorker-");
+      this.procedure = proc;
+    }
+
+    @Override
+    protected boolean keepAlive(long lastUpdate) {
+      return false;
+    }
+
+    @Override
+    protected Procedure<TEnvironment> getProcedure() {
+      return procedure;
+    }
+  }
+
   // ----------------------------------------------------------------------------
   // TODO-MAYBE: Should we provide a InlineChore to notify the store with the
   // full set of procedures pending and completed to write a compacted
@@ -2051,7 +2075,7 @@ public class ProcedureExecutor<TEnvironment> {
   private final class WorkerMonitor extends InlineChore {
     public static final String WORKER_MONITOR_INTERVAL_CONF_KEY =
         "hbase.procedure.worker.monitor.interval.msec";
-    private static final int DEFAULT_WORKER_MONITOR_INTERVAL = 5000; // 5sec
+    private static final int DEFAULT_WORKER_MONITOR_INTERVAL = 1000; // 1sec
 
     public static final String WORKER_STUCK_THRESHOLD_CONF_KEY =
         "hbase.procedure.worker.stuck.threshold.msec";
@@ -2071,11 +2095,34 @@ public class ProcedureExecutor<TEnvironment> {
 
     @Override
     public void run() {
+      // accelerate high priority procedure.
+      accelerateHighPriority();
+
       final int stuckCount = checkForStuckWorkers();
       checkThreadCount(stuckCount);
 
       // refresh interval (poor man dynamic conf update)
       refreshConfig();
+    }
+
+    private void accelerateHighPriority() {
+      if (!scheduler.hasRunnables()) {
+        return;
+      }
+      while (true) {
+        // Poll a high priority procedure and execute it intermediately
+        Procedure highPriorityProcedure = scheduler.pollHighPriority(1, TimeUnit.NANOSECONDS);
+        if (highPriorityProcedure != null) {
+          final HighPriorityWorkerThread worker =
+              new HighPriorityWorkerThread(threadGroup, highPriorityProcedure);
+          workerThreads.add(worker);
+          worker.start();
+          LOG.info("Added new HighPriority worker thread {} for highPriorityProcedure {}", worker,
+              highPriorityProcedure);
+        } else {
+          return;
+        }
+      }
     }
 
     private int checkForStuckWorkers() {

@@ -96,6 +96,20 @@ public interface ProcedureScheduler {
   boolean hasRunnables();
 
   /**
+   * Fetch one high priority Procedure from the queue
+   * @return the Procedure to execute, or null if nothing present.
+   */
+  Procedure pollHighPriority();
+
+  /**
+   * Fetch one high priority Procedure from the queue
+   * @param timeout how long to wait before giving up, in units of unit
+   * @param unit a TimeUnit determining how to interpret the timeout parameter
+   * @return the Procedure to execute, or null if nothing present.
+   */
+  Procedure pollHighPriority(long timeout, TimeUnit unit);
+
+  /**
    * Fetch one Procedure from the queue
    * @return the Procedure to execute, or null if nothing present.
    */

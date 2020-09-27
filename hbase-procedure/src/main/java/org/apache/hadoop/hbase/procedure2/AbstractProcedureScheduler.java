@@ -140,20 +140,34 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
    * NOTE: this method is called with the sched lock held.
    * @return the Procedure to execute, or null if nothing is available.
    */
-  protected abstract Procedure dequeue();
+  protected abstract Procedure dequeue(boolean highPriority);
+
+  @Override
+  public Procedure pollHighPriority() {
+    return poll(-1, true);
+  }
+
+  @Override
+  public Procedure pollHighPriority(long timeout, TimeUnit unit) {
+    return poll(unit.toNanos(timeout), true);
+  }
 
   @Override
   public Procedure poll() {
-    return poll(-1);
+    return poll(-1, false);
   }
 
   @Override
   public Procedure poll(long timeout, TimeUnit unit) {
-    return poll(unit.toNanos(timeout));
+    return poll(unit.toNanos(timeout), false);
+  }
+
+  public Procedure poll(final long nanos) {
+    return poll(nanos, false);
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings("WA_AWAIT_NOT_IN_LOOP")
-  public Procedure poll(final long nanos) {
+  private Procedure poll(final long nanos, final boolean highPriority) {
     schedLock();
     try {
       if (!running) {
@@ -174,7 +188,7 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
           return null;
         }
       }
-      final Procedure pollResult = dequeue();
+      final Procedure pollResult = dequeue(highPriority);
 
       pollCalls++;
       nullPollCalls += (pollResult == null) ? 1 : 0;
