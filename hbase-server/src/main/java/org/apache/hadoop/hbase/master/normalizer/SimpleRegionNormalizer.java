@@ -162,7 +162,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
         targetRegionSize =
           tableDescriptor.getNormalizerTargetRegionSize();
         LOG.debug("Table " + table + ":  target region count is " + targetRegionCount
-            + ", target region size is targetRegionSize");
+            + ", target region size is " + targetRegionSize);
       }
     } catch (IOException e) {
       LOG.warn("cannot get the target number and target size of table " + table
