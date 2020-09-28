@@ -835,7 +835,7 @@ class MetricsRegionServerWrapperImpl
         numWALFiles = (provider == null ? 0 : provider.getNumLogFiles()) +
             (metaProvider == null ? 0 : metaProvider.getNumLogFiles());
         walFileSize = (provider == null ? 0 : provider.getLogFileSize()) +
-            (provider == null ? 0 : provider.getLogFileSize());
+          (metaProvider == null ? 0 : metaProvider.getLogFileSize());
         // Copy over computed values so that no thread sees half computed values.
         numStores = tempNumStores;
         numStoreFiles = tempNumStoreFiles;
