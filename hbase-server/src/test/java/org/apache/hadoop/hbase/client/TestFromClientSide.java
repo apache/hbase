@@ -5067,73 +5067,91 @@ public class TestFromClientSide {
         FAMILY);
     TEST_UTIL.waitTableAvailable(TableName.valueOf("testCheckAndDeleteWithCompareOp"), 10000);
 
-    Put put2 = new Put(ROW);
-    put2.add(FAMILY, QUALIFIER, value2);
-    table.put(put2);
+    Put bbbb = new Put(ROW);
+    bbbb.add(FAMILY, QUALIFIER, value2);
 
-    Put put3 = new Put(ROW);
-    put3.add(FAMILY, QUALIFIER, value3);
+    Put cccc = new Put(ROW);
+    cccc.add(FAMILY, QUALIFIER, value3);
 
     Delete delete = new Delete(ROW);
     delete.deleteColumns(FAMILY, QUALIFIER);
 
     // cell = "bbbb", using "aaaa" to compare only LESS/LESS_OR_EQUAL/NOT_EQUAL
     // turns out "match"
+    table.put(bbbb);
+    assertTrue(verifyPut(table, bbbb, value2));
     boolean ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER, value1, delete);
-    assertEquals(ok, false);
+    // aaaa is less than bbbb, > || >= should be false
+    assertFalse(ok);
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.EQUAL, value1, delete);
-    assertEquals(ok, false);
+    assertFalse(ok);
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER_OR_EQUAL, value1, delete);
-    assertEquals(ok, false);
+    assertFalse(ok);
+    // aaaa is less than bbbb, < || <= should be true
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS, value1, delete);
-    assertEquals(ok, true);
-    table.put(put2);
+    assertTrue(ok);
+    table.put(bbbb);
+    assertTrue(verifyPut(table, bbbb, value2));
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS_OR_EQUAL, value1, delete);
-    assertEquals(ok, true);
-    table.put(put2);
-
-    assertEquals(ok, true);
+    assertTrue(ok);
 
     // cell = "cccc", using "dddd" to compare only LARGER/LARGER_OR_EQUAL/NOT_EQUAL
     // turns out "match"
-    table.put(put3);
+    table.put(cccc);
+    assertTrue(verifyPut(table, cccc, value3));
+    // dddd is larger than cccc,  < || <= shoule be false
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS, value4, delete);
-
-    assertEquals(ok, false);
+    assertFalse(ok);
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS_OR_EQUAL, value4, delete);
-
-    assertEquals(ok, false);
+    assertFalse(ok);
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.EQUAL, value4, delete);
-
-    assertEquals(ok, false);
+    assertFalse(ok);
+    // dddd is larger than cccc, (> || >= || !=) shoule be true
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER, value4, delete);
-
-    assertEquals(ok, true);
-    table.put(put3);
+    assertTrue(ok);
+    table.put(cccc);
+    assertTrue(verifyPut(table, cccc, value3));
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER_OR_EQUAL, value4, delete);
-    assertEquals(ok, true);
-    table.put(put3);
+    assertTrue(ok);
+    table.put(cccc);
+    assertTrue(verifyPut(table, cccc, value3));
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.NOT_EQUAL, value4, delete);
-
-    assertEquals(ok, true);
+    assertTrue(ok);
 
     // cell = "bbbb", using "bbbb" to compare only GREATER_OR_EQUAL/LESS_OR_EQUAL/EQUAL
     // turns out "match"
-    table.put(put2);
+    // bbbb equals to bbbb, != shoule be all false
+    table.put(bbbb);
+    assertTrue(verifyPut(table, bbbb, value2));
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER, value2, delete);
-    assertEquals(ok, false);
+    assertFalse(ok);
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.NOT_EQUAL, value2, delete);
-    assertEquals(ok, false);
+    assertFalse(ok);
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS, value2, delete);
-    assertEquals(ok, false);
+    assertFalse(ok);
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.GREATER_OR_EQUAL, value2, delete);
-    assertEquals(ok, true);
-    table.put(put2);
+    assertTrue(ok);
+    table.put(bbbb);
+    assertTrue(verifyPut(table, bbbb, value2));
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.LESS_OR_EQUAL, value2, delete);
-    assertEquals(ok, true);
-    table.put(put2);
+    assertTrue(ok);
+    table.put(bbbb);
+    assertTrue(verifyPut(table, bbbb, value2));
     ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOp.EQUAL, value2, delete);
-    assertEquals(ok, true);
+    assertTrue(ok);
+  }
+
+  /**
+   * testCheckAndDeleteWithCompareOp will occasionally fail without this method.
+   * Somehow checkAndDelete is executed faster than put, so it leads to assertion failure.
+   * With this verification, we can make sure checkAndDelete is executed after put.
+   */
+  private boolean verifyPut(Table table, Put put, byte[] value) throws IOException {
+    table.put(put);
+    Get get = new Get(ROW);
+    get.addColumn(FAMILY, QUALIFIER);
+    Result result = table.get(get);
+    return Bytes.equals(value, result.value());
   }
 
   /**
