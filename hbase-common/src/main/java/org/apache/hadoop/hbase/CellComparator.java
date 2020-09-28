@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -98,6 +99,21 @@ public interface CellComparator extends Comparator<Cell> {
     return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
       cell.getRowArray(), cell.getRowOffset(),
       cell.getRowLength());
+  }
+
+  /**
+   * Compares rows when represented as byte arrays
+   * @param left
+   * @param loffset
+   * @param llength
+   * @param right
+   * @param roffset
+   * @param rlength
+   * @return
+   */
+  default int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+    int rlength) {
+    return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
   }
 
   /**

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 import java.util.Arrays;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -126,7 +127,9 @@ class MutableRegionInfo implements RegionInfo {
     this.replicaId = checkReplicaId(replicaId);
     this.offLine = offLine;
     this.regionName = RegionInfo.createRegionName(this.tableName, this.startKey, this.regionId,
-      this.replicaId, !this.tableName.equals(TableName.META_TABLE_NAME));
+      this.replicaId,
+      //1 is region id of FIRST_META_REGION_INFO
+      !(this.tableName.equals(TableName.META_TABLE_NAME) && regionId == 1));
     this.encodedName = RegionInfo.encodeRegionName(this.regionName);
     this.hashCode = generateHashCode(this.tableName, this.startKey, this.endKey, this.regionId,
       this.replicaId, this.offLine, this.regionName);
@@ -206,7 +209,9 @@ class MutableRegionInfo implements RegionInfo {
    */
   @Override
   public boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey) {
-    if (Bytes.compareTo(rangeStartKey, rangeEndKey) > 0) {
+    CellComparator comparator = RegionInfo.getComparator(tableName);
+    if (comparator.compareRows(rangeStartKey, 0, rangeStartKey.length,
+      rangeEndKey, 0, rangeEndKey.length) > 0) {
       throw new IllegalArgumentException(
       "Invalid range: " + Bytes.toStringBinary(rangeStartKey) +
       " > " + Bytes.toStringBinary(rangeEndKey));
@@ -214,8 +219,10 @@ class MutableRegionInfo implements RegionInfo {
 
     boolean firstKeyInRange = Bytes.compareTo(rangeStartKey, startKey) >= 0;
     boolean lastKeyInRange =
-      Bytes.compareTo(rangeEndKey, endKey) < 0 ||
-      Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
+      comparator.compareRows(rangeEndKey, 0, rangeEndKey.length,
+        endKey, 0, endKey.length) < 0 ||
+        comparator.compareRows(endKey, 0, endKey.length,
+          HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length) == 0;
     return firstKeyInRange && lastKeyInRange;
   }
 
@@ -229,9 +236,11 @@ class MutableRegionInfo implements RegionInfo {
 
   @Override
   public boolean containsRow(byte[] row, int offset, short length) {
-    return Bytes.compareTo(row, offset, length, startKey, 0, startKey.length) >= 0 &&
-      (Bytes.compareTo(row, offset, length, endKey, 0, endKey.length) < 0 ||
-        Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
+    CellComparator comparator = RegionInfo.getComparator(tableName);
+    return comparator.compareRows(row, offset, length, startKey, 0, startKey.length) >= 0 &&
+      (comparator.compareRows(row, offset, length, endKey, 0, endKey.length) < 0 ||
+        comparator.compareRows(endKey, 0, endKey.length,
+          HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length) == 0);
   }
 
   @Override

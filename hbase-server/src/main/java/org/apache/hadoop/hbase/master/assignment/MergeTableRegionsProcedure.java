@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.ServerName;
@@ -158,7 +159,7 @@ public class MergeTableRegionsProcedure
    * to have an extent sufficient to cover all regions-to-merge.
    */
   private static RegionInfo createMergedRegionInfo(final RegionInfo[] regionsToMerge) {
-    KeyValue.KVComparator comparator =
+    CellComparator comparator =
       RegionInfo.getComparator(regionsToMerge[0].getTable());
     byte [] lowestStartKey = null;
     byte [] highestEndKey = null;

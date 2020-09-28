@@ -37,7 +37,8 @@ public class RootCellComparator extends MetaCellComparator {
    */
   public static final RootCellComparator ROOT_COMPARATOR = new RootCellComparator();
 
-  protected static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+  @Override
+  public int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
       int rlength) {
     // Rows look like this: .META.,ROW_FROM_META,RID
     //        LOG.info("ROOT " + Bytes.toString(left, loffset, llength) +
@@ -59,7 +60,7 @@ public class RootCellComparator extends MetaCellComparator {
     } else if (leftFarDelimiter < 0 && rightFarDelimiter < 0) {
       return 0;
     }
-    int result = org.apache.hadoop.hbase.MetaCellComparator
+    int result = MetaCellComparator.META_COMPARATOR
       .compareRows(left, lmetaOffsetPlusDelimiter, leftFarDelimiter - lmetaOffsetPlusDelimiter,
         right, rmetaOffsetPlusDelimiter, rightFarDelimiter - rmetaOffsetPlusDelimiter);
     if (result != 0) {

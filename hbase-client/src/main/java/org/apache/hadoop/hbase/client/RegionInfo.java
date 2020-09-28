@@ -26,8 +26,12 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MetaCellComparator;
+import org.apache.hadoop.hbase.RootCellComparator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
@@ -105,7 +109,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   @InterfaceAudience.Private
   Comparator<RegionInfo> COMPARATOR
     = (RegionInfo lhs, RegionInfo rhs) -> {
-      KeyValue.KVComparator comparator = getComparator(rhs.getTable());
+      CellComparator comparator = getComparator(rhs.getTable());
       if (rhs == null) {
         return 1;
       }
@@ -440,7 +444,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @return true if two regions are adjacent
    */
   static boolean areAdjacent(RegionInfo regionA, RegionInfo regionB) {
-    KeyValue.KVComparator comparator = getComparator(regionA.getTable());
+    CellComparator comparator = getComparator(regionA.getTable());
     if (regionA == null || regionB == null) {
       throw new IllegalArgumentException(
       "Can't check whether adjacent for null region");
@@ -825,7 +829,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @see #isDegenerate()
    */
   default boolean isOverlap(RegionInfo other) {
-    KeyValue.KVComparator comparator = getComparator(other.getTable());
+    CellComparator comparator = getComparator(other.getTable());
     if (other == null) {
       return false;
     }
@@ -855,13 +859,13 @@ public interface RegionInfo extends Comparable<RegionInfo> {
     return RegionInfo.COMPARATOR.compare(this, other);
   }
 
-  static KeyValue.KVComparator getComparator(TableName tableName) {
+  static CellComparator getComparator(TableName tableName) {
     if (tableName.equals(TableName.ROOT_TABLE_NAME)) {
-      return KeyValue.ROOT_COMPARATOR;
+      return RootCellComparator.ROOT_COMPARATOR;
     }
     if (tableName.equals(TableName.META_TABLE_NAME)) {
-      return KeyValue.META_COMPARATOR;
+      return MetaCellComparator.META_COMPARATOR;
     }
-    return KeyValue.COMPARATOR;
+    return CellComparatorImpl.COMPARATOR;
   }
 }

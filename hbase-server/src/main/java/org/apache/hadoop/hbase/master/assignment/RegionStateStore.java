@@ -270,8 +270,8 @@ public class RegionStateStore {
   private void multiMutate(RegionInfo ri, List<Mutation> mutations) throws IOException {
     debugLogMutations(mutations);
     byte[] row =
-      Bytes.toBytes(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionNameAsString() +
-        HConstants.DELIMITER);
+      Bytes.toBytesBinary(
+        RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionNameAsString());
     MutateRowsRequest.Builder builder = MutateRowsRequest.newBuilder();
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {
@@ -285,9 +285,11 @@ public class RegionStateStore {
           "multi in MetaEditor doesn't support " + mutation.getClass().getName());
       }
     }
+    TableName catalogTable = TableName.isMetaTableName(ri.getTable()) ?
+      TableName.ROOT_TABLE_NAME : TableName.META_TABLE_NAME;
     MutateRowsRequest request = builder.build();
     AsyncTable<?> table =
-      master.getConnection().toAsyncConnection().getTable(TableName.META_TABLE_NAME);
+      master.getConnection().toAsyncConnection().getTable(catalogTable);
     CompletableFuture<MutateRowsResponse> future =
       table.<MultiRowMutationService, MutateRowsResponse> coprocessorService(
         MultiRowMutationService::newStub,
