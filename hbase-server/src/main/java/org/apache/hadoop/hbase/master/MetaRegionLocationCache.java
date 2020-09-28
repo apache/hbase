@@ -157,7 +157,7 @@ public class MetaRegionLocationCache extends ZKListener {
   }
 
   private void updateMetaLocation(String path, ZNodeOpType opType) {
-    if (!isValidMetaZNode(path)) {
+    if (!isValidMetaPath(path)) {
       return;
     }
     LOG.debug("Updating meta znode for path {}: {}", path, opType.name());
@@ -220,8 +220,8 @@ public class MetaRegionLocationCache extends ZKListener {
    * Helper to check if the given 'path' corresponds to a meta znode. This listener is only
    * interested in changes to meta znodes.
    */
-  private boolean isValidMetaZNode(String path) {
-    return watcher.getZNodePaths().isAnyMetaReplicaZNode(path);
+  private boolean isValidMetaPath(String path) {
+    return watcher.getZNodePaths().isMetaZNodePath(path);
   }
 
   @Override

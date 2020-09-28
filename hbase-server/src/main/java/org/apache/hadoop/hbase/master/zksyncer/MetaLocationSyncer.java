@@ -19,10 +19,12 @@
 package org.apache.hadoop.hbase.master.zksyncer;
 
 import java.util.Collection;
-
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Tracks the meta region locations on server ZK cluster and synchronize them to client ZK cluster
@@ -36,11 +38,13 @@ public class MetaLocationSyncer extends ClientZKSyncer {
 
   @Override
   boolean validate(String path) {
-    return watcher.getZNodePaths().isAnyMetaReplicaZNode(path);
+    return watcher.getZNodePaths().isMetaZNodePath(path);
   }
 
   @Override
-  Collection<String> getNodesToWatch() {
-    return watcher.getZNodePaths().getMetaReplicaZNodes();
+  Collection<String> getNodesToWatch() throws KeeperException {
+    return watcher.getMetaReplicaNodes().stream()
+      .map(znode -> ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, znode))
+      .collect(Collectors.toList());
   }
 }

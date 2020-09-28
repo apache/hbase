@@ -207,7 +207,7 @@ public abstract class ClientZKSyncer extends ZKListener {
   /**
    * @return the znode(s) to watch
    */
-  abstract Collection<String> getNodesToWatch();
+  abstract Collection<String> getNodesToWatch() throws KeeperException;
 
   /**
    * Thread to synchronize znode data to client ZK cluster
