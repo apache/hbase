@@ -373,10 +373,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private void tryStartNewShipper(String walGroupId, PriorityBlockingQueue<Path> queue) {
     workerThreads.compute(walGroupId, (key, value) -> {
       if (value != null) {
-        LOG.debug("{} preempted start of worker walGroupId={}", logPeerId(), walGroupId);
+        LOG.debug("{} preempted start of shipping worker walGroupId={}", logPeerId(), walGroupId);
         return value;
       } else {
-        LOG.debug("{} starting worker for walGroupId={}", logPeerId(), walGroupId);
+        LOG.debug("{} starting shipping worker for walGroupId={}", logPeerId(), walGroupId);
         ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
         ReplicationSourceWALReader walReader =
             createNewWALReader(walGroupId, queue, worker.getStartPosition());
@@ -522,7 +522,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private long getCurrentBandwidth() {
     long peerBandwidth = replicationPeer.getPeerBandwidth();
     // User can set peer bandwidth to 0 to use default bandwidth.
-    return peerBandwidth != 0? peerBandwidth : defaultBandwidth;
+    return peerBandwidth != 0 ? peerBandwidth : defaultBandwidth;
   }
 
   /**
@@ -604,11 +604,11 @@ public class ReplicationSource implements ReplicationSourceInterface {
       this.startupOngoing.set(false);
       throw new IllegalStateException("Source should be active.");
     }
-    LOG.info("{} queueId={} is replicating from cluster={} to cluster={}",
-      logPeerId(), this.replicationQueueInfo.getQueueId(), clusterId, peerClusterId);
-
+    LOG.info("{} queueId={} (queues={}) is replicating from cluster={} to cluster={}",
+      logPeerId(), this.replicationQueueInfo.getQueueId(), this.queues.size(), clusterId,
+      peerClusterId);
     initializeWALEntryFilter(peerClusterId);
-    // start workers
+    // Start workers
     for (Map.Entry<String, PriorityBlockingQueue<Path>> entry : queues.entrySet()) {
       String walGroupId = entry.getKey();
       PriorityBlockingQueue<Path> queue = entry.getValue();
