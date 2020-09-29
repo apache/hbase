@@ -5386,7 +5386,7 @@ public class TestFromClientSide {
     waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
     assertEquals(1, store.getStorefilesCount());
     // evicted two data blocks and two index blocks and compaction does not cache new blocks
-    expectedBlockCount = 0;
+    expectedBlockCount -= 4;
     assertEquals(expectedBlockCount, cache.getBlockCount());
     expectedBlockHits += 2;
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
