@@ -71,8 +71,9 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
-  public void startup() {
+  public ReplicationSourceInterface startup() {
     startup.set(true);
+    return this;
   }
 
   public boolean isStartup() {

@@ -180,13 +180,13 @@ public class ReplicationSourceManager implements ReplicationListener {
   /**
    * A special ReplicationSource for hbase:meta Region Read Replicas.
    * Usually this reference remains empty. If an hbase:meta Region is opened on this server, we
-   * will create an instance of a hbase:meta ReplicationSource and it will live the life of the
-   * Server thereafter; i.e. we will not shut it down even if the hbase:meta moves away from this
-   * server (in case it later gets moved back). We synchronize on this instance testing for
+   * will create an instance of a hbase:meta CatalogReplicationSource and it will live the life of
+   * the Server thereafter; i.e. we will not shut it down even if the hbase:meta moves away from
+   * this server (in case it later gets moved back). We synchronize on this instance testing for
    * presence and if absent, while creating so only created and started once.
    */
   @VisibleForTesting
-  AtomicReference<ReplicationSourceInterface> hbaseMetaReplicationSource = new AtomicReference<>();
+  AtomicReference<ReplicationSourceInterface> catalogReplicationSource = new AtomicReference<>();
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
@@ -360,14 +360,14 @@ public class ReplicationSourceManager implements ReplicationListener {
   /**
    * @return a new 'classic' user-space replication source.
    * @param queueId the id of the replication queue to associate the ReplicationSource with.
-   * @see #createHBaseMetaReplicationSource() for creating a ReplicationSource for hbase:meta.
+   * @see #createCatalogReplicationSource() for creating a ReplicationSource for hbase:meta.
    */
   private ReplicationSourceInterface createSource(String queueId, ReplicationPeer replicationPeer)
       throws IOException {
     ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, queueId);
     // Init the just created replication source. Pass the default walProvider's wal file length
     // provider. Presumption is we replicate user-space Tables only. For hbase:meta region replica
-    // replication, see #createHBaseMetaReplicationSource().
+    // replication, see #createCatalogReplicationSource().
     WALFileLengthProvider walFileLengthProvider =
       this.walFactory.getWALProvider() != null?
         this.walFactory.getWALProvider().getWALFileLengthProvider() : p -> OptionalLong.empty();
@@ -1171,59 +1171,58 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   /**
-   * Add an hbase:meta replication source. Called on open of an hbase:meta Region.
-   * @see #removeHBaseMetaReplicationSource()
+   * Add an hbase:meta Catalog replication source. Called on open of an hbase:meta Region.
+   * @see #removeCatalogReplicationSource()
    */
-  public ReplicationSourceInterface addHBaseMetaReplicationSource() throws IOException {
+  public ReplicationSourceInterface addCatalogReplicationSource() throws IOException {
     // Open/Create the hbase:meta ReplicationSource once only.
-    synchronized (this.hbaseMetaReplicationSource) {
-      ReplicationSourceInterface rs = this.hbaseMetaReplicationSource.get();
-      return rs != null? rs:
-        this.hbaseMetaReplicationSource.getAndSet(createHBaseMetaReplicationSource());
+    synchronized (this.catalogReplicationSource) {
+      ReplicationSourceInterface rs = this.catalogReplicationSource.get();
+      return rs != null ? rs :
+        this.catalogReplicationSource.getAndSet(createCatalogReplicationSource());
     }
   }
 
   /**
-   * Remove the hbase:meta replication source.
+   * Remove the hbase:meta Catalog replication source.
    * Called when we close hbase:meta.
-   * @see #addHBaseMetaReplicationSource()
+   * @see #addCatalogReplicationSource()
    */
-  public void removeHBaseMetaReplicationSource() {
-    // Nothing to do. Leave any HBaseMetaReplicationSource in place in case an hbase:meta Region
+  public void removeCatalogReplicationSource() {
+    // Nothing to do. Leave any CatalogReplicationSource in place in case an hbase:meta Region
     // comes back to this server.
   }
 
   /**
-   * Create, initialize, and start the hbase:meta ReplicationSource.
-   * Installs WALActionsListener if we instantiate the meta WALProvider.
+   * Create, initialize, and start the Catalog ReplicationSource.
    */
-  private ReplicationSourceInterface createHBaseMetaReplicationSource() throws IOException {
+  private ReplicationSourceInterface createCatalogReplicationSource() throws IOException {
+    // Has the hbase:meta WALProvider been instantiated?
     WALProvider walProvider = this.walFactory.getMetaWALProvider();
     boolean addListener = false;
     if (walProvider == null) {
-      // The meta walProvider has not been instantiated yet. Create it.
+      // The meta walProvider has not been instantiated. Create it.
       walProvider = this.walFactory.getMetaProvider();
       addListener = true;
     }
-    HBaseMetaReplicationSourcePeer peer = new HBaseMetaReplicationSourcePeer(this.conf,
+    CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
       this.clusterId.toString());
-    final ReplicationSourceInterface hmrs = new HBaseMetaReplicationSource();
-    hmrs.init(conf, fs, this, null, peer, server, peer.getId(), clusterId,
+    final ReplicationSourceInterface crs = new CatalogReplicationSource();
+    crs.init(conf, fs, this, null, peer, server, peer.getId(), clusterId,
       walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
     if (addListener) {
       walProvider.addWALActionsListener(new WALActionsListener() {
         @Override
         public void postLogRoll(Path oldPath, Path newPath) throws IOException {
-          hmrs.enqueueLog(newPath);
+          crs.enqueueLog(newPath);
         }
       });
     } else {
       // This is a problem. We'll have a ReplicationSource but no listener on hbase:meta WALs
       // so nothing will be replicated.
-      LOG.error("Did not install WALActionsListener creating HBaseMetaReplicationSource!");
+      LOG.error("Did not install WALActionsListener creating CatalogReplicationSource!");
     }
     // Start this ReplicationSource.
-    hmrs.startup();
-    return hmrs;
+    return crs.startup();
   }
 }

@@ -62,11 +62,11 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
   public static final String REGION_REPLICA_REPLICATION_PEER = "region_replica_replication";
 
   /**
-   * Same as for {@link #REGION_REPLICA_REPLICATION_CONF_KEY} but for hbase:meta.
+   * Same as for {@link #REGION_REPLICA_REPLICATION_CONF_KEY} but for catalog replication.
    */
-  public static final String META_REGION_REPLICA_REPLICATION_CONF_KEY
-    = "hbase.region.meta.replica.replication.enabled";
-  private static final boolean DEFAULT_META_REGION_REPLICA_REPLICATION = false;
+  public static final String REGION_REPLICA_REPLICATION_CATALOG_CONF_KEY
+    = "hbase.region.replica.replication.catalog.enabled";
+  private static final boolean DEFAULT_REGION_REPLICA_REPLICATION_CATALOG = false;
 
 
   /**
@@ -201,8 +201,8 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    */
   public static boolean isMetaRegionReplicaReplicationEnabled(Configuration conf, TableName tn) {
     return TableName.isMetaTableName(tn) &&
-      conf.getBoolean(META_REGION_REPLICA_REPLICATION_CONF_KEY,
-        DEFAULT_META_REGION_REPLICA_REPLICATION);
+      conf.getBoolean(REGION_REPLICA_REPLICATION_CATALOG_CONF_KEY,
+        DEFAULT_REGION_REPLICA_REPLICATION_CATALOG);
   }
 
   /**

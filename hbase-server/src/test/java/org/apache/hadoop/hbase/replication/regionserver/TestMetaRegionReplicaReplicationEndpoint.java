@@ -94,7 +94,7 @@ public class TestMetaRegionReplicaReplicationEndpoint {
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 1);
     // Enable hbase:meta replication.
-    conf.setBoolean(ServerRegionReplicaUtil.META_REGION_REPLICA_REPLICATION_CONF_KEY, true);
+    conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CATALOG_CONF_KEY, true);
     // Set hbase:meta replicas to be 3.
     conf.setInt(HConstants.META_REPLICAS_NUM, NB_SERVERS);
     HTU.startMiniCluster(NB_SERVERS);
@@ -147,7 +147,7 @@ public class TestMetaRegionReplicaReplicationEndpoint {
    */
   private boolean isMetaRegionReplicaReplicationSource(HRegionServer hrs) {
     return hrs.getReplicationSourceService().getReplicationManager().
-      hbaseMetaReplicationSource.get() != null;
+      catalogReplicationSource.get() != null;
   }
 
   /**

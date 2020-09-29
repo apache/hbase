@@ -21,25 +21,26 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The 'peer' used internally by HBaseMeta Region Replicas Replication Source.
+ * The 'peer' used internally by Catalog Region Replicas Replication Source.
  * The Replication system has 'peer' baked into its core so though we do not need 'peering', we
- * need a 'peer' and its configuration else the replication system breaks at a few points.
- * Set "hbase.region.meta.replica.replication" if you want to change the configured endpoint.
+ * need a 'peer' and its configuration else the replication system breaks at a few locales.
+ * Set "hbase.region.replica.catalog.replication" if you want to change the configured endpoint.
  */
 @InterfaceAudience.Private
-class HBaseMetaReplicationSourcePeer extends ReplicationPeerImpl {
+class CatalogReplicationSourcePeer extends ReplicationPeerImpl {
   /**
    * @param clusterKey Usually the UUID from zk passed in by caller as a String.
    */
-  HBaseMetaReplicationSourcePeer(Configuration configuration, String clusterKey) {
-    super(configuration, "hbase_meta_region_replica_source",
+  CatalogReplicationSourcePeer(Configuration configuration, String clusterKey) {
+    super(configuration, ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER + "_catalog",
       ReplicationPeerConfig.newBuilder().
         setClusterKey(clusterKey).
         setReplicationEndpointImpl(
-          configuration.get("hbase.region.meta.replica.replication",
+          configuration.get("hbase.region.replica.catalog.replication",
             RegionReplicaReplicationEndpoint.class.getName())).
         setBandwidth(0). // '0' means no bandwidth.
         setSerial(false).

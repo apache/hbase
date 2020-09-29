@@ -126,7 +126,7 @@ public class UnassignRegionHandler extends EventHandler {
       if (RegionReplicaUtil.isDefaultReplica(region.getRegionInfo().getReplicaId())) {
         // If hbase:meta read replicas enabled, remove replication source for hbase:meta Regions.
         // See assign region handler where we add the replication source on open.
-        rs.getReplicationSourceService().getReplicationManager().removeHBaseMetaReplicationSource();
+        rs.getReplicationSourceService().getReplicationManager().removeCatalogReplicationSource();
       }
     }
     if (!rs.reportRegionStateTransition(

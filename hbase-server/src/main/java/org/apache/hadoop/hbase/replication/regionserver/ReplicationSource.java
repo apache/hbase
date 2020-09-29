@@ -618,9 +618,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
   }
 
   @Override
-  public void startup() {
+  public ReplicationSourceInterface startup() {
     if (this.sourceRunning) {
-      return;
+      return this;
     }
     this.sourceRunning = true;
     //Flag that signalizes uncaught error happening while starting up the source
@@ -641,6 +641,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
           });
       }
     } while (this.startupOngoing.get() && !this.abortOnError);
+    return this;
   }
 
   @Override

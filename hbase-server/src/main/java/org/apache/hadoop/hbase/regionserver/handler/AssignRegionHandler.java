@@ -138,7 +138,7 @@ public class AssignRegionHandler extends EventHandler {
       if (ServerRegionReplicaUtil.isMetaRegionReplicaReplicationEnabled(conf, tn)) {
         if (RegionReplicaUtil.isDefaultReplica(this.regionInfo.getReplicaId())) {
           // Add the hbase:meta replication source on replica zero/default.
-          rs.getReplicationSourceService().getReplicationManager().addHBaseMetaReplicationSource();
+          rs.getReplicationSourceService().getReplicationManager().addCatalogReplicationSource();
         }
       }
       region = HRegion.openHRegion(regionInfo, htd, rs.getWAL(regionInfo), conf, rs, null);

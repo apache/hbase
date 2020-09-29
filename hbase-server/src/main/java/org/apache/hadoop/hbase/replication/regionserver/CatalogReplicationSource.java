@@ -22,12 +22,13 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * ReplicationSource that reads hbase:meta WAL files and lets through all WALEdits from these WALs.
- * NOT created via {@link ReplicationSourceFactory} -- specialized.
+ * ReplicationSource that reads catalog WAL files -- e.g. hbase:meta WAL files -- and lets through
+ * all WALEdits from these WALs. This ReplicationSource is NOT created via
+ * {@link ReplicationSourceFactory}.
  */
 @InterfaceAudience.Private
-class HBaseMetaReplicationSource extends ReplicationSource {
-  HBaseMetaReplicationSource() {
+class CatalogReplicationSource extends ReplicationSource {
+  CatalogReplicationSource() {
     // Filters in hbase:meta WAL files and allows all edits, including 'meta' edits (these are
     // filtered out in the 'super' class default implementation).
     super(p -> AbstractFSWALProvider.isMetaFile(p), Collections.emptyList());

@@ -74,7 +74,7 @@ public interface ReplicationSourceInterface {
   /**
    * Start the replication
    */
-  void startup();
+  ReplicationSourceInterface startup();
 
   /**
    * End the replication
