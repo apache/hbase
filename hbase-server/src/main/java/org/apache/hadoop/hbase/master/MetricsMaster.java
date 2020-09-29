@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.metrics.impl.HistogramImpl;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetricsForMasterUI;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -52,7 +54,8 @@ public class MetricsMaster {
     masterQuotaSource =
             CompatibilitySingletonFactory.getInstance(MetricsMasterQuotaSourceFactory.class).create(masterWrapper);
 
-    serverCrashProcMetrics = convertToProcedureMetrics(masterSource.getServerCrashMetrics());
+    serverCrashProcMetrics = convertToProcedureMetricsForMasterUI(
+      masterSource.getServerCrashMetrics());
   }
 
   // for unit-test usage
@@ -153,6 +156,37 @@ public class MetricsMaster {
       @Override
       public Counter getFailedCounter() {
         return metrics.getFailedCounter();
+      }
+    };
+  }
+
+  /**
+   * This method is similaer to MetricsMaster#convertToProcedureMetrics(OperationMetrics), but with
+   * additional histogram shown on master UI only.
+   */
+  public static ProcedureMetrics convertToProcedureMetricsForMasterUI(
+    final OperationMetrics metrics) {
+    return new ProcedureMetricsForMasterUI() {
+      private final Histogram histogramForMasterUI = new HistogramImpl();
+
+      @Override
+      public Counter getSubmittedCounter() {
+        return metrics.getSubmittedCounter();
+      }
+
+      @Override
+      public Histogram getTimeHisto() {
+        return metrics.getTimeHisto();
+      }
+
+      @Override
+      public Counter getFailedCounter() {
+        return metrics.getFailedCounter();
+      }
+
+      @Override
+      public Histogram getHistogramForMasterUI() {
+        return histogramForMasterUI;
       }
     };
   }

@@ -439,6 +439,13 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
       if (timeHisto != null) {
         timeHisto.update(runtime);
       }
+      if (metrics instanceof ProcedureMetricsForMasterUI) {
+        ProcedureMetricsForMasterUI procedureMetricsForMasterUI =
+          (ProcedureMetricsForMasterUI)metrics;
+        if (procedureMetricsForMasterUI.getHistogramForMasterUI() != null) {
+          procedureMetricsForMasterUI.getHistogramForMasterUI().update(runtime);
+        }
+      }
     } else {
       Counter failedCounter = metrics.getFailedCounter();
       if (failedCounter != null) {

@@ -47,6 +47,8 @@
 <%@ page import="org.apache.hadoop.hbase.metrics.Histogram" %>
 <%@ page import="java.util.TreeMap" %>
 <%@ page import="org.apache.hadoop.hbase.metrics.impl.HistogramImpl" %>
+<%@ page
+        import="org.apache.hadoop.hbase.procedure2.ProcedureMetricsForMasterUI" %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   ProcedureExecutor<MasterProcedureEnv> procExecutor = master.getMasterProcedureExecutor();
@@ -97,11 +99,15 @@
 
       double[] percentiles = new double[] { 0.5, 0.9};
       for (Map.Entry<String, ProcedureMetrics> e : latencyMetrics.entrySet()) {
-        Histogram histogram = e.getValue().getTimeHisto();
-        if (histogram.getCount() == 0 || !(histogram instanceof HistogramImpl)) {
+        ProcedureMetrics procedureMetrics = e.getValue();
+        if (!(procedureMetrics instanceof ProcedureMetricsForMasterUI
+                && ((ProcedureMetricsForMasterUI) procedureMetrics)
+                .getHistogramForMasterUI() instanceof HistogramImpl)) {
           continue;
         }
-        HistogramImpl histogramImpl = (HistogramImpl)histogram;
+        HistogramImpl histogramImpl = (HistogramImpl)
+                ((ProcedureMetricsForMasterUI)(e.getValue()))
+                        .getHistogramForMasterUI();
         long[] percentileLatencies = histogramImpl.getQuantiles(percentiles);
 
     %>
