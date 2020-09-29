@@ -17,7 +17,7 @@
 pipeline {
   agent {
     node {
-      label 'hbase'
+      label 'Hadoop'
     }
   }
   triggers {
