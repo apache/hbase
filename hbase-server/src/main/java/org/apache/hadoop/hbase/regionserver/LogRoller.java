@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -148,7 +149,7 @@ public class LogRoller extends HasThread {
   @Override
   public void run() {
     while (!server.isStopped()) {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       checkLowReplication(now);
       if (!rollLog.get()) {
         boolean periodic = false;
@@ -244,7 +245,7 @@ public class LogRoller extends HasThread {
    */
   @VisibleForTesting
   public boolean walRollFinished() {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     for (RollController controller : wals.values()) {
       if (controller.needsRoll(now)) {
         return false;
@@ -266,7 +267,7 @@ public class LogRoller extends HasThread {
     RollController(WAL wal) {
       this.wal = wal;
       this.rollRequest = new AtomicBoolean(false);
-      this.lastRollTime = System.currentTimeMillis();
+      this.lastRollTime = EnvironmentEdgeManager.currentTime();
     }
 
     public void requestRoll() {
