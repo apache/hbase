@@ -60,10 +60,11 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   private static final Logger LOG = LoggerFactory.getLogger(HBaseReplicationEndpoint.class);
 
   private ZKWatcher zkw = null;
+  private final Object zkwLock = new Object();
 
   protected Configuration conf;
 
-  protected AsyncClusterConnection conn;
+  private AsyncClusterConnection conn;
 
   /**
    * Default maximum number of times a replication sink can be reported as bad before
@@ -103,10 +104,6 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   public void init(Context context) throws IOException {
     super.init(context);
     this.conf = HBaseConfiguration.create(ctx.getConfiguration());
-    // TODO: This connection is replication specific or we should make it particular to
-    // replication and make replication specific settings such as compression or codec to use
-    // passing Cells.
-    this.conn = createConnection(this.conf);
     this.ratio =
       ctx.getConfiguration().getFloat("replication.source.ratio", DEFAULT_REPLICATION_SOURCE_RATIO);
     this.badSinkThreshold =
@@ -114,9 +111,19 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     this.badReportCounts = Maps.newHashMap();
   }
 
-  protected synchronized void disconnect() {
-    if (zkw != null) {
-      zkw.close();
+  protected void disconnect() {
+    synchronized (zkwLock) {
+      if (zkw != null) {
+        zkw.close();
+      }
+    }
+    if (this.conn != null) {
+      try {
+        this.conn.close();
+        this.conn = null;
+      } catch (IOException e) {
+        LOG.warn("{} Failed to close the connection", ctx.getPeerId());
+      }
     }
   }
 
@@ -128,11 +135,11 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     if (ke instanceof ConnectionLossException || ke instanceof SessionExpiredException
         || ke instanceof AuthFailedException) {
       String clusterKey = ctx.getPeerConfig().getClusterKey();
-      LOG.warn("Lost the ZooKeeper connection for peer " + clusterKey, ke);
+      LOG.warn("Lost the ZooKeeper connection for peer {}", clusterKey, ke);
       try {
         reloadZkWatcher();
       } catch (IOException io) {
-        LOG.warn("Creation of ZookeeperWatcher failed for peer " + clusterKey, io);
+        LOG.warn("Creation of ZookeeperWatcher failed for peer {}", clusterKey, io);
       }
     }
   }
@@ -151,6 +158,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   protected void doStart() {
     try {
       reloadZkWatcher();
+      connectPeerCluster();
       notifyStarted();
     } catch (IOException e) {
       notifyFailed(e);
@@ -168,10 +176,12 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   // limit connections when multiple replication sources try to connect to
   // the peer cluster. If the peer cluster is down we can get out of control
   // over time.
-  public synchronized UUID getPeerUUID() {
+  public UUID getPeerUUID() {
     UUID peerUUID = null;
     try {
-      peerUUID = ZKClusterId.getUUIDForCluster(zkw);
+      synchronized (zkwLock) {
+        peerUUID = ZKClusterId.getUUIDForCluster(zkw);
+      }
     } catch (KeeperException ke) {
       reconnect(ke);
     }
@@ -182,13 +192,24 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * Closes the current ZKW (if not null) and creates a new one
    * @throws IOException If anything goes wrong connecting
    */
-  private synchronized void reloadZkWatcher() throws IOException {
-    if (zkw != null) {
-      zkw.close();
+  private void reloadZkWatcher() throws IOException {
+    synchronized (zkwLock) {
+      if (zkw != null) {
+        zkw.close();
+      }
+      zkw = new ZKWatcher(ctx.getConfiguration(),
+          "connection to cluster: " + ctx.getPeerId(), this);
+      zkw.registerListener(new PeerRegionServerListener(this));
     }
-    zkw = new ZKWatcher(ctx.getConfiguration(),
-        "connection to cluster: " + ctx.getPeerId(), this);
-    zkw.registerListener(new PeerRegionServerListener(this));
+  }
+
+  private void connectPeerCluster() throws IOException {
+    try {
+      conn = createConnection(this.conf);
+    } catch (IOException ioe) {
+      LOG.warn("{} Failed to create connection for peer cluster", ctx.getPeerId(), ioe);
+      throw ioe;
+    }
   }
 
   @Override
@@ -211,7 +232,9 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   protected List<ServerName> fetchSlavesAddresses() {
     List<String> children = null;
     try {
-      children = ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.getZNodePaths().rsZNode);
+      synchronized (zkwLock) {
+        children = ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.getZNodePaths().rsZNode);
+      }
     } catch (KeeperException ke) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Fetch slaves addresses failed", ke);

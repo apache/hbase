@@ -44,14 +44,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
-import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -59,7 +56,6 @@ import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -127,7 +123,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   @Override
   public void init(Context context) throws IOException {
     super.init(context);
-    this.conf = HBaseConfiguration.create(ctx.getConfiguration());
     decorateConf();
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
     this.socketTimeoutMultiplier = this.conf.getInt("replication.source.socketTimeoutMultiplier",
@@ -139,10 +134,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         DEFAULT_MAX_TERMINATION_WAIT_MULTIPLIER);
     this.maxTerminationWait = maxTerminationWaitMultiplier *
         this.conf.getLong(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-    // TODO: This connection is replication specific or we should make it particular to
-    // replication and make replication specific settings such as compression or codec to use
-    // passing Cells.
-    this.conn = createConnection(this.conf);
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.metrics = context.getMetrics();
@@ -412,19 +403,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return entryList;
   }
 
-  private void reconnectToPeerCluster() {
-    AsyncClusterConnection connection = null;
-    try {
-      connection =
-        ClusterConnectionFactory.createAsyncClusterConnection(conf, null, User.getCurrent());
-    } catch (IOException ioe) {
-      LOG.warn("{} Failed to create connection for peer cluster", logPeerId(), ioe);
-    }
-    if (connection != null) {
-      this.conn = connection;
-    }
-  }
-
   private long parallelReplicate(CompletionService<Integer> pool, ReplicateContext replicateContext,
       List<List<Entry>> batches) throws IOException {
     int futures = 0;
@@ -504,9 +482,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         }
         continue;
       }
-      if (this.conn == null) {
-        reconnectToPeerCluster();
-      }
       try {
         // replicate the batches to sink side.
         parallelReplicate(pool, replicateContext, batches);
@@ -564,14 +539,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   @Override
   protected void doStop() {
     disconnect(); // don't call super.doStop()
-    if (this.conn != null) {
-      try {
-        this.conn.close();
-        this.conn = null;
-      } catch (IOException e) {
-        LOG.warn("{} Failed to close the connection", logPeerId());
-      }
-    }
     // Allow currently running replication tasks to finish
     exec.shutdown();
     try {
