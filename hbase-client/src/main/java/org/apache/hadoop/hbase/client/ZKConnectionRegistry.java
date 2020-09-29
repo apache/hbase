@@ -141,7 +141,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
     HRegionLocation[] locs = new HRegionLocation[metaReplicaZNodes.size()];
     MutableInt remaining = new MutableInt(locs.length);
     for (String metaReplicaZNode : metaReplicaZNodes) {
-      int replicaId = znodePaths.getMetaReplicaIdFromZnode(metaReplicaZNode);
+      int replicaId = znodePaths.getMetaReplicaIdFromZNode(metaReplicaZNode);
       String path = ZNodePaths.joinZNode(znodePaths.baseZNode, metaReplicaZNode);
       if (replicaId == DEFAULT_REPLICA_ID) {
         addListener(getAndConvert(path, ZKConnectionRegistry::getMetaProto), (proto, error) -> {
