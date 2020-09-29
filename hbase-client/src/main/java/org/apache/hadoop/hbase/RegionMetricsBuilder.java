@@ -24,12 +24,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -58,6 +60,8 @@ public final class RegionMetricsBuilder {
         .setBlocksLocalWithSsdWeight(regionLoadPB.hasBlocksLocalWithSsdWeight() ?
           regionLoadPB.getBlocksLocalWithSsdWeight() : 0)
         .setBlocksTotalWeight(regionLoadPB.getBlocksTotalWeight())
+        .setCompactionState(ProtobufUtil.createCompactionStateForRegionLoad(
+          regionLoadPB.getCompactionState()))
         .setFilteredReadRequestCount(regionLoadPB.getFilteredReadRequestsCount())
         .setStoreFileUncompressedDataIndexSize(new Size(regionLoadPB.getTotalStaticIndexSizeKB(),
           Size.Unit.KILOBYTE))
@@ -159,6 +163,7 @@ public final class RegionMetricsBuilder {
   private long blocksLocalWeight;
   private long blocksLocalWithSsdWeight;
   private long blocksTotalWeight;
+  private CompactionState compactionState;
   private RegionMetricsBuilder(byte[] name) {
     this.name = name;
   }
@@ -263,6 +268,11 @@ public final class RegionMetricsBuilder {
     this.blocksTotalWeight = value;
     return this;
   }
+  public RegionMetricsBuilder setCompactionState(CompactionState compactionState) {
+    this.compactionState = compactionState;
+    return this;
+  }
+
   public RegionMetrics build() {
     return new RegionMetricsImpl(name,
         storeCount,
@@ -289,7 +299,8 @@ public final class RegionMetricsBuilder {
         dataLocalityForSsd,
         blocksLocalWeight,
         blocksLocalWithSsdWeight,
-        blocksTotalWeight);
+        blocksTotalWeight,
+        compactionState);
   }
 
   private static class RegionMetricsImpl implements RegionMetrics {
@@ -319,6 +330,7 @@ public final class RegionMetricsBuilder {
     private final long blocksLocalWeight;
     private final long blocksLocalWithSsdWeight;
     private final long blocksTotalWeight;
+    private final CompactionState compactionState;
     RegionMetricsImpl(byte[] name,
         int storeCount,
         int storeFileCount,
@@ -344,7 +356,8 @@ public final class RegionMetricsBuilder {
         float dataLocalityForSsd,
         long blocksLocalWeight,
         long blocksLocalWithSsdWeight,
-        long blocksTotalWeight) {
+        long blocksTotalWeight,
+        CompactionState compactionState) {
       this.name = Preconditions.checkNotNull(name);
       this.storeCount = storeCount;
       this.storeFileCount = storeFileCount;
@@ -371,6 +384,7 @@ public final class RegionMetricsBuilder {
       this.blocksLocalWeight = blocksLocalWeight;
       this.blocksLocalWithSsdWeight = blocksLocalWithSsdWeight;
       this.blocksTotalWeight = blocksTotalWeight;
+      this.compactionState = compactionState;
     }
 
     @Override
@@ -504,6 +518,11 @@ public final class RegionMetricsBuilder {
     }
 
     @Override
+    public CompactionState getCompactionState() {
+      return compactionState;
+    }
+
+    @Override
     public String toString() {
       StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "storeCount",
           this.getStoreCount());
@@ -562,6 +581,8 @@ public final class RegionMetricsBuilder {
         blocksLocalWithSsdWeight);
       Strings.appendKeyValue(sb, "blocksTotalWeight",
         blocksTotalWeight);
+      Strings.appendKeyValue(sb, "compactionState",
+        compactionState);
       return sb.toString();
     }
   }
