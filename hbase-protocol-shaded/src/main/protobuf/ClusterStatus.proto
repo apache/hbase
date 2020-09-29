@@ -167,6 +167,16 @@ message RegionLoad {
 
   /** The current blocks total weight for region in the regionserver */
   optional uint64 blocks_total_weight = 26;
+
+  /** The compaction state for region */
+  optional CompactionState compaction_state = 27;
+
+  enum CompactionState {
+    NONE = 0;
+    MINOR = 1;
+    MAJOR = 2;
+    MAJOR_AND_MINOR = 3;
+  }
 }
 
 message UserLoad {

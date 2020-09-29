@@ -610,25 +610,12 @@
         <td>
           <%
             if (master.getTableStateManager().isTableState(table.getName(), TableState.State.ENABLED)) {
-              try {
-                CompactionState compactionState = admin.getCompactionState(table.getName()).get();
-          %><%= compactionState %><%
-        } catch (Exception e) {
-
-          if(e.getCause() != null && e.getCause().getCause() instanceof NotServingRegionException) {
+              CompactionState compactionState = master.getCompactionState(table.getName());
+              %><%= compactionState==null?"UNKNOWN":compactionState %><%
+            } else {
             %><%= CompactionState.NONE %><%
-          } else {
-          // Nothing really to do here
-          for(StackTraceElement element : e.getStackTrace()) {
-          %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
-              }
-          %> Unknown <%
             }
-          }
-        } else {
-        %><%= CompactionState.NONE %><%
-          }
-        %>
+            %>
         </td>
         <td>Is the table compacting</td>
       </tr>
