@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -128,7 +127,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
   //so that it doesn't try submit another initialize thread.
   //NOTE: this should only be set to false at the end of initialize method, prior to return.
   private AtomicBoolean startupOngoing = new AtomicBoolean(false);
-
+  //Flag that signalizes uncaught error happening while starting up the source
+  // and a retry should be attempted
+  private AtomicBoolean retryStartup = new AtomicBoolean(false);
 
   /**
    * A filter (or a chain of filters) for WAL entries; filters out edits.
@@ -375,7 +376,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
         LOG.debug("{} preempted start of worker walGroupId={}", logPeerId(), walGroupId);
         return value;
       } else {
-       LOG.debug("{} starting worker for walGroupId={}", logPeerId(), walGroupId);
+        LOG.debug("{} starting worker for walGroupId={}", logPeerId(), walGroupId);
         ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
         ReplicationSourceWALReader walReader =
             createNewWALReader(walGroupId, queue, worker.getStartPosition());
@@ -570,6 +571,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
         if (sleepForRetries("Error starting ReplicationEndpoint", sleepMultiplier)) {
           sleepMultiplier++;
         } else {
+          retryStartup.set(!this.abortOnError);
           this.startupOngoing.set(false);
           throw new RuntimeException("Exhausted retries to start replication endpoint.");
         }
@@ -577,6 +579,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if (!this.isSourceActive()) {
+      retryStartup.set(!this.abortOnError);
       this.startupOngoing.set(false);
       throw new IllegalStateException("Source should be active.");
     }
@@ -600,6 +603,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if(!this.isSourceActive()) {
+      retryStartup.set(!this.abortOnError);
       this.startupOngoing.set(false);
       throw new IllegalStateException("Source should be active.");
     }
@@ -618,28 +622,34 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   @Override
   public void startup() {
-    if (this.sourceRunning) {
-      return;
-    }
+    // mark we are running now
     this.sourceRunning = true;
-    //Flag that signalizes uncaught error happening while starting up the source
-    // and a retry should be attempted
-    MutableBoolean retryStartup = new MutableBoolean(true);
-    do {
-      if(retryStartup.booleanValue()) {
-        retryStartup.setValue(false);
-        startupOngoing.set(true);
-        // mark we are running now
-        initThread = new Thread(this::initialize);
-        Threads.setDaemonThreadRunning(initThread,
-          Thread.currentThread().getName() + ".replicationSource," + this.queueId,
-          (t,e) -> {
-            sourceRunning = false;
-            uncaughtException(t, e, null, null);
-            retryStartup.setValue(!this.abortOnError);
-          });
-      }
-    } while (this.startupOngoing.get() && !this.abortOnError);
+    startupOngoing.set(true);
+    initThread = new Thread(this::initialize);
+    Threads.setDaemonThreadRunning(initThread,
+      Thread.currentThread().getName() + ".replicationSource," + this.queueId,
+      (t,e) -> {
+        //if first initialization attempt failed, and abortOnError is false, we will
+        //keep looping in this thread until initialize eventually succeeds,
+        //while the server main startup one can go on with its work.
+        sourceRunning = false;
+        uncaughtException(t, e, null, null);
+        retryStartup.set(!this.abortOnError);
+        do {
+          if(retryStartup.get()) {
+            this.sourceRunning = true;
+            startupOngoing.set(true);
+            retryStartup.set(false);
+            try {
+              initialize();
+            } catch(Throwable error){
+              sourceRunning = false;
+              uncaughtException(t, error, null, null);
+              retryStartup.set(!this.abortOnError);
+            }
+          }
+        } while ((this.startupOngoing.get() || this.retryStartup.get()) && !this.abortOnError);
+      });
   }
 
   @Override
