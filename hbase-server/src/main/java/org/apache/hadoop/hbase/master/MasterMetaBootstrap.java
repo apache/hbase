@@ -92,7 +92,7 @@ class MasterMetaBootstrap {
     try {
       List<String> metaReplicaZnodes = zooKeeper.getMetaReplicaNodes();
       for (String metaReplicaZnode : metaReplicaZnodes) {
-        int replicaId = zooKeeper.getZNodePaths().getMetaReplicaIdFromZnode(metaReplicaZnode);
+        int replicaId = zooKeeper.getZNodePaths().getMetaReplicaIdFromZNode(metaReplicaZnode);
         if (replicaId >= numMetaReplicasConfigured) {
           RegionState r = MetaTableLocator.getMetaRegionState(zooKeeper, replicaId);
           LOG.info("Closing excess replica of meta region " + r.getRegion());
