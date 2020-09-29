@@ -134,7 +134,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   //and a retry should be attempted
   private AtomicBoolean retryStartup = new AtomicBoolean(false);
 
-
   /**
    * A filter (or a chain of filters) for WAL entries; filters out edits.
    */
@@ -643,23 +642,34 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   @Override
   public void startup() {
-    retryStartup.set(true);
-    do {
-      if(retryStartup.get()) {
-        this.sourceRunning = true;
-        startupOngoing.set(true);
-        retryStartup.set(false);
-        // mark we are running now
-        initThread = new Thread(this::initialize);
-        Threads.setDaemonThreadRunning(initThread,
-          Thread.currentThread().getName() + ".replicationSource," + this.queueId,
-          (t,e) -> {
-            sourceRunning = false;
-            uncaughtException(t, e, null, null);
-            retryStartup.set(!this.abortOnError);
-          });
-      }
-    } while ((this.startupOngoing.get() || this.retryStartup.get())  && !this.abortOnError);
+    // mark we are running now
+    this.sourceRunning = true;
+    startupOngoing.set(true);
+    initThread = new Thread(this::initialize);
+    Threads.setDaemonThreadRunning(initThread,
+      Thread.currentThread().getName() + ".replicationSource," + this.queueId,
+      (t,e) -> {
+        //if first initialization attempt failed, and abortOnError is false, we will
+        //keep looping in this thread until initialize eventually succeeds,
+        //while the server main startup one can go on with its work.
+        sourceRunning = false;
+        uncaughtException(t, e, null, null);
+        retryStartup.set(!this.abortOnError);
+        do {
+          if(retryStartup.get()) {
+            this.sourceRunning = true;
+            startupOngoing.set(true);
+            retryStartup.set(false);
+            try {
+              initialize();
+            } catch(Throwable error){
+              sourceRunning = false;
+              uncaughtException(t, error, null, null);
+              retryStartup.set(!this.abortOnError);
+            }
+          }
+        } while ((this.startupOngoing.get() || this.retryStartup.get()) && !this.abortOnError);
+      });
   }
 
   @Override
