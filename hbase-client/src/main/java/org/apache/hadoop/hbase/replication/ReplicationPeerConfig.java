@@ -47,7 +47,7 @@ public class ReplicationPeerConfig {
   private long bandwidth = 0;
 
   public static final String HBASE_REPLICATION_PEER_BASE_CONFIG =
-    "hbase.replication.peer.default.config";
+    "hbase.replication.peer.base.config";
 
   public ReplicationPeerConfig() {
     this.peerData = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
