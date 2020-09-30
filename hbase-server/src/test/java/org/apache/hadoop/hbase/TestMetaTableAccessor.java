@@ -29,9 +29,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
@@ -67,7 +66,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Test {@link org.apache.hadoop.hbase.MetaTableAccessor}.
@@ -143,9 +141,11 @@ public class TestMetaTableAccessor {
       }
     };
     MetaTask writer = new MetaTask(connection, "writer") {
+
       @Override
-      void metaTask() throws Throwable {
-        MetaTableAccessor.addRegionToMeta(connection, regions.get(0));
+      void metaTask() throws IOException {
+        MetaTableAccessor.addRegionsToMeta(connection, Collections.singletonList(regions.get(0)),
+          1);
         LOG.info("Wrote " + regions.get(0).getEncodedName());
       }
     };
@@ -378,44 +378,6 @@ public class TestMetaTableAccessor {
   }
 
   @Test
-  public void testMetaLocationForRegionReplicasIsRemovedAtTableDeletion() throws IOException {
-    long regionId = System.currentTimeMillis();
-    RegionInfo primary = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-      .setRegionId(regionId).setReplicaId(0).build();
-
-    Table meta = MetaTableAccessor.getMetaHTable(connection);
-    try {
-      List<RegionInfo> regionInfos = Lists.newArrayList(primary);
-      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
-      MetaTableAccessor.removeRegionReplicasFromMeta(Sets.newHashSet(primary.getRegionName()), 1, 2,
-        connection);
-      Get get = new Get(primary.getRegionName());
-      Result result = meta.get(get);
-      for (int replicaId = 0; replicaId < 3; replicaId++) {
-        Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          CatalogFamilyFormat.getServerColumn(replicaId));
-        Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          CatalogFamilyFormat.getStartCodeColumn(replicaId));
-        Cell stateCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          CatalogFamilyFormat.getRegionStateColumn(replicaId));
-        Cell snCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          CatalogFamilyFormat.getServerNameColumn(replicaId));
-        if (replicaId == 0) {
-          assertNotNull(stateCell);
-        } else {
-          assertNull(serverCell);
-          assertNull(startCodeCell);
-          assertNull(stateCell);
-          assertNull(snCell);
-        }
-      }
-    } finally {
-      meta.close();
-    }
-  }
-
-  @Test
   public void testMetaLocationForRegionReplicasIsAddedAtTableCreation() throws IOException {
     long regionId = System.currentTimeMillis();
     RegionInfo primary = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
@@ -434,14 +396,6 @@ public class TestMetaTableAccessor {
     }
   }
 
-  private Map<RegionInfo, Long> getMapOfRegionsToSeqNum(RegionInfo... regions) {
-    Map<RegionInfo, Long> mids = new HashMap<>(regions.length);
-    for (RegionInfo region : regions) {
-      mids.put(region, -1L);
-    }
-    return mids;
-  }
-
   @Test
   public void testMetaScanner() throws Exception {
     LOG.info("Starting " + name.getMethodName());
@@ -454,7 +408,7 @@ public class TestMetaTableAccessor {
     UTIL.createTable(tableName, FAMILY, SPLIT_KEYS);
     Table table = connection.getTable(tableName);
     // Make sure all the regions are deployed
-    UTIL.countRows(table);
+    HBaseTestingUtility.countRows(table);
 
     ClientMetaTableAccessor.Visitor visitor = mock(ClientMetaTableAccessor.Visitor.class);
     doReturn(true).when(visitor).visit((Result) anyObject());

@@ -48,6 +48,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -543,6 +545,83 @@ public class RegionStateStore {
       now + 1);
     LOG.info("Overwritten " + regionInfos.size() + " regions to Meta");
     LOG.debug("Overwritten regions: {} ", regionInfos);
+  }
+
+  /**
+   * Update region replicas if necessary by adding new replica locations or removing unused region
+   * replicas
+   */
+  public void updateRegionReplicas(TableName tableName, int oldReplicaCount, int newReplicaCount)
+    throws IOException {
+    if (newReplicaCount < oldReplicaCount) {
+      removeRegionReplicas(tableName, oldReplicaCount, newReplicaCount);
+    } else if (newReplicaCount > oldReplicaCount) {
+      addRegionReplicas(tableName, oldReplicaCount, newReplicaCount);
+    }
+  }
+
+  private Scan getScanForUpdateRegionReplicas(TableName tableName) {
+    return MetaTableAccessor.getScanForTableName(master.getConfiguration(), tableName)
+      .addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+  }
+
+  private void removeRegionReplicas(TableName tableName, int oldReplicaCount, int newReplicaCount)
+    throws IOException {
+    Scan scan = getScanForUpdateRegionReplicas(tableName);
+    List<Delete> deletes = new ArrayList<>();
+    long now = EnvironmentEdgeManager.currentTime();
+    try (Table metaTable = getMetaTable(); ResultScanner scanner = metaTable.getScanner(scan)) {
+      for (;;) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
+        }
+        RegionInfo primaryRegionInfo = CatalogFamilyFormat.getRegionInfo(result);
+        if (primaryRegionInfo == null || primaryRegionInfo.isSplitParent()) {
+          continue;
+        }
+        Delete delete = new Delete(result.getRow());
+        for (int i = newReplicaCount; i < oldReplicaCount; i++) {
+          delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerColumn(i), now);
+          delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getSeqNumColumn(i), now);
+          delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getStartCodeColumn(i),
+            now);
+          delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getServerNameColumn(i),
+            now);
+          delete.addColumns(HConstants.CATALOG_FAMILY, CatalogFamilyFormat.getRegionStateColumn(i),
+            now);
+        }
+        deletes.add(delete);
+      }
+      debugLogMutations(deletes);
+      metaTable.delete(deletes);
+    }
+  }
+
+  private void addRegionReplicas(TableName tableName, int oldReplicaCount, int newReplicaCount)
+    throws IOException {
+    Scan scan = getScanForUpdateRegionReplicas(tableName);
+    List<Put> puts = new ArrayList<>();
+    long now = EnvironmentEdgeManager.currentTime();
+    try (Table metaTable = getMetaTable(); ResultScanner scanner = metaTable.getScanner(scan)) {
+      for (;;) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
+        }
+        RegionInfo primaryRegionInfo = CatalogFamilyFormat.getRegionInfo(result);
+        if (primaryRegionInfo == null || primaryRegionInfo.isSplitParent()) {
+          continue;
+        }
+        Put put = new Put(result.getRow(), now);
+        for (int i = oldReplicaCount; i < newReplicaCount; i++) {
+          MetaTableAccessor.addEmptyLocation(put, i);
+        }
+        puts.add(put);
+      }
+      debugLogMutations(puts);
+      metaTable.put(puts);
+    }
   }
 
   // ==========================================================================

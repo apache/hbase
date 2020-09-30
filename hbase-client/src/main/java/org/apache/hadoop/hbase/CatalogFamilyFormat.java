@@ -311,8 +311,7 @@ public class CatalogFamilyFormat {
    * @param replicaId the replicaId of the region
    * @return a byte[] for state qualifier
    */
-  @VisibleForTesting
-  static byte[] getRegionStateColumn(int replicaId) {
+  public static byte[] getRegionStateColumn(int replicaId) {
     return replicaId == 0 ? HConstants.STATE_QUALIFIER :
       Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
         String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));

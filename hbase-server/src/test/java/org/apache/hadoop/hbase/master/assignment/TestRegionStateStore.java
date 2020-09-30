@@ -394,4 +394,41 @@ public class TestRegionStateStore {
       previousQualifier = qualifier;
     }
   }
+
+  @Test
+  public void testMetaLocationForRegionReplicasIsRemovedAtTableDeletion() throws IOException {
+    long regionId = System.currentTimeMillis();
+    TableName tableName = name.getTableName();
+    RegionInfo primary = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
+
+    try (Table meta = MetaTableAccessor.getMetaHTable(UTIL.getConnection())) {
+      List<RegionInfo> regionInfos = Lists.newArrayList(primary);
+      MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(), regionInfos, 3);
+      final RegionStateStore regionStateStore =
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+      regionStateStore.updateRegionReplicas(tableName, 3, 1);
+      Get get = new Get(primary.getRegionName());
+      Result result = meta.get(get);
+      for (int replicaId = 0; replicaId < 3; replicaId++) {
+        Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          CatalogFamilyFormat.getServerColumn(replicaId));
+        Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          CatalogFamilyFormat.getStartCodeColumn(replicaId));
+        Cell stateCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          CatalogFamilyFormat.getRegionStateColumn(replicaId));
+        Cell snCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          CatalogFamilyFormat.getServerNameColumn(replicaId));
+        if (replicaId == 0) {
+          assertNotNull(stateCell);
+        } else {
+          assertNull(serverCell);
+          assertNull(startCodeCell);
+          assertNull(stateCell);
+          assertNull(snCell);
+        }
+      }
+    }
+  }
 }
