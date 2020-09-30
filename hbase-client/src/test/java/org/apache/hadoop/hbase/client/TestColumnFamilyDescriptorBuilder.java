@@ -243,4 +243,34 @@ public class TestColumnFamilyDescriptorBuilder {
     builder.setConfiguration(testConf, "");
     assertNull(builder.build().getConfigurationValue(testConf));
   }
+
+  // See CDPD-17676. Under C5 and HDP2.6 we stored IS_MOB value as a boolean,
+  // under C6 it became a string of "true" or "false".
+  @Test
+  public void testIsMobEnabled() {
+    ColumnFamilyDescriptorBuilder builder
+        = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("mob"));
+    byte[] isMob = Bytes.toBytes(ColumnFamilyDescriptorBuilder.IS_MOB);
+
+    builder.setValue(isMob, Bytes.toBytes(false));
+    Assert.assertFalse(builder.build().isMobEnabled());
+
+    builder.setValue(isMob, Bytes.toBytes(true));
+    Assert.assertTrue(builder.build().isMobEnabled());
+
+    builder.setMobEnabled(false);
+    Assert.assertFalse(builder.build().isMobEnabled());
+
+    builder.setMobEnabled(true);
+    Assert.assertTrue(builder.build().isMobEnabled());
+
+    builder.setValue(isMob, Bytes.toBytes("false"));
+    Assert.assertFalse(builder.build().isMobEnabled());
+
+    builder.setValue(isMob, Bytes.toBytes("true"));
+    Assert.assertTrue(builder.build().isMobEnabled());
+
+    builder.setValue(isMob, Bytes.toBytes("unknown"));
+    Assert.assertFalse(builder.build().isMobEnabled());
+  }
 }

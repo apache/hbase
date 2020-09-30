@@ -1307,7 +1307,15 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public boolean isMobEnabled() {
-      return getStringOrDefault(IS_MOB_BYTES, Boolean::valueOf, DEFAULT_MOB);
+      return getOrDefault(IS_MOB_BYTES, (value) -> {
+        // See CDPD-17676. Under C5 and HDP2.6 we stored IS_MOB value as a boolean,
+        // under C6 it became a string of "true" or "false".
+        if (value.length == Bytes.SIZEOF_BOOLEAN) {
+          return Bytes.toBoolean(value);
+        } else {
+          return Boolean.valueOf(Bytes.toString(value));
+        }
+      }, DEFAULT_MOB);
     }
 
     /**
