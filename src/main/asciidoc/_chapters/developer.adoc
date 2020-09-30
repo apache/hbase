@@ -2755,7 +2755,7 @@ However any substantive discussion (as with any off-list project-related discuss
 
 ==== Do not edit JIRA comments
 
-Misspellings and/or bad grammar is preferable to the disruption a JIRA comment edit causes: See the discussion at link:http://search-hadoop.com/?q=%5BReopened%5D+%28HBASE-451%29+Remove+HTableDescriptor+from+HRegionInfo&fc_project=HBase[Re:(HBASE-451) Remove HTableDescriptor from HRegionInfo]
+Misspellings and/or bad grammar is preferable to the disruption a JIRA comment edit.
 
 [[thirdparty]]
 === The hbase-thirdparty dependency and shading/relocation
