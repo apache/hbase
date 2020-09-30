@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -351,7 +353,7 @@ public class ReplicationSourceShipper extends Thread {
    * have been triggered interruption/termination prior to calling this method.
    */
   void clearWALEntryBatch() {
-    long timeout = System.currentTimeMillis() + this.shipEditsTimeout;
+    long timeout = EnvironmentEdgeManager.currentTime() + this.shipEditsTimeout;
     while(this.isAlive() || this.entryReader.isAlive()){
       try {
         if (System.currentTimeMillis() >= timeout) {
