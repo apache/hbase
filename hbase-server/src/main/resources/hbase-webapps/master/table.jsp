@@ -19,45 +19,45 @@
 --%>
 <%@page import="java.net.URLEncoder"%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
-         import="java.util.ArrayList"
-         import="java.util.Collection"
-         import="java.util.HashMap"
-         import="java.util.LinkedHashMap"
-         import="java.util.List"
-         import="java.util.Map"
-         import="java.util.TreeMap"
-         import="java.util.concurrent.TimeUnit"
-         import="org.codehaus.jettison.json.JSONArray"
-         import="org.codehaus.jettison.json.JSONArray"
-         import="org.apache.commons.lang3.StringEscapeUtils"
-         import="org.apache.hadoop.conf.Configuration"
-         import="org.apache.hadoop.hbase.HColumnDescriptor"
-         import="org.apache.hadoop.hbase.HConstants"
-         import="org.apache.hadoop.hbase.HRegionLocation"
-         import="org.apache.hadoop.hbase.HTableDescriptor"
-         import="org.apache.hadoop.hbase.RegionMetrics"
-         import="org.apache.hadoop.hbase.RegionMetricsBuilder"
-         import="org.apache.hadoop.hbase.ServerMetrics"
-         import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.Size"
-         import="org.apache.hadoop.hbase.TableName"
-         import="org.apache.hadoop.hbase.TableNotFoundException"
-         import="org.apache.hadoop.hbase.client.AsyncAdmin"
-         import="org.apache.hadoop.hbase.client.AsyncConnection"
-         import="org.apache.hadoop.hbase.client.CompactionState"
-         import="org.apache.hadoop.hbase.client.ConnectionFactory"
-         import="org.apache.hadoop.hbase.client.RegionInfo"
-         import="org.apache.hadoop.hbase.client.RegionInfoBuilder"
-         import="org.apache.hadoop.hbase.client.RegionLocator"
-         import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
-         import="org.apache.hadoop.hbase.client.Table"
-         import="org.apache.hadoop.hbase.http.InfoServer"
-         import="org.apache.hadoop.hbase.master.HMaster"
-         import="org.apache.hadoop.hbase.master.RegionState"
-         import="org.apache.hadoop.hbase.master.assignment.RegionStates"
-         import="org.apache.hadoop.hbase.quotas.QuotaSettingsFactory"
-         import="org.apache.hadoop.hbase.quotas.QuotaTableUtil" %>
+  import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
+  import="java.util.ArrayList"
+  import="java.util.Collection"
+  import="java.util.HashMap"
+  import="java.util.LinkedHashMap"
+  import="java.util.List"
+  import="java.util.Map"
+  import="java.util.TreeMap"
+  import="java.util.concurrent.TimeUnit"
+  import="org.codehaus.jettison.json.JSONArray"
+  import="org.codehaus.jettison.json.JSONArray"
+  import="org.apache.commons.lang3.StringEscapeUtils"
+  import="org.apache.hadoop.conf.Configuration"
+  import="org.apache.hadoop.hbase.HColumnDescriptor"
+  import="org.apache.hadoop.hbase.HConstants"
+  import="org.apache.hadoop.hbase.HRegionLocation"
+  import="org.apache.hadoop.hbase.HTableDescriptor"
+  import="org.apache.hadoop.hbase.RegionMetrics"
+  import="org.apache.hadoop.hbase.RegionMetricsBuilder"
+  import="org.apache.hadoop.hbase.ServerMetrics"
+  import="org.apache.hadoop.hbase.ServerName"
+  import="org.apache.hadoop.hbase.Size"
+  import="org.apache.hadoop.hbase.TableName"
+  import="org.apache.hadoop.hbase.TableNotFoundException"
+  import="org.apache.hadoop.hbase.client.AsyncAdmin"
+  import="org.apache.hadoop.hbase.client.AsyncConnection"
+  import="org.apache.hadoop.hbase.client.CompactionState"
+  import="org.apache.hadoop.hbase.client.ConnectionFactory"
+  import="org.apache.hadoop.hbase.client.RegionInfo"
+  import="org.apache.hadoop.hbase.client.RegionInfoBuilder"
+  import="org.apache.hadoop.hbase.client.RegionLocator"
+  import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
+  import="org.apache.hadoop.hbase.client.Table"
+  import="org.apache.hadoop.hbase.http.InfoServer"
+  import="org.apache.hadoop.hbase.master.HMaster"
+  import="org.apache.hadoop.hbase.master.RegionState"
+  import="org.apache.hadoop.hbase.master.assignment.RegionStates"
+  import="org.apache.hadoop.hbase.quotas.QuotaSettingsFactory"
+  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil" %>
 <%@ page import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot" %>
 <%@ page import="org.apache.hadoop.hbase.quotas.ThrottleSettings" %>
 <%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
@@ -94,7 +94,8 @@
   boolean withReplica = false;
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = !InfoServer.canUserModifyUI(request, getServletContext(), conf);
-  int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM);
+  int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
+          HConstants.DEFAULT_META_REPLICA_NUM);
   Map<String, Integer> frags = null;
   if (showFragmentation) {
     frags = FSUtils.getTableFragmentation(master);
@@ -109,7 +110,7 @@
   String stateJsonStr = "";
 
   String pageTitle;
-  if (!readOnly && action != null) {
+  if ( !readOnly && action != null ) {
     pageTitle = "HBase Master: " + StringEscapeUtils.escapeHtml4(master.getServerName().toString());
   } else {
     pageTitle = "Table: " + escaped_fqtn;
@@ -139,7 +140,7 @@
     </div>
   </div>
   <p><hr><p>
-     <%
+    <%
     if (action.equals("split")) {
       if (key != null && key.length() > 0) {
         admin.split(TableName.valueOf(fqtn), Bytes.toBytes(key));
@@ -169,7 +170,7 @@
         %> Merge request accepted. <%
     }
 %>
-     <jsp:include page="redirect.jsp" />
+  <jsp:include page="redirect.jsp" />
 </div>
 <%
 } else {
@@ -276,7 +277,7 @@
                 }
               %>
             </tr>
-            <%} %>
+            <%  } %>
             <%} %>
             </tbody>
           </table>
@@ -338,7 +339,7 @@
               <td><%= compactionProgress%>
               </td>
             </tr>
-            <%} %>
+            <%  } %>
             <%} %>
             </tbody>
           </table>
@@ -393,8 +394,7 @@
       <%  if (showFragmentation) { %>
       <tr>
         <td>Fragmentation</td>
-        <td><%= frags.get(fqtn) != null ? frags.get(fqtn).intValue() + "%" : "n/a" %>
-        </td>
+        <td><%= frags.get(fqtn) != null ? frags.get(fqtn).intValue() + "%" : "n/a" %></td>
         <td>How fragmented is the table. After a major compaction it is 0%.</td>
       </tr>
       <%  } %>
@@ -498,8 +498,7 @@
         for (HColumnDescriptor family: families) {
       %>
       <tr>
-        <td><%= StringEscapeUtils.escapeHtml4(family.getNameAsString()) %>
-        </td>
+        <td><%= StringEscapeUtils.escapeHtml4(family.getNameAsString()) %></td>
         <td>
           <table class="table table-striped">
             <tr>
@@ -559,7 +558,7 @@
               totalStoreFileSizeMB += regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
               totalCompactingCells += regionMetrics.getCompactingCellCount();
               totalCompactedCells += regionMetrics.getCompactedCellCount();
-            } else{
+            } else {
               RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
               regionsToLoad.put(regionInfo, load0);
             }
@@ -567,7 +566,7 @@
             RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
             regionsToLoad.put(regionInfo, load0);
           }
-        } else {
+        } else{
           RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
           regionsToLoad.put(regionInfo, load0);
         }
@@ -582,7 +581,7 @@
         totalCompactionProgress = String.format("%.2f", 100 *
                 ((float) totalCompactedCells / totalCompactingCells)) + "%";
       }
-      if (regions != null && regions.size() > 0) { %>
+      if(regions != null && regions.size() > 0) { %>
     <%
       List<Map.Entry<RegionInfo, RegionMetrics>> entryList = new ArrayList<>(regionsToLoad.entrySet());
       List<Map<String, String>> baseList = new ArrayList<>();
@@ -829,17 +828,15 @@
       <% }
 } catch(Exception ex) {
   for(StackTraceElement element : ex.getStackTrace()) {
-    %>
-      <%= StringEscapeUtils.escapeHtml4(element.toString()) %>
-      <%
+    %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
   }
 } finally {
   connection.close();
 }
 } // end else
 %>
-    <h2>Table Stats</h2>
-    <table class="table table-striped">
+      <h2>Table Stats</h2>
+      <table class="table table-striped">
       <tr>
         <th>Name</th>
         <th>Value</th>
@@ -927,7 +924,8 @@
     </p>
       <% } %>
 </div>
-</div> <% }
+</div>
+<% }
 } catch(TableNotFoundException e) { %>
 <div class="container-fluid content">
   <div class="row inner_header">
@@ -937,9 +935,8 @@
   </div>
   <p><hr><p>
   <p>Go <a href="javascript:history.back()">Back</a>
-</div>
-<%
-} catch (IllegalArgumentException e) { %>
+</div><%
+} catch(IllegalArgumentException e) { %>
 <div class="container-fluid content">
   <div class="row inner_header">
     <div class="page-header">
@@ -950,7 +947,8 @@
   <p>Go <a href="javascript:history.back()">Back</a>
 </div> <%
   }
-} else { // handle the case for fqtn is null or master is not initialized with error message + redirect
+}
+else { // handle the case for fqtn is null or master is not initialized with error message + redirect
 %>
 <div class="container-fluid content">
   <div class="row inner_header">
@@ -958,13 +956,11 @@
       <h1>Table not ready</h1>
     </div>
   </div>
-  <p>
-  <hr>
-  <p>
-    <jsp:include page="redirect.jsp"/>
+  <p><hr><p>
+    <jsp:include page="redirect.jsp" />
 </div>
 <% } %>
-<jsp:include page="footer.jsp"/>
+<jsp:include page="footer.jsp" />
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
 <script src="/static/js/jquery.tablesorter.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
