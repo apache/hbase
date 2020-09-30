@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 --%>
-<%@page import="java.net.URLEncoder" %>
+<%@page import="java.net.URLEncoder"%>
 <%@ page contentType="text/html;charset=UTF-8"
          import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
          import="java.util.ArrayList"
@@ -85,7 +85,7 @@
 <%
   final String ZEROKB = "0 KB";
   final String ZEROMB = "0 MB";
-  HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
+  HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
   String fqtn = request.getParameter("name");
   final String escaped_fqtn = StringEscapeUtils.escapeHtml4(fqtn);
@@ -130,7 +130,7 @@
       if (table.getTableDescriptor().getRegionReplication() > 1) {
         withReplica = true;
       }
-      if (!readOnly && action != null) {
+      if ( !readOnly && action != null ) {
 %>
 <div class="container-fluid content">
   <div class="row inner_header">
@@ -139,7 +139,7 @@
     </div>
   </div>
   <p><hr><p>
-      <%
+     <%
     if (action.equals("split")) {
       if (key != null && key.length() > 0) {
         admin.split(TableName.valueOf(fqtn), Bytes.toBytes(key));
@@ -169,7 +169,7 @@
         %> Merge request accepted. <%
     }
 %>
-    <jsp:include page="redirect.jsp"/>
+     <jsp:include page="redirect.jsp" />
 </div>
 <%
 } else {
@@ -177,13 +177,12 @@
 <div class="container-fluid content">
   <div class="row inner_header">
     <div class="page-header">
-      <h1>Table <small><%= escaped_fqtn %>
-      </small></h1>
+      <h1>Table <small><%= escaped_fqtn %></small></h1>
     </div>
   </div>
   <div class="row">
     <%
-      if (fqtn.equals(TableName.META_TABLE_NAME.getNameAsString())) {
+      if(fqtn.equals(TableName.META_TABLE_NAME.getNameAsString())) {
     %>
     <h2>Table Regions</h2>
     <div class="tabbable">
@@ -224,9 +223,8 @@
               // NOTE: Presumes meta with one or more replicas
               for (int j = 0; j < numMetaReplicas; j++) {
                 RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                  RegionInfoBuilder.FIRST_META_REGIONINFO, j);
-                ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(),
-                  j, 1);
+                        RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+                ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
                 for (int i = 0; i < 1; i++) {
                   String hostAndPort = "";
                   String readReq = "N/A";
@@ -238,8 +236,7 @@
                   if (metaLocation != null) {
                     ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
                     // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
-                    hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":"
-                      + master.getRegionServerInfoPort(metaLocation);
+                    hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
                     if (sl != null) {
                       Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
                       if (map.containsKey(meta.getRegionName())) {
@@ -253,7 +250,7 @@
                         fileCount = String.format("%,1d", load.getStoreFileCount());
                         double mSize = load.getMemStoreSize().get(Size.Unit.BYTE);
                         if (mSize > 0) {
-                          memSize = StringUtils.byteDesc((long) mSize);
+                          memSize = StringUtils.byteDesc((long)mSize);
                         }
                         locality = load.getDataLocality();
                       }
@@ -261,38 +258,25 @@
                   }
             %>
             <tr>
-              <td><%= escapeXml(meta.getRegionNameAsString()) %>
-              </td>
-              <td>
-                <a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(
-                  hostAndPort) %>
-                </a></td>
-              <td><%= readReq%>
-              </td>
-              <td><%= writeReq%>
-              </td>
-              <td><%= fileSize%>
-              </td>
-              <td><%= fileCount%>
-              </td>
-              <td><%= memSize%>
-              </td>
-              <td><%= locality%>
-              </td>
-              <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %>
-              </td>
-              <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %>
-              </td>
+              <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
+              <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+              <td><%= readReq%></td>
+              <td><%= writeReq%></td>
+              <td><%= fileSize%></td>
+              <td><%= fileCount%></td>
+              <td><%= memSize%></td>
+              <td><%= locality%></td>
+              <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
+              <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
               <%
                 if (withReplica) {
               %>
-              <td><%= meta.getReplicaId() %>
-              </td>
+              <td><%= meta.getReplicaId() %></td>
               <%
                 }
               %>
             </tr>
-            <% } %>
+            <%} %>
             <%} %>
             </tbody>
           </table>
@@ -314,9 +298,8 @@
               // NOTE: Presumes meta with one or more replicas
               for (int j = 0; j < numMetaReplicas; j++) {
                 RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                  RegionInfoBuilder.FIRST_META_REGIONINFO, j);
-                ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(),
-                  j, 1);
+                        RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+                ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
                 for (int i = 0; i < 1; i++) {
                   String hostAndPort = "";
                   long compactingCells = 0;
@@ -324,8 +307,7 @@
                   String compactionProgress = "";
                   if (metaLocation != null) {
                     ServerMetrics sl = master.getServerManager().getLoad(metaLocation);
-                    hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":"
-                      + master.getRegionServerInfoPort(metaLocation);
+                    hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
                     if (sl != null) {
                       Map<byte[], RegionMetrics> map = sl.getRegionMetrics();
                       if (map.containsKey(meta.getRegionName())) {
@@ -333,8 +315,8 @@
                         compactingCells = load.getCompactingCellCount();
                         compactedCells = load.getCompactedCellCount();
                         if (compactingCells > 0) {
-                          compactionProgress = String.format("%.2f",
-                            100 * ((float) compactedCells / compactingCells)) + "%";
+                          compactionProgress = String.format("%.2f", 100 * ((float)
+                                  compactedCells / compactingCells)) + "%";
                         }
                       }
                     }
@@ -356,15 +338,14 @@
               <td><%= compactionProgress%>
               </td>
             </tr>
-            <% } %>
+            <%} %>
             <%} %>
             </tbody>
           </table>
         </div>
       </div>
     </div>
-    <%
-    } else {
+    <%} else {
       RegionStates states = master.getAssignmentManager().getRegionStates();
       Map<RegionState.State, List<RegionInfo>> regionStates = states.getRegionByStateOfTable(table.getName());
       Map<String, RegionState.State> stateMap = new HashMap<>();
@@ -374,8 +355,7 @@
         }
       }
       RegionLocator r = master.getConnection().getRegionLocator(table.getName());
-      try {
-    %>
+      try { %>
     <h2>Table Attributes</h2>
     <table class="table table-striped">
       <tr>
@@ -385,8 +365,7 @@
       </tr>
       <tr>
         <td>Enabled</td>
-        <td><%= master.getAssignmentManager().isTableEnabled(table.getName()) %>
-        </td>
+        <td><%= master.getAssignmentManager().isTableEnabled(table.getName()) %></td>
         <td>Is the table enabled</td>
       </tr>
       <tr>
@@ -399,7 +378,7 @@
           %><%= compactionState %><%
         } catch (Exception e) {
           // Nothing really to do here
-          for (StackTraceElement element : e.getStackTrace()) {
+          for(StackTraceElement element : e.getStackTrace()) {
         %><%= StringEscapeUtils.escapeHtml4(element.toString()) %><%
           }
         %> Unknown <%
@@ -411,14 +390,14 @@
         </td>
         <td>Is the table compacting</td>
       </tr>
-      <% if (showFragmentation) { %>
+      <%  if (showFragmentation) { %>
       <tr>
         <td>Fragmentation</td>
         <td><%= frags.get(fqtn) != null ? frags.get(fqtn).intValue() + "%" : "n/a" %>
         </td>
         <td>How fragmented is the table. After a major compaction it is 0%.</td>
       </tr>
-      <% } %>
+      <%  } %>
       <%
         if (quotasEnabled) {
           TableName tn = TableName.valueOf(fqtn);
@@ -427,9 +406,8 @@
           if (quota == null || !quota.hasSpace()) {
             quota = QuotaTableUtil.getNamespaceQuota(master.getConnection(), tn.getNamespaceAsString());
             if (quota != null) {
-              masterSnapshot = master.getQuotaObserverChore()
-                .getNamespaceQuotaSnapshots()
-                .get(tn.getNamespaceAsString());
+              masterSnapshot = master.getQuotaObserverChore().getNamespaceQuotaSnapshots()
+                      .get(tn.getNamespaceAsString());
             }
           } else {
             masterSnapshot = master.getQuotaObserverChore().getTableQuotaSnapshots().get(tn);
@@ -447,28 +425,22 @@
             </tr>
             <tr>
               <td>Limit</td>
-              <td><%= StringUtils.byteDesc(spaceQuota.getSoftLimit()) %>
-              </td>
+              <td><%= StringUtils.byteDesc(spaceQuota.getSoftLimit()) %></td>
             </tr>
             <tr>
               <td>Policy</td>
-              <td><%= spaceQuota.getViolationPolicy() %>
-              </td>
+              <td><%= spaceQuota.getViolationPolicy() %></td>
             </tr>
             <%
               if (masterSnapshot != null) {
             %>
             <tr>
               <td>Usage</td>
-              <td><%= StringUtils.byteDesc(masterSnapshot.getUsage()) %>
-              </td>
+              <td><%= StringUtils.byteDesc(masterSnapshot.getUsage()) %></td>
             </tr>
             <tr>
               <td>State</td>
-              <td><%= masterSnapshot.getQuotaStatus().isInViolation()
-                ? "In Violation"
-                : "In Observance" %>
-              </td>
+              <td><%= masterSnapshot.getQuotaStatus().isInViolation() ? "In Violation" : "In Observance" %></td>
             </tr>
             <%
               }
@@ -480,8 +452,7 @@
       <%
         }
         if (quota != null && quota.hasThrottle()) {
-          List<ThrottleSettings> throttles = QuotaSettingsFactory.fromTableThrottles(table.getName(),
-            quota.getThrottle());
+          List<ThrottleSettings> throttles = QuotaSettingsFactory.fromTableThrottles(table.getName(), quota.getThrottle());
           if (throttles.size() > 0) {
       %>
       <tr>
@@ -498,14 +469,10 @@
               for (ThrottleSettings throttle : throttles) {
             %>
             <tr>
-              <td><%= throttle.getSoftLimit() %>
-              </td>
-              <td><%= throttle.getThrottleType() %>
-              </td>
-              <td><%= throttle.getTimeUnit() %>
-              </td>
-              <td><%= throttle.getQuotaScope() %>
-              </td>
+              <td><%= throttle.getSoftLimit() %></td>
+              <td><%= throttle.getThrottleType() %></td>
+              <td><%= throttle.getTimeUnit() %></td>
+              <td><%= throttle.getQuotaScope() %></td>
             </tr>
             <%
               }
@@ -528,7 +495,7 @@
       </tr>
       <%
         Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
-        for (HColumnDescriptor family : families) {
+        for (HColumnDescriptor family: families) {
       %>
       <tr>
         <td><%= StringEscapeUtils.escapeHtml4(family.getNameAsString()) %>
@@ -541,7 +508,7 @@
             </tr>
             <%
               Map<Bytes, Bytes> familyValues = family.getValues();
-              for (Bytes familyKey : familyValues.keySet()) {
+              for (Bytes familyKey: familyValues.keySet()) {
             %>
             <tr>
               <td>
@@ -592,7 +559,7 @@
               totalStoreFileSizeMB += regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
               totalCompactingCells += regionMetrics.getCompactingCellCount();
               totalCompactedCells += regionMetrics.getCompactedCellCount();
-            } else {
+            } else{
               RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
               regionsToLoad.put(regionInfo, load0);
             }
@@ -606,14 +573,14 @@
         }
       }
       if (totalSize > 0) {
-        totalSizeStr = StringUtils.byteDesc(totalSize * 1024l * 1024);
+        totalSizeStr = StringUtils.byteDesc(totalSize*1024l*1024);
       }
       if (totalMemSize > 0) {
-        totalMemSizeStr = StringUtils.byteDesc(totalMemSize * 1024l * 1024);
+        totalMemSizeStr = StringUtils.byteDesc(totalMemSize*1024l*1024);
       }
       if (totalCompactingCells > 0) {
-        totalCompactionProgress =
-          String.format("%.2f", 100 * ((float) totalCompactedCells / totalCompactingCells)) + "%";
+        totalCompactionProgress = String.format("%.2f", 100 *
+                ((float) totalCompactedCells / totalCompactingCells)) + "%";
       }
       if (regions != null && regions.size() > 0) { %>
     <%
@@ -960,9 +927,8 @@
     </p>
       <% } %>
 </div>
-</div>
-<% }
-} catch (TableNotFoundException e) { %>
+</div> <% }
+} catch(TableNotFoundException e) { %>
 <div class="container-fluid content">
   <div class="row inner_header">
     <div class="page-header">
@@ -980,12 +946,9 @@
       <h1>Table qualifier must not be empty</h1>
     </div>
   </div>
-  <p>
-  <hr>
-  <p>
+  <p><hr><p>
   <p>Go <a href="javascript:history.back()">Back</a>
-</div>
-<%
+</div> <%
   }
 } else { // handle the case for fqtn is null or master is not initialized with error message + redirect
 %>
