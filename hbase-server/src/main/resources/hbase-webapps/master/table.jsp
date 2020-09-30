@@ -29,7 +29,6 @@
   import="java.util.TreeMap"
   import="java.util.concurrent.TimeUnit"
   import="org.codehaus.jettison.json.JSONArray"
-  import="org.codehaus.jettison.json.JSONArray"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HColumnDescriptor"
@@ -57,7 +56,7 @@
   import="org.apache.hadoop.hbase.master.RegionState"
   import="org.apache.hadoop.hbase.master.assignment.RegionStates"
   import="org.apache.hadoop.hbase.quotas.QuotaSettingsFactory"
-  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil" %>
+  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"%>
 <%@ page import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot" %>
 <%@ page import="org.apache.hadoop.hbase.quotas.ThrottleSettings" %>
 <%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
@@ -562,11 +561,11 @@
               RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
               regionsToLoad.put(regionInfo, load0);
             }
-          } else {
+          } else{
             RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
             regionsToLoad.put(regionInfo, load0);
           }
-        } else{
+        } else {
           RegionMetrics load0 = getEmptyRegionMetrics(regionInfo);
           regionsToLoad.put(regionInfo, load0);
         }
