@@ -67,7 +67,7 @@ import org.junit.rules.TestRule;
 public class TestExportSnapshot {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
-  private static final Log LOG = LogFactory.getLog(TestExportSnapshot.class);
+  protected static final Log LOG = LogFactory.getLog(TestExportSnapshot.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -79,7 +79,7 @@ public class TestExportSnapshot {
   private TableName tableName;
   private Admin admin;
 
-  public static void setUpBaseConf(Configuration conf) {
+  public static void setUpBaseConf(Configuration conf) throws Exception  {
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.setInt("hbase.regionserver.msginterval", 100);
     conf.setInt("hbase.client.pause", 250);

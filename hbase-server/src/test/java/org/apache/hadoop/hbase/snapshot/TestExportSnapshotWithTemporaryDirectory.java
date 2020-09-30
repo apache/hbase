@@ -18,12 +18,14 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.UUID;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
@@ -31,24 +33,21 @@ import org.junit.experimental.categories.Category;
 @Category({MediumTests.class})
 public class TestExportSnapshotWithTemporaryDirectory extends TestExportSnapshot {
 
-  protected static String TEMP_DIR = Paths.get("").toAbsolutePath().toString() + Path.SEPARATOR
-      + UUID.randomUUID().toString();
-
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    setUpBaseConf(TEST_UTIL.getConfiguration());
+    Configuration conf = TEST_UTIL.getConfiguration();
+    TestExportSnapshot.setUpBaseConf(conf);
     TEST_UTIL.startMiniCluster(3);
+    Path rootDir = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    LOG.info("Root dir: " + rootDir);
+    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR,
+      new Path(rootDir.getParent(), ".tmpdir").toUri().toString());
     TEST_UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TestExportSnapshot.tearDownAfterClass();
-    FileUtils.deleteDirectory(new File(TEMP_DIR));
   }
 
-  public static void setUpBaseConf(Configuration conf) {
-    TestExportSnapshot.setUpBaseConf(conf);
-    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR,  "file://" + new Path(TEMP_DIR, ".tmpdir").toUri());
-  }
 }
