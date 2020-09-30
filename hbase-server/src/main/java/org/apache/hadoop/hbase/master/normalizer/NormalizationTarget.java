@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import java.util.Objects;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -33,7 +34,7 @@ class NormalizationTarget {
   private final long regionSizeMb;
 
   NormalizationTarget(final RegionInfo regionInfo, final long regionSizeMb) {
-    this.regionInfo = regionInfo;
+    this.regionInfo = Objects.requireNonNull(regionInfo);
     this.regionSizeMb = regionSizeMb;
   }
 
