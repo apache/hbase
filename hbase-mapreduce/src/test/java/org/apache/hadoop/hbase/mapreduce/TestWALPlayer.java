@@ -223,8 +223,8 @@ public class TestWALPlayer {
       } catch (SecurityException e) {
         assertEquals(-1, newSecurityManager.getExitCode());
         assertTrue(data.toString().contains("ERROR: Wrong number of arguments:"));
-        assertTrue(data.toString().contains("Usage: WALPlayer [options] <wal inputdir>" +
-            " <tables> [<tableMappings>]"));
+        assertTrue(data.toString().contains("Usage: WALPlayer [options] <WAL inputdir>" +
+            " [<tables> <tableMappings>]"));
         assertTrue(data.toString().contains("-Dwal.bulk.output=/path/for/output"));
       }
 
