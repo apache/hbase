@@ -77,9 +77,9 @@
    */
   private RegionMetrics getEmptyRegionMetrics(final RegionInfo regionInfo) {
     return RegionMetricsBuilder.toRegionMetrics(ClusterStatusProtos.RegionLoad.newBuilder().
-      setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().
-        setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).
-        setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
+            setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().
+                    setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).
+                    setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
   }
 %>
 <%
@@ -138,9 +138,7 @@
       <h1>Table action request accepted</h1>
     </div>
   </div>
-  <p>
-  <hr>
-  <p>
+  <p><hr><p>
       <%
     if (action.equals("split")) {
       if (key != null && key.length() > 0) {
@@ -900,9 +898,7 @@
       </tr>
     </table>
       <% if (!readOnly) { %>
-    <p>
-    <hr/>
-    </p>
+    <p><hr/></p>
     Actions:
     <p>
     <center>
@@ -973,9 +969,7 @@
       <h1>Table not found</h1>
     </div>
   </div>
-  <p>
-  <hr>
-  <p>
+  <p><hr><p>
   <p>Go <a href="javascript:history.back()">Back</a>
 </div>
 <%
