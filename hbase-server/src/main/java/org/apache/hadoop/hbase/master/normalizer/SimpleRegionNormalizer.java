@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import static org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils.isEmpty;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.Period;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
@@ -41,7 +43,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
  * Simple implementation of region normalizer. Logic in use:
@@ -77,7 +78,7 @@ class SimpleRegionNormalizer implements RegionNormalizer {
   private boolean mergeEnabled;
   private int minRegionCount;
   private Period mergeMinRegionAge;
-  private int mergeMinRegionSizeMb;
+  private long mergeMinRegionSizeMb;
 
   public SimpleRegionNormalizer() {
     splitEnabled = DEFAULT_SPLIT_ENABLED;
@@ -124,10 +125,10 @@ class SimpleRegionNormalizer implements RegionNormalizer {
     return Period.ofDays(settledValue);
   }
 
-  private static int parseMergeMinRegionSizeMb(final Configuration conf) {
-    final int parsedValue =
-      conf.getInt(MERGE_MIN_REGION_SIZE_MB_KEY, DEFAULT_MERGE_MIN_REGION_SIZE_MB);
-    final int settledValue = Math.max(0, parsedValue);
+  private static long parseMergeMinRegionSizeMb(final Configuration conf) {
+    final long parsedValue =
+      conf.getLong(MERGE_MIN_REGION_SIZE_MB_KEY, DEFAULT_MERGE_MIN_REGION_SIZE_MB);
+    final long settledValue = Math.max(0, parsedValue);
     if (parsedValue != settledValue) {
       warnInvalidValue(MERGE_MIN_REGION_SIZE_MB_KEY, parsedValue, settledValue);
     }
@@ -171,7 +172,7 @@ class SimpleRegionNormalizer implements RegionNormalizer {
   /**
    * Return this instance's configured value for {@value #MERGE_MIN_REGION_SIZE_MB_KEY}.
    */
-  public int getMergeMinRegionSizeMb() {
+  public long getMergeMinRegionSizeMb() {
     return mergeMinRegionSizeMb;
   }
 
@@ -198,7 +199,7 @@ class SimpleRegionNormalizer implements RegionNormalizer {
     }
 
     final NormalizeContext ctx = new NormalizeContext(table);
-    if (CollectionUtils.isEmpty(ctx.getTableRegions())) {
+    if (isEmpty(ctx.getTableRegions())) {
       return Collections.emptyList();
     }
 
@@ -251,7 +252,7 @@ class SimpleRegionNormalizer implements RegionNormalizer {
    * Also make sure tableRegions contains regions of the same table
    */
   private double getAverageRegionSizeMb(final List<RegionInfo> tableRegions) {
-    if (CollectionUtils.isEmpty(tableRegions)) {
+    if (isEmpty(tableRegions)) {
       throw new IllegalStateException(
         "Cannot calculate average size of a table without any regions.");
     }
@@ -315,35 +316,60 @@ class SimpleRegionNormalizer implements RegionNormalizer {
    * towards target average or target region count.
    */
   private List<NormalizationPlan> computeMergeNormalizationPlans(final NormalizeContext ctx) {
-    if (ctx.getTableRegions().size() < minRegionCount) {
+    if (isEmpty(ctx.getTableRegions()) || ctx.getTableRegions().size() < minRegionCount) {
       LOG.debug("Table {} has {} regions, required min number of regions for normalizer to run"
         + " is {}, not computing merge plans.", ctx.getTableName(), ctx.getTableRegions().size(),
         minRegionCount);
       return Collections.emptyList();
     }
 
-    final double avgRegionSizeMb = ctx.getAverageRegionSizeMb();
+    final long avgRegionSizeMb = (long) ctx.getAverageRegionSizeMb();
+    if (avgRegionSizeMb < mergeMinRegionSizeMb) {
+      return Collections.emptyList();
+    }
     LOG.debug("Computing normalization plan for table {}. average region size: {}, number of"
       + " regions: {}.", ctx.getTableName(), avgRegionSizeMb, ctx.getTableRegions().size());
 
-    final List<NormalizationPlan> plans = new ArrayList<>();
-    for (int candidateIdx = 0; candidateIdx < ctx.getTableRegions().size() - 1; candidateIdx++) {
-      final RegionInfo current = ctx.getTableRegions().get(candidateIdx);
-      final RegionInfo next = ctx.getTableRegions().get(candidateIdx + 1);
-      if (skipForMerge(ctx.getRegionStates(), current)
-        || skipForMerge(ctx.getRegionStates(), next)) {
-        continue;
+    // this nested loop walks the table's region chain once, looking for contiguous sequences of
+    // regions that meet the criteria for merge. The outer loop tracks the starting point of the
+    // next sequence, the inner loop looks for the end of that sequence. A single sequence becomes
+    // an instance of MergeNormalizationPlan.
+
+    final List<NormalizationPlan> plans = new LinkedList<>();
+    final List<NormalizationTarget> rangeMembers = new LinkedList<>();
+    long sumRangeMembersSizeMb;
+    int current = 0;
+    for (int rangeStart = 0;
+         rangeStart < ctx.getTableRegions().size() - 1 && current < ctx.getTableRegions().size();) {
+      // walk the region chain looking for contiguous sequences of regions that can be merged.
+      rangeMembers.clear();
+      sumRangeMembersSizeMb = 0;
+      for (current = rangeStart; current < ctx.getTableRegions().size(); current++) {
+        final RegionInfo regionInfo = ctx.getTableRegions().get(current);
+        final long regionSizeMb = getRegionSizeMB(regionInfo);
+        if (skipForMerge(ctx.getRegionStates(), regionInfo)) {
+          // this region cannot participate in a range. resume the outer loop.
+          rangeStart = Math.max(current, rangeStart + 1);
+          break;
+        }
+        if (rangeMembers.isEmpty() // when there are no range members, seed the range with whatever
+                                   // we have. this way we're prepared in case the next region is
+                                   // 0-size.
+          || regionSizeMb == 0 // always add an empty region to the current range.
+          || (regionSizeMb + sumRangeMembersSizeMb <= avgRegionSizeMb)) { // add the current region
+                                                                          // to the range when
+                                                                          // there's capacity
+                                                                          // remaining.
+          rangeMembers.add(new NormalizationTarget(regionInfo, regionSizeMb));
+          sumRangeMembersSizeMb += regionSizeMb;
+          continue;
+        }
+        // we have accumulated enough regions to fill a range. resume the outer loop.
+        rangeStart = Math.max(current, rangeStart + 1);
+        break;
       }
-      final long currentSizeMb = getRegionSizeMB(current);
-      final long nextSizeMb = getRegionSizeMB(next);
-      // always merge away empty regions when they present themselves.
-      if (currentSizeMb == 0 || nextSizeMb == 0 || currentSizeMb + nextSizeMb < avgRegionSizeMb) {
-        final MergeNormalizationPlan plan = new MergeNormalizationPlan.Builder()
-          .addTarget(current, currentSizeMb)
-          .addTarget(next, nextSizeMb)
-          .build();
-        plans.add(plan);
-        candidateIdx++;
+      if (rangeMembers.size() > 1) {
+        plans.add(new MergeNormalizationPlan.Builder().setTargets(rangeMembers).build());
       }
     }
     return plans;
