@@ -96,6 +96,12 @@ final class MergeNormalizationPlan implements NormalizationPlan {
 
     private final List<NormalizationTarget> normalizationTargets = new LinkedList<>();
 
+    public Builder setTargets(final List<NormalizationTarget> targets) {
+      normalizationTargets.clear();
+      normalizationTargets.addAll(targets);
+      return this;
+    }
+
     public Builder addTarget(final RegionInfo regionInfo, final long regionSizeMb) {
       normalizationTargets.add(new NormalizationTarget(regionInfo, regionSizeMb));
       return this;
