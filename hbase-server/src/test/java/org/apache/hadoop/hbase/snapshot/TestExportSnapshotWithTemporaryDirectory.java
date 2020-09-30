@@ -17,15 +17,9 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.UUID;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
