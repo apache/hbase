@@ -26,7 +26,9 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -153,12 +155,8 @@ public class TestCanaryTool {
       CanaryTool canary = new CanaryTool(executor, sink);
       configuration.setBoolean(HConstants.HBASE_CANARY_READ_ALL_CF, readAllCF);
       assertEquals(0, ToolRunner.run(configuration, canary, args));
-      // the test table has two column family. If readAllCF set true,
-      // we expect read count is double of region count
-      int expectedReadCount =
-          readAllCF ? 2 * sink.getTotalExpectedRegions() : sink.getTotalExpectedRegions();
       assertEquals("canary region success count should equal total expected read count",
-        expectedReadCount, sink.getReadSuccessCount());
+        sink.getTotalExpectedRegions(), sink.getReadSuccessCount());
       Map<String, List<CanaryTool.RegionTaskResult>> regionMap = sink.getRegionMap();
       assertFalse("verify region map has size > 0", regionMap.isEmpty());
 
@@ -385,5 +383,63 @@ public class TestCanaryTool {
     String baseZnode = testingUtility.getConfiguration()
       .get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
     verify(sink, atLeastOnce()).publishReadTiming(eq(baseZnode), eq(hostPort), anyLong());
+  }
+
+  @Test
+  public void testLimitedTaskCount() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    testingUtility.createMultiRegionTable(tableName, FAMILY, 100);
+    int[] taskCounts = { 10, 50, 100 };
+    ExecutorService executor = new ScheduledThreadPoolExecutor(1);
+    CanaryTool.RegionStdOutSink sink = spy(new CanaryTool.RegionStdOutSink());
+    CanaryTool canary = new CanaryTool(executor, sink);
+    String[] args = { "-writeSniffing", "-t", "10000", name.getMethodName() };
+    testingUtility.getConfiguration().setInt(HConstants.HBASE_CANARY_REGION_TASK_COUNT_MIN, 10);
+    testingUtility.getConfiguration()
+        .setBoolean(HConstants.HBASE_CANARY_REGION_TASK_COUNT_NORMALIZE_ENABLE, true);
+    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
+    verify(sink, atLeast(100)).publishReadTiming(isA(ServerName.class), isA(RegionInfo.class),
+      isA(ColumnFamilyDescriptor.class), anyLong());
+
+    for (int taskCount : taskCounts) {
+      sink = spy(new CanaryTool.RegionStdOutSink());
+      canary = new CanaryTool(executor, sink);
+      testingUtility.getConfiguration()
+          .setInt(HConstants.HBASE_CANARY_REGION_TASK_COUNT_MAX, taskCount);
+      assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, null));
+      verify(sink, atMost(taskCount)).publishReadTiming(isA(ServerName.class),
+        isA(RegionInfo.class), isA(ColumnFamilyDescriptor.class), anyLong());
+      verify(sink, atMost(taskCount)).publishWriteTiming(isA(ServerName.class),
+        isA(RegionInfo.class), isA(ColumnFamilyDescriptor.class), anyLong());
+    }
+  }
+
+  @Test
+  public void testExpandedTaskCount() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    testingUtility.createMultiRegionTable(tableName, FAMILY, 100);
+    int[] taskCounts = { 200, 500, 1000 };
+    ExecutorService executor = new ScheduledThreadPoolExecutor(1);
+    CanaryTool.RegionStdOutSink sink = spy(new CanaryTool.RegionStdOutSink());
+    CanaryTool canary = new CanaryTool(executor, sink);
+    String[] args = { "-writeSniffing", "-t", "10000", name.getMethodName() };
+    testingUtility.getConfiguration().setInt(HConstants.HBASE_CANARY_REGION_TASK_COUNT_MAX, 10000);
+    testingUtility.getConfiguration()
+        .setBoolean(HConstants.HBASE_CANARY_REGION_TASK_COUNT_NORMALIZE_ENABLE, true);
+    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
+    verify(sink, atLeast(100)).publishReadTiming(isA(ServerName.class), isA(RegionInfo.class),
+      isA(ColumnFamilyDescriptor.class), anyLong());
+
+    for (int taskCount : taskCounts) {
+      sink = spy(new CanaryTool.RegionStdOutSink());
+      canary = new CanaryTool(executor, sink);
+      testingUtility.getConfiguration()
+          .setInt(HConstants.HBASE_CANARY_REGION_TASK_COUNT_MIN, taskCount);
+      assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, null));
+      verify(sink, atLeast(taskCount)).publishReadTiming(isA(ServerName.class),
+        isA(RegionInfo.class), isA(ColumnFamilyDescriptor.class), anyLong());
+      verify(sink, atLeast(taskCount)).publishWriteTiming(isA(ServerName.class),
+        isA(RegionInfo.class), isA(ColumnFamilyDescriptor.class), anyLong());
+    }
   }
 }

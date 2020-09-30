@@ -414,7 +414,7 @@ public class CanaryTool implements Tool, Canary {
     }
 
     public int getTotalExpectedRegions() {
-      return this.regionMap.size();
+      return this.regionMap.values().stream().mapToInt(List::size).sum();
     }
   }
 
@@ -1390,6 +1390,9 @@ public class CanaryTool implements Tool, Canary {
     private int checkPeriod;
     private boolean rawScanEnabled;
     private boolean readAllCF;
+    private int maxTaskCount;
+    private int minTaskCount;
+    private boolean regionTaskCountNormalizeEnable;
 
     /**
      * This is a timeout per table. If read of each region in the table aggregated takes longer
@@ -1422,6 +1425,12 @@ public class CanaryTool implements Tool, Canary {
       this.configuredReadTableTimeouts = new HashMap<>(configuredReadTableTimeouts);
       this.configuredWriteTableTimeout = configuredWriteTableTimeout;
       this.readAllCF = conf.getBoolean(HConstants.HBASE_CANARY_READ_ALL_CF, true);
+      this.minTaskCount = conf.getInt(HConstants.HBASE_CANARY_REGION_TASK_COUNT_MIN, 1000);
+      this.minTaskCount = this.minTaskCount > 0 ? this.minTaskCount : 1000;
+      this.maxTaskCount = conf.getInt(HConstants.HBASE_CANARY_REGION_TASK_COUNT_MAX, 10000);
+      this.maxTaskCount = this.maxTaskCount > 0 ? this.maxTaskCount : 10000;
+      this.regionTaskCountNormalizeEnable =
+          conf.getBoolean(HConstants.HBASE_CANARY_REGION_TASK_COUNT_NORMALIZE_ENABLE, false);
     }
 
     private RegionStdOutSink getSink() {
@@ -1435,7 +1444,7 @@ public class CanaryTool implements Tool, Canary {
     public void run() {
       if (this.initAdmin()) {
         try {
-          List<Future<Void>> taskFutures = new LinkedList<>();
+          List<RegionTask> readTasks = new LinkedList<>();
           RegionStdOutSink regionSink = this.getSink();
           regionSink.resetFailuresCountDetails();
           if (this.targets != null && this.targets.length > 0) {
@@ -1452,14 +1461,16 @@ public class CanaryTool implements Tool, Canary {
             this.initialized = true;
             for (String table : tables) {
               LongAdder readLatency = regionSink.initializeAndGetReadLatencyForTable(table);
-              taskFutures.addAll(CanaryTool.sniff(admin, regionSink, table, executor, TaskType.READ,
+              readTasks.addAll(CanaryTool.sniff(admin, regionSink, table, executor, TaskType.READ,
                 this.rawScanEnabled, readLatency, readAllCF));
             }
           } else {
-            taskFutures.addAll(sniff(TaskType.READ, regionSink));
+            readTasks.addAll(sniff(TaskType.READ, regionSink));
           }
-
+          List<Future<Void>> taskFutures =
+              new LinkedList<>(executor.invokeAll(tryNormalizeTaskCount(readTasks)));
           if (writeSniffing) {
+            List<RegionTask> writeTasks = new LinkedList<>();
             if (EnvironmentEdgeManager.currentTime() - lastCheckTime > checkPeriod) {
               try {
                 checkWriteTableDistribution();
@@ -1471,9 +1482,10 @@ public class CanaryTool implements Tool, Canary {
             // sniff canary table with write operation
             regionSink.initializeWriteLatency();
             LongAdder writeTableLatency = regionSink.getWriteLatency();
-            taskFutures
-                .addAll(CanaryTool.sniff(admin, regionSink, admin.getDescriptor(writeTableName),
-                  executor, TaskType.WRITE, this.rawScanEnabled, writeTableLatency, readAllCF));
+            writeTasks.addAll(tryNormalizeTaskCount(
+              CanaryTool.sniff(admin, regionSink, admin.getDescriptor(writeTableName), executor,
+                TaskType.WRITE, this.rawScanEnabled, writeTableLatency, readAllCF)));
+            taskFutures.addAll(executor.invokeAll(writeTasks));
           }
 
           for (Future<Void> future : taskFutures) {
@@ -1522,6 +1534,46 @@ public class CanaryTool implements Tool, Canary {
       this.done = true;
     }
 
+    private List<RegionTask> tryNormalizeTaskCount(List<RegionTask> taskList) {
+      if (regionTaskCountNormalizeEnable) {
+        LOG.info("Region task count normalize is enable");
+        return normalizeTaskCount(taskList);
+      }
+      return taskList;
+    }
+
+    /**
+     * If tasks count larger than "hbase.canary.region.monitor.task.count.max", we will randomly
+     * trim tasks for each table, according to the raito of the table region count in whole tasks
+     * region count. If tasks count less than "hbase.canary.region.monitor.task.count.min", we will
+     * repeat fill tasks
+     * @return taskList after normalized
+     */
+    private List<RegionTask> normalizeTaskCount(List<RegionTask> taskList) {
+      if (taskList.size() > maxTaskCount) {
+        List<RegionTask> limitedCountTasks = new ArrayList();
+        double ratio = 1.0 * maxTaskCount / taskList.size();
+        Map<TableName, List<RegionTask>> table2RegionTaskMap = new HashMap();
+        taskList.forEach(task -> table2RegionTaskMap
+          .computeIfAbsent(task.region.getTable(), k -> new ArrayList<>()).add(task));
+
+        table2RegionTaskMap.values().forEach(regionTasks -> {
+          int count = (int) (ratio * regionTasks.size());
+          //at least one region task for each table
+          count = count > 0 ? count : 1;
+          Collections.shuffle(regionTasks);
+          limitedCountTasks.addAll(regionTasks.subList(0, count));
+        });
+        return limitedCountTasks;
+      } else if (taskList.size() < minTaskCount && taskList.size() > 0) {
+        List<RegionTask> expandTaskList = new ArrayList<>();
+        while (expandTaskList.size() < minTaskCount) {
+          expandTaskList.addAll(taskList);
+        }
+        return expandTaskList;
+      }
+      return taskList;
+    }
     /**
      * @return List of tables to use in test.
      */
@@ -1569,20 +1621,20 @@ public class CanaryTool implements Tool, Canary {
     /*
      * Canary entry point to monitor all the tables.
      */
-    private List<Future<Void>> sniff(TaskType taskType, RegionStdOutSink regionSink)
+    private List<RegionTask> sniff(TaskType taskType, RegionStdOutSink regionSink)
         throws Exception {
       LOG.debug("Reading list of tables");
-      List<Future<Void>> taskFutures = new LinkedList<>();
+      List<RegionTask> tasks = new LinkedList<>();
       for (TableDescriptor td: admin.listTableDescriptors()) {
         if (admin.tableExists(td.getTableName()) && admin.isTableEnabled(td.getTableName()) &&
             (!td.getTableName().equals(writeTableName))) {
           LongAdder readLatency =
               regionSink.initializeAndGetReadLatencyForTable(td.getTableName().getNameAsString());
-          taskFutures.addAll(CanaryTool.sniff(admin, sink, td, executor, taskType,
+          tasks.addAll(CanaryTool.sniff(admin, sink, td, executor, taskType,
             this.rawScanEnabled, readLatency, readAllCF));
         }
       }
-      return taskFutures;
+      return tasks;
     }
 
     private void checkWriteTableDistribution() throws IOException {
@@ -1644,7 +1696,7 @@ public class CanaryTool implements Tool, Canary {
    * Canary entry point for specified table.
    * @throws Exception exception
    */
-  private static List<Future<Void>> sniff(final Admin admin, final Sink sink, String tableName,
+  private static List<RegionTask> sniff(final Admin admin, final Sink sink, String tableName,
       ExecutorService executor, TaskType taskType, boolean rawScanEnabled, LongAdder readLatency,
       boolean readAllCF) throws Exception {
     LOG.debug("Checking table is enabled and getting table descriptor for table {}", tableName);
@@ -1660,7 +1712,7 @@ public class CanaryTool implements Tool, Canary {
   /*
    * Loops over regions of this table, and outputs information about the state.
    */
-  private static List<Future<Void>> sniff(final Admin admin, final Sink sink,
+  private static List<RegionTask> sniff(final Admin admin, final Sink sink,
       TableDescriptor tableDesc, ExecutorService executor, TaskType taskType,
       boolean rawScanEnabled, LongAdder rwLatency, boolean readAllCF) throws Exception {
     LOG.debug("Reading list of regions for table {}", tableDesc.getTableName());
@@ -1680,7 +1732,7 @@ public class CanaryTool implements Tool, Canary {
           Map<String, List<RegionTaskResult>> regionMap = ((RegionStdOutSink) sink).getRegionMap();
           regionMap.put(region.getRegionNameAsString(), new ArrayList<RegionTaskResult>());
         }
-        return executor.invokeAll(tasks);
+        return tasks;
       }
     } catch (TableNotFoundException e) {
       return Collections.EMPTY_LIST;
