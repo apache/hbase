@@ -587,14 +587,12 @@ public class ReplicationSource implements ReplicationSourceInterface {
       Threads.shutdown(initThread, this.sleepForRetries);
     }
     Collection<ReplicationSourceShipper> workers = workerThreads.values();
-    for (ReplicationSourceShipper worker : workers) {
-      worker.stopWorker();
-      if(worker.entryReader != null) {
-        worker.entryReader.setReaderRunning(false);
-      }
-    }
 
     for (ReplicationSourceShipper worker : workers) {
+      worker.stopWorker();
+      if (worker.entryReader != null) {
+        worker.entryReader.setReaderRunning(false);
+      }
       if (worker.isAlive() || worker.entryReader.isAlive()) {
         try {
           // Wait worker to stop
@@ -612,6 +610,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
           worker.entryReader.interrupt();
         }
       }
+      //If worker is already stopped but there was still entries batched,
+      //we need to clear buffer used for non processed entries
+      worker.clearWALEntryBatch();
     }
 
     if (this.replicationEndpoint != null) {
