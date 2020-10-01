@@ -77,10 +77,15 @@ Options:
                If none specified, runs tag, then publish-dist, and then publish-release.
                'publish-snapshot' is also an allowed, less used, option.
   -x           debug. do less clean up. (env file, gpg forwarding on mac)
-  -i [ignore-svn-ci]
-               ignores svn checkin, specifically used in the presence of -f "force" if user
-               of the script doesn't have svn checkin access, all artifacts will be present under
-               /output dir and not checked-in to svn repo.
+  -u [upload-to-apache-public-resource]
+               ignores svn checkin and instead tries to upload RC artifacts to given public apache
+               resource location (https://home.apache.org). RC artifacts are uploaded using scp so
+               make sure you have setup password-less ssh to public resources
+               (home.apache.org / people.apache.org) by copying your localhost ssh public key to
+               remote location's /home/{APACHE_USERNAME}/.ssh/authorized_keys
+               Example usage:
+               ./do-release-docker.sh -d location -u home.apache.org:/home/{APACHE_USERNAME}/public_html/2.3.0RC0/
+               which represent destination as https://home.apache.org/~{APACHE_USERNAME}/2.3.0RC0/
 EOF
   exit 1
 }
@@ -90,7 +95,7 @@ IMGTAG=latest
 JAVA=
 RELEASE_STEP=
 GIT_REPO=
-while getopts "d:fhj:p:r:s:t:x:i" opt; do
+while getopts "d:u:fhj:p:r:s:t:x" opt; do
   case $opt in
     d) WORKDIR="$OPTARG" ;;
     f) DRY_RUN=0 ;;
@@ -100,7 +105,7 @@ while getopts "d:fhj:p:r:s:t:x:i" opt; do
     r) GIT_REPO="$OPTARG" ;;
     s) RELEASE_STEP="$OPTARG" ;;
     x) DEBUG=1 ;;
-    i) IGNORE_SVN_CI=1 ;;
+    u) UPLOAD_TO_RESOURCE="$OPTARG" ;;
     h) usage ;;
     ?) error "Invalid option. Run with -h for help." ;;
   esac
@@ -227,7 +232,7 @@ ASF_PASSWORD=$ASF_PASSWORD
 RELEASE_STEP=$RELEASE_STEP
 API_DIFF_TAG=$API_DIFF_TAG
 HOST_OS=$HOST_OS
-IGNORE_SVN_CI=$IGNORE_SVN_CI
+UPLOAD_TO_RESOURCE=$UPLOAD_TO_RESOURCE
 EOF
 
 JAVA_MOUNT=()
@@ -344,6 +349,7 @@ cmd=(docker run --rm -ti \
   "${JAVA_MOUNT[@]}" \
   "${GIT_REPO_MOUNT[@]}" \
   "${GPG_PROXY_MOUNT[@]}" \
+  --mount "type=bind,src=${HOME}/.ssh,dst=/home/${USER}/.ssh" \
   "org.apache.hbase/hbase-rm:$IMGTAG")
 echo "${cmd[*]}"
 "${cmd[@]}"

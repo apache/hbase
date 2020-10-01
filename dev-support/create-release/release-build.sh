@@ -243,14 +243,20 @@ if [[ "$1" == "publish-dist" ]]; then
 
   svn add "$svn_target/${DEST_DIR_NAME}"
 
-  if is_svn_ci_disabled; then
-    mv "$svn_target/${DEST_DIR_NAME}" "${svn_target}_${DEST_DIR_NAME}.dist"
-    echo "Ignored svn ci: svn-managed 'dist' directory with release tarballs, CHANGES.md and RELEASENOTES.md available as $(pwd)/${svn_target}_${DEST_DIR_NAME}.dist"
-    rm -rf "$svn_target"
-  else
+  if upload_to_svn; then
     cd "$svn_target"
     svn ci --username "$ASF_USERNAME" --password "$ASF_PASSWORD" -m"Apache ${PROJECT} $package_version_name" --no-auth-cache
     cd ..
+    rm -rf "$svn_target"
+  elif upload_to_user_resource; then
+    cd "$svn_target/${DEST_DIR_NAME}"
+    scp * $UPLOAD_TO_RESOURCE
+    cd ..
+    cd ..
+    rm -rf "$svn_target"
+  else
+    mv "$svn_target/${DEST_DIR_NAME}" "${svn_target}_${DEST_DIR_NAME}.dist"
+    echo "Ignored svn ci: svn-managed 'dist' directory with release tarballs, CHANGES.md and RELEASENOTES.md available as $(pwd)/${svn_target}_${DEST_DIR_NAME}.dist"
     rm -rf "$svn_target"
   fi
 
