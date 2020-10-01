@@ -41,6 +41,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
+import java.util.Map;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestColumnFamilyDescriptorBuilder {
@@ -192,5 +193,35 @@ public class TestColumnFamilyDescriptorBuilder {
     ttl = "43282800 SECONDS (500 Days 23 hours)";
     builder.setTimeToLive(ttl);
     Assert.assertEquals(43282800, builder.build().getTimeToLive());
+  }
+
+  /**
+   * Test for verifying the ColumnFamilyDescriptorBuilder's default values so that backward
+   * compatibility with hbase-1.x can be mantained (see HBASE-24981).
+   */
+  @Test
+  public void testDefaultBuilder() {
+    final Map<String, String> defaultValueMap = ColumnFamilyDescriptorBuilder.getDefaultValues();
+    assertEquals(defaultValueMap.size(), 11);
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.BLOOMFILTER),
+      BloomType.ROW.toString());
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.REPLICATION_SCOPE), "0");
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.MAX_VERSIONS), "1");
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.MIN_VERSIONS), "0");
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.COMPRESSION),
+      Compression.Algorithm.NONE.toString());
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.TTL),
+      Integer.toString(Integer.MAX_VALUE));
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.BLOCKSIZE),
+      Integer.toString(64 * 1024));
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.IN_MEMORY),
+      Boolean.toString(false));
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.BLOCKCACHE),
+      Boolean.toString(true));
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.KEEP_DELETED_CELLS),
+      KeepDeletedCells.FALSE.toString());
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING),
+      DataBlockEncoding.NONE.toString());
+
   }
 }
