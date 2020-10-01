@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface MetricsTableWrapperAggregate {
-  public String UNDERSCORE = "_";
+  public String HASH = "#";
   /**
    * Get the number of read requests that have been issued against this table
    */
