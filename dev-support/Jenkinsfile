@@ -17,7 +17,7 @@
 pipeline {
   agent {
     node {
-      label 'Hadoop'
+      label 'hbase'
     }
   }
   triggers {
@@ -124,7 +124,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
         stage ('yetus general check') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           environment {
@@ -195,7 +195,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
         stage ('yetus jdk7 checks') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           when {
@@ -277,7 +277,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
         stage ('yetus jdk8 hadoop2 checks') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           environment {
@@ -356,7 +356,7 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
         stage ('yetus jdk8 hadoop3 checks') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           when {
