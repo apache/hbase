@@ -286,7 +286,7 @@ public class MasterQuotaManager implements RegionStateListener {
             QuotaTableUtil.getCurrentSnapshotFromQuotaTable(masterServices.getConnection(), table);
         QuotaUtil.deleteTableQuota(masterServices.getConnection(), table);
         // Removes the tableName from the current state in QuotaObserverChore
-        QuotaObserverChore quotaChore = ((HMaster)masterServices).getQuotaObserverChore();
+        QuotaObserverChore quotaChore = masterServices.getQuotaObserverChore();
         quotaChore.removeTableQuotasnapshot(table);
         if (currSnapshotOfTable != null) {
           SpaceQuotaStatus quotaStatus = currSnapshotOfTable.getQuotaStatus();

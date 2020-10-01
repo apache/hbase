@@ -3776,6 +3776,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     return lockManager;
   }
 
+  @Override
   public QuotaObserverChore getQuotaObserverChore() {
     return this.quotaObserverChore;
   }

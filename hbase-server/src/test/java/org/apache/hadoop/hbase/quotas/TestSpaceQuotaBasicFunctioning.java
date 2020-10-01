@@ -286,6 +286,8 @@ public class TestSpaceQuotaBasicFunctioning {
       fail("Expected that invoking the compaction should throw an Exception");
     } catch (DoNotRetryIOException e) {
       //Expected
+      assertTrue(e.getMessage()
+        .contains("Compactions on this region are disabled due to a space quota violation"));
     }
   }
 
