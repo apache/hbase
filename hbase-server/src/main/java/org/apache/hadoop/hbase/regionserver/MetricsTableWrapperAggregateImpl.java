@@ -94,7 +94,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
                   (long) store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount();
             }
             mt.storeCount += 1;
-            tempKey = tbl.getNameAsString() + UNDERSCORE + familyName;
+            tempKey = tbl.getNameAsString() + HASH + familyName;
             Long tempVal = mt.perStoreMemstoreOnlyReadCount.get(tempKey);
             if (tempVal == null) {
               tempVal = 0L;
