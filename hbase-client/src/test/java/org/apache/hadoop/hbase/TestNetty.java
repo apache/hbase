@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -74,6 +75,14 @@ public class TestNetty {
     } catch (Throwable t) {
       LOG.warn("bind failed", t);
     }
+    try {
+      LOG.info("bind {} using server socket", bindAddress);
+      ServerSocket socket = new ServerSocket();
+      socket.bind(bindAddress);
+      socket.close();
+    } catch (Throwable t) {
+      LOG.warn("bind failed", t);
+    }
     InetSocketAddress local = new InetSocketAddress("127.0.0.1", 0);
     LOG.info("local bind address is {}", local);
     try {
@@ -89,6 +98,14 @@ public class TestNetty {
       LOG.info("local server channel is {}", serverChannel);
       Thread.sleep(1000);
       serverChannel.close();
+    } catch (Throwable t) {
+      LOG.warn("bind failed", t);
+    }
+    try {
+      LOG.info("bind {} using server socket", local);
+      ServerSocket socket = new ServerSocket();
+      socket.bind(local);
+      socket.close();
     } catch (Throwable t) {
       LOG.warn("bind failed", t);
     }
