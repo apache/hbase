@@ -55,18 +55,40 @@ public class TestNetty {
       new InetSocketAddress(conf.get("hbase.master.ipc.address", hostname), port);
     LOG.info("bind address is {}", bindAddress);
     EpollEventLoopGroup group = new EpollEventLoopGroup();
-    Channel serverChannel = new ServerBootstrap().group(group)
-      .channel(EpollServerSocketChannel.class).childHandler(new ChannelInitializer<Channel>() {
+    try {
+      Channel serverChannel = new ServerBootstrap().group(group)
+        .channel(EpollServerSocketChannel.class).childHandler(new ChannelInitializer<Channel>() {
 
-        @Override
-        protected void initChannel(Channel ch) throws Exception {
-          LOG.info("connected {}", ch);
-          ch.close();
-        }
-      }).bind(bindAddress).sync().channel();
-    LOG.info("server channel is {}", serverChannel);
-    Thread.sleep(1000);
-    serverChannel.close();
+          @Override
+          protected void initChannel(Channel ch) throws Exception {
+            LOG.info("connected {}", ch);
+            ch.close();
+          }
+        }).bind(bindAddress).sync().channel();
+      LOG.info("server channel is {}", serverChannel);
+      Thread.sleep(1000);
+      serverChannel.close();
+    } catch (Throwable t) {
+      LOG.warn("bind failed", t);
+    }
+    InetSocketAddress local = new InetSocketAddress("127.0.0.1", 0);
+    LOG.info("local bind address is {}", local);
+    try {
+      Channel serverChannel = new ServerBootstrap().group(group)
+        .channel(EpollServerSocketChannel.class).childHandler(new ChannelInitializer<Channel>() {
+
+          @Override
+          protected void initChannel(Channel ch) throws Exception {
+            LOG.info("connected {}", ch);
+            ch.close();
+          }
+        }).bind(bindAddress).sync().channel();
+      LOG.info("local server channel is {}", serverChannel);
+      Thread.sleep(1000);
+      serverChannel.close();
+    } catch (Throwable t) {
+      LOG.warn("bind failed", t);
+    }
     group.shutdownGracefully();
   }
 }
