@@ -21,12 +21,15 @@ import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTi
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.atomic.LongAccumulator;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -330,5 +333,54 @@ public class ReplicationSourceShipper extends Thread {
       Thread.currentThread().interrupt();
     }
     return sleepMultiplier < maxRetriesMultiplier;
+  }
+
+  /**
+   * Attempts to properly update <code>ReplicationSourceManager.totalBufferUser</code>,
+   * in case there were unprocessed entries batched by the reader to the shipper,
+   * but the shipper didn't manage to ship those because the replication source is being terminated.
+   * In that case, it iterates through the batched entries and decrease the pending
+   * entries size from <code>ReplicationSourceManager.totalBufferUser</code>
+   * <p/>
+   * <b>NOTES</b>
+   * 1) This method should only be called upon replication source termination.
+   * It blocks waiting for both shipper and reader threads termination,
+   * to make sure no race conditions
+   * when updating <code>ReplicationSourceManager.totalBufferUser</code>.
+   *
+   * 2) It <b>does not</b> attempt to terminate reader and shipper threads. Those <b>must</b>
+   * have been triggered interruption/termination prior to calling this method.
+   */
+  void clearWALEntryBatch() {
+    long timeout = EnvironmentEdgeManager.currentTime() + this.shipEditsTimeout;
+    while(this.isAlive() || this.entryReader.isAlive()){
+      try {
+        if (System.currentTimeMillis() >= timeout) {
+          LOG.warn("Interrupting source thread for peer {} without cleaning buffer usage "
+            + "because clearWALEntryBatch method timed out whilst waiting reader/shipper "
+            + "thread to stop.", this.source.getPeerId());
+          Thread.currentThread().interrupt();
+        } else {
+          // Wait both shipper and reader threads to stop
+          Thread.sleep(this.sleepForRetries);
+        }
+      } catch (InterruptedException e) {
+        LOG.warn("{} Interrupted while waiting {} to stop on clearWALEntryBatch: {}",
+          this.source.getPeerId(), this.getName(), e);
+        Thread.currentThread().interrupt();
+      }
+    }
+    LongAccumulator totalToDecrement = new LongAccumulator((a,b) -> a + b, 0);
+    entryReader.entryBatchQueue.forEach(w -> {
+      entryReader.entryBatchQueue.remove(w);
+      w.getWalEntries().forEach(e -> {
+        long entrySizeExcludeBulkLoad = entryReader.getEntrySizeExcludeBulkLoad(e);
+        totalToDecrement.accumulate(entrySizeExcludeBulkLoad);
+      });
+    });
+
+    LOG.trace("Decrementing totalBufferUsed by {}B while stopping Replication WAL Readers.",
+      totalToDecrement.longValue());
+    source.getSourceManager().getTotalBufferUsed().addAndGet(-totalToDecrement.longValue());
   }
 }
