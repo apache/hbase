@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.apache.commons.lang3.StringUtils.isNumeric;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -418,6 +420,36 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return p != null && p.endsWith(META_WAL_PROVIDER_ID);
   }
 
+  /**
+   * Comparator used to compare WAL files together based on their start time.
+   * Just compares start times and nothing else.
+   */
+  public static class WALStartTimeComparator implements Comparator<Path> {
+    @Override
+    public int compare(Path o1, Path o2) {
+      return Long.compare(getTS(o1), getTS(o2));
+    }
+
+    /**
+     * Split a path to get the start time
+     * For example: 10.20.20.171%3A60020.1277499063250
+     * Could also be a meta WAL which adds a '.meta' suffix or a synchronous replication WAL
+     * which adds a '.syncrep' suffix. Check.
+     * @param p path to split
+     * @return start time
+     */
+    private static long getTS(Path p) {
+      String name = p.getName();
+      String [] splits = name.split("\\.");
+      String ts = splits[splits.length - 1];
+      if (!isNumeric(ts)) {
+        // Its a '.meta' or a '.syncrep' suffix.
+        ts = splits[splits.length - 2];
+      }
+      return Long.parseLong(ts);
+    }
+  }
+
   public static boolean isArchivedLogFile(Path p) {
     String oldLog = Path.SEPARATOR + HConstants.HREGION_OLDLOGDIR_NAME + Path.SEPARATOR;
     return p.toString().contains(oldLog);
@@ -544,9 +576,5 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    */
   public static String getWALPrefixFromWALName(String name) {
     return getWALNameGroupFromWALName(name, 1);
-  }
-
-  public static long getWALStartTimeFromWALName(String name) {
-    return Long.parseLong(getWALNameGroupFromWALName(name, 2));
   }
 }
