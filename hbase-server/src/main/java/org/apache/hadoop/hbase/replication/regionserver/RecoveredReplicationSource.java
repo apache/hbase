@@ -64,8 +64,8 @@ public class RecoveredReplicationSource extends ReplicationSource {
 
   public void locateRecoveredPaths(PriorityBlockingQueue<Path> queue) throws IOException {
     boolean hasPathChanged = false;
-    PriorityBlockingQueue<Path> newPaths =
-        new PriorityBlockingQueue<Path>(queueSizePerGroup, new LogsComparator());
+    PriorityBlockingQueue<Path> newPaths = new PriorityBlockingQueue<Path>(queueSizePerGroup,
+      new AbstractFSWALProvider.WALStartTimeComparator());
     pathsLoop: for (Path path : queue) {
       if (fs.exists(path)) { // still in same location, don't need to do anything
         newPaths.add(path);
