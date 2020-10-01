@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -44,6 +45,8 @@ public class TestNetty {
 
   @Test
   public void test() throws Exception {
+    LOG.info("Free space for /: {}", new File("/").getFreeSpace());
+    LOG.info("Free space for /home/jenkins: {}", new File("/home/jenkins").getFreeSpace());
     Configuration conf = HBaseConfiguration.create();
     String hostname = DNS.getHostname(conf, DNS.ServerType.MASTER);
     LOG.info("hostname is {}", hostname);
