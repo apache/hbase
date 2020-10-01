@@ -17,7 +17,7 @@
 pipeline {
   agent {
     node {
-      label 'Hadoop'
+      label 'hbase'
     }
   }
   triggers {
@@ -192,7 +192,7 @@ pipeline {
         stage ('yetus general check') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           environment {
@@ -257,7 +257,7 @@ pipeline {
         stage ('yetus jdk7 checks') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           when {
@@ -338,7 +338,7 @@ pipeline {
         stage ('yetus jdk8 hadoop2 checks') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           when {
@@ -419,7 +419,7 @@ pipeline {
         stage ('yetus jdk8 hadoop3 checks') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           when {
@@ -504,7 +504,7 @@ pipeline {
         stage ('yetus jdk11 hadoop3 checks') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           when {
