@@ -337,7 +337,7 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
       for (Entry<String, Long> entry : metricMap.entrySet()) {
         // append 'store' and its name to the metric
         mrb.addGauge(Interns.info(this.tableNamePrefixPart1 + _COLUMNFAMILY
-            + entry.getKey().split(MetricsTableWrapperAggregate.UNDERSCORE)[1]
+            + entry.getKey().split(MetricsTableWrapperAggregate.HASH)[1]
             + this.tableNamePrefixPart2 + metricName,
           metricDesc), entry.getValue());
       }
