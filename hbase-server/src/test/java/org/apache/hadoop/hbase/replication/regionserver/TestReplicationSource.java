@@ -131,7 +131,7 @@ public class TestReplicationSource {
     String queueId = "qid";
     RegionServerServices rss =
       TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
-    rs.init(conf, null, manager, mockPeer, rss, queueId, null,
+    rs.init(conf, null, manager, null, mockPeer, rss, queueId, null,
       p -> OptionalLong.empty(), new MetricsSource(queueId));
     try {
       rs.startup();
@@ -169,7 +169,7 @@ public class TestReplicationSource {
     String queueId = "qid";
     RegionServerServices rss =
       TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
-    rs.init(conf, null, manager, mockPeer, rss, queueId,
+    rs.init(conf, null, manager, null, mockPeer, rss, queueId,
       uuid, p -> OptionalLong.empty(), new MetricsSource(queueId));
     try {
       rs.startup();
@@ -257,7 +257,7 @@ public class TestReplicationSource {
       testConf.setInt("replication.source.maxretriesmultiplier", 1);
       ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
       Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
-      source.init(testConf, null, manager, mockPeer, null, "testPeer",
+      source.init(testConf, null, manager, null, mockPeer, null, "testPeer",
         null, p -> OptionalLong.empty(), null);
       ExecutorService executor = Executors.newSingleThreadExecutor();
       Future<?> future = executor.submit(
@@ -466,7 +466,7 @@ public class TestReplicationSource {
     String queueId = "qid";
     RegionServerServices rss =
       TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
-    rs.init(conf, null, manager, mockPeer, rss, queueId, null,
+    rs.init(conf, null, manager, null, mockPeer, rss, queueId, null,
       p -> OptionalLong.empty(), new MetricsSource(queueId));
     try {
       rs.startup();
@@ -503,7 +503,7 @@ public class TestReplicationSource {
     String queueId = "qid";
     RegionServerServices rss =
       TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
-    rs.init(conf, null, manager, mockPeer, rss, queueId, null,
+    rs.init(conf, null, manager, null, mockPeer, rss, queueId, null,
       p -> OptionalLong.empty(), new MetricsSource(queueId));
     try {
       rs.startup();

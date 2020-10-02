@@ -50,8 +50,8 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -78,8 +78,8 @@ public class TestMetaRegionReplicaReplicationEndpoint {
   @Rule
   public TestName name = new TestName();
 
-  @BeforeClass
-  public static void beforeClass() throws Exception {
+  @Before
+  public void before() throws Exception {
     Configuration conf = HTU.getConfiguration();
     conf.setFloat("hbase.regionserver.logroll.multiplier", 0.0003f);
     conf.setInt("replication.source.size.capacity", 10240);
@@ -101,8 +101,8 @@ public class TestMetaRegionReplicaReplicationEndpoint {
       () -> HTU.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size() >= NB_SERVERS);
   }
 
-  @AfterClass
-  public static void afterClass() throws Exception {
+  @After
+  public void after() throws Exception {
     HTU.shutdownMiniCluster();
   }
 
@@ -167,19 +167,6 @@ public class TestMetaRegionReplicaReplicationEndpoint {
       // Try delete.
       HTU.deleteTableIfAny(table.getName());
       verifyDeletedReplication(TableName.META_TABLE_NAME, NB_SERVERS, table.getName());
-    }
-  }
-
-  /**
-   * Test meta region replica replication. Create some tables and see if replicas pick up the
-   * additions.
-   */
-  @Test
-  public void testHBaseMetaReplicatesOneRow() throws Exception {
-    waitForMetaReplicasToOnline();
-    try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName()),
-        HConstants.CATALOG_FAMILY)) {
-      verifyReplication(TableName.META_TABLE_NAME, NB_SERVERS, getMetaCells(table.getName()));
     }
   }
 

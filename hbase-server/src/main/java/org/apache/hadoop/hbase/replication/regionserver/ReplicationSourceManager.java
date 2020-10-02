@@ -131,7 +131,15 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final ConcurrentMap<String, ReplicationSourceInterface> sources;
   // List of all the sources we got from died RSs
   private final List<ReplicationSourceInterface> oldsources;
+
+  /**
+   * Storage for queues that need persistance; e.g. Replication state so can be recovered
+   * after a crash. queueStorage upkeep is spread about this class and passed
+   * to ReplicationSource instances for these to do updates themselves. Not all ReplicationSource
+   * instances keep state.
+   */
   private final ReplicationQueueStorage queueStorage;
+
   private final ReplicationTracker replicationTracker;
   private final ReplicationPeers replicationPeers;
   // UUID for this cluster
@@ -372,7 +380,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     WALFileLengthProvider walFileLengthProvider =
       this.walFactory.getWALProvider() != null?
         this.walFactory.getWALProvider().getWALFileLengthProvider() : p -> OptionalLong.empty();
-    src.init(conf, fs, this, replicationPeer, server, queueId, clusterId,
+    src.init(conf, fs, this, queueStorage, replicationPeer, server, queueId, clusterId,
       walFileLengthProvider, new MetricsSource(queueId));
     return src;
   }
@@ -1209,8 +1217,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
       this.clusterId.toString(), "meta_" + ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
     final ReplicationSourceInterface crs = new CatalogReplicationSource();
-    crs.init(conf, fs, this, peer, server, peer.getId(), clusterId,
-      walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
+    crs.init(conf, fs, this, new NoopReplicationQueueStorage(), peer, server, peer.getId(),
+      clusterId, walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
     if (addListener) {
       walProvider.addWALActionsListener(new WALActionsListener() {
         @Override

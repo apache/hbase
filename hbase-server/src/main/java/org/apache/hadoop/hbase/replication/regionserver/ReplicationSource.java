@@ -198,7 +198,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
    */
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationPeer replicationPeer, Server server,
+      ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
       String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
       MetricsSource metrics) throws IOException {
     this.server = server;
@@ -211,6 +211,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.maxRetriesMultiplier =
         this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5 minutes @ 1 sec per
     this.queueSizePerGroup = this.conf.getInt("hbase.regionserver.maxlogs", 32);
+    this.queueStorage = queueStorage;
     this.replicationPeer = replicationPeer;
     this.manager = manager;
     this.fs = fs;
@@ -844,7 +845,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return server;
   }
 
-  ReplicationQueueStorage getQueueStorage() {
+  @Override
+  public ReplicationQueueStorage getReplicationQueueStorage() {
     return queueStorage;
   }
 

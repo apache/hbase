@@ -37,6 +37,7 @@ class CatalogReplicationSource extends ReplicationSource {
   @Override
   public void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
     // Noop. This implementation does not persist state to backing storage nor does it keep its
-    // WALs in a general map up in ReplicationSourceManager from it has to help maintain.
+    // WALs in a general map up in ReplicationSourceManager so just skip calling through to the
+    // default implemenentation.
   }
 }

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -49,8 +50,9 @@ public interface ReplicationSourceInterface {
    * @param server the server for this region server
    */
   void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationPeer replicationPeer, Server server, String queueId, UUID clusterId,
-      WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException;
+      ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
+      String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
+      MetricsSource metrics) throws IOException;
 
   /**
    * Add a log to the list of logs to replicate
@@ -203,11 +205,17 @@ public interface ReplicationSourceInterface {
   }
 
   /**
+   * @return The instance of queueStorage used by this ReplicationSource.
+   */
+  ReplicationQueueStorage getReplicationQueueStorage();
+
+  /**
    * Log the current position to storage. Also clean old logs from the replication queue.
    * Use to bypass the default call to
    * {@link ReplicationSourceManager#logPositionAndCleanOldLogs(ReplicationSourceInterface,
    * WALEntryBatch)} whem implementation does not need to persist state to backing storage.
    * @param entryBatch the wal entry batch we just shipped
+   * @return The instance of queueStorage used by this ReplicationSource.
    */
   default void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
     getSourceManager().logPositionAndCleanOldLogs(this, entryBatch);

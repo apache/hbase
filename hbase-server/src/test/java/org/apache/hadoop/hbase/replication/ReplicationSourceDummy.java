@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationPeer rp, Server server, String peerClusterId,
+      ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
       UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
       throws IOException {
     this.manager = manager;
@@ -160,6 +160,11 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   @Override
   public ServerName getServerWALsBelongTo() {
+    return null;
+  }
+
+  @Override
+  public ReplicationQueueStorage getReplicationQueueStorage() {
     return null;
   }
 
