@@ -73,8 +73,7 @@ class MasterMetaBootstrap {
         LOG.info(hri.getRegionNameAsString() +
           " old location is same as current hbase:meta location; setting location as null...");
       }
-      // These assigns run inline. All is blocked till they complete. Only interrupt is shutting
-      // down hosting server which calls AM#stop.
+      // Assigns are done asynchronously. See HBASE-24562.
       if (metaState != null && metaState.getServerName() != null) {
         // Try to retain old assignment.
         assignmentManager.assignAsync(hri, metaState.getServerName());
