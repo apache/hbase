@@ -166,7 +166,7 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * @param conf configuration to use
    */
   public static void setupRegionReplicaReplication(Configuration conf) throws IOException {
-    if (!conf.getBoolean(REGION_REPLICA_REPLICATION_CONF_KEY, DEFAULT_REGION_REPLICA_REPLICATION)) {
+    if (!isRegionReplicaReplicationEnabled(conf)) {
       return;
     }
     String peerId = REGION_REPLICA_REPLICATION_PEER;
@@ -189,11 +189,19 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
   }
 
   /**
-   * @return True if Region Read Replica is enabled for <code>tn</code>.
+   * @return True if Region Read Replica is enabled for <code>tn</code> (whether hbase:meta or
+   *   user-space tables).
    */
   public static boolean isRegionReplicaReplicationEnabled(Configuration conf, TableName tn) {
     return isMetaRegionReplicaReplicationEnabled(conf, tn) ||
-      conf.getBoolean(REGION_REPLICA_REPLICATION_CONF_KEY, DEFAULT_REGION_REPLICA_REPLICATION);
+      isRegionReplicaReplicationEnabled(conf);
+  }
+
+  /**
+   * @return True if Region Read Replica is enabled for user-space tables.
+   */
+  private static boolean isRegionReplicaReplicationEnabled(Configuration conf) {
+    return conf.getBoolean(REGION_REPLICA_REPLICATION_CONF_KEY, DEFAULT_REGION_REPLICA_REPLICATION);
   }
 
   /**

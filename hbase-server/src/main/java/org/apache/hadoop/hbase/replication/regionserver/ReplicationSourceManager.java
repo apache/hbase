@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -371,7 +372,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     WALFileLengthProvider walFileLengthProvider =
       this.walFactory.getWALProvider() != null?
         this.walFactory.getWALProvider().getWALFileLengthProvider() : p -> OptionalLong.empty();
-    src.init(conf, fs, this, queueStorage, replicationPeer, server, queueId, clusterId,
+    src.init(conf, fs, this, replicationPeer, server, queueId, clusterId,
       walFileLengthProvider, new MetricsSource(queueId));
     return src;
   }
@@ -1206,9 +1207,9 @@ public class ReplicationSourceManager implements ReplicationListener {
       addListener = true;
     }
     CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
-      this.clusterId.toString());
+      this.clusterId.toString(), "meta_" + ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
     final ReplicationSourceInterface crs = new CatalogReplicationSource();
-    crs.init(conf, fs, this, null, peer, server, peer.getId(), clusterId,
+    crs.init(conf, fs, this, peer, server, peer.getId(), clusterId,
       walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
     if (addListener) {
       walProvider.addWALActionsListener(new WALActionsListener() {

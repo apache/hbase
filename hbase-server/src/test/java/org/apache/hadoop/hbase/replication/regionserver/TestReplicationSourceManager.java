@@ -816,7 +816,7 @@ public abstract class TestReplicationSourceManager {
 
     @Override
     public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-        ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
+        ReplicationPeer rp, Server server, String peerClusterId,
         UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
         throws IOException {
       throw new IOException("Failing deliberately");
