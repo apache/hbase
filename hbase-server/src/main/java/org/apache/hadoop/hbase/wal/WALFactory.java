@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,7 +67,7 @@ public class WALFactory {
   /**
    * Maps between configuration names for providers and implementation classes.
    */
-  static enum Providers {
+  enum Providers {
     defaultProvider(AsyncFSWALProvider.class),
     filesystem(FSHLogProvider.class),
     multiwal(RegionGroupingProvider.class),
@@ -260,8 +260,12 @@ public class WALFactory {
     return provider.getWALs();
   }
 
-  @VisibleForTesting
-  WALProvider getMetaProvider() throws IOException {
+  /**
+   * Called when we lazily create a hbase:meta WAL OR from ReplicationSourceManager ahead of
+   * creating the first hbase:meta WAL so we can register a listener.
+   * @see #getMetaWALProvider()
+   */
+  public WALProvider getMetaProvider() throws IOException {
     for (;;) {
       WALProvider provider = this.metaProvider.get();
       if (provider != null) {
@@ -312,7 +316,6 @@ public class WALFactory {
    * to reopen it multiple times, use {@link WAL.Reader#reset()} instead of this method
    * then just seek back to the last known good position.
    * @return A WAL reader.  Close when done with it.
-   * @throws IOException
    */
   public Reader createReader(final FileSystem fs, final Path path,
       CancelableProgressable reporter) throws IOException {
@@ -491,6 +494,10 @@ public class WALFactory {
     return this.provider;
   }
 
+  /**
+   * @return Current metaProvider... may be null if not yet initialized.
+   * @see #getMetaProvider()
+   */
   public final WALProvider getMetaWALProvider() {
     return this.metaProvider.get();
   }
