@@ -1175,6 +1175,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (initialIsa.getAddress() == null) {
       throw new IllegalArgumentException("Failed resolve of " + initialIsa);
     }
+    LOG.debug("Initial ISA is '{}', bind address is '{}'", initialIsa, bindAddress);
     priority = createPriority();
     // Using Address means we don't get the IP too. Shorten it more even to just the host name
     // w/o the domain.

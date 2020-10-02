@@ -94,7 +94,7 @@ public class TestNetty {
             LOG.info("connected {}", ch);
             ch.close();
           }
-        }).bind(bindAddress).sync().channel();
+        }).bind(local).sync().channel();
       LOG.info("local server channel is {}", serverChannel);
       Thread.sleep(1000);
       serverChannel.close();
