@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -39,6 +40,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,6 +50,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationListener;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
@@ -58,12 +61,14 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -120,7 +125,15 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final ConcurrentMap<String, ReplicationSourceInterface> sources;
   // List of all the sources we got from died RSs
   private final List<ReplicationSourceInterface> oldsources;
+
+  /**
+   * Storage for queues that need persistance; e.g. Replication state so can be recovered
+   * after a crash. queueStorage upkeep is spread about this class and passed
+   * to ReplicationSource instances for these to do updates themselves. Not all ReplicationSource
+   * instances keep state.
+   */
   private final ReplicationQueueStorage queueStorage;
+
   private final ReplicationTracker replicationTracker;
   private final ReplicationPeers replicationPeers;
   // UUID for this cluster
@@ -145,7 +158,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final Path logDir;
   // Path to the wal archive
   private final Path oldLogDir;
-  private final WALFileLengthProvider walFileLengthProvider;
+  private final WALFactory walFactory;
   // The number of ms that we wait before moving znodes, HBASE-3596
   private final long sleepBeforeFailover;
   // Homemade executer service for replication
@@ -160,21 +173,29 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final MetricsReplicationGlobalSourceSource globalMetrics;
 
   /**
+   * A special ReplicationSource for hbase:meta Region Read Replicas.
+   * Usually this reference remains empty. If an hbase:meta Region is opened on this server, we
+   * will create an instance of a hbase:meta CatalogReplicationSource and it will live the life of
+   * the Server thereafter; i.e. we will not shut it down even if the hbase:meta moves away from
+   * this server (in case it later gets moved back). We synchronize on this instance testing for
+   * presence and if absent, while creating so only created and started once.
+   */
+  @VisibleForTesting
+  AtomicReference<ReplicationSourceInterface> catalogReplicationSource = new AtomicReference<>();
+
+  /**
    * Creates a replication manager and sets the watch on all the other registered region servers
    * @param queueStorage the interface for manipulating replication queues
-   * @param replicationPeers
-   * @param replicationTracker
    * @param conf the configuration to use
    * @param server the server for this region server
    * @param fs the file system to use
    * @param logDir the directory that contains all wal directories of live RSs
    * @param oldLogDir the directory where old logs are archived
-   * @param clusterId
    */
   public ReplicationSourceManager(ReplicationQueueStorage queueStorage,
       ReplicationPeers replicationPeers, ReplicationTracker replicationTracker, Configuration conf,
       Server server, FileSystem fs, Path logDir, Path oldLogDir, UUID clusterId,
-      WALFileLengthProvider walFileLengthProvider,
+      WALFactory walFactory,
       MetricsReplicationGlobalSourceSource globalMetrics) throws IOException {
     // CopyOnWriteArrayList is thread-safe.
     // Generally, reading is more than modifying.
@@ -193,7 +214,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.sleepBeforeFailover = conf.getLong("replication.sleep.before.failover", 30000); // 30
                                                                                          // seconds
     this.clusterId = clusterId;
-    this.walFileLengthProvider = walFileLengthProvider;
+    this.walFactory = walFactory;
     this.replicationTracker.registerListener(this);
     // It's preferable to failover 1 RS at a time, but with good zk servers
     // more could be processed at the same time.
@@ -320,18 +341,21 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   /**
-   * Factory method to create a replication source
-   * @param queueId the id of the replication queue
-   * @return the created source
+   * @return a new 'classic' user-space replication source.
+   * @param queueId the id of the replication queue to associate the ReplicationSource with.
+   * @see #createCatalogReplicationSource() for creating a ReplicationSource for hbase:meta.
    */
   private ReplicationSourceInterface createSource(String queueId, ReplicationPeer replicationPeer)
       throws IOException {
     ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, queueId);
-
-    MetricsSource metrics = new MetricsSource(queueId);
-    // init replication source
+    // Init the just created replication source. Pass the default walProvider's wal file length
+    // provider. Presumption is we replicate user-space Tables only. For hbase:meta region replica
+    // replication, see #createCatalogReplicationSource().
+    WALFileLengthProvider walFileLengthProvider =
+      this.walFactory.getWALProvider() != null?
+        this.walFactory.getWALProvider().getWALFileLengthProvider() : p -> OptionalLong.empty();
     src.init(conf, fs, this, queueStorage, replicationPeer, server, queueId, clusterId,
-      walFileLengthProvider, metrics);
+      walFileLengthProvider, new MetricsSource(queueId));
     return src;
   }
 
@@ -518,17 +542,16 @@ public class ReplicationSourceManager implements ReplicationListener {
   /**
    * This method will log the current position to storage. And also clean old logs from the
    * replication queue.
-   * @param queueId id of the replication queue
-   * @param queueRecovered indicates if this queue comes from another region server
    * @param entryBatch the wal entry batch we just shipped
    */
-  public void logPositionAndCleanOldLogs(String queueId, boolean queueRecovered,
+  public void logPositionAndCleanOldLogs(ReplicationSourceInterface source,
       WALEntryBatch entryBatch) {
     String fileName = entryBatch.getLastWalPath().getName();
+    String queueId = source.getQueueId();
     interruptOrAbortWhenFail(() -> this.queueStorage
         .setWALPosition(server.getServerName(), queueId, fileName, entryBatch.getLastWalPosition(),
             entryBatch.getLastSeqIds()));
-    cleanOldLogs(fileName, entryBatch.isEndOfFile(), queueId, queueRecovered);
+    cleanOldLogs(fileName, entryBatch.isEndOfFile(), queueId, source.isRecovered());
   }
 
   /**
@@ -958,5 +981,61 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   MetricsReplicationGlobalSourceSource getGlobalMetrics() {
     return this.globalMetrics;
+  }
+
+  /**
+   * Add an hbase:meta Catalog replication source. Called on open of an hbase:meta Region.
+   * @see #removeCatalogReplicationSource()
+   */
+  public ReplicationSourceInterface addCatalogReplicationSource() throws IOException {
+    // Open/Create the hbase:meta ReplicationSource once only.
+    synchronized (this.catalogReplicationSource) {
+      ReplicationSourceInterface rs = this.catalogReplicationSource.get();
+      return rs != null ? rs :
+        this.catalogReplicationSource.getAndSet(createCatalogReplicationSource());
+    }
+  }
+
+  /**
+   * Remove the hbase:meta Catalog replication source.
+   * Called when we close hbase:meta.
+   * @see #addCatalogReplicationSource()
+   */
+  public void removeCatalogReplicationSource() {
+    // Nothing to do. Leave any CatalogReplicationSource in place in case an hbase:meta Region
+    // comes back to this server.
+  }
+
+  /**
+   * Create, initialize, and start the Catalog ReplicationSource.
+   */
+  private ReplicationSourceInterface createCatalogReplicationSource() throws IOException {
+    // Has the hbase:meta WALProvider been instantiated?
+    WALProvider walProvider = this.walFactory.getMetaWALProvider();
+    boolean addListener = false;
+    if (walProvider == null) {
+      // The meta walProvider has not been instantiated. Create it.
+      walProvider = this.walFactory.getMetaProvider();
+      addListener = true;
+    }
+    CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
+      this.clusterId.toString(), "meta_" + ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
+    final ReplicationSourceInterface crs = new CatalogReplicationSource();
+    crs.init(conf, fs, this, new NoopReplicationQueueStorage(), peer, server, peer.getId(),
+      clusterId, walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
+    if (addListener) {
+      walProvider.addWALActionsListener(new WALActionsListener() {
+        @Override
+        public void postLogRoll(Path oldPath, Path newPath) throws IOException {
+          crs.enqueueLog(newPath);
+        }
+      });
+    } else {
+      // This is a problem. We'll have a ReplicationSource but no listener on hbase:meta WALs
+      // so nothing will be replicated.
+      LOG.error("Did not install WALActionsListener creating CatalogReplicationSource!");
+    }
+    // Start this ReplicationSource.
+    return crs.startup();
   }
 }

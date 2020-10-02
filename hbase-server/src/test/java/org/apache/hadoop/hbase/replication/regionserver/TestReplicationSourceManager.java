@@ -320,7 +320,7 @@ public abstract class TestReplicationSourceManager {
 
     wal.rollWriter();
 
-    manager.logPositionAndCleanOldLogs("1", false,
+    manager.logPositionAndCleanOldLogs(manager.getSources().get(0),
       new WALEntryBatch(0, manager.getSources().get(0).getCurrentPath()));
 
     wal.appendData(hri,

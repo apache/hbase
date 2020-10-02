@@ -109,9 +109,9 @@ public class RegionReplicaFlushHandler extends EventHandler {
     RetryCounter counter = new RetryCounterFactory(maxAttempts, (int)pause).create();
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("RPC'ing to primary region replica " +
-        ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo()) + " from " +
-        region.getRegionInfo() + " to trigger FLUSH");
+      LOG.debug("RPC'ing to primary " + ServerRegionReplicaUtil.
+          getRegionInfoForDefaultReplica(region.getRegionInfo()).getRegionNameAsString() +
+        " from " + region.getRegionInfo().getRegionNameAsString() + " to trigger FLUSH");
     }
     while (!region.isClosing() && !region.isClosed()
         && !server.isAborted() && !server.isStopped()) {

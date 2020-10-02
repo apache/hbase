@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,7 +42,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface ReplicationSourceInterface {
-
   /**
    * Initializer for the source
    * @param conf the configuration to use
@@ -76,7 +74,7 @@ public interface ReplicationSourceInterface {
   /**
    * Start the replication
    */
-  void startup();
+  ReplicationSourceInterface startup();
 
   /**
    * End the replication
@@ -159,7 +157,6 @@ public interface ReplicationSourceInterface {
   /**
    * Try to throttle when the peer config with a bandwidth
    * @param batchSize entries size will be pushed
-   * @throws InterruptedException
    */
   void tryThrottle(int batchSize) throws InterruptedException;
 
@@ -190,5 +187,22 @@ public interface ReplicationSourceInterface {
    */
   default boolean isRecovered() {
     return false;
+  }
+
+  /**
+   * @return The instance of queueStorage used by this ReplicationSource.
+   */
+  ReplicationQueueStorage getReplicationQueueStorage();
+
+  /**
+   * Log the current position to storage. Also clean old logs from the replication queue.
+   * Use to bypass the default call to
+   * {@link ReplicationSourceManager#logPositionAndCleanOldLogs(ReplicationSourceInterface,
+   * WALEntryBatch)} whem implementation does not need to persist state to backing storage.
+   * @param entryBatch the wal entry batch we just shipped
+   * @return The instance of queueStorage used by this ReplicationSource.
+   */
+  default void logPositionAndCleanOldLogs(WALEntryBatch entryBatch) {
+    getSourceManager().logPositionAndCleanOldLogs(this, entryBatch);
   }
 }

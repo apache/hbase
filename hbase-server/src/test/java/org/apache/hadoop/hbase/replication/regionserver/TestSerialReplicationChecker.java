@@ -109,7 +109,7 @@ public class TestSerialReplicationChecker {
   public void setUp() throws IOException {
     ReplicationSource source = mock(ReplicationSource.class);
     when(source.getPeerId()).thenReturn(PEER_ID);
-    when(source.getQueueStorage()).thenReturn(QUEUE_STORAGE);
+    when(source.getReplicationQueueStorage()).thenReturn(QUEUE_STORAGE);
     conn = mock(Connection.class);
     when(conn.isClosed()).thenReturn(false);
     doAnswer(new Answer<Table>() {

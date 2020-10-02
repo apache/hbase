@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,8 +70,9 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
-  public void startup() {
+  public ReplicationSourceInterface startup() {
     startup.set(true);
+    return this;
   }
 
   public boolean isStartup() {
@@ -158,6 +159,11 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   @Override
   public ServerName getServerWALsBelongTo() {
+    return null;
+  }
+
+  @Override
+  public ReplicationQueueStorage getReplicationQueueStorage() {
     return null;
   }
 }
