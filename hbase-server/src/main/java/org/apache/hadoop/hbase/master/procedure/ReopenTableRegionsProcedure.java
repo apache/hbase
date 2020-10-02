@@ -37,6 +37,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -57,7 +58,7 @@ public class ReopenTableRegionsProcedure
 
   // Specify specific regions of a table to reopen.
   // if specified null, all regions of the table will be reopened.
-  private final List<byte[]> regionNames;
+  private List<byte[]> regionNames;
 
   private List<HRegionLocation> regions = Collections.emptyList();
 
@@ -224,6 +225,9 @@ public class ReopenTableRegionsProcedure
     ReopenTableRegionsStateData.Builder builder = ReopenTableRegionsStateData.newBuilder()
       .setTableName(ProtobufUtil.toProtoTableName(tableName));
     regions.stream().map(ProtobufUtil::toRegionLocation).forEachOrdered(builder::addRegion);
+    if (regionNames != null) {
+      regionNames.stream().map(ByteString::copyFrom).forEachOrdered(builder::addRegionNames);
+    }
     serializer.serialize(builder.build());
   }
 
@@ -234,5 +238,11 @@ public class ReopenTableRegionsProcedure
     tableName = ProtobufUtil.toTableName(data.getTableName());
     regions = data.getRegionList().stream().map(ProtobufUtil::toRegionLocation)
       .collect(Collectors.toList());
+    if (CollectionUtils.isNotEmpty(data.getRegionNamesList())) {
+      regionNames = new ArrayList<>();
+      data.getRegionNamesList().forEach(regionName -> regionNames.add(regionName.toByteArray()));
+    } else {
+      regionNames = null;
+    }
   }
 }
