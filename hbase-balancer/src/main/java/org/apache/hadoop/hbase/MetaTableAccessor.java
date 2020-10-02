@@ -319,9 +319,7 @@ public final class MetaTableAccessor {
    * and scan until it hits a new table since that requires parsing the HRI to get the table name.
    * @param tableName bytes of table's name
    * @return configured Scan object
-   * @deprecated This is internal so please remove it when we get a chance.
    */
-  @Deprecated
   public static Scan getScanForTableName(Connection connection, TableName tableName) {
     // Start key is just the table name with delimiters
     byte[] startKey = ClientMetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REGION);
