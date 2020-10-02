@@ -581,7 +581,6 @@ public class MetaTableAccessor {
    * @param tableName bytes of table's name
    * @return configured Scan object
    */
-  @Deprecated
   public static Scan getScanForTableName(Connection connection, TableName tableName) {
     // Start key is just the table name with delimiters
     byte[] startKey = getTableStartRowForMeta(tableName, QueryType.REGION);
