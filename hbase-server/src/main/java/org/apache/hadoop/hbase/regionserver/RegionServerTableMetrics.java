@@ -65,6 +65,14 @@ public class RegionServerTableMetrics {
     latencies.updateDeleteBatch(table.getNameAsString(), time);
   }
 
+  public void updateCheckAndDelete(TableName table, long time) {
+    latencies.updateCheckAndDelete(table.getNameAsString(), time);
+  }
+
+  public void updateCheckAndPut(TableName table, long time) {
+    latencies.updateCheckAndPut(table.getNameAsString(), time);
+  }
+
   public void updateScanTime(TableName table, long time) {
     latencies.updateScanTime(table.getNameAsString(), time);
   }
@@ -88,4 +96,5 @@ public class RegionServerTableMetrics {
   public void updateTableWriteQueryMeter(TableName table) {
     queryMeter.updateTableWriteQueryMeter(table);
   }
+
 }
