@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -66,7 +65,7 @@ import org.slf4j.LoggerFactory;
  * verifying async wal replication replays the edits to the secondary region in various scenarios.
  * @see TestRegionReplicaReplicationEndpoint
  */
-@Category({FlakeyTests.class, LargeTests.class})
+@Category({LargeTests.class})
 public class TestMetaRegionReplicaReplicationEndpoint {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
