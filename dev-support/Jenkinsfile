@@ -17,7 +17,7 @@
 pipeline {
   agent {
     node {
-      label 'Hadoop'
+      label 'hbase'
     }
   }
   triggers {
@@ -192,7 +192,7 @@ pipeline {
         stage ('yetus general check') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           environment {
@@ -257,7 +257,7 @@ pipeline {
         stage ('yetus jdk7 checks') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           when {
@@ -338,7 +338,7 @@ pipeline {
         stage ('yetus jdk8 hadoop2 checks') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           environment {
@@ -416,7 +416,7 @@ pipeline {
         stage ('yetus jdk8 hadoop3 checks') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           when {
@@ -501,7 +501,7 @@ pipeline {
         stage ('yetus jdk11 hadoop3 checks') {
           agent {
             node {
-              label 'Hadoop'
+              label 'hbase'
             }
           }
           when {
@@ -596,6 +596,7 @@ pipeline {
           }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
+            BRANCH = "${env.BRANCH_NAME}"
           }
           steps {
             sh '''#!/bin/bash -e
@@ -646,61 +647,69 @@ pipeline {
               tar --strip-component=1 -xzf "${client_artifact}" -C "hbase-client"
 '''
             unstash 'hadoop-2'
-            echo "Attempting to use run an instance on top of Hadoop 2."
             sh '''#!/bin/bash -xe
-              artifact=$(ls -1 "${WORKSPACE}"/hadoop-2*.tar.gz | head -n 1)
-              tar --strip-components=1 -xzf "${artifact}" -C "hadoop-2"
-              if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
-                  --single-process \
-                  --working-dir output-integration/hadoop-2 \
-                  --hbase-client-install "hbase-client" \
-                  "hbase-install" \
-                  "hadoop-2/bin/hadoop" \
-                  hadoop-2/share/hadoop/yarn/timelineservice \
-                  hadoop-2/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
-                  hadoop-2/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
-                  hadoop-2/bin/mapred \
-                  >output-integration/hadoop-2.log 2>&1 ; then
-                echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 2. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-2.log]. (note that this means we didn't run on Hadoop 3)" >output-integration/commentfile
-                exit 2
+              if [[ "${BRANCH}" = branch-2* ]] || [[ "${BRANCH}" = branch-1* ]]; then
+                echo "Attempting to use run an instance on top of Hadoop 2."
+                artifact=$(ls -1 "${WORKSPACE}"/hadoop-2*.tar.gz | head -n 1)
+                tar --strip-components=1 -xzf "${artifact}" -C "hadoop-2"
+                if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+                    --single-process \
+                    --working-dir output-integration/hadoop-2 \
+                    --hbase-client-install "hbase-client" \
+                    "hbase-install" \
+                    "hadoop-2/bin/hadoop" \
+                    hadoop-2/share/hadoop/yarn/timelineservice \
+                    hadoop-2/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
+                    hadoop-2/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                    hadoop-2/bin/mapred \
+                    >output-integration/hadoop-2.log 2>&1 ; then
+                  echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 2. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-2.log]. (note that this means we didn't run on Hadoop 3)" >output-integration/commentfile
+                  exit 2
+                fi
+              else
+                echo "Skipping to run against Hadoop 2 for branch ${BRANCH}"
               fi
 '''
             unstash 'hadoop-3'
-            echo "Attempting to use run an instance on top of Hadoop 3."
             sh '''#!/bin/bash -e
-              artifact=$(ls -1 "${WORKSPACE}"/hadoop-3*.tar.gz | head -n 1)
-              tar --strip-components=1 -xzf "${artifact}" -C "hadoop-3"
-              if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
-                  --single-process \
-                  --working-dir output-integration/hadoop-3 \
-                  --hbase-client-install hbase-client \
-                  hbase-install \
-                  hadoop-3/bin/hadoop \
-                  hadoop-3/share/hadoop/yarn/timelineservice \
-                  hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
-                  hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
-                  hadoop-3/bin/mapred \
-                  >output-integration/hadoop-3.log 2>&1 ; then
-                echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3.log]. (note that this means we didn't check the Hadoop 3 shaded client)" >output-integration/commentfile
-                exit 2
+              if [[ "${BRANCH}" = branch-1* ]]; then
+                echo "Skipping to run against Hadoop 3 for branch ${BRANCH}"
+              else
+                echo "Attempting to use run an instance on top of Hadoop 3."
+                artifact=$(ls -1 "${WORKSPACE}"/hadoop-3*.tar.gz | head -n 1)
+                tar --strip-components=1 -xzf "${artifact}" -C "hadoop-3"
+                if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+                    --single-process \
+                    --working-dir output-integration/hadoop-3 \
+                    --hbase-client-install hbase-client \
+                    hbase-install \
+                    hadoop-3/bin/hadoop \
+                    hadoop-3/share/hadoop/yarn/timelineservice \
+                    hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
+                    hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                    hadoop-3/bin/mapred \
+                    >output-integration/hadoop-3.log 2>&1 ; then
+                  echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3.log]. (note that this means we didn't check the Hadoop 3 shaded client)" >output-integration/commentfile
+                  exit 2
+                fi
+                echo "Attempting to use run an instance on top of Hadoop 3, relying on the Hadoop client artifacts for the example client program."
+                if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
+                    --single-process \
+                    --hadoop-client-classpath hadoop-3/share/hadoop/client/hadoop-client-api-*.jar:hadoop-3/share/hadoop/client/hadoop-client-runtime-*.jar \
+                    --working-dir output-integration/hadoop-3-shaded \
+                    --hbase-client-install hbase-client \
+                    hbase-install \
+                    hadoop-3/bin/hadoop \
+                    hadoop-3/share/hadoop/yarn/timelineservice \
+                    hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
+                    hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
+                    hadoop-3/bin/mapred \
+                    >output-integration/hadoop-3-shaded.log 2>&1 ; then
+                  echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3 using Hadoop's shaded client. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3-shaded.log]." >output-integration/commentfile
+                  exit 2
+                fi
+                echo "(/) {color:green}+1 client integration test{color}" >output-integration/commentfile
               fi
-              echo "Attempting to use run an instance on top of Hadoop 3, relying on the Hadoop client artifacts for the example client program."
-              if ! "${BASEDIR}/dev-support/hbase_nightly_pseudo-distributed-test.sh" \
-                  --single-process \
-                  --hadoop-client-classpath hadoop-3/share/hadoop/client/hadoop-client-api-*.jar:hadoop-3/share/hadoop/client/hadoop-client-runtime-*.jar \
-                  --working-dir output-integration/hadoop-3-shaded \
-                  --hbase-client-install hbase-client \
-                  hbase-install \
-                  hadoop-3/bin/hadoop \
-                  hadoop-3/share/hadoop/yarn/timelineservice \
-                  hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
-                  hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
-                  hadoop-3/bin/mapred \
-                  >output-integration/hadoop-3-shaded.log 2>&1 ; then
-                echo "(x) {color:red}-1 client integration test{color}\n--Failed when running client tests on top of Hadoop 3 using Hadoop's shaded client. [see log for details|${BUILD_URL}/artifact/output-integration/hadoop-3-shaded.log]." >output-integration/commentfile
-                exit 2
-              fi
-              echo "(/) {color:green}+1 client integration test{color}" >output-integration/commentfile
 '''
 
 

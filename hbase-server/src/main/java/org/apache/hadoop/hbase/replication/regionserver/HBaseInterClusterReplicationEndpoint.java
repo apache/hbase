@@ -559,10 +559,14 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
           } else if (dropOnDeletedColumnFamilies && isNoSuchColumnFamilyException(ioe)) {
             batches = filterNotExistColumnFamilyEdits(batches);
             if (batches.isEmpty()) {
-              LOG.warn(
-                  "After filter not exist column family's edits, 0 edits to replicate, just return");
+              LOG.warn("After filter not exist column family's edits, 0 edits to replicate, "
+                      + "just return");
               return true;
             }
+          } else {
+            LOG.warn("{} Peer encountered RemoteException, rechecking all sinks: ", logPeerId(),
+                ioe);
+            replicationSinkMgr.chooseSinks();
           }
         } else {
           if (ioe instanceof SocketTimeoutException) {

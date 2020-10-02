@@ -250,15 +250,15 @@ public class HbckChore extends ScheduledChore {
       numRegions += entry.getValue().size();
     }
     LOG.info("Loaded {} regions from {} regionservers' reports and found {} orphan regions",
-        numRegions, rsReports.size(), orphanRegionsOnFS.size());
+        numRegions, rsReports.size(), orphanRegionsOnRS.size());
 
     for (Map.Entry<String, HbckRegionInfo> entry : regionInfoMap.entrySet()) {
       HbckRegionInfo hri = entry.getValue();
       ServerName locationInMeta = hri.getMetaEntry().getRegionServer();
+      if (locationInMeta == null) {
+        continue;
+      }
       if (hri.getDeployedOn().size() == 0) {
-        if (locationInMeta == null) {
-          continue;
-        }
         // skip the offline region which belong to disabled table.
         if (disabledTableRegions.contains(hri.getRegionNameAsString())) {
           continue;

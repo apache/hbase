@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -254,25 +253,27 @@ public class ReplicationSource implements ReplicationSourceInterface {
       LOG.trace("NOT replicating {}", wal);
       return;
     }
-    String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal.getName());
-    PriorityBlockingQueue<Path> queue = queues.get(logPrefix);
+    // Use WAL prefix as the WALGroupId for this peer.
+    String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal.getName());
+    PriorityBlockingQueue<Path> queue = queues.get(walPrefix);
     if (queue == null) {
-      queue = new PriorityBlockingQueue<>(queueSizePerGroup, new LogsComparator());
+      queue = new PriorityBlockingQueue<>(queueSizePerGroup,
+        new AbstractFSWALProvider.WALStartTimeComparator());
       // make sure that we do not use an empty queue when setting up a ReplicationSource, otherwise
       // the shipper may quit immediately
       queue.put(wal);
-      queues.put(logPrefix, queue);
+      queues.put(walPrefix, queue);
       if (this.isSourceActive() && this.walEntryFilter != null) {
         // new wal group observed after source startup, start a new worker thread to track it
         // notice: it's possible that wal enqueued when this.running is set but worker thread
         // still not launched, so it's necessary to check workerThreads before start the worker
-        tryStartNewShipper(logPrefix, queue);
+        tryStartNewShipper(walPrefix, queue);
       }
     } else {
       queue.put(wal);
     }
     if (LOG.isTraceEnabled()) {
-      LOG.trace("{} Added wal {} to queue of source {}.", logPeerId(), logPrefix,
+      LOG.trace("{} Added wal {} to queue of source {}.", logPeerId(), walPrefix,
         this.replicationQueueInfo.getQueueId());
     }
     this.metrics.incrSizeOfLogQueue();
@@ -281,7 +282,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (queueSize > this.logQueueWarnThreshold) {
       LOG.warn("{} WAL group {} queue size: {} exceeds value of "
           + "replication.source.log.queue.warn: {}", logPeerId(),
-        logPrefix, queueSize, logQueueWarnThreshold);
+        walPrefix, queueSize, logQueueWarnThreshold);
     }
   }
 
@@ -462,8 +463,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   /**
    * Call after {@link #initializeWALEntryFilter(UUID)} else it will be null.
-   * @return The WAL Entry Filter Chain this ReplicationSource will use on WAL files filtering
-   * out WALEntry edits.
+   * @return WAL Entry Filter Chain to use on WAL files filtering *out* WALEntry edits.
    */
   @VisibleForTesting
   WALEntryFilter getWalEntryFilter() {
@@ -627,7 +627,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       this.startupOngoing.set(false);
       throw new IllegalStateException("Source should be active.");
     }
-    LOG.info("{} Source: {}, is now replicating from cluster: {}; to peer cluster: {};",
+    LOG.info("{} queueId={} is replicating from cluster={} to cluster={}",
       logPeerId(), this.replicationQueueInfo.getQueueId(), clusterId, peerClusterId);
 
     initializeWALEntryFilter(peerClusterId);
@@ -642,7 +642,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   @Override
   public void startup() {
-    // mark we are running now
+    if (this.sourceRunning) {
+      return;
+    }
+    // Mark we are running now
     this.sourceRunning = true;
     startupOngoing.set(true);
     initThread = new Thread(this::initialize);
@@ -687,7 +690,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     terminate(reason, cause, clearMetrics, true);
   }
 
-  public void terminate(String reason, Exception cause, boolean clearMetrics, boolean join) {
+  public void terminate(String reason, Exception cause, boolean clearMetrics,
+      boolean join) {
     if (cause == null) {
       LOG.info("{} Closing source {} because: {}", logPeerId(), this.queueId, reason);
     } else {
@@ -703,14 +707,12 @@ public class ReplicationSource implements ReplicationSourceInterface {
       Threads.shutdown(initThread, this.sleepForRetries);
     }
     Collection<ReplicationSourceShipper> workers = workerThreads.values();
-    for (ReplicationSourceShipper worker : workers) {
-      worker.stopWorker();
-      if(worker.entryReader != null) {
-        worker.entryReader.setReaderRunning(false);
-      }
-    }
 
     for (ReplicationSourceShipper worker : workers) {
+      worker.stopWorker();
+      if (worker.entryReader != null) {
+        worker.entryReader.setReaderRunning(false);
+      }
       if (worker.isAlive() || worker.entryReader.isAlive()) {
         try {
           // Wait worker to stop
@@ -728,6 +730,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
           worker.entryReader.interrupt();
         }
       }
+      //If worker is already stopped but there was still entries batched,
+      //we need to clear buffer used for non processed entries
+      worker.clearWALEntryBatch();
     }
 
     if (this.replicationEndpoint != null) {
@@ -780,28 +785,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   @Override
   public boolean isSourceActive() {
     return !this.server.isStopped() && this.sourceRunning;
-  }
-
-  /**
-   * Comparator used to compare logs together based on their start time
-   */
-  public static class LogsComparator implements Comparator<Path> {
-
-    @Override
-    public int compare(Path o1, Path o2) {
-      return Long.compare(getTS(o1), getTS(o2));
-    }
-
-    /**
-     * Split a path to get the start time
-     * For example: 10.20.20.171%3A60020.1277499063250
-     * @param p path to split
-     * @return start time
-     */
-    private static long getTS(Path p) {
-      int tsIndex = p.getName().lastIndexOf('.') + 1;
-      return Long.parseLong(p.getName().substring(tsIndex));
-    }
   }
 
   public ReplicationQueueInfo getReplicationQueueInfo() {
@@ -873,7 +856,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return queueStorage;
   }
 
+  /**
+   * @return String to use as a log prefix that contains current peerId.
+   */
   private String logPeerId(){
-    return "[Source for peer " + this.getPeerId() + "]:";
+    return "peerId=" + this.getPeerId() + ",";
   }
 }

@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The thread pool used for scan directories
@@ -51,10 +51,9 @@ public class DirScanPool implements ConfigurationObserver {
   }
 
   private static ThreadPoolExecutor initializePool(int size) {
-    ThreadPoolExecutor executor = new ThreadPoolExecutor(size, size, 1, TimeUnit.MINUTES,
-        new LinkedBlockingQueue<>(), new DaemonThreadFactory("dir-scan-pool"));
-    executor.allowCoreThreadTimeOut(true);
-    return executor;
+    return Threads.getBoundedCachedThreadPool(size, 1, TimeUnit.MINUTES,
+      new ThreadFactoryBuilder().setNameFormat("dir-scan-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   /**

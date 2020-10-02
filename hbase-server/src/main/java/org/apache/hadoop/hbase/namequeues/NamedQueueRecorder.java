@@ -63,12 +63,10 @@ public class NamedQueueRecorder {
     int eventCount = conf.getInt("hbase.namedqueue.ringbuffer.size", 1024);
 
     // disruptor initialization with BlockingWaitStrategy
-    this.disruptor = new Disruptor<>(RingBufferEnvelope::new,
-      getEventCount(eventCount),
+    this.disruptor = new Disruptor<>(RingBufferEnvelope::new, getEventCount(eventCount),
       new ThreadFactoryBuilder().setNameFormat(hostingThreadName + ".slowlog.append-pool-%d")
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
-      ProducerType.MULTI,
-      new BlockingWaitStrategy());
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+      ProducerType.MULTI, new BlockingWaitStrategy());
     this.disruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler());
 
     // initialize ringbuffer event handler

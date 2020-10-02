@@ -154,14 +154,13 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
       WALSplit hsplit = (WALSplit)split;
       logFile = new Path(hsplit.getLogFileName());
       conf = context.getConfiguration();
-      LOG.info("Opening reader for "+split);
+      LOG.info("Opening {} for {}", logFile, split);
       openReader(logFile);
       this.startTime = hsplit.getStartTime();
       this.endTime = hsplit.getEndTime();
     }
 
-    private void openReader(Path path) throws IOException
-    {
+    private void openReader(Path path) throws IOException {
       closeReader();
       reader = AbstractFSWALProvider.openReader(path, conf);
       seek();

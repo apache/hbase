@@ -578,14 +578,9 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
 
-      // Some unit tests don't need a cluster, so no zookeeper at all
-      if (!conf.getBoolean("hbase.testing.nocluster", false)) {
-        this.metaRegionLocationCache = new MetaRegionLocationCache(this.zooKeeper);
-        this.activeMasterManager = createActiveMasterManager(zooKeeper, serverName, this);
-      } else {
-        this.metaRegionLocationCache = null;
-        this.activeMasterManager = null;
-      }
+      this.metaRegionLocationCache = new MetaRegionLocationCache(this.zooKeeper);
+      this.activeMasterManager = createActiveMasterManager(zooKeeper, serverName, this);
+
       cachedClusterId = new CachedClusterId(this, conf);
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
@@ -614,22 +609,20 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public void run() {
     try {
-      if (!conf.getBoolean("hbase.testing.nocluster", false)) {
-        Threads.setDaemonThreadRunning(new Thread(() -> {
-          try {
-            int infoPort = putUpJettyServer();
-            startActiveMasterManager(infoPort);
-          } catch (Throwable t) {
-            // Make sure we log the exception.
-            String error = "Failed to become Active Master";
-            LOG.error(error, t);
-            // Abort should have been called already.
-            if (!isAborted()) {
-              abort(error, t);
-            }
+      Threads.setDaemonThreadRunning(new Thread(() -> {
+        try {
+          int infoPort = putUpJettyServer();
+          startActiveMasterManager(infoPort);
+        } catch (Throwable t) {
+          // Make sure we log the exception.
+          String error = "Failed to become Active Master";
+          LOG.error(error, t);
+          // Abort should have been called already.
+          if (!isAborted()) {
+            abort(error, t);
           }
-        }), getName() + ":becomeActiveMaster");
-      }
+        }
+      }), getName() + ":becomeActiveMaster");
       // Fall in here even if we have been aborted. Need to run the shutdown services and
       // the super run call will do this for us.
       super.run();
@@ -1772,7 +1765,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           toPrint = regionsInTransition.subList(0, max);
           truncated = true;
         }
-        LOG.info(prefix + "unning balancer because " + regionsInTransition.size() +
+        LOG.info(prefix + " not running balancer because " + regionsInTransition.size() +
           " region(s) in transition: " + toPrint + (truncated? "(truncated list)": ""));
         if (!force || metaInTransition) return false;
       }

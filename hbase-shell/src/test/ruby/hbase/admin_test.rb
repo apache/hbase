@@ -386,8 +386,8 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test 'get slowlog responses should work' do
-      output = capture_stdout { command(:get_slowlog_responses, '*', {}) }
-      assert(output.include?('Retrieved SlowLog Responses from RegionServers'))
+      output = command(:get_slowlog_responses, '*', {})
+      assert(output.nil?)
     end
 
     #-------------------------------------------------------------------------------

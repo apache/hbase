@@ -228,13 +228,12 @@ public abstract class ModifyRegionUtils {
    * "hbase.hregion.open.and.init.threads.max" property.
    */
   static ThreadPoolExecutor getRegionOpenAndInitThreadPool(final Configuration conf,
-      final String threadNamePrefix, int regionNumber) {
-    int maxThreads = Math.min(regionNumber, conf.getInt(
-        "hbase.hregion.open.and.init.threads.max", 16));
-    ThreadPoolExecutor regionOpenAndInitThreadPool = Threads.
-      getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-        new ThreadFactoryBuilder().setNameFormat(threadNamePrefix + "-pool-%d")
-          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+    final String threadNamePrefix, int regionNumber) {
+    int maxThreads =
+      Math.min(regionNumber, conf.getInt("hbase.hregion.open.and.init.threads.max", 16));
+    ThreadPoolExecutor regionOpenAndInitThreadPool = Threads.getBoundedCachedThreadPool(maxThreads,
+      30L, TimeUnit.SECONDS, new ThreadFactoryBuilder().setNameFormat(threadNamePrefix + "-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     return regionOpenAndInitThreadPool;
   }
 }

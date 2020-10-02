@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -105,6 +106,8 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.net.Address;
@@ -127,7 +130,6 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.UnassignRegionHandler;
-import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -241,6 +243,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -1421,14 +1424,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } else {
       accessChecker = new NoopAccessChecker(getConfiguration());
     }
-    if (!getConfiguration().getBoolean("hbase.testing.nocluster", false) && zkWatcher != null) {
-      zkPermissionWatcher =
-          new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
-      try {
-        zkPermissionWatcher.start();
-      } catch (KeeperException e) {
-        LOG.error("ZooKeeper permission watcher initialization failed", e);
-      }
+    zkPermissionWatcher =
+      new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
+    try {
+      zkPermissionWatcher.start();
+    } catch (KeeperException e) {
+      LOG.error("ZooKeeper permission watcher initialization failed", e);
     }
     this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.serverName);
     rpcServer.start();
@@ -3789,7 +3790,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     List<SlowLogPayload> slowLogPayloads;
     NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-    namedQueueGetRequest.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    namedQueueGetRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
     namedQueueGetRequest.setSlowLogResponseRequest(request);
     NamedQueueGetResponse namedQueueGetResponse =
       namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
@@ -3826,6 +3827,36 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       .setIsCleaned(slowLogsCleaned)
       .build();
     return clearSlowLogResponses;
+  }
+
+  @Override
+  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+      HBaseProtos.LogRequest request) throws ServiceException {
+    try {
+      final String logClassName = request.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName)
+        .asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("SlowLogResponseRequest")) {
+        SlowLogResponseRequest slowLogResponseRequest =
+          (SlowLogResponseRequest) method.invoke(null, request.getLogMessage());
+        final NamedQueueRecorder namedQueueRecorder =
+          this.regionServer.getNamedQueueRecorder();
+        final List<SlowLogPayload> slowLogPayloads =
+          getSlowLogPayloads(slowLogResponseRequest, namedQueueRecorder);
+        SlowLogResponses slowLogResponses = SlowLogResponses.newBuilder()
+          .addAllSlowLogPayloads(slowLogPayloads)
+          .build();
+        return HBaseProtos.LogEntry.newBuilder()
+          .setLogClassName(slowLogResponses.getClass().getName())
+          .setLogMessage(slowLogResponses.toByteString()).build();
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+        | InvocationTargetException e) {
+      LOG.error("Error while retrieving log entries.", e);
+      throw new ServiceException(e);
+    }
+    throw new ServiceException("Invalid request params");
   }
 
   @VisibleForTesting

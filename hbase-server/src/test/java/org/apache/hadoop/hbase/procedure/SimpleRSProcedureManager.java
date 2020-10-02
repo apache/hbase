@@ -25,21 +25,21 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class SimpleRSProcedureManager extends RegionServerProcedureManager {
 
@@ -84,7 +84,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
 
   /**
    * If in a running state, creates the specified subprocedure for handling a procedure.
-   * @return Subprocedure to submit to the ProcedureMemeber.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(String name) {
 
@@ -125,9 +125,9 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
 
     public SimpleSubprocedurePool(String name, Configuration conf) {
       this.name = name;
-      executor = new ThreadPoolExecutor(1, 1, 500,
-          TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
-          new DaemonThreadFactory("rs(" + name + ")-procedure-pool-"));
+      executor = Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder().setNameFormat("rs(" + name + ")-procedure-pool-%d")
+          .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
       taskPool = new ExecutorCompletionService<>(executor);
     }
 

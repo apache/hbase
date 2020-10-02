@@ -66,10 +66,9 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 8 * REGION_ONLINE_TIMEOUT);
     TEST_UTIL.startMiniCluster(1);
 
-    tableExecutorService =
-      new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS, new SynchronousQueue<>(),
-        new ThreadFactoryBuilder().setNameFormat("testhbck-pool-%d")
-          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+    tableExecutorService = new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS,
+      new SynchronousQueue<>(), new ThreadFactoryBuilder().setNameFormat("testhbck-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 

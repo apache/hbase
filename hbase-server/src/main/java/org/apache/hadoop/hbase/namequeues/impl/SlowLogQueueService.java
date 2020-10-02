@@ -19,6 +19,12 @@
 
 package org.apache.hadoop.hbase.namequeues.impl;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Queue;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -31,22 +37,19 @@ import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
 import org.apache.hadoop.hbase.namequeues.SlowLogPersistentService;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.EvictingQueue;
 import org.apache.hbase.thirdparty.com.google.common.collect.Queues;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Queue;
-import java.util.stream.Collectors;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 
 /**
  * In-memory Queue service provider for Slow/LargeLog events
@@ -201,7 +204,7 @@ public class SlowLogQueueService implements NamedQueueService {
       slowLogPayloads = getSlowLogPayloads(slowLogResponseRequest);
     }
     NamedQueueGetResponse response = new NamedQueueGetResponse();
-    response.setNamedQueueEvent(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
+    response.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
     response.setSlowLogPayloads(slowLogPayloads);
     return response;
   }

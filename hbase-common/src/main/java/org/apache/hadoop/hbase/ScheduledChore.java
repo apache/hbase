@@ -270,7 +270,7 @@ public abstract class ScheduledChore implements Runnable {
       choreServicer.cancelChore(this, false);
     }
     choreServicer = service;
-    timeOfThisRun = System.currentTimeMillis();
+    timeOfThisRun = -1;
   }
 
   public synchronized void cancel() {
