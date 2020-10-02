@@ -115,7 +115,6 @@ public class Replication implements ReplicationSourceService {
     SyncReplicationPeerMappingManager mapping = new SyncReplicationPeerMappingManager();
     this.globalMetricsSource = CompatibilitySingletonFactory
         .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
-    WALProvider walProvider = walFactory.getWALProvider();
     this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers,
         replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId, walFactory,
         mapping, globalMetricsSource);
