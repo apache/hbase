@@ -225,7 +225,7 @@ public class ReopenTableRegionsProcedure
     ReopenTableRegionsStateData.Builder builder = ReopenTableRegionsStateData.newBuilder()
       .setTableName(ProtobufUtil.toProtoTableName(tableName));
     regions.stream().map(ProtobufUtil::toRegionLocation).forEachOrdered(builder::addRegion);
-    if (regionNames != null) {
+    if (CollectionUtils.isNotEmpty(regionNames)) {
       regionNames.stream().map(ByteString::copyFrom).forEachOrdered(builder::addRegionNames);
     }
     serializer.serialize(builder.build());
