@@ -368,7 +368,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         ctx.getMetrics().incrLogEditsFiltered(skippedEdits);
         return true;
       } else {
-        LOG.warn("Failed to replicate all entris, retry={}", retryCounter.getAttemptTimes());
+        LOG.warn("Failed to replicate all entries, retry={}", retryCounter.getAttemptTimes());
         if (!retryCounter.shouldRetry()) {
           return false;
         }

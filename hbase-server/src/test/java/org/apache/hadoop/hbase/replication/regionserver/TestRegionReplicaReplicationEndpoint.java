@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -127,7 +127,7 @@ public class TestRegionReplicaReplicationEndpoint {
     // and replication started.
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
       Admin admin = connection.getAdmin()) {
-      String peerId = "region_replica_replication";
+      String peerId = ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER;
 
       ReplicationPeerConfig peerConfig = null;
       try {
@@ -416,7 +416,7 @@ public class TestRegionReplicaReplicationEndpoint {
     HTU.getAdmin().createTable(htd);
 
     // both tables are created, now pause replication
-    HTU.getAdmin().disableReplicationPeer(ServerRegionReplicaUtil.getReplicationPeerId());
+    HTU.getAdmin().disableReplicationPeer(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
 
     // now that the replication is disabled, write to the table to be dropped, then drop the table.
 
@@ -450,9 +450,9 @@ public class TestRegionReplicaReplicationEndpoint {
     MetricsSource metrics = mock(MetricsSource.class);
     ReplicationEndpoint.Context ctx =
       new ReplicationEndpoint.Context(rs, HTU.getConfiguration(), HTU.getConfiguration(),
-        HTU.getTestFileSystem(), ServerRegionReplicaUtil.getReplicationPeerId(),
+        HTU.getTestFileSystem(), ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER,
         UUID.fromString(rs.getClusterId()), rs.getReplicationSourceService().getReplicationPeers()
-          .getPeer(ServerRegionReplicaUtil.getReplicationPeerId()),
+          .getPeer(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER),
         metrics, rs.getTableDescriptors(), rs);
     RegionReplicaReplicationEndpoint rrpe = new RegionReplicaReplicationEndpoint();
     rrpe.init(ctx);
@@ -476,7 +476,7 @@ public class TestRegionReplicaReplicationEndpoint {
       HTU.loadNumericRows(table, HBaseTestingUtility.fam1, 0, 1000);
 
       // now enable the replication
-      HTU.getAdmin().enableReplicationPeer(ServerRegionReplicaUtil.getReplicationPeerId());
+      HTU.getAdmin().enableReplicationPeer(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
 
       verifyReplication(tableName, regionReplication, 0, 1000);
     } finally {
