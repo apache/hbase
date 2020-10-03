@@ -51,6 +51,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationListener;
@@ -68,6 +70,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -369,7 +372,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   /**
    * @return a new 'classic' user-space replication source.
    * @param queueId the id of the replication queue to associate the ReplicationSource with.
-   * @see #createCatalogReplicationSource() for creating a ReplicationSource for hbase:meta.
+   * @see #createCatalogReplicationSource(RegionInfo) for creating a ReplicationSource for meta.
    */
   private ReplicationSourceInterface createSource(String queueId, ReplicationPeer replicationPeer)
       throws IOException {
@@ -1181,57 +1184,65 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   /**
    * Add an hbase:meta Catalog replication source. Called on open of an hbase:meta Region.
-   * @see #removeCatalogReplicationSource()
+   * Create it once only. If exists already, use the existing one.
+   * @see #removeCatalogReplicationSource(RegionInfo)
+   * @see #addSource(String) This is specialization on the addSource method.
    */
-  public ReplicationSourceInterface addCatalogReplicationSource() throws IOException {
-    // Open/Create the hbase:meta ReplicationSource once only.
+  public ReplicationSourceInterface addCatalogReplicationSource(RegionInfo regionInfo)
+      throws IOException {
+    // Poor-man's putIfAbsent
     synchronized (this.catalogReplicationSource) {
       ReplicationSourceInterface rs = this.catalogReplicationSource.get();
       return rs != null ? rs :
-        this.catalogReplicationSource.getAndSet(createCatalogReplicationSource());
+        this.catalogReplicationSource.getAndSet(createCatalogReplicationSource(regionInfo));
     }
   }
 
   /**
    * Remove the hbase:meta Catalog replication source.
    * Called when we close hbase:meta.
-   * @see #addCatalogReplicationSource()
+   * @see #addCatalogReplicationSource(RegionInfo regionInfo)
    */
-  public void removeCatalogReplicationSource() {
+  public void removeCatalogReplicationSource(RegionInfo regionInfo) {
     // Nothing to do. Leave any CatalogReplicationSource in place in case an hbase:meta Region
     // comes back to this server.
   }
 
   /**
    * Create, initialize, and start the Catalog ReplicationSource.
+   * Presumes called one-time only (caller must ensure one-time only call).
+   * @see #addSource(String) This is a specialization of the addSource call.
    */
-  private ReplicationSourceInterface createCatalogReplicationSource() throws IOException {
-    // Has the hbase:meta WALProvider been instantiated?
+  private ReplicationSourceInterface createCatalogReplicationSource(RegionInfo regionInfo)
+      throws IOException {
+    // Instantiate meta walProvider. Instantiated here or over in the #warmupRegion call made by the
+    // Master on a 'move' operation. Need to do extra work if we did NOT instantiate the provider.
     WALProvider walProvider = this.walFactory.getMetaWALProvider();
-    boolean addListener = false;
-    if (walProvider == null) {
-      // The meta walProvider has not been instantiated. Create it.
+    boolean instantiate = walProvider == null;
+    if (instantiate) {
       walProvider = this.walFactory.getMetaProvider();
-      addListener = true;
     }
     CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
       this.clusterId.toString(), "meta_" + ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
     final ReplicationSourceInterface crs = new CatalogReplicationSource();
     crs.init(conf, fs, this, new NoopReplicationQueueStorage(), peer, server, peer.getId(),
       clusterId, walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
-    if (addListener) {
-      walProvider.addWALActionsListener(new WALActionsListener() {
-        @Override
-        public void postLogRoll(Path oldPath, Path newPath) throws IOException {
-          crs.enqueueLog(newPath);
-        }
-      });
-    } else {
-      // This is a problem. We'll have a ReplicationSource but no listener on hbase:meta WALs
-      // so nothing will be replicated.
-      LOG.error("Did not install WALActionsListener creating CatalogReplicationSource!");
+    // Add listener on the provider so we can pick up the WAL to replicate on roll.
+    WALActionsListener listener = new WALActionsListener() {
+      @Override public void postLogRoll(Path oldPath, Path newPath) throws IOException {
+        crs.enqueueLog(newPath);
+      }
+    };
+    walProvider.addWALActionsListener(listener);
+    if (!instantiate) {
+      // If we did not instantiate provider, need to add our listener on already-created WAL
+      // instance too (listeners are passed by provider to WAL instance on creation but if provider
+      // created already, our listener add above is missed). And add the current WAL file to the
+      // Replication Source so it can start replicating it.
+      WAL wal = walProvider.getWAL(regionInfo);
+      wal.registerWALActionsListener(listener);
+      crs.enqueueLog(((AbstractFSWAL)wal).getCurrentFileName());
     }
-    // Start this ReplicationSource.
     return crs.startup();
   }
 }
