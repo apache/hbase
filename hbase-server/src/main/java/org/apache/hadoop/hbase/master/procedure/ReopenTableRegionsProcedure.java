@@ -240,7 +240,8 @@ public class ReopenTableRegionsProcedure
       .collect(Collectors.toList());
     if (CollectionUtils.isNotEmpty(data.getRegionNamesList())) {
       regionNames = new ArrayList<>();
-      data.getRegionNamesList().forEach(regionName -> regionNames.add(regionName.toByteArray()));
+      data.getRegionNamesList().stream().map(ByteString::toByteArray)
+        .forEachOrdered(regionNames::add);
     } else {
       regionNames = null;
     }
