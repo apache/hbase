@@ -2044,48 +2044,34 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   /**
-   *  Wamrmup a region on this server.
-   *
-   * This method should only be called by Master. It synchrnously opens the region and
+   * Warmup a region on this server.
+   * This method should only be called by Master. It synchronously opens the region and
    * closes the region bringing the most important pages in cache.
-   * <p>
-   *
-   * @param controller the RPC controller
-   * @param request the request
-   * @throws ServiceException
    */
   @Override
   public WarmupRegionResponse warmupRegion(final RpcController controller,
       final WarmupRegionRequest request) throws ServiceException {
-
     final RegionInfo region = ProtobufUtil.toRegionInfo(request.getRegionInfo());
-    TableDescriptor htd;
     WarmupRegionResponse response = WarmupRegionResponse.getDefaultInstance();
-
     try {
       checkOpen();
       String encodedName = region.getEncodedName();
       byte[] encodedNameBytes = region.getEncodedNameAsBytes();
       final HRegion onlineRegion = regionServer.getRegion(encodedName);
-
       if (onlineRegion != null) {
-        LOG.info("Region already online. Skipping warming up " + region);
+        LOG.info("{} is online; skipping warmup", region);
         return response;
       }
-
-      htd = regionServer.tableDescriptors.get(region.getTable());
-
+      TableDescriptor htd = regionServer.tableDescriptors.get(region.getTable());
       if (regionServer.getRegionsInTransitionInRS().containsKey(encodedNameBytes)) {
-        LOG.info("Region is in transition. Skipping warmup " + region);
+        LOG.info("{} is in transition; skipping warmup", region);
         return response;
       }
-
-      LOG.info("Warming up region " + region.getRegionNameAsString());
+      LOG.info("Warmup {}", region.getRegionNameAsString());
       HRegion.warmupHRegion(region, htd, regionServer.getWAL(region),
           regionServer.getConfiguration(), regionServer, null);
-
     } catch (IOException ie) {
-      LOG.error("Failed warming up region " + region.getRegionNameAsString(), ie);
+      LOG.error("Failed warmup of {}", region.getRegionNameAsString(), ie);
       throw new ServiceException(ie);
     }
 

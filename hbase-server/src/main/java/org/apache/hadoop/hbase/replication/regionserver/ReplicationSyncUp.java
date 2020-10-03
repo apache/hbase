@@ -84,7 +84,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
       System.out.println("Start Replication Server start");
       Replication replication = new Replication();
       replication.initialize(new DummyServer(zkw), fs, logDir, oldLogDir,
-        new WALFactory(conf, "test", false));
+        new WALFactory(conf, "test", null, false));
       ReplicationSourceManager manager = replication.getReplicationManager();
       manager.init().get();
       while (manager.activeFailoverTaskCount() > 0) {
