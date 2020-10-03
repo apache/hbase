@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -64,7 +65,7 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
 
   @Override
   public void initialize(Server server, FileSystem fs, Path logdir, Path oldLogDir,
-    WALProvider walProvider) throws IOException {
+    WALFactory walFactory) throws IOException {
     this.server = server;
     this.conf = server.getConfiguration();
     this.statsPeriodInSecond =
