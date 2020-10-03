@@ -176,6 +176,11 @@ public abstract class AbstractStateMachineTableProcedure<TState>
     }
   }
 
+  protected boolean isTableEnabled(MasterProcedureEnv env) {
+    return env.getMasterServices().getTableStateManager().isTableState(getTableName(),
+      TableState.State.ENABLED);
+  }
+
   /**
    * Check region is online.
    */

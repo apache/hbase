@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
@@ -105,7 +104,7 @@ public class ReopenTableRegionsProcedure
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     switch (state) {
       case REOPEN_TABLE_REGIONS_GET_REGIONS:
-        if (!env.getAssignmentManager().isTableEnabled(tableName)) {
+        if (!isTableEnabled(env)) {
           LOG.info("Table {} is disabled, give up reopening its regions", tableName);
           return Flow.NO_MORE_STATE;
         }
