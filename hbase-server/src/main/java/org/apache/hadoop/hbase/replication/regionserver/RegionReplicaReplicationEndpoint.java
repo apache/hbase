@@ -444,10 +444,21 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         try {
           locations = RegionReplicaReplayCallable
               .getRegionLocations(connection, tableName, row, useCache, 0);
-
           if (locations == null) {
             throw new HBaseIOException("Cannot locate locations for "
                 + tableName + ", row:" + Bytes.toStringBinary(row));
+          }
+          // Replicas can take a while to come online. The cache may have only the primary. If we
+          // keep going to the cache, we will not learn of the replicas and their locations after
+          // they come online.
+          if (useCache && locations.size() == 1 && TableName.isMetaTableName(tableName)) {
+            if (tableDescriptors.get(tableName).getRegionReplication() > 1) {
+              // Make an obnoxious log here. See how bad this issue is. Add a timer if happening
+              // too much.
+              LOG.info("Skipping location cache; only one location found for {}", tableName);
+              useCache = false;
+              continue;
+            }
           }
         } catch (TableNotFoundException e) {
           if (LOG.isTraceEnabled()) {
@@ -467,7 +478,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         // entry is not coming from the primary region, filter it out.
         HRegionLocation primaryLocation = locations.getDefaultRegionLocation();
         if (!Bytes.equals(primaryLocation.getRegionInfo().getEncodedNameAsBytes(),
-          encodedRegionName)) {
+            encodedRegionName)) {
           if (useCache) {
             useCache = false;
             continue; // this will retry location lookup

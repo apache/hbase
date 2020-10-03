@@ -109,12 +109,13 @@ public class TestMetaRegionReplicaReplicationEndpoint {
    * Assert that the ReplicationSource for hbase:meta gets created when hbase:meta is opened.
    */
   @Test
-  public void testHBaseMetaReplicationSourceCreatedOnOpen()
-    throws IOException, InterruptedException {
+  public void testHBaseMetaReplicationSourceCreatedOnOpen() throws Exception {
     MiniHBaseCluster cluster = HTU.getMiniHBaseCluster();
     HRegionServer hrs = cluster.getRegionServer(cluster.getServerHoldingMeta());
+    // Replicate a row to prove all working.
+    testHBaseMetaReplicatesOneRow(0);
     assertTrue(isMetaRegionReplicaReplicationSource(hrs));
-    // Now move the hbase:meta and make sure the ReplicationSoruce is in both places.
+    // Now move the hbase:meta and make sure the ReplicationSource is in both places.
     HRegionServer hrsOther = null;
     for (int i = 0; i < cluster.getNumLiveRegionServers(); i++) {
       hrsOther = cluster.getRegionServer(i);
@@ -138,6 +139,26 @@ public class TestMetaRegionReplicaReplicationEndpoint {
     // Assert that there is a ReplicationSource in both places now.
     assertTrue(isMetaRegionReplicaReplicationSource(hrs));
     assertTrue(isMetaRegionReplicaReplicationSource(hrsOther));
+    // Replicate to show stuff still works.
+    testHBaseMetaReplicatesOneRow(1);
+    // Now pretend a few hours have gone by... roll the meta WAL in original location... Move the
+    // meta back and retry replication. See if it works.
+    hrs.getWAL(meta.getRegionInfo()).rollWriter(true);
+    testHBaseMetaReplicatesOneRow(2);
+    hrs.getWAL(meta.getRegionInfo()).rollWriter(true);
+    testHBaseMetaReplicatesOneRow(3);
+  }
+
+  /**
+   * Test meta region replica replication. Create some tables and see if replicas pick up the
+   * additions.
+   */
+  private void testHBaseMetaReplicatesOneRow(int i) throws Exception {
+    waitForMetaReplicasToOnline();
+    try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName() + "_" + i),
+        HConstants.CATALOG_FAMILY)) {
+      verifyReplication(TableName.META_TABLE_NAME, NB_SERVERS, getMetaCells(table.getName()));
+    }
   }
 
   /**

@@ -535,7 +535,11 @@ public class TestReplicationSource {
       FlakyReplicationEndpoint.class.getName());
     try {
       rs.startup();
+      assertTrue(rs.isSourceActive());
+      Waiter.waitFor(conf, 1000, () -> FaultyReplicationEndpoint.count > 0);
       Waiter.waitFor(conf, 1000, () -> rss.isAborted());
+      assertTrue(rss.isAborted());
+      Waiter.waitFor(conf, 1000, () -> !rs.isSourceActive());
       assertFalse(rs.isSourceActive());
     } finally {
       rs.terminate("Done");
