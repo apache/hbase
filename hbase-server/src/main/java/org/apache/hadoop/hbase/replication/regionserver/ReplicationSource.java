@@ -652,6 +652,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
             }
           }
         } while ((this.startupOngoing.get() || this.retryStartup.get()) && !this.abortOnError);
+      });
     return this;
   }
 

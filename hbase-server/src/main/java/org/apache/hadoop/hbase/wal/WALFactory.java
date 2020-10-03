@@ -295,10 +295,10 @@ public class WALFactory {
   }
 
   /**
-   * @param region the region which we want to get a WAL for it. Could be null.
+   * @param region the region which we want to get a WAL for. Could be null.
    */
   public WAL getWAL(RegionInfo region) throws IOException {
-    // use different WAL for hbase:meta
+    // Use different WAL for hbase:meta. Instantiates the meta WALProvider if not already up.
     if (region != null && region.isMetaRegion() &&
       region.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
       return getMetaProvider().getWAL(region);
