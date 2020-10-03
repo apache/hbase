@@ -1198,11 +1198,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private void initializeWarmup(final CancelableProgressable reporter) throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus("Initializing region " + this);
     // Initialize all the HStores
-    status.setStatus("Warming up all the Stores");
+    status.setStatus("Warmup all stores of " + this.getRegionInfo().getRegionNameAsString());
     try {
       initializeStores(reporter, status, true);
     } finally {
-      status.markComplete("Done warming up.");
+      status.markComplete("Warmed up " + this.getRegionInfo().getRegionNameAsString());
     }
   }
 
@@ -8039,14 +8039,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       throws IOException {
 
     Objects.requireNonNull(info, "RegionInfo cannot be null");
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("HRegion.Warming up region: " + info);
-    }
-
+    LOG.debug("Warmup {}", info);
     Path rootDir = CommonFSUtils.getRootDir(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
-
     FileSystem fs = null;
     if (rsServices != null) {
       fs = rsServices.getFileSystem();
@@ -8054,7 +8049,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (fs == null) {
       fs = rootDir.getFileSystem(conf);
     }
-
     HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, null);
     r.initializeWarmup(reporter);
   }

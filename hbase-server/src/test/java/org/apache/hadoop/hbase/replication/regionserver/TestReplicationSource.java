@@ -507,9 +507,12 @@ public class TestReplicationSource {
       p -> OptionalLong.empty(), new MetricsSource(queueId));
     try {
       rs.startup();
+      assertTrue(rs.isSourceActive());
       Waiter.waitFor(conf, 1000, () -> FaultyReplicationEndpoint.count > 0);
-      assertFalse(rs.isSourceActive());
+      Waiter.waitFor(conf, 1000, () -> rss.isAborted());
       assertTrue(rss.isAborted());
+      Waiter.waitFor(conf, 1000, () -> !rs.isSourceActive());
+      assertFalse(rs.isSourceActive());
     } finally {
       rs.terminate("Done");
       rss.stop("Done");
