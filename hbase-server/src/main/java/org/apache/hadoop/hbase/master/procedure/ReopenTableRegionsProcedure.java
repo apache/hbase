@@ -65,12 +65,12 @@ public class ReopenTableRegionsProcedure
   private RetryCounter retryCounter;
 
   public ReopenTableRegionsProcedure() {
-    regionNames = null;
+    regionNames = Collections.emptyList();
   }
 
   public ReopenTableRegionsProcedure(TableName tableName) {
     this.tableName = tableName;
-    this.regionNames = null;
+    this.regionNames = Collections.emptyList();
   }
 
   public ReopenTableRegionsProcedure(final TableName tableName,
@@ -243,7 +243,7 @@ public class ReopenTableRegionsProcedure
       data.getRegionNamesList().stream().map(ByteString::toByteArray)
         .forEachOrdered(regionNames::add);
     } else {
-      regionNames = null;
+      regionNames = Collections.emptyList();
     }
   }
 }
