@@ -386,15 +386,15 @@ public class AssignmentManager {
   // ============================================================================================
   //  Table State Manager helpers
   // ============================================================================================
-  TableStateManager getTableStateManager() {
+  private TableStateManager getTableStateManager() {
     return master.getTableStateManager();
   }
 
-  public boolean isTableEnabled(final TableName tableName) {
+  private boolean isTableEnabled(final TableName tableName) {
     return getTableStateManager().isTableState(tableName, TableState.State.ENABLED);
   }
 
-  public boolean isTableDisabled(final TableName tableName) {
+  private boolean isTableDisabled(final TableName tableName) {
     return getTableStateManager().isTableState(tableName,
       TableState.State.DISABLED, TableState.State.DISABLING);
   }

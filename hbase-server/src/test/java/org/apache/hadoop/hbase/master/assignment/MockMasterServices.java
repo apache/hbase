@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.assignment;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.mockito.ArgumentMatchers.any;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,9 @@ import org.apache.zookeeper.KeeperException;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
@@ -105,17 +108,7 @@ public class MockMasterServices extends MockNoopMasterServices {
         null: new SplitWALManager(this);
 
     // Mock an AM.
-    this.assignmentManager = new AssignmentManager(this, new MockRegionStateStore(this)) {
-      @Override
-      public boolean isTableEnabled(final TableName tableName) {
-        return true;
-      }
-
-      @Override
-      public boolean isTableDisabled(final TableName tableName) {
-        return false;
-      }
-    };
+    this.assignmentManager = new AssignmentManager(this, new MockRegionStateStore(this));
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.serverManager = new ServerManager(this);
     this.tableStateManager = Mockito.mock(TableStateManager.class);

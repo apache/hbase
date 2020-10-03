@@ -149,7 +149,7 @@ public class ModifyTableProcedure
           setNextState(ModifyTableState.MODIFY_TABLE_REOPEN_ALL_REGIONS);
           break;
         case MODIFY_TABLE_REOPEN_ALL_REGIONS:
-          if (env.getAssignmentManager().isTableEnabled(getTableName())) {
+          if (isTableEnabled(env)) {
             addChildProcedure(new ReopenTableRegionsProcedure(getTableName()));
           }
           if (deleteColumnFamilyInModify) {
