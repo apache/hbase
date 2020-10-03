@@ -53,6 +53,7 @@
   import="org.apache.hadoop.hbase.client.RegionLocator"
   import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
   import="org.apache.hadoop.hbase.client.Table"
+  import="org.apache.hadoop.hbase.client.TableState"
   import="org.apache.hadoop.hbase.client.ColumnFamilyDescriptor"
   import="org.apache.hadoop.hbase.http.InfoServer"
   import="org.apache.hadoop.hbase.master.HMaster"
@@ -647,14 +648,14 @@
   </tr>
   <tr>
       <td>Enabled</td>
-      <td><%= master.getAssignmentManager().isTableEnabled(table.getName()) %></td>
+      <td><%= master.getTableStateManager().isTableState(table.getName(), TableState.State.ENABLED) %></td>
       <td>Is the table enabled</td>
   </tr>
   <tr>
       <td>Compaction</td>
       <td>
 <%
-  if (master.getAssignmentManager().isTableEnabled(table.getName())) {
+  if (master.getTableStateManager().isTableState(table.getName(), TableState.State.ENABLED)) {
     CompactionState compactionState = master.getCompactionState(table.getName());
     %><%= compactionState==null?"UNKNOWN":compactionState %><%
   } else {
