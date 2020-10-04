@@ -239,9 +239,8 @@ public class ReopenTableRegionsProcedure
     regions = data.getRegionList().stream().map(ProtobufUtil::toRegionLocation)
       .collect(Collectors.toList());
     if (CollectionUtils.isNotEmpty(data.getRegionNamesList())) {
-      regionNames = new ArrayList<>();
-      data.getRegionNamesList().stream().map(ByteString::toByteArray)
-        .forEachOrdered(regionNames::add);
+      regionNames = data.getRegionNamesList().stream().map(ByteString::toByteArray)
+        .collect(Collectors.toList());
     } else {
       regionNames = Collections.emptyList();
     }
