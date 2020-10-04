@@ -323,20 +323,12 @@
                   }
             %>
             <tr>
-              <td><%= escapeXml(meta.getRegionNameAsString()) %>
-              </td>
-              <td>
-                <a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(
-                  hostAndPort) %>
-                </a></td>
-              <td><%= String.format("%,1d", compactingCells)%>
-              </td>
-              <td><%= String.format("%,1d", compactedCells)%>
-              </td>
-              <td><%= String.format("%,1d", compactingCells - compactedCells)%>
-              </td>
-              <td><%= compactionProgress%>
-              </td>
+              <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
+              <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+              <td><%= String.format("%,1d", compactingCells)%></td>
+              <td><%= String.format("%,1d", compactedCells)%></td>
+              <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
+              <td><%= compactionProgress%></td>
             </tr>
             <%  } %>
             <%} %>
@@ -700,29 +692,17 @@
         </li>
       </ul>
       <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        div class="tab-pane active" id="tab_baseStats">
+        <div class="tab-pane active" id="tab_baseStats">
         <table id="regionServerDetailsTable" class="tablesorter table table-striped">
           <thead>
           <tr>
-            <th class="header" onclick="customChange(this);" id="regionName">
-              Name(<%= String.format("%,1d", regions.size())%>)
-            </th>
+            <th class="header" onclick="customChange(this);" id="regionName">Name(<%= String.format("%,1d", regions.size())%>)</th>
             <th class="header" onclick="customChange(this);" id="regionServerName">Region Server</th>
-            <th class="header" onclick="customChange(this);" id="readReq">
-              ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)
-            </th>
-            <th class="header" onclick="customChange(this);" id="writeReq">
-              WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)
-            </th>
-            <th class="header" onclick="customChange(this);" id="regionSize">
-              StorefileSize<br>(<%= totalSizeStr %>)
-            </th>
-            <th class="header" onclick="customChange(this);" id="fileCount">
-              Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)
-            </th>
-            <th class="header" onclick="customChange(this);" id="MemSize">
-              MemSize<br>(<%= totalMemSizeStr %>)
-            </th>
+            <th class="header" onclick="customChange(this);" id="readReq">ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
+            <th class="header" onclick="customChange(this);" id="writeReq">WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
+            <th class="header" onclick="customChange(this);" id="regionSize">StorefileSize<br>(<%= totalSizeStr %>)</th>
+            <th class="header" onclick="customChange(this);" id="fileCount">Num.Storefiles<br>(<%= String.format("%,1d", totalStoreFileCount)%>)</th>
+            <th class="header" onclick="customChange(this);" id="MemSize">MemSize<br>(<%= totalMemSizeStr %>)</th>
             <th class="header" onclick="customChange(this);" id="locality">Locality</th>
             <th class="header" onclick="customChange(this);" id="startKey">Start Key</th>
             <th class="header" onclick="customChange(this);" id="endKey">End Key</th>
@@ -934,7 +914,7 @@
   </div>
   <p><hr><p>
   <p>Go <a href="javascript:history.back()">Back</a>
-</div><%
+</div> <%
 } catch(IllegalArgumentException e) { %>
 <div class="container-fluid content">
   <div class="row inner_header">
@@ -956,7 +936,7 @@ else { // handle the case for fqtn is null or master is not initialized with err
     </div>
   </div>
   <p><hr><p>
-    <jsp:include page="redirect.jsp" />
+  <jsp:include page="redirect.jsp" />
 </div>
 <% } %>
 <jsp:include page="footer.jsp" />
