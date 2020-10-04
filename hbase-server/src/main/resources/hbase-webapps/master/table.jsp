@@ -780,8 +780,8 @@
       <%
 } else {
 %>
-    <table id="regionServerTable" class="tablesorter table table-striped"><thead><tr><th>Region Server</th><th>Region Count</th></tr></thead>
-      <tbody>
+      <table id="regionServerTable" class="tablesorter table table-striped"><thead><tr><th>Region Server</th><th>Region Count</th></tr></thead>
+        <tbody>
       <%
         }
       %>
