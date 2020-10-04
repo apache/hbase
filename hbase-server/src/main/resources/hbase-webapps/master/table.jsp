@@ -19,44 +19,44 @@
 --%>
 <%@page import="java.net.URLEncoder"%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
-         import="java.util.ArrayList"
-         import="java.util.Collection"
-         import="java.util.HashMap"
-         import="java.util.LinkedHashMap"
-         import="java.util.List"
-         import="java.util.Map"
-         import="java.util.TreeMap"
-         import="java.util.concurrent.TimeUnit"
-         import="org.codehaus.jettison.json.JSONArray"
-         import="org.apache.commons.lang3.StringEscapeUtils"
-         import="org.apache.hadoop.conf.Configuration"
-         import="org.apache.hadoop.hbase.HColumnDescriptor"
-         import="org.apache.hadoop.hbase.HConstants"
-         import="org.apache.hadoop.hbase.HRegionLocation"
-         import="org.apache.hadoop.hbase.HTableDescriptor"
-         import="org.apache.hadoop.hbase.RegionMetrics"
-         import="org.apache.hadoop.hbase.RegionMetricsBuilder"
-         import="org.apache.hadoop.hbase.ServerMetrics"
-         import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.Size"
-         import="org.apache.hadoop.hbase.TableName"
-         import="org.apache.hadoop.hbase.TableNotFoundException"
-         import="org.apache.hadoop.hbase.client.AsyncAdmin"
-         import="org.apache.hadoop.hbase.client.AsyncConnection"
-         import="org.apache.hadoop.hbase.client.CompactionState"
-         import="org.apache.hadoop.hbase.client.ConnectionFactory"
-         import="org.apache.hadoop.hbase.client.RegionInfo"
-         import="org.apache.hadoop.hbase.client.RegionInfoBuilder"
-         import="org.apache.hadoop.hbase.client.RegionLocator"
-         import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
-         import="org.apache.hadoop.hbase.client.Table"
-         import="org.apache.hadoop.hbase.http.InfoServer"
-         import="org.apache.hadoop.hbase.master.HMaster"
-         import="org.apache.hadoop.hbase.master.RegionState"
-         import="org.apache.hadoop.hbase.master.assignment.RegionStates"
-         import="org.apache.hadoop.hbase.quotas.QuotaSettingsFactory"
-         import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"%>
+  import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
+  import="java.util.ArrayList"
+  import="java.util.Collection"
+  import="java.util.HashMap"
+  import="java.util.LinkedHashMap"
+  import="java.util.List"
+  import="java.util.Map"
+  import="java.util.TreeMap"
+  import="java.util.concurrent.TimeUnit"
+  import="org.codehaus.jettison.json.JSONArray"
+  import="org.apache.commons.lang3.StringEscapeUtils"
+  import="org.apache.hadoop.conf.Configuration"
+  import="org.apache.hadoop.hbase.HColumnDescriptor"
+  import="org.apache.hadoop.hbase.HConstants"
+  import="org.apache.hadoop.hbase.HRegionLocation"
+  import="org.apache.hadoop.hbase.HTableDescriptor"
+  import="org.apache.hadoop.hbase.RegionMetrics"
+  import="org.apache.hadoop.hbase.RegionMetricsBuilder"
+  import="org.apache.hadoop.hbase.ServerMetrics"
+  import="org.apache.hadoop.hbase.ServerName"
+  import="org.apache.hadoop.hbase.Size"
+  import="org.apache.hadoop.hbase.TableName"
+  import="org.apache.hadoop.hbase.TableNotFoundException"
+  import="org.apache.hadoop.hbase.client.AsyncAdmin"
+  import="org.apache.hadoop.hbase.client.AsyncConnection"
+  import="org.apache.hadoop.hbase.client.CompactionState"
+  import="org.apache.hadoop.hbase.client.ConnectionFactory"
+  import="org.apache.hadoop.hbase.client.RegionInfo"
+  import="org.apache.hadoop.hbase.client.RegionInfoBuilder"
+  import="org.apache.hadoop.hbase.client.RegionLocator"
+  import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
+  import="org.apache.hadoop.hbase.client.Table"
+  import="org.apache.hadoop.hbase.http.InfoServer"
+  import="org.apache.hadoop.hbase.master.HMaster"
+  import="org.apache.hadoop.hbase.master.RegionState"
+  import="org.apache.hadoop.hbase.master.assignment.RegionStates"
+  import="org.apache.hadoop.hbase.quotas.QuotaSettingsFactory"
+  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"%>
 <%@ page import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot" %>
 <%@ page import="org.apache.hadoop.hbase.quotas.ThrottleSettings" %>
 <%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
@@ -76,9 +76,9 @@
    */
   private RegionMetrics getEmptyRegionMetrics(final RegionInfo regionInfo) {
     return RegionMetricsBuilder.toRegionMetrics(ClusterStatusProtos.RegionLoad.newBuilder().
-      setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().
-        setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).
-        setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
+            setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().
+                    setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).
+                    setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
   }
 %>
 <%
@@ -94,7 +94,7 @@
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = !InfoServer.canUserModifyUI(request, getServletContext(), conf);
   int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
-    HConstants.DEFAULT_META_REPLICA_NUM);
+          HConstants.DEFAULT_META_REPLICA_NUM);
   Map<String, Integer> frags = null;
   if (showFragmentation) {
     frags = FSUtils.getTableFragmentation(master);
@@ -223,7 +223,7 @@
               // NOTE: Presumes meta with one or more replicas
               for (int j = 0; j < numMetaReplicas; j++) {
                 RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                  RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+                        RegionInfoBuilder.FIRST_META_REGIONINFO, j);
                 ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
                 for (int i = 0; i < 1; i++) {
                   String hostAndPort = "";
@@ -298,7 +298,7 @@
               // NOTE: Presumes meta with one or more replicas
               for (int j = 0; j < numMetaReplicas; j++) {
                 RegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
-                  RegionInfoBuilder.FIRST_META_REGIONINFO, j);
+                        RegionInfoBuilder.FIRST_META_REGIONINFO, j);
                 ServerName metaLocation = MetaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
                 for (int i = 0; i < 1; i++) {
                   String hostAndPort = "";
@@ -316,7 +316,7 @@
                         compactedCells = load.getCompactedCellCount();
                         if (compactingCells > 0) {
                           compactionProgress = String.format("%.2f", 100 * ((float)
-                            compactedCells / compactingCells)) + "%";
+                                  compactedCells / compactingCells)) + "%";
                         }
                       }
                     }
@@ -398,7 +398,7 @@
             quota = QuotaTableUtil.getNamespaceQuota(master.getConnection(), tn.getNamespaceAsString());
             if (quota != null) {
               masterSnapshot = master.getQuotaObserverChore().getNamespaceQuotaSnapshots()
-                .get(tn.getNamespaceAsString());
+                      .get(tn.getNamespaceAsString());
             }
           } else {
             masterSnapshot = master.getQuotaObserverChore().getTableQuotaSnapshots().get(tn);
@@ -570,7 +570,7 @@
       }
       if (totalCompactingCells > 0) {
         totalCompactionProgress = String.format("%.2f", 100 *
-          ((float) totalCompactedCells / totalCompactingCells)) + "%";
+                ((float) totalCompactedCells / totalCompactingCells)) + "%";
       }
       if(regions != null && regions.size() > 0) { %>
     <%
@@ -780,13 +780,7 @@
       <%
 } else {
 %>
-    <table id="regionServerTable" class="tablesorter table table-striped">
-      <thead>
-      <tr>
-        <th>Region Server</th>
-        <th>Region Count</th>
-      </tr>
-      </thead>
+    <table id="regionServerTable" class="tablesorter table table-striped"><thead><tr><th>Region Server</th><th>Region Count</th></tr></thead>
       <tbody>
       <%
         }
