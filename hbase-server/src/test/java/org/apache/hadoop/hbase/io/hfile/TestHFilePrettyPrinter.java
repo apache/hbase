@@ -107,4 +107,23 @@ public class TestHFilePrettyPrinter {
     String expectedResult = "Scanning -> " + fileInRootDir + "\n" + "Scanned kv count -> 1000\n";
     assertEquals(expectedResult, result);
   }
+
+  @Test
+  public void testHFilePrettyPrinterSeekFirstRow() throws Exception {
+    Path fileNotInRootDir = UTIL.getDataTestDir("hfile");
+    TestHRegionServerBulkLoad.createHFile(fs, fileNotInRootDir, cf, fam, value, 1000);
+    assertNotEquals("directory used is not an HBase root dir", UTIL.getDefaultRootDirPath(),
+      fileNotInRootDir);
+
+    HFile.Reader reader =
+        HFile.createReader(fs, fileNotInRootDir, CacheConfig.DISABLED, true, conf);
+    String firstRowKey = new String(reader.getFirstRowKey().get());
+
+    System.setOut(ps);
+    new HFilePrettyPrinter(conf)
+        .run(new String[] { "-v", "-w" + firstRowKey, String.valueOf(fileNotInRootDir) });
+    String result = new String(stream.toByteArray());
+    String expectedResult = "Scanning -> " + fileNotInRootDir + "\n" + "Scanned kv count -> 1\n";
+    assertEquals(expectedResult, result);
+  }
 }
