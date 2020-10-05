@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -190,8 +192,8 @@ public class MetaFixer {
 
           // Add replicas if needed
           // we need to create regions with replicaIds starting from 1
-          List<RegionInfo> newRegions = RegionReplicaUtil.addReplicas(
-            Collections.singletonList(regionInfo), 1, td.getRegionReplication());
+          List<RegionInfo> newRegions = RegionReplicaUtil
+            .addReplicas(Collections.singletonList(regionInfo), 1, td.getRegionReplication());
 
           // Add regions to META
           MetaTableAccessor.addRegionsToMeta(masterServices.getConnection(), newRegions,
@@ -199,12 +201,13 @@ public class MetaFixer {
 
           // Setup replication for region replicas if needed
           if (td.getRegionReplication() > 1) {
-            ServerRegionReplicaUtil.setupRegionReplicaReplication(
-              masterServices.getConfiguration());
+            ServerRegionReplicaUtil.setupRegionReplicaReplication(masterServices);
           }
-          return Either.<List<RegionInfo>, IOException>ofLeft(newRegions);
+          return Either.<List<RegionInfo>, IOException> ofLeft(newRegions);
         } catch (IOException e) {
-          return Either.<List<RegionInfo>, IOException>ofRight(e);
+          return Either.<List<RegionInfo>, IOException> ofRight(e);
+        } catch (ReplicationException e) {
+          return Either.<List<RegionInfo>, IOException> ofRight(new HBaseIOException(e));
         }
       })
       .collect(Collectors.toList());

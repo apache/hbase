@@ -94,7 +94,7 @@ public class TestEnableTable {
     // content from a few of the rows.
     try (Table metaTable = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       try (ResultScanner scanner = metaTable.getScanner(
-        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
+        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConfiguration(), tableName))) {
         for (Result result : scanner) {
           // Just delete one row.
           Delete d = new Delete(result.getRow());
@@ -114,8 +114,8 @@ public class TestEnableTable {
         fail("Got an exception while deleting " + tableName);
       }
       int rowCount = 0;
-      try (ResultScanner scanner = metaTable
-        .getScanner(MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
+      try (ResultScanner scanner = metaTable.getScanner(
+        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConfiguration(), tableName))) {
         for (Result result : scanner) {
           LOG.info("Found when none expected: " + result);
           rowCount++;
