@@ -979,7 +979,7 @@ public class ProcedureExecutor<TEnvironment> {
       while (current != null) {
         LOG.debug("Bypassing {}", current);
         current.bypass(getEnvironment());
-        store.update(procedure);
+        store.update(current);
         long parentID = current.getParentProcId();
         current = getProcedure(parentID);
       }
