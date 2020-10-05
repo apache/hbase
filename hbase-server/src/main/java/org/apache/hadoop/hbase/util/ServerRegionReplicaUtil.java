@@ -22,16 +22,15 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -155,34 +154,24 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
 
   /**
    * Create replication peer for replicating to region replicas if needed.
-   * @param conf configuration to use
-   * @throws IOException
+   * <p/>
+   * This methods should only be called at master side.
    */
-  public static void setupRegionReplicaReplication(Configuration conf) throws IOException {
-    if (!isRegionReplicaReplicationEnabled(conf)) {
+  public static void setupRegionReplicaReplication(MasterServices services)
+    throws IOException, ReplicationException {
+    if (!isRegionReplicaReplicationEnabled(services.getConfiguration())) {
       return;
     }
-
-    try (Connection connection = ConnectionFactory.createConnection(conf);
-      Admin admin = connection.getAdmin()) {
-      ReplicationPeerConfig peerConfig = null;
-      try {
-        peerConfig = admin.getReplicationPeerConfig(REGION_REPLICA_REPLICATION_PEER);
-      } catch (ReplicationPeerNotFoundException e) {
-        LOG.warn(
-          "Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER + " not exist",
-          e);
-      }
-
-      if (peerConfig == null) {
-        LOG.info("Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER
-          + " not exist. Creating...");
-        peerConfig = new ReplicationPeerConfig();
-        peerConfig.setClusterKey(ZKConfig.getZooKeeperClusterKey(conf));
-        peerConfig.setReplicationEndpointImpl(RegionReplicaReplicationEndpoint.class.getName());
-        admin.addReplicationPeer(REGION_REPLICA_REPLICATION_PEER, peerConfig);
-      }
+    if (services.getReplicationPeerManager().getPeerConfig(REGION_REPLICA_REPLICATION_PEER)
+      .isPresent()) {
+      return;
     }
+    LOG.info("Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER +
+      " not exist. Creating...");
+    ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(ZKConfig.getZooKeeperClusterKey(services.getConfiguration()))
+      .setReplicationEndpointImpl(RegionReplicaReplicationEndpoint.class.getName()).build();
+    services.addReplicationPeer(REGION_REPLICA_REPLICATION_PEER, peerConfig, true);
   }
 
   public static boolean isRegionReplicaReplicationEnabled(Configuration conf) {

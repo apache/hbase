@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -299,7 +300,8 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
       RegionInfo hri = createRegionInfo(tableName, 1);
       assertNull("RegionInfo was just instantiated by the test, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
-      MetaTableAccessor.addRegionToMeta(this.util.getConnection(), hri);
+      MetaTableAccessor.addRegionsToMeta(this.util.getConnection(), Collections.singletonList(hri),
+        1);
       assertNull("RegionInfo was manually added in META, but "
         + "shouldn't be in AM regionStates yet.", am.getRegionStates().getRegionState(hri));
       hri = am.loadRegionFromMeta(hri.getEncodedName());
