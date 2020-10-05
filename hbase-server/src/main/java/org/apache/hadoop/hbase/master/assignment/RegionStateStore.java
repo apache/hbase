@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -32,9 +32,13 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -59,6 +63,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class RegionStateStore {
   private static final Logger LOG = LoggerFactory.getLogger(RegionStateStore.class);
+  private static final Logger METALOG = LoggerFactory.getLogger("org.apache.hadoop.hbase.META");
 
   /** The delimiter for meta columns for replicaIds &gt; 0 */
   protected static final char META_REPLICA_ID_DELIMITER = '_';
@@ -220,7 +225,8 @@ public class RegionStateStore {
 
   private void updateRegionLocation(RegionInfo regionInfo, State state, Put put)
       throws IOException {
-    try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = getMetaTable()) {
+      debugLogMutation(put);
       table.put(put);
     } catch (IOException e) {
       // TODO: Revist!!!! Means that if a server is loaded, then we will abort our host!
@@ -238,6 +244,10 @@ public class RegionStateStore {
     long maxSeqId = WALSplitUtil.getMaxRegionSequenceId(master.getConfiguration(), region,
       fs::getFileSystem, fs::getWALFileSystem);
     return maxSeqId > 0 ? maxSeqId + 1 : HConstants.NO_SEQNUM;
+  }
+
+  private Table getMetaTable() throws IOException {
+    return master.getConnection().getTable(TableName.META_TABLE_NAME);
   }
 
   // ============================================================================================
@@ -278,6 +288,83 @@ public class RegionStateStore {
 
   public void deleteRegions(final List<RegionInfo> regions) throws IOException {
     MetaTableAccessor.deleteRegionInfos(master.getConnection(), regions);
+  }
+
+  /**
+   * Update region replicas if necessary by adding new replica locations or removing unused region
+   * replicas
+   */
+  public void updateRegionReplicas(TableName tableName, int oldReplicaCount, int newReplicaCount)
+    throws IOException {
+    if (newReplicaCount < oldReplicaCount) {
+      removeRegionReplicas(tableName, oldReplicaCount, newReplicaCount);
+    } else if (newReplicaCount > oldReplicaCount) {
+      addRegionReplicas(tableName, oldReplicaCount, newReplicaCount);
+    }
+  }
+
+  private Scan getScanForUpdateRegionReplicas(TableName tableName) {
+    return MetaTableAccessor.getScanForTableName(master.getConfiguration(), tableName)
+      .addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+  }
+
+  private void removeRegionReplicas(TableName tableName, int oldReplicaCount, int newReplicaCount)
+    throws IOException {
+    Scan scan = getScanForUpdateRegionReplicas(tableName);
+    List<Delete> deletes = new ArrayList<>();
+    long now = EnvironmentEdgeManager.currentTime();
+    try (Table metaTable = getMetaTable(); ResultScanner scanner = metaTable.getScanner(scan)) {
+      for (;;) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
+        }
+        RegionInfo primaryRegionInfo = MetaTableAccessor.getRegionInfo(result);
+        if (primaryRegionInfo == null || primaryRegionInfo.isSplitParent()) {
+          continue;
+        }
+        Delete delete = new Delete(result.getRow());
+        for (int i = newReplicaCount; i < oldReplicaCount; i++) {
+          delete.addColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(i), now);
+          delete.addColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getSeqNumColumn(i), now);
+          delete.addColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(i),
+            now);
+          delete.addColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerNameColumn(i),
+            now);
+          delete.addColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getRegionStateColumn(i),
+            now);
+        }
+        deletes.add(delete);
+      }
+      debugLogMutations(deletes);
+      metaTable.delete(deletes);
+    }
+  }
+
+  private void addRegionReplicas(TableName tableName, int oldReplicaCount, int newReplicaCount)
+    throws IOException {
+    Scan scan = getScanForUpdateRegionReplicas(tableName);
+    List<Put> puts = new ArrayList<>();
+    long now = EnvironmentEdgeManager.currentTime();
+    try (Table metaTable = getMetaTable(); ResultScanner scanner = metaTable.getScanner(scan)) {
+      for (;;) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
+        }
+        RegionInfo primaryRegionInfo = MetaTableAccessor.getRegionInfo(result);
+        if (primaryRegionInfo == null || primaryRegionInfo.isSplitParent()) {
+          continue;
+        }
+        Put put = new Put(result.getRow(), now);
+        for (int i = oldReplicaCount; i < newReplicaCount; i++) {
+          MetaTableAccessor.addEmptyLocation(put, i);
+        }
+        puts.add(put);
+      }
+      debugLogMutations(puts);
+      metaTable.put(puts);
+    }
   }
 
   // ==========================================================================
@@ -331,5 +418,20 @@ public class RegionStateStore {
         ? HConstants.STATE_QUALIFIER
         : Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
           + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+  }
+
+  private static void debugLogMutations(List<? extends Mutation> mutations) throws IOException {
+    if (!METALOG.isDebugEnabled()) {
+      return;
+    }
+    // Logging each mutation in separate line makes it easier to see diff between them visually
+    // because of common starting indentation.
+    for (Mutation mutation : mutations) {
+      debugLogMutation(mutation);
+    }
+  }
+
+  private static void debugLogMutation(Mutation p) throws IOException {
+    METALOG.debug("{} {}", p.getClass().getSimpleName(), p.toJSON());
   }
 }
