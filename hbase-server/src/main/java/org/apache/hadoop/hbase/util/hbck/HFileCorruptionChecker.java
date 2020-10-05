@@ -560,6 +560,8 @@ public class HFileCorruptionChecker {
         : "CORRUPTED";
 
     // print mob-related report
+    out.print("Checked " + mobFilesChecked.get() + " Mob files for corruption");
+    out.print("  Mob files corrupted:                  " + corruptedMobFiles.size());
     if (inQuarantineMode) {
       out.print("    Mob files successfully quarantined: " + quarantinedMobFiles.size());
       for (Path sq : quarantinedMobFiles) {
