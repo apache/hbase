@@ -37,6 +37,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -57,19 +58,19 @@ public class ReopenTableRegionsProcedure
 
   // Specify specific regions of a table to reopen.
   // if specified null, all regions of the table will be reopened.
-  private final List<byte[]> regionNames;
+  private List<byte[]> regionNames;
 
   private List<HRegionLocation> regions = Collections.emptyList();
 
   private RetryCounter retryCounter;
 
   public ReopenTableRegionsProcedure() {
-    regionNames = null;
+    regionNames = Collections.emptyList();
   }
 
   public ReopenTableRegionsProcedure(TableName tableName) {
     this.tableName = tableName;
-    this.regionNames = null;
+    this.regionNames = Collections.emptyList();
   }
 
   public ReopenTableRegionsProcedure(final TableName tableName,
@@ -224,6 +225,17 @@ public class ReopenTableRegionsProcedure
     ReopenTableRegionsStateData.Builder builder = ReopenTableRegionsStateData.newBuilder()
       .setTableName(ProtobufUtil.toProtoTableName(tableName));
     regions.stream().map(ProtobufUtil::toRegionLocation).forEachOrdered(builder::addRegion);
+    if (CollectionUtils.isNotEmpty(regionNames)) {
+      // As of this writing, wrapping this statement withing if condition is only required
+      // for backward compatibility as we used to have 'regionNames' as null for cases
+      // where all regions of given table should be reopened. Now, we have kept emptyList()
+      // for 'regionNames' to indicate all regions of given table should be reopened unless
+      // 'regionNames' contains at least one specific region, in which case only list of regions
+      // that 'regionNames' contain should be reopened, not all regions of given table.
+      // Now, we don't need this check since we are not dealing with null 'regionNames' and hence,
+      // guarding by this if condition can be removed in HBase 4.0.0.
+      regionNames.stream().map(ByteString::copyFrom).forEachOrdered(builder::addRegionNames);
+    }
     serializer.serialize(builder.build());
   }
 
@@ -234,5 +246,11 @@ public class ReopenTableRegionsProcedure
     tableName = ProtobufUtil.toTableName(data.getTableName());
     regions = data.getRegionList().stream().map(ProtobufUtil::toRegionLocation)
       .collect(Collectors.toList());
+    if (CollectionUtils.isNotEmpty(data.getRegionNamesList())) {
+      regionNames = data.getRegionNamesList().stream().map(ByteString::toByteArray)
+        .collect(Collectors.toList());
+    } else {
+      regionNames = Collections.emptyList();
+    }
   }
 }

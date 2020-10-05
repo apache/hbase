@@ -465,6 +465,7 @@ enum ReopenTableRegionsState {
 message ReopenTableRegionsStateData {
   required TableName table_name = 1;
   repeated RegionLocation region = 2;
+  repeated bytes region_names = 3;
 }
 
 enum InitMetaState {
