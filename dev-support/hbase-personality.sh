@@ -553,14 +553,7 @@ function hadoopcheck_rebuild
 
   # All supported Hadoop versions that we want to test the compilation with
   # See the Hadoop section on prereqs in the HBase Reference Guide
-  if [[ "${PATCH_BRANCH}" = branch-1.3 ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on branch-1.3 rules."
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.4.1 2.5.2 2.6.5 2.7.7"
-    else
-      hbase_hadoop2_versions="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3 2.7.4 2.7.5 2.7.6 2.7.7"
-    fi
-  elif [[ "${PATCH_BRANCH}" = branch-1.4 ]]; then
+  if [[ "${PATCH_BRANCH}" = branch-1.4 ]]; then
     yetus_info "Setting Hadoop 2 versions to test based on branch-1.4 rules."
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
       hbase_hadoop2_versions="2.7.7"
