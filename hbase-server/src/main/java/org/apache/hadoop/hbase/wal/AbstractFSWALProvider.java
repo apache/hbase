@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
@@ -88,6 +89,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   protected AtomicBoolean initialized = new AtomicBoolean(false);
   // for default wal provider, logPrefix won't change
   protected String logPrefix;
+  protected Server server;
 
   /**
    * We use walCreateLock to prevent wal recreation in different threads, and also prevent getWALs
@@ -102,7 +104,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    *          null
    */
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALFactory factory, Configuration conf, String providerId, Server server)
+      throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -119,6 +122,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       }
     }
     logPrefix = sb.toString();
+    this.server = server;
     doInit(conf);
   }
 

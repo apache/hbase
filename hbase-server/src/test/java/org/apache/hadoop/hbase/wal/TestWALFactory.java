@@ -687,7 +687,7 @@ public class TestWALFactory {
     assertEquals(wrappedWALProvider.getClass(), walFactory.getMetaProvider().getClass());
 
     // if providers are not set and do not enable SyncReplicationWALProvider
-    walFactory = new WALFactory(conf, this.currentServername.toString(), false);
+    walFactory = new WALFactory(conf, this.currentServername.toString(), null, false);
     assertEquals(walFactory.getWALProvider().getClass(), walFactory.getMetaProvider().getClass());
   }
 
