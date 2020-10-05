@@ -50,6 +50,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 /**
  * This class marches through all of the region's hfiles and verifies that
  * they are all valid files. One just needs to instantiate the class, use
@@ -180,6 +181,9 @@ public class HFileCorruptionChecker {
       missing.add(cfDir);
       return;
     }
+
+    LOG.info("Checking Column Family Directory {}. Number of entries = {}", cfDir, hfs.size());
+
     for (FileStatus hfFs : hfs) {
       Path hf = hfFs.getPath();
       checkHFile(hf);
@@ -213,6 +217,9 @@ public class HFileCorruptionChecker {
       missedMobFiles.add(cfDir);
       return;
     }
+
+    LOG.info("Checking MOB Column Family Directory {}. Number of entries = {}", cfDir, hfs.size());
+
     for (FileStatus hfFs : hfs) {
       Path hf = hfFs.getPath();
       checkMobFile(hf);
@@ -284,6 +291,9 @@ public class HFileCorruptionChecker {
       missedMobFiles.add(regionDir);
       return;
     }
+
+    LOG.info("Checking MOB Region Directory {}. Number of entries = {}", regionDir, hfs.length);
+
     for (FileStatus hfFs : hfs) {
       Path hf = hfFs.getPath();
       checkMobColFamDir(hf);
@@ -318,6 +328,8 @@ public class HFileCorruptionChecker {
       return;
     }
 
+    LOG.info("Checking Region Directory {}. Number of entries = {}", regionDir, cfs.size());
+
     for (FileStatus cfFs : cfs) {
       Path cfDir = cfFs.getPath();
       checkColFamDir(cfDir);
@@ -341,6 +353,8 @@ public class HFileCorruptionChecker {
       }
       return;
     }
+
+    LOG.info("Checking Table Directory {}. Number of entries (including mob) = {}", tableDir, rds.size() + 1);
 
     // Parallelize check at the region dir level
     List<RegionDirChecker> rdcs = new ArrayList<>(rds.size() + 1);
