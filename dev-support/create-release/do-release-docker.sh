@@ -86,6 +86,8 @@ Options:
                Example usage:
                ./do-release-docker.sh -d location -u home.apache.org:/home/{APACHE_USERNAME}/public_html/2.3.0RC0/
                which represent destination as https://home.apache.org/~{APACHE_USERNAME}/2.3.0RC0/
+               For this example, /home/{APACHE_USERNAME}/public_html/2.3.0RC0 dir must be present
+               on home.apache.org.
 EOF
   exit 1
 }
