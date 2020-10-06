@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -629,12 +629,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
       Threads.shutdown(initThread, this.sleepForRetries);
     }
     Collection<ReplicationSourceShipper> workers = workerThreads.values();
-
     for (ReplicationSourceShipper worker : workers) {
       worker.stopWorker();
-      if (worker.entryReader != null) {
+      if(worker.entryReader != null) {
         worker.entryReader.setReaderRunning(false);
       }
+    }
+
+    for (ReplicationSourceShipper worker : workers) {
       if (worker.isAlive() || worker.entryReader.isAlive()) {
         try {
           // Wait worker to stop
@@ -652,9 +654,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
           worker.entryReader.interrupt();
         }
       }
-      //If worker is already stopped but there was still entries batched,
-      //we need to clear buffer used for non processed entries
-      worker.clearWALEntryBatch();
     }
 
     if (this.replicationEndpoint != null) {
