@@ -533,6 +533,7 @@
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
             <systemPropertyVariables>
               <test.build.classes>${test.build.classes}</test.build.classes>
+              <java.io.tmpdir>${test.tmp.dir}</java.io.tmpdir>
             </systemPropertyVariables>
 
             <excludes>
@@ -1386,6 +1387,7 @@
     <extra.enforcer.version>1.0-beta-6</extra.enforcer.version>
     <!-- Location of test resources -->
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
+    <test.tmp.dir>${project.build.directory}</test.tmp.dir>
     <shell-executable>bash</shell-executable>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
