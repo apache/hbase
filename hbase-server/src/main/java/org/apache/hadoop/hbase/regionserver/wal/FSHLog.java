@@ -242,7 +242,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   public FSHLog(final FileSystem fs, final Server server, final Path rootDir, final String logDir,
       final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
       final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
-    super(fs, server, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
+    super(fs, server, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
+        suffix);
     this.minTolerableReplication = conf.getInt(TOLERABLE_LOW_REPLICATION,
       CommonFSUtils.getDefaultReplication(fs, this.walDir));
     this.lowReplicationRollLimit = conf.getInt(LOW_REPLICATION_ROLL_LIMIT, DEFAULT_LOW_REPLICATION_ROLL_LIMIT);

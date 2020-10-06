@@ -215,7 +215,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
       String prefix, String suffix, EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
-    super(fs, server, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
+    super(fs, server, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
+        suffix);
     this.eventLoopGroup = eventLoopGroup;
     this.channelClass = channelClass;
     Supplier<Boolean> hasConsumerTask;

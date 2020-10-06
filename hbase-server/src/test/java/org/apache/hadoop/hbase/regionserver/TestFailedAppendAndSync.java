@@ -280,7 +280,7 @@ public class TestFailedAppendAndSync {
         dodgyWAL.throwArchiveException = true;
         Pair<Path, Long> pair = new Pair<Path, Long>();
         pair.setFirst(new Path("/a/b/"));
-        pair.setSecond(100l);
+        pair.setSecond(100L);
         dodgyWAL.archiveRetriable(pair);
       } catch (Throwable ioe) {
       }

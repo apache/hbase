@@ -67,7 +67,7 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
    * Public because of FSHLog. Should be package-private
    */
   public static Writer createWriter(final Configuration conf, final FileSystem fs, final Path path,
-    final boolean overwritable, long blocksize) throws IOException {
+      final boolean overwritable, long blocksize) throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends Writer> logWriterClass =
         conf.getClass("hbase.regionserver.hlog.writer.impl", ProtobufLogWriter.class,
@@ -101,8 +101,8 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
 
   @Override
   protected FSHLog createWAL() throws IOException {
-    return new FSHLog(CommonFSUtils.getWALFileSystem(conf), server, CommonFSUtils.getWALRootDir(conf),
-        getWALDirectoryName(factory.factoryId),
+    return new FSHLog(CommonFSUtils.getWALFileSystem(conf), server,
+        CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
         getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
         META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
   }
