@@ -593,6 +593,7 @@
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
             <systemPropertyVariables>
               <test.build.classes>${test.build.classes}</test.build.classes>
+              <java.io.tmpdir>${test.tmp.dir}</java.io.tmpdir>
             </systemPropertyVariables>
             <excludes>
               <!-- users can add -D option to skip particular test classes
@@ -1549,6 +1550,7 @@
     <restrict-imports.enforcer.version>0.14.0</restrict-imports.enforcer.version>
     <!-- Location of test resources -->
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
+    <test.tmp.dir>${project.build.directory}</test.tmp.dir>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
     <!--This build.id we'll add as flag so can identify which forked processes belong to our build.
         Default is the build start timestamp. Up on jenkins pass in the jenkins build id by setting
