@@ -414,6 +414,7 @@ public class HttpServer implements FilterContainer {
         httpConfig.setHeaderCacheSize(DEFAULT_MAX_HEADER_SIZE);
         httpConfig.setResponseHeaderSize(DEFAULT_MAX_HEADER_SIZE);
         httpConfig.setRequestHeaderSize(DEFAULT_MAX_HEADER_SIZE);
+        httpConfig.setSendServerVersion(false);
 
         if ("http".equals(scheme)) {
           listener = new ServerConnector(server.webServer, new HttpConnectionFactory(httpConfig));
