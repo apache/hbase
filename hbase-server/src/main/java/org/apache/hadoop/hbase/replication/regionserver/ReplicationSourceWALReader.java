@@ -61,8 +61,7 @@ class ReplicationSourceWALReader extends Thread {
   private final WALEntryFilter filter;
   private final ReplicationSource source;
 
-  @InterfaceAudience.Private
-  final BlockingQueue<WALEntryBatch> entryBatchQueue;
+  private final BlockingQueue<WALEntryBatch> entryBatchQueue;
   // max (heap) size of each batch - multiply by number of batches in queue to get total
   private final long replicationBatchSizeCapacity;
   // max count of each batch - multiply by number of batches in queue to get total
