@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -42,6 +41,7 @@ import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -123,8 +123,7 @@ public class TestWALRecordReader {
   }
 
   /**
-   * Test partial reads from the log based on passed time range
-   * @throws Exception
+   * Test partial reads from the WALs based on passed time range.
    */
   @Test
   public void testPartialRead() throws Exception {
@@ -140,6 +139,7 @@ public class TestWALRecordReader {
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), ts+1, value));
     log.appendData(info, getWalKeyImpl(ts+1, scopes), edit);
     log.sync();
+    Threads.sleep(10);
     LOG.info("Before 1st WAL roll " + log.toString());
     log.rollWriter();
     LOG.info("Past 1st WAL roll " + log.toString());
@@ -164,26 +164,29 @@ public class TestWALRecordReader {
     jobConf.set("mapreduce.input.fileinputformat.inputdir", logDir.toString());
     jobConf.setLong(WALInputFormat.END_TIME_KEY, ts);
 
-    // only 1st file is considered, and only its 1st entry is used
+    // Only 1st file is considered, and only its 1st entry is in-range.
     List<InputSplit> splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
-
     assertEquals(1, splits.size());
     testSplit(splits.get(0), Bytes.toBytes("1"));
 
-    jobConf.setLong(WALInputFormat.START_TIME_KEY, ts+1);
     jobConf.setLong(WALInputFormat.END_TIME_KEY, ts1+1);
     splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
-    // both files need to be considered
     assertEquals(2, splits.size());
-    // only the 2nd entry from the 1st file is used
-    testSplit(splits.get(0), Bytes.toBytes("2"));
-    // only the 1nd entry from the 2nd file is used
+    // Both entries from first file are in-range.
+    testSplit(splits.get(0), Bytes.toBytes("1"), Bytes.toBytes("2"));
+    // Only the 1st entry from the 2nd file is in-range.
     testSplit(splits.get(1), Bytes.toBytes("3"));
+
+    jobConf.setLong(WALInputFormat.START_TIME_KEY, ts + 1);
+    jobConf.setLong(WALInputFormat.END_TIME_KEY, ts1 + 1);
+    splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
+    assertEquals(1, splits.size());
+    // Only the 1st entry from the 2nd file is in-range.
+    testSplit(splits.get(0), Bytes.toBytes("3"));
   }
 
   /**
    * Test basic functionality
-   * @throws Exception
    */
   @Test
   public void testWALRecordReader() throws Exception {
@@ -234,11 +237,7 @@ public class TestWALRecordReader {
     jobConf.setLong(WALInputFormat.END_TIME_KEY, Long.MAX_VALUE);
     jobConf.setLong(WALInputFormat.START_TIME_KEY, thirdTs);
     splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
-    // both logs need to be considered
-    assertEquals(2, splits.size());
-    // but both readers skip all edits
-    testSplit(splits.get(0));
-    testSplit(splits.get(1));
+    assertTrue(splits.isEmpty());
   }
 
   /**

@@ -424,32 +424,11 @@ See <<hfile_tool>>.
 For bulk replaying WAL files or _recovered.edits_ files, see
 <<walplayer>>. For reading/verifying individual files, read on.
 
-[[hlog_tool]]
-==== FSHLog tool
-
-The main method on `FSHLog` offers manual split and dump facilities.
-Pass it WALs or the product of a split, the content of the _recovered.edits_.
-directory.
-
-You can get a textual dump of a WAL file content by doing the following:
-
-----
- $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --dump hdfs://example.org:8020/hbase/WALs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
-----
-
-The return code will be non-zero if there are any issues with the file so you can test wholesomeness of file by redirecting `STDOUT` to `/dev/null` and testing the program return.
-
-Similarly you can force a split of a log file directory by doing:
-
-----
- $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --split hdfs://example.org:8020/hbase/WALs/example.org,60020,1283516293161/
-----
-
 [[hlog_tool.prettyprint]]
-===== WALPrettyPrinter
+==== WALPrettyPrinter
 
-The `WALPrettyPrinter` is a tool with configurable options to print the contents of a WAL.
-You can invoke it via the HBase cli with the 'wal' command.
+The `WALPrettyPrinter` is a tool with configurable options to print the contents of a WAL
+or a _recovered.edits_ file. You can invoke it via the HBase cli with the 'wal' command.
 
 ----
  $ ./bin/hbase wal hdfs://example.org:8020/hbase/WALs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
@@ -904,7 +883,10 @@ The output can optionally be mapped to another set of tables.
 
 WALPlayer can also generate HFiles for later bulk importing, in that case only a single table and no mapping can be specified.
 
-.WALPrettyPrinter/FSHLog Tool
+Finally, you can use WALPlayer to replay the content of a Regions `recovered.edits` directory (the files under
+`recovered.edits` directory have the same format as WAL files).
+
+.WALPrettyPrinter
 [NOTE]
 ====
 To read or verify single WAL files or _recovered.edits_ files, since they share the WAL format,
@@ -945,8 +927,8 @@ To generate HFiles to bulk load instead of loading HBase directly, pass:
 To specify a time range, pass:
  -Dwal.start.time=[date|ms]
  -Dwal.end.time=[date|ms]
- The start and the end date of timerange. The dates can be expressed
- in milliseconds since epoch or in yyyy-MM-dd'T'HH:mm:ss.SS format.
+ The start and the end date of timerange (inclusive). The dates can be
+ expressed in milliseconds-since-epoch or yyyy-MM-dd'T'HH:mm:ss.SS format.
  E.g. 1234567890120 or 2009-02-13T23:32:30.12
 Other options:
  -Dmapreduce.job.name=jobName
