@@ -174,4 +174,14 @@ public interface CellComparator extends Comparator<Cell> {
    *   Do not pollute with types other than BBKV if can be helped; the Comparator will slow.
    */
   Comparator getSimpleComparator();
+
+  static CellComparator getComparator(TableName tableName) {
+    if (tableName.equals(TableName.ROOT_TABLE_NAME)) {
+      return RootCellComparator.ROOT_COMPARATOR;
+    }
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
+      return MetaCellComparator.META_COMPARATOR;
+    }
+    return CellComparatorImpl.COMPARATOR;
+  }
 }

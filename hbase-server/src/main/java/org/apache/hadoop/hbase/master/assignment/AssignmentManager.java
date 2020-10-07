@@ -21,12 +21,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,6 +41,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.RootCellComparator;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
@@ -159,8 +162,15 @@ public class AssignmentManager {
   private final ProcedureEvent<?> rootAssignEvent = new ProcedureEvent<>("root assign");
   private final ProcedureEvent<?> rootLoadEvent = new ProcedureEvent<>("root load");
 
-  private final ProcedureEvent<?> metaAssignEvent = new ProcedureEvent<>("meta assign");
   private final ProcedureEvent<?> metaLoadEvent = new ProcedureEvent<>("meta load");
+
+  private final ConcurrentSkipListMap<byte[], ProcedureEvent<?>> metaAssignEventMap =
+    new ConcurrentSkipListMap<>(new Comparator<byte[]>() {
+      @Override public int compare(byte[] o1, byte[] o2) {
+        return RootCellComparator.ROOT_COMPARATOR
+          .compareRows(o1, 0, o1.length, o2, 0, o2.length);
+      }
+    });
 
   private final MetricsAssignmentManager metrics;
   private final RegionInTransitionChore ritChore;
@@ -326,13 +336,11 @@ public class AssignmentManager {
     // Update meta events (for testing)
     if (hasProcExecutor) {
       metaLoadEvent.suspend();
-      for (RegionInfo hri: getMetaRegionSet()) {
+      for (RegionInfo hri: regionStates.getRegionsOfTable(TableName.META_TABLE_NAME)) {
         setMetaAssigned(hri, false);
       }
       rootLoadEvent.suspend();
-      for(RegionInfo hri: getRootRegionSet()) {
-        setRootAssigned(hri, false);
-      }
+      setRootAssigned(RegionInfoBuilder.ROOT_REGIONINFO, false);
     }
   }
 
@@ -427,19 +435,6 @@ public class AssignmentManager {
     return regionInfo.isRootRegion();
   }
 
-  public boolean isRootRegion(final byte[] regionName) {
-    return getRootRegionFromName(regionName) != null;
-  }
-
-  public RegionInfo getRootRegionFromName(final byte[] regionName) {
-    for (RegionInfo hri: getRootRegionSet()) {
-      if (Bytes.equals(hri.getRegionName(), regionName)) {
-        return hri;
-      }
-    }
-    return null;
-  }
-
   public boolean isCarryingRoot(final ServerName serverName) {
     // TODO: handle multiple root
     return isCarryingRegion(serverName, RegionInfoBuilder.ROOT_REGIONINFO);
@@ -461,7 +456,6 @@ public class AssignmentManager {
     return isRegionOnline(RegionInfoBuilder.ROOT_REGIONINFO);
   }
 
-  // TODO: handle multiple root.
   private static final Set<RegionInfo> ROOT_REGION_SET =
     Collections.singleton(RegionInfoBuilder.ROOT_REGIONINFO);
   public Set<RegionInfo> getRootRegionSet() {
@@ -497,6 +491,9 @@ public class AssignmentManager {
 
   private void setRootAssigned(RegionInfo rootRegionInfo, boolean assigned) {
     assert isRootRegion(rootRegionInfo) : "unexpected non-root region " + rootRegionInfo;
+    if (!RegionReplicaUtil.isDefaultReplica(rootRegionInfo)) {
+      return;
+    }
     ProcedureEvent<?> rootAssignEvent = getRootAssignEvent(rootRegionInfo);
     if (assigned) {
       LOG.debug("Setting hbase:root region assigned: "+rootRegionInfo);
@@ -551,22 +548,13 @@ public class AssignmentManager {
     return regionInfo.isMetaRegion();
   }
 
-  public boolean isMetaRegion(final byte[] regionName) {
-    return getMetaRegionFromName(regionName) != null;
-  }
-
-  public RegionInfo getMetaRegionFromName(final byte[] regionName) {
-    for (RegionInfo hri: getMetaRegionSet()) {
-      if (Bytes.equals(hri.getRegionName(), regionName)) {
-        return hri;
+  public boolean isCarryingMeta(final ServerName serverName) {
+    for (RegionInfo ri : getRegionsOnServer(serverName)) {
+      if (ri.isMetaRegion() && RegionReplicaUtil.isDefaultReplica(ri)) {
+        return true;
       }
     }
-    return null;
-  }
-
-  public boolean isCarryingMeta(final ServerName serverName) {
-    // TODO: handle multiple meta
-    return isCarryingRegion(serverName, RegionInfoBuilder.FIRST_META_REGIONINFO);
+    return false;
   }
 
   private boolean isCarryingRegion(final ServerName serverName, final RegionInfo regionInfo) {
@@ -575,20 +563,19 @@ public class AssignmentManager {
     return(node != null && serverName.equals(node.getRegionLocation()));
   }
 
-  private RegionInfo getMetaForRegion(final RegionInfo regionInfo) {
-    //if (regionInfo.isMetaRegion()) return regionInfo;
-    // TODO francis handle multiple meta. if the region provided is not meta lookup
-    // which meta the region belongs to.
-    return RegionInfoBuilder.FIRST_META_REGIONINFO;
-  }
-
   /**
    * Check hbase:meta is up and ready for reading. For use during Master startup only.
    * @return True if meta is UP and online and startup can progress. Otherwise, meta is not online
    *   and we will hold here until operator intervention.
    */
+  @VisibleForTesting
   public boolean waitForMetaOnline() {
-    return isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    for (RegionInfo regionInfo : regionStates.getRegionsOfTable(TableName.META_TABLE_NAME)) {
+      if (!isRegionOnline(regionInfo)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // TODO: handle multiple meta.
@@ -609,7 +596,12 @@ public class AssignmentManager {
    * @see #isMetaLoaded()
    */
   public boolean isMetaAssigned() {
-    return metaAssignEvent.isReady();
+    for (ProcedureEvent<?> event : metaAssignEventMap.values()) {
+      if (!event.isReady()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public boolean isMetaRegionInTransition() {
@@ -622,12 +614,15 @@ public class AssignmentManager {
    * @see #isMetaAssigned()
    */
   public boolean waitMetaAssigned(Procedure<?> proc, RegionInfo regionInfo) {
-    return getMetaAssignEvent(getMetaForRegion(regionInfo)).suspendIfNotReady(proc);
+    return getMetaAssignEvent(regionInfo.getRegionName()).suspendIfNotReady(proc);
   }
 
   private void setMetaAssigned(RegionInfo metaRegionInfo, boolean assigned) {
     assert isMetaRegion(metaRegionInfo) : "unexpected non-meta region " + metaRegionInfo;
-    ProcedureEvent<?> metaAssignEvent = getMetaAssignEvent(metaRegionInfo);
+    if (!RegionReplicaUtil.isDefaultReplica(metaRegionInfo)) {
+      return;
+    }
+    ProcedureEvent<?> metaAssignEvent = getMetaAssignEvent(metaRegionInfo.getStartKey());
     if (assigned) {
       LOG.debug("Setting hbase:meta region assigned: "+metaRegionInfo);
       metaAssignEvent.wake(getProcedureScheduler());
@@ -637,10 +632,8 @@ public class AssignmentManager {
     }
   }
 
-  private ProcedureEvent<?> getMetaAssignEvent(RegionInfo metaRegionInfo) {
-    assert isMetaRegion(metaRegionInfo) : "unexpected non-meta region " + metaRegionInfo;
-    // TODO: handle multiple meta.
-    return metaAssignEvent;
+  private ProcedureEvent<?> getMetaAssignEvent(byte[] startKey) {
+    return metaAssignEventMap.headMap(startKey, true).lastEntry().getValue();
   }
 
   /**
@@ -1787,7 +1780,9 @@ public class AssignmentManager {
       if (regionNode.getProcedure() != null) {
         regionNode.getProcedure().stateLoaded(AssignmentManager.this, regionNode);
       }
-      if (isMetaRegion(regionInfo)) {
+      if (isMetaRegion(regionInfo) && !regionInfo.isSplit()) {
+        metaAssignEventMap.put(regionInfo.getStartKey(),
+          new ProcedureEvent<>("meta assign: " + regionInfo.getRegionNameAsString()));
         if (localState.matches(State.OPEN)) {
           setMetaAssigned(regionInfo, true);
         } else if (localState.matches(State.CLOSING, State.CLOSED)){
@@ -2227,6 +2222,20 @@ public class AssignmentManager {
     // it is a split parent. And usually only one of them can match, as after restart, the region
     // state will be changed from SPLIT to CLOSED.
     regionStateStore.splitRegion(parent, daughterA, daughterB, serverName, td);
+
+    //Split meta assignment event
+    if (td.isMetaTable()) {
+      ProcedureEvent<?> parentEvent = metaAssignEventMap.get(parent.getStartKey());
+      metaAssignEventMap.put(daughterB.getStartKey(),
+        new ProcedureEvent<>("meta assign: " + daughterB.getRegionNameAsString()));
+      //this entry should overwrite the parent's entry in metaAssignEventMap
+      metaAssignEventMap.put(daughterA.getStartKey(),
+        new ProcedureEvent<>("meta assign: " + daughterA.getRegionNameAsString()));
+      //wake the procedures waiting on parent event, the procedures will awaken
+      //and wait on newly created daughter events
+      parentEvent.wake(getProcedureScheduler());
+    }
+
     if (shouldAssignFavoredNodes(parent)) {
       List<ServerName> onlineServers = this.master.getServerManager().getOnlineServersList();
       getFavoredNodePromoter().generateFavoredNodesForDaughter(onlineServers, parent, daughterA,
@@ -2254,6 +2263,27 @@ public class AssignmentManager {
     }
     TableDescriptor td = master.getTableDescriptors().get(child.getTable());
     regionStateStore.mergeRegions(child, mergeParents, serverName, td);
+
+    //Split meta assignment event
+    if (td.isMetaTable()) {
+      ProcedureEvent<?> parentEvent[] = new ProcedureEvent[mergeParents.length];
+      for (int i=0; i<parentEvent.length; i++) {
+        parentEvent[i] = metaAssignEventMap.get(mergeParents[i].getStartKey());
+      }
+
+      metaAssignEventMap.put(child.getStartKey(),
+        new ProcedureEvent<>("meta assign: " + child.getRegionNameAsString()));
+
+      //wake the procedures waiting on parent event, the procedures will awaken
+      //and wait on newly created child event
+      for (int i= mergeParents.length-1; i>=1; i--) {
+        metaAssignEventMap.remove(mergeParents[i].getStartKey());
+        parentEvent[i].wake(getProcedureScheduler());
+      }
+      //for the first key we don't remove since we already replaced it
+      parentEvent[0].wake(getProcedureScheduler());
+    }
+
     if (shouldAssignFavoredNodes(child)) {
       getFavoredNodePromoter().generateFavoredNodesForMergedRegion(child, mergeParents);
     }

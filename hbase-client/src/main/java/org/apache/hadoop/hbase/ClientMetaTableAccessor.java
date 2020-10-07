@@ -474,6 +474,9 @@ public final class ClientMetaTableAccessor {
     switch (type) {
       case REGION:
       case REPLICATION: {
+        if (TableName.META_TABLE_NAME.equals(tableName)) {
+          return HConstants.EMPTY_END_ROW;
+        }
         stopRow = new byte[tableName.getName().length + 3];
         System.arraycopy(tableName.getName(), 0, stopRow, 0, tableName.getName().length);
         stopRow[stopRow.length - 3] = ' ';

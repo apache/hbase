@@ -229,7 +229,17 @@ public class ServerCrashProcedure
           }
           break;
         case SERVER_CRASH_ASSIGN_META:
-          assignRegions(env, Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO));
+          //On master startup this list will only contain catalog regions
+          List<RegionInfo> regionsOnServer = getRegionsOnCrashedServer(env);
+          if (regionsOnServer != null) {
+            List<RegionInfo> metaRegions = new ArrayList<>();
+            for (RegionInfo regionInfo : regionsOnServer) {
+              if (isDefaultMetaRegion(regionInfo)) {
+                metaRegions.add(regionInfo);
+              }
+            }
+            assignRegions(env, metaRegions);
+          }
           setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
           break;
         case SERVER_CRASH_GET_REGIONS:

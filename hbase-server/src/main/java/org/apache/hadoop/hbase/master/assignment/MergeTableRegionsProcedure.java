@@ -160,7 +160,7 @@ public class MergeTableRegionsProcedure
    */
   private static RegionInfo createMergedRegionInfo(final RegionInfo[] regionsToMerge) {
     CellComparator comparator =
-      RegionInfo.getComparator(regionsToMerge[0].getTable());
+      CellComparator.getComparator(regionsToMerge[0].getTable());
     byte [] lowestStartKey = null;
     byte [] highestEndKey = null;
     // Region Id is a timestamp. Merged region's id can't be less than that of

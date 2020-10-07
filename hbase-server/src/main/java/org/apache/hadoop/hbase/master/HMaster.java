@@ -1212,16 +1212,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  /**
-   * Check hbase:meta is up and ready for reading. For use during Master startup only.
-   * @return True if meta is UP and online and startup can progress. Otherwise, meta is not online
-   *   and we will hold here until operator intervention.
-   */
-  @VisibleForTesting
-  //TODO francis reconcile this with AM?
-  public boolean waitForMetaOnline() {
-    return assignmentManager.isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO);
-  }
 
   /**
    * Check hbase:namespace table is assigned. If not, startup will hang looking for the ns table

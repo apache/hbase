@@ -29,7 +29,9 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -222,7 +224,12 @@ public class CatalogJanitor extends ScheduledChore {
   protected Report scanForReport() throws IOException {
     ReportMakingVisitor visitor = new ReportMakingVisitor(this.services);
     // Null tablename means scan all of meta.
-    MetaTableAccessor.scanMetaForTableRegions(this.services.getConnection(), visitor, null);
+    CatalogAccessor.scanCatalog(this.services.getConnection(),
+      TableName.ROOT_TABLE_NAME, null,null,
+      ClientMetaTableAccessor.QueryType.REGION, Integer.MAX_VALUE, visitor);
+    CatalogAccessor.scanCatalog(this.services.getConnection(),
+      TableName.META_TABLE_NAME, null,null,
+      ClientMetaTableAccessor.QueryType.REGION, Integer.MAX_VALUE, visitor);
     return visitor.getReport();
   }
 

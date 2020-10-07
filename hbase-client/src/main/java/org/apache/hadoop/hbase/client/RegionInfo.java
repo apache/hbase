@@ -109,7 +109,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   @InterfaceAudience.Private
   Comparator<RegionInfo> COMPARATOR
     = (RegionInfo lhs, RegionInfo rhs) -> {
-      CellComparator comparator = getComparator(rhs.getTable());
+      CellComparator comparator = CellComparator.getComparator(rhs.getTable());
       if (rhs == null) {
         return 1;
       }
@@ -444,7 +444,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @return true if two regions are adjacent
    */
   static boolean areAdjacent(RegionInfo regionA, RegionInfo regionB) {
-    CellComparator comparator = getComparator(regionA.getTable());
+    CellComparator comparator = CellComparator.getComparator(regionA.getTable());
     if (regionA == null || regionB == null) {
       throw new IllegalArgumentException(
       "Can't check whether adjacent for null region");
@@ -829,7 +829,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    * @see #isDegenerate()
    */
   default boolean isOverlap(RegionInfo other) {
-    CellComparator comparator = getComparator(other.getTable());
+    CellComparator comparator = CellComparator.getComparator(other.getTable());
     if (other == null) {
       return false;
     }
@@ -857,15 +857,5 @@ public interface RegionInfo extends Comparable<RegionInfo> {
 
   default int compareTo(RegionInfo other) {
     return RegionInfo.COMPARATOR.compare(this, other);
-  }
-
-  static CellComparator getComparator(TableName tableName) {
-    if (tableName.equals(TableName.ROOT_TABLE_NAME)) {
-      return RootCellComparator.ROOT_COMPARATOR;
-    }
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
-      return MetaCellComparator.META_COMPARATOR;
-    }
-    return CellComparatorImpl.COMPARATOR;
   }
 }

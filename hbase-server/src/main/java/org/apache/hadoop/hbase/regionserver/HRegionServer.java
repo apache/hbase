@@ -1189,8 +1189,14 @@ public class HRegionServer extends Thread implements
   }
 
   private boolean containsCatalogTableRegions() {
-    return onlineRegions.containsKey(RegionInfoBuilder.ROOT_REGIONINFO.getEncodedName()) ||
-      onlineRegions.containsKey(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
+    boolean hasCatalogRegions = false;
+    for (HRegion region : onlineRegions.values()) {
+      if (region.getRegionInfo().isRootRegion() || region.getRegionInfo().isMetaRegion()) {
+        hasCatalogRegions = true;
+        break;
+      }
+    }
+    return hasCatalogRegions;
   }
 
   private boolean areAllUserRegionsOffline() {

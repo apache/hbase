@@ -473,11 +473,11 @@ public class CatalogAccessor {
 
   public static void scanMetaForTableRegions(Connection connection,
     ClientMetaTableAccessor.Visitor visitor, TableName tableName) throws IOException {
-    scanCatalog(connection, tableName, QueryType.REGION, Integer.MAX_VALUE, visitor);
+    scanCatalogForTableRegions(connection, QueryType.REGION, Integer.MAX_VALUE, visitor, tableName);
   }
 
-  public static void scanCatalog(Connection connection, TableName table, QueryType type,
-    int maxRows, final ClientMetaTableAccessor.Visitor visitor) throws IOException {
+  public static void scanCatalogForTableRegions(Connection connection, QueryType type, int maxRows,
+    final ClientMetaTableAccessor.Visitor visitor, TableName table) throws IOException {
     scanCatalog(connection, getCatalogTableForTable(table),
       ClientMetaTableAccessor.getTableStartRowForMeta(table, type),
       ClientMetaTableAccessor.getTableStopRowForMeta(table, type),

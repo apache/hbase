@@ -32,9 +32,11 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -195,62 +197,63 @@ public class TestSplitMetaBasicOperations {
     }
   }
 
-//  @Test(timeout = 120000)
-//  public void testSplitNoSplitPoint() throws Exception {
-//    final TableName tableName = TableName.valueOf("testSplitNoSplitPoint");
-//    conf = HBaseConfiguration.create();
-//    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
-//    Admin hbaseAdmin = null;
-//    try {
-//      TEST_UTIL.startMiniCluster(1, 3);
-//      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-//      cluster.waitForActiveAndReadyMaster();
-//      hbaseAdmin = TEST_UTIL.getAdmin();
-//
-//      HTableDescriptor desc = new HTableDescriptor(tableName);
-//      desc.addFamily(new HColumnDescriptor("cf").setBlocksize(30));
-//      SplitAlgorithm algo = new RegionSplitter.HexStringSplit();
-//      // Have more splits so entries in meta span more than one block
-//      byte[][] splits = algo.split(20);
-//      hbaseAdmin.createTable(desc, splits);
-//      hbaseAdmin.flush(TableName.META_TABLE_NAME);
-//
-//      List<Result> list =
-//        CatalogAccessor.fullScanRegions(TEST_UTIL.getConnection());
-//
-//      LOG.info("Splitting meta");
-//      int metaServerIndex =
-//        TEST_UTIL.getHBaseCluster().getServerWith(
-//          HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
-//      HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(metaServerIndex);
-//      int regionCount = hbaseAdmin.getRegions(server.getServerName()).size();
-//      hbaseAdmin.split(HRegionInfo.FIRST_META_REGIONINFO.getTable());
-//
-//      int metaSize =0;
-//      for (int i = 0; i < 300; i++) {
-//        LOG.debug("Waiting on region to split");
-//        metaSize =
-//          CatalogAccessor.getTableRegions(
-//            TEST_UTIL.getConnection(),
-//            TableName.META_TABLE_NAME,
-//            true).size();
-//        if (metaSize > 1) {
-//          break;
-//        }
-//        Thread.sleep(1000);
-//      }
-//
-//      assertEquals(2, metaSize);
-//      LOG.info("Splitting done");
-//      checkBasicOps(TEST_UTIL.getConnection(), tableName, list);
-//    } finally {
-//      if (hbaseAdmin != null) {
-//        hbaseAdmin.disableTable(tableName);
-//        hbaseAdmin.deleteTable(tableName);
-//      }
-//      TEST_UTIL.shutdownMiniCluster();
-//    }
-//  }
+  @Test(timeout = 120000)
+  public void testSplitNoSplitPoint() throws Exception {
+    final TableName tableName = TableName.valueOf("testSplitNoSplitPoint");
+    conf = HBaseConfiguration.create();
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    Admin hbaseAdmin = null;
+    try {
+      TEST_UTIL.startMiniCluster(1, 3);
+      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      cluster.waitForActiveAndReadyMaster();
+      hbaseAdmin = TEST_UTIL.getAdmin();
+
+      TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf"))
+          .setBlocksize(30).build()).build();
+      RegionSplitter.SplitAlgorithm algo = new RegionSplitter.HexStringSplit();
+      // Have more splits so entries in meta span more than one block
+      byte[][] splits = algo.split(20);
+      hbaseAdmin.createTable(desc, splits);
+      hbaseAdmin.flush(TableName.META_TABLE_NAME);
+
+      List<Result> list =
+        CatalogAccessor.fullScanRegions(TEST_UTIL.getConnection());
+
+      LOG.info("Splitting meta");
+      int metaServerIndex =
+        TEST_UTIL.getHBaseCluster().getServerWith(
+          RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName());
+      HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(metaServerIndex);
+      int regionCount = hbaseAdmin.getRegions(server.getServerName()).size();
+      hbaseAdmin.split(TableName.META_TABLE_NAME);
+
+      int metaSize =0;
+      for (int i = 0; i < 300; i++) {
+        LOG.debug("Waiting on region to split");
+        metaSize =
+          CatalogAccessor.getTableRegions(
+            TEST_UTIL.getConnection(),
+            TableName.META_TABLE_NAME,
+            true).size();
+        if (metaSize > 1) {
+          break;
+        }
+        Thread.sleep(1000);
+      }
+
+      assertEquals(2, metaSize);
+      LOG.info("Splitting done");
+      checkBasicOps(TEST_UTIL.getConnection(), tableName, list);
+    } finally {
+      if (hbaseAdmin != null) {
+        hbaseAdmin.disableTable(tableName);
+        hbaseAdmin.deleteTable(tableName);
+      }
+      TEST_UTIL.shutdownMiniCluster();
+    }
+  }
 
 
   private void checkBasicOps(Connection conn, TableName tableName,

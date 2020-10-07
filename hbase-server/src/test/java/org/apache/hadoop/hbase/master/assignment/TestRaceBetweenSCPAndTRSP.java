@@ -91,10 +91,12 @@ public class TestRaceBetweenSCPAndTRSP {
       List<RegionInfo> regions = super.getRegionsOnServer(serverName);
       if (ARRIVE_GET_REGIONS_ON_SERVER != null) {
         ARRIVE_GET_REGIONS_ON_SERVER.countDown();
-        ARRIVE_GET_REGIONS_ON_SERVER = null;
-        try {
-          RESUME_GET_REGIONS_ON_SERVER.await();
-        } catch (InterruptedException e) {
+        if (ARRIVE_GET_REGIONS_ON_SERVER.getCount() == 0) {
+          ARRIVE_GET_REGIONS_ON_SERVER = null;
+          try {
+            RESUME_GET_REGIONS_ON_SERVER.await();
+          } catch (InterruptedException e) {
+          }
         }
       }
       return regions;
@@ -138,7 +140,8 @@ public class TestRaceBetweenSCPAndTRSP {
     ARRIVE_REGION_OPENING = new CountDownLatch(1);
     CountDownLatch arriveRegionOpening = ARRIVE_REGION_OPENING;
     RESUME_REGION_OPENING = new CountDownLatch(1);
-    ARRIVE_GET_REGIONS_ON_SERVER = new CountDownLatch(1);
+    //getRegionsOnServer is called twice, one of isCarryMeta and the second is of interest
+    ARRIVE_GET_REGIONS_ON_SERVER = new CountDownLatch(2);
     CountDownLatch arriveGetRegionsOnServer = ARRIVE_GET_REGIONS_ON_SERVER;
     RESUME_GET_REGIONS_ON_SERVER = new CountDownLatch(1);
 

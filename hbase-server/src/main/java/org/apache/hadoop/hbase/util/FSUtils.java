@@ -406,7 +406,7 @@ public final class FSUtils {
     String version = getVersion(fs, rootdir);
     String msg;
     if (version == null) {
-      if (!metaRegionExists(fs, rootdir)) {
+      if (!rootRegionExists(fs, rootdir)) {
         // rootDir is empty (no version file and no root region)
         // just create new version file (HBASE-1195)
         setVersion(fs, rootdir, wait, retries);
@@ -712,9 +712,9 @@ public final class FSUtils {
    * @param rootDir root directory of HBase installation
    * @return true if exists
    */
-  public static boolean metaRegionExists(FileSystem fs, Path rootDir) throws IOException {
-    Path metaRegionDir = getRegionDirFromRootDir(rootDir, RegionInfoBuilder.FIRST_META_REGIONINFO);
-    return fs.exists(metaRegionDir);
+  public static boolean rootRegionExists(FileSystem fs, Path rootDir) throws IOException {
+    Path rootRegionDir = getRegionDirFromRootDir(rootDir, RegionInfoBuilder.ROOT_REGIONINFO);
+    return fs.exists(rootRegionDir);
   }
 
   /**

@@ -209,7 +209,7 @@ class MutableRegionInfo implements RegionInfo {
    */
   @Override
   public boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey) {
-    CellComparator comparator = RegionInfo.getComparator(tableName);
+    CellComparator comparator = CellComparator.getComparator(tableName);
     if (comparator.compareRows(rangeStartKey, 0, rangeStartKey.length,
       rangeEndKey, 0, rangeEndKey.length) > 0) {
       throw new IllegalArgumentException(
@@ -236,7 +236,7 @@ class MutableRegionInfo implements RegionInfo {
 
   @Override
   public boolean containsRow(byte[] row, int offset, short length) {
-    CellComparator comparator = RegionInfo.getComparator(tableName);
+    CellComparator comparator = CellComparator.getComparator(tableName);
     return comparator.compareRows(row, offset, length, startKey, 0, startKey.length) >= 0 &&
       (comparator.compareRows(row, offset, length, endKey, 0, endKey.length) < 0 ||
         comparator.compareRows(endKey, 0, endKey.length,
