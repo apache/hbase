@@ -32,12 +32,12 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -76,7 +76,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Test {@link org.apache.hadoop.hbase.MetaTableAccessor}.
@@ -218,9 +217,11 @@ public class TestMetaTableAccessor {
       }
     };
     MetaTask writer = new MetaTask(connection, "writer") {
+
       @Override
-      void metaTask() throws Throwable {
-        MetaTableAccessor.addRegionToMeta(connection, regions.get(0));
+      void metaTask() throws IOException {
+        MetaTableAccessor.addRegionsToMeta(connection, Collections.singletonList(regions.get(0)),
+          1);
         LOG.info("Wrote " + regions.get(0).getEncodedName());
       }
     };
@@ -536,44 +537,6 @@ public class TestMetaTableAccessor {
     assertNotNull(startCodeCell);
     assertEquals(0, serverCell.getValueLength());
     assertEquals(0, startCodeCell.getValueLength());
-  }
-
-  @Test
-  public void testMetaLocationForRegionReplicasIsRemovedAtTableDeletion() throws IOException {
-    long regionId = System.currentTimeMillis();
-    RegionInfo primary = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
-        .setRegionId(regionId).setReplicaId(0).build();
-
-    Table meta = MetaTableAccessor.getMetaHTable(connection);
-    try {
-      List<RegionInfo> regionInfos = Lists.newArrayList(primary);
-      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
-      MetaTableAccessor.removeRegionReplicasFromMeta(Sets.newHashSet(primary.getRegionName()), 1, 2,
-        connection);
-      Get get = new Get(primary.getRegionName());
-      Result result = meta.get(get);
-      for (int replicaId = 0; replicaId < 3; replicaId++) {
-        Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getServerColumn(replicaId));
-        Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getStartCodeColumn(replicaId));
-        Cell stateCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getRegionStateColumn(replicaId));
-        Cell snCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-          MetaTableAccessor.getServerNameColumn(replicaId));
-        if (replicaId == 0) {
-          assertNotNull(stateCell);
-        } else {
-          assertNull(serverCell);
-          assertNull(startCodeCell);
-          assertNull(stateCell);
-          assertNull(snCell);
-        }
-      }
-    } finally {
-      meta.close();
-    }
   }
 
   @Test

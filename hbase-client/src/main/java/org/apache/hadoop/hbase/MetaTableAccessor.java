@@ -31,12 +31,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -358,7 +358,7 @@ public class MetaTableAccessor {
       String regionEncodedName) throws IOException {
     RowFilter rowFilter = new RowFilter(CompareOperator.EQUAL,
       new SubstringComparator(regionEncodedName));
-    Scan scan = getMetaScan(connection, 1);
+    Scan scan = getMetaScan(connection.getConfiguration(), 1);
     scan.setFilter(rowFilter);
     try (Table table = getMetaHTable(connection);
         ResultScanner resultScanner = table.getScanner(scan)) {
@@ -563,26 +563,23 @@ public class MetaTableAccessor {
    * @param tableName bytes of table's name
    * @return configured Scan object
    */
-  @Deprecated
-  public static Scan getScanForTableName(Connection connection, TableName tableName) {
+  public static Scan getScanForTableName(Configuration conf, TableName tableName) {
     // Start key is just the table name with delimiters
     byte[] startKey = getTableStartRowForMeta(tableName, QueryType.REGION);
     // Stop key appends the smallest possible char to the table name
     byte[] stopKey = getTableStopRowForMeta(tableName, QueryType.REGION);
 
-    Scan scan = getMetaScan(connection, -1);
+    Scan scan = getMetaScan(conf, -1);
     scan.setStartRow(startKey);
     scan.setStopRow(stopKey);
     return scan;
   }
 
-  private static Scan getMetaScan(Connection connection, int rowUpperLimit) {
+  private static Scan getMetaScan(Configuration conf, int rowUpperLimit) {
     Scan scan = new Scan();
-    int scannerCaching = connection.getConfiguration()
-        .getInt(HConstants.HBASE_META_SCANNER_CACHING,
-            HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
-    if (connection.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS,
-        HConstants.DEFAULT_USE_META_REPLICAS)) {
+    int scannerCaching = conf.getInt(HConstants.HBASE_META_SCANNER_CACHING,
+      HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
+    if (conf.getBoolean(HConstants.USE_META_REPLICAS, HConstants.DEFAULT_USE_META_REPLICAS)) {
       scan.setConsistency(Consistency.TIMELINE);
     }
     if (rowUpperLimit > 0) {
@@ -592,6 +589,7 @@ public class MetaTableAccessor {
     scan.setCaching(scannerCaching);
     return scan;
   }
+
   /**
    * Do not use this method to get meta table regions, use methods in MetaTableLocator instead.
    * @param connection connection we're using
@@ -775,7 +773,7 @@ public class MetaTableAccessor {
       @Nullable final byte[] stopRow, QueryType type, @Nullable Filter filter, int maxRows,
       final Visitor visitor) throws IOException {
     int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
-    Scan scan = getMetaScan(connection, rowUpperLimit);
+    Scan scan = getMetaScan(connection.getConfiguration(), rowUpperLimit);
 
     for (byte[] family : type.getFamilies()) {
       scan.addFamily(family);
@@ -825,7 +823,7 @@ public class MetaTableAccessor {
   private static RegionInfo getClosestRegionInfo(Connection connection,
       @NonNull final TableName tableName, @NonNull final byte[] row) throws IOException {
     byte[] searchRow = RegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
-    Scan scan = getMetaScan(connection, 1);
+    Scan scan = getMetaScan(connection.getConfiguration(), 1);
     scan.setReversed(true);
     scan.withStartRow(searchRow);
     try (ResultScanner resultScanner = getMetaHTable(connection).getScanner(scan)) {
@@ -888,8 +886,7 @@ public class MetaTableAccessor {
    * @param replicaId the replicaId of the region
    * @return a byte[] for state qualifier
    */
-  @VisibleForTesting
-  static byte[] getRegionStateColumn(int replicaId) {
+  public static byte[] getRegionStateColumn(int replicaId) {
     return replicaId == 0 ? HConstants.STATE_QUALIFIER
         : Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
             + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
@@ -1417,35 +1414,6 @@ public class MetaTableAccessor {
     try (Table t = getMetaHTable(connection)) {
       debugLogMutations(deletes);
       t.delete(deletes);
-    }
-  }
-
-  /**
-   * Deletes some replica columns corresponding to replicas for the passed rows
-   * @param metaRows rows in hbase:meta
-   * @param replicaIndexToDeleteFrom the replica ID we would start deleting from
-   * @param numReplicasToRemove how many replicas to remove
-   * @param connection connection we're using to access meta table
-   */
-  public static void removeRegionReplicasFromMeta(Set<byte[]> metaRows,
-    int replicaIndexToDeleteFrom, int numReplicasToRemove, Connection connection)
-      throws IOException {
-    int absoluteIndex = replicaIndexToDeleteFrom + numReplicasToRemove;
-    for (byte[] row : metaRows) {
-      long now = EnvironmentEdgeManager.currentTime();
-      Delete deleteReplicaLocations = new Delete(row);
-      for (int i = replicaIndexToDeleteFrom; i < absoluteIndex; i++) {
-        deleteReplicaLocations.addColumns(getCatalogFamily(),
-          getServerColumn(i), now);
-        deleteReplicaLocations.addColumns(getCatalogFamily(),
-          getSeqNumColumn(i), now);
-        deleteReplicaLocations.addColumns(getCatalogFamily(),
-          getStartCodeColumn(i), now);
-        deleteReplicaLocations.addColumns(getCatalogFamily(), getServerNameColumn(i), now);
-        deleteReplicaLocations.addColumns(getCatalogFamily(), getRegionStateColumn(i), now);
-      }
-
-      deleteFromMetaTable(connection, deleteReplicaLocations);
     }
   }
 
@@ -2031,7 +1999,7 @@ public class MetaTableAccessor {
       .build());
   }
 
-  private static Put addEmptyLocation(Put p, int replicaId) throws IOException {
+  public static Put addEmptyLocation(Put p, int replicaId) throws IOException {
     CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     return p.add(builder.clear()
                 .setRow(p.getRow())

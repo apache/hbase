@@ -18,7 +18,7 @@
 pipeline {
 
     agent {
-        label 'hbase'
+        label 'Hadoop'
     }
 
     options {
@@ -66,7 +66,7 @@ pipeline {
                 stage ('yetus general check') {
                     agent {
                         node {
-                            label 'hbase'
+                            label 'Hadoop'
                         }
                     }
                     environment {
@@ -152,7 +152,7 @@ pipeline {
                 stage ('yetus jdk8 Hadoop2 checks') {
                     agent {
                         node {
-                            label 'hbase'
+                            label 'Hadoop'
                         }
                     }
                     environment {
@@ -252,7 +252,7 @@ pipeline {
                 stage ('yetus jdk11 hadoop3 checks') {
                     agent {
                         node {
-                            label 'hbase'
+                            label 'Hadoop'
                         }
                     }
                     environment {

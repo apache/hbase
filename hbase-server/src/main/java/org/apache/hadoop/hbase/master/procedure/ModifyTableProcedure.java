@@ -21,28 +21,21 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -148,7 +141,7 @@ public class ModifyTableProcedure
           setNextState(ModifyTableState.MODIFY_TABLE_REOPEN_ALL_REGIONS);
           break;
         case MODIFY_TABLE_REOPEN_ALL_REGIONS:
-          if (env.getAssignmentManager().isTableEnabled(getTableName())) {
+          if (isTableEnabled(env)) {
             addChildProcedure(new ReopenTableRegionsProcedure(getTableName()));
           }
           if (deleteColumnFamilyInModify) {
@@ -339,8 +332,6 @@ public class ModifyTableProcedure
    * Action before modifying table.
    * @param env MasterProcedureEnv
    * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
    */
   private void preModify(final MasterProcedureEnv env, final ModifyTableState state)
       throws IOException, InterruptedException {
@@ -350,7 +341,6 @@ public class ModifyTableProcedure
   /**
    * Update descriptor
    * @param env MasterProcedureEnv
-   * @throws IOException
    **/
   private void updateTableDescriptor(final MasterProcedureEnv env) throws IOException {
     env.getMasterServices().getTableDescriptors().update(modifiedTableDescriptor);
@@ -359,7 +349,6 @@ public class ModifyTableProcedure
   /**
    * Removes from hdfs the families that are not longer present in the new table descriptor.
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private void deleteFromFs(final MasterProcedureEnv env,
       final TableDescriptor oldTableDescriptor, final TableDescriptor newTableDescriptor)
@@ -379,61 +368,28 @@ public class ModifyTableProcedure
 
   /**
    * update replica column families if necessary.
-   * @param env MasterProcedureEnv
-   * @throws IOException
    */
-  private void updateReplicaColumnsIfNeeded(
-    final MasterProcedureEnv env,
-    final TableDescriptor oldTableDescriptor,
-    final TableDescriptor newTableDescriptor) throws IOException {
+  private void updateReplicaColumnsIfNeeded(MasterProcedureEnv env,
+    TableDescriptor oldTableDescriptor, TableDescriptor newTableDescriptor) throws IOException {
     final int oldReplicaCount = oldTableDescriptor.getRegionReplication();
     final int newReplicaCount = newTableDescriptor.getRegionReplication();
-
-    if (newReplicaCount < oldReplicaCount) {
-      Set<byte[]> tableRows = new HashSet<>();
-      Connection connection = env.getMasterServices().getConnection();
-      Scan scan = MetaTableAccessor.getScanForTableName(connection, getTableName());
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-
-      try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
-        ResultScanner resScanner = metaTable.getScanner(scan);
-        for (Result result : resScanner) {
-          tableRows.add(result.getRow());
-        }
-        MetaTableAccessor.removeRegionReplicasFromMeta(
-          tableRows,
-          newReplicaCount,
-          oldReplicaCount - newReplicaCount,
-          connection);
-      }
-    }
-    if (newReplicaCount > oldReplicaCount) {
-      Connection connection = env.getMasterServices().getConnection();
-      // Get the existing table regions
-      List<RegionInfo> existingTableRegions =
-          MetaTableAccessor.getTableRegions(connection, getTableName());
-      // add all the new entries to the meta table
-      addRegionsToMeta(env, newTableDescriptor, existingTableRegions);
-      if (oldReplicaCount <= 1) {
-        // The table has been newly enabled for replica. So check if we need to setup
-        // region replication
-        ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterConfiguration());
+    env.getAssignmentManager().getRegionStateStore().updateRegionReplicas(getTableName(),
+      oldReplicaCount, newReplicaCount);
+    if (newReplicaCount > oldReplicaCount && oldReplicaCount <= 1) {
+      // The table has been newly enabled for replica. So check if we need to setup
+      // region replication
+      try {
+        ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterServices());
+      } catch (ReplicationException e) {
+        throw new HBaseIOException(e);
       }
     }
   }
 
-  private static void addRegionsToMeta(final MasterProcedureEnv env,
-      final TableDescriptor tableDescriptor, final List<RegionInfo> regionInfos)
-      throws IOException {
-    MetaTableAccessor.addRegionsToMeta(env.getMasterServices().getConnection(), regionInfos,
-      tableDescriptor.getRegionReplication());
-  }
   /**
    * Action after modifying table.
    * @param env MasterProcedureEnv
    * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
    */
   private void postModify(final MasterProcedureEnv env, final ModifyTableState state)
       throws IOException, InterruptedException {
@@ -444,8 +400,6 @@ public class ModifyTableProcedure
    * Coprocessor Action.
    * @param env MasterProcedureEnv
    * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
    */
   private void runCoprocessorAction(final MasterProcedureEnv env, final ModifyTableState state)
       throws IOException, InterruptedException {

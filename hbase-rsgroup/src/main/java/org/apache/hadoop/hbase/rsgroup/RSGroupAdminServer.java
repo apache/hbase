@@ -263,7 +263,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       hasRegionsToMove = false;
       for (Iterator<TableName> iter = allTables.iterator(); iter.hasNext(); ) {
         TableName table = iter.next();
-        if (master.getAssignmentManager().isTableDisabled(table)) {
+        if (master.getTableStateManager().isTableState(table, TableState.State.DISABLED,
+          TableState.State.DISABLING)) {
           LOG.debug("Skipping move regions because the table {} is disabled", table);
           continue;
         }

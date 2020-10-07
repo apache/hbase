@@ -19,17 +19,25 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -41,10 +49,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 
 @Category({ MasterTests.class, MediumTests.class })
@@ -54,9 +63,10 @@ public class TestRegionStateStore {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionStateStore.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionStateStore.class);
-
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public final TableNameTestRule name = new TableNameTestRule();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -70,7 +80,7 @@ public class TestRegionStateStore {
 
   @Test
   public void testVisitMetaForRegionExistingRegion() throws Exception {
-    final TableName tableName = TableName.valueOf("testVisitMetaForRegion");
+    final TableName tableName = name.getTableName();
     UTIL.createTable(tableName, "cf");
     final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
@@ -90,7 +100,7 @@ public class TestRegionStateStore {
 
   @Test
   public void testVisitMetaForBadRegionState() throws Exception {
-    final TableName tableName = TableName.valueOf("testVisitMetaForBadRegionState");
+    final TableName tableName = name.getTableName();
     UTIL.createTable(tableName, "cf");
     final List<HRegion> regions = UTIL.getHBaseCluster().getRegions(tableName);
     final String encodedName = regions.get(0).getRegionInfo().getEncodedName();
@@ -135,5 +145,42 @@ public class TestRegionStateStore {
       }
     });
     assertFalse("Visitor has been called, but it shouldn't.", visitorCalled.get());
+  }
+
+  @Test
+  public void testMetaLocationForRegionReplicasIsRemovedAtTableDeletion() throws IOException {
+    long regionId = System.currentTimeMillis();
+    TableName tableName = name.getTableName();
+    RegionInfo primary = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
+
+    try (Table meta = MetaTableAccessor.getMetaHTable(UTIL.getConnection())) {
+      List<RegionInfo> regionInfos = Lists.newArrayList(primary);
+      MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(), regionInfos, 3);
+      final RegionStateStore regionStateStore =
+        UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
+      regionStateStore.updateRegionReplicas(tableName, 3, 1);
+      Get get = new Get(primary.getRegionName());
+      Result result = meta.get(get);
+      for (int replicaId = 0; replicaId < 3; replicaId++) {
+        Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getServerColumn(replicaId));
+        Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getStartCodeColumn(replicaId));
+        Cell stateCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getRegionStateColumn(replicaId));
+        Cell snCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getServerNameColumn(replicaId));
+        if (replicaId == 0) {
+          assertNotNull(stateCell);
+        } else {
+          assertNull(serverCell);
+          assertNull(startCodeCell);
+          assertNull(stateCell);
+          assertNull(snCell);
+        }
+      }
+    }
   }
 }
