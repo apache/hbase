@@ -870,32 +870,47 @@ public class AssignmentManager {
       .sorted(AssignmentManager::compare).toArray(TransitRegionStateProcedure[]::new);
   }
 
+  // for creating unassign TRSP when disabling a table or closing excess region replicas
+  private TransitRegionStateProcedure forceCreateUnssignProcedure(RegionStateNode regionNode) {
+    regionNode.lock();
+    try {
+      if (!regionStates.include(regionNode, false) ||
+        regionStates.isRegionOffline(regionNode.getRegionInfo())) {
+        return null;
+      }
+      // As in DisableTableProcedure or ModifyTableProcedure, we will hold the xlock for table, so
+      // we can make sure that this procedure has not been executed yet, as TRSP will hold the
+      // shared lock for table all the time. So here we will unset it and when it is actually
+      // executed, it will find that the attach procedure is not itself and quit immediately.
+      if (regionNode.getProcedure() != null) {
+        regionNode.unsetProcedure(regionNode.getProcedure());
+      }
+      return regionNode.setProcedure(TransitRegionStateProcedure.unassign(getProcedureEnvironment(),
+        regionNode.getRegionInfo()));
+    } finally {
+      regionNode.unlock();
+    }
+  }
+
   /**
    * Called by DisableTableProcedure to unassign all the regions for a table.
    */
   public TransitRegionStateProcedure[] createUnassignProceduresForDisabling(TableName tableName) {
-    return regionStates.getTableRegionStateNodes(tableName).stream().map(regionNode -> {
-      regionNode.lock();
-      try {
-        if (!regionStates.include(regionNode, false) ||
-          regionStates.isRegionOffline(regionNode.getRegionInfo())) {
-          return null;
-        }
-        // As in DisableTableProcedure, we will hold the xlock for table, so we can make sure that
-        // this procedure has not been executed yet, as TRSP will hold the shared lock for table all
-        // the time. So here we will unset it and when it is actually executed, it will find that
-        // the attach procedure is not itself and quit immediately.
-        if (regionNode.getProcedure() != null) {
-          regionNode.unsetProcedure(regionNode.getProcedure());
-        }
-        TransitRegionStateProcedure proc = TransitRegionStateProcedure
-          .unassign(getProcedureEnvironment(), regionNode.getRegionInfo());
-        regionNode.setProcedure(proc);
-        return proc;
-      } finally {
-        regionNode.unlock();
-      }
-    }).filter(p -> p != null).toArray(TransitRegionStateProcedure[]::new);
+    return regionStates.getTableRegionStateNodes(tableName).stream()
+      .map(this::forceCreateUnssignProcedure).filter(p -> p != null)
+      .toArray(TransitRegionStateProcedure[]::new);
+  }
+
+  /**
+   * Called by ModifyTableProcedures to unassign all the excess region replicas
+   * for a table.
+   */
+  public TransitRegionStateProcedure[] createUnassignProceduresForClosingExcessRegionReplicas(
+    TableName tableName, int newReplicaCount) {
+    return regionStates.getTableRegionStateNodes(tableName).stream()
+      .filter(regionNode -> regionNode.getRegionInfo().getReplicaId() >= newReplicaCount)
+      .map(this::forceCreateUnssignProcedure).filter(p -> p != null)
+      .toArray(TransitRegionStateProcedure[]::new);
   }
 
   public SplitTableRegionProcedure createSplitProcedure(final RegionInfo regionToSplit,
