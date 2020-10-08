@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.RegionStateListener;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.SwitchRpcThrottleProcedure;
@@ -281,6 +282,9 @@ public class MasterQuotaManager implements RegionStateListener {
         SpaceQuotaSnapshot currSnapshotOfTable =
             QuotaTableUtil.getCurrentSnapshotFromQuotaTable(masterServices.getConnection(), table);
         QuotaUtil.deleteTableQuota(masterServices.getConnection(), table);
+        // Removes the tableName from the current state in QuotaObserverChore
+        QuotaObserverChore quotaChore = masterServices.getQuotaObserverChore();
+        quotaChore.removeTableQuotasnapshot(table);
         if (currSnapshotOfTable != null) {
           SpaceQuotaStatus quotaStatus = currSnapshotOfTable.getQuotaStatus();
           if (SpaceViolationPolicy.DISABLE == quotaStatus.getPolicy().orElse(null)

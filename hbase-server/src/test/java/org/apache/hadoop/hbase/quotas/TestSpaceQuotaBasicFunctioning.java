@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -257,4 +258,37 @@ public class TestSpaceQuotaBasicFunctioning {
         .filter(k -> k.getTable().equals(tableName)).count();
     Assert.assertTrue(regionSizes > 0);
   }
+
+  @Test
+  public void testNSAndTableQuotaRemoveTableQuotaTableInViolation() throws Exception {
+    final String ns = testName.getMethodName();
+    NamespaceDescriptor nd = NamespaceDescriptor.create(ns).build();
+    TEST_UTIL.getAdmin().createNamespace(nd);
+    TableName table1 = helper.createTableInNamespace(nd);
+    TableName table2 = helper.createTableInNamespace(nd);
+    TableName table3 = helper.createTableInNamespace(nd);
+    Put put = new Put(Bytes.toBytes(("to_reject")));
+    put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
+    helper.setQuotaLimit(nd.getName(), SpaceViolationPolicy.NO_WRITES_COMPACTIONS, 4L);
+    helper.setQuotaLimit(table2, SpaceViolationPolicy.NO_WRITES, 2L);
+    helper.writeData(table2, 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
+    helper.verifyViolation(SpaceViolationPolicy.NO_WRITES, table2, put);
+    helper.removeQuotaFromtable(table2);
+    helper.writeData(table1, 1L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
+    helper.writeData(table3, 1L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
+    Put put1 = new Put(Bytes.toBytes(("to_reject1")));
+    put1.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
+    helper.verifyViolation(SpaceViolationPolicy.NO_WRITES_COMPACTIONS, table2, put1);
+    try {
+      TEST_UTIL.getAdmin().majorCompact(table2);
+      fail("Expected that invoking the compaction should throw an Exception");
+    } catch (DoNotRetryIOException e) {
+      //Expected
+      assertTrue(e.getMessage()
+        .contains("Compactions on this region are disabled due to a space quota violation"));
+    }
+  }
+
 }

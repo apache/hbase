@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
@@ -506,5 +507,9 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public boolean isBalancerOn() {
     return false;
+  }
+
+  @Override public QuotaObserverChore getQuotaObserverChore() {
+    return null;
   }
 }

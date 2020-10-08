@@ -550,7 +550,7 @@ public class QuotaObserverChore extends ScheduledChore {
   /**
    * Fetches the {@link SpaceQuotaSnapshot} for the given table.
    */
-  SpaceQuotaSnapshot getTableQuotaSnapshot(TableName table) {
+  synchronized SpaceQuotaSnapshot getTableQuotaSnapshot(TableName table) {
     SpaceQuotaSnapshot state = this.tableQuotaSnapshots.get(table);
     if (state == null) {
       // No tracked state implies observance.
@@ -562,8 +562,15 @@ public class QuotaObserverChore extends ScheduledChore {
   /**
    * Stores the quota state for the given table.
    */
-  void setTableQuotaSnapshot(TableName table, SpaceQuotaSnapshot snapshot) {
+  synchronized void setTableQuotaSnapshot(TableName table, SpaceQuotaSnapshot snapshot) {
     this.tableQuotaSnapshots.put(table, snapshot);
+  }
+
+  /**
+   * Removes the quota state for the given table.
+   */
+  synchronized void removeTableQuotasnapshot(TableName table) {
+    this.tableQuotaSnapshots.remove(table);
   }
 
   /**
