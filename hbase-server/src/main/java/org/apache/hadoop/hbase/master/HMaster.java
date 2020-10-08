@@ -1015,10 +1015,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     status.setStatus("Initializing meta table if this is a new deploy");
     InitMetaProcedure initMetaProc = null;
     // Print out state of hbase:meta on startup; helps debugging.
-    RegionState rs = this.assignmentManager.getRegionStates().
-        getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO);
-    LOG.info("hbase:meta {}", rs);
-    if (rs != null && rs.isOffline()) {
+    if (!this.assignmentManager.getRegionStates().hasTableRegionStates(TableName.META_TABLE_NAME)) {
       Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
         .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
       initMetaProc = optProc.orElseGet(() -> {
@@ -1070,6 +1067,39 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
     this.tableStateManager.start();
+
+    // for migrating from a version without HBASE-25099, and also for honoring the configuration
+    // first.
+    if (conf.get(HConstants.META_REPLICAS_NUM) != null) {
+      int replicasNumInConf =
+        conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM);
+      TableDescriptor metaDesc = tableDescriptors.get(TableName.META_TABLE_NAME);
+      if (metaDesc.getRegionReplication() != replicasNumInConf) {
+        // it is possible that we already have some replicas before upgrading, so we must set the
+        // region replication number in meta TableDescriptor directly first, without creating a
+        // ModifyTableProcedure, otherwise it may cause a double assign for the meta replicas.
+        int existingReplicasCount =
+          assignmentManager.getRegionStates().getRegionsOfTable(TableName.META_TABLE_NAME).size();
+        if (existingReplicasCount > metaDesc.getRegionReplication()) {
+          LOG.info("Update replica count of hbase:meta from {}(in TableDescriptor)" +
+            " to {}(existing ZNodes)", metaDesc.getRegionReplication(), existingReplicasCount);
+          metaDesc = TableDescriptorBuilder.newBuilder(metaDesc)
+            .setRegionReplication(existingReplicasCount).build();
+          tableDescriptors.update(metaDesc);
+        }
+        // check again, and issue a ModifyTableProcedure if needed
+        if (metaDesc.getRegionReplication() != replicasNumInConf) {
+          LOG.info(
+            "The {} config is {} while the replica count in TableDescriptor is {}" +
+              " for hbase:meta, altering...",
+            HConstants.META_REPLICAS_NUM, replicasNumInConf, metaDesc.getRegionReplication());
+          procedureExecutor.submitProcedure(new ModifyTableProcedure(
+            procedureExecutor.getEnvironment(), TableDescriptorBuilder.newBuilder(metaDesc)
+              .setRegionReplication(replicasNumInConf).build(),
+            null, metaDesc, false));
+        }
+      }
+    }
     // Below has to happen after tablestatemanager has started in the case where this hbase-2.x
     // is being started over an hbase-1.x dataset. tablestatemanager runs a migration as part
     // of its 'start' moving table state from zookeeper to hbase:meta. This migration needs to
@@ -1133,13 +1163,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     assignmentManager.checkIfShouldMoveSystemRegionAsync();
-    status.setStatus("Assign meta replicas");
-    MasterMetaBootstrap metaBootstrap = createMetaBootstrap();
-    try {
-      metaBootstrap.assignMetaReplicas();
-    } catch (IOException | KeeperException e){
-      LOG.error("Assigning meta replica failed: ", e);
-    }
     status.setStatus("Starting quota manager");
     initQuotaManager();
     if (QuotaUtil.isQuotaEnabled(conf)) {
@@ -1292,21 +1315,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     getChoreService().scheduleChore(mobFileCleanerChore);
     this.mobFileCompactionChore = new MobFileCompactionChore(this);
     getChoreService().scheduleChore(mobFileCompactionChore);
-  }
-
-  /**
-   * <p>
-   * Create a {@link MasterMetaBootstrap} instance.
-   * </p>
-   * <p>
-   * Will be overridden in tests.
-   * </p>
-   */
-  @VisibleForTesting
-  protected MasterMetaBootstrap createMetaBootstrap() {
-    // We put this out here in a method so can do a Mockito.spy and stub it out
-    // w/ a mocked up MasterMetaBootstrap.
-    return new MasterMetaBootstrap(this);
   }
 
   /**

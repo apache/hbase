@@ -47,8 +47,8 @@ public abstract class AbstractTestRegionLocator {
   protected static byte[][] SPLIT_KEYS;
 
   protected static void startClusterAndCreateTable() throws Exception {
-    UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, REGION_REPLICATION);
     UTIL.startMiniCluster(3);
+    HBaseTestingUtility.setReplicas(UTIL.getAdmin(), TableName.META_TABLE_NAME, REGION_REPLICATION);
     TableDescriptor td =
       TableDescriptorBuilder.newBuilder(TABLE_NAME).setRegionReplication(REGION_REPLICATION)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
@@ -59,7 +59,7 @@ public abstract class AbstractTestRegionLocator {
     UTIL.getAdmin().createTable(td, SPLIT_KEYS);
     UTIL.waitTableAvailable(TABLE_NAME);
     try (ConnectionRegistry registry =
-             ConnectionRegistryFactory.getRegistry(UTIL.getConfiguration())) {
+      ConnectionRegistryFactory.getRegistry(UTIL.getConfiguration())) {
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(UTIL, registry);
     }
     UTIL.getAdmin().balancerSwitch(false, true);
