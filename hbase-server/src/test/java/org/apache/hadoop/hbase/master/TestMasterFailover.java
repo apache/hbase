@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1112,7 +1113,7 @@ public class TestMasterFailover {
     // Check that ClusterStatus reports the correct active and backup masters
     assertNotNull(active);
     ClusterStatus status = active.getClusterStatus();
-    assertTrue(status.getMaster().equals(activeName));
+    assertEquals(status.getMaster(), activeName);
     assertEquals(2, status.getBackupMastersSize());
     assertEquals(2, status.getBackupMasters().size());
 
@@ -1126,7 +1127,7 @@ public class TestMasterFailover {
     // Verify still one active master and it's the same
     for (int i = 0; i < masterThreads.size(); i++) {
       if (masterThreads.get(i).getMaster().isActiveMaster()) {
-        assertTrue(activeName.equals(masterThreads.get(i).getMaster().getServerName()));
+        assertEquals(activeName, masterThreads.get(i).getMaster().getServerName());
         activeIndex = i;
         active = masterThreads.get(activeIndex).getMaster();
       }
@@ -1136,6 +1137,14 @@ public class TestMasterFailover {
     int rsCount = masterThreads.get(activeIndex).getMaster().getClusterStatus().getServersSize();
     LOG.info("Active master " + active.getServerName() + " managing " + rsCount +  " regions servers");
     assertEquals(3, rsCount);
+
+    // wait for the active master to acknowledge loss of the backup from ZK
+    final HMaster activeFinal = active;
+    TEST_UTIL.waitFor(TimeUnit.SECONDS.toMillis(30), new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() {
+        return activeFinal.getBackupMasters().size() == 1;
+      }
+    });
 
     // Check that ClusterStatus reports the correct active and backup masters
     assertNotNull(active);
@@ -1148,7 +1157,7 @@ public class TestMasterFailover {
       }
     });
     status = active.getClusterStatus();
-    assertTrue(status.getMaster().equals(activeName));
+    assertEquals(activeName, status.getMaster());
 
     // kill the active master
     LOG.debug("\n\nStopping the active master " + active.getServerName() + "\n");
@@ -1166,13 +1175,14 @@ public class TestMasterFailover {
     active = masterThreads.get(0).getMaster();
     assertNotNull(active);
     status = active.getClusterStatus();
-    ServerName mastername = status.getMaster();
-    assertTrue(mastername.equals(active.getServerName()));
+    ServerName masterName = status.getMaster();
+    assertNotNull(masterName);
+    assertEquals(active.getServerName(), masterName);
     assertTrue(active.isActiveMaster());
     assertEquals(0, status.getBackupMastersSize());
     assertEquals(0, status.getBackupMasters().size());
     int rss = status.getServersSize();
-    LOG.info("Active master " + mastername.getServerName() + " managing " +
+    LOG.info("Active master " + masterName.getServerName() + " managing " +
       rss +  " region servers");
     assertEquals(3, rss);
 
