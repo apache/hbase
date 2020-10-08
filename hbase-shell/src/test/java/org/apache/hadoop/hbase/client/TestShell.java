@@ -32,11 +32,9 @@ public class TestShell extends AbstractTestShell {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestShell.class);
 
-  @Test
-  public void testRunShellTests() throws IOException {
-    System.setProperty("shell.test.exclude", "replication_admin_test.rb,rsgroup_shell_test.rb," +
-      "admin_test.rb,table_test.rb,quotas_test.rb,admin2_test.rb");
-    // Start all ruby tests
-    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
+  @Override
+  protected String getExcludeList() {
+    return "replication_admin_test.rb,rsgroup_shell_test.rb,admin_test.rb,table_test.rb," +
+        "quotas_test.rb,admin2_test.rb";
   }
 }

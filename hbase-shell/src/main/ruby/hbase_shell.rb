@@ -13,10 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-puts <<EOF
-  This file has been superceded by packaging our ruby files into a jar
-  and using jruby's bootstrapping to invoke them. If you need to
-  source this file fo some reason it is now named 'jar-bootstrap.rb' and is
-  located in the root of the file hbase-shell.jar and in the source tree at
-  'hbase-shell/src/main/ruby'.
-EOF
+
+# Ruby has a stdlib named 'shell' so using "require 'shell'" does not
+# work if our shell implementation is not on the local filesystem.
+# this is the absolute path to our shell implementation when packaged
+# in a jar. The level of indirection provided by this file lets things
+# still behave the same as in earlier releases if folks unpackage the
+# jar contents onto the local filesystem if they need that for some
+# other reason.
+require 'uri:classloader:/shell.rb'
