@@ -23,16 +23,17 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -126,6 +127,12 @@ public class ModifyTableProcedure
           break;
         case MODIFY_TABLE_PRE_OPERATION:
           preModify(env, state);
+          setNextState(ModifyTableState.MODIFY_TABLE_CLOSE_EXCESS_REPLICAS);
+          break;
+        case MODIFY_TABLE_CLOSE_EXCESS_REPLICAS:
+          if (isTableEnabled(env)) {
+            closeExcessReplicasIfNeeded(env);
+          }
           setNextState(ModifyTableState.MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR);
           break;
         case MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR:
@@ -133,7 +140,7 @@ public class ModifyTableProcedure
           setNextState(ModifyTableState.MODIFY_TABLE_REMOVE_REPLICA_COLUMN);
           break;
         case MODIFY_TABLE_REMOVE_REPLICA_COLUMN:
-          updateReplicaColumnsIfNeeded(env, unmodifiedTableDescriptor, modifiedTableDescriptor);
+          removeReplicaColumnsIfNeeded(env);
           setNextState(ModifyTableState.MODIFY_TABLE_POST_OPERATION);
           break;
         case MODIFY_TABLE_POST_OPERATION:
@@ -144,6 +151,10 @@ public class ModifyTableProcedure
           if (isTableEnabled(env)) {
             addChildProcedure(new ReopenTableRegionsProcedure(getTableName()));
           }
+          setNextState(ModifyTableState.MODIFY_TABLE_ASSIGN_NEW_REPLICAS);
+          break;
+        case MODIFY_TABLE_ASSIGN_NEW_REPLICAS:
+          assignNewReplicasIfNeeded(env);
           if (deleteColumnFamilyInModify) {
             setNextState(ModifyTableState.MODIFY_TABLE_DELETE_FS_LAYOUT);
           } else {
@@ -297,14 +308,6 @@ public class ModifyTableProcedure
           env.getMasterServices().getTableDescriptors().get(getTableName());
     }
 
-    if (env.getMasterServices().getTableStateManager()
-        .isTableState(getTableName(), TableState.State.ENABLED)) {
-      if (modifiedTableDescriptor.getRegionReplication() != unmodifiedTableDescriptor
-          .getRegionReplication()) {
-        throw new TableNotDisabledException(
-            "REGION_REPLICATION change is not supported for enabled tables");
-      }
-    }
     this.deleteColumnFamilyInModify = isDeleteColumnFamily(unmodifiedTableDescriptor,
       modifiedTableDescriptor);
   }
@@ -367,23 +370,52 @@ public class ModifyTableProcedure
   }
 
   /**
-   * update replica column families if necessary.
+   * remove replica columns if necessary.
    */
-  private void updateReplicaColumnsIfNeeded(MasterProcedureEnv env,
-    TableDescriptor oldTableDescriptor, TableDescriptor newTableDescriptor) throws IOException {
-    final int oldReplicaCount = oldTableDescriptor.getRegionReplication();
-    final int newReplicaCount = newTableDescriptor.getRegionReplication();
-    env.getAssignmentManager().getRegionStateStore().updateRegionReplicas(getTableName(),
+  private void removeReplicaColumnsIfNeeded(MasterProcedureEnv env) throws IOException {
+    final int oldReplicaCount = unmodifiedTableDescriptor.getRegionReplication();
+    final int newReplicaCount = modifiedTableDescriptor.getRegionReplication();
+    if (newReplicaCount >= oldReplicaCount) {
+      return;
+    }
+    env.getAssignmentManager().getRegionStateStore().removeRegionReplicas(getTableName(),
       oldReplicaCount, newReplicaCount);
-    if (newReplicaCount > oldReplicaCount && oldReplicaCount <= 1) {
-      // The table has been newly enabled for replica. So check if we need to setup
-      // region replication
+    env.getAssignmentManager().getRegionStates().getRegionsOfTable(getTableName()).stream()
+      .filter(r -> r.getReplicaId() >= newReplicaCount)
+      .forEach(env.getAssignmentManager().getRegionStates()::deleteRegion);
+  }
+
+  private void assignNewReplicasIfNeeded(MasterProcedureEnv env) throws IOException {
+    final int oldReplicaCount = unmodifiedTableDescriptor.getRegionReplication();
+    final int newReplicaCount = modifiedTableDescriptor.getRegionReplication();
+    if (newReplicaCount <= oldReplicaCount) {
+      return;
+    }
+    if (isTableEnabled(env)) {
+      List<RegionInfo> newReplicas = env.getAssignmentManager().getRegionStates()
+        .getRegionsOfTable(getTableName()).stream().filter(RegionReplicaUtil::isDefaultReplica)
+        .flatMap(primaryRegion -> IntStream.range(oldReplicaCount, newReplicaCount).mapToObj(
+          replicaId -> RegionReplicaUtil.getRegionInfoForReplica(primaryRegion, replicaId)))
+        .collect(Collectors.toList());
+      addChildProcedure(env.getAssignmentManager().createAssignProcedures(newReplicas));
+    }
+    if (oldReplicaCount <= 1) {
       try {
         ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterServices());
       } catch (ReplicationException e) {
         throw new HBaseIOException(e);
       }
     }
+  }
+
+  private void closeExcessReplicasIfNeeded(MasterProcedureEnv env) {
+    final int oldReplicaCount = unmodifiedTableDescriptor.getRegionReplication();
+    final int newReplicaCount = modifiedTableDescriptor.getRegionReplication();
+    if (newReplicaCount >= oldReplicaCount) {
+      return;
+    }
+    addChildProcedure(env.getAssignmentManager()
+      .createUnassignProceduresForClosingExcessRegionReplicas(getTableName(), newReplicaCount));
   }
 
   /**
