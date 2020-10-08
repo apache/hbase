@@ -1949,12 +1949,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Set the number of Region replicas.
    */
   public static void setReplicas(Admin admin, TableName table, int replicaCount)
-      throws IOException, InterruptedException {
-    admin.disableTable(table);
-    HTableDescriptor desc = new HTableDescriptor(admin.getTableDescriptor(table));
-    desc.setRegionReplication(replicaCount);
-    admin.modifyTable(desc.getTableName(), desc);
-    admin.enableTable(table);
+    throws IOException, InterruptedException {
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(admin.getDescriptor(table))
+      .setRegionReplication(replicaCount).build();
+    admin.modifyTable(desc);
   }
 
   /**

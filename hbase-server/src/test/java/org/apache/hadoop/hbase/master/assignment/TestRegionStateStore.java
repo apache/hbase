@@ -160,7 +160,7 @@ public class TestRegionStateStore {
       MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(), regionInfos, 3);
       final RegionStateStore regionStateStore =
         UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
-      regionStateStore.updateRegionReplicas(tableName, 3, 1);
+      regionStateStore.removeRegionReplicas(tableName, 3, 1);
       Get get = new Get(primary.getRegionName());
       Result result = meta.get(get);
       for (int replicaId = 0; replicaId < 3; replicaId++) {

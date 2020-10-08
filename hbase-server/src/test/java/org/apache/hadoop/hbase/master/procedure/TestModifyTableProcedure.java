@@ -364,7 +364,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     long procId =
       procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), newTd));
 
-    int lastStep = 3; // failing before MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR
+    int lastStep = 8; // failing before MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
 
     // cf2 should not be present
@@ -397,7 +397,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       new ModifyTableProcedure(procExec.getEnvironment(), newTd));
 
     // Restart the executor and rollback the step twice
-    int lastStep = 3; // failing before MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR
+    int lastStep = 8; // failing before MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
 
     // cf2 should not be present

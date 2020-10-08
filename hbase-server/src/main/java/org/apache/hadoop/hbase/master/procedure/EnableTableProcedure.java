@@ -20,16 +20,11 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -99,7 +94,6 @@ public class EnableTableProcedure
         case ENABLE_TABLE_MARK_REGIONS_ONLINE:
           // Get the region replica count. If changed since disable, need to do
           // more work assigning.
-          Connection connection = env.getMasterServices().getConnection();
           TableDescriptor tableDescriptor =
               env.getMasterServices().getTableDescriptors().get(tableName);
           int configuredReplicaCount = tableDescriptor.getRegionReplication();
@@ -110,25 +104,16 @@ public class EnableTableProcedure
           // How many replicas do we currently have? Check regions returned from
           // in-memory state.
           int currentMaxReplica = getMaxReplicaId(regionsOfTable);
-
-          // Read the META table to know the number of replicas the table currently has.
-          // If there was a table modification on region replica count then need to
-          // adjust replica counts here.
-          int replicasFound = TableName.isMetaTableName(this.tableName)?
-              0: // TODO: Figure better what to do here for hbase:meta replica.
-              getReplicaCountInMeta(connection, configuredReplicaCount, regionsOfTable);
-          LOG.info("replicasFound={} (configuredReplicaCount={} for {}", replicasFound,
-              configuredReplicaCount, tableName.getNameAsString());
-          if (currentMaxReplica == (configuredReplicaCount - 1)) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("No change in number of region replicas (configuredReplicaCount={});"
-                  + " assigning.", configuredReplicaCount);
-            }
+          if (currentMaxReplica == configuredReplicaCount - 1) {
+            LOG.debug("No change in number of region replicas (configuredReplicaCount={});"
+              + " assigning.", configuredReplicaCount);
           } else if (currentMaxReplica > (configuredReplicaCount - 1)) {
             // We have additional regions as the replica count has been decreased. Delete
             // those regions because already the table is in the unassigned state
-            LOG.info("The number of replicas " + (currentMaxReplica + 1)
-                + "  is more than the region replica count " + configuredReplicaCount);
+            LOG.warn(
+              "The number of replicas {} is more than the region replica count {}" +
+                ", usually this should not happen as we will delete them in ModifyTableProcedure",
+              currentMaxReplica + 1, configuredReplicaCount);
             List<RegionInfo> copyOfRegions = new ArrayList<RegionInfo>(regionsOfTable);
             for (RegionInfo regionInfo : copyOfRegions) {
               if (regionInfo.getReplicaId() > (configuredReplicaCount - 1)) {
@@ -139,11 +124,11 @@ public class EnableTableProcedure
                 regionsOfTable.remove(regionInfo);
               }
             }
-          } else {
+          } else if (currentMaxReplica < configuredReplicaCount - 1) {
             // the replicasFound is less than the regionReplication
             LOG.info("Number of replicas has increased for {}. Assigning new region replicas." +
                 "The previous replica count was {}. The current replica count is {}.",
-              this.tableName, (currentMaxReplica + 1), configuredReplicaCount);
+              this.tableName, currentMaxReplica + 1, configuredReplicaCount);
             regionsOfTable = RegionReplicaUtil.addReplicas(regionsOfTable,
               currentMaxReplica + 1, configuredReplicaCount);
           }
@@ -171,25 +156,6 @@ public class EnableTableProcedure
       }
     }
     return Flow.HAS_MORE_STATE;
-  }
-
-  /**
-   * @return Count of replicas found reading hbase:meta Region row or zk if
-   *   asking about the hbase:meta table itself..
-   */
-  private int getReplicaCountInMeta(Connection connection, int regionReplicaCount,
-      List<RegionInfo> regionsOfTable) throws IOException {
-    Result r = MetaTableAccessor.getCatalogFamilyRow(connection, regionsOfTable.get(0));
-    int replicasFound = 0;
-    for (int i = 1; i < regionReplicaCount; i++) {
-      // Since we have already added the entries to the META we will be getting only that here
-      List<Cell> columnCells =
-          r.getColumnCells(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(i));
-      if (!columnCells.isEmpty()) {
-        replicasFound++;
-      }
-    }
-    return replicasFound;
   }
 
   @Override
