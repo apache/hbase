@@ -1846,11 +1846,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public static void setReplicas(Admin admin, TableName table, int replicaCount)
     throws IOException, InterruptedException {
-    admin.disableTable(table);
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(admin.getDescriptor(table))
       .setRegionReplication(replicaCount).build();
     admin.modifyTable(desc);
-    admin.enableTable(table);
   }
 
   /**
