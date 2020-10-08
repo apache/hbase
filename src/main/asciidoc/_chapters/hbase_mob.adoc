@@ -613,6 +613,13 @@ $ hdfs dfs -count /hbase/mobdir/data/default/some_table
 This data is spurious and may be reclaimed. You should sideline it, verify your application’s view
 of the table, and then delete it.
 
+==== Data values over than the MOB threshold show up stored in non-MOB hfiles
+
+Bulk load and WAL split-to-HFile don't consider MOB threshold and write data into normal hfile (under /hbase/data directory).
+
+[NOTE]
+This won't cause any functional problem, during next compaction such data will be written out to the MOB hfiles.
+
 === MOB Upgrade Considerations
 
 Generally, data stored using the MOB feature should transparently continue to work correctly across
