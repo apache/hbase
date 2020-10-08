@@ -55,11 +55,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
@@ -89,6 +89,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+
 
 
 
@@ -190,7 +192,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   protected final Configuration conf;
 
-  protected final Server server;
+  protected final Abortable abortable;
 
   /** Listeners that are called on WAL events. */
   protected final List<WALActionsListener> listeners = new CopyOnWriteArrayList<>();
@@ -337,7 +339,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   protected final AtomicBoolean rollRequested = new AtomicBoolean(false);
 
   private final ExecutorService logArchiveExecutor = Executors.newSingleThreadExecutor(
-    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Log-Archiver-%d").build());
+    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("WAL-Archiver-%d").build());
 
   private final int archiveRetries;
 
@@ -395,7 +397,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
   }
 
-  protected AbstractFSWAL(final FileSystem fs, final Server server, final Path rootDir,
+  protected AbstractFSWAL(final FileSystem fs, final Abortable abortable, final Path rootDir,
       final String logDir, final String archiveDir, final Configuration conf,
       final List<WALActionsListener> listeners, final boolean failIfWALExists, final String prefix,
       final String suffix)
@@ -404,7 +406,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this.walDir = new Path(rootDir, logDir);
     this.walArchiveDir = new Path(rootDir, archiveDir);
     this.conf = conf;
-    this.server = server;
+    this.abortable = abortable;
 
     if (!fs.exists(walDir) && !fs.mkdirs(walDir)) {
       throw new IOException("Unable to mkdir " + walDir);
@@ -503,7 +505,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this.walTooOldNs = TimeUnit.SECONDS.toNanos(conf.getInt(
             SURVIVED_TOO_LONG_SEC_KEY, SURVIVED_TOO_LONG_SEC_DEFAULT));
     this.useHsync = conf.getBoolean(HRegion.WAL_HSYNC_CONF_KEY, HRegion.DEFAULT_WAL_HSYNC);
-    archiveRetries = this.conf.getInt("hbase.regionserver.logroll.archive.retries", 0);
+    archiveRetries = this.conf.getInt("hbase.regionserver.walroll.archive.retries", 0);
 
   }
 
@@ -744,14 +746,14 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       // make it async
       for (Pair<Path, Long> log : localLogsToArchive) {
         logArchiveExecutor.execute(() -> {
-          archiveRetriable(log);
+          archiveRetryable(log);
         });
         this.walFile2Props.remove(log.getFirst());
       }
     }
   }
 
-  protected void archiveRetriable(final Pair<Path, Long> log) {
+  protected void archiveRetryable(final Pair<Path, Long> log) {
     int retry = 1;
     while (true) {
       try {
@@ -762,8 +764,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       } catch (Throwable e) {
         if (retry > archiveRetries) {
           LOG.error("Failed log archiving for the log {},", log.getFirst(), e);
-          if (this.server != null) {
-            this.server.abort("Failed log archiving", e);
+          if (this.abortable != null) {
+            this.abortable.abort("Failed log archiving", e);
             break;
           }
         } else {

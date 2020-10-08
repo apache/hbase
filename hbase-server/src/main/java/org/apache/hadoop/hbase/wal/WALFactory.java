@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
@@ -34,10 +34,10 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Entry point for users of the Write Ahead Log.
@@ -87,7 +87,7 @@ public class WALFactory {
   public static final String WAL_ENABLED = "hbase.regionserver.hlog.enabled";
 
   final String factoryId;
-  final Server server;
+  final Abortable abortable;
   private final WALProvider provider;
   // The meta updates are written to a different wal. If this
   // regionserver holds meta regions, then this ref will be non-null.
@@ -121,7 +121,7 @@ public class WALFactory {
     // this instance can't create wals, just reader/writers.
     provider = null;
     factoryId = SINGLETON_ID;
-    this.server = null;
+    this.abortable = null;
   }
 
   @VisibleForTesting
@@ -186,11 +186,11 @@ public class WALFactory {
    *          instances.
    * @param factoryId a unique identifier for this factory. used i.e. by filesystem implementations
    *          to make a directory
-   * @param server the servername associated with this WAL file
+   * @param abortable the server associated with this WAL file
    * @param enableSyncReplicationWALProvider whether wrap the wal provider to a
    *          {@link SyncReplicationWALProvider}
    */
-  public WALFactory(Configuration conf, String factoryId, Server server,
+  public WALFactory(Configuration conf, String factoryId, Abortable abortable,
       boolean enableSyncReplicationWALProvider) throws IOException {
     // until we've moved reader/writer construction down into providers, this initialization must
     // happen prior to provider initialization, in case they need to instantiate a reader/writer.
@@ -200,14 +200,14 @@ public class WALFactory {
       AbstractFSWALProvider.Reader.class);
     this.conf = conf;
     this.factoryId = factoryId;
-    this.server = server;
+    this.abortable = abortable;
     // end required early initialization
     if (conf.getBoolean(WAL_ENABLED, true)) {
       WALProvider provider = createProvider(getProviderClass(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
       if (enableSyncReplicationWALProvider) {
         provider = new SyncReplicationWALProvider(provider);
       }
-      provider.init(this, conf, null, this.server);
+      provider.init(this, conf, null, this.abortable);
       provider.addWALActionsListener(new MetricsWAL());
       this.provider = provider;
     } else {
@@ -279,7 +279,7 @@ public class WALFactory {
         clz = getProviderClass(META_WAL_PROVIDER, conf.get(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
       }
       provider = createProvider(clz);
-      provider.init(this, conf, AbstractFSWALProvider.META_WAL_PROVIDER_ID, this.server);
+      provider.init(this, conf, AbstractFSWALProvider.META_WAL_PROVIDER_ID, this.abortable);
       provider.addWALActionsListener(new MetricsWAL());
       if (metaProvider.compareAndSet(null, provider)) {
         return provider;
