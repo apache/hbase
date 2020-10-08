@@ -686,4 +686,39 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       assertEquals(regionsInfo.getTable(), table2);
     }
   }
+
+  @Test
+  public void testMoveServersToRSGroupPerformance() throws Exception {
+    final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 2);
+    final byte[] familyNameBytes = Bytes.toBytes("f");
+    // there will be 100 regions are both the serves
+    final int tableRegionCount = 200;
+    // All the regions created below will be assigned to the default group.
+    TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, tableRegionCount);
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override public boolean evaluate() throws Exception {
+        List<String> regions = getTableRegionMap().get(tableName);
+        if (regions == null) {
+          return false;
+        }
+        return getTableRegionMap().get(tableName).size() >= tableRegionCount;
+      }
+    });
+    ADMIN.setRSGroup(Sets.newHashSet(tableName), newGroup.getName());
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    String rsGroup2 = "rsGroup2";
+    ADMIN.addRSGroup(rsGroup2);
+
+    long startTime = System.currentTimeMillis();
+    ADMIN.moveServersToRSGroup(Sets.newHashSet(newGroup.getServers().first()), rsGroup2);
+    long timeTaken = System.currentTimeMillis() - startTime;
+    String msg =
+      "Should not take mote than 15000 ms to move a table with 100 regions. Time taken  ="
+        + timeTaken + " ms";
+    //This test case is meant to be used for verifying the performance quickly by a developer.
+    //Moving 100 regions takes much less than 15000 ms. Given 15000 ms so test cases passes
+    // on all environment.
+    assertTrue(msg, timeTaken < 15000);
+    LOG.info("Time taken to move a table with 100 region is {} ms", timeTaken);
+  }
 }
