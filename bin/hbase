@@ -522,7 +522,7 @@ if [ "$COMMAND" = "shell" ] ; then
   # otherwise assume we are running in a source checkout
   else
     HBASE_OPTS="$HBASE_OPTS -Dhbase.ruby.sources=$HBASE_HOME/hbase-shell/src/main/ruby"
-    CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/hbase-shell/src/main/resources/jar-bootstrap.rb"
+    CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/hbase-shell/src/main/ruby/jar-bootstrap.rb"
   fi
   HBASE_OPTS="$HBASE_OPTS $HBASE_SHELL_OPTS"
 elif [ "$COMMAND" = "hbck" ] ; then
