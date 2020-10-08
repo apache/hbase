@@ -426,7 +426,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     DELETE("delete"),
     CHECK_AND_PUT("checkAndPut"),
     CHECK_AND_DELETE("checkAndDelete"),
-    INCREMENT_COLUMN_VALUE("incrementColumnValue"),
     APPEND("append"),
     INCREMENT("increment");
 
@@ -1503,18 +1502,27 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           // We have a failure with table, cf and q perm checks and now giving a chance for cell
           // perm check
           OpType opType;
+          long timestamp;
           if (m instanceof Put) {
             checkForReservedTagPresence(user, m);
             opType = OpType.PUT;
+            timestamp = m.getTimestamp();
           } else if (m instanceof Delete) {
             opType = OpType.DELETE;
+            timestamp = m.getTimestamp();
+          } else if (m instanceof Increment) {
+            opType = OpType.INCREMENT;
+            timestamp = ((Increment) m).getTimeRange().getMax();
+          } else if (m instanceof Append) {
+            opType = OpType.APPEND;
+            timestamp = ((Append) m).getTimeRange().getMax();
           } else {
-            // If the operation type is not Put or Delete, do nothing
+            // If the operation type is not Put/Delete/Increment/Append, do nothing
             continue;
           }
           AuthResult authResult = null;
           if (checkCoveringPermission(user, opType, c.getEnvironment(), m.getRow(),
-            m.getFamilyCellMap(), m.getTimestamp(), Action.WRITE)) {
+            m.getFamilyCellMap(), timestamp, Action.WRITE)) {
             authResult = AuthResult.allow(opType.toString(), "Covering cell set",
               user, Action.WRITE, table, m.getFamilyCellMap());
           } else {
@@ -1696,32 +1704,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public Result preAppendAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Append append) throws IOException {
-    if (append.getAttribute(CHECK_COVERING_PERM) != null) {
-      // We had failure with table, cf and q perm checks and now giving a chance for cell
-      // perm check
-      TableName table = c.getEnvironment().getRegion().getRegionInfo().getTable();
-      AuthResult authResult = null;
-      User user = getActiveUser(c);
-      if (checkCoveringPermission(user, OpType.APPEND, c.getEnvironment(), append.getRow(),
-          append.getFamilyCellMap(), append.getTimeRange().getMax(), Action.WRITE)) {
-        authResult = AuthResult.allow(OpType.APPEND.toString(),
-            "Covering cell set", user, Action.WRITE, table, append.getFamilyCellMap());
-      } else {
-        authResult = AuthResult.deny(OpType.APPEND.toString(),
-            "Covering cell set", user, Action.WRITE, table, append.getFamilyCellMap());
-      }
-      AccessChecker.logResult(authResult);
-      if (authorizationEnabled && !authResult.isAllowed()) {
-        throw new AccessDeniedException("Insufficient permissions " +
-          authResult.toContextString());
-      }
-    }
-    return null;
-  }
-
-  @Override
   public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment)
       throws IOException {
@@ -1753,32 +1735,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       }
     }
 
-    return null;
-  }
-
-  @Override
-  public Result preIncrementAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Increment increment) throws IOException {
-    if (increment.getAttribute(CHECK_COVERING_PERM) != null) {
-      // We had failure with table, cf and q perm checks and now giving a chance for cell
-      // perm check
-      TableName table = c.getEnvironment().getRegion().getRegionInfo().getTable();
-      AuthResult authResult = null;
-      User user = getActiveUser(c);
-      if (checkCoveringPermission(user, OpType.INCREMENT, c.getEnvironment(), increment.getRow(),
-          increment.getFamilyCellMap(), increment.getTimeRange().getMax(), Action.WRITE)) {
-        authResult = AuthResult.allow(OpType.INCREMENT.toString(), "Covering cell set",
-            user, Action.WRITE, table, increment.getFamilyCellMap());
-      } else {
-        authResult = AuthResult.deny(OpType.INCREMENT.toString(), "Covering cell set",
-            user, Action.WRITE, table, increment.getFamilyCellMap());
-      }
-      AccessChecker.logResult(authResult);
-      if (authorizationEnabled && !authResult.isAllowed()) {
-        throw new AccessDeniedException("Insufficient permissions " +
-          authResult.toContextString());
-      }
-    }
     return null;
   }
 
