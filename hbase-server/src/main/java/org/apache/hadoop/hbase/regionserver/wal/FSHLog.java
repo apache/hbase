@@ -213,7 +213,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   @VisibleForTesting
   public FSHLog(final FileSystem fs, Abortable abortable, final Path root, final String logDir,
       final Configuration conf) throws IOException {
-    this(fs, abortable, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null);
+    this(fs, abortable, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null,
+        null);
   }
 
   public FSHLog(final FileSystem fs, final Path rootDir, final String logDir,
@@ -227,6 +228,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * existing log. If there is a log at startup, it should have already been processed and deleted
    * by the time the WAL object is started up.
    * @param fs filesystem handle
+   * @param abortable Abortable - the server here
    * @param rootDir path to where logs and oldlogs
    * @param logDir dir where wals are stored
    * @param archiveDir dir where wals are archived
@@ -240,9 +242,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * @param suffix will be url encoded. null is treated as empty. non-empty must start with
    *          {@link org.apache.hadoop.hbase.wal.AbstractFSWALProvider#WAL_FILE_NAME_DELIMITER}
    */
-  public FSHLog(final FileSystem fs, final Abortable abortable, final Path rootDir, final String logDir,
-      final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
-      final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
+  public FSHLog(final FileSystem fs, final Abortable abortable, final Path rootDir,
+      final String logDir, final String archiveDir, final Configuration conf,
+      final List<WALActionsListener> listeners, final boolean failIfWALExists, final String prefix,
+      final String suffix) throws IOException {
     super(fs, abortable, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
         suffix);
     this.minTolerableReplication = conf.getInt(TOLERABLE_LOW_REPLICATION,

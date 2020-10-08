@@ -212,9 +212,9 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         eventLoopGroup, channelClass);
   }
 
-  public AsyncFSWAL(FileSystem fs, Abortable abortable, Path rootDir, String logDir, String archiveDir,
-      Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
-      String prefix, String suffix, EventLoopGroup eventLoopGroup,
+  public AsyncFSWAL(FileSystem fs, Abortable abortable, Path rootDir, String logDir,
+      String archiveDir, Configuration conf, List<WALActionsListener> listeners,
+      boolean failIfWALExists, String prefix, String suffix, EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
     super(fs, abortable, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
         suffix);
