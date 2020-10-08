@@ -30,8 +30,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Category({ ClientTests.class, MediumTests.class })
 public class TestShellNoCluster extends AbstractTestShell {
+  private static final Logger LOG = LoggerFactory.getLogger(TestShellNoCluster.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -41,7 +45,6 @@ public class TestShellNoCluster extends AbstractTestShell {
   public static void setUpBeforeClass() throws Exception {
     // no cluster
     List<String> loadPaths = new ArrayList<>(2);
-    loadPaths.add("src/main/ruby");
     loadPaths.add("src/test/ruby");
     jruby.setLoadPaths(loadPaths);
     jruby.put("$TEST_CLUSTER", TEST_UTIL);
@@ -55,9 +58,11 @@ public class TestShellNoCluster extends AbstractTestShell {
     // no cluster
   }
 
+  // Keep the same name so we override the with-a-cluster test
+  @Override
   @Test
-  public void testRunNoClusterShellTests() throws IOException {
-    // Start ruby tests without cluster
-    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/no_cluster_tests_runner.rb");
+  public void testRunShellTests() throws IOException {
+    LOG.info("Start ruby tests without cluster");
+    jruby.runScriptlet(PathType.CLASSPATH, "no_cluster_tests_runner.rb");
   }
 }

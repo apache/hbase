@@ -39,7 +39,7 @@ module Hbase
   module TestHelpers
     require 'hbase_constants'
     require 'hbase/hbase'
-    require 'shell'
+    require 'hbase_shell'
 
     def setup_hbase
       hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
@@ -169,7 +169,3 @@ end
 
 # Extend standard unit tests with our helpers
 Test::Unit::TestCase.extend(Testing::Declarative)
-
-# Add the $HBASE_HOME/lib/ruby directory to the ruby
-# load path so I can load up my HBase ruby modules
-$LOAD_PATH.unshift File.join(File.dirname(__FILE__), "..", "..", "main", "ruby")

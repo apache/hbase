@@ -69,13 +69,6 @@
         <include>**/*.cmd</include>
       </includes>
     </fileSet>
-    <!-- Move the ruby code over -->
-    <fileSet>
-      <directory>${project.basedir}/../hbase-shell/src/main/ruby</directory>
-      <outputDirectory>lib/ruby</outputDirectory>
-      <fileMode>0644</fileMode>
-      <directoryMode>0755</directoryMode>
-    </fileSet>
     <!-- Move the webapps to the webapp dir -->
     <fileSet>
       <directory>${project.basedir}/../hbase-server/target/hbase-webapps</directory>
