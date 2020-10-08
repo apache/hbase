@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-require 'shell'
+require 'hbase_shell'
 require 'hbase_constants'
 
 java_import 'org.apache.hadoop.hbase.HRegionLocation'

@@ -26,11 +26,18 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
+import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Test;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractTestShell {
+
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestShell.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected final static ScriptingContainer jruby = new ScriptingContainer();
@@ -54,15 +61,42 @@ public abstract class AbstractTestShell {
   }
 
   protected static void setUpJRubyRuntime() {
-    // Configure jruby runtime
+    LOG.debug("Configure jruby runtime, cluster set to {}", TEST_UTIL);
     List<String> loadPaths = new ArrayList<>(2);
-    loadPaths.add("src/main/ruby");
     loadPaths.add("src/test/ruby");
     jruby.setLoadPaths(loadPaths);
     jruby.put("$TEST_CLUSTER", TEST_UTIL);
     System.setProperty("jruby.jit.logging.verbose", "true");
     System.setProperty("jruby.jit.logging", "true");
     System.setProperty("jruby.native.verbose", "true");
+  }
+
+  /**
+   * @return comma separated list of ruby script names for tests
+   */
+  protected String getIncludeList() {
+    return "";
+  }
+
+  /**
+   * @return comma separated list of ruby script names for tests to skip
+   */
+  protected String getExcludeList() {
+    return "";
+  }
+
+  @Test
+  public void testRunShellTests() throws IOException {
+    final String tests = getIncludeList();
+    final String excludes = getExcludeList();
+    if (!tests.isEmpty()) {
+      System.setProperty("shell.test.include", tests);
+    }
+    if (!excludes.isEmpty()) {
+      System.setProperty("shell.test.exclude", excludes);
+    }
+    LOG.info("Starting ruby tests. includes: {} excludes: {}", tests, excludes);
+    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
   }
 
   @BeforeClass
