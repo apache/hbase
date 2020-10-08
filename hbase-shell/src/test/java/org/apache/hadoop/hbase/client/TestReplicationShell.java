@@ -33,10 +33,8 @@ public class TestReplicationShell extends AbstractTestShell {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestReplicationShell.class);
 
-  @Test
-  public void testRunShellTests() throws IOException {
-    System.setProperty("shell.test.include", "replication_admin_test.rb");
-    // Start all ruby tests
-    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
+  @Override
+  protected String getIncludeList() {
+    return "replication_admin_test.rb";
   }
 }

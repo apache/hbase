@@ -17,7 +17,7 @@
 # limitations under the License.
 #
 
-require 'shell'
+require 'hbase_shell'
 require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'

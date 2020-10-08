@@ -33,10 +33,8 @@ public class TestAdminShell2 extends AbstractTestShell {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAdminShell2.class);
 
-  @Test
-  public void testRunShellTests() throws IOException {
-    System.setProperty("shell.test.include", "admin2_test.rb");
-    // Start all ruby tests
-    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
+  @Override
+  protected String getIncludeList() {
+    return "admin2_test.rb";
   }
 }

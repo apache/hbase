@@ -19,7 +19,7 @@
 
 require 'hbase_constants'
 require 'hbase/table'
-require 'shell'
+require 'hbase_shell'
 
 ##
 # Tests whether all registered commands have a help and command method

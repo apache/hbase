@@ -21,6 +21,8 @@ require 'rubygems'
 require 'rake'
 require 'set'
 
+puts "Ruby description: #{RUBY_DESCRIPTION}"
+
 unless defined?($TEST_CLUSTER)
   include Java
 
@@ -68,6 +70,7 @@ files.each do |file|
     next
   end
   begin
+    puts "loading test file '#{filename}'."
     load(file)
   rescue => e
     puts "ERROR: #{e}"

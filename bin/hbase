@@ -509,13 +509,22 @@ fi
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
 	#find the hbase ruby sources
+  # assume we are in a binary install if lib/ruby exists
   if [ -d "$HBASE_HOME/lib/ruby" ]; then
-    HBASE_OPTS="$HBASE_OPTS -Dhbase.ruby.sources=$HBASE_HOME/lib/ruby"
+    # We want jruby to consume these things rather than our bootstrap script;
+    # jruby will look for the env variable 'JRUBY_OPTS'.
+    JRUBY_OPTS="${JRUBY_OPTS} -X+O"
+    export JRUBY_OPTS
+    # hbase-shell.jar contains a 'jar-bootstrap.rb'
+    # for more info see
+    # https://github.com/jruby/jruby/wiki/StandaloneJarsAndClasses#standalone-executable-jar-files
+    CLASS="org.jruby.JarBootstrapMain"
+  # otherwise assume we are running in a source checkout
   else
     HBASE_OPTS="$HBASE_OPTS -Dhbase.ruby.sources=$HBASE_HOME/hbase-shell/src/main/ruby"
+    CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/hbase-shell/src/main/resources/jar-bootstrap.rb"
   fi
   HBASE_OPTS="$HBASE_OPTS $HBASE_SHELL_OPTS"
-  CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/bin/hirb.rb"
 elif [ "$COMMAND" = "hbck" ] ; then
   # Look for the -j /path/to/HBCK2.jar parameter. Else pass through to hbck.
   case "${1}" in
