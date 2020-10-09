@@ -746,14 +746,14 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       // make it async
       for (Pair<Path, Long> log : localLogsToArchive) {
         logArchiveExecutor.execute(() -> {
-          archiveRetryable(log);
+          archive(log);
         });
         this.walFile2Props.remove(log.getFirst());
       }
     }
   }
 
-  protected void archiveRetryable(final Pair<Path, Long> log) {
+  protected void archive(final Pair<Path, Long> log) {
     int retry = 1;
     while (true) {
       try {

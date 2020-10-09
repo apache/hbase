@@ -135,8 +135,8 @@ public class TestFailedAppendAndSync {
     }
 
     @Override
-    protected void archiveRetryable(Pair<Path, Long> localLogsToArchive) {
-      super.archiveRetryable(localLogsToArchive);
+    protected void archive(Pair<Path, Long> localLogsToArchive) {
+      super.archive(localLogsToArchive);
     }
 
     @Override
@@ -281,7 +281,7 @@ public class TestFailedAppendAndSync {
         Pair<Path, Long> pair = new Pair<Path, Long>();
         pair.setFirst(new Path("/a/b/"));
         pair.setSecond(100L);
-        dodgyWAL.archiveRetryable(pair);
+        dodgyWAL.archive(pair);
       } catch (Throwable ioe) {
       }
       while (true) {
