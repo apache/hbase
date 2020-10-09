@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.apache.commons.lang3.StringUtils.isNumeric;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -440,16 +439,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
      * @return start time
      */
     private static long getTS(Path p) {
-      String name = p.getName();
-      String [] splits = name.split("\\.");
-      String ts = splits[splits.length - 1];
-      if (!isNumeric(ts)) {
-        // Its a '.meta' or a '.syncrep' suffix.
-        ts = splits[splits.length - 2];
-      }
-      return Long.parseLong(ts);
+      return WAL.getTimestamp(p.getName());
     }
   }
+
+
 
   public static boolean isArchivedLogFile(Path p) {
     String oldLog = Path.SEPARATOR + HConstants.HREGION_OLDLOGDIR_NAME + Path.SEPARATOR;
