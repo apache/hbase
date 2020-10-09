@@ -26,6 +26,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -39,7 +42,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  * and executes the resulting {@link NormalizationPlan}s.
  */
 @InterfaceAudience.Private
-class RegionNormalizerWorker implements Runnable {
+class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(RegionNormalizerWorker.class);
 
   static final String RATE_LIMIT_BYTES_PER_SEC_KEY =
@@ -70,7 +73,32 @@ class RegionNormalizerWorker implements Runnable {
     this.rateLimiter = loadRateLimiter(configuration);
   }
 
+  @Override
+  public void registerChildren(ConfigurationManager manager) {
+    if (regionNormalizer instanceof ConfigurationObserver) {
+      final ConfigurationObserver observer = (ConfigurationObserver)  regionNormalizer;
+      manager.registerObserver(observer);
+    }
+  }
+
+  @Override
+  public void deregisterChildren(ConfigurationManager manager) {
+    if (regionNormalizer instanceof ConfigurationObserver) {
+      final ConfigurationObserver observer = (ConfigurationObserver)  regionNormalizer;
+      manager.deregisterObserver(observer);
+    }
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    rateLimiter.setRate(loadRateLimit(conf));
+  }
+
   private static RateLimiter loadRateLimiter(final Configuration configuration) {
+    return RateLimiter.create(loadRateLimit(configuration));
+  }
+
+  private static long loadRateLimit(final Configuration configuration) {
     long rateLimitBytes =
       configuration.getLongBytes(RATE_LIMIT_BYTES_PER_SEC_KEY, RATE_UNLIMITED_BYTES);
     long rateLimitMbs = rateLimitBytes / 1_000_000L;
@@ -82,7 +110,7 @@ class RegionNormalizerWorker implements Runnable {
     }
     LOG.info("Normalizer rate limit set to {}",
       rateLimitBytes == RATE_UNLIMITED_BYTES ? "unlimited" : rateLimitMbs + " MB/sec");
-    return RateLimiter.create(rateLimitMbs);
+    return rateLimitMbs;
   }
 
   /**
@@ -114,6 +142,15 @@ class RegionNormalizerWorker implements Runnable {
    */
   long getMergePlanCount() {
     return mergePlanCount;
+  }
+
+  /**
+   * Used in test only. This field is exposed to the test, as opposed to tracking the current
+   * configuration value beside the RateLimiter instance and managing synchronization to keep the
+   * two in sync.
+   */
+  RateLimiter getRateLimiter() {
+    return rateLimiter;
   }
 
   @Override
