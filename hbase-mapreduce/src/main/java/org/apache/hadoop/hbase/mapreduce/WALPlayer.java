@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -239,6 +238,7 @@ public class WALPlayer extends Configured implements Tool {
       super.cleanup(context);
     }
 
+    @SuppressWarnings("checkstyle:EmptyBlock")
     @Override
     public void setup(Context context) throws IOException {
       String[] tableMap = context.getConfiguration().getStrings(TABLE_MAP_KEY);
@@ -377,17 +377,21 @@ public class WALPlayer extends Configured implements Tool {
     System.err.println(" <WAL inputdir>   directory of WALs to replay.");
     System.err.println(" <tables>         comma separated list of tables. If no tables specified,");
     System.err.println("                  all are imported (even hbase:meta if present).");
-    System.err.println(" <tableMappings>  WAL entries can be mapped to a new set of tables by passing");
-    System.err.println("                  <tableMappings>, a comma separated list of target tables.");
-    System.err.println("                  If specified, each table in <tables> must have a mapping.");
+    System.err.println(" <tableMappings>  WAL entries can be mapped to a new set of tables by " +
+      "passing");
+    System.err.println("                  <tableMappings>, a comma separated list of target " +
+      "tables.");
+    System.err.println("                  If specified, each table in <tables> must have a " +
+      "mapping.");
     System.err.println("To generate HFiles to bulk load instead of loading HBase directly, pass:");
     System.err.println(" -D" + BULK_OUTPUT_CONF_KEY + "=/path/for/output");
     System.err.println(" Only one table can be specified, and no mapping allowed!");
     System.err.println("To specify a time range, pass:");
     System.err.println(" -D" + WALInputFormat.START_TIME_KEY + "=[date|ms]");
     System.err.println(" -D" + WALInputFormat.END_TIME_KEY + "=[date|ms]");
-    System.err.println(" The start and the end date of timerange. The dates can be expressed");
-    System.err.println(" in milliseconds since epoch or in yyyy-MM-dd'T'HH:mm:ss.SS format.");
+    System.err.println(" The start and the end date of timerange (inclusive). The dates can be");
+    System.err.println(" expressed in milliseconds-since-epoch or yyyy-MM-dd'T'HH:mm:ss.SS " +
+      "format.");
     System.err.println(" E.g. 1234567890120 or 2009-02-13T23:32:30.12");
     System.err.println("Other options:");
     System.err.println(" -D" + JOB_NAME_CONF_KEY + "=jobName");
