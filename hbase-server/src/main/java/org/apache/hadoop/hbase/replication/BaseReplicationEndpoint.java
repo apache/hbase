@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 import java.util.ArrayList;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +39,10 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   private static final Logger LOG = LoggerFactory.getLogger(BaseReplicationEndpoint.class);
   public static final String REPLICATION_WALENTRYFILTER_CONFIG_KEY
       = "hbase.replication.source.custom.walentryfilters";
+  // Can be configured differently than hbase.client.retries.number
+  public static final String CLIENT_RETRIES_NUMBER =
+    "hbase.region.replica.replication.client.retries.number";
+
   protected Context ctx;
 
   @Override

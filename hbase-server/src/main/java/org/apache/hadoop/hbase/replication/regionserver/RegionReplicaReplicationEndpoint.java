@@ -69,9 +69,6 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionReplicaReplicationEndpoint.class);
 
-  // Can be configured differently than hbase.client.retries.number
-  private static String CLIENT_RETRIES_NUMBER =
-    "hbase.region.replica.replication.client.retries.number";
 
   private Configuration conf;
   private AsyncClusterConnection connection;

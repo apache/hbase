@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -72,14 +74,14 @@ public class TestMetaRegionReplicaReplicationEndpoint {
       HBaseClassTestRule.forClass(TestMetaRegionReplicaReplicationEndpoint.class);
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMetaRegionReplicaReplicationEndpoint.class);
-  private static final int NB_SERVERS = 3;
-  private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final int NB_SERVERS = 4;
+  private final HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private int numOfMetaReplica = NB_SERVERS - 1;
 
   @Rule
   public TestName name = new TestName();
 
-  @Before
-  public void before() throws Exception {
+  protected Configuration setupConfig() {
     Configuration conf = HTU.getConfiguration();
     conf.setFloat("hbase.regionserver.logroll.multiplier", 0.0003f);
     conf.setInt("replication.source.size.capacity", 10240);
@@ -95,10 +97,16 @@ public class TestMetaRegionReplicaReplicationEndpoint {
     // Enable hbase:meta replication.
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CATALOG_CONF_KEY, true);
     // Set hbase:meta replicas to be 3.
-    conf.setInt(HConstants.META_REPLICAS_NUM, NB_SERVERS);
+    conf.setInt(HConstants.META_REPLICAS_NUM, numOfMetaReplica);
+    return conf;
+  }
+
+  @Before
+  public void before() throws Exception {
+    setupConfig();
     HTU.startMiniCluster(NB_SERVERS);
     HTU.waitFor(30000,
-      () -> HTU.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size() >= NB_SERVERS);
+      () -> HTU.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size() >= numOfMetaReplica);
   }
 
   @After
@@ -158,7 +166,7 @@ public class TestMetaRegionReplicaReplicationEndpoint {
     waitForMetaReplicasToOnline();
     try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName() + "_" + i),
         HConstants.CATALOG_FAMILY)) {
-      verifyReplication(TableName.META_TABLE_NAME, NB_SERVERS, getMetaCells(table.getName()));
+      verifyReplication(TableName.META_TABLE_NAME, numOfMetaReplica, getMetaCells(table.getName()));
     }
   }
 
@@ -179,15 +187,135 @@ public class TestMetaRegionReplicaReplicationEndpoint {
     try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName() + "_0"),
       HConstants.CATALOG_FAMILY,
         Arrays.copyOfRange(HBaseTestingUtility.KEYS, 1, HBaseTestingUtility.KEYS.length)))  {
-      verifyReplication(TableName.META_TABLE_NAME, NB_SERVERS, getMetaCells(table.getName()));
+      verifyReplication(TableName.META_TABLE_NAME, numOfMetaReplica, getMetaCells(table.getName()));
     }
     try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName() + "_1"),
       HConstants.CATALOG_FAMILY,
       Arrays.copyOfRange(HBaseTestingUtility.KEYS, 1, HBaseTestingUtility.KEYS.length)))  {
-      verifyReplication(TableName.META_TABLE_NAME, NB_SERVERS, getMetaCells(table.getName()));
+      verifyReplication(TableName.META_TABLE_NAME, numOfMetaReplica, getMetaCells(table.getName()));
       // Try delete.
       HTU.deleteTableIfAny(table.getName());
-      verifyDeletedReplication(TableName.META_TABLE_NAME, NB_SERVERS, table.getName());
+      verifyDeletedReplication(TableName.META_TABLE_NAME, numOfMetaReplica, table.getName());
+    }
+  }
+
+  @Test
+  public void testCatalogReplicaReplicationWithFlushAndCompaction() throws Exception {
+    Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+    TableName tableName = TableName.valueOf("hbase:meta");
+    Table table = connection.getTable(tableName);
+    try {
+      // load the data to the table
+      for (int i = 0; i < 5; i ++) {
+        LOG.info("Writing data from " + i * 1000 + " to " + (i * 1000 + 1000));
+        HTU.loadNumericRows(table, HConstants.CATALOG_FAMILY, i * 1000,
+          i * 1000 + 1000);
+        LOG.info("flushing table");
+        HTU.flush(tableName);
+        LOG.info("compacting table");
+        if (i < 4) {
+          HTU.compact(tableName, false);
+        }
+      }
+
+      verifyReplication(tableName, numOfMetaReplica, 0, 5000,
+        HConstants.CATALOG_FAMILY);
+    } finally {
+      table.close();
+      connection.close();
+    }
+  }
+
+  @Test
+  public void testCatalogReplicaReplicationWithReplicaMoved() throws Exception {
+    MiniHBaseCluster cluster = HTU.getMiniHBaseCluster();
+    HRegionServer hrs = cluster.getRegionServer(cluster.getServerHoldingMeta());
+
+    HRegionServer hrsMetaReplica = null;
+    HRegionServer hrsNoMetaReplica = null;
+    HRegionServer server = null;
+    Region metaReplica = null;
+    boolean hostingMeta;
+
+    for (int i = 0; i < cluster.getNumLiveRegionServers(); i++) {
+      server = cluster.getRegionServer(i);
+      hostingMeta = false;
+      if (server == hrs) {
+        continue;
+      }
+      for (Region region : server.getOnlineRegionsLocalContext()) {
+        if (region.getRegionInfo().isMetaRegion()) {
+          if (metaReplica == null) {
+            metaReplica = region;
+          }
+          hostingMeta = true;
+          break;
+        }
+      }
+      if (!hostingMeta) {
+        hrsNoMetaReplica = server;
+      }
+    }
+
+    Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+    TableName tableName = TableName.valueOf("hbase:meta");
+    Table table = connection.getTable(tableName);
+    try {
+      // load the data to the table
+      for (int i = 0; i < 5; i++) {
+        LOG.info("Writing data from " + i * 1000 + " to " + (i * 1000 + 1000));
+        HTU.loadNumericRows(table, HConstants.CATALOG_FAMILY, i * 1000, i * 1000 + 1000);
+        if (i == 0) {
+          HTU.moveRegionAndWait(metaReplica.getRegionInfo(), hrsNoMetaReplica.getServerName());
+        }
+      }
+
+      verifyReplication(tableName, numOfMetaReplica, 0, 5000, HConstants.CATALOG_FAMILY);
+    } finally {
+      table.close();
+      connection.close();
+    }
+  }
+
+  protected void verifyReplication(TableName tableName, int regionReplication,
+    final int startRow, final int endRow, final byte[] family) throws Exception {
+    verifyReplication(tableName, regionReplication, startRow, endRow, family,true);
+  }
+
+  private void verifyReplication(TableName tableName, int regionReplication,
+    final int startRow, final int endRow, final byte[] family, final boolean present) throws Exception {
+    // find the regions
+    final Region[] regions = new Region[regionReplication];
+
+    for (int i=0; i < NB_SERVERS; i++) {
+      HRegionServer rs = HTU.getMiniHBaseCluster().getRegionServer(i);
+      List<HRegion> onlineRegions = rs.getRegions(tableName);
+      for (HRegion region : onlineRegions) {
+        regions[region.getRegionInfo().getReplicaId()] = region;
+      }
+    }
+
+    for (Region region : regions) {
+      assertNotNull(region);
+    }
+
+    for (int i = 1; i < regionReplication; i++) {
+      final Region region = regions[i];
+      // wait until all the data is replicated to all secondary regions
+      Waiter.waitFor(HTU.getConfiguration(), 90000, 1000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          LOG.info("verifying replication for region replica:" + region.getRegionInfo());
+          try {
+            HTU.verifyNumericRows(region, family, startRow, endRow, present);
+          } catch(Throwable ex) {
+            LOG.warn("Verification from secondary region is not complete yet", ex);
+            // still wait
+            return false;
+          }
+          return true;
+        }
+      });
     }
   }
 
@@ -201,10 +329,10 @@ public class TestMetaRegionReplicaReplicationEndpoint {
       // getRegionLocations returns an entry for each replica but if unassigned, entry is null.
       // Pass reload to force us to skip cache else it just keeps returning default.
       () -> regionLocator.getRegionLocations(HConstants.EMPTY_START_ROW, true).stream().
-        filter(Objects::nonNull).count() >= NB_SERVERS);
+        filter(Objects::nonNull).count() >= numOfMetaReplica);
     List<HRegionLocation> locations = regionLocator.getRegionLocations(HConstants.EMPTY_START_ROW);
     LOG.info("Found locations {}", locations);
-    assertEquals(NB_SERVERS, locations.size());
+    assertEquals(numOfMetaReplica, locations.size());
   }
 
   /**

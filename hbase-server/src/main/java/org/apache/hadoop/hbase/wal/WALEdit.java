@@ -130,6 +130,9 @@ public class WALEdit implements HeapSize {
   private static final byte [] REGION_EVENT_CLOSE =
       createRegionEventDescriptorQualifier(RegionEventDescriptor.EventType.REGION_CLOSE);
 
+  private static final byte [] REGION_EVENT_OPEN =
+    createRegionEventDescriptorQualifier(RegionEventDescriptor.EventType.REGION_OPEN);
+
   @VisibleForTesting
   public static final byte [] BULK_LOAD = Bytes.toBytes("HBASE::BULK_LOAD");
 
@@ -320,6 +323,15 @@ public class WALEdit implements HeapSize {
         FlushDescriptor.parseFrom(CellUtil.cloneValue(cell)): null;
   }
 
+  public static FlushDescriptor getCommitFlushDescriptor(Cell cell) throws IOException {
+    FlushDescriptor desc =  getFlushDescriptor(cell);
+    if ((desc != null) && desc.getAction() != WALProtos.FlushDescriptor.FlushAction.COMMIT_FLUSH) {
+        desc = null;
+    }
+    return desc;
+  }
+
+
   /**
    * @return A meta Marker WALEdit that has a single Cell whose value is the passed in
    *   <code>regionEventDesc</code> serialized and whose row is this region,
@@ -348,6 +360,15 @@ public class WALEdit implements HeapSize {
   @VisibleForTesting
   public static byte [] createRegionEventDescriptorQualifier(RegionEventDescriptor.EventType t) {
     return Bytes.toBytes(REGION_EVENT_PREFIX_STR + t.toString());
+  }
+
+  /**
+   * Public so can be accessed from regionserver.wal package.
+   * @return True if this is a Marker Edit and it is a RegionOpen type.
+   */
+  public boolean isRegionOpenMarker() {
+    return isMetaEdit() && PrivateCellUtil.matchingQualifier(this.cells.get(0),
+      REGION_EVENT_OPEN, 0, REGION_EVENT_OPEN.length);
   }
 
   /**
