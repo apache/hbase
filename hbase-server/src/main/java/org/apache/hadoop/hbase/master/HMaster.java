@@ -2575,7 +2575,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     return status;
   }
 
-  private List<ServerName> getBackupMasters() throws InterruptedIOException {
+  List<ServerName> getBackupMasters() throws InterruptedIOException {
     // Build Set of backup masters from ZK nodes
     List<String> backupMasterStrings;
     try {
