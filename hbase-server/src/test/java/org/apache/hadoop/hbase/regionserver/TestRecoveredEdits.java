@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,12 +31,13 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -78,6 +78,32 @@ public class TestRecoveredEdits {
 
   @Rule public TestName testName = new TestName();
 
+  /**
+   * Path to a recovered.edits file in hbase-server test resources folder.
+   * This is a little fragile getting this path to a file of 10M of edits.
+   */
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  public static final Path RECOVEREDEDITS_PATH = new Path(
+    System.getProperty("test.build.classes", "target/test-classes"),
+    "0000000000000016310");
+
+  /**
+   * Name of table referenced by edits in the recovered.edits file.
+   */
+  public static final String RECOVEREDEDITS_TABLENAME = "IntegrationTestBigLinkedList";
+
+  /**
+   * Column family referenced by edits in the recovered.edits file.
+   */
+  public static final byte [] RECOVEREDEDITS_COLUMNFAMILY = Bytes.toBytes("meta");
+  public static final byte[][] RECOVEREDITS_COLUMNFAMILY_ARRAY =
+    new byte[][] {RECOVEREDEDITS_COLUMNFAMILY};
+  public static final ColumnFamilyDescriptor RECOVEREDEDITS_CFD =
+    ColumnFamilyDescriptorBuilder.newBuilder(RECOVEREDEDITS_COLUMNFAMILY).build();
+
+  /**
+   * Name of table mentioned edits from recovered.edits
+   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     blockCache = BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration());
@@ -88,7 +114,6 @@ public class TestRecoveredEdits {
    * Create a region. Close it. Then copy into place a file to replay, one that is bigger than
    * configured flush size so we bring on lots of flushes.  Then reopen and confirm all edits
    * made it in.
-   * @throws IOException
    */
   @Test
   public void testReplayWorksThoughLotsOfFlushing() throws
@@ -104,33 +129,11 @@ public class TestRecoveredEdits {
     // Set it so we flush every 1M or so.  Thats a lot.
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, String.valueOf(policy).toLowerCase());
-    // The file of recovered edits has a column family of 'meta'. Also has an encoded regionname
-    // of 4823016d8fca70b25503ee07f4c6d79f which needs to match on replay.
-    final String encodedRegionName = "4823016d8fca70b25503ee07f4c6d79f";
-    final String columnFamily = "meta";
-    byte [][] columnFamilyAsByteArray = new byte [][] {Bytes.toBytes(columnFamily)};
-    TableDescriptor tableDescriptor =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(testName.getMethodName()))
-            .setColumnFamily(
-                ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(columnFamily)).build())
-            .build();
-    RegionInfo hri = new HRegionInfo(tableDescriptor.getTableName()) {
-      @Override
-      public synchronized String getEncodedName() {
-        return encodedRegionName;
-      }
-
-      // Cache the name because lots of lookups.
-      private byte[] encodedRegionNameAsBytes = null;
-
-      @Override
-      public synchronized byte[] getEncodedNameAsBytes() {
-        if (encodedRegionNameAsBytes == null) {
-          this.encodedRegionNameAsBytes = Bytes.toBytes(getEncodedName());
-        }
-        return this.encodedRegionNameAsBytes;
-      }
-    };
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.
+      newBuilder(TableName.valueOf(testName.getMethodName())).
+      setColumnFamily(RECOVEREDEDITS_CFD) .build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
+    final String encodedRegionName = hri.getEncodedName();
     Path hbaseRootDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     Path tableDir = CommonFSUtils.getTableDir(hbaseRootDir, tableDescriptor.getTableName());
@@ -143,24 +146,20 @@ public class TestRecoveredEdits {
     HRegion region = HBaseTestingUtility
         .createRegionAndWAL(hri, hbaseRootDir, conf, tableDescriptor, blockCache);
     assertEquals(encodedRegionName, region.getRegionInfo().getEncodedName());
-    List<String> storeFiles = region.getStoreFileList(columnFamilyAsByteArray);
+    List<String> storeFiles = region.getStoreFileList(RECOVEREDITS_COLUMNFAMILY_ARRAY);
     // There should be no store files.
     assertTrue(storeFiles.isEmpty());
     region.close();
     Path regionDir = FSUtils.getRegionDirFromRootDir(hbaseRootDir, hri);
     Path recoveredEditsDir = WALSplitUtil.getRegionDirRecoveredEditsDir(regionDir);
-    // This is a little fragile getting this path to a file of 10M of edits.
-    Path recoveredEditsFile = new Path(
-      System.getProperty("test.build.classes", "target/test-classes"),
-        "0000000000000016310");
     // Copy this file under the region's recovered.edits dir so it is replayed on reopen.
-    Path destination = new Path(recoveredEditsDir, recoveredEditsFile.getName());
-    fs.copyToLocalFile(recoveredEditsFile, destination);
+    Path destination = new Path(recoveredEditsDir, RECOVEREDEDITS_PATH.getName());
+    fs.copyToLocalFile(RECOVEREDEDITS_PATH, destination);
     assertTrue(fs.exists(destination));
     // Now the file 0000000000000016310 is under recovered.edits, reopen the region to replay.
     region = HRegion.openHRegion(region, null);
     assertEquals(encodedRegionName, region.getRegionInfo().getEncodedName());
-    storeFiles = region.getStoreFileList(columnFamilyAsByteArray);
+    storeFiles = region.getStoreFileList(RECOVEREDITS_COLUMNFAMILY_ARRAY);
     // Our 0000000000000016310 is 10MB. Most of the edits are for one region. Lets assume that if
     // we flush at 1MB, that there are at least 3 flushed files that are there because of the
     // replay of edits.
@@ -170,19 +169,16 @@ public class TestRecoveredEdits {
       assertTrue("Files count=" + storeFiles.size(), storeFiles.size() > 10);
     }
     // Now verify all edits made it into the region.
-    int count = verifyAllEditsMadeItIn(fs, conf, recoveredEditsFile, region);
+    int count = verifyAllEditsMadeItIn(fs, conf, RECOVEREDEDITS_PATH, region);
+    assertTrue(count > 0);
     LOG.info("Checked " + count + " edits made it in");
   }
 
   /**
-   * @param fs
-   * @param conf
-   * @param edits
-   * @param region
    * @return Return how many edits seen.
-   * @throws IOException
    */
-  private int verifyAllEditsMadeItIn(final FileSystem fs, final Configuration conf,
+  // Used by TestWALPlayer over in hbase-mapreduce too.
+  public static int verifyAllEditsMadeItIn(final FileSystem fs, final Configuration conf,
       final Path edits, final HRegion region) throws IOException {
     int count = 0;
     // Read all cells from recover edits

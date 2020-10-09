@@ -365,7 +365,8 @@ public final class CommonFSUtils {
     if (!qualifiedWalDir.equals(rootDir)) {
       if (qualifiedWalDir.toString().startsWith(rootDir.toString() + "/")) {
         throw new IllegalStateException("Illegal WAL directory specified. " +
-            "WAL directories are not permitted to be under the root directory if set.");
+          "WAL directories are not permitted to be under root directory: rootDir=" +
+          rootDir.toString() + ", qualifiedWALDir=" + qualifiedWalDir);
       }
     }
     return true;
