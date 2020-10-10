@@ -573,7 +573,6 @@ pipeline {
                     --hbase-client-install "hbase-client" \
                     "hbase-install" \
                     "hadoop-2/bin/hadoop" \
-                    hadoop-2/share/hadoop/yarn/timelineservice \
                     hadoop-2/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
                     hadoop-2/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
                     hadoop-2/bin/mapred \
@@ -599,7 +598,6 @@ pipeline {
                     --hbase-client-install hbase-client \
                     hbase-install \
                     hadoop-3/bin/hadoop \
-                    hadoop-3/share/hadoop/yarn/timelineservice \
                     hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
                     hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
                     hadoop-3/bin/mapred \
@@ -615,7 +613,6 @@ pipeline {
                     --hbase-client-install hbase-client \
                     hbase-install \
                     hadoop-3/bin/hadoop \
-                    hadoop-3/share/hadoop/yarn/timelineservice \
                     hadoop-3/share/hadoop/yarn/test/hadoop-yarn-server-tests-*-tests.jar \
                     hadoop-3/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-*-tests.jar \
                     hadoop-3/bin/mapred \
