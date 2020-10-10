@@ -626,14 +626,17 @@
             }
           }
         }
-        reMap.put("regionName", Bytes.toStringBinary(regionInfo.getRegionName()));
+        reMap.put("regionName_base", Bytes.toStringBinary(regionInfo.getRegionName()));
+        reMap.put("regionName_compact", Bytes.toStringBinary(regionInfo.getRegionName()));
         if (urlRegionServer != null) {
           String regionServerName = addr == null
             ? "-"
             : addr.getHostname().toString() + ":" + master.getRegionServerInfoPort(addr);
-          reMap.put("regionServerName", regionServerName + "##" + urlRegionServer);
+          reMap.put("regionServerName_base", regionServerName + "##" + urlRegionServer);
+          reMap.put("regionServerName_compact", regionServerName + "##" + urlRegionServer);
         } else {
-          reMap.put("regionServerName", "");
+          reMap.put("regionServerName_base", "");
+          reMap.put("regionServerName_compact", "");
         }
         reMap.put("readReq", readReq);
         reMap.put("writeReq", writeReq);
@@ -692,14 +695,14 @@
         </li>
       </ul>
       <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
-        div class="tab-pane active" id="tab_baseStats">
+        <div class="tab-pane active" id="tab_baseStats">
         <table id="regionServerDetailsTable" class="tablesorter table table-striped">
           <thead>
           <tr>
-            <th class="header" onclick="customChange(this);" id="regionName">
+            <th class="header" onclick="customChange(this);" id="regionName_base">
               Name(<%= String.format("%,1d", regions.size())%>)
             </th>
-            <th class="header" onclick="customChange(this);" id="regionServerName">Region Server</th>
+            <th class="header" onclick="customChange(this);" id="regionServerName_base">Region Server</th>
             <th class="header" onclick="customChange(this);" id="readReq">
               ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)
             </th>
@@ -736,10 +739,10 @@
         <table id="tableCompactStatsTable" class="tablesorter table table-striped">
           <thead>
           <tr>
-            <th class="header" onclick="customChange(this);" id="regionName">
+            <th class="header" onclick="customChange(this);" id="regionName_compact">
               Name(<%= String.format("%,1d", regions.size())%>)
             </th>
-            <th class="header" onclick="customChange(this);" id="regionServerName">Region Server</th>
+            <th class="header" onclick="customChange(this);" id="regionServerName_compact">Region Server</th>
             <th class="header" onclick="customChange(this);" id="compactingCells">Num. Compacting
               Cells<br>(<%= String.format("%,1d", totalCompactingCells)%>)
             </th>
@@ -1038,6 +1041,8 @@ else { // handle the case for fqtn is null or master is not initialized with err
             $('.prePage').remove();
             $('.page-item').remove();
             $('.nextPage').remove();
+            $("thead tr th").removeClass("headerSortDown");
+            $("thead tr th").removeClass("headerSortUp");
             tag = "compactStats";
             initial();
         })
@@ -1051,6 +1056,9 @@ else { // handle the case for fqtn is null or master is not initialized with err
             $('.prePage').remove();
             $('.page-item').remove();
             $('.nextPage').remove();
+            $("thead tr th").removeClass("headerSortDown");
+            $("thead tr th").removeClass("headerSortUp");
+            tag = "baseStats";
             initial();
         })
     })
@@ -1065,8 +1073,8 @@ else { // handle the case for fqtn is null or master is not initialized with err
         if (type == "baseStats") {
             $('.tr-item-base').remove();
             for (let i = startData; i <= endData; i++) {
-                var regionName = jsonArr[i].regionName;
-                var regionServerName = jsonArr[i].regionServerName;
+                var regionName = jsonArr[i].regionName_base;
+                var regionServerName = jsonArr[i].regionServerName_base;
                 var readReq = jsonArr[i].readReq;
                 var writeReq = jsonArr[i].writeReq;
                 var regionSize = jsonArr[i].regionSize;
@@ -1110,8 +1118,8 @@ else { // handle the case for fqtn is null or master is not initialized with err
         } else {
             $('.tr-item-compaction').remove();
             for (let i = startData; i <= endData; i++) {
-                var regionName = jsonArr[i].regionName;
-                var regionServerName = jsonArr[i].regionServerName;
+                var regionName = jsonArr[i].regionName_compact;
+                var regionServerName = jsonArr[i].regionServerName_compact;
                 var compactingCells = jsonArr[i].compactingCells;
                 var compactedCells = jsonArr[i].compactedCells;
                 var compactionProgress = jsonArr[i].compactionProgress;
