@@ -74,8 +74,6 @@ public class ZNodePaths {
   public final String regionNormalizerZNode;
   // znode containing the state of all switches, currently there are split and merge child node.
   public final String switchZNode;
-  // znode containing namespace descriptors
-  public final String namespaceZNode;
   // znode of indicating master maintenance mode
   public final String masterMaintZNode;
 
@@ -106,7 +104,6 @@ public class ZNodePaths {
     regionNormalizerZNode =
         joinZNode(baseZNode, conf.get("zookeeper.znode.regionNormalizer", "normalizer"));
     switchZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.switch", "switch"));
-    namespaceZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.namespace", "namespace"));
     masterMaintZNode =
         joinZNode(baseZNode, conf.get("zookeeper.znode.masterMaintenance", "master-maintenance"));
     replicationZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.replication", "replication"));
@@ -134,7 +131,6 @@ public class ZNodePaths {
         .append(", balancerZNode=").append(balancerZNode)
         .append(", regionNormalizerZNode=").append(regionNormalizerZNode)
         .append(", switchZNode=").append(switchZNode)
-        .append(", namespaceZNode=").append(namespaceZNode)
         .append(", masterMaintZNode=").append(masterMaintZNode)
         .append(", replicationZNode=").append(replicationZNode)
         .append(", peersZNode=").append(peersZNode)
