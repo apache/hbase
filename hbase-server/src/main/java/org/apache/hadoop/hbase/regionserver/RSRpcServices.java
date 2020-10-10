@@ -173,6 +173,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ArchiveWALRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ArchiveWALResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
@@ -2287,6 +2289,27 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
+  /**
+   * Archive the earliest log file of the region server.
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  @Override
+  public ArchiveWALResponse archiveWAL(final RpcController controller,
+    final ArchiveWALRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.increment();
+      regionServer.getRegionServerCoprocessorHost().preArchiveWALRequest();
+      regionServer.getWalRoller().requestArchive();
+      regionServer.getRegionServerCoprocessorHost().postArchiveWALRequest();
+      ArchiveWALResponse.Builder builder = ArchiveWALResponse.newBuilder();
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
 
   /**
    * Stop the region server.

@@ -636,6 +636,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> archiveWAL(ServerName serverName) {
+    return wrap(rawAdmin.archiveWAL(serverName));
+  }
+
+  @Override
   public CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues) {
     return wrap(rawAdmin.clearCompactionQueues(serverName, queues));
   }

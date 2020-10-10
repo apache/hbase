@@ -57,14 +57,17 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -718,7 +721,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     if (logsToArchive != null) {
       for (Pair<Path, Long> logAndSize : logsToArchive) {
         this.totalLogSize.addAndGet(-logAndSize.getSecond());
-        archiveLogFile(logAndSize.getFirst());
+        moveLogFileToArchiveDir(logAndSize.getFirst());
         this.walFile2Props.remove(logAndSize.getFirst());
       }
     }
@@ -732,7 +735,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return new Path(archiveDir, p.getName());
   }
 
-  private void archiveLogFile(final Path p) throws IOException {
+  private void moveLogFileToArchiveDir(final Path p) throws IOException {
     Path newPath = getWALArchivePath(this.walArchiveDir, p);
     // Tell our listeners that a log is going to be archived.
     if (!this.listeners.isEmpty()) {
@@ -870,6 +873,33 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     } finally {
       rollWriterLock.unlock();
     }
+  }
+
+  public void archive(RegionServerServices services) throws IOException{
+    if (getNumRolledLogFiles() < 1) {
+      return;
+    }
+    // get the earliest log of this WAL instance
+    Map.Entry<Path, WalProps> firstWALEntry = this.walFile2Props.firstEntry();
+    // flush regions if necessary
+    Map<byte[], List<byte[]>> regions =
+      this.sequenceIdAccounting.findLower(firstWALEntry.getValue().encodedName2HighestSequenceId);
+    if (regions != null) {
+      for (Map.Entry<byte[], List<byte[]>> entry : regions.entrySet()) {
+        String encodedRegionName = Bytes.toString(entry.getKey());
+        HRegion r = (HRegion) services.getRegion(encodedRegionName);
+        if (r == null) {
+          throw new RegionException("Failed to flush of " + encodedRegionName +
+            " when archive manually, because it is not online on rs");
+        }
+        r.flushcache(entry.getValue(), false, FlushLifeCycleTracker.DUMMY);
+      }
+    }
+
+    // move the log file to archive dir
+    moveLogFileToArchiveDir(firstWALEntry.getKey());
+    this.totalLogSize.addAndGet(-firstWALEntry.getValue().logSize);
+    this.walFile2Props.remove(firstWALEntry.getKey());
   }
 
   // public only until class moves to o.a.h.h.wal

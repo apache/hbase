@@ -219,6 +219,12 @@ message RollWALWriterResponse {
   repeated bytes region_to_flush = 1;
 }
 
+message ArchiveWALRequest {
+}
+
+message ArchiveWALResponse {
+}
+
 message StopServerRequest {
   required string reason = 1;
 }
@@ -364,6 +370,9 @@ service AdminService {
 
   rpc RollWALWriter(RollWALWriterRequest)
     returns(RollWALWriterResponse);
+
+  rpc ArchiveWAL(ArchiveWALRequest)
+  returns(ArchiveWALResponse);
 
   rpc GetServerInfo(GetServerInfoRequest)
     returns(GetServerInfoResponse);

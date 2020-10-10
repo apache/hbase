@@ -82,6 +82,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ArchiveWALRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ArchiveWALResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
@@ -511,6 +513,12 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   @Override
   public RollWALWriterResponse rollWALWriter(RpcController controller,
       RollWALWriterRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public ArchiveWALResponse archiveWAL(RpcController controller,
+    ArchiveWALRequest request) throws ServiceException {
     return null;
   }
 

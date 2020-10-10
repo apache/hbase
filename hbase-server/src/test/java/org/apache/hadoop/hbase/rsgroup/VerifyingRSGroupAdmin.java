@@ -502,6 +502,10 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.rollWALWriter(serverName);
   }
 
+  public void archiveWAL(ServerName serverName) throws IOException {
+    admin.archiveWAL(serverName);
+  }
+
   public CompactionState getCompactionState(TableName tableName) throws IOException {
     return admin.getCompactionState(tableName);
   }
