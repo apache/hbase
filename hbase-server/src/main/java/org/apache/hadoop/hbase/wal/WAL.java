@@ -300,32 +300,4 @@ public interface WAL extends Closeable, WALFileLengthProvider {
       return this.key + "=" + this.edit;
     }
   }
-
-  /**
-   * Split a WAL filename to get a start time. WALs usually have the time we start writing to them
-   * as part of their name, usually the suffix. Sometimes there will be an extra suffix as when it
-   * is a WAL for the meta table. For example, WALs might look like this
-   * <code>10.20.20.171%3A60020.1277499063250</code> where <code>1277499063250</code> is the
-   * timestamp. Could also be a meta WAL which adds a '.meta' suffix or a
-   * synchronous replication WAL which adds a '.syncrep' suffix. Check for these. File also may have
-   * no timestamp on it. For example the recovered.edits files are WALs but are named in ascending
-   * order. Here is an example: 0000000000000016310. Allow for this.
-   * @param name Name of the WAL file.
-   * @return Timestamp or -1.
-   */
-  public static long getTimestamp(String name) {
-    String [] splits = name.split("\\.");
-    if (splits.length <= 1) {
-      return -1;
-    }
-    String timestamp = splits[splits.length - 1];
-    if (!isNumeric(timestamp)) {
-      // Its a '.meta' or a '.syncrep' suffix.
-      timestamp = splits[splits.length - 2];
-      if (!isNumeric(timestamp)) {
-        return -1;
-      }
-    }
-    return Long.parseLong(timestamp);
-  }
 }

@@ -252,31 +252,36 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   public static final String SPLITTING_EXT = "-splitting";
 
   /**
-   * It returns the file create timestamp from the file name. For name format see
+   * Pattern used to validate a WAL file name see {@link #validateWALFilename(String)} for
+   * description.
+   */
+  private static final Pattern WAL_FILE_NAME_PATTERN =
+    Pattern.compile("(.+)\\.(\\d+)(\\.[0-9A-Za-z]+)?");
+
+  /**
+   * Define for when no timestamp found.
+   */
+  private static final long NO_TIMESTAMP = -1L;
+
+  /**
+   * It returns the file create timestamp (the 'FileNum') from the file name. For name format see
    * {@link #validateWALFilename(String)} public until remaining tests move to o.a.h.h.wal
    * @param wal must not be null
    * @return the file number that is part of the WAL file name
    */
   @VisibleForTesting
   public static long extractFileNumFromWAL(final WAL wal) {
-    final Path walName = ((AbstractFSWAL<?>) wal).getCurrentFileName();
-    if (walName == null) {
+    final Path walPath = ((AbstractFSWAL<?>) wal).getCurrentFileName();
+    if (walPath == null) {
       throw new IllegalArgumentException("The WAL path couldn't be null");
     }
-    Matcher matcher = WAL_FILE_NAME_PATTERN.matcher(walName.getName());
-    if (matcher.matches()) {
-      return Long.parseLong(matcher.group(2));
-    } else {
-      throw new IllegalArgumentException(walName.getName() + " is not a valid wal file name");
+    String name = walPath.getName();
+    long timestamp = getTimestamp(name);
+    if (timestamp == NO_TIMESTAMP) {
+      throw new IllegalArgumentException(name + " is not a valid wal file name");
     }
+    return timestamp;
   }
-
-  /**
-   * Pattern used to validate a WAL file name see {@link #validateWALFilename(String)} for
-   * description.
-   */
-  private static final Pattern WAL_FILE_NAME_PATTERN =
-    Pattern.compile("(.+)\\.(\\d+)(\\.[0-9A-Za-z]+)?");
 
   /**
    * A WAL file name is of the format: &lt;wal-name&gt;{@link #WAL_FILE_NAME_DELIMITER}
@@ -287,6 +292,23 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    */
   public static boolean validateWALFilename(String filename) {
     return WAL_FILE_NAME_PATTERN.matcher(filename).matches();
+  }
+
+  /**
+   * Split a WAL filename to get a start time. WALs usually have the time we start writing to them
+   * with as part of their name, usually the suffix. Sometimes there will be an extra suffix as when
+   * it is a WAL for the meta table. For example, WALs might look like this
+   * <code>10.20.20.171%3A60020.1277499063250</code> where <code>1277499063250</code> is the
+   * timestamp. Could also be a meta WAL which adds a '.meta' suffix or a
+   * synchronous replication WAL which adds a '.syncrep' suffix. Check for these. File also may have
+   * no timestamp on it. For example the recovered.edits files are WALs but are named in ascending
+   * order. Here is an example: 0000000000000016310. Allow for this.
+   * @param name Name of the WAL file.
+   * @return Timestamp or {@link #NO_TIMESTAMP}.
+   */
+  public static long getTimestamp(String name) {
+    Matcher matcher = WAL_FILE_NAME_PATTERN.matcher(name);
+    return matcher.matches() ? Long.parseLong(matcher.group(2)): NO_TIMESTAMP;
   }
 
   /**
@@ -438,7 +460,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
      * @return start time
      */
     private static long getTS(Path p) {
-      return WAL.getTimestamp(p.getName());
+      return getTimestamp(p.getName());
     }
   }
 

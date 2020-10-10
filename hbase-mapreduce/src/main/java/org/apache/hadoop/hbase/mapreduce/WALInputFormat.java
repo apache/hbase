@@ -336,7 +336,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
 
   static void addFile(List<FileStatus> result, LocatedFileStatus lfs, long startTime,
       long endTime) {
-    long timestamp = WAL.getTimestamp(lfs.getPath().getName());
+    long timestamp = AbstractFSWALProvider.getTimestamp(lfs.getPath().getName());
     if (timestamp > 0) {
       // Looks like a valid timestamp.
       if (timestamp <= endTime && timestamp >= startTime) {
