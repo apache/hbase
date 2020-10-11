@@ -186,7 +186,7 @@ public abstract class ModifyRegionUtils {
       }
     } finally {
       // 3. Close the new region to flush to disk. Close log file too.
-      region.close();
+      region.close(false, true);
     }
     return region.getRegionInfo();
   }
