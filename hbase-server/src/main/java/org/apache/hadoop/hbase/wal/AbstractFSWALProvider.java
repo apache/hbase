@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,10 +30,12 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -88,6 +91,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   protected AtomicBoolean initialized = new AtomicBoolean(false);
   // for default wal provider, logPrefix won't change
   protected String logPrefix;
+  protected Abortable abortable;
 
   /**
    * We use walCreateLock to prevent wal recreation in different threads, and also prevent getWALs
@@ -102,7 +106,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    *          null
    */
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
+      throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -119,6 +124,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       }
     }
     logPrefix = sb.toString();
+    this.abortable = abortable;
     doInit(conf);
   }
 
