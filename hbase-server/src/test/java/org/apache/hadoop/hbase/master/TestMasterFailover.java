@@ -129,7 +129,7 @@ public class TestMasterFailover {
       // wait for the active master to acknowledge loss of the backup from ZK
       final HMaster activeFinal = active;
       TEST_UTIL.waitFor(
-        TimeUnit.SECONDS.toMillis(30), () -> activeFinal.getBackupMasters().size() == 1);
+        TimeUnit.MINUTES.toMillis(5), () -> activeFinal.getBackupMasters().size() == 1);
 
       // Check that ClusterStatus reports the correct active and backup masters
       assertNotNull(active);
