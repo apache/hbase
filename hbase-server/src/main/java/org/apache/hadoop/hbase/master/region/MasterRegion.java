@@ -301,7 +301,7 @@ public final class MasterRegion {
       params.archivedWalSuffix(), params.rollPeriodMs(), params.flushSize());
     walRoller.start();
 
-    WALFactory walFactory = new WALFactory(conf, server.getServerName().toString(), false);
+    WALFactory walFactory = new WALFactory(conf, server.getServerName().toString(), server, false);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
     HRegion region;
     if (fs.exists(tableDir)) {

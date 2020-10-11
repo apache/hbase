@@ -1906,7 +1906,7 @@ public class HRegionServer extends Thread implements
     boolean isMasterNoTableOrSystemTableOnly = this instanceof HMaster &&
         !LoadBalancer.isMasterCanHostUserRegions(conf);
     WALFactory factory =
-        new WALFactory(conf, serverName.toString(), !isMasterNoTableOrSystemTableOnly);
+        new WALFactory(conf, serverName.toString(), this, !isMasterNoTableOrSystemTableOnly);
     if (!isMasterNoTableOrSystemTableOnly) {
       // TODO Replication make assumptions here based on the default filesystem impl
       Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
