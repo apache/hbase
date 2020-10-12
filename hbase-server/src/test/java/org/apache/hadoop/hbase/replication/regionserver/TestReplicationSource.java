@@ -22,6 +22,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.OptionalLong;
 import java.util.UUID;
@@ -438,13 +441,13 @@ public class TestReplicationSource {
     ServerName deadServer = ServerName.valueOf("www.deadServer.com", 12006, 1524679704419L);
     PriorityBlockingQueue<Path> queue = new PriorityBlockingQueue<>();
     queue.put(new Path("/www/html/test"));
-    RecoveredReplicationSource source = Mockito.mock(RecoveredReplicationSource.class);
-    Server server = Mockito.mock(Server.class);
-    Mockito.when(server.getServerName()).thenReturn(serverName);
-    Mockito.when(source.getServer()).thenReturn(server);
-    Mockito.when(source.getServerWALsBelongTo()).thenReturn(deadServer);
-    ReplicationQueueStorage storage = Mockito.mock(ReplicationQueueStorage.class);
-    Mockito.when(storage.getWALPosition(Mockito.eq(serverName), Mockito.any(), Mockito.any()))
+    RecoveredReplicationSource source = mock(RecoveredReplicationSource.class);
+    Server server = mock(Server.class);
+    when(server.getServerName()).thenReturn(serverName);
+    when(source.getServer()).thenReturn(server);
+    when(source.getServerWALsBelongTo()).thenReturn(deadServer);
+    ReplicationQueueStorage storage = mock(ReplicationQueueStorage.class);
+    when(storage.getWALPosition(Mockito.eq(serverName), Mockito.any(), Mockito.any()))
       .thenReturn(1001L);
     when(storage.getWALPosition(Mockito.eq(deadServer), Mockito.any(), Mockito.any()))
       .thenReturn(-1L);
