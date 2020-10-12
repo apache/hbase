@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
@@ -35,11 +34,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 /**
  * Entry point for users of the Write Ahead Log.
  * Acts as the shim between internal use and the particular WALProvider we use to handle wal
@@ -192,10 +191,9 @@ public class WALFactory {
   /**
    * @param conf must not be null, will keep a reference to read params in later reader/writer
    *          instances.
-   * @param serverName a unique identifier for this factory. used i.e. by filesystem implementations
-   *          to make a directory
+   * @param Abortable the server to abort
    */
-  public WALFactory(Configuration conf, String factoryId, Abortable abortable) throws IOException {
+  public WALFactory(Configuration conf, String factoryId, Abortable Abortable) throws IOException {
     // until we've moved reader/writer construction down into providers, this initialization must
     // happen prior to provider initialization, in case they need to instantiate a reader/writer.
     timeoutMillis = conf.getInt("hbase.hlog.open.timeout", 300000);
