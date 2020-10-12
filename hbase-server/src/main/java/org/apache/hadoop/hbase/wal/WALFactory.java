@@ -21,9 +21,11 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
@@ -37,7 +39,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Entry point for users of the Write Ahead Log.
  * Acts as the shim between internal use and the particular WALProvider we use to handle wal
@@ -86,6 +87,7 @@ public class WALFactory {
   public static final String WAL_ENABLED = "hbase.regionserver.hlog.enabled";
 
   final String factoryId;
+  final Abortable abortable;
   private final WALProvider provider;
   // The meta updates are written to a different wal. If this
   // regionserver holds meta regions, then this ref will be non-null.
@@ -119,6 +121,7 @@ public class WALFactory {
     // this instance can't create wals, just reader/writers.
     provider = null;
     factoryId = SINGLETON_ID;
+    this.abortable = null;
   }
 
   @VisibleForTesting
@@ -160,7 +163,7 @@ public class WALFactory {
     LOG.info("Instantiating WALProvider of type " + clazz);
     try {
       final WALProvider result = clazz.getDeclaredConstructor().newInstance();
-      result.init(this, conf, providerId);
+      result.init(this, conf, providerId, this.abortable);
       return result;
     } catch (Exception e) {
       LOG.error("couldn't set up WALProvider, the configured class is " + clazz);
@@ -180,13 +183,17 @@ public class WALFactory {
     return provider;
   }
 
+  @VisibleForTesting
+  public WALFactory(Configuration conf, String factoryId) throws IOException {
+    this(conf, factoryId, null);
+  }
+
   /**
    * @param conf must not be null, will keep a reference to read params in later reader/writer
    *          instances.
-   * @param factoryId a unique identifier for this factory. used i.e. by filesystem implementations
-   *          to make a directory
+   * @param abortable the server to abort
    */
-  public WALFactory(Configuration conf, String factoryId) throws IOException {
+  public WALFactory(Configuration conf, String factoryId, Abortable abortable) throws IOException {
     // until we've moved reader/writer construction down into providers, this initialization must
     // happen prior to provider initialization, in case they need to instantiate a reader/writer.
     timeoutMillis = conf.getInt("hbase.hlog.open.timeout", 300000);
@@ -195,6 +202,7 @@ public class WALFactory {
       AbstractFSWALProvider.Reader.class);
     this.conf = conf;
     this.factoryId = factoryId;
+    this.abortable = abortable;
     // end required early initialization
     if (conf.getBoolean(WAL_ENABLED, true)) {
       provider = getProvider(WAL_PROVIDER, DEFAULT_WAL_PROVIDER, null);
@@ -202,7 +210,7 @@ public class WALFactory {
       // special handling of existing configuration behavior.
       LOG.warn("Running with WAL disabled.");
       provider = new DisabledWALProvider();
-      provider.init(this, conf, factoryId);
+      provider.init(this, conf, factoryId, null);
     }
   }
 

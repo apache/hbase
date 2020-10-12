@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
@@ -116,10 +118,11 @@ public class TestFailedAppendAndSync {
     class DodgyFSLog extends FSHLog {
       volatile boolean throwSyncException = false;
       volatile boolean throwAppendException = false;
+      volatile boolean throwArchiveException = false;
 
-      public DodgyFSLog(FileSystem fs, Path root, String logDir, Configuration conf)
-      throws IOException {
-        super(fs, root, logDir, conf);
+      public DodgyFSLog(FileSystem fs, Abortable abortable, Path root, String logDir,
+          Configuration conf) throws IOException {
+        super(fs, abortable, root, logDir, conf);
       }
 
       @Override
@@ -128,6 +131,18 @@ public class TestFailedAppendAndSync {
         Map<byte[], List<byte[]>> regions = super.rollWriter(force);
         rolls.getAndIncrement();
         return regions;
+      }
+
+      @Override
+      protected void archiveLogFile(Path p) throws IOException {
+        if (throwArchiveException) {
+          throw new IOException("throw archival exception");
+        }
+      }
+
+      @Override
+      protected void archive(Pair<Path, Long> localLogsToArchive) {
+        super.archive(localLogsToArchive);
       }
 
       @Override
@@ -177,7 +192,7 @@ public class TestFailedAppendAndSync {
     // the test.
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + getName());
-    DodgyFSLog dodgyWAL = new DodgyFSLog(fs, rootDir, getName(), CONF);
+    DodgyFSLog dodgyWAL = new DodgyFSLog(fs, services, rootDir, getName(), CONF);
     dodgyWAL.init();
     LogRoller logRoller = new LogRoller(services);
     logRoller.addWAL(dodgyWAL);
@@ -248,6 +263,27 @@ public class TestFailedAppendAndSync {
         try {
           Mockito.verify(services, Mockito.atLeast(1)).
             abort(Mockito.anyString(), (Throwable)Mockito.anyObject());
+          break;
+        } catch (WantedButNotInvoked t) {
+          Threads.sleep(1);
+        }
+      }
+
+      try {
+        dodgyWAL.throwAppendException = false;
+        dodgyWAL.throwSyncException = false;
+        dodgyWAL.throwArchiveException = true;
+        Pair<Path, Long> pair = new Pair<Path, Long>();
+        pair.setFirst(new Path("/a/b/"));
+        pair.setSecond(100L);
+        dodgyWAL.archive(pair);
+      } catch (Throwable ioe) {
+      }
+      while (true) {
+        try {
+          // one more abort needs to be called
+          Mockito.verify(services, Mockito.atLeast(2)).abort(Mockito.anyString(),
+            (Throwable) Mockito.anyObject());
           break;
         } catch (WantedButNotInvoked t) {
           Threads.sleep(1);

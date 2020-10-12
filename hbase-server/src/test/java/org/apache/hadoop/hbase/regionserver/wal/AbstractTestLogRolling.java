@@ -175,10 +175,15 @@ public abstract class AbstractTestLogRolling  {
     }
   }
 
-  private void assertLogFileSize(WAL log) {
+  private void assertLogFileSize(WAL log) throws InterruptedException {
     if (AbstractFSWALProvider.getNumRolledLogFiles(log) > 0) {
       assertTrue(AbstractFSWALProvider.getLogFileSize(log) > 0);
     } else {
+      for (int i = 0; i < 10; i++) {
+        if (AbstractFSWALProvider.getLogFileSize(log) != 0) {
+          Thread.sleep(10);
+        }
+      }
       assertEquals(0, AbstractFSWALProvider.getLogFileSize(log));
     }
   }
