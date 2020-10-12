@@ -326,10 +326,10 @@ do
   sleep_time="$((sleep_time*2))"
 done
 
-echo "Setting up table 'test:example' with 1,000 regions"
+echo "Setting up table 'test:example' with 100 regions"
 "${hbase_client}/bin/hbase" --config "${working_dir}/hbase-conf/" shell --noninteractive >"${working_dir}/table_create.log" 2>&1 <<EOF
   create_namespace 'test'
-  create 'test:example', 'family1', 'family2', {NUMREGIONS => 1000, SPLITALGO => 'UniformSplit'}
+  create 'test:example', 'family1', 'family2', {NUMREGIONS => 100, SPLITALGO => 'UniformSplit'}
 EOF
 
 echo "writing out example TSV to example.tsv"
