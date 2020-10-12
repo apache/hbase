@@ -193,7 +193,7 @@ public class WALFactory {
    *          instances.
    * @param Abortable the server to abort
    */
-  public WALFactory(Configuration conf, String factoryId, Abortable Abortable) throws IOException {
+  public WALFactory(Configuration conf, String factoryId, Abortable abortable) throws IOException {
     // until we've moved reader/writer construction down into providers, this initialization must
     // happen prior to provider initialization, in case they need to instantiate a reader/writer.
     timeoutMillis = conf.getInt("hbase.hlog.open.timeout", 300000);
