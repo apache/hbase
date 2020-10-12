@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -110,6 +110,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * Perform a Round Robin assignment of regions.
    * @return Map of servername to regioninfos
    */
+  @NonNull
   Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
       List<ServerName> servers) throws IOException;
 
@@ -117,7 +118,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * Assign regions to the previously hosting region server
    * @return List of plans
    */
-  @Nullable
+  @NonNull
   Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
       List<ServerName> servers) throws IOException;
 
