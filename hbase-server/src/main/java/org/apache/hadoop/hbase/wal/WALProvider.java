@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -46,7 +48,8 @@ public interface WALProvider {
    * @param conf may not be null
    * @param providerId differentiate between providers from one factory. may be null
    */
-  void init(WALFactory factory, Configuration conf, String providerId) throws IOException;
+  void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
+      throws IOException;
 
   /**
    * @param region the region which we want to get a WAL for it. Could be null.

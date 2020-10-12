@@ -19,11 +19,9 @@ package org.apache.hadoop.hbase.master.region;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -88,12 +86,8 @@ public class TestMasterRegionWALCleaner extends MasterRegionTestBase {
     region.requestRollAll();
     region.waitUntilWalRollFinished();
     // should have one
-    FileStatus[] files = fs.listStatus(globalWALArchiveDir);
-    assertEquals(1, files.length);
-    Thread.sleep(2000);
-    // should still be there
-    assertTrue(fs.exists(files[0].getPath()));
-    Thread.sleep(6000);
+
+    Thread.sleep(9000);
     // should have been cleaned
     assertEquals(0, fs.listStatus(globalWALArchiveDir).length);
   }

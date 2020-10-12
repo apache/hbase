@@ -40,10 +40,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -62,9 +64,9 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 
 /**
  * The default implementation of FSWAL.
@@ -208,6 +210,19 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     this(fs, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null);
   }
 
+  @VisibleForTesting
+  public FSHLog(final FileSystem fs, Abortable abortable, final Path root, final String logDir,
+      final Configuration conf) throws IOException {
+    this(fs, abortable, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null,
+        null);
+  }
+
+  public FSHLog(final FileSystem fs, final Path rootDir, final String logDir,
+      final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
+      final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
+    this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
+  }
+
   /**
    * Create an edit log at the given <code>dir</code> location. You should never have to load an
    * existing log. If there is a log at startup, it should have already been processed and deleted
@@ -226,10 +241,12 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * @param suffix will be url encoded. null is treated as empty. non-empty must start with
    *          {@link org.apache.hadoop.hbase.wal.AbstractFSWALProvider#WAL_FILE_NAME_DELIMITER}
    */
-  public FSHLog(final FileSystem fs, final Path rootDir, final String logDir,
-      final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
-      final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
-    super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
+  public FSHLog(final FileSystem fs, final Abortable abortable, final Path rootDir,
+      final String logDir, final String archiveDir, final Configuration conf,
+      final List<WALActionsListener> listeners, final boolean failIfWALExists, final String prefix,
+      final String suffix) throws IOException {
+    super(fs, abortable, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
+        suffix);
     this.minTolerableReplication = conf.getInt(TOLERABLE_LOW_REPLICATION,
       CommonFSUtils.getDefaultReplication(fs, this.walDir));
     this.lowReplicationRollLimit = conf.getInt(LOW_REPLICATION_ROLL_LIMIT, DEFAULT_LOW_REPLICATION_ROLL_LIMIT);

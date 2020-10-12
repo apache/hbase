@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -1897,7 +1898,7 @@ public class HRegionServer extends Thread implements
    * be hooked up to WAL.
    */
   private void setupWALAndReplication() throws IOException {
-    WALFactory factory = new WALFactory(conf, serverName.toString());
+    WALFactory factory = new WALFactory(conf, serverName.toString(), (Server)this);
 
     // TODO Replication make assumptions here based on the default filesystem impl
     Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
