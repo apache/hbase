@@ -88,12 +88,8 @@ public class TestMasterRegionWALCleaner extends MasterRegionTestBase {
     region.requestRollAll();
     region.waitUntilWalRollFinished();
     // should have one
-    FileStatus[] files = fs.listStatus(globalWALArchiveDir);
-    assertEquals(1, files.length);
-    Thread.sleep(2000);
-    // should still be there
-    assertTrue(fs.exists(files[0].getPath()));
-    Thread.sleep(6000);
+
+    Thread.sleep(9000);
     // should have been cleaned
     assertEquals(0, fs.listStatus(globalWALArchiveDir).length);
   }

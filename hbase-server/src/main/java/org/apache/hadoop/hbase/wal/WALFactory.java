@@ -191,7 +191,7 @@ public class WALFactory {
   /**
    * @param conf must not be null, will keep a reference to read params in later reader/writer
    *          instances.
-   * @param Abortable the server to abort
+   * @param abortable the server to abort
    */
   public WALFactory(Configuration conf, String factoryId, Abortable abortable) throws IOException {
     // until we've moved reader/writer construction down into providers, this initialization must
