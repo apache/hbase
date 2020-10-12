@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -174,25 +175,25 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public Map<ServerName, List<RegionInfo>> roundRobinAssignment(
-      List<RegionInfo> regions, List<ServerName> servers) throws IOException {
+  @NonNull
+  public Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
+      List<ServerName> servers) throws IOException {
     Map<ServerName, List<RegionInfo>> assignments = Maps.newHashMap();
     List<Pair<List<RegionInfo>, List<ServerName>>> pairs =
         generateGroupAssignments(regions, servers);
     for (Pair<List<RegionInfo>, List<ServerName>> pair : pairs) {
-      Map<ServerName, List<RegionInfo>> result = this.internalBalancer
-          .roundRobinAssignment(pair.getFirst(), pair.getSecond());
-      if (result != null) {
-        result.forEach((server, regionInfos) ->
-            assignments.computeIfAbsent(server, s -> Lists.newArrayList()).addAll(regionInfos));
-      }
+      Map<ServerName, List<RegionInfo>> result =
+          this.internalBalancer.roundRobinAssignment(pair.getFirst(), pair.getSecond());
+      result.forEach((server, regionInfos) -> assignments
+          .computeIfAbsent(server, s -> Lists.newArrayList()).addAll(regionInfos));
     }
     return assignments;
   }
 
   @Override
+  @NonNull
   public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
-    List<ServerName> servers) throws HBaseIOException {
+      List<ServerName> servers) throws HBaseIOException {
     try {
       Map<ServerName, List<RegionInfo>> assignments = new TreeMap<>();
       List<Pair<List<RegionInfo>, List<ServerName>>> pairs =
@@ -203,8 +204,8 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
         regionList.forEach(r -> currentAssignmentMap.put(r, regions.get(r)));
         Map<ServerName, List<RegionInfo>> pairResult =
             this.internalBalancer.retainAssignment(currentAssignmentMap, pair.getSecond());
-        pairResult.forEach((server, rs) ->
-            assignments.computeIfAbsent(server, s -> Lists.newArrayList()).addAll(rs));
+        pairResult.forEach((server, rs) -> assignments
+            .computeIfAbsent(server, s -> Lists.newArrayList()).addAll(rs));
       }
       return assignments;
     } catch (IOException e) {
