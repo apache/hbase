@@ -19,24 +19,37 @@ package org.apache.hadoop.hbase.io.crypto;
 import java.security.Key;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.Bytes;
+
+
 /**
  * Return a fixed secret key for AES for testing.
  */
 public class KeyProviderForTesting implements KeyProvider {
+
+  private final Configuration config;
+
+  public KeyProviderForTesting() {
+    config = new Configuration();
+    config.set(HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, "MD5");
+  }
 
   @Override
   public void init(String parameters) { }
 
   @Override
   public Key getKey(String name) {
-    return new SecretKeySpec(Encryption.hash128(name), "AES");
+    byte[] hash = Encryption.computeHash(config, Bytes.toBytes(name));
+    return new SecretKeySpec(hash, "AES");
   }
 
   @Override
   public Key[] getKeys(String[] aliases) {
     Key[] result = new Key[aliases.length];
     for (int i = 0; i < aliases.length; i++) {
-      result[i] = new SecretKeySpec(Encryption.hash128(aliases[i]), "AES");
+      result[i] = getKey(aliases[i]);
     }
     return result;
   }

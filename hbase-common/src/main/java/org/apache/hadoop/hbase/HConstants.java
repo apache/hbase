@@ -1339,6 +1339,19 @@ public final class HConstants {
   /** Configuration key for the algorithm used for creating jks key, a string */
   public static final String CRYPTO_KEY_ALGORITHM_CONF_KEY = "hbase.crypto.key.algorithm";
 
+  /**
+   * Configuration key for the hash algorithm used for generating key hash in encrypted HFiles.
+   * This is a MessageDigest algorithm identifier string, like "MD5", "SHA-256" or "SHA-384".
+   * (default: "MD5" for backward compatibility reasons)
+   */
+  public static final String CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY = "hbase.crypto.key.hash.algorithm";
+
+  /**
+   * Default hash algorithm used for generating key hash in encrypted HFiles.
+   * (we use "MD5" for backward compatibility reasons)
+   */
+  public static final String CRYPTO_KEY_HASH_ALGORITHM_CONF_DEFAULT = "MD5";
+
   /** Configuration key for the name of the alternate cipher algorithm for the cluster, a string */
   public static final String CRYPTO_ALTERNATE_KEY_ALGORITHM_CONF_KEY =
       "hbase.crypto.alternate.key.algorithm";

@@ -24,24 +24,23 @@ import java.security.Key;
 import java.security.KeyException;
 import java.security.SecureRandom;
 import java.util.Properties;
-
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.io.crypto.Cipher;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
+import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.io.crypto.Cipher;
-import org.apache.hadoop.hbase.io.crypto.Encryption;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
-import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Some static utility methods for encryption uses in hbase-client.
@@ -102,7 +101,9 @@ public final class EncryptionUtil {
     }
     byte[] keyBytes = key.getEncoded();
     builder.setLength(keyBytes.length);
-    builder.setHash(UnsafeByteOperations.unsafeWrap(Encryption.hash128(keyBytes)));
+    builder.setHashAlgorithm(Encryption.getConfiguredHashAlgorithm(conf));
+    builder.setHash(
+      UnsafeByteOperations.unsafeWrap(Encryption.computeHash(conf, keyBytes)));
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Encryption.encryptWithSubjectKey(out, new ByteArrayInputStream(keyBytes), subject,
       conf, cipher, iv);
@@ -138,13 +139,18 @@ public final class EncryptionUtil {
 
   private static Key getUnwrapKey(Configuration conf, String subject,
       EncryptionProtos.WrappedKey wrappedKey, Cipher cipher) throws IOException, KeyException {
+    String configuredHashAlgorithm = Encryption.getConfiguredHashAlgorithm(conf);
+    if(!configuredHashAlgorithm.equalsIgnoreCase(wrappedKey.getHashAlgorithm().trim())) {
+      throw new KeyException("Unexpected hash algorithm: " + wrappedKey.getHashAlgorithm());
+    }
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     byte[] iv = wrappedKey.hasIv() ? wrappedKey.getIv().toByteArray() : null;
     Encryption.decryptWithSubjectKey(out, wrappedKey.getData().newInput(),
       wrappedKey.getLength(), subject, conf, cipher, iv);
     byte[] keyBytes = out.toByteArray();
     if (wrappedKey.hasHash()) {
-      if (!Bytes.equals(wrappedKey.getHash().toByteArray(), Encryption.hash128(keyBytes))) {
+      if (!Bytes.equals(wrappedKey.getHash().toByteArray(),
+                        Encryption.computeHash(conf, keyBytes))) {
         throw new KeyException("Key was not successfully unwrapped");
       }
     }

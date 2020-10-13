@@ -40,6 +40,9 @@ import org.junit.experimental.categories.Category;
 @Category({ClientTests.class, SmallTests.class})
 public class TestEncryptionUtil {
 
+  private static final String INVALID_HASH_ALG = "this-hash-algorithm-not-exists hopefully... :)";
+  private static final String DEFAULT_HASH_ALGORITHM = "use-default";
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestEncryptionUtil.class);
@@ -49,64 +52,53 @@ public class TestEncryptionUtil {
   // untested.  Not ideal!
 
   @Test
-  public void testKeyWrapping() throws Exception {
-    // set up the key provider for testing to resolve a key for our test subject
-    Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
-
-    // generate a test key
-    byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    new SecureRandom().nextBytes(keyBytes);
-    String algorithm =
-        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
-    Key key = new SecretKeySpec(keyBytes, algorithm);
-
-    // wrap the test key
-    byte[] wrappedKeyBytes = EncryptionUtil.wrapKey(conf, "hbase", key);
-    assertNotNull(wrappedKeyBytes);
-
-    // unwrap
-    Key unwrappedKey = EncryptionUtil.unwrapKey(conf, "hbase", wrappedKeyBytes);
-    assertNotNull(unwrappedKey);
-    // only secretkeyspec supported for now
-    assertTrue(unwrappedKey instanceof SecretKeySpec);
-    // did we get back what we wrapped?
-    assertTrue("Unwrapped key bytes do not match original",
-      Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
-
-    // unwrap with an incorrect key
-    try {
-      EncryptionUtil.unwrapKey(conf, "other", wrappedKeyBytes);
-      fail("Unwrap with incorrect key did not throw KeyException");
-    } catch (KeyException e) {
-      // expected
-    }
+  public void testKeyWrappingUsingHashAlgDefault() throws Exception {
+    testKeyWrapping(DEFAULT_HASH_ALGORITHM);
   }
 
   @Test
-  public void testWALKeyWrapping() throws Exception {
-    // set up the key provider for testing to resolve a key for our test subject
-    Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
-    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+  public void testKeyWrappingUsingHashAlgMD5() throws Exception {
+    testKeyWrapping("MD5");
+  }
 
-    // generate a test key
-    byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    new SecureRandom().nextBytes(keyBytes);
-    String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
-    Key key = new SecretKeySpec(keyBytes, algorithm);
+  @Test
+  public void testKeyWrappingUsingHashAlgSHA256() throws Exception {
+    testKeyWrapping("SHA-256");
+  }
 
-    // wrap the test key
-    byte[] wrappedKeyBytes = EncryptionUtil.wrapKey(conf, "hbase", key);
-    assertNotNull(wrappedKeyBytes);
+  @Test
+  public void testKeyWrappingUsingHashAlgSHA384() throws Exception {
+    testKeyWrapping("SHA-384");
+  }
 
-    // unwrap
-    Key unwrappedKey = EncryptionUtil.unwrapWALKey(conf, "hbase", wrappedKeyBytes);
-    assertNotNull(unwrappedKey);
-    // only secretkeyspec supported for now
-    assertTrue(unwrappedKey instanceof SecretKeySpec);
-    // did we get back what we wrapped?
-    assertTrue("Unwrapped key bytes do not match original",
-      Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+  @Test(expected = RuntimeException.class)
+  public void testKeyWrappingWithInvalidHashAlg() throws Exception {
+    testKeyWrapping(INVALID_HASH_ALG);
+  }
+
+  @Test
+  public void testWALKeyWrappingUsingHashAlgDefault() throws Exception {
+    testWALKeyWrapping(DEFAULT_HASH_ALGORITHM);
+  }
+
+  @Test
+  public void testWALKeyWrappingUsingHashAlgMD5() throws Exception {
+    testWALKeyWrapping("MD5");
+  }
+
+  @Test
+  public void testWALKeyWrappingUsingHashAlgSHA256() throws Exception {
+    testWALKeyWrapping("SHA-256");
+  }
+
+  @Test
+  public void testWALKeyWrappingUsingHashAlgSHA384() throws Exception {
+    testWALKeyWrapping("SHA-384");
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testWALKeyWrappingWithInvalidHashAlg() throws Exception {
+    testWALKeyWrapping(INVALID_HASH_ALG);
   }
 
   @Test(expected = KeyException.class)
@@ -128,4 +120,70 @@ public class TestEncryptionUtil {
     // unwrap with an incorrect key
     EncryptionUtil.unwrapWALKey(conf, "other", wrappedKeyBytes);
   }
+
+  private void testKeyWrapping(String hashAlgorithm) throws Exception {
+    // set up the key provider for testing to resolve a key for our test subject
+    Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    if(!hashAlgorithm.equals(DEFAULT_HASH_ALGORITHM)) {
+      conf.set(HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, hashAlgorithm);
+    }
+
+    // generate a test key
+    byte[] keyBytes = new byte[AES.KEY_LENGTH];
+    new SecureRandom().nextBytes(keyBytes);
+    String algorithm =
+      conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Key key = new SecretKeySpec(keyBytes, algorithm);
+
+    // wrap the test key
+    byte[] wrappedKeyBytes = EncryptionUtil.wrapKey(conf, "hbase", key);
+    assertNotNull(wrappedKeyBytes);
+
+    // unwrap
+    Key unwrappedKey = EncryptionUtil.unwrapKey(conf, "hbase", wrappedKeyBytes);
+    assertNotNull(unwrappedKey);
+    // only secretkeyspec supported for now
+    assertTrue(unwrappedKey instanceof SecretKeySpec);
+    // did we get back what we wrapped?
+    assertTrue("Unwrapped key bytes do not match original",
+               Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+
+    // unwrap with an incorrect key
+    try {
+      EncryptionUtil.unwrapKey(conf, "other", wrappedKeyBytes);
+      fail("Unwrap with incorrect key did not throw KeyException");
+    } catch (KeyException e) {
+      // expected
+    }
+  }
+
+  private void testWALKeyWrapping(String hashAlgorithm) throws Exception {
+    // set up the key provider for testing to resolve a key for our test subject
+    Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    if(!hashAlgorithm.equals(DEFAULT_HASH_ALGORITHM)) {
+      conf.set(HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, hashAlgorithm);
+    }
+
+    // generate a test key
+    byte[] keyBytes = new byte[AES.KEY_LENGTH];
+    new SecureRandom().nextBytes(keyBytes);
+    String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Key key = new SecretKeySpec(keyBytes, algorithm);
+
+    // wrap the test key
+    byte[] wrappedKeyBytes = EncryptionUtil.wrapKey(conf, "hbase", key);
+    assertNotNull(wrappedKeyBytes);
+
+    // unwrap
+    Key unwrappedKey = EncryptionUtil.unwrapWALKey(conf, "hbase", wrappedKeyBytes);
+    assertNotNull(unwrappedKey);
+    // only secretkeyspec supported for now
+    assertTrue(unwrappedKey instanceof SecretKeySpec);
+    // did we get back what we wrapped?
+    assertTrue("Unwrapped key bytes do not match original",
+               Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+  }
+
 }

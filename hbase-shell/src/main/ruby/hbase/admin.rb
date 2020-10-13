@@ -1137,7 +1137,7 @@ module Hbase
         algorithm = arg.delete(ColumnFamilyDescriptorBuilder::ENCRYPTION).upcase
         cfdb.setEncryptionType(algorithm)
         if arg.include?(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY)
-          key = org.apache.hadoop.hbase.io.crypto.Encryption.pbkdf128(
+          key = org.apache.hadoop.hbase.io.crypto.Encryption.pbkdf384(
             arg.delete(ColumnFamilyDescriptorBuilder::ENCRYPTION_KEY)
           )
           cfdb.setEncryptionKey(org.apache.hadoop.hbase.security.EncryptionUtil.wrapKey(@conf, key,

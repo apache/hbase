@@ -16,10 +16,11 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
+import static java.lang.String.format;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.DigestException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -127,96 +128,48 @@ public final class Encryption {
   }
 
   /**
-   * Return the MD5 digest of the concatenation of the supplied arguments.
+   * Returns the Hash Algorithm defined in the crypto configuration.
    */
-  public static byte[] hash128(String... args) {
-    byte[] result = new byte[16];
+  public static String getConfiguredHashAlgorithm(Configuration conf) {
+    return conf.get(HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY,
+                    HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_DEFAULT).trim();
+  }
+
+  /**
+   * Returns the hash of the supplied argument, using the hash algorithm
+   * specified in the given config.
+   */
+  public static byte[] computeHash(Configuration conf, byte[] arg) {
+    String algorithm = getConfiguredHashAlgorithm(conf);
     try {
-      MessageDigest md = MessageDigest.getInstance("MD5");
-      for (String arg: args) {
-        md.update(Bytes.toBytes(arg));
-      }
-      md.digest(result, 0, result.length);
-      return result;
+      MessageDigest md = MessageDigest.getInstance(algorithm);
+      return md.digest(arg);
     } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (DigestException e) {
-      throw new RuntimeException(e);
+      String message = format("unable to use algorithm %s (please check your configuration " +
+                              "parameter %s and the security providers configured for the JVM)",
+                              algorithm, HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY);
+      throw new RuntimeException(message, e);
     }
   }
 
   /**
-   * Return the MD5 digest of the concatenation of the supplied arguments.
-   */
-  public static byte[] hash128(byte[]... args) {
-    byte[] result = new byte[16];
-    try {
-      MessageDigest md = MessageDigest.getInstance("MD5");
-      for (byte[] arg: args) {
-        md.update(arg);
-      }
-      md.digest(result, 0, result.length);
-      return result;
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (DigestException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /**
-   * Return the SHA-256 digest of the concatenation of the supplied arguments.
-   */
-  public static byte[] hash256(String... args) {
-    byte[] result = new byte[32];
-    try {
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      for (String arg: args) {
-        md.update(Bytes.toBytes(arg));
-      }
-      md.digest(result, 0, result.length);
-      return result;
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (DigestException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /**
-   * Return the SHA-256 digest of the concatenation of the supplied arguments.
-   */
-  public static byte[] hash256(byte[]... args) {
-    byte[] result = new byte[32];
-    try {
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      for (byte[] arg: args) {
-        md.update(arg);
-      }
-      md.digest(result, 0, result.length);
-      return result;
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (DigestException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /**
-   * Return a 128 bit key derived from the concatenation of the supplied
-   * arguments using PBKDF2WithHmacSHA1 at 10,000 iterations.
+   * Return a 384 bit key derived from the concatenation of the supplied
+   * arguments using PBKDF2WithHmacSHA384 at 10,000 iterations.
    *
+   * This is used in the HBase Shell (admin.rb) to set the column family data encryption key for
+   * testing an encrypted schema. (this isn't the way to generate data keys in production, which
+   * happens through the Java Api)
    */
-  public static byte[] pbkdf128(String... args) {
-    byte[] salt = new byte[128];
+  public static byte[] pbkdf384(String... args) {
+    byte[] salt = new byte[384];
     Bytes.random(salt);
     StringBuilder sb = new StringBuilder();
     for (String s: args) {
       sb.append(s);
     }
-    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 128);
+    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 384);
     try {
-      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA384")
         .generateSecret(spec).getEncoded();
     } catch (NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
@@ -226,20 +179,23 @@ public final class Encryption {
   }
 
   /**
-   * Return a 128 bit key derived from the concatenation of the supplied
-   * arguments using PBKDF2WithHmacSHA1 at 10,000 iterations.
+   * Return a 384 bit key derived from the concatenation of the supplied
+   * arguments using PBKDF2WithHmacSHA384 at 10,000 iterations.
    *
+   * This is used in the HBase Shell (admin.rb) to set the column family data encryption key for
+   * testing an encrypted schema. (this isn't the way to generate data keys in production, which
+   * happens through the Java Api)
    */
-  public static byte[] pbkdf128(byte[]... args) {
-    byte[] salt = new byte[128];
+  public static byte[] pbkdf384(byte[]... args) {
+    byte[] salt = new byte[384];
     Bytes.random(salt);
     StringBuilder sb = new StringBuilder();
     for (byte[] b: args) {
       sb.append(Arrays.toString(b));
     }
-    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 128);
+    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 384);
     try {
-      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA384")
         .generateSecret(spec).getEncoded();
     } catch (NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
