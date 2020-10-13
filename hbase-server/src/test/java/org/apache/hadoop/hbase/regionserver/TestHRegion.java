@@ -36,6 +36,8 @@ import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -136,6 +138,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.Stor
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
+import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.Region.RowLock;
 import org.apache.hadoop.hbase.regionserver.TestStore.FaultyFileSystem;
 import org.apache.hadoop.hbase.regionserver.handler.FinishRegionRecoveringHandler;
@@ -6639,5 +6642,155 @@ public class TestHRegion {
       currRow.get(0).getRowOffset(), currRow.get(0).getRowLength()));
     assertEquals("199995", Bytes.toString(currRow.get(1).getRowArray(),
       currRow.get(1).getRowOffset(), currRow.get(1).getRowLength()));
+  }
+
+  @Test(timeout=20000)
+  public void testCloseNoInterrupt() throws Exception {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+
+    HBaseConfiguration conf = new HBaseConfiguration();
+    // Disable close thread interrupt and server abort behavior
+    conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, false);
+    region = initHRegion(tableName, method, conf, families);
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final AtomicBoolean holderInterrupted = new AtomicBoolean();
+    Thread holder = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          LOG.info("Starting region operation holder");
+          region.startRegionOperation(Operation.SCAN);
+          latch.countDown();
+          try {
+            Thread.sleep(10*1000);
+          } catch (InterruptedException e) {
+            LOG.info("Interrupted");
+            holderInterrupted.set(true);
+          }
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        } finally {
+          try {
+            region.closeRegionOperation();
+          } catch (IOException e) {
+          }
+          LOG.info("Stopped region operation holder");
+        }
+      }
+    });
+
+    holder.start();
+    latch.await();
+    region.close();
+    region = null;
+
+    assertFalse("Region lock holder should not have been interrupted", holderInterrupted.get());
+  }
+
+  @Test(timeout=20000)
+  public void testCloseInterrupt() throws Exception {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+
+    HBaseConfiguration conf = new HBaseConfiguration();
+    // Enable close thread interrupt and server abort behavior
+    conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
+    region = initHRegion(tableName, method, conf, families);
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final AtomicBoolean holderInterrupted = new AtomicBoolean();
+    Thread holder = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          LOG.info("Starting region operation holder");
+          region.startRegionOperation(Operation.SCAN);
+          latch.countDown();
+          try {
+            Thread.sleep(10*1000);
+          } catch (InterruptedException e) {
+            LOG.info("Interrupted");
+            holderInterrupted.set(true);
+          }
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        } finally {
+          try {
+            region.closeRegionOperation();
+          } catch (IOException e) {
+          }
+          LOG.info("Stopped region operation holder");
+        }
+      }
+    });
+
+    holder.start();
+    latch.await();
+    region.close();
+    region = null;
+
+    assertTrue("Region lock holder was not interrupted", holderInterrupted.get());
+  }
+
+  @Test(timeout=20000)
+  public void testCloseAbort() throws Exception {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+
+    HBaseConfiguration conf = new HBaseConfiguration();
+    // Enable close thread interrupt and server abort behavior
+    // Set the close lock acquisition wait time to 5 seconds
+    conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
+    conf.setInt(HRegion.CLOSE_WAIT_TIME, 5*1000);
+    region = initHRegion(tableName, method, conf, families);
+    RegionServerServices rsServices = mock(RegionServerServices.class);
+    region.rsServices = rsServices;
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    Thread holder = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          LOG.info("Starting region operation holder");
+          region.startRegionOperation(Operation.SCAN);
+          latch.countDown();
+          // Hold the lock for 10 seconds no matter how many times we are interrupted
+          int timeRemaining = 10 * 1000;
+          while (timeRemaining > 0) {
+            long start = EnvironmentEdgeManager.currentTime();
+            try {
+              Thread.sleep(timeRemaining);
+            } catch (InterruptedException e) {
+              LOG.info("Interrupted");
+            }
+            long end = EnvironmentEdgeManager.currentTime();
+            timeRemaining -= end - start;
+            LOG.info("Sleeping again, remaining time " + timeRemaining + " ms");
+          }
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        } finally {
+          try {
+            region.closeRegionOperation();
+          } catch (IOException e) {
+          }
+          LOG.info("Stopped region operation holder");
+        }
+      }
+    });
+
+    holder.start();
+    latch.await();
+    try {
+      region.close();
+    } catch (IOException e) {
+      LOG.info("Caught expected exception", e);
+    }
+    region = null;
+
+    // Verify the region tried to abort the server
+    verify(rsServices, atLeast(1)).abort(anyString(),any(Throwable.class));
   }
 }

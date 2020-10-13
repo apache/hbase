@@ -2136,6 +2136,20 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Create an HRegion that writes to the local tmp dirs with specified wal
+   * @param info regioninfo
+   * @param info configuration
+   * @param desc table descriptor
+   * @param wal wal for this region.
+   * @return created hregion
+   * @throws IOException
+   */
+  public HRegion createLocalHRegion(HRegionInfo info, Configuration conf, HTableDescriptor desc, WAL wal)
+      throws IOException {
+    return HRegion.createHRegion(info, getDataTestDir(), conf, desc, wal);
+  }
+
+  /**
    * @param tableName the name of the table
    * @param startKey the start key of the region
    * @param stopKey the stop key of the region
@@ -2160,7 +2174,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     htd.setDurability(durability);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false);
-    return createLocalHRegion(info, htd, wal);
+    return createLocalHRegion(info, conf, htd, wal);
   }
   //
   // ==========================================================================
