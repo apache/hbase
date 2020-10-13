@@ -2753,8 +2753,6 @@ See the above HDFS Architecture link for more information.
 [[arch.timelineconsistent.reads]]
 == Timeline-consistent High Available Reads
 
-NOTE: The current <<amv2, Assignment Manager V2>> does not work well with region replica, so this feature maybe broken. Use it with caution.
-
 [[casestudies.timelineconsistent.intro]]
 === Introduction
 
@@ -2920,7 +2918,7 @@ Instead you can change the number of region replicas per table to increase or de
     <name>hbase.regionserver.meta.storefile.refresh.period</name>
     <value>300000</value>
     <description>
-      The period (in milliseconds) for refreshing the store files for the hbase:meta tables secondary regions. 0 means this feature is disabled. Secondary regions sees new files (from flushes and compactions) from primary once the secondary region refreshes the list of files in the region (there is no notification mechanism). But too frequent refreshes might cause extra Namenode pressure. If the files cannot be refreshed for longer than HFile TTL (hbase.master.hfilecleaner.ttl) the requests are rejected. Configuring HFile TTL to a larger value is also recommended with this setting. This should be a non-zero number if meta replicas are enabled (via hbase.meta.replica.count set to greater than 1).
+      The period (in milliseconds) for refreshing the store files for the hbase:meta tables secondary regions. 0 means this feature is disabled. Secondary regions sees new files (from flushes and compactions) from primary once the secondary region refreshes the list of files in the region (there is no notification mechanism). But too frequent refreshes might cause extra Namenode pressure. If the files cannot be refreshed for longer than HFile TTL (hbase.master.hfilecleaner.ttl) the requests are rejected. Configuring HFile TTL to a larger value is also recommended with this setting. This should be a non-zero number if meta replicas are enabled.
     </description>
 </property>
 
@@ -2952,15 +2950,6 @@ Instead you can change the number of region replicas per table to increase or de
     <description>
       The period (in milliseconds) to keep store files in the archive folder before deleting them from the file system.</description>
 </property>
-
-<property>
-    <name>hbase.meta.replica.count</name>
-    <value>3</value>
-    <description>
-      Region replication count for the meta regions. Defaults to 1.
-    </description>
-</property>
-
 
 <property>
     <name>hbase.region.replica.storefile.refresh.memstore.multiplier</name>
