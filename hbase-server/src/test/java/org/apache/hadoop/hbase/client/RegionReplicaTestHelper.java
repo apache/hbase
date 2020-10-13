@@ -20,13 +20,13 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -44,10 +44,10 @@ public final class RegionReplicaTestHelper {
 
   // waits for all replicas to have region location
   static void waitUntilAllMetaReplicasAreReady(HBaseTestingUtility util,
-      ConnectionRegistry registry) {
+    ConnectionRegistry registry) throws IOException {
     Configuration conf = util.getConfiguration();
-    int regionReplicaCount = util.getConfiguration().getInt(HConstants.META_REPLICAS_NUM,
-        HConstants.DEFAULT_META_REPLICA_NUM);
+    int regionReplicaCount =
+      util.getAdmin().getDescriptor(TableName.META_TABLE_NAME).getRegionReplication();
     Waiter.waitFor(conf, conf.getLong("hbase.client.sync.wait.timeout.msec", 60000), 200, true,
       new ExplainingPredicate<IOException>() {
         @Override

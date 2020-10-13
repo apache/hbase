@@ -253,12 +253,6 @@ public class TestReplicaWithCluster {
     HTU.getConfiguration().setInt("hbase.client.primaryCallTimeout.get", 1000000);
     HTU.getConfiguration().setInt("hbase.client.primaryCallTimeout.scan", 1000000);
 
-    // Retry less so it can fail faster
-    HTU.getConfiguration().setInt("hbase.client.retries.number", 1);
-
-    // Enable meta replica at server side
-    HTU.getConfiguration().setInt("hbase.meta.replica.count", 2);
-
     // Make sure master does not host system tables.
     HTU.getConfiguration().set("hbase.balancer.tablesOnMaster", "none");
 
@@ -270,6 +264,9 @@ public class TestReplicaWithCluster {
         META_SCAN_TIMEOUT_IN_MILLISEC * 1000);
 
     HTU.startMiniCluster(NB_SERVERS);
+    // Enable meta replica at server side
+    HBaseTestingUtility.setReplicas(HTU.getAdmin(), TableName.META_TABLE_NAME, 2);
+
     HTU.getHBaseCluster().startMaster();
   }
 
