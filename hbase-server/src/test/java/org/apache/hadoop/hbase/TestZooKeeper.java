@@ -21,8 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -282,6 +284,7 @@ public class TestZooKeeper {
     static boolean retainAssignCalled = false;
 
     @Override
+    @NonNull
     public Map<ServerName, List<RegionInfo>> retainAssignment(
         Map<RegionInfo, ServerName> regions, List<ServerName> servers) throws HBaseIOException {
       retainAssignCalled = true;
