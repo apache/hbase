@@ -66,8 +66,15 @@ public class ServerCrashProcedure
   private static final Logger LOG = LoggerFactory.getLogger(ServerCrashProcedure.class);
 
   /**
-   * Configuration parameter to retain the region assignment during ServerCrashProcedure, see
-   * HBASE-24900 for more details.
+   * Configuration parameter to enable/disable the retain region assignment during
+   * ServerCrashProcedure.
+   * <p>
+   * By default retain assignment is disabled which makes the failover faster and improve the
+   * availability; useful for cloud scenario where region block locality is not important. Enable
+   * this when RegionServers are deployed on same host where Datanode are running, this will improve
+   * read performance due to local read.
+   * <p>
+   * see HBASE-24900 for more details.
    */
   public static final String MASTER_SCP_RETAIN_ASSIGNMENT = "hbase.master.scp.retain.assignment";
   /** Default value of {@link #MASTER_SCP_RETAIN_ASSIGNMENT} */
