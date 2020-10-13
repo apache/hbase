@@ -27,6 +27,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocateType;
 import org.apache.hadoop.hbase.master.MetaLocationCache.CacheHolder;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.region.RootStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,6 +58,7 @@ public class TestBackupMasterSyncRoot {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(MetaLocationCache.SYNC_INTERVAL_SECONDS, 1);
+    UTIL.getConfiguration().setBoolean(RootStore.REPLICATE_ROOT_EDITS, false);
     StartMiniClusterOption option =
       StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).build();
     UTIL.startMiniCluster(option);
@@ -78,8 +81,12 @@ public class TestBackupMasterSyncRoot {
       .filter(h -> h != active).findFirst().get();
     MetaLocationCache cache = backup.getMetaLocationCache();
     UTIL.waitFor(10000, () -> {
-      RegionLocations loc = cache.locateMeta(HConstants.EMPTY_START_ROW, RegionLocateType.CURRENT);
-      return loc != null && loc.getRegionLocation().getServerName().equals(expected);
+      RegionLocations locs = cache.locateMeta(HConstants.EMPTY_START_ROW, RegionLocateType.CURRENT);
+      if (locs == null) {
+        return false;
+      }
+      HRegionLocation loc = locs.getDefaultRegionLocation();
+      return loc != null && expected.equals(loc.getServerName());
     });
     CacheHolder currentHolder = cache.holder.get();
     assertNotNull(currentHolder);

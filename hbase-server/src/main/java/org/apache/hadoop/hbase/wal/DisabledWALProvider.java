@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
@@ -204,7 +205,7 @@ class DisabledWALProvider implements WALProvider {
     public void sync() {
       if (!this.listeners.isEmpty()) {
         for (WALActionsListener listener : this.listeners) {
-          listener.postSync(0L, 0);
+          listener.postSync(Collections.emptyList(), 0L, 0);
         }
       }
     }

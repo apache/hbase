@@ -660,11 +660,6 @@ public class MergeTableRegionsProcedure
       Collections.singletonList(mergedRegion), getRegionReplication(env), getServerName(env));
   }
 
-  private int getRegionReplication(final MasterProcedureEnv env) throws IOException {
-    return env.getMasterServices().getTableDescriptors().get(getTableName()).
-        getRegionReplication();
-  }
-
   /**
    * Post merge region action
    * @param env MasterProcedureEnv

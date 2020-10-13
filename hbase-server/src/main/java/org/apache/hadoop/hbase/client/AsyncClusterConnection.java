@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -105,4 +106,13 @@ public interface AsyncClusterConnection extends AsyncConnection {
    */
   CompletableFuture<Pair<Long, List<HRegionLocation>>> syncRoot(long lastSyncSeqId,
     int callTimeoutMs);
+
+  /**
+   * Replicate the root edits to all backup masters.
+   * <p/>
+   * The {@code void} return value is intentional, as we do not care whether the replication is
+   * successfully or not, we just try our best to replicate the edits. We rely on the above
+   * {@link #syncRoot(long, int)} to fix the inconsistency at last.
+   */
+  void replicateRootEdits(List<ServerName> backupMasters, List<Pair<Long, List<Cell>>> edits);
 }

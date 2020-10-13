@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.TableStateManager;
@@ -179,6 +180,11 @@ public abstract class AbstractStateMachineTableProcedure<TState>
   protected boolean isTableEnabled(MasterProcedureEnv env) {
     return env.getMasterServices().getTableStateManager().isTableState(getTableName(),
       TableState.State.ENABLED);
+  }
+
+  protected final int getRegionReplication(MasterProcedureEnv env) throws IOException {
+    TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
+    return htd.getRegionReplication();
   }
 
   /**

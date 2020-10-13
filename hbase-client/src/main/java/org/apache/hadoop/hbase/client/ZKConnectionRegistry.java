@@ -289,7 +289,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
             future.completeExceptionally(ex);
             return;
           }
-          RegionLocations locs = new RegionLocations(resp.getMetaLocationsList().stream()
+          RegionLocations locs = new RegionLocations(resp.getMetaLocationList().stream()
             .map(ProtobufUtil::toRegionLocation).collect(Collectors.toList()));
           future.complete(locs);
         });
@@ -315,7 +315,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
             future.completeExceptionally(ex);
             return;
           }
-          List<HRegionLocation> locs = resp.getMetaLocationsList().stream()
+          List<HRegionLocation> locs = resp.getMetaLocationList().stream()
             .map(ProtobufUtil::toRegionLocation).collect(Collectors.toList());
           future.complete(locs);
         });

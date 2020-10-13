@@ -1052,7 +1052,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // initialize master local region
     masterRegion = MasterRegionFactory.create(this);
-    rootStore = new RootStore(masterRegion);
+    rootStore = new RootStore(conf, masterRegion, getAsyncClusterConnection(), activeMasterManager);
 
     tryMigrateRootTableFromZooKeeper();
 

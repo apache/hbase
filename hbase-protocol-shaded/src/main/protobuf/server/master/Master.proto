@@ -1318,11 +1318,11 @@ enum RegionLocateType {
 
 message LocateMetaRegionRequest {
   required bytes row = 1;
-  required RegionLocateType locateType = 2;
+  required RegionLocateType locate_type = 2;
 }
 
 message LocateMetaRegionResponse {
-  repeated RegionLocation meta_locations = 1;
+  repeated RegionLocation meta_location = 1;
 }
 
 message GetAllMetaRegionLocationsRequest {
@@ -1330,7 +1330,7 @@ message GetAllMetaRegionLocationsRequest {
 }
 
 message GetAllMetaRegionLocationsResponse {
-  repeated RegionLocation meta_locations = 1;
+  repeated RegionLocation meta_location = 1;
 }
 
 /**
@@ -1373,15 +1373,29 @@ service ClientMetaService {
 }
 
 message SyncRootRequest {
-  required int64 lastSyncSeqId = 1;
+  required int64 last_sync_seq_id = 1;
 }
 
 message SyncRootResponse {
-  required int64 lastModifiedSeqId = 1;
-  repeated RegionLocation meta_locations = 2;
+  required int64 last_modified_seq_id = 1;
+  repeated RegionLocation meta_location = 2;
+}
+
+message RootEdit {
+  required int64 seq_id = 1;
+  required int32 associated_cell_count = 2;
+}
+
+message ReplicateRootEditsRequest {
+  repeated RootEdit root_edit = 1;
+}
+
+message ReplicateRootEditsResponse {
 }
 
 service RootSyncService {
   rpc SyncRoot(SyncRootRequest)
     returns(SyncRootResponse);
+  rpc ReplicateRootEdits(ReplicateRootEditsRequest)
+    returns(ReplicateRootEditsResponse);
 }

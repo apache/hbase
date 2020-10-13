@@ -352,7 +352,7 @@ public class MasterRegistry implements ConnectionRegistry {
   }
 
   private RegionLocations transformRegionLocations(LocateMetaRegionResponse resp) {
-    return new RegionLocations(resp.getMetaLocationsList().stream()
+    return new RegionLocations(resp.getMetaLocationList().stream()
       .map(ProtobufUtil::toRegionLocation).collect(Collectors.toList()));
   }
 
@@ -363,7 +363,7 @@ public class MasterRegistry implements ConnectionRegistry {
         .setLocateType(ProtobufUtil.toProtoRegionLocateType(locateType)).build();
     return this
       .<LocateMetaRegionResponse> call((c, s, d) -> s.locateMetaRegion(c, request, d),
-        r -> r.getMetaLocationsList().stream()
+        r -> r.getMetaLocationList().stream()
           .anyMatch(l -> l.hasRegionInfo() && l.hasServerName()),
         "locateMeta()")
       .thenApply(this::transformRegionLocations);
@@ -371,7 +371,7 @@ public class MasterRegistry implements ConnectionRegistry {
 
   private List<HRegionLocation>
     transformRegionLocationList(GetAllMetaRegionLocationsResponse resp) {
-    return resp.getMetaLocationsList().stream().map(ProtobufUtil::toRegionLocation)
+    return resp.getMetaLocationList().stream().map(ProtobufUtil::toRegionLocation)
       .collect(Collectors.toList());
   }
 
@@ -383,7 +383,7 @@ public class MasterRegistry implements ConnectionRegistry {
     return this
       .<GetAllMetaRegionLocationsResponse> call(
         (c, s, d) -> s.getAllMetaRegionLocations(c, request, d),
-        r -> r.getMetaLocationsCount() > 0,
+        r -> r.getMetaLocationCount() > 0,
         "getAllMetaRegionLocations(" + excludeOfflinedSplitParents + ")")
       .thenApply(this::transformRegionLocationList);
   }

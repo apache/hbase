@@ -377,7 +377,7 @@ public class RegionStateStore {
 
     // Add empty locations for region replicas of daughters so that number of replicas can be
     // cached whenever the primary region is looked up from meta
-    int regionReplication = getRegionReplication(htd);
+    int regionReplication = htd.getRegionReplication();
     for (int i = 1; i < regionReplication; i++) {
       MetaTableAccessor.addEmptyLocation(putA, i);
       MetaTableAccessor.addEmptyLocation(putB, i);
@@ -425,7 +425,7 @@ public class RegionStateStore {
 
     // Add empty locations for region replicas of the merged region so that number of replicas
     // can be cached whenever the primary region is looked up from meta
-    int regionReplication = getRegionReplication(htd);
+    int regionReplication = htd.getRegionReplication();
     for (int i = 1; i < regionReplication; i++) {
       MetaTableAccessor.addEmptyLocation(putOfMerged, i);
     }
@@ -662,10 +662,6 @@ public class RegionStateStore {
 
   private boolean hasGlobalReplicationScope(TableDescriptor htd) {
     return htd != null ? htd.hasGlobalReplicationScope() : false;
-  }
-
-  private int getRegionReplication(TableDescriptor htd) {
-    return htd != null ? htd.getRegionReplication() : 1;
   }
 
   private TableDescriptor getDescriptor(TableName tableName) throws IOException {

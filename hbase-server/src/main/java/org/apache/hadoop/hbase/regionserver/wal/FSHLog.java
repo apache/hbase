@@ -32,6 +32,7 @@ import com.lmax.disruptor.dsl.ProducerType;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -296,7 +297,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     long startTimeNanos = System.nanoTime();
     try {
       nextWriter.sync(useHsync);
-      postSync(System.nanoTime() - startTimeNanos, 0);
+      postSync(Collections.emptyList(), System.nanoTime() - startTimeNanos, 0);
     } catch (IOException e) {
       // optimization failed, no need to abort here.
       LOG.warn("pre-sync failed but an optimization so keep going", e);
@@ -681,7 +682,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
               checkLogRoll();
             }
           }
-          postSync(System.nanoTime() - start, syncCount);
+          postSync(Collections.emptyList(), System.nanoTime() - start, syncCount);
         } catch (InterruptedException e) {
           // Presume legit interrupt.
           Thread.currentThread().interrupt();

@@ -16,11 +16,15 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.assignment;
+
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -32,12 +36,14 @@ import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.master.ActiveMasterManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -62,7 +68,6 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureStoreLis
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.zookeeper.KeeperException;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -111,29 +116,32 @@ public class MockMasterServices extends MockNoopMasterServices {
       conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)?
         null: new SplitWALManager(this);
     this.masterRegion = MasterRegionFactory.create(this);
-    RootStore rootStore = new RootStore(masterRegion);
+    ActiveMasterManager activeMasterManager = mock(ActiveMasterManager.class);
+    when(activeMasterManager.getBackupMasters()).thenReturn(Collections.emptyList());
+    RootStore rootStore =
+      new RootStore(conf, masterRegion, mock(AsyncClusterConnection.class), null);
     // Mock an AM.
     this.assignmentManager =
       new AssignmentManager(this, rootStore, new MockRegionStateStore(this, rootStore));
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.serverManager = new ServerManager(this);
-    this.tableStateManager = Mockito.mock(TableStateManager.class);
-    Mockito.when(this.tableStateManager.getTableState(Mockito.any())).
+    this.tableStateManager = mock(TableStateManager.class);
+    when(this.tableStateManager.getTableState(any())).
         thenReturn(new TableState(TableName.valueOf("AnyTableNameSetInMockMasterServcies"),
             TableState.State.ENABLED));
 
     // Mock up a Client Interface
     ClientProtos.ClientService.BlockingInterface ri =
-        Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
+        mock(ClientProtos.ClientService.BlockingInterface.class);
     MutateResponse.Builder builder = MutateResponse.newBuilder();
     builder.setProcessed(true);
     try {
-      Mockito.when(ri.mutate(any(), any())).thenReturn(builder.build());
+      when(ri.mutate(any(), any())).thenReturn(builder.build());
     } catch (ServiceException se) {
       throw ProtobufUtil.handleRemoteException(se);
     }
     try {
-      Mockito.when(ri.multi(any(), any())).thenAnswer(new Answer<MultiResponse>() {
+      when(ri.multi(any(), any())).thenAnswer(new Answer<MultiResponse>() {
           @Override
           public MultiResponse answer(InvocationOnMock invocation) throws Throwable {
             return buildMultiResponse(invocation.getArgument(1));

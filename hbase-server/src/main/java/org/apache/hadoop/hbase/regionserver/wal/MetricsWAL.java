@@ -19,18 +19,19 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
-
+import java.util.List;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.util.StringUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Class used to push numbers about the WAL into the metrics subsystem.  This will take a
@@ -52,8 +53,9 @@ public class MetricsWAL implements WALActionsListener {
   }
 
   @Override
-  public void postSync(final long timeInNanos, final int handlerSyncs) {
-    source.incrementSyncTime(timeInNanos/1000000L);
+  public void postSync(final List<? extends WAL.Entry> syncedWALEntries, final long timeInNanos,
+    final int handlerSyncs) {
+    source.incrementSyncTime(timeInNanos / 1000000L);
   }
 
   @Override

@@ -204,6 +204,21 @@ public class RegionLocations implements Iterable<HRegionLocation> {
   }
 
   /**
+   * Combine the two RegionLocations.
+   * <p/>
+   * The difference comparing to {@link #mergeLocations(RegionLocations)} is that, in this method we
+   * will consider the max replica id from both RegionLocations, not only the {@code other}.
+   */
+  public RegionLocations combineLocations(RegionLocations other) {
+    HRegionLocation[] newLocations = new HRegionLocation[Math.max(size(), other.size())];
+    for (int i = 0; i < newLocations.length; i++) {
+      newLocations[i] =
+        selectRegionLocation(getRegionLocation(i), other.getRegionLocation(i), true, false);
+    }
+    return new RegionLocations(newLocations);
+  }
+
+  /**
    * Merges this RegionLocations list with the given list assuming
    * same range, and keeping the most up to date version of the
    * HRegionLocation entries from either list according to seqNum. If seqNums

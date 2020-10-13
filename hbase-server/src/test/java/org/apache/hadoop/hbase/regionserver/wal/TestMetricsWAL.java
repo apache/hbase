@@ -22,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -68,7 +69,7 @@ public class TestMetricsWAL {
     long nanos = TimeUnit.MILLISECONDS.toNanos(145);
     MetricsWALSource source = mock(MetricsWALSourceImpl.class);
     MetricsWAL metricsWAL = new MetricsWAL(source);
-    metricsWAL.postSync(nanos, 1);
+    metricsWAL.postSync(Collections.emptyList(), nanos, 1);
     verify(source, times(1)).incrementSyncTime(145);
   }
 

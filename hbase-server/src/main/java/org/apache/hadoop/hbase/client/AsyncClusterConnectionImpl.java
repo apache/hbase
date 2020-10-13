@@ -22,24 +22,33 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -52,6 +61,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBul
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReplicateRootEditsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RootEdit;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RootSyncService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SyncRootRequest;
 
@@ -61,11 +72,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SyncRootRe
 @InterfaceAudience.Private
 class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClusterConnection {
 
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncClusterConnectionImpl.class);
+
   private final AtomicReference<RootSyncService.Interface> cachedRootSyncStub =
     new AtomicReference<>();
 
   private final AtomicReference<CompletableFuture<RootSyncService.Interface>>
     rootSyncStubMakeFuture = new AtomicReference<>();
+
+  private final AtomicReference<ImmutableMap<String, RootSyncService.Interface>> backupMasterStubs =
+    new AtomicReference<ImmutableMap<String, RootSyncService.Interface>>(ImmutableMap.of());
 
   public AsyncClusterConnectionImpl(Configuration conf, ConnectionRegistry registry,
     String clusterId, SocketAddress localAddress, User user) {
@@ -177,11 +193,58 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
             future.completeExceptionally(ex);
             return;
           }
-          List<HRegionLocation> locs = resp.getMetaLocationsList().stream()
+          List<HRegionLocation> locs = resp.getMetaLocationList().stream()
             .map(ProtobufUtil::toRegionLocation).collect(Collectors.toList());
           future.complete(Pair.newPair(resp.getLastModifiedSeqId(), locs));
         });
     });
     return future;
+  }
+
+  private void replicateRootEdits(ServerName backupMaster, RootSyncService.Interface stub,
+    List<Pair<Long, List<Cell>>> edits) {
+    ReplicateRootEditsRequest.Builder builder = ReplicateRootEditsRequest.newBuilder();
+    List<List<? extends Cell>> allCells = new ArrayList<>();
+    int size = 0;
+    for (Pair<Long, List<Cell>> edit : edits) {
+      builder.addRootEdit(RootEdit.newBuilder().setSeqId(edit.getFirst().longValue())
+        .setAssociatedCellCount(edit.getSecond().size()));
+      allCells.add(edit.getSecond());
+      for (Cell cell : edit.getSecond()) {
+        size += PrivateCellUtil.estimatedSerializedSizeOf(cell);
+      }
+    }
+    CellScanner cellScanner = ReplicationProtobufUtil.getCellScanner(allCells, size);
+    HBaseRpcController controller = rpcControllerFactory.newController(cellScanner);
+    stub.replicateRootEdits(controller, builder.build(), resp -> {
+      if (controller.failed()) {
+        LOG.warn("Failed to replicate root edits to backup master {}", backupMaster);
+      }
+    });
+  }
+
+  @Override
+  public void replicateRootEdits(List<ServerName> backupMasters,
+    List<Pair<Long, List<Cell>>> edits) {
+    ImmutableMap<String, RootSyncService.Interface> stubs = backupMasterStubs.get();
+    ImmutableMap.Builder<String, RootSyncService.Interface> builder =
+      ImmutableMap.builderWithExpectedSize(backupMasters.size());
+    for (ServerName backupMaster : backupMasters) {
+      String stubKey = ConnectionUtils.getStubKey(RootSyncService.getDescriptor().getName(),
+        backupMaster, hostnameCanChange);
+      RootSyncService.Interface stub = stubs.get(stubKey);
+      if (stub == null) {
+        try {
+          stub =
+            RootSyncService.newStub(rpcClient.createRpcChannel(backupMaster, user, rpcTimeout));
+        } catch (IOException e) {
+          LOG.warn("Failed to create rpc stub for backup master " + backupMaster, e);
+          continue;
+        }
+      }
+      replicateRootEdits(backupMaster, stub, edits);
+      builder.put(stubKey, stub);
+    }
+    backupMasterStubs.compareAndSet(stubs, builder.build());
   }
 }

@@ -28,6 +28,7 @@ import com.codahale.metrics.MetricRegistry;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
@@ -513,7 +514,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         }
 
         @Override
-        public void postSync(final long timeInNanos, final int handlerSyncs) {
+        public void postSync(final List<? extends WAL.Entry> syncedWALEntries,
+          final long timeInNanos, final int handlerSyncs) {
           syncMeter.mark();
           syncHistogram.update(timeInNanos);
           syncCountHistogram.update(handlerSyncs);

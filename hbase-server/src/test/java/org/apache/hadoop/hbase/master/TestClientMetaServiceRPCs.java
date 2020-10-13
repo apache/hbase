@@ -209,7 +209,7 @@ public class TestClientMetaServiceRPCs {
         LocateMetaRegionRequest.newBuilder().setRow(ByteString.EMPTY)
           .setLocateType(RegionLocateType.REGION_LOCATE_TYPE_CURRENT).build());
       List<HRegionLocation> result = new ArrayList<>();
-      resp.getMetaLocationsList()
+      resp.getMetaLocationList()
         .forEach(location -> result.add(ProtobufUtil.toRegionLocation(location)));
       Collections.sort(result);
       assertEquals(metaLocations, result);
@@ -230,7 +230,7 @@ public class TestClientMetaServiceRPCs {
       GetAllMetaRegionLocationsResponse resp = stub.getAllMetaRegionLocations(rpcController,
         GetAllMetaRegionLocationsRequest.newBuilder().setExcludeOfflinedSplitParents(true).build());
       List<HRegionLocation> result = new ArrayList<>();
-      resp.getMetaLocationsList()
+      resp.getMetaLocationList()
         .forEach(location -> result.add(ProtobufUtil.toRegionLocation(location)));
       Collections.sort(result);
       assertEquals(metaLocations, result);

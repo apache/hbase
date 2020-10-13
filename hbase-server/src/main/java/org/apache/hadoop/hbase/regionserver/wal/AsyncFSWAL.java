@@ -27,6 +27,7 @@ import com.lmax.disruptor.Sequencer;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.Iterator;
@@ -335,16 +336,20 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private void syncCompleted(AsyncWriter writer, long processedTxid, long startTimeNs) {
     highestSyncedTxid.set(processedTxid);
+    List<FSWALEntry> syncedWALEntries = new ArrayList<>();
     for (Iterator<FSWALEntry> iter = unackedAppends.iterator(); iter.hasNext();) {
       FSWALEntry entry = iter.next();
       if (entry.getTxid() <= processedTxid) {
-        entry.release();
+        syncedWALEntries.add(entry);
         iter.remove();
       } else {
         break;
       }
     }
-    postSync(System.nanoTime() - startTimeNs, finishSync(true));
+    postSync(syncedWALEntries, System.nanoTime() - startTimeNs, finishSync(true));
+    for (FSWALEntry entry: syncedWALEntries) {
+      entry.release();
+    }
     if (trySetReadyForRolling()) {
       // we have just finished a roll, then do not need to check for log rolling, the writer will be
       // closed soon.

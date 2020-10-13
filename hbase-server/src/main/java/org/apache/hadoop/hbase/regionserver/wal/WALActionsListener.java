@@ -19,8 +19,10 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -108,14 +110,14 @@ public interface WALActionsListener {
    * @param logEdit A WAL edit containing list of cells.
    * @throws IOException if any network or I/O error occurred
    */
-  default void postAppend(final long entryLen, final long elapsedTimeMillis, final WALKey logKey,
-      final WALEdit logEdit) throws IOException {}
+  default void postAppend(long entryLen, long elapsedTimeMillis, WALKey logKey, WALEdit logEdit)
+    throws IOException {}
 
   /**
-   * For notification post writer sync.  Used by metrics system at least.
+   * For notification post writer sync. Used by metrics system at least.
+   * @param syncedWALEntries the wal entries persistent by this sync operation
    * @param timeInNanos How long the filesystem sync took in nanoseconds.
-   * @param handlerSyncs How many sync handler calls were released by this call to filesystem
-   * sync.
+   * @param handlerSyncs How many sync handler calls were released by this call to filesystem sync.
    */
-  default void postSync(final long timeInNanos, final int handlerSyncs) {}
+  default void postSync(List<? extends WAL.Entry> syncedWALEntries, long timeInNanos, int handlerSyncs) {}
 }

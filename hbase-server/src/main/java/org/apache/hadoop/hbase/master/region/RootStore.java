@@ -25,10 +25,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -37,15 +41,16 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.master.ActiveMasterManager;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.util.AtomicUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A wrapper of {@link MasterRegion} to support root table storage.
@@ -55,25 +60,48 @@ public class RootStore {
 
   private static final Logger LOG = LoggerFactory.getLogger(RootStore.class);
 
+  @VisibleForTesting
+  public static final String REPLICATE_ROOT_EDITS = "hbase.master.replicate.root.edits";
+
+  private static final boolean DEFAULT_REPLICATE_ROOT_EDITS = true;
+
   private final MasterRegion region;
 
   private final AtomicLong lastModifiedSeqId = new AtomicLong(HConstants.NO_SEQNUM);
 
-  public RootStore(MasterRegion region) {
+  private final boolean replicateRootEdits;
+
+  public RootStore(Configuration conf, MasterRegion region, AsyncClusterConnection conn,
+    ActiveMasterManager activeMasterManager) {
     this.region = region;
+    this.replicateRootEdits = conf.getBoolean(REPLICATE_ROOT_EDITS, DEFAULT_REPLICATE_ROOT_EDITS);
     lastModifiedSeqId.set(region.getReadPoint());
+    // FSHLog does not pass the syncedWALEntries so we can only work with AsyncFSWAL
     region.getWAL().registerWALActionsListener(new WALActionsListener() {
 
       @Override
-      public void postAppend(long entryLen, long elapsedTimeMillis, WALKey logKey, WALEdit logEdit)
-        throws IOException {
-        for (byte[] family : logEdit.getFamilies()) {
-          // we only care about catalog family
-          if (!Bytes.equals(family, HConstants.CATALOG_FAMILY)) {
-            return;
+      public void postSync(List<? extends WAL.Entry> syncedWALEntries, long timeInNanos,
+        int handlerSyncs) {
+        List<Pair<Long, List<Cell>>> edits = new ArrayList<>();
+        outer: for (WAL.Entry entry : syncedWALEntries) {
+          for (byte[] family : entry.getEdit().getFamilies()) {
+            // we only care about catalog family
+            if (!Bytes.equals(family, HConstants.CATALOG_FAMILY)) {
+              continue outer;
+            }
           }
+          edits.add(Pair.newPair(entry.getKey().getSequenceId(), entry.getEdit().getCells()));
         }
-        AtomicUtils.updateMax(lastModifiedSeqId, logKey.getSequenceId());
+        if (edits.isEmpty()) {
+          return;
+        }
+        lastModifiedSeqId
+          .set(syncedWALEntries.get(syncedWALEntries.size() - 1).getKey().getSequenceId());
+        if (replicateRootEdits) {
+          List<ServerName> backupMasters = activeMasterManager.getBackupMasters();
+          LOG.debug("replicate root edits {} to backup masters {}", edits, backupMasters);
+          conn.replicateRootEdits(backupMasters, edits);
+        }
       }
     });
   }

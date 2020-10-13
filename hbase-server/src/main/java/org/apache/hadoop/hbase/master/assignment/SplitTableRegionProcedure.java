@@ -74,8 +74,10 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -875,11 +877,6 @@ public class SplitTableRegionProcedure
     hris.add(daughterTwoRI);
     return AssignmentManagerUtil.createAssignProceduresForOpeningNewRegions(env, hris,
       getRegionReplication(env), getParentRegionServerName(env));
-  }
-
-  private int getRegionReplication(final MasterProcedureEnv env) throws IOException {
-    final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
-    return htd.getRegionReplication();
   }
 
   private void writeMaxSequenceIdFile(MasterProcedureEnv env) throws IOException {

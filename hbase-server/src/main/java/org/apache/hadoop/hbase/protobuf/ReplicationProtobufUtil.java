@@ -132,10 +132,9 @@ public class ReplicationProtobufUtil {
   }
 
   /**
-   * @param cells
    * @return <code>cells</code> packaged as a CellScanner
    */
-  static CellScanner getCellScanner(final List<List<? extends Cell>> cells, final int size) {
+  public static CellScanner getCellScanner(final List<List<? extends Cell>> cells, final int size) {
     return new SizedCellScanner() {
       private final Iterator<List<? extends Cell>> entries = cells.iterator();
       private Iterator<? extends Cell> currentIterator = null;

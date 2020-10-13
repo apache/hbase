@@ -38,8 +38,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -67,6 +70,7 @@ import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -291,8 +295,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReplicateRootEditsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReplicateRootEditsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RootEdit;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RootSyncService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
@@ -3415,7 +3422,7 @@ public class MasterRpcServices extends RSRpcServices
       if (locs != null) {
         for (HRegionLocation loc : locs) {
           if (loc != null) {
-            builder.addMetaLocations(ProtobufUtil.toRegionLocation(loc));
+            builder.addMetaLocation(ProtobufUtil.toRegionLocation(loc));
             list.add(loc);
           }
         }
@@ -3460,7 +3467,7 @@ public class MasterRpcServices extends RSRpcServices
       GetAllMetaRegionLocationsResponse.Builder builder =
         GetAllMetaRegionLocationsResponse.newBuilder();
       for (HRegionLocation loc : list) {
-        builder.addMetaLocations(ProtobufUtil.toRegionLocation(loc));
+        builder.addMetaLocation(ProtobufUtil.toRegionLocation(loc));
       }
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postGetAllMetaRegionLocations(excludeOfflinedSplitParents,
@@ -3486,7 +3493,7 @@ public class MasterRpcServices extends RSRpcServices
       SyncRootResponse.Builder builder = SyncRootResponse.newBuilder();
       builder.setLastModifiedSeqId(pair.getFirst());
       for (HRegionLocation loc : locs) {
-        builder.addMetaLocations(ProtobufUtil.toRegionLocation(loc));
+        builder.addMetaLocation(ProtobufUtil.toRegionLocation(loc));
       }
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postSyncRoot(lastSyncSeqId, pair.getFirst(), locs);
@@ -3495,5 +3502,35 @@ public class MasterRpcServices extends RSRpcServices
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public ReplicateRootEditsResponse replicateRootEdits(RpcController controller,
+    ReplicateRootEditsRequest request) throws ServiceException {
+    MetaLocationCache cache = master.getMetaLocationCache();
+    if (cache == null) {
+      return ReplicateRootEditsResponse.getDefaultInstance();
+    }
+    HBaseRpcController hrc = (HBaseRpcController) controller;
+    CellScanner cellScanner = hrc.cellScanner();
+    List<Pair<Long, List<Cell>>> rootEdits = new ArrayList<>();
+    try {
+      for (RootEdit edit : request.getRootEditList()) {
+        int cellCount = edit.getAssociatedCellCount();
+        List<Cell> cells = new ArrayList<>();
+        for (int i = 0; i < cellCount; i++) {
+          if (!cellScanner.advance()) {
+            throw new HBaseIOException(
+              "Expected " + cellCount + " cells but no cell at index " + i);
+          }
+          cells.add(cellScanner.current());
+        }
+        rootEdits.add(Pair.newPair(edit.getSeqId(), cells));
+      }
+      cache.applyRootEdits(rootEdits);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return ReplicateRootEditsResponse.getDefaultInstance();
   }
 }

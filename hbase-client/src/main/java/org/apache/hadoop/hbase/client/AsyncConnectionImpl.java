@@ -96,7 +96,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   final RpcControllerFactory rpcControllerFactory;
 
-  private final boolean hostnameCanChange;
+  protected final boolean hostnameCanChange;
 
   private final AsyncRegionLocator locator;
 

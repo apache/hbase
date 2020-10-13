@@ -197,6 +197,10 @@ public class CatalogFamilyFormat {
         break;
       }
       HRegionLocation location = getRegionLocation(r, regionInfo, replicaId);
+      // fill null if we do not have the location for some replica
+      while (locations.size() < replicaId) {
+        locations.add(null);
+      }
       // In case the region replica is newly created, it's location might be null. We usually do not
       // have HRL's in RegionLocations object with null ServerName. They are handled as null HRLs.
       if (location.getServerName() == null) {
@@ -286,7 +290,7 @@ public class CatalogFamilyFormat {
 
   /** The delimiter for meta columns for replicaIds &gt; 0 */
   @VisibleForTesting
-  static final char META_REPLICA_ID_DELIMITER = '_';
+  static final char META_REPLICA_ID_DELIMITER = RegionInfo.REPLICA_ID_DELIMITER;
 
   /**
    * Parses the replicaId from the server column qualifier. See top of the class javadoc for the

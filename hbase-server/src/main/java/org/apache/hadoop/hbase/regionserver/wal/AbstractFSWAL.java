@@ -48,7 +48,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -1096,7 +1095,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return len;
   }
 
-  protected final void postSync(long timeInNanos, int handlerSyncs) {
+  protected final void postSync(List<? extends WAL.Entry> syncedWALEntries, long timeInNanos,
+    int handlerSyncs) {
     if (timeInNanos > this.slowSyncNs) {
       String msg = new StringBuilder().append("Slow sync cost: ")
           .append(TimeUnit.NANOSECONDS.toMillis(timeInNanos))
@@ -1119,7 +1119,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
     if (!listeners.isEmpty()) {
       for (WALActionsListener listener : listeners) {
-        listener.postSync(timeInNanos, handlerSyncs);
+        listener.postSync(syncedWALEntries, timeInNanos, handlerSyncs);
       }
     }
   }

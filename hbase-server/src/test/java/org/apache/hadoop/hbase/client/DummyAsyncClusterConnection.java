@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -163,5 +164,10 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   @Override
   public Connection toConnection() {
     return null;
+  }
+
+  @Override
+  public void replicateRootEdits(List<ServerName> backupMasters,
+    List<Pair<Long, List<Cell>>> edits) {
   }
 }
