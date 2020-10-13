@@ -155,8 +155,8 @@
   Table table = master.getConnection().getTable(TableName.valueOf(fqtn));
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = !InfoServer.canUserModifyUI(request, getServletContext(), conf);
-  int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
-                        HConstants.DEFAULT_META_REPLICA_NUM);
+  int numMetaReplicas =
+    master.getTableDescriptors().get(TableName.META_TABLE_NAME).getRegionReplication();
   Map<String, Integer> frags = null;
   if (showFragmentation) {
       frags = FSUtils.getTableFragmentation(master);
