@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.PRIMARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.SECONDARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.TERTIARY;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -109,6 +110,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * secondary and tertiary as per favored nodes constraints.
    */
   @Override
+  @NonNull
   public Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
       List<ServerName> servers) throws HBaseIOException {
 
@@ -116,7 +118,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
 
     Set<RegionInfo> regionSet = Sets.newHashSet(regions);
     Map<ServerName, List<RegionInfo>> assignmentMap = assignMasterSystemRegions(regions, servers);
-    if (assignmentMap != null && !assignmentMap.isEmpty()) {
+    if (!assignmentMap.isEmpty()) {
       servers = new ArrayList<>(servers);
       // Guarantee not to put other regions on master
       servers.remove(masterServerName);
@@ -367,14 +369,15 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * Reuse BaseLoadBalancer's retainAssignment, but generate favored nodes when its missing.
    */
   @Override
+  @NonNull
   public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
       List<ServerName> servers) throws HBaseIOException {
 
     Map<ServerName, List<RegionInfo>> assignmentMap = Maps.newHashMap();
     Map<ServerName, List<RegionInfo>> result = super.retainAssignment(regions, servers);
-    if (result == null || result.isEmpty()) {
+    if (result.isEmpty()) {
       LOG.warn("Nothing to assign to, probably no servers or no regions");
-      return null;
+      return result;
     }
 
     // Guarantee not to put other regions on master
