@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_QUORUM;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -31,7 +30,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaMockingUtil;
-import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -40,7 +38,6 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -260,67 +257,6 @@ public class TestMasterNoCluster {
       rs0.stop("Test is done");
       rs1.stop("Test is done");
       rs2.stop("Test is done");
-      master.stopMaster();
-      master.join();
-    }
-  }
-
-  @Ignore @Test // Disabled since HBASE-18511. Reenable when master can carry regions.
-  public void testNotPullingDeadRegionServerFromZK()
-      throws IOException, KeeperException, InterruptedException {
-    final Configuration conf = TESTUTIL.getConfiguration();
-    final ServerName newServer = ServerName.valueOf("test.sample", 1, 101);
-    final ServerName deadServer = ServerName.valueOf("test.sample", 1, 100);
-    final MockRegionServer rs0 = new MockRegionServer(conf, newServer);
-
-    HMaster master = new HMaster(conf) {
-      @Override
-      protected MasterMetaBootstrap createMetaBootstrap() {
-        return new MasterMetaBootstrap(this) {
-          @Override
-          protected void assignMetaReplicas()
-              throws IOException, InterruptedException, KeeperException {
-            // Nothing to do.
-          }
-        };
-      }
-
-      @Override
-      protected void initClusterSchemaService() throws IOException, InterruptedException {}
-
-      @Override
-      protected void initializeZKBasedSystemTrackers() throws IOException, InterruptedException,
-          KeeperException, ReplicationException {
-        super.initializeZKBasedSystemTrackers();
-        // Record a newer server in server manager at first
-        getServerManager().recordNewServerWithLock(newServer,
-          new ServerLoad(ServerMetricsBuilder.of(newServer)));
-      }
-
-      @Override
-      public ClusterConnection getConnection() {
-        // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
-        // the conf from the master; the conf will already have a Connection
-        // associate so the below mocking of a connection will fail.
-        try {
-          return HConnectionTestingUtility.getMockedConnectionAndDecorate(
-            TESTUTIL.getConfiguration(), rs0, rs0, rs0.getServerName(),
-            HRegionInfo.FIRST_META_REGIONINFO);
-        } catch (IOException e) {
-          return null;
-        }
-      }
-    };
-    master.start();
-
-    try {
-      // Wait till master is initialized.
-      while (!master.isInitialized()) Threads.sleep(10);
-      LOG.info("Master is initialized");
-
-      assertFalse("The dead server should not be pulled in",
-        master.getServerManager().isServerOnline(deadServer));
-    } finally {
       master.stopMaster();
       master.join();
     }

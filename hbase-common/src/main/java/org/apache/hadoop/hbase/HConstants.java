@@ -1165,7 +1165,20 @@ public final class HConstants {
   /** Conf key for enabling meta replication */
   public static final String USE_META_REPLICAS = "hbase.meta.replicas.use";
   public static final boolean DEFAULT_USE_META_REPLICAS = false;
+
+  /**
+   * @deprecated Since 2.4.0, will be removed in 4.0.0. Please change the meta replicas number by
+   *             altering meta table, i.e, set a new 'region replication' number and call
+   *             modifyTable.
+   */
+  @Deprecated
   public static final String META_REPLICAS_NUM = "hbase.meta.replica.count";
+  /**
+   * @deprecated Since 2.4.0, will be removed in 4.0.0. Please change the meta replicas number by
+   *             altering meta table, i.e, set a new 'region replication' number and call
+   *             modifyTable.
+   */
+  @Deprecated
   public static final int DEFAULT_META_REPLICA_NUM = 1;
 
   /**
