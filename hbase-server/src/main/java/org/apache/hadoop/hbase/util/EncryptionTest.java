@@ -99,17 +99,22 @@ public class EncryptionTest {
   /**
    * Check that the specified cipher can be loaded and initialized, or throw
    * an exception. Verifies key and cipher provider configuration as a
-   * prerequisite for cipher verification.
+   * prerequisite for cipher verification. Also verifies if encryption is enabled globally.
    *
-   * @param conf
-   * @param cipher
-   * @param key
-   * @throws IOException
+   * @param conf HBase configuration
+   * @param cipher chiper algorith to use for the column family
+   * @param key encryption key
+   * @throws IOException in case of encryption configuration error
    */
   public static void testEncryption(final Configuration conf, final String cipher,
       byte[] key) throws IOException {
     if (cipher == null) {
       return;
+    }
+    if(!Encryption.isEncryptionEnabled(conf)) {
+      String message = String.format("Cipher %s failed test: encryption is disabled on the cluster",
+        cipher);
+      throw new IOException(message);
     }
     testKeyProvider(conf);
     testCipherProvider(conf);
