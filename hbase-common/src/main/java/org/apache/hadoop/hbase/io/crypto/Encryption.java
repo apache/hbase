@@ -21,6 +21,7 @@ import static java.lang.String.format;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.DigestException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -153,55 +154,89 @@ public final class Encryption {
   }
 
   /**
-   * Return a 384 bit key derived from the concatenation of the supplied
-   * arguments using PBKDF2WithHmacSHA384 at 10,000 iterations.
-   *
-   * This is used in the HBase Shell (admin.rb) to set the column family data encryption key for
-   * testing an encrypted schema. (this isn't the way to generate data keys in production, which
-   * happens through the Java Api)
+   * Return the MD5 digest of the concatenation of the supplied arguments.
    */
-  public static byte[] pbkdf384(String... args) {
-    byte[] salt = new byte[384];
-    Bytes.random(salt);
+  public static byte[] hash128(String... args) {
+    return hashWithAlg("MD5", 16, args);
+  }
+
+  /**
+   * Return the MD5 digest of the concatenation of the supplied arguments.
+   */
+  public static byte[] hash128(byte[]... args) {
+    return hashWithAlg("MD5", 16, args);
+  }
+
+  /**
+   * Return the SHA-256 digest of the concatenation of the supplied arguments.
+   */
+  public static byte[] hash256(String... args) {
+    return hashWithAlg("SHA-256", 32, args);
+  }
+
+  /**
+   * Return the SHA-256 digest of the concatenation of the supplied arguments.
+   */
+  public static byte[] hash256(byte[]... args) {
+    return hashWithAlg("SHA-256", 32, args);
+  }
+
+  /**
+   * Return a 128 bit key derived from the concatenation of the supplied
+   * arguments using PBKDF2WithHmacSHA1 at 10,000 iterations.
+   *
+   */
+  public static byte[] pbkdf128(String... args) {
     StringBuilder sb = new StringBuilder();
     for (String s: args) {
       sb.append(s);
     }
-    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 384);
-    try {
-      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA384")
-        .generateSecret(spec).getEncoded();
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (InvalidKeySpecException e) {
-      throw new RuntimeException(e);
+    return pbkdf("PBKDF2WithHmacSHA1", 128, sb.toString().toCharArray());
+  }
+
+  /**
+   * Return a 128 bit key derived from the concatenation of the supplied
+   * arguments using PBKDF2WithHmacSHA1 at 10,000 iterations.
+   *
+   */
+  public static byte[] pbkdf128(byte[]... args) {
+    StringBuilder sb = new StringBuilder();
+    for (byte[] b: args) {
+      sb.append(Arrays.toString(b));
     }
+    return pbkdf("PBKDF2WithHmacSHA1", 128, sb.toString().toCharArray());
   }
 
   /**
    * Return a 384 bit key derived from the concatenation of the supplied
    * arguments using PBKDF2WithHmacSHA384 at 10,000 iterations.
    *
-   * This is used in the HBase Shell (admin.rb) to set the column family data encryption key for
-   * testing an encrypted schema. (this isn't the way to generate data keys in production, which
+   * This is used e.g. in the HBase Shell (admin.rb) to set the column family data encryption key
+   * for testing an encrypted schema. (this isn't the way to generate data keys in production, which
+   * happens through the Java Api)
+   */
+  public static byte[] pbkdf384(String... args) {
+    StringBuilder sb = new StringBuilder();
+    for (String s: args) {
+      sb.append(s);
+    }
+    return pbkdf("PBKDF2WithHmacSHA384", 384, sb.toString().toCharArray());
+  }
+
+  /**
+   * Return a 384 bit key derived from the concatenation of the supplied
+   * arguments using PBKDF2WithHmacSHA384 at 10,000 iterations.
+   *
+   * This is used e.g. in the HBase Shell (admin.rb) to set the column family data encryption key
+   * for testing an encrypted schema. (this isn't the way to generate data keys in production, which
    * happens through the Java Api)
    */
   public static byte[] pbkdf384(byte[]... args) {
-    byte[] salt = new byte[384];
-    Bytes.random(salt);
     StringBuilder sb = new StringBuilder();
     for (byte[] b: args) {
       sb.append(Arrays.toString(b));
     }
-    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 384);
-    try {
-      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA384")
-        .generateSecret(spec).getEncoded();
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (InvalidKeySpecException e) {
-      throw new RuntimeException(e);
-    }
+    return pbkdf("PBKDF2WithHmacSHA384", 384, sb.toString().toCharArray());
   }
 
   /**
@@ -533,5 +568,46 @@ public final class Encryption {
       v--;
     } while (v > 0);
   }
+
+  private static byte[] hashWithAlg(String algorithm, int hashLength, byte[]... args) {
+    byte[] result = new byte[hashLength];
+    try {
+      MessageDigest md = MessageDigest.getInstance(algorithm);
+      for (byte[] arg: args) {
+        md.update(arg);
+      }
+      md.digest(result, 0, result.length);
+      return result;
+    } catch (NoSuchAlgorithmException | DigestException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static byte[] hashWithAlg(String algorithm, int hashLength, String... args) {
+    byte[] result = new byte[hashLength];
+    try {
+      MessageDigest md = MessageDigest.getInstance(algorithm);
+      for (String arg: args) {
+        md.update(Bytes.toBytes(arg));
+      }
+      md.digest(result, 0, result.length);
+      return result;
+    } catch (NoSuchAlgorithmException | DigestException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static byte[] pbkdf(String algorithm, int keyLength, char[] arg) {
+    byte[] salt = new byte[keyLength];
+    Bytes.random(salt);
+    PBEKeySpec spec = new PBEKeySpec(arg, salt, 10000, keyLength);
+    try {
+      return SecretKeyFactory.getInstance(algorithm)
+        .generateSecret(spec).getEncoded();
+    } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
 
 }
