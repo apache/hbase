@@ -22,18 +22,23 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.concurrent.Future;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.AfterClass;
@@ -53,7 +58,8 @@ public class TestFailedMetaReplicaAssigment {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    // using our rigged master, to force a failed meta replica assignment
+    // using our rigged master, to force a failed meta replica assignment when start up master
+    // this test can be removed once we remove the HConstants.META_REPLICAS_NUM config.
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.META_REPLICAS_NUM, 3);
     StartMiniClusterOption option = StartMiniClusterOption.builder().numAlwaysStandByMasters(1)
@@ -100,8 +106,19 @@ public class TestFailedMetaReplicaAssigment {
   }
 
   public static class BrokenTransitRegionStateProcedure extends TransitRegionStateProcedure {
-    protected BrokenTransitRegionStateProcedure() {
+
+    public BrokenTransitRegionStateProcedure() {
       super(null, null, null, false, TransitionType.ASSIGN);
+    }
+
+    public BrokenTransitRegionStateProcedure(MasterProcedureEnv env, RegionInfo hri) {
+      super(env, hri, null, false, TransitionType.ASSIGN);
+    }
+
+    @Override
+    protected Procedure[] execute(MasterProcedureEnv env)
+      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+      throw new ProcedureSuspendedException("Never end procedure!");
     }
   }
 
@@ -124,12 +141,24 @@ public class TestFailedMetaReplicaAssigment {
       this.master = master;
     }
 
-    public Future<byte[]> assignAsync(RegionInfo regionInfo, ServerName sn) throws IOException {
-      RegionStateNode regionNode = getRegionStates().getOrCreateRegionStateNode(regionInfo);
-      if (regionNode.getRegionInfo().getReplicaId() == 2) {
-        regionNode.setProcedure(new BrokenTransitRegionStateProcedure());
+    @Override
+    public TransitRegionStateProcedure[] createAssignProcedures(List<RegionInfo> hris) {
+      List<TransitRegionStateProcedure> procs = new ArrayList<>();
+      for (RegionInfo hri : hris) {
+        if (hri.isMetaRegion() && hri.getReplicaId() == 2) {
+          RegionStateNode regionNode = getRegionStates().getOrCreateRegionStateNode(hri);
+          regionNode.lock();
+          try {
+            procs.add(regionNode.setProcedure(new BrokenTransitRegionStateProcedure(
+              master.getMasterProcedureExecutor().getEnvironment(), hri)));
+          } finally {
+            regionNode.unlock();
+          }
+        } else {
+          procs.add(super.createAssignProcedures(Collections.singletonList(hri))[0]);
+        }
       }
-      return super.assignAsync(regionInfo, sn);
+      return procs.toArray(new TransitRegionStateProcedure[0]);
     }
   }
 }

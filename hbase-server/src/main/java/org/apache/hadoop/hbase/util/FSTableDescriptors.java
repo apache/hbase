@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.NotImplementedException;
@@ -121,20 +120,16 @@ public class FSTableDescriptors implements TableDescriptors {
   @VisibleForTesting
   public static void tryUpdateMetaTableDescriptor(Configuration conf) throws IOException {
     tryUpdateAndGetMetaTableDescriptor(conf, CommonFSUtils.getCurrentFileSystem(conf),
-      CommonFSUtils.getRootDir(conf), null);
+      CommonFSUtils.getRootDir(conf));
   }
 
   public static TableDescriptor tryUpdateAndGetMetaTableDescriptor(Configuration conf,
-    FileSystem fs, Path rootdir,
-    Function<TableDescriptorBuilder, TableDescriptorBuilder> metaObserver) throws IOException {
+    FileSystem fs, Path rootdir) throws IOException {
     // see if we already have meta descriptor on fs. Write one if not.
     try {
       return getTableDescriptorFromFs(fs, rootdir, TableName.META_TABLE_NAME);
     } catch (TableInfoMissingException e) {
       TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
-      if (metaObserver != null) {
-        builder = metaObserver.apply(builder);
-      }
       TableDescriptor td = builder.build();
       LOG.info("Creating new hbase:meta table descriptor {}", td);
       TableName tableName = td.getTableName();
