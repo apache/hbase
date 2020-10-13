@@ -31,4 +31,5 @@ message WrappedKey {
   required bytes data = 3;
   optional bytes iv = 4;
   optional bytes hash = 5;
+  optional string hash_algorithm = 6 [default = "MD5"];
 }

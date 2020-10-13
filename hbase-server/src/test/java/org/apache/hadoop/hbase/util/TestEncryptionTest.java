@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.CipherProvider;
 import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -88,6 +89,35 @@ public class TestEncryptionTest {
     try {
       EncryptionTest.testEncryption(conf, "foobar", null);
       fail("Test for bogus cipher should have failed");
+    } catch (Exception e) { }
+  }
+
+  @Test
+  public void testTestEnabled() {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    try {
+      EncryptionTest.testEncryption(conf, algorithm, null);
+    } catch (Exception e) {
+      fail("Test for cipher " + algorithm + " should have succeeded, when " +
+        Encryption.CRYPTO_ENABLED_CONF_KEY + " is not set");
+    }
+
+    conf.setBoolean(Encryption.CRYPTO_ENABLED_CONF_KEY, true);
+    try {
+      EncryptionTest.testEncryption(conf, algorithm, null);
+    } catch (Exception e) {
+      fail("Test for cipher " + algorithm + " should have succeeded, when " +
+        Encryption.CRYPTO_ENABLED_CONF_KEY + " is set to true");
+    }
+
+    conf.setBoolean(Encryption.CRYPTO_ENABLED_CONF_KEY, false);
+    try {
+      EncryptionTest.testEncryption(conf, algorithm, null);
+      fail("Test for cipher " + algorithm + " should have failed, when " +
+        Encryption.CRYPTO_ENABLED_CONF_KEY + " is set to false");
     } catch (Exception e) { }
   }
 
