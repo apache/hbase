@@ -70,7 +70,6 @@ final class TestHDFSAclHelper {
             .setMobThreshold(0).build())
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).setMobEnabled(true)
             .setMobThreshold(0).build())
-        .setOwner(User.createUserForTesting(util.getConfiguration(), "owner", new String[] {}))
         .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
     return util.createTable(td, splits);
@@ -91,8 +90,7 @@ final class TestHDFSAclHelper {
       TableName tableName) {
     return TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN1).build())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).build())
-        .setOwner(User.createUserForTesting(util.getConfiguration(), "owner", new String[] {}));
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).build());
   }
 
   static void createTableAndPut(HBaseTestingUtility util, TableName tableNam) throws IOException {

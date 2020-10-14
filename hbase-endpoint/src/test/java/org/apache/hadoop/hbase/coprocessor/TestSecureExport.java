@@ -109,7 +109,7 @@ public class TestSecureExport {
   // user granted with all global permission
   private static final String USER_ADMIN = "admin";
   // user is table owner. will have all permissions on table
-  private static final String USER_OWNER = "owner";
+  private static String USER_OWNER;
   // user with rx permissions.
   private static final String USER_RX = "rxuser";
   // user with exe-only permissions.
@@ -125,6 +125,7 @@ public class TestSecureExport {
   @Rule
   public final TestName name = new TestName();
   private static void setUpKdcServer() throws Exception {
+    USER_OWNER = UserProvider.instantiate(UTIL.getConfiguration()).getCurrent().getShortName();
     KDC = UTIL.setupMiniKdc(KEYTAB_FILE);
     USERNAME = UserGroupInformation.getLoginUser().getShortUserName();
     SERVER_PRINCIPAL = USERNAME + "/" + LOCALHOST;
@@ -238,7 +239,6 @@ public class TestSecureExport {
     TableDescriptor exportHtd = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(name.getMethodName()))
             .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
-            .setOwnerString(USER_OWNER)
             .build();
     SecureTestUtil.createTable(UTIL, exportHtd, new byte[][]{Bytes.toBytes("s")});
     SecureTestUtil.grantOnTable(UTIL, USER_RO,
@@ -340,7 +340,6 @@ public class TestSecureExport {
     final TableDescriptor exportHtd = TableDescriptorBuilder
             .newBuilder(TableName.valueOf(exportTable))
             .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
-            .setOwnerString(USER_OWNER)
             .build();
     SecureTestUtil.createTable(UTIL, exportHtd, new byte[][]{Bytes.toBytes("s")});
     AccessTestAction putAction = () -> {
@@ -398,7 +397,6 @@ public class TestSecureExport {
       final TableDescriptor importHtd = TableDescriptorBuilder
               .newBuilder(TableName.valueOf(importTable))
               .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYB))
-              .setOwnerString(USER_OWNER)
               .build();
       SecureTestUtil.createTable(UTIL, importHtd, new byte[][]{Bytes.toBytes("s")});
       AccessTestAction importAction = () -> {

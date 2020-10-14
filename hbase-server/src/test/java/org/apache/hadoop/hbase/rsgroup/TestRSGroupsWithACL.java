@@ -118,7 +118,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
     USER_ADMIN = User.createUserForTesting(conf, "admin2", new String[0]);
     USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
     USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
-    USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
+    USER_OWNER = UserProvider.instantiate(conf).getCurrent();
     USER_CREATE = User.createUserForTesting(conf, "tbl_create", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
 
@@ -156,7 +156,6 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
     ColumnFamilyDescriptorBuilder cfd = ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY);
     cfd.setMaxVersions(100);
     tableBuilder.setColumnFamily(cfd.build());
-    tableBuilder.setValue(TableDescriptorBuilder.OWNER, USER_OWNER.getShortName());
     createTable(TEST_UTIL, tableBuilder.build(), new byte[][] { Bytes.toBytes("s") });
 
     // Set up initial grants

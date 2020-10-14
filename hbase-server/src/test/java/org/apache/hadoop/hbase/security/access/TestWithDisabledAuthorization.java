@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -161,7 +162,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     // create a set of test users
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     USER_ADMIN = User.createUserForTesting(conf, "admin2", new String[0]);
-    USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
+    USER_OWNER = UserProvider.instantiate(conf).getCurrent();
     USER_CREATE = User.createUserForTesting(conf, "tbl_create", new String[0]);
     USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
     USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
@@ -180,8 +181,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     Admin admin = TEST_UTIL.getAdmin();
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(testTable.getTableName())
       .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build())
-      .setOwner(USER_OWNER).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build()).build();
     admin.createTable(tableDescriptor, new byte[][] { Bytes.toBytes("s") });
     TEST_UTIL.waitUntilAllRegionsAssigned(testTable.getTableName());
 

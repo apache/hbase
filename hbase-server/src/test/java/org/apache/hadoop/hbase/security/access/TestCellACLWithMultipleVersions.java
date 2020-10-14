@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -119,7 +120,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     TEST_UTIL.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
 
     // create a set of test users
-    USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
+    USER_OWNER = UserProvider.instantiate(conf).getCurrent();
     USER_OTHER = User.createUserForTesting(conf, "other", new String[0]);
     USER_OTHER2 = User.createUserForTesting(conf, "other2", new String[0]);
     GROUP_USER = User.createUserForTesting(conf, "group_user", new String[] { GROUP });
@@ -138,8 +139,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       .setColumnFamily(
         ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY1).setMaxVersions(4).build())
       .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY2).setMaxVersions(4).build())
-      .setOwner(USER_OWNER).build();
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY2).setMaxVersions(4).build()).build();
     // Create the test table (owner added to the _acl_ table)
     try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
       try (Admin admin = connection.getAdmin()) {

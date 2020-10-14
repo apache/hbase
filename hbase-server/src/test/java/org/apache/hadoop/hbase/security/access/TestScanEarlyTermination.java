@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -105,7 +106,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
     TEST_UTIL.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
 
     // create a set of test users
-    USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
+    USER_OWNER = UserProvider.instantiate(conf).getCurrent();
     USER_OTHER = User.createUserForTesting(conf, "other", new String[0]);
   }
 
@@ -118,7 +119,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
   public void setUp() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(testTable.getTableName()).setOwner(USER_OWNER)
+      TableDescriptorBuilder.newBuilder(testTable.getTableName())
         .setColumnFamily(
           ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY1).setMaxVersions(10).build())
         .setColumnFamily(
