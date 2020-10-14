@@ -53,6 +53,21 @@ public final class Encryption {
 
   private static final Logger LOG = LoggerFactory.getLogger(Encryption.class);
 
+
+  /**
+   * Configuration key for the hash algorithm used for generating key hash in encrypted HFiles.
+   * This is a MessageDigest algorithm identifier string, like "MD5", "SHA-256" or "SHA-384".
+   * (default: "MD5" for backward compatibility reasons)
+   */
+  public static final String CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY = "hbase.crypto.key.hash.algorithm";
+
+  /**
+   * Default hash algorithm used for generating key hash in encrypted HFiles.
+   * (we use "MD5" for backward compatibility reasons)
+   */
+  public static final String CRYPTO_KEY_HASH_ALGORITHM_CONF_DEFAULT = "MD5";
+
+
   /**
    * Crypto context
    */
@@ -132,8 +147,8 @@ public final class Encryption {
    * Returns the Hash Algorithm defined in the crypto configuration.
    */
   public static String getConfiguredHashAlgorithm(Configuration conf) {
-    return conf.get(HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY,
-                    HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_DEFAULT).trim();
+    return conf.get(CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY,
+                    CRYPTO_KEY_HASH_ALGORITHM_CONF_DEFAULT).trim();
   }
 
   /**
@@ -148,7 +163,7 @@ public final class Encryption {
     } catch (NoSuchAlgorithmException e) {
       String message = format("unable to use algorithm %s (please check your configuration " +
                               "parameter %s and the security providers configured for the JVM)",
-                              algorithm, HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY);
+                              algorithm, CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY);
       throw new RuntimeException(message, e);
     }
   }

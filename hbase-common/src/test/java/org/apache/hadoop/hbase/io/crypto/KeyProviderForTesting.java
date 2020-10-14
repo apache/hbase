@@ -20,7 +20,6 @@ import java.security.Key;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
@@ -33,7 +32,7 @@ public class KeyProviderForTesting implements KeyProvider {
 
   public KeyProviderForTesting() {
     config = new Configuration();
-    config.set(HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, "MD5");
+    config.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, "MD5");
   }
 
   @Override

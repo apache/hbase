@@ -28,6 +28,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -126,7 +127,7 @@ public class TestEncryptionUtil {
     Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     if(!hashAlgorithm.equals(DEFAULT_HASH_ALGORITHM)) {
-      conf.set(HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, hashAlgorithm);
+      conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, hashAlgorithm);
     }
 
     // generate a test key
@@ -163,7 +164,7 @@ public class TestEncryptionUtil {
     Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     if(!hashAlgorithm.equals(DEFAULT_HASH_ALGORITHM)) {
-      conf.set(HConstants.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, hashAlgorithm);
+      conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, hashAlgorithm);
     }
 
     // generate a test key
