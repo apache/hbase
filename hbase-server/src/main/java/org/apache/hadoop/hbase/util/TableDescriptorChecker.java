@@ -153,8 +153,7 @@ public final class TableDescriptorChecker {
 
     // Meta table shouldn't be set as read only, otherwise it will impact region assignments
     if (td.isReadOnly() && TableName.isMetaTableName(td.getTableName())) {
-      String message = "Meta table can't be set as read only.";
-      warnOrThrowExceptionForFailure(false, message, null);
+      warnOrThrowExceptionForFailure(false, "Meta table can't be set as read only.", null);
     }
 
     for (ColumnFamilyDescriptor hcd : td.getColumnFamilies()) {
