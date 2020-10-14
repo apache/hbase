@@ -691,6 +691,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
       }
     }
 
+    if (this.replicationEndpoint != null) {
+      this.replicationEndpoint.stop();
+    }
     for (ReplicationSourceShipper worker : workers) {
       if (worker.isAlive() || worker.entryReader.isAlive()) {
         try {
@@ -711,9 +714,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
       }
     }
 
-    if (this.replicationEndpoint != null) {
-      this.replicationEndpoint.stop();
-    }
     if (join) {
       for (ReplicationSourceShipper worker : workers) {
         Threads.shutdown(worker, this.sleepForRetries);
