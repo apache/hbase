@@ -221,7 +221,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
    * @param sleepMultiplier by how many times the default sleeping time is augmented
    * @return True if <code>sleepMultiplier</code> is &lt; <code>maxRetriesMultiplier</code>
    */
-  protected boolean sleepForRetries(String msg, int sleepMultiplier) {
+  private boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
       if (LOG.isTraceEnabled()) {
         LOG.trace("{} {}, sleeping {} times {}",
@@ -229,8 +229,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       }
       Thread.sleep(this.sleepForRetries * sleepMultiplier);
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       if (LOG.isDebugEnabled()) {
-        LOG.debug("{} Interrupted while sleeping between retries", logPeerId());
+        LOG.debug("{} {} Interrupted while sleeping between retries", msg, logPeerId());
       }
     }
     return sleepMultiplier < maxRetriesMultiplier;
