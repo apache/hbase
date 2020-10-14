@@ -399,19 +399,11 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * Get the znodes corresponding to the meta replicas from ZK
    * @return list of znodes
    * @throws KeeperException if a ZooKeeper operation fails
+   * @deprecated Since 3.0.0, will be removed in 4.0.0.
    */
+  @Deprecated
   public List<String> getMetaReplicaNodes() throws KeeperException {
     List<String> childrenOfBaseNode = ZKUtil.listChildrenNoWatch(this, znodePaths.baseZNode);
-    return filterMetaReplicaNodes(childrenOfBaseNode);
-  }
-
-  /**
-   * Same as {@link #getMetaReplicaNodes()} except that this also registers a watcher on base znode
-   * for subsequent CREATE/DELETE operations on child nodes.
-   */
-  public List<String> getMetaReplicaNodesAndWatchChildren() throws KeeperException {
-    List<String> childrenOfBaseNode =
-        ZKUtil.listChildrenAndWatchForNewChildren(this, znodePaths.baseZNode);
     return filterMetaReplicaNodes(childrenOfBaseNode);
   }
 

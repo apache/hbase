@@ -28,8 +28,13 @@ import org.apache.zookeeper.KeeperException;
 
 /**
  * Tracks the meta region locations on server ZK cluster and synchronize them to client ZK cluster
- * if changed
+ * if changed.
+ * <p/>
+ * After supporting splittable meta, the meta location will not be stored in zookeeper any more, so
+ * this class is useless now.
+ * @deprecated Since 3.0.0, will be removed in 4.0.0.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class MetaLocationSyncer extends ClientZKSyncer {
   public MetaLocationSyncer(ZKWatcher watcher, ZKWatcher clientZkWatcher, Server server) {

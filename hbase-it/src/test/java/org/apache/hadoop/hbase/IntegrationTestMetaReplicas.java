@@ -17,20 +17,13 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.TestMetaWithReplicasShutdownHandling;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * An integration test that starts the cluster with three replicas for the meta
@@ -53,22 +46,13 @@ public class IntegrationTestMetaReplicas {
     if (util == null) {
       util = new IntegrationTestingUtility();
     }
-    util.getConfiguration().setInt(
-        StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
+    util.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
+      1000);
     // Make sure there are three servers.
     util.initializeCluster(3);
     HBaseTestingUtility.setReplicas(util.getAdmin(), TableName.META_TABLE_NAME, 3);
-    ZKWatcher zkw = util.getZooKeeperWatcher();
-    Configuration conf = util.getConfiguration();
-    String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
-        HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.metaserver", "meta-region-server"));
-    // check that the data in the znode is parseable (this would also mean the znode exists)
-    byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
-    ProtobufUtil.toServerName(data);
-    waitUntilZnodeAvailable(1);
-    waitUntilZnodeAvailable(2);
+    // after set replicas suceed, we can make sure that all replicas are assigned, so we do not need
+    // to wait them online
   }
 
   @AfterClass
@@ -76,18 +60,6 @@ public class IntegrationTestMetaReplicas {
     //Clean everything up.
     util.restoreCluster();
     util = null;
-  }
-
-  private static void waitUntilZnodeAvailable(int replicaId) throws Exception {
-    String znode = util.getZooKeeperWatcher().getZNodePaths().getZNodeForReplica(replicaId);
-    int i = 0;
-    while (i < 1000) {
-      if (ZKUtil.checkExists(util.getZooKeeperWatcher(), znode) == -1) {
-        Thread.sleep(100);
-        i++;
-      } else break;
-    }
-    if (i == 1000) throw new IOException("znode for meta replica " + replicaId + " not available");
   }
 
   @Test

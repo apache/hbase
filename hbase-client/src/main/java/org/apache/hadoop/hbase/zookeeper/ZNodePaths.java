@@ -142,7 +142,9 @@ public class ZNodePaths {
 
   /**
    * @return the znode string corresponding to a replicaId
+   * @deprecated Since 3.0.0, will be removed in 4.0.0.
    */
+  @Deprecated
   public String getZNodeForReplica(int replicaId) {
     if (RegionReplicaUtil.isDefaultReplica(replicaId)) {
       return joinZNode(baseZNode, metaZNodePrefix);
@@ -155,7 +157,9 @@ public class ZNodePaths {
    * Parses the meta replicaId from the passed path.
    * @param path the name of the full path which includes baseZNode.
    * @return replicaId
+   * @deprecated Since 3.0.0, will be removed in 4.0.0.
    */
+  @Deprecated
   public int getMetaReplicaIdFromPath(String path) {
     // Extract the znode from path. The prefix is of the following format.
     // baseZNode + PATH_SEPARATOR.
@@ -167,7 +171,9 @@ public class ZNodePaths {
    * Parse the meta replicaId from the passed znode
    * @param znode the name of the znode, does not include baseZNode
    * @return replicaId
+   * @deprecated Since 3.0.0, will be removed in 4.0.0.
    */
+  @Deprecated
   public int getMetaReplicaIdFromZNode(String znode) {
     return znode.equals(metaZNodePrefix)?
         RegionInfo.DEFAULT_REPLICA_ID:
@@ -176,14 +182,18 @@ public class ZNodePaths {
 
   /**
    * @return True if meta znode.
+   * @deprecated Since 3.0.0, will be removed in 4.0.0.
    */
+  @Deprecated
   public boolean isMetaZNodePrefix(String znode) {
     return znode != null && znode.startsWith(this.metaZNodePrefix);
   }
 
   /**
    * @return True is the fully qualified path is for meta location
+   * @deprecated Since 3.0.0, will be removed in 4.0.0.
    */
+  @Deprecated
   public boolean isMetaZNodePath(String path) {
     int prefixLen = baseZNode.length() + 1;
     return path.length() > prefixLen && isMetaZNodePrefix(path.substring(prefixLen));
