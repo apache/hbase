@@ -467,12 +467,30 @@ public class HRegionServer extends Thread implements
   protected String useThisHostnameInstead;
 
   /**
+   * @deprecated
+   *  Use {@link HRegionServer#UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY} instead.
+   */
+  @Deprecated
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+  final static String DEPRECATED_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY =
+    "hbase.regionserver.hostname.disable.master.reversedns";
+
+  /**
    * HBASE-18226: This config and hbase.regionserver.hostname are mutually exclusive.
    * Exception will be thrown if both are used.
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-  final static String RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY =
-    "hbase.regionserver.hostname.disable.master.reversedns";
+  final static String UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY =
+    "hbase.unsafe.regionserver.hostname.disable.master.reversedns";
+
+  /**
+   * HBASE-24667: This config hbase.regionserver.hostname.disable.master.reversedns will be replaced by
+   * hbase.unsafe.regionserver.hostname.disable.master.reversedns. Keep the old config keys here for backward
+   * compatibility.
+   */
+  static {
+    Configuration.addDeprecation(DEPRECATED_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY);
+  }
 
   /**
    * This servers startcode.
@@ -692,10 +710,10 @@ public class HRegionServer extends Thread implements
   // HMaster should override this method to load the specific config for master
   protected String getUseThisHostnameInstead(Configuration conf) throws IOException {
     String hostname = conf.get(RS_HOSTNAME_KEY);
-    if (conf.getBoolean(RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false)) {
+    if (conf.getBoolean(UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false)) {
       if (!StringUtils.isBlank(hostname)) {
-        String msg = RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY + " and " + RS_HOSTNAME_KEY +
-          " are mutually exclusive. Do not set " + RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY +
+        String msg = UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY + " and " + RS_HOSTNAME_KEY +
+          " are mutually exclusive. Do not set " + UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY +
           " to true while " + RS_HOSTNAME_KEY + " is used";
         throw new IOException(msg);
       } else {
