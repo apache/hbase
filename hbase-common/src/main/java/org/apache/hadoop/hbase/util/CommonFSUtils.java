@@ -313,14 +313,6 @@ public final class CommonFSUtils {
     return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
-  public static String getRootDirUri(final Configuration c) throws IOException {
-    Path p = new Path(c.get(HConstants.HBASE_DIR));
-    if (p.toUri().getScheme() != null) {
-      return p.toUri().toString();
-    }
-    return null;
-  }
-
   public static void setRootDir(final Configuration c, final Path root) {
     c.set(HConstants.HBASE_DIR, root.toString());
   }
@@ -353,9 +345,8 @@ public final class CommonFSUtils {
     return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
-  public static String getWALDirUri(final Configuration c) throws IOException {
-    Path p = new Path(c.get(HBASE_WAL_DIR, c.get(HConstants.HBASE_DIR)));
-    if(p.toUri().getScheme() != null) {
+  public static String getDirUri(final Configuration c, Path p) throws IOException {
+    if (p.toUri().getScheme() != null) {
       return p.toUri().toString();
     }
     return null;

@@ -112,8 +112,8 @@ public class TestCommonFSUtils {
     conf.set(HConstants.HBASE_DIR, root.toString());
     Path walRoot = new Path("file:///hbase/logroot");
     conf.set(CommonFSUtils.HBASE_WAL_DIR, walRoot.toString());
-    String walDirUri = CommonFSUtils.getWALDirUri(conf);
-    String rootDirUri = CommonFSUtils.getRootDirUri(conf);
+    String walDirUri = CommonFSUtils.getDirUri(conf, walRoot);
+    String rootDirUri = CommonFSUtils.getDirUri(conf, root);
     CommonFSUtils.setFsDefault(this.conf, rootDirUri);
     CommonFSUtils.setRootDir(conf, root);
     assertEquals(root, CommonFSUtils.getRootDir(conf));
