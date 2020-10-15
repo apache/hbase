@@ -67,11 +67,13 @@ public class LogRoller extends HasThread {
   // The interval to check low replication on hlog's pipeline
   private final long checkLowReplicationInterval;
 
-  @SuppressWarnings("unchecked")
   public void addWAL(final WAL wal) {
     if (null == wals.putIfAbsent(wal, new RollController(wal))) {
       wal.registerWALActionsListener(new WALActionsListener.Base() {
         @Override
+        @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+          value="JAT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
+          justification="Sequence of calls to concurrent abstraction may not be atomic")
         public void logRollRequested(WALActionsListener.RollRequestReason reason) {
           RollController controller = wals.get(wal);
           if (controller == null) {
