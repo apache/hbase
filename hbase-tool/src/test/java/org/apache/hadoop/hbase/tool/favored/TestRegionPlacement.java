@@ -15,13 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+package org.apache.hadoop.hbase.tool.favored;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -57,6 +51,8 @@ import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -66,6 +62,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Ignore;
@@ -74,6 +71,11 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This test was disabled because it was for an unused feature,
+ * {@link RegionPlacementMaintainer} and it was failing.
+ */
+// TODO: Remove if we remove RegionPlacementMaintainer.
 @Category({MasterTests.class, MediumTests.class})
 public class TestRegionPlacement {
 
@@ -110,7 +112,7 @@ public class TestRegionPlacement {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Ignore ("Test for unfinished feature") @Test
+  @Ignore ("Test for unfinished feature; needs WORK!") @Test
   public void testRegionPlacement() throws Exception {
     String tableStr = "testRegionAssignment";
     TableName table = TableName.valueOf(tableStr);
@@ -159,13 +161,15 @@ public class TestRegionPlacement {
     rp.setTargetTableName(new String[]{tableStr});
     List<AssignmentVerificationReport> reports = rp.verifyRegionPlacement(false);
     AssignmentVerificationReport report = reports.get(0);
-    assertTrue(report.getRegionsWithoutValidFavoredNodes().isEmpty());
-    assertTrue(report.getNonFavoredAssignedRegions().isEmpty());
-    assertTrue(report.getTotalFavoredAssignments() >= REGION_NUM);
-    assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) != 0);
-    assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) == 0);
-    assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY) == 0);
-    assertTrue(report.getUnassignedRegions().isEmpty());
+    Assert.assertTrue(report.getRegionsWithoutValidFavoredNodes().isEmpty());
+    Assert.assertTrue(report.getNonFavoredAssignedRegions().isEmpty());
+    Assert.assertTrue(report.getTotalFavoredAssignments() >= REGION_NUM);
+    Assert
+      .assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) != 0);
+    Assert.assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) == 0);
+    Assert
+      .assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY) == 0);
+    Assert.assertTrue(report.getUnassignedRegions().isEmpty());
 
     // Check when a RS stops, the regions get assigned to their secondary/tertiary
     killRandomServerAndVerifyAssignment();
@@ -173,16 +177,18 @@ public class TestRegionPlacement {
     // also verify that the AssignmentVerificationReport has the correct information
     reports = rp.verifyRegionPlacement(false);
     report = reports.get(0);
-    assertTrue(report.getRegionsWithoutValidFavoredNodes().isEmpty());
-    assertTrue(report.getNonFavoredAssignedRegions().isEmpty());
-    assertTrue(report.getTotalFavoredAssignments() >= REGION_NUM);
-    assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) > 0);
-    assertTrue("secondary " +
+    Assert.assertTrue(report.getRegionsWithoutValidFavoredNodes().isEmpty());
+    Assert.assertTrue(report.getNonFavoredAssignedRegions().isEmpty());
+    Assert.assertTrue(report.getTotalFavoredAssignments() >= REGION_NUM);
+    Assert
+      .assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) > 0);
+    Assert.assertTrue("secondary " +
     report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) + " tertiary "
         + report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY),
         (report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) > 0
         || report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY) > 0));
-    assertTrue((report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) +
+    Assert
+      .assertTrue((report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) +
         report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) +
         report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY)) == REGION_NUM);
     RegionPlacementMaintainer.printAssignmentPlan(currentPlan);
@@ -243,7 +249,7 @@ public class TestRegionPlacement {
           + "/" + secondaryTertiaryServers.getSecond());
       if (!(ServerName.isSameAddress(newDestination, secondaryTertiaryServers.getFirst())||
           ServerName.isSameAddress(newDestination, secondaryTertiaryServers.getSecond()))){
-        fail("Region " + entry.getKey() + " not present on any of the expected servers");
+        Assert.fail("Region " + entry.getKey() + " not present on any of the expected servers");
       }
     }
     // start(reinstate) region server since we killed one before
@@ -334,12 +340,6 @@ public class TestRegionPlacement {
    * region servers.
    * Also it will verify weather the number of region movement and
    * the number regions on the primary region server are expected
-   *
-   * @param plan
-   * @param regionMovementNum
-   * @param numRegionsOnPrimaryRS
-   * @throws InterruptedException
-   * @throws IOException
    */
   private void verifyRegionAssignment(FavoredNodesPlan plan,
       int regionMovementNum, int numRegionsOnPrimaryRS)
@@ -363,10 +363,9 @@ public class TestRegionPlacement {
    * @param expectedPlan the region assignment plan
    * @throws IOException if an IO problem is encountered
    */
-  private void verifyMETAUpdated(FavoredNodesPlan expectedPlan)
-  throws IOException {
+  private void verifyMETAUpdated(FavoredNodesPlan expectedPlan) throws IOException {
     FavoredNodesPlan planFromMETA = rp.getRegionAssignmentSnapshot().getExistingAssignmentPlan();
-    assertTrue("The assignment plan is NOT consistent with the expected plan ",
+    Assert.assertTrue("The assignment plan is NOT consistent with the expected plan ",
         planFromMETA.equals(expectedPlan));
   }
 
@@ -396,7 +395,7 @@ public class TestRegionPlacement {
     // update the lastRegionOpenedCount
     lastRegionOpenedCount = currentRegionOpened;
 
-    assertEquals("There are only " + regionMovement + " instead of "
+    Assert.assertEquals("There are only " + regionMovement + " instead of "
           + expected + " region movement for " + attempt + " attempts", expected, regionMovement);
   }
 
@@ -409,7 +408,7 @@ public class TestRegionPlacement {
   private void verifyRegionOnPrimaryRS(int expectedNum)
       throws IOException {
     lastRegionOnPrimaryRSCount = getNumRegionisOnPrimaryRS();
-    assertEquals("Only " +  expectedNum + " of user regions running " +
+    Assert.assertEquals("Only " +  expectedNum + " of user regions running " +
         "on the primary region server", expectedNum ,
         lastRegionOnPrimaryRSCount);
   }
@@ -436,23 +435,23 @@ public class TestRegionPlacement {
         if (favoredServerList == null) {
           TableDescriptor desc = region.getTableDescriptor();
           // Verify they are ROOT and hbase:meta regions since no favored nodes
-          assertNull(favoredSocketAddress);
-          assertTrue("User region " +
+          Assert.assertNull(favoredSocketAddress);
+          Assert.assertTrue("User region " +
               region.getTableDescriptor().getTableName() +
               " should have favored nodes", desc.isMetaRegion());
         } else {
           // For user region, the favored nodes in the region server should be
           // identical to favored nodes in the assignmentPlan
-          assertTrue(favoredSocketAddress.length == favoredServerList.size());
-          assertTrue(favoredServerList.size() > 0);
+          Assert.assertTrue(favoredSocketAddress.length == favoredServerList.size());
+          Assert.assertTrue(favoredServerList.size() > 0);
           for (int j = 0; j < favoredServerList.size(); j++) {
             InetSocketAddress addrFromRS = favoredSocketAddress[j];
             InetSocketAddress addrFromPlan = InetSocketAddress.createUnresolved(
                 favoredServerList.get(j).getHostname(), favoredServerList.get(j).getPort());
 
-            assertNotNull(addrFromRS);
-            assertNotNull(addrFromPlan);
-            assertTrue("Region server " + rs.getServerName().getAddress()
+            Assert.assertNotNull(addrFromRS);
+            Assert.assertNotNull(addrFromPlan);
+            Assert.assertTrue("Region server " + rs.getServerName().getAddress()
                 + " has the " + positions[j] +
                 " for region " + region.getRegionInfo().getRegionNameAsString() + " is " +
                 addrFromRS + " which is inconsistent with the plan "
@@ -557,7 +556,7 @@ public class TestRegionPlacement {
 
     try (RegionLocator r = CONNECTION.getRegionLocator(tableName)) {
       List<HRegionLocation> regions = r.getAllRegionLocations();
-      assertEquals("Tried to create " + expectedRegions + " regions "
+      Assert.assertEquals("Tried to create " + expectedRegions + " regions "
           + "but only found " + regions.size(), expectedRegions, regions.size());
     }
   }

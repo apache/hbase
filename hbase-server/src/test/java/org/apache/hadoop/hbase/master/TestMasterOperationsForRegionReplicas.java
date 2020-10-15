@@ -81,7 +81,8 @@ public class TestMasterOperationsForRegionReplicas {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMasterOperationsForRegionReplicas.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestMasterOperationsForRegionReplicas.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Connection CONNECTION = null;
   private static Admin ADMIN;

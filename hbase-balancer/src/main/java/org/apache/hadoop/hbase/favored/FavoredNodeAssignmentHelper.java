@@ -33,22 +33,11 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell.Type;
-import org.apache.hadoop.hbase.CellBuilderFactory;
-import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,80 +103,6 @@ public class FavoredNodeAssignmentHelper {
       serverList.add((sn));
       this.regionServerToRackMap.put(sn.getHostname(), rackName);
     }
-  }
-
-  /**
-   * Update meta table with favored nodes info
-   * @param regionToFavoredNodes map of RegionInfo's to their favored nodes
-   * @param connection connection to be used
-   * @throws IOException
-   */
-  public static void updateMetaWithFavoredNodesInfo(
-      Map<RegionInfo, List<ServerName>> regionToFavoredNodes,
-      Connection connection) throws IOException {
-    List<Put> puts = new ArrayList<>();
-    for (Map.Entry<RegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
-      Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
-      if (put != null) {
-        puts.add(put);
-      }
-    }
-    MetaTableAccessor.putsToMetaTable(connection, puts);
-    LOG.info("Added " + puts.size() + " regions in META");
-  }
-
-  /**
-   * Update meta table with favored nodes info
-   * @param regionToFavoredNodes
-   * @param conf
-   * @throws IOException
-   */
-  public static void updateMetaWithFavoredNodesInfo(
-      Map<RegionInfo, List<ServerName>> regionToFavoredNodes,
-      Configuration conf) throws IOException {
-    List<Put> puts = new ArrayList<>();
-    for (Map.Entry<RegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
-      Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
-      if (put != null) {
-        puts.add(put);
-      }
-    }
-    // Write the region assignments to the meta table.
-    // TODO: See above overrides take a Connection rather than a Configuration only the
-    // Connection is a short circuit connection. That is not going to good in all cases, when
-    // master and meta are not colocated. Fix when this favored nodes feature is actually used
-    // someday.
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
-        metaTable.put(puts);
-      }
-    }
-    LOG.info("Added " + puts.size() + " regions in META");
-  }
-
-  /**
-   * Generates and returns a Put containing the region info for the catalog table and the servers
-   * @return Put object
-   */
-  private static Put makePutFromRegionInfo(RegionInfo regionInfo, List<ServerName> favoredNodeList)
-      throws IOException {
-    Put put = null;
-    if (favoredNodeList != null) {
-      long time = EnvironmentEdgeManager.currentTime();
-      put = MetaTableAccessor.makePutFromRegionInfo(regionInfo, time);
-      byte[] favoredNodes = getFavoredNodes(favoredNodeList);
-      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-          .setRow(put.getRow())
-          .setFamily(HConstants.CATALOG_FAMILY)
-          .setQualifier(FAVOREDNODES_QUALIFIER)
-          .setTimestamp(time)
-          .setType(Type.Put)
-          .setValue(favoredNodes)
-          .build());
-      LOG.debug("Create the region {} with favored nodes {}", regionInfo.getRegionNameAsString(),
-        favoredNodeList);
-    }
-    return put;
   }
 
   /**

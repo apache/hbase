@@ -68,6 +68,7 @@
     <module>hbase-resource-bundle</module>
     <module>hbase-http</module>
     <module>hbase-server</module>
+    <module>hbase-tool</module>
     <module>hbase-thrift</module>
     <module>hbase-shell</module>
     <module>hbase-protocol-shaded</module>

@@ -49,11 +49,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * For Favored Nodes calculations.
  * Used internally for reading meta and constructing datastructures that are
  * then queried, for things like regions to regionservers, table to regions, etc.
  * It also records the favored nodes mapping for regions.
- *
  */
+// TODO: Needs rewrite. It calculates info available in the Master that is sitting beside it.
 @InterfaceAudience.Private
 public class SnapshotOfRegionAssignmentFromMeta {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotOfRegionAssignmentFromMeta.class

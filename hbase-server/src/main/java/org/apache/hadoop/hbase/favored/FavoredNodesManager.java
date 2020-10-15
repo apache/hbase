@@ -31,11 +31,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.net.NetUtils;
@@ -186,8 +194,7 @@ public class FavoredNodesManager {
     }
 
     // Lets do a bulk update to meta since that reduces the RPC's
-    FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(regionToFavoredNodes,
-        masterServices.getConnection());
+    updateMetaWithFavoredNodesInfo(regionToFavoredNodes, masterServices.getConnection());
     deleteFavoredNodesForRegions(regionToFavoredNodes.keySet());
 
     for (Map.Entry<RegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
@@ -301,5 +308,49 @@ public class FavoredNodesManager {
 
   public RackManager getRackManager() {
     return rackManager;
+  }
+
+  /**
+   * Update meta table with favored nodes info
+   * @param regionToFavoredNodes map of RegionInfo's to their favored nodes
+   * @param connection connection to be used
+   */
+  private static void updateMetaWithFavoredNodesInfo(
+    Map<RegionInfo, List<ServerName>> regionToFavoredNodes,
+    Connection connection) throws IOException {
+    List<Put> puts = new ArrayList<>();
+    for (Map.Entry<RegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
+      Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
+      if (put != null) {
+        puts.add(put);
+      }
+    }
+    MetaTableAccessor.putsToMetaTable(connection, puts);
+    LOG.info("Added " + puts.size() + " regions in META");
+  }
+
+  /**
+   * Generates and returns a Put containing the region info for the catalog table and the servers
+   * @return Put object
+   */
+  private static Put makePutFromRegionInfo(RegionInfo regionInfo, List<ServerName> favoredNodeList)
+    throws IOException {
+    Put put = null;
+    if (favoredNodeList != null) {
+      long time = EnvironmentEdgeManager.currentTime();
+      put = MetaTableAccessor.makePutFromRegionInfo(regionInfo, time);
+      byte[] favoredNodes = FavoredNodeAssignmentHelper.getFavoredNodes(favoredNodeList);
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+        .setRow(put.getRow())
+        .setFamily(HConstants.CATALOG_FAMILY)
+        .setQualifier(FavoredNodeAssignmentHelper.FAVOREDNODES_QUALIFIER)
+        .setTimestamp(time)
+        .setType(Cell.Type.Put)
+        .setValue(favoredNodes)
+        .build());
+      LOG.debug("Create the region {} with favored nodes {}", regionInfo.getRegionNameAsString(),
+        favoredNodeList);
+    }
+    return put;
   }
 }

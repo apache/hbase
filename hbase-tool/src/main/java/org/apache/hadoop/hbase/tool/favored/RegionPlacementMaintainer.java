@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.tool.favored;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -29,6 +29,7 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,10 +40,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
+import org.apache.hadoop.hbase.master.RackManager;
+import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -64,11 +68,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 
 /**
- * A tool that is used for manipulating and viewing favored nodes information
- * for regions. Run with -h to get a list of the options
+ * A tool used for manipulating and viewing favored nodes information for regions.
+ * Run with -h to get a list of the options
  */
 @InterfaceAudience.Private
 // TODO: Remove? Unused. Partially implemented only.
+// Left in place for now in case the favored nodes addition to stochastic load balancer ever
+// gets revived. See HBASE-15531  and appeal in  HBASE-21014. Meantime the tool has been
+// emasculated on move here into hbase-tool module; its ability to write
+// hbase:meta needs to be added back. Look for the NotImplementedException instances in below.
 public class RegionPlacementMaintainer implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(RegionPlacementMaintainer.class
       .getName());
@@ -123,6 +131,19 @@ public class RegionPlacementMaintainer implements Closeable {
         ClusterConnectionFactory.createAsyncClusterConnection(this.conf, null, User.getCurrent());
     }
     return connection;
+  }
+
+
+  /**
+   * Update meta table with favored nodes info
+   */
+  private static void updateMetaWithFavoredNodesInfo(
+    Map<RegionInfo, List<ServerName>> regionToFavoredNodes,
+    Configuration conf) throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      throw new NotImplementedException("FIX! Needs something like " +
+        "FavoredNodesManager.updateMetaWithFavoredNodesInfo(regionToFavoredNodes, connection)");
+    }
   }
 
   public void setTargetTableName(String[] tableNames) {
@@ -630,8 +651,7 @@ public class RegionPlacementMaintainer implements Closeable {
    * @param plan the assignments plan to be updated into hbase:meta
    * @throws IOException if cannot update assignment plan in hbase:meta
    */
-  public void updateAssignmentPlanToMeta(FavoredNodesPlan plan)
-  throws IOException {
+  public void updateAssignmentPlanToMeta(FavoredNodesPlan plan) throws IOException {
     try {
       LOG.info("Start to update the hbase:meta with the new assignment plan");
       Map<String, List<ServerName>> assignmentMap = plan.getAssignmentMap();
@@ -641,8 +661,7 @@ public class RegionPlacementMaintainer implements Closeable {
       for (Map.Entry<String, List<ServerName>> entry : assignmentMap.entrySet()) {
         planToUpdate.put(regionToRegionInfoMap.get(entry.getKey()), entry.getValue());
       }
-
-      FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(planToUpdate, conf);
+      updateMetaWithFavoredNodesInfo(planToUpdate, conf);
       LOG.info("Updated the hbase:meta with the new assignment plan");
     } catch (Exception e) {
       LOG.error("Failed to update hbase:meta with the new assignment" +
