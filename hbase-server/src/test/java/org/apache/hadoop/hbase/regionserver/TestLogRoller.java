@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
@@ -38,6 +39,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -144,6 +146,31 @@ public class TestLogRoller {
       assertNotEquals(entry.getValue(), entry.getKey().getCurrentFileName());
       entry.getKey().close();
     }
+  }
+
+  @Test
+  public void testWalRollFinished() throws Exception {
+    long now = EnvironmentEdgeManager.currentTime();
+    FSHLog wal = new FSHLog(FS, ROOT_DIR, LOG_DIR, ARCHIVE_DIR, CONF, null,
+        true, WAL_PREFIX, getWALSuffix(0));
+    wal.init();
+    ROLLER.addWAL(wal);
+    LogRoller.RollController controller = ROLLER.getRollControllerForTest(wal);
+    assertTrue(controller.isRollFinished(now));
+    controller.requestRoll();
+    assertFalse(controller.isRollFinished(now));
+    Thread rollThread = new Thread(() -> {
+      try {
+        controller.rollWalForTest(now, 10000);
+      } catch (IOException ignored) {
+      }
+    });
+    rollThread.start();
+    Thread.sleep(1000);
+    assertFalse(controller.isRollFinished(now));
+    rollThread.interrupt();
+    rollThread.join();
+    assertTrue(controller.isRollFinished(now));
   }
 
   private static String getWALSuffix(int id) {

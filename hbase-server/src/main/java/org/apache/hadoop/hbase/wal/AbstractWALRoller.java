@@ -35,7 +35,9 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALClosedException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,7 +149,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
   @Override
   public void run() {
     while (running) {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       checkLowReplication(now);
       synchronized (this) {
         if (wals.values().stream().noneMatch(rc -> rc.needsRoll(now))) {
@@ -222,7 +224,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
    * @return true if all WAL roll finished
    */
   public boolean walRollFinished() {
-    return wals.values().stream().allMatch(rc -> rc.isRollFinished(System.currentTimeMillis()));
+    return wals.values().stream().allMatch(rc -> rc.isRollFinished(EnvironmentEdgeManager.currentTime()));
   }
 
   /**
@@ -240,20 +242,25 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     interrupt();
   }
 
+  @VisibleForTesting
+  public RollController getRollControllerForTest(WAL wal) {
+    return wals.get(wal);
+  }
+
   /**
    * Independently control the roll of each wal. When use multiwal,
    * can avoid all wal roll together. see HBASE-24665 for detail
    */
-  protected class RollController {
+  public class RollController {
     private final WAL wal;
     private final AtomicBoolean rollRequest;
-    private long lastRollTime;
-    private boolean isRolling;
+    private volatile long lastRollTime;
+    private volatile boolean isRolling;
 
     RollController(WAL wal) {
       this.wal = wal;
       this.rollRequest = new AtomicBoolean(false);
-      this.lastRollTime = System.currentTimeMillis();
+      this.lastRollTime = EnvironmentEdgeManager.currentTime();
       this.isRolling = false;
     }
 
@@ -267,6 +274,23 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
         this.lastRollTime = now;
         // reset the flag in front to avoid missing roll request before we return from rollWriter.
         this.rollRequest.set(false);
+        return wal.rollWriter(true);
+      } finally {
+        this.isRolling = false;
+      }
+    }
+
+    @VisibleForTesting
+    public Map<byte[], List<byte[]>> rollWalForTest(long now, long timeout) throws IOException {
+      this.isRolling = true;
+      try {
+        this.lastRollTime = now;
+        this.rollRequest.set(false);
+        // to test, extend the rolling time
+        try {
+          Thread.sleep(timeout);
+        } catch (InterruptedException ignored) {
+        }
         return wal.rollWriter(true);
       } finally {
         this.isRolling = false;
