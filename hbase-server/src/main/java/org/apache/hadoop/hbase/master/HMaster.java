@@ -1123,7 +1123,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     getChoreService().scheduleChore(clusterStatusChore);
     this.balancerChore = new BalancerChore(this);
     getChoreService().scheduleChore(balancerChore);
-    getChoreService().scheduleChore(regionNormalizerManager.getRegionNormalizerChore());
+    if (regionNormalizerManager != null) {
+      getChoreService().scheduleChore(regionNormalizerManager.getRegionNormalizerChore());
+    }
     this.catalogJanitorChore = new CatalogJanitor(this);
     getChoreService().scheduleChore(catalogJanitorChore);
     this.hbckChore = new HbckChore(this);
@@ -1638,7 +1640,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       choreService.cancelChore(this.mobFileCleanerChore);
       choreService.cancelChore(this.mobFileCompactionChore);
       choreService.cancelChore(this.balancerChore);
-      choreService.cancelChore(getRegionNormalizerManager().getRegionNormalizerChore());
+      if (regionNormalizerManager != null) {
+        choreService.cancelChore(regionNormalizerManager.getRegionNormalizerChore());
+      }
       choreService.cancelChore(this.clusterStatusChore);
       choreService.cancelChore(this.catalogJanitorChore);
       choreService.cancelChore(this.clusterStatusPublisherChore);
