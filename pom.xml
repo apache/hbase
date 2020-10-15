@@ -70,6 +70,7 @@
     <module>hbase-server</module>
     <module>hbase-thrift</module>
     <module>hbase-shell</module>
+    <module>hbase-tool</module>
     <module>hbase-protocol-shaded</module>
     <module>hbase-client</module>
     <module>hbase-hadoop-compat</module>
