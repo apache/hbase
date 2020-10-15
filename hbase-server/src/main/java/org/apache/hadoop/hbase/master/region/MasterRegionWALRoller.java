@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.AbstractWALRoller;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -68,8 +67,11 @@ public final class MasterRegionWALRoller extends AbstractWALRoller<Abortable> {
   }
 
   @Override
-  protected void afterRoll(WAL wal) {
+  protected void afterWALArchive(Path oldPath, Path newPath) {
     // move the archived WAL files to the global archive path
+    // here we do not use the newPath directly, so that even if we fail to move some of the
+    // newPaths, we are still safe because every time we will get all the files under the archive
+    // directory.
     try {
       MasterRegionUtils.moveFilesUnderDir(fs, walArchiveDir, globalWALArchiveDir,
         archivedWALSuffix);
