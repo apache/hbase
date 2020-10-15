@@ -26,7 +26,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.SizeCachedByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
+import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
 import org.apache.hadoop.hbase.io.encoding.AbstractDataBlockEncoder.AbstractEncodedSeeker;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -370,9 +372,12 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
         currentBuffer.asSubByteBuffer(startOffset, cellBufSize, tmpPair);
         ByteBuffer buf = tmpPair.getFirst();
         if (buf.isDirect()) {
-          ret =
-              tagsLength > 0 ? new ByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId)
-                  : new NoTagsByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId);
+          // TODO : getRow len here.
+          ret = tagsLength > 0
+              ? new SizeCachedByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId,
+                  keyLength)
+              : new SizeCachedNoTagsByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId,
+                  keyLength);
         } else {
           if (tagsLength > 0) {
             ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset()
