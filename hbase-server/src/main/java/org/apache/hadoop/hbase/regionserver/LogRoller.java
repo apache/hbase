@@ -67,6 +67,7 @@ public class LogRoller extends HasThread {
   // The interval to check low replication on hlog's pipeline
   private final long checkLowReplicationInterval;
 
+  @SuppressWarnings("unchecked")
   public void addWAL(final WAL wal) {
     if (null == wals.putIfAbsent(wal, new RollController(wal))) {
       wal.registerWALActionsListener(new WALActionsListener.Base() {
