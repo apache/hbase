@@ -3077,17 +3077,17 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (metricsRegionServer != null) {
       long after = EnvironmentEdgeManager.currentTime();
       metricsRegionServer.updateCheckAndMutate(
-        region == null ? null : region.getRegionInfo().getTable(), after - before);
+        region.getRegionInfo().getTable(), after - before);
 
       MutationType type = mutation.getMutateType();
       switch (type) {
         case PUT:
           metricsRegionServer.updateCheckAndPut(
-            region == null ? null : region.getRegionInfo().getTable(), after - before);
+            region.getRegionInfo().getTable(), after - before);
           break;
         case DELETE:
           metricsRegionServer.updateCheckAndDelete(
-            region == null ? null : region.getRegionInfo().getTable(), after - before);
+            region.getRegionInfo().getTable(), after - before);
           break;
         default:
           break;
