@@ -374,11 +374,12 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
         // TODO : reduce the varieties of KV here. Check if based on a boolean
         // we can handle the 'no tags' case.
         if (tagsLength > 0) {
+          // TODO : getRow len here.
           ret = new SizeCachedKeyValue(currentBuffer.array(),
-              currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId);
+              currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId, keyLength);
         } else {
           ret = new SizeCachedNoTagsKeyValue(currentBuffer.array(),
-              currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId);
+              currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId, keyLength);
         }
       } else {
         currentBuffer.asSubByteBuffer(startOffset, cellBufSize, tmpPair);
@@ -390,10 +391,10 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
         } else {
           if (tagsLength > 0) {
             ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset()
-                + tmpPair.getSecond(), cellBufSize, seqId);
+                + tmpPair.getSecond(), cellBufSize, seqId, keyLength);
           } else {
             ret = new SizeCachedNoTagsKeyValue(buf.array(), buf.arrayOffset()
-                + tmpPair.getSecond(), cellBufSize, seqId);
+                + tmpPair.getSecond(), cellBufSize, seqId, keyLength);
           }
         }
       }

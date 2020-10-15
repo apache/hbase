@@ -497,6 +497,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     protected AtomicInteger blockFetches = new AtomicInteger(0);
     protected final HFile.Reader reader;
     private int currTagsLen;
+    private int rowLen;
     // buffer backed keyonlyKV
     private ByteBufferKeyOnlyKeyValue bufBackedKeyOnlyKv = new ByteBufferKeyOnlyKeyValue();
     // A pair for reusing in blockSeek() so that we don't garbage lot of objects
@@ -627,6 +628,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       this.currKeyLen = (int)(ll >> Integer.SIZE);
       this.currValueLen = (int)(Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
       checkKeyValueLen();
+      this.rowLen = ((blockBuffer.getByteAfterPosition(Bytes.SIZEOF_LONG) & 0xff) << 8)
+          ^ (blockBuffer.getByteAfterPosition(Bytes.SIZEOF_LONG + 1) & 0xff);
       // Move position past the key and value lengths and then beyond the key and value
       int p = (Bytes.SIZEOF_LONG + currKeyLen + currValueLen);
       if (reader.getFileContext().isIncludesTags()) {
@@ -721,6 +724,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       int klen, vlen, tlen = 0;
       int lastKeyValueSize = -1;
       int offsetFromPos;
+      int rowLenPos;
       do {
         offsetFromPos = 0;
         // Better to ensure that we use the BB Utils here
@@ -735,6 +739,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               + " path=" + reader.getPath());
         }
         offsetFromPos += Bytes.SIZEOF_LONG;
+        rowLenPos = offsetFromPos;
         blockBuffer.asSubByteBuffer(blockBuffer.position() + offsetFromPos, klen, pair);
         bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), klen);
         int comp =
@@ -773,6 +778,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           currKeyLen = klen;
           currValueLen = vlen;
           currTagsLen = tlen;
+          rowLen = ((blockBuffer.getByteAfterPosition(rowLenPos) & 0xff) << 8)
+              ^ (blockBuffer.getByteAfterPosition(rowLenPos + 1) & 0xff);
           return 0; // indicate exact match
         } else if (comp < 0) {
           if (lastKeyValueSize > 0) {
@@ -978,10 +985,12 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         // we can handle the 'no tags' case.
         if (currTagsLen > 0) {
           ret = new SizeCachedKeyValue(blockBuffer.array(),
-              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId);
+              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId, currKeyLen,
+              rowLen);
         } else {
           ret = new SizeCachedNoTagsKeyValue(blockBuffer.array(),
-              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId);
+              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId, currKeyLen,
+              rowLen);
         }
       } else {
         ByteBuffer buf = blockBuffer.asSubByteBuffer(cellBufSize);
@@ -991,10 +1000,10 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         } else {
           if (currTagsLen > 0) {
             ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
-                cellBufSize, seqId);
+                cellBufSize, seqId, currKeyLen, rowLen);
           } else {
             ret = new SizeCachedNoTagsKeyValue(buf.array(), buf.arrayOffset() + buf.position(),
-                cellBufSize, seqId);
+                cellBufSize, seqId, currKeyLen, rowLen);
           }
         }
       }
