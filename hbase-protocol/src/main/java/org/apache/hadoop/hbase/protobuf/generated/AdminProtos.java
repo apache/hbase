@@ -23304,6 +23304,2999 @@ public final class AdminProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.UpdateConfigurationResponse)
   }
 
+  public interface SlowLogResponseRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // optional string region_name = 1;
+    /**
+     * <code>optional string region_name = 1;</code>
+     */
+    boolean hasRegionName();
+    /**
+     * <code>optional string region_name = 1;</code>
+     */
+    java.lang.String getRegionName();
+    /**
+     * <code>optional string region_name = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getRegionNameBytes();
+
+    // optional string table_name = 2;
+    /**
+     * <code>optional string table_name = 2;</code>
+     */
+    boolean hasTableName();
+    /**
+     * <code>optional string table_name = 2;</code>
+     */
+    java.lang.String getTableName();
+    /**
+     * <code>optional string table_name = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getTableNameBytes();
+
+    // optional string client_address = 3;
+    /**
+     * <code>optional string client_address = 3;</code>
+     */
+    boolean hasClientAddress();
+    /**
+     * <code>optional string client_address = 3;</code>
+     */
+    java.lang.String getClientAddress();
+    /**
+     * <code>optional string client_address = 3;</code>
+     */
+    com.google.protobuf.ByteString
+        getClientAddressBytes();
+
+    // optional string user_name = 4;
+    /**
+     * <code>optional string user_name = 4;</code>
+     */
+    boolean hasUserName();
+    /**
+     * <code>optional string user_name = 4;</code>
+     */
+    java.lang.String getUserName();
+    /**
+     * <code>optional string user_name = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getUserNameBytes();
+
+    // optional uint32 limit = 5 [default = 10];
+    /**
+     * <code>optional uint32 limit = 5 [default = 10];</code>
+     */
+    boolean hasLimit();
+    /**
+     * <code>optional uint32 limit = 5 [default = 10];</code>
+     */
+    int getLimit();
+
+    // optional .hbase.pb.SlowLogResponseRequest.FilterByOperator filter_by_operator = 6 [default = OR];
+    /**
+     * <code>optional .hbase.pb.SlowLogResponseRequest.FilterByOperator filter_by_operator = 6 [default = OR];</code>
+     */
+    boolean hasFilterByOperator();
+    /**
+     * <code>optional .hbase.pb.SlowLogResponseRequest.FilterByOperator filter_by_operator = 6 [default = OR];</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator getFilterByOperator();
+
+    // optional .hbase.pb.SlowLogResponseRequest.LogType log_type = 7;
+    /**
+     * <code>optional .hbase.pb.SlowLogResponseRequest.LogType log_type = 7;</code>
+     */
+    boolean hasLogType();
+    /**
+     * <code>optional .hbase.pb.SlowLogResponseRequest.LogType log_type = 7;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType getLogType();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.SlowLogResponseRequest}
+   *
+   * <pre>
+   **
+   * Slow/Large log (LogRequest) use-case specific RPC request. This request payload will be
+   * converted in bytes and sent to generic RPC API: GetLogEntries
+   * LogRequest message has two params:
+   * 1. log_class_name: SlowLogResponseRequest (for Slow/Large log use-case)
+   * 2. log_message: SlowLogResponseRequest converted in bytes (for Slow/Large log use-case)
+   * </pre>
+   */
+  public static final class SlowLogResponseRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements SlowLogResponseRequestOrBuilder {
+    // Use SlowLogResponseRequest.newBuilder() to construct.
+    private SlowLogResponseRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private SlowLogResponseRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final SlowLogResponseRequest defaultInstance;
+    public static SlowLogResponseRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public SlowLogResponseRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SlowLogResponseRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              regionName_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              tableName_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              clientAddress_ = input.readBytes();
+              break;
+            }
+            case 34: {
+              bitField0_ |= 0x00000008;
+              userName_ = input.readBytes();
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              limit_ = input.readUInt32();
+              break;
+            }
+            case 48: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator value = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(6, rawValue);
+              } else {
+                bitField0_ |= 0x00000020;
+                filterByOperator_ = value;
+              }
+              break;
+            }
+            case 56: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType value = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(7, rawValue);
+              } else {
+                bitField0_ |= 0x00000040;
+                logType_ = value;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_SlowLogResponseRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_SlowLogResponseRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.class, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<SlowLogResponseRequest> PARSER =
+        new com.google.protobuf.AbstractParser<SlowLogResponseRequest>() {
+      public SlowLogResponseRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SlowLogResponseRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SlowLogResponseRequest> getParserForType() {
+      return PARSER;
+    }
+
+    /**
+     * Protobuf enum {@code hbase.pb.SlowLogResponseRequest.FilterByOperator}
+     */
+    public enum FilterByOperator
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>AND = 0;</code>
+       */
+      AND(0, 0),
+      /**
+       * <code>OR = 1;</code>
+       */
+      OR(1, 1),
+      ;
+
+      /**
+       * <code>AND = 0;</code>
+       */
+      public static final int AND_VALUE = 0;
+      /**
+       * <code>OR = 1;</code>
+       */
+      public static final int OR_VALUE = 1;
+
+
+      public final int getNumber() { return value; }
+
+      public static FilterByOperator valueOf(int value) {
+        switch (value) {
+          case 0: return AND;
+          case 1: return OR;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<FilterByOperator>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<FilterByOperator>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<FilterByOperator>() {
+              public FilterByOperator findValueByNumber(int number) {
+                return FilterByOperator.valueOf(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final FilterByOperator[] VALUES = values();
+
+      public static FilterByOperator valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int index;
+      private final int value;
+
+      private FilterByOperator(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:hbase.pb.SlowLogResponseRequest.FilterByOperator)
+    }
+
+    /**
+     * Protobuf enum {@code hbase.pb.SlowLogResponseRequest.LogType}
+     */
+    public enum LogType
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>SLOW_LOG = 0;</code>
+       */
+      SLOW_LOG(0, 0),
+      /**
+       * <code>LARGE_LOG = 1;</code>
+       */
+      LARGE_LOG(1, 1),
+      ;
+
+      /**
+       * <code>SLOW_LOG = 0;</code>
+       */
+      public static final int SLOW_LOG_VALUE = 0;
+      /**
+       * <code>LARGE_LOG = 1;</code>
+       */
+      public static final int LARGE_LOG_VALUE = 1;
+
+
+      public final int getNumber() { return value; }
+
+      public static LogType valueOf(int value) {
+        switch (value) {
+          case 0: return SLOW_LOG;
+          case 1: return LARGE_LOG;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<LogType>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<LogType>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<LogType>() {
+              public LogType findValueByNumber(int number) {
+                return LogType.valueOf(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.getDescriptor().getEnumTypes().get(1);
+      }
+
+      private static final LogType[] VALUES = values();
+
+      public static LogType valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int index;
+      private final int value;
+
+      private LogType(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:hbase.pb.SlowLogResponseRequest.LogType)
+    }
+
+    private int bitField0_;
+    // optional string region_name = 1;
+    public static final int REGION_NAME_FIELD_NUMBER = 1;
+    private java.lang.Object regionName_;
+    /**
+     * <code>optional string region_name = 1;</code>
+     */
+    public boolean hasRegionName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional string region_name = 1;</code>
+     */
+    public java.lang.String getRegionName() {
+      java.lang.Object ref = regionName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          regionName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string region_name = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getRegionNameBytes() {
+      java.lang.Object ref = regionName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        regionName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional string table_name = 2;
+    public static final int TABLE_NAME_FIELD_NUMBER = 2;
+    private java.lang.Object tableName_;
+    /**
+     * <code>optional string table_name = 2;</code>
+     */
+    public boolean hasTableName() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional string table_name = 2;</code>
+     */
+    public java.lang.String getTableName() {
+      java.lang.Object ref = tableName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          tableName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string table_name = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getTableNameBytes() {
+      java.lang.Object ref = tableName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        tableName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional string client_address = 3;
+    public static final int CLIENT_ADDRESS_FIELD_NUMBER = 3;
+    private java.lang.Object clientAddress_;
+    /**
+     * <code>optional string client_address = 3;</code>
+     */
+    public boolean hasClientAddress() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional string client_address = 3;</code>
+     */
+    public java.lang.String getClientAddress() {
+      java.lang.Object ref = clientAddress_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          clientAddress_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string client_address = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getClientAddressBytes() {
+      java.lang.Object ref = clientAddress_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        clientAddress_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional string user_name = 4;
+    public static final int USER_NAME_FIELD_NUMBER = 4;
+    private java.lang.Object userName_;
+    /**
+     * <code>optional string user_name = 4;</code>
+     */
+    public boolean hasUserName() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional string user_name = 4;</code>
+     */
+    public java.lang.String getUserName() {
+      java.lang.Object ref = userName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          userName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string user_name = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getUserNameBytes() {
+      java.lang.Object ref = userName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        userName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional uint32 limit = 5 [default = 10];
+    public static final int LIMIT_FIELD_NUMBER = 5;
+    private int limit_;
+    /**
+     * <code>optional uint32 limit = 5 [default = 10];</code>
+     */
+    public boolean hasLimit() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional uint32 limit = 5 [default = 10];</code>
+     */
+    public int getLimit() {
+      return limit_;
+    }
+
+    // optional .hbase.pb.SlowLogResponseRequest.FilterByOperator filter_by_operator = 6 [default = OR];
+    public static final int FILTER_BY_OPERATOR_FIELD_NUMBER = 6;
+    private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator filterByOperator_;
+    /**
+     * <code>optional .hbase.pb.SlowLogResponseRequest.FilterByOperator filter_by_operator = 6 [default = OR];</code>
+     */
+    public boolean hasFilterByOperator() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>optional .hbase.pb.SlowLogResponseRequest.FilterByOperator filter_by_operator = 6 [default = OR];</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator getFilterByOperator() {
+      return filterByOperator_;
+    }
+
+    // optional .hbase.pb.SlowLogResponseRequest.LogType log_type = 7;
+    public static final int LOG_TYPE_FIELD_NUMBER = 7;
+    private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType logType_;
+    /**
+     * <code>optional .hbase.pb.SlowLogResponseRequest.LogType log_type = 7;</code>
+     */
+    public boolean hasLogType() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    /**
+     * <code>optional .hbase.pb.SlowLogResponseRequest.LogType log_type = 7;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType getLogType() {
+      return logType_;
+    }
+
+    private void initFields() {
+      regionName_ = "";
+      tableName_ = "";
+      clientAddress_ = "";
+      userName_ = "";
+      limit_ = 10;
+      filterByOperator_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator.OR;
+      logType_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType.SLOW_LOG;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getRegionNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getTableNameBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, getClientAddressBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBytes(4, getUserNameBytes());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeUInt32(5, limit_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeEnum(6, filterByOperator_.getNumber());
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeEnum(7, logType_.getNumber());
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getRegionNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getTableNameBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, getClientAddressBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, getUserNameBytes());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(5, limit_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(6, filterByOperator_.getNumber());
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(7, logType_.getNumber());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest other = (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest) obj;
+
+      boolean result = true;
+      result = result && (hasRegionName() == other.hasRegionName());
+      if (hasRegionName()) {
+        result = result && getRegionName()
+            .equals(other.getRegionName());
+      }
+      result = result && (hasTableName() == other.hasTableName());
+      if (hasTableName()) {
+        result = result && getTableName()
+            .equals(other.getTableName());
+      }
+      result = result && (hasClientAddress() == other.hasClientAddress());
+      if (hasClientAddress()) {
+        result = result && getClientAddress()
+            .equals(other.getClientAddress());
+      }
+      result = result && (hasUserName() == other.hasUserName());
+      if (hasUserName()) {
+        result = result && getUserName()
+            .equals(other.getUserName());
+      }
+      result = result && (hasLimit() == other.hasLimit());
+      if (hasLimit()) {
+        result = result && (getLimit()
+            == other.getLimit());
+      }
+      result = result && (hasFilterByOperator() == other.hasFilterByOperator());
+      if (hasFilterByOperator()) {
+        result = result &&
+            (getFilterByOperator() == other.getFilterByOperator());
+      }
+      result = result && (hasLogType() == other.hasLogType());
+      if (hasLogType()) {
+        result = result &&
+            (getLogType() == other.getLogType());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasRegionName()) {
+        hash = (37 * hash) + REGION_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getRegionName().hashCode();
+      }
+      if (hasTableName()) {
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getTableName().hashCode();
+      }
+      if (hasClientAddress()) {
+        hash = (37 * hash) + CLIENT_ADDRESS_FIELD_NUMBER;
+        hash = (53 * hash) + getClientAddress().hashCode();
+      }
+      if (hasUserName()) {
+        hash = (37 * hash) + USER_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getUserName().hashCode();
+      }
+      if (hasLimit()) {
+        hash = (37 * hash) + LIMIT_FIELD_NUMBER;
+        hash = (53 * hash) + getLimit();
+      }
+      if (hasFilterByOperator()) {
+        hash = (37 * hash) + FILTER_BY_OPERATOR_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getFilterByOperator());
+      }
+      if (hasLogType()) {
+        hash = (37 * hash) + LOG_TYPE_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getLogType());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.SlowLogResponseRequest}
+     *
+     * <pre>
+     **
+     * Slow/Large log (LogRequest) use-case specific RPC request. This request payload will be
+     * converted in bytes and sent to generic RPC API: GetLogEntries
+     * LogRequest message has two params:
+     * 1. log_class_name: SlowLogResponseRequest (for Slow/Large log use-case)
+     * 2. log_message: SlowLogResponseRequest converted in bytes (for Slow/Large log use-case)
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_SlowLogResponseRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_SlowLogResponseRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.class, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        regionName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        tableName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        clientAddress_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
+        userName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
+        limit_ = 10;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        filterByOperator_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator.OR;
+        bitField0_ = (bitField0_ & ~0x00000020);
+        logType_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType.SLOW_LOG;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_SlowLogResponseRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest result = new org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.regionName_ = regionName_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.tableName_ = tableName_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.clientAddress_ = clientAddress_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.userName_ = userName_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.limit_ = limit_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.filterByOperator_ = filterByOperator_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.logType_ = logType_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.getDefaultInstance()) return this;
+        if (other.hasRegionName()) {
+          bitField0_ |= 0x00000001;
+          regionName_ = other.regionName_;
+          onChanged();
+        }
+        if (other.hasTableName()) {
+          bitField0_ |= 0x00000002;
+          tableName_ = other.tableName_;
+          onChanged();
+        }
+        if (other.hasClientAddress()) {
+          bitField0_ |= 0x00000004;
+          clientAddress_ = other.clientAddress_;
+          onChanged();
+        }
+        if (other.hasUserName()) {
+          bitField0_ |= 0x00000008;
+          userName_ = other.userName_;
+          onChanged();
+        }
+        if (other.hasLimit()) {
+          setLimit(other.getLimit());
+        }
+        if (other.hasFilterByOperator()) {
+          setFilterByOperator(other.getFilterByOperator());
+        }
+        if (other.hasLogType()) {
+          setLogType(other.getLogType());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional string region_name = 1;
+      private java.lang.Object regionName_ = "";
+      /**
+       * <code>optional string region_name = 1;</code>
+       */
+      public boolean hasRegionName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional string region_name = 1;</code>
+       */
+      public java.lang.String getRegionName() {
+        java.lang.Object ref = regionName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          regionName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string region_name = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getRegionNameBytes() {
+        java.lang.Object ref = regionName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          regionName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string region_name = 1;</code>
+       */
+      public Builder setRegionName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        regionName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string region_name = 1;</code>
+       */
+      public Builder clearRegionName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        regionName_ = getDefaultInstance().getRegionName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string region_name = 1;</code>
+       */
+      public Builder setRegionNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        regionName_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional string table_name = 2;
+      private java.lang.Object tableName_ = "";
+      /**
+       * <code>optional string table_name = 2;</code>
+       */
+      public boolean hasTableName() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional string table_name = 2;</code>
+       */
+      public java.lang.String getTableName() {
+        java.lang.Object ref = tableName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          tableName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string table_name = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getTableNameBytes() {
+        java.lang.Object ref = tableName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          tableName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string table_name = 2;</code>
+       */
+      public Builder setTableName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        tableName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string table_name = 2;</code>
+       */
+      public Builder clearTableName() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        tableName_ = getDefaultInstance().getTableName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string table_name = 2;</code>
+       */
+      public Builder setTableNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        tableName_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional string client_address = 3;
+      private java.lang.Object clientAddress_ = "";
+      /**
+       * <code>optional string client_address = 3;</code>
+       */
+      public boolean hasClientAddress() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional string client_address = 3;</code>
+       */
+      public java.lang.String getClientAddress() {
+        java.lang.Object ref = clientAddress_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          clientAddress_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string client_address = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getClientAddressBytes() {
+        java.lang.Object ref = clientAddress_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          clientAddress_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string client_address = 3;</code>
+       */
+      public Builder setClientAddress(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        clientAddress_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string client_address = 3;</code>
+       */
+      public Builder clearClientAddress() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        clientAddress_ = getDefaultInstance().getClientAddress();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string client_address = 3;</code>
+       */
+      public Builder setClientAddressBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        clientAddress_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional string user_name = 4;
+      private java.lang.Object userName_ = "";
+      /**
+       * <code>optional string user_name = 4;</code>
+       */
+      public boolean hasUserName() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional string user_name = 4;</code>
+       */
+      public java.lang.String getUserName() {
+        java.lang.Object ref = userName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          userName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string user_name = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getUserNameBytes() {
+        java.lang.Object ref = userName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          userName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string user_name = 4;</code>
+       */
+      public Builder setUserName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        userName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string user_name = 4;</code>
+       */
+      public Builder clearUserName() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        userName_ = getDefaultInstance().getUserName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string user_name = 4;</code>
+       */
+      public Builder setUserNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        userName_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 limit = 5 [default = 10];
+      private int limit_ = 10;
+      /**
+       * <code>optional uint32 limit = 5 [default = 10];</code>
+       */
+      public boolean hasLimit() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional uint32 limit = 5 [default = 10];</code>
+       */
+      public int getLimit() {
+        return limit_;
+      }
+      /**
+       * <code>optional uint32 limit = 5 [default = 10];</code>
+       */
+      public Builder setLimit(int value) {
+        bitField0_ |= 0x00000010;
+        limit_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 limit = 5 [default = 10];</code>
+       */
+      public Builder clearLimit() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        limit_ = 10;
+        onChanged();
+        return this;
+      }
+
+      // optional .hbase.pb.SlowLogResponseRequest.FilterByOperator filter_by_operator = 6 [default = OR];
+      private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator filterByOperator_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator.OR;
+      /**
+       * <code>optional .hbase.pb.SlowLogResponseRequest.FilterByOperator filter_by_operator = 6 [default = OR];</code>
+       */
+      public boolean hasFilterByOperator() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <code>optional .hbase.pb.SlowLogResponseRequest.FilterByOperator filter_by_operator = 6 [default = OR];</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator getFilterByOperator() {
+        return filterByOperator_;
+      }
+      /**
+       * <code>optional .hbase.pb.SlowLogResponseRequest.FilterByOperator filter_by_operator = 6 [default = OR];</code>
+       */
+      public Builder setFilterByOperator(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000020;
+        filterByOperator_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SlowLogResponseRequest.FilterByOperator filter_by_operator = 6 [default = OR];</code>
+       */
+      public Builder clearFilterByOperator() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        filterByOperator_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.FilterByOperator.OR;
+        onChanged();
+        return this;
+      }
+
+      // optional .hbase.pb.SlowLogResponseRequest.LogType log_type = 7;
+      private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType logType_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType.SLOW_LOG;
+      /**
+       * <code>optional .hbase.pb.SlowLogResponseRequest.LogType log_type = 7;</code>
+       */
+      public boolean hasLogType() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional .hbase.pb.SlowLogResponseRequest.LogType log_type = 7;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType getLogType() {
+        return logType_;
+      }
+      /**
+       * <code>optional .hbase.pb.SlowLogResponseRequest.LogType log_type = 7;</code>
+       */
+      public Builder setLogType(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000040;
+        logType_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SlowLogResponseRequest.LogType log_type = 7;</code>
+       */
+      public Builder clearLogType() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        logType_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponseRequest.LogType.SLOW_LOG;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SlowLogResponseRequest)
+    }
+
+    static {
+      defaultInstance = new SlowLogResponseRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.SlowLogResponseRequest)
+  }
+
+  public interface SlowLogResponsesOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;
+    /**
+     * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload> 
+        getSlowLogPayloadsList();
+    /**
+     * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload getSlowLogPayloads(int index);
+    /**
+     * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+     */
+    int getSlowLogPayloadsCount();
+    /**
+     * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayloadOrBuilder> 
+        getSlowLogPayloadsOrBuilderList();
+    /**
+     * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayloadOrBuilder getSlowLogPayloadsOrBuilder(
+        int index);
+  }
+  /**
+   * Protobuf type {@code hbase.pb.SlowLogResponses}
+   *
+   * <pre>
+   **
+   * Slow/Large log (LogEntry) use-case specific RPC response. This response payload will be
+   * converted in bytes by servers and sent as response to generic RPC API: GetLogEntries
+   * LogEntry message has two params:
+   * 1. log_class_name: SlowLogResponses (for Slow/Large log use-case)
+   * 2. log_message: SlowLogResponses converted in bytes (for Slow/Large log use-case)
+   * </pre>
+   */
+  public static final class SlowLogResponses extends
+      com.google.protobuf.GeneratedMessage
+      implements SlowLogResponsesOrBuilder {
+    // Use SlowLogResponses.newBuilder() to construct.
+    private SlowLogResponses(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private SlowLogResponses(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final SlowLogResponses defaultInstance;
+    public static SlowLogResponses getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public SlowLogResponses getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SlowLogResponses(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                slowLogPayloads_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              slowLogPayloads_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          slowLogPayloads_ = java.util.Collections.unmodifiableList(slowLogPayloads_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_SlowLogResponses_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_SlowLogResponses_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.class, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<SlowLogResponses> PARSER =
+        new com.google.protobuf.AbstractParser<SlowLogResponses>() {
+      public SlowLogResponses parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SlowLogResponses(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SlowLogResponses> getParserForType() {
+      return PARSER;
+    }
+
+    // repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;
+    public static final int SLOW_LOG_PAYLOADS_FIELD_NUMBER = 1;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload> slowLogPayloads_;
+    /**
+     * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload> getSlowLogPayloadsList() {
+      return slowLogPayloads_;
+    }
+    /**
+     * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayloadOrBuilder> 
+        getSlowLogPayloadsOrBuilderList() {
+      return slowLogPayloads_;
+    }
+    /**
+     * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+     */
+    public int getSlowLogPayloadsCount() {
+      return slowLogPayloads_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload getSlowLogPayloads(int index) {
+      return slowLogPayloads_.get(index);
+    }
+    /**
+     * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayloadOrBuilder getSlowLogPayloadsOrBuilder(
+        int index) {
+      return slowLogPayloads_.get(index);
+    }
+
+    private void initFields() {
+      slowLogPayloads_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      for (int i = 0; i < getSlowLogPayloadsCount(); i++) {
+        if (!getSlowLogPayloads(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < slowLogPayloads_.size(); i++) {
+        output.writeMessage(1, slowLogPayloads_.get(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      for (int i = 0; i < slowLogPayloads_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, slowLogPayloads_.get(i));
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses other = (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses) obj;
+
+      boolean result = true;
+      result = result && getSlowLogPayloadsList()
+          .equals(other.getSlowLogPayloadsList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (getSlowLogPayloadsCount() > 0) {
+        hash = (37 * hash) + SLOW_LOG_PAYLOADS_FIELD_NUMBER;
+        hash = (53 * hash) + getSlowLogPayloadsList().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.SlowLogResponses}
+     *
+     * <pre>
+     **
+     * Slow/Large log (LogEntry) use-case specific RPC response. This response payload will be
+     * converted in bytes by servers and sent as response to generic RPC API: GetLogEntries
+     * LogEntry message has two params:
+     * 1. log_class_name: SlowLogResponses (for Slow/Large log use-case)
+     * 2. log_message: SlowLogResponses converted in bytes (for Slow/Large log use-case)
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponsesOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_SlowLogResponses_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_SlowLogResponses_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.class, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getSlowLogPayloadsFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        if (slowLogPayloadsBuilder_ == null) {
+          slowLogPayloads_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
+        } else {
+          slowLogPayloadsBuilder_.clear();
+        }
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_SlowLogResponses_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses build() {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses result = new org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses(this);
+        int from_bitField0_ = bitField0_;
+        if (slowLogPayloadsBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+            slowLogPayloads_ = java.util.Collections.unmodifiableList(slowLogPayloads_);
+            bitField0_ = (bitField0_ & ~0x00000001);
+          }
+          result.slowLogPayloads_ = slowLogPayloads_;
+        } else {
+          result.slowLogPayloads_ = slowLogPayloadsBuilder_.build();
+        }
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses.getDefaultInstance()) return this;
+        if (slowLogPayloadsBuilder_ == null) {
+          if (!other.slowLogPayloads_.isEmpty()) {
+            if (slowLogPayloads_.isEmpty()) {
+              slowLogPayloads_ = other.slowLogPayloads_;
+              bitField0_ = (bitField0_ & ~0x00000001);
+            } else {
+              ensureSlowLogPayloadsIsMutable();
+              slowLogPayloads_.addAll(other.slowLogPayloads_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.slowLogPayloads_.isEmpty()) {
+            if (slowLogPayloadsBuilder_.isEmpty()) {
+              slowLogPayloadsBuilder_.dispose();
+              slowLogPayloadsBuilder_ = null;
+              slowLogPayloads_ = other.slowLogPayloads_;
+              bitField0_ = (bitField0_ & ~0x00000001);
+              slowLogPayloadsBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getSlowLogPayloadsFieldBuilder() : null;
+            } else {
+              slowLogPayloadsBuilder_.addAllMessages(other.slowLogPayloads_);
+            }
+          }
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        for (int i = 0; i < getSlowLogPayloadsCount(); i++) {
+          if (!getSlowLogPayloads(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SlowLogResponses) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload> slowLogPayloads_ =
+        java.util.Collections.emptyList();
+      private void ensureSlowLogPayloadsIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          slowLogPayloads_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload>(slowLogPayloads_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload, org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.Builder, org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayloadOrBuilder> slowLogPayloadsBuilder_;
+
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload> getSlowLogPayloadsList() {
+        if (slowLogPayloadsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(slowLogPayloads_);
+        } else {
+          return slowLogPayloadsBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public int getSlowLogPayloadsCount() {
+        if (slowLogPayloadsBuilder_ == null) {
+          return slowLogPayloads_.size();
+        } else {
+          return slowLogPayloadsBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload getSlowLogPayloads(int index) {
+        if (slowLogPayloadsBuilder_ == null) {
+          return slowLogPayloads_.get(index);
+        } else {
+          return slowLogPayloadsBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public Builder setSlowLogPayloads(
+          int index, org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload value) {
+        if (slowLogPayloadsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureSlowLogPayloadsIsMutable();
+          slowLogPayloads_.set(index, value);
+          onChanged();
+        } else {
+          slowLogPayloadsBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public Builder setSlowLogPayloads(
+          int index, org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.Builder builderForValue) {
+        if (slowLogPayloadsBuilder_ == null) {
+          ensureSlowLogPayloadsIsMutable();
+          slowLogPayloads_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          slowLogPayloadsBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public Builder addSlowLogPayloads(org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload value) {
+        if (slowLogPayloadsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureSlowLogPayloadsIsMutable();
+          slowLogPayloads_.add(value);
+          onChanged();
+        } else {
+          slowLogPayloadsBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public Builder addSlowLogPayloads(
+          int index, org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload value) {
+        if (slowLogPayloadsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureSlowLogPayloadsIsMutable();
+          slowLogPayloads_.add(index, value);
+          onChanged();
+        } else {
+          slowLogPayloadsBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public Builder addSlowLogPayloads(
+          org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.Builder builderForValue) {
+        if (slowLogPayloadsBuilder_ == null) {
+          ensureSlowLogPayloadsIsMutable();
+          slowLogPayloads_.add(builderForValue.build());
+          onChanged();
+        } else {
+          slowLogPayloadsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public Builder addSlowLogPayloads(
+          int index, org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.Builder builderForValue) {
+        if (slowLogPayloadsBuilder_ == null) {
+          ensureSlowLogPayloadsIsMutable();
+          slowLogPayloads_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          slowLogPayloadsBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public Builder addAllSlowLogPayloads(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload> values) {
+        if (slowLogPayloadsBuilder_ == null) {
+          ensureSlowLogPayloadsIsMutable();
+          super.addAll(values, slowLogPayloads_);
+          onChanged();
+        } else {
+          slowLogPayloadsBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public Builder clearSlowLogPayloads() {
+        if (slowLogPayloadsBuilder_ == null) {
+          slowLogPayloads_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
+          onChanged();
+        } else {
+          slowLogPayloadsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public Builder removeSlowLogPayloads(int index) {
+        if (slowLogPayloadsBuilder_ == null) {
+          ensureSlowLogPayloadsIsMutable();
+          slowLogPayloads_.remove(index);
+          onChanged();
+        } else {
+          slowLogPayloadsBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.Builder getSlowLogPayloadsBuilder(
+          int index) {
+        return getSlowLogPayloadsFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayloadOrBuilder getSlowLogPayloadsOrBuilder(
+          int index) {
+        if (slowLogPayloadsBuilder_ == null) {
+          return slowLogPayloads_.get(index);  } else {
+          return slowLogPayloadsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayloadOrBuilder> 
+           getSlowLogPayloadsOrBuilderList() {
+        if (slowLogPayloadsBuilder_ != null) {
+          return slowLogPayloadsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(slowLogPayloads_);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.Builder addSlowLogPayloadsBuilder() {
+        return getSlowLogPayloadsFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.Builder addSlowLogPayloadsBuilder(
+          int index) {
+        return getSlowLogPayloadsFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.SlowLogPayload slow_log_payloads = 1;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.Builder> 
+           getSlowLogPayloadsBuilderList() {
+        return getSlowLogPayloadsFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload, org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.Builder, org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayloadOrBuilder> 
+          getSlowLogPayloadsFieldBuilder() {
+        if (slowLogPayloadsBuilder_ == null) {
+          slowLogPayloadsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload, org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayload.Builder, org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.SlowLogPayloadOrBuilder>(
+                  slowLogPayloads_,
+                  ((bitField0_ & 0x00000001) == 0x00000001),
+                  getParentForChildren(),
+                  isClean());
+          slowLogPayloads_ = null;
+        }
+        return slowLogPayloadsBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SlowLogResponses)
+    }
+
+    static {
+      defaultInstance = new SlowLogResponses(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.SlowLogResponses)
+  }
+
+  public interface ClearSlowLogResponseRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code hbase.pb.ClearSlowLogResponseRequest}
+   */
+  public static final class ClearSlowLogResponseRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements ClearSlowLogResponseRequestOrBuilder {
+    // Use ClearSlowLogResponseRequest.newBuilder() to construct.
+    private ClearSlowLogResponseRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ClearSlowLogResponseRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ClearSlowLogResponseRequest defaultInstance;
+    public static ClearSlowLogResponseRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ClearSlowLogResponseRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ClearSlowLogResponseRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_ClearSlowLogResponseRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_ClearSlowLogResponseRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest.class, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ClearSlowLogResponseRequest> PARSER =
+        new com.google.protobuf.AbstractParser<ClearSlowLogResponseRequest>() {
+      public ClearSlowLogResponseRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ClearSlowLogResponseRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ClearSlowLogResponseRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest other = (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest) obj;
+
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.ClearSlowLogResponseRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_ClearSlowLogResponseRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_ClearSlowLogResponseRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest.class, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_ClearSlowLogResponseRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest result = new org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest(this);
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ClearSlowLogResponseRequest)
+    }
+
+    static {
+      defaultInstance = new ClearSlowLogResponseRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.ClearSlowLogResponseRequest)
+  }
+
+  public interface ClearSlowLogResponsesOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required bool is_cleaned = 1;
+    /**
+     * <code>required bool is_cleaned = 1;</code>
+     */
+    boolean hasIsCleaned();
+    /**
+     * <code>required bool is_cleaned = 1;</code>
+     */
+    boolean getIsCleaned();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.ClearSlowLogResponses}
+   */
+  public static final class ClearSlowLogResponses extends
+      com.google.protobuf.GeneratedMessage
+      implements ClearSlowLogResponsesOrBuilder {
+    // Use ClearSlowLogResponses.newBuilder() to construct.
+    private ClearSlowLogResponses(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ClearSlowLogResponses(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ClearSlowLogResponses defaultInstance;
+    public static ClearSlowLogResponses getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ClearSlowLogResponses getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ClearSlowLogResponses(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              isCleaned_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_ClearSlowLogResponses_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_ClearSlowLogResponses_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.class, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ClearSlowLogResponses> PARSER =
+        new com.google.protobuf.AbstractParser<ClearSlowLogResponses>() {
+      public ClearSlowLogResponses parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ClearSlowLogResponses(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ClearSlowLogResponses> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required bool is_cleaned = 1;
+    public static final int IS_CLEANED_FIELD_NUMBER = 1;
+    private boolean isCleaned_;
+    /**
+     * <code>required bool is_cleaned = 1;</code>
+     */
+    public boolean hasIsCleaned() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required bool is_cleaned = 1;</code>
+     */
+    public boolean getIsCleaned() {
+      return isCleaned_;
+    }
+
+    private void initFields() {
+      isCleaned_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasIsCleaned()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(1, isCleaned_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, isCleaned_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses other = (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses) obj;
+
+      boolean result = true;
+      result = result && (hasIsCleaned() == other.hasIsCleaned());
+      if (hasIsCleaned()) {
+        result = result && (getIsCleaned()
+            == other.getIsCleaned());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasIsCleaned()) {
+        hash = (37 * hash) + IS_CLEANED_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getIsCleaned());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.ClearSlowLogResponses}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponsesOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_ClearSlowLogResponses_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_ClearSlowLogResponses_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.class, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        isCleaned_ = false;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_hbase_pb_ClearSlowLogResponses_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses build() {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses result = new org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.isCleaned_ = isCleaned_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance()) return this;
+        if (other.hasIsCleaned()) {
+          setIsCleaned(other.getIsCleaned());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasIsCleaned()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required bool is_cleaned = 1;
+      private boolean isCleaned_ ;
+      /**
+       * <code>required bool is_cleaned = 1;</code>
+       */
+      public boolean hasIsCleaned() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required bool is_cleaned = 1;</code>
+       */
+      public boolean getIsCleaned() {
+        return isCleaned_;
+      }
+      /**
+       * <code>required bool is_cleaned = 1;</code>
+       */
+      public Builder setIsCleaned(boolean value) {
+        bitField0_ |= 0x00000001;
+        isCleaned_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bool is_cleaned = 1;</code>
+       */
+      public Builder clearIsCleaned() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        isCleaned_ = false;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ClearSlowLogResponses)
+    }
+
+    static {
+      defaultInstance = new ClearSlowLogResponses(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.ClearSlowLogResponses)
+  }
+
   /**
    * Protobuf service {@code hbase.pb.AdminService}
    */
@@ -23456,6 +26449,22 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse> done);
 
+      /**
+       * <code>rpc ClearSlowLogsResponses(.hbase.pb.ClearSlowLogResponseRequest) returns (.hbase.pb.ClearSlowLogResponses);</code>
+       */
+      public abstract void clearSlowLogsResponses(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses> done);
+
+      /**
+       * <code>rpc GetLogEntries(.hbase.pb.LogRequest) returns (.hbase.pb.LogEntry);</code>
+       */
+      public abstract void getLogEntries(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry> done);
+
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -23605,6 +26614,22 @@ public final class AdminProtos {
           impl.updateConfiguration(controller, request, done);
         }
 
+        @java.lang.Override
+        public  void clearSlowLogsResponses(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses> done) {
+          impl.clearSlowLogsResponses(controller, request, done);
+        }
+
+        @java.lang.Override
+        public  void getLogEntries(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry> done) {
+          impl.getLogEntries(controller, request, done);
+        }
+
       };
     }
 
@@ -23663,6 +26688,10 @@ public final class AdminProtos {
               return impl.updateFavoredNodes(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest)request);
             case 17:
               return impl.updateConfiguration(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest)request);
+            case 18:
+              return impl.clearSlowLogsResponses(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest)request);
+            case 19:
+              return impl.getLogEntries(controller, (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -23713,6 +26742,10 @@ public final class AdminProtos {
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest.getDefaultInstance();
             case 17:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest.getDefaultInstance();
+            case 18:
+              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest.getDefaultInstance();
+            case 19:
+              return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -23763,6 +26796,10 @@ public final class AdminProtos {
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse.getDefaultInstance();
             case 17:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance();
+            case 18:
+              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance();
+            case 19:
+              return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -23915,6 +26952,22 @@ public final class AdminProtos {
         org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse> done);
 
+    /**
+     * <code>rpc ClearSlowLogsResponses(.hbase.pb.ClearSlowLogResponseRequest) returns (.hbase.pb.ClearSlowLogResponses);</code>
+     */
+    public abstract void clearSlowLogsResponses(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses> done);
+
+    /**
+     * <code>rpc GetLogEntries(.hbase.pb.LogRequest) returns (.hbase.pb.LogEntry);</code>
+     */
+    public abstract void getLogEntries(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry> done);
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -24027,6 +27080,16 @@ public final class AdminProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse>specializeCallback(
               done));
           return;
+        case 18:
+          this.clearSlowLogsResponses(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses>specializeCallback(
+              done));
+          return;
+        case 19:
+          this.getLogEntries(controller, (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -24077,6 +27140,10 @@ public final class AdminProtos {
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest.getDefaultInstance();
         case 17:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest.getDefaultInstance();
+        case 18:
+          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest.getDefaultInstance();
+        case 19:
+          return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -24127,6 +27194,10 @@ public final class AdminProtos {
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse.getDefaultInstance();
         case 17:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance();
+        case 18:
+          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance();
+        case 19:
+          return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -24417,6 +27488,36 @@ public final class AdminProtos {
             org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance()));
       }
+
+      public  void clearSlowLogsResponses(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(18),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.class,
+            org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance()));
+      }
+
+      public  void getLogEntries(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(19),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.class,
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -24513,6 +27614,16 @@ public final class AdminProtos {
       public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse updateConfiguration(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses clearSlowLogsResponses(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry getLogEntries(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -24738,6 +27849,30 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance());
       }
 
+
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses clearSlowLogsResponses(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(18),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ClearSlowLogResponses.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry getLogEntries(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(19),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LogEntry.getDefaultInstance());
+      }
+
     }
 
     // @@protoc_insertion_point(class_scope:hbase.pb.AdminService)
@@ -24933,6 +28068,26 @@ public final class AdminProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_UpdateConfigurationResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_SlowLogResponseRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_SlowLogResponseRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_SlowLogResponses_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_SlowLogResponses_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_ClearSlowLogResponseRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_ClearSlowLogResponseRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_ClearSlowLogResponses_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_ClearSlowLogResponses_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -24943,122 +28098,139 @@ public final class AdminProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\013Admin.proto\022\010hbase.pb\032\014Client.proto\032\013H" +
-      "Base.proto\032\tWAL.proto\"[\n\024GetRegionInfoRe" +
-      "quest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionS" +
-      "pecifier\022\030\n\020compaction_state\030\002 \001(\010\"\353\001\n\025G" +
-      "etRegionInfoResponse\022)\n\013region_info\030\001 \002(" +
-      "\0132\024.hbase.pb.RegionInfo\022I\n\020compaction_st" +
-      "ate\030\002 \001(\0162/.hbase.pb.GetRegionInfoRespon" +
-      "se.CompactionState\022\024\n\014isRecovering\030\003 \001(\010" +
-      "\"F\n\017CompactionState\022\010\n\004NONE\020\000\022\t\n\005MINOR\020\001" +
-      "\022\t\n\005MAJOR\020\002\022\023\n\017MAJOR_AND_MINOR\020\003\"P\n\023GetS",
-      "toreFileRequest\022)\n\006region\030\001 \002(\0132\031.hbase." +
-      "pb.RegionSpecifier\022\016\n\006family\030\002 \003(\014\"*\n\024Ge" +
-      "tStoreFileResponse\022\022\n\nstore_file\030\001 \003(\t\"\030" +
-      "\n\026GetOnlineRegionRequest\"D\n\027GetOnlineReg" +
-      "ionResponse\022)\n\013region_info\030\001 \003(\0132\024.hbase" +
-      ".pb.RegionInfo\"\263\002\n\021OpenRegionRequest\022=\n\t" +
-      "open_info\030\001 \003(\0132*.hbase.pb.OpenRegionReq" +
-      "uest.RegionOpenInfo\022\027\n\017serverStartCode\030\002" +
-      " \001(\004\022\032\n\022master_system_time\030\005 \001(\004\032\251\001\n\016Reg" +
-      "ionOpenInfo\022$\n\006region\030\001 \002(\0132\024.hbase.pb.R",
-      "egionInfo\022\037\n\027version_of_offline_node\030\002 \001" +
-      "(\r\022+\n\rfavored_nodes\030\003 \003(\0132\024.hbase.pb.Ser" +
-      "verName\022#\n\033openForDistributedLogReplay\030\004" +
-      " \001(\010\"\246\001\n\022OpenRegionResponse\022F\n\ropening_s" +
-      "tate\030\001 \003(\0162/.hbase.pb.OpenRegionResponse" +
-      ".RegionOpeningState\"H\n\022RegionOpeningStat" +
-      "e\022\n\n\006OPENED\020\000\022\022\n\016ALREADY_OPENED\020\001\022\022\n\016FAI" +
-      "LED_OPENING\020\002\"?\n\023WarmupRegionRequest\022(\n\n" +
-      "regionInfo\030\001 \002(\0132\024.hbase.pb.RegionInfo\"\026" +
-      "\n\024WarmupRegionResponse\"\313\001\n\022CloseRegionRe",
-      "quest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionS" +
-      "pecifier\022\037\n\027version_of_closing_node\030\002 \001(" +
-      "\r\022\036\n\020transition_in_ZK\030\003 \001(\010:\004true\0220\n\022des" +
-      "tination_server\030\004 \001(\0132\024.hbase.pb.ServerN" +
-      "ame\022\027\n\017serverStartCode\030\005 \001(\004\"%\n\023CloseReg" +
-      "ionResponse\022\016\n\006closed\030\001 \002(\010\"y\n\022FlushRegi" +
-      "onRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Reg" +
-      "ionSpecifier\022\030\n\020if_older_than_ts\030\002 \001(\004\022\036" +
-      "\n\026write_flush_wal_marker\030\003 \001(\010\"_\n\023FlushR" +
-      "egionResponse\022\027\n\017last_flush_time\030\001 \002(\004\022\017",
-      "\n\007flushed\030\002 \001(\010\022\036\n\026wrote_flush_wal_marke" +
-      "r\030\003 \001(\010\"T\n\022SplitRegionRequest\022)\n\006region\030" +
-      "\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\023\n\013spli" +
-      "t_point\030\002 \001(\014\"\025\n\023SplitRegionResponse\"`\n\024" +
-      "CompactRegionRequest\022)\n\006region\030\001 \002(\0132\031.h" +
-      "base.pb.RegionSpecifier\022\r\n\005major\030\002 \001(\010\022\016" +
-      "\n\006family\030\003 \001(\014\"\027\n\025CompactRegionResponse\"" +
-      "*\n\027CompactionSwitchRequest\022\017\n\007enabled\030\001 " +
-      "\002(\010\".\n\030CompactionSwitchResponse\022\022\n\nprev_" +
-      "state\030\001 \002(\010\"\315\001\n\031UpdateFavoredNodesReques",
-      "t\022I\n\013update_info\030\001 \003(\01324.hbase.pb.Update" +
-      "FavoredNodesRequest.RegionUpdateInfo\032e\n\020" +
-      "RegionUpdateInfo\022$\n\006region\030\001 \002(\0132\024.hbase" +
-      ".pb.RegionInfo\022+\n\rfavored_nodes\030\002 \003(\0132\024." +
-      "hbase.pb.ServerName\".\n\032UpdateFavoredNode" +
-      "sResponse\022\020\n\010response\030\001 \001(\r\"\244\001\n\023MergeReg" +
-      "ionsRequest\022+\n\010region_a\030\001 \002(\0132\031.hbase.pb" +
-      ".RegionSpecifier\022+\n\010region_b\030\002 \002(\0132\031.hba" +
-      "se.pb.RegionSpecifier\022\027\n\010forcible\030\003 \001(\010:" +
-      "\005false\022\032\n\022master_system_time\030\004 \001(\004\"\026\n\024Me",
-      "rgeRegionsResponse\"a\n\010WALEntry\022\035\n\003key\030\001 " +
-      "\002(\0132\020.hbase.pb.WALKey\022\027\n\017key_value_bytes" +
-      "\030\002 \003(\014\022\035\n\025associated_cell_count\030\003 \001(\005\"\242\001" +
-      "\n\030ReplicateWALEntryRequest\022!\n\005entry\030\001 \003(" +
-      "\0132\022.hbase.pb.WALEntry\022\034\n\024replicationClus" +
-      "terId\030\002 \001(\t\022\"\n\032sourceBaseNamespaceDirPat" +
-      "h\030\003 \001(\t\022!\n\031sourceHFileArchiveDirPath\030\004 \001" +
-      "(\t\"\033\n\031ReplicateWALEntryResponse\"\026\n\024RollW" +
-      "ALWriterRequest\"0\n\025RollWALWriterResponse" +
-      "\022\027\n\017region_to_flush\030\001 \003(\014\"#\n\021StopServerR",
-      "equest\022\016\n\006reason\030\001 \002(\t\"\024\n\022StopServerResp" +
-      "onse\"\026\n\024GetServerInfoRequest\"K\n\nServerIn" +
-      "fo\022)\n\013server_name\030\001 \002(\0132\024.hbase.pb.Serve" +
-      "rName\022\022\n\nwebui_port\030\002 \001(\r\"B\n\025GetServerIn" +
-      "foResponse\022)\n\013server_info\030\001 \002(\0132\024.hbase." +
-      "pb.ServerInfo\"\034\n\032UpdateConfigurationRequ" +
-      "est\"\035\n\033UpdateConfigurationResponse2\342\013\n\014A" +
-      "dminService\022P\n\rGetRegionInfo\022\036.hbase.pb." +
-      "GetRegionInfoRequest\032\037.hbase.pb.GetRegio" +
-      "nInfoResponse\022M\n\014GetStoreFile\022\035.hbase.pb",
-      ".GetStoreFileRequest\032\036.hbase.pb.GetStore" +
-      "FileResponse\022V\n\017GetOnlineRegion\022 .hbase." +
-      "pb.GetOnlineRegionRequest\032!.hbase.pb.Get" +
-      "OnlineRegionResponse\022G\n\nOpenRegion\022\033.hba" +
-      "se.pb.OpenRegionRequest\032\034.hbase.pb.OpenR" +
-      "egionResponse\022M\n\014WarmupRegion\022\035.hbase.pb" +
-      ".WarmupRegionRequest\032\036.hbase.pb.WarmupRe" +
-      "gionResponse\022J\n\013CloseRegion\022\034.hbase.pb.C" +
-      "loseRegionRequest\032\035.hbase.pb.CloseRegion" +
-      "Response\022J\n\013FlushRegion\022\034.hbase.pb.Flush",
-      "RegionRequest\032\035.hbase.pb.FlushRegionResp" +
-      "onse\022J\n\013SplitRegion\022\034.hbase.pb.SplitRegi" +
-      "onRequest\032\035.hbase.pb.SplitRegionResponse" +
-      "\022Y\n\020CompactionSwitch\022!.hbase.pb.Compacti" +
-      "onSwitchRequest\032\".hbase.pb.CompactionSwi" +
-      "tchResponse\022P\n\rCompactRegion\022\036.hbase.pb." +
-      "CompactRegionRequest\032\037.hbase.pb.CompactR" +
-      "egionResponse\022M\n\014MergeRegions\022\035.hbase.pb" +
-      ".MergeRegionsRequest\032\036.hbase.pb.MergeReg" +
-      "ionsResponse\022\\\n\021ReplicateWALEntry\022\".hbas",
+      "Base.proto\032\tWAL.proto\032\020TooSlowLog.proto\"" +
+      "[\n\024GetRegionInfoRequest\022)\n\006region\030\001 \002(\0132" +
+      "\031.hbase.pb.RegionSpecifier\022\030\n\020compaction" +
+      "_state\030\002 \001(\010\"\353\001\n\025GetRegionInfoResponse\022)" +
+      "\n\013region_info\030\001 \002(\0132\024.hbase.pb.RegionInf" +
+      "o\022I\n\020compaction_state\030\002 \001(\0162/.hbase.pb.G" +
+      "etRegionInfoResponse.CompactionState\022\024\n\014" +
+      "isRecovering\030\003 \001(\010\"F\n\017CompactionState\022\010\n" +
+      "\004NONE\020\000\022\t\n\005MINOR\020\001\022\t\n\005MAJOR\020\002\022\023\n\017MAJOR_A",
+      "ND_MINOR\020\003\"P\n\023GetStoreFileRequest\022)\n\006reg" +
+      "ion\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\016\n\006" +
+      "family\030\002 \003(\014\"*\n\024GetStoreFileResponse\022\022\n\n" +
+      "store_file\030\001 \003(\t\"\030\n\026GetOnlineRegionReque" +
+      "st\"D\n\027GetOnlineRegionResponse\022)\n\013region_" +
+      "info\030\001 \003(\0132\024.hbase.pb.RegionInfo\"\263\002\n\021Ope" +
+      "nRegionRequest\022=\n\topen_info\030\001 \003(\0132*.hbas" +
+      "e.pb.OpenRegionRequest.RegionOpenInfo\022\027\n" +
+      "\017serverStartCode\030\002 \001(\004\022\032\n\022master_system_" +
+      "time\030\005 \001(\004\032\251\001\n\016RegionOpenInfo\022$\n\006region\030",
+      "\001 \002(\0132\024.hbase.pb.RegionInfo\022\037\n\027version_o" +
+      "f_offline_node\030\002 \001(\r\022+\n\rfavored_nodes\030\003 " +
+      "\003(\0132\024.hbase.pb.ServerName\022#\n\033openForDist" +
+      "ributedLogReplay\030\004 \001(\010\"\246\001\n\022OpenRegionRes" +
+      "ponse\022F\n\ropening_state\030\001 \003(\0162/.hbase.pb." +
+      "OpenRegionResponse.RegionOpeningState\"H\n" +
+      "\022RegionOpeningState\022\n\n\006OPENED\020\000\022\022\n\016ALREA" +
+      "DY_OPENED\020\001\022\022\n\016FAILED_OPENING\020\002\"?\n\023Warmu" +
+      "pRegionRequest\022(\n\nregionInfo\030\001 \002(\0132\024.hba" +
+      "se.pb.RegionInfo\"\026\n\024WarmupRegionResponse",
+      "\"\313\001\n\022CloseRegionRequest\022)\n\006region\030\001 \002(\0132" +
+      "\031.hbase.pb.RegionSpecifier\022\037\n\027version_of" +
+      "_closing_node\030\002 \001(\r\022\036\n\020transition_in_ZK\030" +
+      "\003 \001(\010:\004true\0220\n\022destination_server\030\004 \001(\0132" +
+      "\024.hbase.pb.ServerName\022\027\n\017serverStartCode" +
+      "\030\005 \001(\004\"%\n\023CloseRegionResponse\022\016\n\006closed\030" +
+      "\001 \002(\010\"y\n\022FlushRegionRequest\022)\n\006region\030\001 " +
+      "\002(\0132\031.hbase.pb.RegionSpecifier\022\030\n\020if_old" +
+      "er_than_ts\030\002 \001(\004\022\036\n\026write_flush_wal_mark" +
+      "er\030\003 \001(\010\"_\n\023FlushRegionResponse\022\027\n\017last_",
+      "flush_time\030\001 \002(\004\022\017\n\007flushed\030\002 \001(\010\022\036\n\026wro" +
+      "te_flush_wal_marker\030\003 \001(\010\"T\n\022SplitRegion" +
+      "Request\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Regio" +
+      "nSpecifier\022\023\n\013split_point\030\002 \001(\014\"\025\n\023Split" +
+      "RegionResponse\"`\n\024CompactRegionRequest\022)" +
+      "\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpecifie" +
+      "r\022\r\n\005major\030\002 \001(\010\022\016\n\006family\030\003 \001(\014\"\027\n\025Comp" +
+      "actRegionResponse\"*\n\027CompactionSwitchReq" +
+      "uest\022\017\n\007enabled\030\001 \002(\010\".\n\030CompactionSwitc" +
+      "hResponse\022\022\n\nprev_state\030\001 \002(\010\"\315\001\n\031Update",
+      "FavoredNodesRequest\022I\n\013update_info\030\001 \003(\013" +
+      "24.hbase.pb.UpdateFavoredNodesRequest.Re" +
+      "gionUpdateInfo\032e\n\020RegionUpdateInfo\022$\n\006re" +
+      "gion\030\001 \002(\0132\024.hbase.pb.RegionInfo\022+\n\rfavo" +
+      "red_nodes\030\002 \003(\0132\024.hbase.pb.ServerName\".\n" +
+      "\032UpdateFavoredNodesResponse\022\020\n\010response\030" +
+      "\001 \001(\r\"\244\001\n\023MergeRegionsRequest\022+\n\010region_" +
+      "a\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022+\n\010re" +
+      "gion_b\030\002 \002(\0132\031.hbase.pb.RegionSpecifier\022" +
+      "\027\n\010forcible\030\003 \001(\010:\005false\022\032\n\022master_syste",
+      "m_time\030\004 \001(\004\"\026\n\024MergeRegionsResponse\"a\n\010" +
+      "WALEntry\022\035\n\003key\030\001 \002(\0132\020.hbase.pb.WALKey\022" +
+      "\027\n\017key_value_bytes\030\002 \003(\014\022\035\n\025associated_c" +
+      "ell_count\030\003 \001(\005\"\242\001\n\030ReplicateWALEntryReq" +
+      "uest\022!\n\005entry\030\001 \003(\0132\022.hbase.pb.WALEntry\022" +
+      "\034\n\024replicationClusterId\030\002 \001(\t\022\"\n\032sourceB" +
+      "aseNamespaceDirPath\030\003 \001(\t\022!\n\031sourceHFile" +
+      "ArchiveDirPath\030\004 \001(\t\"\033\n\031ReplicateWALEntr" +
+      "yResponse\"\026\n\024RollWALWriterRequest\"0\n\025Rol" +
+      "lWALWriterResponse\022\027\n\017region_to_flush\030\001 ",
+      "\003(\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001 \002(\t" +
+      "\"\024\n\022StopServerResponse\"\026\n\024GetServerInfoR" +
+      "equest\"K\n\nServerInfo\022)\n\013server_name\030\001 \002(" +
+      "\0132\024.hbase.pb.ServerName\022\022\n\nwebui_port\030\002 " +
+      "\001(\r\"B\n\025GetServerInfoResponse\022)\n\013server_i" +
+      "nfo\030\001 \002(\0132\024.hbase.pb.ServerInfo\"\034\n\032Updat" +
+      "eConfigurationRequest\"\035\n\033UpdateConfigura" +
+      "tionResponse\"\333\002\n\026SlowLogResponseRequest\022" +
+      "\023\n\013region_name\030\001 \001(\t\022\022\n\ntable_name\030\002 \001(\t" +
+      "\022\026\n\016client_address\030\003 \001(\t\022\021\n\tuser_name\030\004 ",
+      "\001(\t\022\021\n\005limit\030\005 \001(\r:\00210\022Q\n\022filter_by_oper" +
+      "ator\030\006 \001(\01621.hbase.pb.SlowLogResponseReq" +
+      "uest.FilterByOperator:\002OR\022:\n\010log_type\030\007 " +
+      "\001(\0162(.hbase.pb.SlowLogResponseRequest.Lo" +
+      "gType\"#\n\020FilterByOperator\022\007\n\003AND\020\000\022\006\n\002OR" +
+      "\020\001\"&\n\007LogType\022\014\n\010SLOW_LOG\020\000\022\r\n\tLARGE_LOG" +
+      "\020\001\"G\n\020SlowLogResponses\0223\n\021slow_log_paylo" +
+      "ads\030\001 \003(\0132\030.hbase.pb.SlowLogPayload\"\035\n\033C" +
+      "learSlowLogResponseRequest\"+\n\025ClearSlowL" +
+      "ogResponses\022\022\n\nis_cleaned\030\001 \002(\0102\377\014\n\014Admi",
+      "nService\022P\n\rGetRegionInfo\022\036.hbase.pb.Get" +
+      "RegionInfoRequest\032\037.hbase.pb.GetRegionIn" +
+      "foResponse\022M\n\014GetStoreFile\022\035.hbase.pb.Ge" +
+      "tStoreFileRequest\032\036.hbase.pb.GetStoreFil" +
+      "eResponse\022V\n\017GetOnlineRegion\022 .hbase.pb." +
+      "GetOnlineRegionRequest\032!.hbase.pb.GetOnl" +
+      "ineRegionResponse\022G\n\nOpenRegion\022\033.hbase." +
+      "pb.OpenRegionRequest\032\034.hbase.pb.OpenRegi" +
+      "onResponse\022M\n\014WarmupRegion\022\035.hbase.pb.Wa" +
+      "rmupRegionRequest\032\036.hbase.pb.WarmupRegio",
+      "nResponse\022J\n\013CloseRegion\022\034.hbase.pb.Clos" +
+      "eRegionRequest\032\035.hbase.pb.CloseRegionRes" +
+      "ponse\022J\n\013FlushRegion\022\034.hbase.pb.FlushReg" +
+      "ionRequest\032\035.hbase.pb.FlushRegionRespons" +
+      "e\022J\n\013SplitRegion\022\034.hbase.pb.SplitRegionR" +
+      "equest\032\035.hbase.pb.SplitRegionResponse\022Y\n" +
+      "\020CompactionSwitch\022!.hbase.pb.CompactionS" +
+      "witchRequest\032\".hbase.pb.CompactionSwitch" +
+      "Response\022P\n\rCompactRegion\022\036.hbase.pb.Com" +
+      "pactRegionRequest\032\037.hbase.pb.CompactRegi",
+      "onResponse\022M\n\014MergeRegions\022\035.hbase.pb.Me" +
+      "rgeRegionsRequest\032\036.hbase.pb.MergeRegion" +
+      "sResponse\022\\\n\021ReplicateWALEntry\022\".hbase.p" +
+      "b.ReplicateWALEntryRequest\032#.hbase.pb.Re" +
+      "plicateWALEntryResponse\022Q\n\006Replay\022\".hbas" +
       "e.pb.ReplicateWALEntryRequest\032#.hbase.pb" +
-      ".ReplicateWALEntryResponse\022Q\n\006Replay\022\".h" +
-      "base.pb.ReplicateWALEntryRequest\032#.hbase" +
-      ".pb.ReplicateWALEntryResponse\022P\n\rRollWAL" +
-      "Writer\022\036.hbase.pb.RollWALWriterRequest\032\037" +
-      ".hbase.pb.RollWALWriterResponse\022P\n\rGetSe" +
-      "rverInfo\022\036.hbase.pb.GetServerInfoRequest" +
-      "\032\037.hbase.pb.GetServerInfoResponse\022G\n\nSto" +
-      "pServer\022\033.hbase.pb.StopServerRequest\032\034.h" +
-      "base.pb.StopServerResponse\022_\n\022UpdateFavo",
-      "redNodes\022#.hbase.pb.UpdateFavoredNodesRe" +
-      "quest\032$.hbase.pb.UpdateFavoredNodesRespo" +
-      "nse\022b\n\023UpdateConfiguration\022$.hbase.pb.Up" +
-      "dateConfigurationRequest\032%.hbase.pb.Upda" +
-      "teConfigurationResponseBA\n*org.apache.ha" +
-      "doop.hbase.protobuf.generatedB\013AdminProt" +
-      "osH\001\210\001\001\240\001\001"
+      ".ReplicateWALEntryResponse\022P\n\rRollWALWri" +
+      "ter\022\036.hbase.pb.RollWALWriterRequest\032\037.hb" +
+      "ase.pb.RollWALWriterResponse\022P\n\rGetServe" +
+      "rInfo\022\036.hbase.pb.GetServerInfoRequest\032\037.",
+      "hbase.pb.GetServerInfoResponse\022G\n\nStopSe" +
+      "rver\022\033.hbase.pb.StopServerRequest\032\034.hbas" +
+      "e.pb.StopServerResponse\022_\n\022UpdateFavored" +
+      "Nodes\022#.hbase.pb.UpdateFavoredNodesReque" +
+      "st\032$.hbase.pb.UpdateFavoredNodesResponse" +
+      "\022b\n\023UpdateConfiguration\022$.hbase.pb.Updat" +
+      "eConfigurationRequest\032%.hbase.pb.UpdateC" +
+      "onfigurationResponse\022`\n\026ClearSlowLogsRes" +
+      "ponses\022%.hbase.pb.ClearSlowLogResponseRe" +
+      "quest\032\037.hbase.pb.ClearSlowLogResponses\0229",
+      "\n\rGetLogEntries\022\024.hbase.pb.LogRequest\032\022." +
+      "hbase.pb.LogEntryBA\n*org.apache.hadoop.h" +
+      "base.protobuf.generatedB\013AdminProtosH\001\210\001" +
+      "\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -25293,6 +28465,30 @@ public final class AdminProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_UpdateConfigurationResponse_descriptor,
               new java.lang.String[] { });
+          internal_static_hbase_pb_SlowLogResponseRequest_descriptor =
+            getDescriptor().getMessageTypes().get(36);
+          internal_static_hbase_pb_SlowLogResponseRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_SlowLogResponseRequest_descriptor,
+              new java.lang.String[] { "RegionName", "TableName", "ClientAddress", "UserName", "Limit", "FilterByOperator", "LogType", });
+          internal_static_hbase_pb_SlowLogResponses_descriptor =
+            getDescriptor().getMessageTypes().get(37);
+          internal_static_hbase_pb_SlowLogResponses_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_SlowLogResponses_descriptor,
+              new java.lang.String[] { "SlowLogPayloads", });
+          internal_static_hbase_pb_ClearSlowLogResponseRequest_descriptor =
+            getDescriptor().getMessageTypes().get(38);
+          internal_static_hbase_pb_ClearSlowLogResponseRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_ClearSlowLogResponseRequest_descriptor,
+              new java.lang.String[] { });
+          internal_static_hbase_pb_ClearSlowLogResponses_descriptor =
+            getDescriptor().getMessageTypes().get(39);
+          internal_static_hbase_pb_ClearSlowLogResponses_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_ClearSlowLogResponses_descriptor,
+              new java.lang.String[] { "IsCleaned", });
           return null;
         }
       };
@@ -25302,6 +28498,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.WALProtos.getDescriptor(),
+          org.apache.hadoop.hbase.protobuf.generated.TooSlowLog.getDescriptor(),
         }, assigner);
   }
 

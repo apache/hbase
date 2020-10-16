@@ -191,6 +191,7 @@
                           <include>Procedure.proto</include>
                           <include>Quota.proto</include>
                           <include>RPC.proto</include>
+                          <include>RecentLogs.proto</include>
                           <include>RegionNormalizer.proto</include>
                           <include>RegionServerStatus.proto</include>
                           <include>RowProcessor.proto</include>
@@ -201,6 +202,7 @@
                           <include>Snapshot.proto</include>
                           <include>SnapshotCleanup.proto</include>
                           <include>Table.proto</include>
+                          <include>TooSlowLog.proto</include>
                           <include>Tracing.proto</include>
                           <include>VisibilityLabels.proto</include>
                           <include>WAL.proto</include>

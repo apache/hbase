@@ -330,10 +330,14 @@ Shell.load_command_group(
     normalizer_switch
     normalizer_enabled
     is_in_maintenance_mode
+    clear_slowlog_responses
     close_region
     compact
     compaction_switch
     flush
+    get_balancer_decisions
+    get_slowlog_responses
+    get_largelog_responses
     major_compact
     move
     split

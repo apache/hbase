@@ -34,6 +34,7 @@ import "ErrorHandling.proto";
 import "Procedure.proto";
 import "Quota.proto";
 import "Snapshot.proto";
+import "RecentLogs.proto";
 
 /* Column-level protobufs */
 
@@ -595,6 +596,28 @@ message IsSnapshotCleanupEnabledResponse {
   required bool enabled = 1;
 }
 
+/**
+ * BalancerDecision (LogRequest) use-case specific RPC request. This request payload will be
+ * converted in bytes and sent to generic RPC API: GetLogEntries
+ * LogRequest message has two params:
+ * 1. log_class_name: BalancerDecisionsRequest (for BalancerDecision use-case)
+ * 2. log_message: BalancerDecisionsRequest converted in bytes (for BalancerDecision use-case)
+ */
+message BalancerDecisionsRequest {
+  optional uint32 limit = 1;
+}
+
+/**
+ * BalancerDecision (LogEntry) use-case specific RPC response. This response payload will be
+ * converted in bytes by servers and sent as response to generic RPC API: GetLogEntries
+ * LogEntry message has two params:
+ * 1. log_class_name: BalancerDecisionsResponse (for BalancerDecision use-case)
+ * 2. log_message: BalancerDecisionsResponse converted in bytes (for BalancerDecision use-case)
+ */
+message BalancerDecisionsResponse {
+  repeated BalancerDecision balancer_decision = 1;
+}
+
 
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
@@ -908,6 +931,9 @@ service MasterService {
    */
   rpc IsSnapshotCleanupEnabled (IsSnapshotCleanupEnabledRequest)
     returns (IsSnapshotCleanupEnabledResponse);
+
+  rpc GetLogEntries(LogRequest)
+    returns(LogEntry);
 
   /** returns table state */
   rpc GetTableState(GetTableStateRequest)

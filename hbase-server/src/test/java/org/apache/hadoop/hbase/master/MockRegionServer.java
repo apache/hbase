@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
@@ -651,6 +652,18 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public UpdateConfigurationResponse updateConfiguration(
       RpcController controller, UpdateConfigurationRequest request)
       throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public AdminProtos.ClearSlowLogResponses clearSlowLogsResponses(RpcController controller,
+    AdminProtos.ClearSlowLogResponseRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+      HBaseProtos.LogRequest request) throws ServiceException {
     return null;
   }
 

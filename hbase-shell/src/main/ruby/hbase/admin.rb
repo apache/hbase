@@ -1176,6 +1176,104 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Retrieve SlowLog Responses from RegionServers
+    def get_slowlog_responses(server_names, args, is_large_log = false)
+      unless server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of Array/String type")
+      end
+      if server_names == '*'
+        server_names = getServerNames([])
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list)
+      end
+      filter_params = get_filter_params(args)
+      (args.key? 'LIMIT') ? limit = args['LIMIT'] : limit = 10
+      is_large_log ? log_type = 'LARGE_LOG' : log_type = 'SLOW_LOG'
+      log_dest = org.apache.hadoop.hbase.client.ServerType::REGION_SERVER
+      server_names_set = java.util.HashSet.new(server_names)
+      slow_log_responses = @admin.getLogEntries(server_names_set, log_type, log_dest, limit,
+                                                filter_params)
+      slow_log_responses_arr = []
+      slow_log_responses.each do |slow_log_response|
+        slow_log_responses_arr << slow_log_response.toJsonPrettyPrint
+      end
+      slow_log_responses_arr
+    end
+
+    def get_filter_params(args)
+      filter_params = java.util.HashMap.new
+      if args.key? 'REGION_NAME'
+        region_name = args['REGION_NAME']
+        filter_params.put('regionName', region_name)
+      end
+      if args.key? 'TABLE_NAME'
+        table_name = args['TABLE_NAME']
+        filter_params.put('tableName', table_name)
+      end
+      if args.key? 'CLIENT_IP'
+        client_address = args['CLIENT_IP']
+        filter_params.put('clientAddress', client_address)
+      end
+      if args.key? 'USER'
+        user = args['USER']
+        filter_params.put('userName', user)
+      end
+      if args.key? 'FILTER_BY_OP'
+        filter_by_op = args['FILTER_BY_OP']
+        if filter_by_op != 'OR' && filter_by_op != 'AND'
+          raise(ArgumentError, 'FILTER_BY_OP should be either OR / AND')
+        end
+
+        filter_params.put('filterByOperator', 'AND') if filter_by_op == 'AND'
+      end
+      filter_params
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Clears SlowLog Responses from RegionServers
+    def clear_slowlog_responses(server_names)
+      unless server_names.nil? || server_names.is_a?(Array) || server_names.is_a?(String)
+        raise(ArgumentError,
+              "#{server_names.class} of #{server_names.inspect} is not of correct type")
+      end
+      if server_names.nil?
+        server_names = getServerNames([])
+      else
+        server_names_list = to_server_names(server_names)
+        server_names = getServerNames(server_names_list)
+      end
+      clear_log_responses = @admin.clearSlowLogResponses(java.util.HashSet.new(server_names))
+      clear_log_success_count = 0
+      clear_log_responses.each do |response|
+        if response
+          clear_log_success_count += 1
+        end
+      end
+      puts 'Cleared Slowlog responses from ' \
+           "#{clear_log_success_count}/#{clear_log_responses.size} RegionServers"
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Retrieve latest balancer decisions made by LoadBalancers
+    def get_balancer_decisions(args)
+      if args.key? 'LIMIT'
+        limit = args['LIMIT']
+      else
+        limit = 250
+      end
+      log_type = 'BALANCER_DECISION'
+      log_dest = org.apache.hadoop.hbase.client.ServerType::MASTER
+      balancer_decisions_responses = @admin.getLogEntries(nil, log_type, log_dest, limit, nil)
+      balancer_decisions_resp_arr = []
+      balancer_decisions_responses.each do |balancer_dec_resp|
+        balancer_decisions_resp_arr << balancer_dec_resp.toJsonPrettyPrint
+      end
+      balancer_decisions_resp_arr
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Get security capabilities
     def get_security_capabilities
       @admin.getSecurityCapabilities
@@ -1236,6 +1334,16 @@ module Hbase
     # clear dead region servers
     def list_deadservers
       @admin.listDeadServers.to_a
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Get list of server names
+    def to_server_names(server_names)
+      if server_names.is_a?(Array)
+        server_names
+      else
+        java.util.Arrays.asList(server_names)
+      end
     end
 
     #----------------------------------------------------------------------------------------------

@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -53,6 +55,10 @@ import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
+import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -286,6 +292,51 @@ public class MasterRpcServices extends RSRpcServices
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
+  }
+
+  @Override
+  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+      HBaseProtos.LogRequest request) throws ServiceException {
+    try {
+      final String logClassName = request.getLogClassName();
+      Class<?> logClass = Class.forName(logClassName)
+        .asSubclass(Message.class);
+      Method method = logClass.getMethod("parseFrom", ByteString.class);
+      if (logClassName.contains("BalancerDecisionsRequest")) {
+        MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest =
+          (MasterProtos.BalancerDecisionsRequest) method
+            .invoke(null, request.getLogMessage());
+        MasterProtos.BalancerDecisionsResponse balancerDecisionsResponse =
+          getBalancerDecisions(balancerDecisionsRequest);
+        return HBaseProtos.LogEntry.newBuilder()
+          .setLogClassName(balancerDecisionsResponse.getClass().getName())
+          .setLogMessage(balancerDecisionsResponse.toByteString())
+          .build();
+      }
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      LOG.error("Error while retrieving log entries.", e);
+      throw new ServiceException(e);
+    }
+    throw new ServiceException("Invalid request params");
+  }
+
+  private MasterProtos.BalancerDecisionsResponse getBalancerDecisions(
+      MasterProtos.BalancerDecisionsRequest request) {
+    final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
+    if (namedQueueRecorder == null) {
+      return MasterProtos.BalancerDecisionsResponse.newBuilder()
+        .addAllBalancerDecision(new ArrayList<RecentLogs.BalancerDecision>()).build();
+    }
+    final NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
+    namedQueueGetRequest.setNamedQueueEvent(BalancerDecisionDetails.BALANCER_DECISION_EVENT);
+    namedQueueGetRequest.setBalancerDecisionsRequest(request);
+    NamedQueueGetResponse namedQueueGetResponse =
+      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
+    List<RecentLogs.BalancerDecision> balancerDecisions =
+      namedQueueGetResponse.getBalancerDecisions();
+    return MasterProtos.BalancerDecisionsResponse.newBuilder()
+      .addAllBalancerDecision(balancerDecisions).build();
   }
 
   enum BalanceSwitchMode {

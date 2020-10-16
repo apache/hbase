@@ -1690,4 +1690,60 @@ possible configurations would overwhelm and obscure the important.
       too large batch request.
     </description>
   </property>
+  <property>
+    <name>hbase.regionserver.slowlog.ringbuffer.size</name>
+    <value>256</value>
+    <description>
+      Default size of ringbuffer to be maintained by each RegionServer in order
+      to store online slowlog responses. This is an in-memory ring buffer of
+      requests that were judged to be too slow in addition to the responseTooSlow
+      logging. The in-memory representation would be complete.
+      For more details, please look into Doc Section:
+      Get Slow Response Log from shell
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.slowlog.buffer.enabled</name>
+    <value>false</value>
+    <description>
+      Indicates whether RegionServers have ring buffer running for storing
+      Online Slow logs in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config: hbase.regionserver.slowlog.ringbuffer.size
+      The default value is false, turn this on and get latest slowlog
+      responses with complete data.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.slowlog.systable.enabled</name>
+    <value>false</value>
+    <description>
+      Should be enabled only if hbase.regionserver.slowlog.buffer.enabled is enabled. If enabled
+      (true), all slow/large RPC logs would be persisted to system table hbase:slowlog (in addition
+      to in-memory ring buffer at each RegionServer). The records are stored in increasing
+      order of time. Operators can scan the table with various combination of ColumnValueFilter.
+      More details are provided in the doc section:
+      "Get Slow/Large Response Logs from System table hbase:slowlog"
+    </description>
+  </property>
+  <property>
+    <name>hbase.namedqueue.provider.classes</name>
+    <value>org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerDecisionQueueService</value>
+    <description>
+      Default values for NamedQueueService implementors. This comma separated full class names
+      represent all implementors of NamedQueueService that we would like to be invoked by
+      LogEvent handler service. One example of NamedQueue service is SlowLogQueueService which
+      is used to store slow/large RPC logs in ringbuffer at each RegionServer.
+      All implementors of NamedQueueService should be found under package:
+      "org.apache.hadoop.hbase.namequeues.impl"
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.balancer.decision.buffer.enabled</name>
+    <value>false</value>
+    <description>
+      Indicates whether active HMaster has ring buffer running for storing
+      balancer decisions in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config: hbase.master.balancer.decision.queue.size
+    </description>
+  </property>
 </configuration>

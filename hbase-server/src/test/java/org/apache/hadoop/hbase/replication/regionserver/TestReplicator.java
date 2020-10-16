@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.*;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint;
@@ -396,6 +397,18 @@ public class TestReplicator extends TestReplicationBase {
       public UpdateConfigurationResponse updateConfiguration(RpcController controller,
           UpdateConfigurationRequest request) throws ServiceException {
         return delegate.updateConfiguration(controller, request);
+      }
+
+      @Override
+      public ClearSlowLogResponses clearSlowLogsResponses(RpcController controller,
+          ClearSlowLogResponseRequest request) throws ServiceException {
+        return delegate.clearSlowLogsResponses(controller, request);
+      }
+
+      @Override
+      public HBaseProtos.LogEntry getLogEntries(RpcController controller,
+          HBaseProtos.LogRequest request) throws ServiceException {
+        return delegate.getLogEntries(controller, request);
       }
     }
 

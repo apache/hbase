@@ -256,6 +256,16 @@ message SnapshotDescription {
   optional int64 ttl = 8 [default = 0];
 }
 
+message LogRequest {
+  required string log_class_name = 1;
+  required bytes log_message = 2;
+}
+
+message LogEntry {
+  required string log_class_name = 1;
+  required bytes log_message = 2;
+}
+
 message RegionLocation {
   required RegionInfo region_info = 1;
   optional ServerName server_name = 2;
