@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.replication.HReplicationServer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +73,33 @@ public class JVMClusterUtil {
   }
 
   /**
+   * Datastructure to hold ReplicationServer Thread and ReplicationServer instance
+   */
+  public static class ReplicationServerThread extends Thread {
+    private final HReplicationServer replicationServer;
+
+    public ReplicationServerThread(final HReplicationServer r, final int index) {
+      super(r, "ReplicationServer:" + index + ";" + r.getServerName().toShortString());
+      this.replicationServer = r;
+    }
+
+    /**
+     * @return the replication server
+     */
+    public HReplicationServer getReplicationServer() {
+      return this.replicationServer;
+    }
+
+    /**
+     * Block until the replication server has come online, indicating it is ready
+     * to be used.
+     */
+    public void waitForServerOnline() {
+      replicationServer.waitForServerOnline();
+    }
+  }
+
+  /**
    * Creates a {@link RegionServerThread}.
    * Call 'start' on the returned thread to make it run.
    * @param c Configuration to use.
@@ -98,6 +126,24 @@ public class JVMClusterUtil {
     return new JVMClusterUtil.RegionServerThread(server, index);
   }
 
+  /**
+   * Creates a {@link ReplicationServerThread}.
+   * Call 'start' on the returned thread to make it run.
+   * @param c Configuration to use.
+   * @param index Used distinguishing the object returned.
+   * @throws IOException
+   * @return Replication server added.
+   */
+  public static JVMClusterUtil.ReplicationServerThread createReplicationServerThread(
+      final Configuration c, final int index) throws IOException {
+    HReplicationServer server;
+    try {
+      server = new HReplicationServer(c);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+    return new JVMClusterUtil.ReplicationServerThread(server, index);
+  }
 
   /**
    * Datastructure to hold Master Thread and Master instance
@@ -122,7 +168,7 @@ public class JVMClusterUtil {
    * @param c Configuration to use.
    * @param hmc Class to create.
    * @param index Used distinguishing the object returned.
-   * @throws IOException
+   * @throws IOException exception
    * @return Master added.
    */
   public static JVMClusterUtil.MasterThread createMasterThread(final Configuration c,
@@ -165,7 +211,8 @@ public class JVMClusterUtil {
    * @return Address to use contacting primary master.
    */
   public static String startup(final List<JVMClusterUtil.MasterThread> masters,
-      final List<JVMClusterUtil.RegionServerThread> regionservers) throws IOException {
+      final List<JVMClusterUtil.RegionServerThread> regionservers,
+      final List<JVMClusterUtil.ReplicationServerThread> replicationServers) throws IOException {
     // Implementation note: This method relies on timed sleeps in a loop. It's not great, and
     // should probably be re-written to use actual synchronization objects, but it's ok for now
 
@@ -189,6 +236,12 @@ public class JVMClusterUtil {
 
     if (regionservers != null) {
       for (JVMClusterUtil.RegionServerThread t: regionservers) {
+        t.start();
+      }
+    }
+
+    if (replicationServers != null) {
+      for (JVMClusterUtil.ReplicationServerThread t: replicationServers) {
         t.start();
       }
     }

@@ -32,11 +32,13 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.replication.HReplicationServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.ReplicationServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -86,10 +88,10 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @param numRegionServers initial number of region servers to start.
    */
   public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers,
-         Class<? extends HMaster> masterClass,
-         Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
       throws IOException, InterruptedException {
-    this(conf, numMasters, 0, numRegionServers, null, masterClass, regionserverClass);
+    this(conf, numMasters, 0, numRegionServers, null, 0, masterClass, regionserverClass);
   }
 
   /**
@@ -97,20 +99,22 @@ public class MiniHBaseCluster extends HBaseCluster {
    *   restart where for sure the regionservers come up on same address+port (but
    *   just with different startcode); by default mini hbase clusters choose new
    *   arbitrary ports on each cluster start.
+   * @param numReplicationServers initial number of replication servers to start.
    * @throws IOException
    * @throws InterruptedException
    */
   public MiniHBaseCluster(Configuration conf, int numMasters, int numAlwaysStandByMasters,
-         int numRegionServers, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
-         Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      int numRegionServers, List<Integer> rsPorts, int numReplicationServers,
+      Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
       throws IOException, InterruptedException {
     super(conf);
 
     // Hadoop 2
     CompatibilityFactory.getInstance(MetricsAssertHelper.class).init();
 
-    init(numMasters, numAlwaysStandByMasters, numRegionServers, rsPorts, masterClass,
-        regionserverClass);
+    init(numMasters, numAlwaysStandByMasters, numRegionServers, rsPorts, numReplicationServers,
+        masterClass, regionserverClass);
     this.initialClusterStatus = getClusterMetrics();
   }
 
@@ -227,7 +231,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   private void init(final int nMasterNodes, final int numAlwaysStandByMasters,
-      final int nRegionNodes, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
+      final int nRegionNodes, List<Integer> rsPorts, int numReplicationServers,
+      Class<? extends HMaster> masterClass,
       Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
   throws IOException, InterruptedException {
     try {
@@ -248,9 +253,15 @@ public class MiniHBaseCluster extends HBaseCluster {
         if (rsPorts != null) {
           rsConf.setInt(HConstants.REGIONSERVER_PORT, rsPorts.get(i));
         }
-        User user = HBaseTestingUtility.getDifferentUser(rsConf,
-            ".hfs."+index++);
+        User user = HBaseTestingUtility.getDifferentUser(rsConf, ".hfs." + index++);
         hbaseCluster.addRegionServer(rsConf, i, user);
+      }
+
+      // manually add the replication servers as other users
+      for (int i = 0; i < numReplicationServers; i++) {
+        Configuration rsConf = HBaseConfiguration.create(conf);
+        User user = HBaseTestingUtility.getDifferentUser(rsConf, ".hfs." + index++);
+        hbaseCluster.addReplicationServer(rsConf, i, user);
       }
 
       hbaseCluster.startup();
@@ -791,7 +802,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Grab a numbered region server of your choice.
-   * @param serverNumber
+   * @param serverNumber region server number
    * @return region server
    */
   public HRegionServer getRegionServer(int serverNumber) {
@@ -801,6 +812,43 @@ public class MiniHBaseCluster extends HBaseCluster {
   public HRegionServer getRegionServer(ServerName serverName) {
     return hbaseCluster.getRegionServers().stream()
         .map(t -> t.getRegionServer())
+        .filter(r -> r.getServerName().equals(serverName))
+        .findFirst().orElse(null);
+  }
+
+  /**
+   * @return Number of live replication servers in the cluster currently.
+   */
+  public int getNumLiveReplicationServers() {
+    return this.hbaseCluster.getLiveReplicationServers().size();
+  }
+
+  /**
+   * @return List of replication server threads.
+   */
+  public List<JVMClusterUtil.ReplicationServerThread> getReplicationServerThreads() {
+    return this.hbaseCluster.getReplicationServers();
+  }
+
+  /**
+   * @return List of live replication server threads (skips the aborted and the killed)
+   */
+  public List<JVMClusterUtil.ReplicationServerThread> getLiveReplicationServerThreads() {
+    return this.hbaseCluster.getLiveReplicationServers();
+  }
+
+  /**
+   * Grab a numbered replication server of your choice.
+   * @param serverNumber
+   * @return replication server
+   */
+  public HReplicationServer getReplicationServer(int serverNumber) {
+    return hbaseCluster.getReplicationServer(serverNumber);
+  }
+
+  public HReplicationServer getReplicationServer(ServerName serverName) {
+    return hbaseCluster.getReplicationServers().stream()
+        .map(ReplicationServerThread::getReplicationServer)
         .filter(r -> r.getServerName().equals(serverName))
         .findFirst().orElse(null);
   }
