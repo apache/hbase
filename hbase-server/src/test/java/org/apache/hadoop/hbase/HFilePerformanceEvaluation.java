@@ -433,7 +433,7 @@ public class HFilePerformanceEvaluation {
         // TODO: Fix. Make Scanner do Cells.
         Cell c = this.scanner.getCell();
         PerformanceEvaluationCommons.assertKey(format(i + 1), c);
-        PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
+        PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, c.getValueLength());
       }
     }
 
@@ -464,7 +464,7 @@ public class HFilePerformanceEvaluation {
       // TODO: Fix scanner so it does Cells
       Cell c = scanner.getCell();
       PerformanceEvaluationCommons.assertKey(b, c);
-      PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
+      PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, c.getValueLength());
     }
 
     private byte [] getRandomRow() {
@@ -501,7 +501,7 @@ public class HFilePerformanceEvaluation {
           return;
         }
         c = scanner.getCell();
-        PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
+        PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, c.getValueLength());
       }
     }
 
