@@ -118,7 +118,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
     USER_ADMIN = User.createUserForTesting(conf, "admin2", new String[0]);
     USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
     USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
-    USER_OWNER = UserProvider.instantiate(conf).getCurrent();
+    USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
     USER_CREATE = User.createUserForTesting(conf, "tbl_create", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
 
@@ -130,6 +130,9 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
         User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
     USER_GROUP_WRITE =
         User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
+
+    // Grant table creation permission to USER_OWNER
+    grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Permission.Action.CREATE);
 
     systemUserConnection = TEST_UTIL.getConnection();
     setUpTableAndUserPermissions();
@@ -156,7 +159,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
     ColumnFamilyDescriptorBuilder cfd = ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY);
     cfd.setMaxVersions(100);
     tableBuilder.setColumnFamily(cfd.build());
-    createTable(TEST_UTIL, tableBuilder.build(), new byte[][] { Bytes.toBytes("s") });
+    createTable(TEST_UTIL, USER_OWNER, tableBuilder.build(), new byte[][] { Bytes.toBytes("s") });
 
     // Set up initial grants
     grantGlobal(TEST_UTIL, USER_ADMIN.getShortName(), Permission.Action.ADMIN,

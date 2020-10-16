@@ -104,7 +104,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -257,7 +256,7 @@ public class TestAccessController extends SecureTestUtil {
     USER_ADMIN = User.createUserForTesting(conf, "admin2", new String[0]);
     USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
     USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
-    USER_OWNER = UserProvider.instantiate(conf).getCurrent();
+    USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
     USER_CREATE = User.createUserForTesting(conf, "tbl_create", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
     USER_ADMIN_CF = User.createUserForTesting(conf, "col_family_admin", new String[0]);
@@ -270,6 +269,9 @@ public class TestAccessController extends SecureTestUtil {
         User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
     USER_GROUP_WRITE =
         User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
+
+    // Grant table creation permission to USER_OWNER
+    grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Action.CREATE);
 
     systemUserConnection = TEST_UTIL.getConnection();
     setUpTableAndUserPermissions();
@@ -285,7 +287,7 @@ public class TestAccessController extends SecureTestUtil {
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TABLE)
       .setColumnFamily(
         ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build()).build();
-    createTable(TEST_UTIL, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
@@ -1671,7 +1673,7 @@ public class TestAccessController extends SecureTestUtil {
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family1))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family2)).build();
-    createTable(TEST_UTIL, tableDescriptor);
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor);
     try {
       List<UserPermission> perms =
           admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
@@ -1723,6 +1725,16 @@ public class TestAccessController extends SecureTestUtil {
       perms = admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
       assertFalse("User should not be granted permission: " + upToVerify.toString(),
         hasFoundUserPermission(upToVerify, perms));
+
+      User newOwner = User.createUserForTesting(conf, "new_owner", new String[] {});
+      grantOnTable(TEST_UTIL, newOwner.getShortName(), tableName,
+        null, null, Permission.Action.values());
+
+      perms = admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
+      UserPermission newOwnerperm = new UserPermission(newOwner.getName(),
+          Permission.newBuilder(tableName).withActions(Action.values()).build());
+      assertTrue("New owner should have all permissions on table",
+        hasFoundUserPermission(newOwnerperm, perms));
     } finally {
       // delete table
       deleteTable(TEST_UTIL, tableName);
@@ -2265,7 +2277,7 @@ public class TestAccessController extends SecureTestUtil {
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tname)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cf).setMaxVersions(100).build())
       .build();
-    createTable(TEST_UTIL, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
   }
 
   @Test

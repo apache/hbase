@@ -109,7 +109,7 @@ public class TestSecureExport {
   // user granted with all global permission
   private static final String USER_ADMIN = "admin";
   // user is table owner. will have all permissions on table
-  private static String USER_OWNER;
+  private static final String USER_OWNER = "owner";
   // user with rx permissions.
   private static final String USER_RX = "rxuser";
   // user with exe-only permissions.
@@ -125,7 +125,6 @@ public class TestSecureExport {
   @Rule
   public final TestName name = new TestName();
   private static void setUpKdcServer() throws Exception {
-    USER_OWNER = UserProvider.instantiate(UTIL.getConfiguration()).getCurrent().getShortName();
     KDC = UTIL.setupMiniKdc(KEYTAB_FILE);
     USERNAME = UserGroupInformation.getLoginUser().getShortUserName();
     SERVER_PRINCIPAL = USERNAME + "/" + LOCALHOST;
@@ -217,6 +216,7 @@ public class TestSecureExport {
             Permission.Action.EXEC,
             Permission.Action.READ,
             Permission.Action.WRITE);
+    SecureTestUtil.grantGlobal(UTIL, USER_OWNER, Permission.Action.CREATE);
     addLabels(UTIL.getConfiguration(), Arrays.asList(USER_OWNER),
             Arrays.asList(PRIVATE, CONFIDENTIAL, SECRET, TOPSECRET));
   }
@@ -237,10 +237,11 @@ public class TestSecureExport {
   public void testAccessCase() throws Throwable {
     final String exportTable = name.getMethodName();
     TableDescriptor exportHtd = TableDescriptorBuilder
-            .newBuilder(TableName.valueOf(name.getMethodName()))
+            .newBuilder(TableName.valueOf(exportTable))
             .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
             .build();
-    SecureTestUtil.createTable(UTIL, exportHtd, new byte[][]{Bytes.toBytes("s")});
+    User owner = User.createUserForTesting(UTIL.getConfiguration(), USER_OWNER, new String[0]);
+    SecureTestUtil.createTable(UTIL, owner, exportHtd, new byte[][]{Bytes.toBytes("s")});
     SecureTestUtil.grantOnTable(UTIL, USER_RO,
             TableName.valueOf(exportTable), null, null,
             Permission.Action.READ);
@@ -341,7 +342,8 @@ public class TestSecureExport {
             .newBuilder(TableName.valueOf(exportTable))
             .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
             .build();
-    SecureTestUtil.createTable(UTIL, exportHtd, new byte[][]{Bytes.toBytes("s")});
+    User owner = User.createUserForTesting(UTIL.getConfiguration(), USER_OWNER, new String[0]);
+    SecureTestUtil.createTable(UTIL, owner, exportHtd, new byte[][]{Bytes.toBytes("s")});
     AccessTestAction putAction = () -> {
       Put p1 = new Put(ROW1);
       p1.addColumn(FAMILYA, QUAL, NOW, QUAL);
@@ -398,7 +400,7 @@ public class TestSecureExport {
               .newBuilder(TableName.valueOf(importTable))
               .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYB))
               .build();
-      SecureTestUtil.createTable(UTIL, importHtd, new byte[][]{Bytes.toBytes("s")});
+      SecureTestUtil.createTable(UTIL, owner, importHtd, new byte[][]{Bytes.toBytes("s")});
       AccessTestAction importAction = () -> {
         String[] args = new String[]{
           "-D" + Import.CF_RENAME_PROP + "=" + FAMILYA_STRING + ":" + FAMILYB_STRING,
