@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,23 +57,27 @@ public class LogRoller extends HasThread {
   private static final Log LOG = LogFactory.getLog(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
-  private final ConcurrentHashMap<WAL, Boolean> walNeedsRoll =
-      new ConcurrentHashMap<WAL, Boolean>();
+  private final ConcurrentHashMap<WAL, RollController> wals =
+      new ConcurrentHashMap<WAL, RollController>();
   private final Server server;
   protected final RegionServerServices services;
-  private volatile long lastrolltime = System.currentTimeMillis();
   // Period to roll log.
-  private final long rollperiod;
+  private final long rollPeriod;
   private final int threadWakeFrequency;
   // The interval to check low replication on hlog's pipeline
-  private long checkLowReplicationInterval;
+  private final long checkLowReplicationInterval;
 
   public void addWAL(final WAL wal) {
-    if (null == walNeedsRoll.putIfAbsent(wal, Boolean.FALSE)) {
+    if (null == wals.putIfAbsent(wal, new RollController(wal))) {
       wal.registerWALActionsListener(new WALActionsListener.Base() {
         @Override
         public void logRollRequested(WALActionsListener.RollRequestReason reason) {
-          walNeedsRoll.put(wal, Boolean.TRUE);
+          RollController controller = wals.get(wal);
+          if (controller == null) {
+            wals.putIfAbsent(wal, new RollController(wal));
+            controller = wals.get(wal);
+          }
+          controller.requestRoll();
           // TODO logs will contend with each other here, replace with e.g. DelayedQueue
           synchronized(rollLog) {
             rollLog.set(true);
@@ -84,8 +89,8 @@ public class LogRoller extends HasThread {
   }
 
   public void requestRollAll() {
-    for (WAL wal : walNeedsRoll.keySet()) {
-      walNeedsRoll.put(wal, Boolean.TRUE);
+    for (RollController controller : wals.values()) {
+      controller.requestRoll();
     }
     synchronized(rollLog) {
       rollLog.set(true);
@@ -98,7 +103,7 @@ public class LogRoller extends HasThread {
     super("LogRoller");
     this.server = server;
     this.services = services;
-    this.rollperiod = this.server.getConfiguration().
+    this.rollPeriod = this.server.getConfiguration().
       getLong("hbase.regionserver.logroll.period", 3600000);
     this.threadWakeFrequency = this.server.getConfiguration().
       getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
@@ -120,9 +125,9 @@ public class LogRoller extends HasThread {
    */
   void checkLowReplication(long now) {
     try {
-      for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
+      for (Entry<WAL, RollController> entry : wals.entrySet()) {
         WAL wal = entry.getKey();
-        boolean neeRollAlready = entry.getValue();
+        boolean neeRollAlready = entry.getValue().needsRoll(now);
         if(wal instanceof FSHLog && !neeRollAlready) {
           FSHLog hlog = (FSHLog)wal;
           if ((now - hlog.getLastTimeCheckLowReplication())
@@ -139,11 +144,16 @@ public class LogRoller extends HasThread {
   @Override
   public void run() {
     while (!server.isStopped()) {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       checkLowReplication(now);
-      boolean periodic = false;
       if (!rollLog.get()) {
-        periodic = (now - this.lastrolltime) > this.rollperiod;
+        boolean periodic = false;
+        for (RollController controller : wals.values()) {
+          if (controller.needsPeriodicRoll(now)) {
+            periodic = true;
+            break;
+          }
+        }
         if (!periodic) {
           synchronized (rollLog) {
             try {
@@ -156,23 +166,24 @@ public class LogRoller extends HasThread {
           }
           continue;
         }
-        // Time for periodic roll
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Wal roll period " + this.rollperiod + "ms elapsed");
-        }
-      } else if (LOG.isDebugEnabled()) {
-        LOG.debug("WAL roll requested");
       }
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
-        this.lastrolltime = now;
-        for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
+        for (Entry<WAL, RollController> entry : wals.entrySet()) {
           final WAL wal = entry.getKey();
+          RollController controller = entry.getValue();
+          if (controller.isRollRequested()) {
+            // WAL roll requested, fall through
+            LOG.debug("WAL " + wal + " roll requested");
+          } else if (controller.needsPeriodicRoll(now)) {
+            // Time for periodic roll, fall through
+            LOG.debug("WAL " + wal + " roll period " + this.rollPeriod + "ms elapsed");
+          } else {
+            continue;
+          }
           // Force the roll if the logroll.period is elapsed or if a roll was requested.
           // The returned value is an array of actual region names.
-          final byte [][] regionsToFlush = wal.rollWriter(periodic ||
-              entry.getValue().booleanValue());
-          walNeedsRoll.put(wal, Boolean.FALSE);
+          final byte [][] regionsToFlush = controller.rollWal(now);
           if (regionsToFlush != null) {
             for (byte [] r: regionsToFlush) scheduleFlush(r);
           }
@@ -229,11 +240,52 @@ public class LogRoller extends HasThread {
    */
   @VisibleForTesting
   public boolean walRollFinished() {
-    for (boolean needRoll : walNeedsRoll.values()) {
-      if (needRoll) {
+    long now = EnvironmentEdgeManager.currentTime();
+    for (RollController controller : wals.values()) {
+      if (controller.needsRoll(now)) {
         return false;
       }
     }
     return true;
+  }
+
+
+  /**
+   * Independently control the roll of each wal. When use multiwal,
+   * can avoid all wal roll together. see HBASE-24665 for detail
+   */
+  protected class RollController {
+    private final WAL wal;
+    private final AtomicBoolean rollRequest;
+    private long lastRollTime;
+
+    RollController(WAL wal) {
+      this.wal = wal;
+      this.rollRequest = new AtomicBoolean(false);
+      this.lastRollTime = EnvironmentEdgeManager.currentTime();
+    }
+
+    public void requestRoll() {
+      this.rollRequest.set(true);
+    }
+
+    public byte[][] rollWal(long now) throws IOException {
+      this.lastRollTime = now;
+      byte[][] regionsToFlush = wal.rollWriter(true);
+      this.rollRequest.set(false);
+      return regionsToFlush;
+    }
+
+    public boolean isRollRequested() {
+      return rollRequest.get();
+    }
+
+    public boolean needsPeriodicRoll(long now) {
+      return (now - this.lastRollTime) > rollPeriod;
+    }
+
+    public boolean needsRoll(long now) {
+      return isRollRequested() || needsPeriodicRoll(now);
+    }
   }
 }
