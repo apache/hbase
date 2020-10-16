@@ -2694,19 +2694,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         case DELETE:
           if (request.hasCondition()) {
             regionServer.metricsRegionServer.updateCheckAndDelete(
-                region == null ? null : region.getRegionInfo().getTable(), after - before);
+              region == null ? null : region.getRegionInfo().getTable(), after - before);
           } else {
             regionServer.metricsRegionServer.updateDelete(
-                region == null ? null : region.getRegionInfo().getTable(), after - before);
+              region == null ? null : region.getRegionInfo().getTable(), after - before);
           }
           break;
         case PUT:
           if (request.hasCondition()) {
             regionServer.metricsRegionServer.updateCheckAndPut(
-                region == null ? null : region.getRegionInfo().getTable(), after - before);
+              region == null ? null : region.getRegionInfo().getTable(), after - before);
           } else {
             regionServer.metricsRegionServer.updatePut(
-                region == null ? null : region.getRegionInfo().getTable(), after - before);
+              region == null ? null : region.getRegionInfo().getTable(), after - before);
           }
           break;
         default:
