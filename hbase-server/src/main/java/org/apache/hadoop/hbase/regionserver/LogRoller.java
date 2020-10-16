@@ -71,19 +71,11 @@ public class LogRoller extends HasThread {
     if (null == wals.putIfAbsent(wal, new RollController(wal))) {
       wal.registerWALActionsListener(new WALActionsListener.Base() {
         @Override
-        @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-          value="JAT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
-          justification="Sequence of calls to concurrent abstraction may not be atomic")
         public void logRollRequested(WALActionsListener.RollRequestReason reason) {
           RollController controller = wals.get(wal);
           if (controller == null) {
-            synchronized(wals) {
-              controller = wals.get(wal);
-              if (controller == null) {
-                controller = new RollController(wal);
-                wals.put(wal, controller);
-              }
-            }
+            wals.putIfAbsent(wal, new RollController(wal));
+            controller = wals.get(wal);
           }
           controller.requestRoll();
           // TODO logs will contend with each other here, replace with e.g. DelayedQueue
