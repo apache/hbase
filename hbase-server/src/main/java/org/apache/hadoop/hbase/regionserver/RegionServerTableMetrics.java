@@ -96,5 +96,4 @@ public class RegionServerTableMetrics {
   public void updateTableWriteQueryMeter(TableName table) {
     queryMeter.updateTableWriteQueryMeter(table);
   }
-
 }
