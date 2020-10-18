@@ -31,6 +31,9 @@ pipeline {
   parameters {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
   }
+  environment {
+    OUTPUT_DIR_RELATIVE_REPORT = "output-report"
+  }
   stages {
     stage ('build flaky report') {
       steps {
@@ -43,7 +46,8 @@ pipeline {
           flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase/job/HBase%20Nightly/job/${BRANCH_NAME}" --is-yetus True --max-builds 10)
           flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase/job/HBase-Flaky-Tests/job/${BRANCH_NAME}" --is-yetus False --max-builds 30)
           docker build -t hbase-dev-support dev-support
-          docker run --ulimit nproc=12500 -v "${WORKSPACE}":/hbase --workdir=/hbase hbase-dev-support python dev-support/flaky-tests/report-flakies.py --mvn -v "${flaky_args[@]}"
+          docker run --ulimit nproc=12500 -v "${WORKSPACE}":/hbase --workdir=/hbase hbase-dev-support \
+            python dev-support/flaky-tests/report-flakies.py --mvn -v -o ${OUTPUT_DIR_RELATIVE_REPORT} "${flaky_args[@]}"
 '''
       }
     }
@@ -51,13 +55,13 @@ pipeline {
   post {
     always {
       // Has to be relative to WORKSPACE.
-      archiveArtifacts artifacts: "includes,excludes,dashboard.html"
+      archiveArtifacts artifacts: "${OUTPUT_DIR_RELATIVE_REPORT}/includes,${OUTPUT_DIR_RELATIVE_REPORT}/excludes,${OUTPUT_DIR_RELATIVE_REPORT}/dashboard.html"
       publishHTML target: [
         allowMissing: true,
         keepAll: true,
         alwaysLinkToLastBuild: true,
         // Has to be relative to WORKSPACE
-        reportDir: ".",
+        reportDir: ${OUTPUT_DIR_RELATIVE_REPORT},
         reportFiles: 'dashboard.html',
         reportName: 'Flaky Test Report'
       ]
