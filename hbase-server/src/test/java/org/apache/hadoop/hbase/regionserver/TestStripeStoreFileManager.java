@@ -59,7 +59,7 @@ public class TestStripeStoreFileManager {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Path BASEDIR =
       TEST_UTIL.getDataTestDir(TestStripeStoreFileManager.class.getSimpleName());
-  private static final Path CFDIR = HStore.getStoreHomedir(BASEDIR, "region", Bytes.toBytes("cf"));
+  private static final Path CFDIR = new Path(BASEDIR, new Path("region", "cf"));
 
   private static final byte[] KEY_A = Bytes.toBytes("aaa");
   private static final byte[] KEY_B = Bytes.toBytes("aab");

@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -48,7 +47,7 @@ public final class HFileArchiveUtil {
   public static Path getStoreArchivePath(final Configuration conf, final TableName tableName,
     final String regionName, final String familyName) throws IOException {
     Path tableArchiveDir = getTableArchivePath(conf, tableName);
-    return HStore.getStoreHomedir(tableArchiveDir, regionName, Bytes.toBytes(familyName));
+    return new Path(tableArchiveDir, new Path(regionName, familyName));
   }
 
   /**
@@ -77,7 +76,7 @@ public final class HFileArchiveUtil {
     throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     Path tableArchiveDir = getTableArchivePath(rootDir, region.getTable());
-    return HStore.getStoreHomedir(tableArchiveDir, region, family);
+    return new Path(tableArchiveDir, new Path(region.getEncodedName(), Bytes.toString(family)));
   }
 
   /**
@@ -93,13 +92,13 @@ public final class HFileArchiveUtil {
    */
   public static Path getStoreArchivePathForRootDir(Path rootDir, RegionInfo region, byte[] family) {
     Path tableArchiveDir = getTableArchivePath(rootDir, region.getTable());
-    return HStore.getStoreHomedir(tableArchiveDir, region, family);
+    return new Path(tableArchiveDir, new Path(region.getEncodedName(), Bytes.toString(family)));
   }
 
   public static Path getStoreArchivePathForArchivePath(Path archivePath, RegionInfo region,
     byte[] family) {
     Path tableArchiveDir = CommonFSUtils.getTableDir(archivePath, region.getTable());
-    return HStore.getStoreHomedir(tableArchiveDir, region, family);
+    return new Path(tableArchiveDir, new Path(region.getEncodedName(), Bytes.toString(family)));
   }
 
   /**
