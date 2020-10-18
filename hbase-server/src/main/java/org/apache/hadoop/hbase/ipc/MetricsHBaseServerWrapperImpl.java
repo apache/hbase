@@ -68,7 +68,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
     if (!isServerStarted() || this.server.connectionList == null) {
       return 0;
     }
-    return server.connectionList.size();
+    return server.numConnections;
   }
 
   @Override
