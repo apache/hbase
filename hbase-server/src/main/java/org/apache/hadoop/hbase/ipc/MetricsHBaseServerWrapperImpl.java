@@ -65,7 +65,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
 
   @Override
   public int getNumOpenConnections() {
-    if (!isServerStarted() || this.server.connectionList == null) {
+    if (!isServerStarted()) {
       return 0;
     }
     return server.numConnections;
