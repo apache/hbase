@@ -1358,8 +1358,9 @@ public final class HConstants {
 
   /**
    * Drop edits for tables that been deleted from the replication source and target
-   * @deprecated since 3.0.0 (HBASE-24359). Will be removed in 4.0.0.
+   * @deprecated since 3.0.0. Will be removed in 4.0.0.
    *             Moved it into HBaseInterClusterReplicationEndpoint.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-24359">HBASE-24359</a>
    */
   @Deprecated
   public static final String REPLICATION_DROP_ON_DELETED_TABLE_KEY =
