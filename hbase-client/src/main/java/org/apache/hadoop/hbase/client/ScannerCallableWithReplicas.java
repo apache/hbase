@@ -45,10 +45,11 @@ import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * This class has the logic for handling scanners for regions with and without replicas.
- * 1. A scan is attempted on the default (primary) region
- * 2. The scanner sends all the RPCs to the default region until it is done, or, there
- * is a timeout on the default (a timeout of zero is disallowed).
- * 3. If there is a timeout in (2) above, scanner(s) is opened on the non-default replica(s)
+ * 1. A scan is attempted on the default (primary) region, or a specific region.
+ * 2. The scanner sends all the RPCs to the default/specific region until it is done, or, there
+ * is a timeout on the default/specific region (a timeout of zero is disallowed).
+ * 3. If there is a timeout in (2) above, scanner(s) is opened on the non-default replica(s) only
+ *    for Consistency.TIMELINE without specific replica id specified.
  * 4. The results from the first successful scanner are taken, and it is stored which server
  * returned the results.
  * 5. The next RPCs are done on the above stored server until it is done or there is a timeout,
@@ -160,7 +161,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       RegionLocations rl = null;
       try {
         rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(true,
-            RegionReplicaUtil.DEFAULT_REPLICA_ID, cConnection, tableName,
+          RegionReplicaUtil.DEFAULT_REPLICA_ID, cConnection, tableName,
             currentScannerCallable.getRow());
       } catch (RetriesExhaustedException | DoNotRetryIOException e) {
         // We cannot get the primary replica region location, it is possible that the region server
