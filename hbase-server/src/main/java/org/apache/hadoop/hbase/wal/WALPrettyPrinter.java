@@ -46,7 +46,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
@@ -86,7 +85,12 @@ public class WALPrettyPrinter {
   // List of tables for filter
   private final Set<String> tableSet;
   private String region;
+
+  // exact row which needs to be filtered
+  private String row;
+  // prefix of rows which needs to be filtered
   private String rowPrefix;
+
   private boolean outputOnlyRowKey;
   // enable in order to output a single list of transactions from several files
   private boolean persistentOutput;
@@ -107,6 +111,7 @@ public class WALPrettyPrinter {
     sequence = -1;
     tableSet = new HashSet<>();
     region = null;
+    row = null;
     rowPrefix = null;
     outputOnlyRowKey = false;
     persistentOutput = false;
@@ -169,6 +174,17 @@ public class WALPrettyPrinter {
    */
   public void setRegionFilter(String region) {
     this.region = region;
+  }
+
+  /**
+   * sets the row key by which output will be filtered
+   *
+   * @param row
+   *          when not null, serves as a filter; only log entries from this row
+   *          will be printed
+   */
+  public void setRowFilter(String row) {
+    this.row = row;
   }
 
   /**
@@ -303,7 +319,7 @@ public class WALPrettyPrinter {
         for (Cell cell : edit.getCells()) {
           // add atomic operation to txn
           Map<String, Object> op =
-            new HashMap<>(toStringMap(cell, outputOnlyRowKey, rowPrefix, outputValues));
+            new HashMap<>(toStringMap(cell, outputOnlyRowKey, rowPrefix, row, outputValues));
           if (op.isEmpty()) {
             continue;
           }
@@ -324,15 +340,19 @@ public class WALPrettyPrinter {
           out.print(GSON.toJson(txn));
         } else {
           // Pretty output, complete with indentation by atomic action
-          out.println(String.format(outputTmpl,
+          if (!outputOnlyRowKey) {
+            out.println(String.format(outputTmpl,
               txn.get("sequence"), txn.get("table"), txn.get("region"), new Date(writeTime)));
+          }
           for (int i = 0; i < actions.size(); i++) {
             Map<String, Object> op = actions.get(i);
             printCell(out, op, outputOnlyRowKey, outputValues);
           }
         }
-        out.println("edit heap size: " + entry.getEdit().heapSize());
-        out.println("position: " + log.getPosition());
+        if (!outputOnlyRowKey) {
+          out.println("edit heap size: " + entry.getEdit().heapSize());
+          out.println("position: " + log.getPosition());
+        }
       }
     } finally {
       log.close();
@@ -351,6 +371,7 @@ public class WALPrettyPrinter {
     }
 
     rowDetails += ", column=" + op.get("family") + ":" + op.get("qualifier");
+    rowDetails += ", type=" + op.get("type");
     out.println(rowDetails);
     if (op.get("tag") != null) {
       out.println("    tag: " + op.get("tag"));
@@ -362,13 +383,15 @@ public class WALPrettyPrinter {
   }
 
   public static Map<String, Object> toStringMap(Cell cell,
-    boolean printRowKeyOnly, String rowPrefix, boolean outputValues) {
+    boolean printRowKeyOnly, String rowPrefix, String row, boolean outputValues) {
     Map<String, Object> stringMap = new HashMap<>();
     String rowKey = Bytes.toStringBinary(cell.getRowArray(),
       cell.getRowOffset(), cell.getRowLength());
-    // If the row prefix is provided and the current row doesn't satisfy
-    // the prefix requirement return empty map
-    if (!Strings.isNullOrEmpty(rowPrefix) && !rowKey.startsWith(rowPrefix)) {
+    // Row and row prefix are mutually options so both cannot be true at the
+    // same time. We can include checks in the same condition
+    // Check if any of the filters are satisfied by the row, if not return empty map
+    if ((!Strings.isNullOrEmpty(rowPrefix) && !rowKey.startsWith(rowPrefix)) ||
+      (!Strings.isNullOrEmpty(row) && !rowKey.equals(row))) {
       return stringMap;
     }
 
@@ -402,7 +425,7 @@ public class WALPrettyPrinter {
   }
 
   public static Map<String, Object> toStringMap(Cell cell) {
-    return toStringMap(cell, false, null, false);
+    return toStringMap(cell, false, null, null, false);
   }
 
   public static void main(String[] args) throws IOException {
@@ -432,7 +455,8 @@ public class WALPrettyPrinter {
         "Sequence to filter by. Pass sequence number.");
     options.addOption("k", "outputOnlyRowKey", false,
       "Print only row keys");
-    options.addOption("w", "row", true, "Row key prefix to filter by");
+    options.addOption("w", "row", true, "Row to filter by. Pass row name.");
+    options.addOption("f", "rowPrefix", true, "Row prefix to filter by.");
     options.addOption("g", "goto", true, "Position to seek to in the file");
 
     WALPrettyPrinter printer = new WALPrettyPrinter();
@@ -466,7 +490,16 @@ public class WALPrettyPrinter {
         printer.setSequenceFilter(Long.parseLong(cmd.getOptionValue("s")));
       }
       if (cmd.hasOption("w")) {
-        printer.setRowPrefixFilter(cmd.getOptionValue("w"));
+        if (cmd.hasOption("f")) {
+          throw new ParseException("Row and Row-prefix cannot be supplied together");
+        }
+        printer.setRowFilter(cmd.getOptionValue("w"));
+      }
+      if (cmd.hasOption("f")) {
+        if (cmd.hasOption("w")) {
+          throw new ParseException("Row and Row-prefix cannot be supplied together");
+        }
+        printer.setRowPrefixFilter(cmd.getOptionValue("f"));
       }
       if (cmd.hasOption("g")) {
         printer.setPosition(Long.parseLong(cmd.getOptionValue("g")));
