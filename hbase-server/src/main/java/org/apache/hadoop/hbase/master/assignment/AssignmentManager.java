@@ -2055,11 +2055,9 @@ public class AssignmentManager {
     final ProcedureEvent<?>[] events = new ProcedureEvent[regions.size()];
     final long st = System.currentTimeMillis();
 
-    if (plan == null) {
+    if (plan.isEmpty()) {
       throw new HBaseIOException("unable to compute plans for regions=" + regions.size());
     }
-
-    if (plan.isEmpty()) return;
 
     int evcount = 0;
     for (Map.Entry<ServerName, List<RegionInfo>> entry: plan.entrySet()) {

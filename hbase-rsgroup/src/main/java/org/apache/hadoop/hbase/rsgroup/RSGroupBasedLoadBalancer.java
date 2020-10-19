@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -160,8 +161,9 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   }
 
   @Override
+  @NonNull
   public Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
-    List<ServerName> servers) throws HBaseIOException {
+      List<ServerName> servers) throws HBaseIOException {
     Map<ServerName, List<RegionInfo>> assignments = Maps.newHashMap();
     ListMultimap<String, RegionInfo> regionMap = ArrayListMultimap.create();
     ListMultimap<String, ServerName> serverMap = ArrayListMultimap.create();
@@ -169,15 +171,13 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     for (String groupKey : regionMap.keySet()) {
       if (regionMap.get(groupKey).size() > 0) {
         Map<ServerName, List<RegionInfo>> result = this.internalBalancer
-          .roundRobinAssignment(regionMap.get(groupKey), serverMap.get(groupKey));
-        if (result != null) {
-          if (result.containsKey(LoadBalancer.BOGUS_SERVER_NAME) &&
-            assignments.containsKey(LoadBalancer.BOGUS_SERVER_NAME)) {
-            assignments.get(LoadBalancer.BOGUS_SERVER_NAME)
+            .roundRobinAssignment(regionMap.get(groupKey), serverMap.get(groupKey));
+        if (result.containsKey(LoadBalancer.BOGUS_SERVER_NAME)
+            && assignments.containsKey(LoadBalancer.BOGUS_SERVER_NAME)) {
+          assignments.get(LoadBalancer.BOGUS_SERVER_NAME)
               .addAll(result.get(LoadBalancer.BOGUS_SERVER_NAME));
-          } else {
-            assignments.putAll(result);
-          }
+        } else {
+          assignments.putAll(result);
         }
       }
     }
@@ -185,8 +185,9 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   }
 
   @Override
+  @NonNull
   public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
-    List<ServerName> servers) throws HBaseIOException {
+      List<ServerName> servers) throws HBaseIOException {
     try {
       Map<ServerName, List<RegionInfo>> assignments = new TreeMap<>();
       ListMultimap<String, RegionInfo> groupToRegion = ArrayListMultimap.create();
@@ -208,14 +209,14 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
         }
         if (candidateList.size() > 0) {
           assignments
-            .putAll(this.internalBalancer.retainAssignment(currentAssignmentMap, candidateList));
+              .putAll(this.internalBalancer.retainAssignment(currentAssignmentMap, candidateList));
         } else {
           if (LOG.isDebugEnabled()) {
             LOG.debug("No available servers to assign regions: {}",
               RegionInfo.getShortNameToLog(regionList));
           }
           assignments.computeIfAbsent(LoadBalancer.BOGUS_SERVER_NAME, s -> new ArrayList<>())
-            .addAll(regionList);
+              .addAll(regionList);
         }
       }
       return assignments;
