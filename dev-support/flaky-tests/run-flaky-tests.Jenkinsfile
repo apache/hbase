@@ -21,12 +21,12 @@ pipeline {
     }
   }
   triggers {
-    cron('H H/4 * * *') // Every four hours. See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
+    cron('H H/6 * * *') // Every four hours. See https://jenkins.io/doc/book/pipeline/syntax/#cron-syntax
   }
   options {
     // this should roughly match how long we tell the flaky dashboard to look at
     buildDiscarder(logRotator(numToKeepStr: '30'))
-    timeout (time: 2, unit: 'HOURS')
+    timeout (time: 4, unit: 'HOURS')
     timestamps()
   }
   parameters {
