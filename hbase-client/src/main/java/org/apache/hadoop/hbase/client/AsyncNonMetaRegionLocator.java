@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_META_REPLICA_NUM;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_USE_META_REPLICAS;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
+import static org.apache.hadoop.hbase.HConstants.META_REPLICAS_MODE;
+import static org.apache.hadoop.hbase.HConstants.META_REPLICAS_MODE_LOADBALANCE_REPILCA_CHOOSER;
+import static org.apache.hadoop.hbase.HConstants.META_REPLICAS_NUM;
 import static org.apache.hadoop.hbase.HConstants.NINES;
 import static org.apache.hadoop.hbase.HConstants.USE_META_REPLICAS;
 import static org.apache.hadoop.hbase.HConstants.ZEROES;
@@ -34,6 +38,7 @@ import static org.apache.hadoop.hbase.util.Bytes.BYTES_COMPARATOR;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -90,6 +95,11 @@ class AsyncNonMetaRegionLocator {
   private final int locatePrefetchLimit;
 
   private final boolean useMetaReplicas;
+
+  // When useMetaReplicas is true, the mode tells if HighAvailable, LoadBalance mode is supported.
+  // The default mode is HighAvailable.
+  private final MetaReplicaMode metaReplicaMode;
+  private MetaReplicaLoadBalanceReplicaChooser metaReplicaChooser;
 
   private final ConcurrentMap<TableName, TableCache> cache = new ConcurrentHashMap<>();
 
@@ -198,6 +208,36 @@ class AsyncNonMetaRegionLocator {
       conn.getConfiguration().getInt(LOCATE_PREFETCH_LIMIT, DEFAULT_LOCATE_PREFETCH_LIMIT);
     this.useMetaReplicas =
       conn.getConfiguration().getBoolean(USE_META_REPLICAS, DEFAULT_USE_META_REPLICAS);
+
+    if (this.useMetaReplicas) {
+      if (conn.getConfiguration()
+        .get(META_REPLICAS_MODE, "").equals(MetaReplicaMode.LoadBalance.toString())) {
+        this.metaReplicaMode = MetaReplicaMode.LoadBalance;
+        int numOfMetaReplicas = conn.getConfiguration().getInt(
+          META_REPLICAS_NUM, DEFAULT_META_REPLICA_NUM);
+        if (numOfMetaReplicas <= 1) {
+          LOG.error("Configured to support meta replica load balance mode,"
+            + " but there is no meta replica configured");
+          this.metaReplicaChooser = null;
+        } else {
+          String metaReplicaChooserImpl = conn.getConfiguration().get(
+            META_REPLICAS_MODE_LOADBALANCE_REPILCA_CHOOSER,
+            MetaReplicaLoadBalanceReplicaSimpleChooser.class.getName());
+          try {
+            this.metaReplicaChooser = Class.forName(metaReplicaChooserImpl)
+              .asSubclass(MetaReplicaLoadBalanceReplicaChooser.class)
+              .getDeclaredConstructor(AsyncConnectionImpl.class).newInstance(this.conn);
+          } catch (InstantiationException | IllegalAccessException | ClassNotFoundException
+            | NoSuchMethodException | InvocationTargetException e) {
+            throw new IllegalArgumentException(e);
+          }
+        }
+      } else {
+        this.metaReplicaMode = MetaReplicaMode.HighAvailable;
+      }
+    } else {
+      this.metaReplicaMode = MetaReplicaMode.None;
+    }
   }
 
   private TableCache getTableCache(TableName tableName) {
@@ -435,6 +475,14 @@ class AsyncNonMetaRegionLocator {
       .setReadType(ReadType.PREAD);
     if (useMetaReplicas) {
       scan.setConsistency(Consistency.TIMELINE);
+
+      // If it is meta replica LoadBalance mode, pick up a meta replica to scan. It will try to
+      // pick up meta replica region to scan, in certain error cases, it may pick primary meta
+      // region to scan.
+      if (isMetaReplicaLBMode()) {
+        scan.setReplicaId(this.metaReplicaChooser.chooseReplicaToGo(tableName,
+          req.row, req.locateType));
+      }
     }
     conn.getTable(META_TABLE_NAME).scan(scan, new AdvancedScanResultConsumer() {
 
@@ -444,6 +492,8 @@ class AsyncNonMetaRegionLocator {
 
       @Override
       public void onError(Throwable error) {
+        // TODO: if it fails, with meta replica load balance, it may try with another meta
+        // replica. This improvement will be done later.
         complete(tableName, req, null, error);
       }
 
@@ -577,6 +627,15 @@ class AsyncNonMetaRegionLocator {
       if (!canUpdateOnError(loc, oldLoc)) {
         return;
       }
+      // Tell metaReplicaChooser that the location is stale. It will create a stale entry
+      // with timestamp internally. Next time the client looks up the same location,
+      // it will pick a different meta replica region. For the current implementation,
+      // the metaReplicaId is not used, so the primary one is passed in.
+      if (isMetaReplicaLBMode()) {
+        // TODO: for now, metaReplicaId is not used in simplerChooser, default to the primary one.
+        metaReplicaChooser.updateCacheOnError(loc, RegionInfo.DEFAULT_REPLICA_ID);
+      }
+
       RegionLocations newLocs = removeRegionLocation(oldLocs, loc.getRegion().getReplicaId());
       if (newLocs == null) {
         if (tableCache.cache.remove(startKey, oldLocs)) {
@@ -590,6 +649,11 @@ class AsyncNonMetaRegionLocator {
         }
       }
     }
+  }
+
+  public boolean isMetaReplicaLBMode() {
+    return this.useMetaReplicas && (this.metaReplicaMode == MetaReplicaMode.LoadBalance) &&
+      (this.metaReplicaChooser != null);
   }
 
   private void addLocationToCache(HRegionLocation loc) {

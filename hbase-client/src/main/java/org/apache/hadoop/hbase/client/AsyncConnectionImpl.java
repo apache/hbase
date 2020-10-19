@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_USE_META_REPLICAS;
+import static org.apache.hadoop.hbase.HConstants.META_REPLICAS_MODE;
 import static org.apache.hadoop.hbase.HConstants.STATUS_PUBLISHED;
 import static org.apache.hadoop.hbase.HConstants.STATUS_PUBLISHED_DEFAULT;
+import static org.apache.hadoop.hbase.HConstants.USE_META_REPLICAS;
 import static org.apache.hadoop.hbase.client.ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS;
 import static org.apache.hadoop.hbase.client.ClusterStatusListener.STATUS_LISTENER_CLASS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
@@ -116,7 +119,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   private final Optional<ServerStatisticTracker> stats;
   private final ClientBackoffPolicy backoffPolicy;
 
-  private ChoreService authService;
+  private ChoreService choreService;
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -130,8 +133,12 @@ class AsyncConnectionImpl implements AsyncConnection {
       SocketAddress localAddress, User user) {
     this.conf = conf;
     this.user = user;
-    if (user.isLoginFromKeytab()) {
-      spawnRenewalChore(user.getUGI());
+
+    if (user.isLoginFromKeytab() || isMetaReplicaLBMode()) {
+      startChoreService();
+      if (user.isLoginFromKeytab()) {
+        spawnRenewalChore(user.getUGI());
+      }
     }
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.registry = registry;
@@ -181,9 +188,16 @@ class AsyncConnectionImpl implements AsyncConnection {
     this.clusterStatusListener = listener;
   }
 
+  private void startChoreService() {
+    choreService = new ChoreService("AsyncConn Chore Service");
+  }
+
   private void spawnRenewalChore(final UserGroupInformation user) {
-    authService = new ChoreService("Relogin service");
-    authService.scheduleChore(AuthUtil.getAuthRenewalChore(user));
+    choreService.scheduleChore(AuthUtil.getAuthRenewalChore(user));
+  }
+
+  public ChoreService getChoreService() {
+    return this.choreService;
   }
 
   @Override
@@ -208,8 +222,8 @@ class AsyncConnectionImpl implements AsyncConnection {
     IOUtils.closeQuietly(clusterStatusListener);
     IOUtils.closeQuietly(rpcClient);
     IOUtils.closeQuietly(registry);
-    if (authService != null) {
-      authService.shutdown();
+    if (choreService != null) {
+      choreService.shutdown();
     }
     metrics.ifPresent(MetricsConnection::shutdown);
     ConnectionOverAsyncConnection c = this.conn;
@@ -390,6 +404,16 @@ class AsyncConnectionImpl implements AsyncConnection {
       this.conn = c;
     }
     return c;
+  }
+
+  private boolean isMetaReplicaLBMode() {
+    if (conf.getBoolean(USE_META_REPLICAS, DEFAULT_USE_META_REPLICAS)) {
+      String metaReplicaMode = conf.get(META_REPLICAS_MODE, "");
+      if (MetaReplicaMode.LoadBalance.toString().equals(metaReplicaMode)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override

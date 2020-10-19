@@ -63,17 +63,17 @@ public class TestAsyncNonMetaRegionLocator {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAsyncNonMetaRegionLocator.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static TableName TABLE_NAME = TableName.valueOf("async");
 
   private static byte[] FAMILY = Bytes.toBytes("cf");
 
-  private static AsyncConnectionImpl CONN;
+  protected static AsyncConnectionImpl CONN;
 
-  private static AsyncNonMetaRegionLocator LOCATOR;
+  protected static AsyncNonMetaRegionLocator LOCATOR;
 
-  private static byte[][] SPLIT_KEYS;
+  protected static byte[][] SPLIT_KEYS;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -347,8 +347,21 @@ public class TestAsyncNonMetaRegionLocator {
         getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType, false).get());
     }
     // should get the new location when reload = true
-    assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, newServerName,
-      getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, true).get());
+    // when meta replica LoadBalance mode is enabled, it may delay a bit.
+    TEST_UTIL.waitFor(3000, new ExplainingPredicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        HRegionLocation loc = getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW,
+          RegionLocateType.CURRENT, true).get();
+        return newServerName.equals(loc.getServerName());
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return "New location does not show up in meta (replica) region";
+      }
+    });
+
     // the cached location should be replaced
     for (RegionLocateType locateType : RegionLocateType.values()) {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, newServerName,

@@ -1128,6 +1128,9 @@ public final class HConstants {
 
   /** Conf key for enabling meta replication */
   public static final String USE_META_REPLICAS = "hbase.meta.replicas.use";
+  public static final String META_REPLICAS_MODE = "hbase.meta.replicas.mode";
+  public static final String META_REPLICAS_MODE_LOADBALANCE_REPILCA_CHOOSER =
+    "hbase.meta.replicas.mode.loadbalance.replica.chooser";
   public static final boolean DEFAULT_USE_META_REPLICAS = false;
   public static final String META_REPLICAS_NUM = "hbase.meta.replica.count";
   public static final int DEFAULT_META_REPLICA_NUM = 1;
