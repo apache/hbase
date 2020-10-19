@@ -18,10 +18,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_USE_META_REPLICAS;
+import static org.apache.hadoop.hbase.HConstants.USE_META_REPLICAS;
+import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
+import static org.apache.hadoop.hbase.client.RegionLocator.LOCATOR_META_REPLICAS_MODE;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsentEx;
 
@@ -161,7 +165,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   private final boolean hostnamesCanChange;
   private final long pause;
   private final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
-  private boolean useMetaReplicas;
+  // The mode tells if HedgedRead, LoadBalance mode is supported.
+  // The default mode is CatalogReplicaMode.None.
+  private CatalogReplicaMode metaReplicaMode;
+  private CatalogReplicaLoadBalanceSelector metaReplicaSelector;
+
   private final int metaReplicaCallTimeoutScanInMicroSecond;
   private final int numTries;
   final int rpcTimeout;
@@ -232,7 +240,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   /** lock guards against multiple threads trying to query the meta region at the same time */
   private final ReentrantLock userRegionLock = new ReentrantLock();
 
-  private ChoreService authService;
+  private ChoreService choreService;
 
   /**
    * constructor
@@ -258,8 +266,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     } else {
       this.pauseForCQTBE = configuredPauseForCQTBE;
     }
-    this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
-      HConstants.DEFAULT_USE_META_REPLICAS);
     this.metaReplicaCallTimeoutScanInMicroSecond =
         connectionConfig.getMetaReplicaCallTimeoutMicroSecondScan();
 
@@ -332,19 +338,47 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       close();
       throw e;
     }
+
+    // Get the region locator's meta replica mode.
+    this.metaReplicaMode = CatalogReplicaMode.fromString(conf.get(LOCATOR_META_REPLICAS_MODE,
+      CatalogReplicaMode.NONE.toString()));
+
+    switch (this.metaReplicaMode) {
+      case LOAD_BALANCE:
+        String replicaSelectorClass = conf.get(
+          RegionLocator.LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR,
+          CatalogReplicaLoadBalanceSimpleSelector.class.getName());
+
+        this.metaReplicaSelector = CatalogReplicaLoadBalanceSelectorFactory.createSelector(
+          replicaSelectorClass, META_TABLE_NAME, getChoreService(), () -> {
+            int numOfReplicas = 1;
+            try {
+              RegionLocations metaLocations = registry.getMetaRegionLocations().get(
+                connectionConfig.getReadRpcTimeout(), TimeUnit.MILLISECONDS);
+              numOfReplicas = metaLocations.size();
+            } catch (Exception e) {
+              LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
+            }
+            return numOfReplicas;
+          });
+        break;
+      case NONE:
+        // If user does not configure LOCATOR_META_REPLICAS_MODE, let's check the legacy config.
+
+        boolean useMetaReplicas = conf.getBoolean(USE_META_REPLICAS,
+          DEFAULT_USE_META_REPLICAS);
+        if (useMetaReplicas) {
+          this.metaReplicaMode = CatalogReplicaMode.HEDGED_READ;
+        }
+        break;
+      default:
+        // Doing nothing
+    }
   }
 
   private void spawnRenewalChore(final UserGroupInformation user) {
-    authService = new ChoreService("Relogin service");
-    authService.scheduleChore(AuthUtil.getAuthRenewalChore(user));
-  }
-
-  /**
-   * @param useMetaReplicas
-   */
-  @VisibleForTesting
-  void setUseMetaReplicas(final boolean useMetaReplicas) {
-    this.useMetaReplicas = useMetaReplicas;
+    ChoreService service = getChoreService();
+    service.scheduleChore(AuthUtil.getAuthRenewalChore(user));
   }
 
   /**
@@ -578,6 +612,17 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       clusterId = HConstants.CLUSTER_ID_DEFAULT;
       LOG.debug("clusterid came back null, using default " + clusterId);
     }
+  }
+
+  /**
+   * If choreService has not been created yet, create the ChoreService.
+   * @return ChoreService
+   */
+  synchronized ChoreService getChoreService() {
+    if (choreService == null) {
+      choreService = new ChoreService("AsyncConn Chore Service");
+    }
+    return choreService;
   }
 
   @Override
@@ -841,8 +886,23 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     Scan s = new Scan().withStartRow(metaStartKey).withStopRow(metaStopKey, true)
       .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(5)
       .setReadType(ReadType.PREAD);
-    if (this.useMetaReplicas) {
-      s.setConsistency(Consistency.TIMELINE);
+
+    switch (this.metaReplicaMode) {
+      case LOAD_BALANCE:
+        int metaReplicaId = this.metaReplicaSelector.select(tableName, row,
+          RegionLocateType.CURRENT);
+        if (metaReplicaId != RegionInfo.DEFAULT_REPLICA_ID) {
+          // If the selector gives a non-primary meta replica region, then go with it.
+          // Otherwise, just go to primary in non-hedgedRead mode.
+          s.setConsistency(Consistency.TIMELINE);
+          s.setReplicaId(metaReplicaId);
+        }
+        break;
+      case HEDGED_READ:
+        s.setConsistency(Consistency.TIMELINE);
+        break;
+      default:
+        // do nothing
     }
     int maxAttempts = (retry ? numTries : 1);
     boolean relocateMeta = false;
@@ -1980,6 +2040,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       metrics.incrCacheDroppingExceptions(exception);
     }
 
+    // Tell metaReplicaSelector that the location is stale. It will create a stale entry
+    // with timestamp internally. Next time the client looks up the same location,
+    // it will pick a different meta replica region.
+    if (this.metaReplicaMode == CatalogReplicaMode.LOAD_BALANCE) {
+      metaReplicaSelector.onError(oldLocation);
+    }
+
     // If we're here, it means that can cannot be sure about the location, so we remove it from
     // the cache. Do not send the source because source can be a new server in the same host:port
     metaCache.clearCache(regionInfo);
@@ -2050,8 +2117,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (rpcClient != null) {
       rpcClient.close();
     }
-    if (authService != null) {
-      authService.shutdown();
+    if (choreService != null) {
+      choreService.shutdown();
     }
   }
 

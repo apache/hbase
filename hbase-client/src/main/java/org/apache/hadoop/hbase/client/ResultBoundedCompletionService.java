@@ -237,7 +237,6 @@ public class ResultBoundedCompletionService<V> {
       return f;
     }
 
-    // impossible to reach
     return null;
   }
 
