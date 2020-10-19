@@ -133,6 +133,11 @@ public class MetricsReplicationGlobalSourceSourceImpl
     incrementKBsCounter(shippedBytesCounter, shippedKBsCounter);
   }
 
+  @Override
+  public long getShippedBytes() {
+    return shippedBytesCounter.value();
+  }
+
   static void incrementKBsCounter(MutableFastCounter bytesCounter, MutableFastCounter kbsCounter) {
     // Following code should be thread-safe.
     long delta = 0;

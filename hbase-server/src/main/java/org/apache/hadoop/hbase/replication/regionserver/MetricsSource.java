@@ -51,7 +51,7 @@ public class MetricsSource implements BaseSource {
 
   private final MetricsReplicationSourceSource singleSourceSource;
   private final MetricsReplicationSourceSource globalSourceSource;
-  private Map<String, MetricsReplicationTableSource> singleSourceSourceByTable;
+  private Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable;
 
   /**
    * Constructor used to register the metrics
@@ -75,7 +75,7 @@ public class MetricsSource implements BaseSource {
    */
   public MetricsSource(String id, MetricsReplicationSourceSource singleSourceSource,
                        MetricsReplicationSourceSource globalSourceSource,
-                       Map<String, MetricsReplicationTableSource> singleSourceSourceByTable) {
+                       Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable) {
     this.id = id;
     this.singleSourceSource = singleSourceSource;
     this.globalSourceSource = globalSourceSource;
@@ -109,10 +109,10 @@ public class MetricsSource implements BaseSource {
       long age = EnvironmentEdgeManager.currentTime() - writeTime;
 
       // get the replication metrics source for table at the run time
-      MetricsReplicationTableSource tableSource = this.getSingleSourceSourceByTable()
+      MetricsReplicationSourceSource tableSource = this.getSingleSourceSourceByTable()
         .computeIfAbsent(tableName,
           t -> CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
-            .getTableSource(t));
+            .getSource(t));
       tableSource.setLastShippedAge(age);
       tableSource.incrShippedBytes(entrySize);
     }
@@ -127,7 +127,7 @@ public class MetricsSource implements BaseSource {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
     this.getSingleSourceSourceByTable().computeIfAbsent(
         tableName, t -> CompatibilitySingletonFactory
-            .getInstance(MetricsReplicationSourceFactory.class).getTableSource(t))
+            .getInstance(MetricsReplicationSourceFactory.class).getSource(t))
             .setLastShippedAge(age);
   }
 
@@ -419,7 +419,7 @@ public class MetricsSource implements BaseSource {
   }
 
   @VisibleForTesting
-  public Map<String, MetricsReplicationTableSource> getSingleSourceSourceByTable() {
+  public Map<String, MetricsReplicationSourceSource> getSingleSourceSourceByTable() {
     return singleSourceSourceByTable;
   }
 
