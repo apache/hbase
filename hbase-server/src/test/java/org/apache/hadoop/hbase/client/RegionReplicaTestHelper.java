@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -125,7 +126,8 @@ public final class RegionReplicaTestHelper {
     void updateCachedLocationOnError(HRegionLocation loc, Throwable error) throws Exception;
   }
 
-  static void testLocator(HBaseTestingUtility util, TableName tableName, Locator locator)
+  static void testLocator(HBaseTestingUtility util, TableName tableName,
+    Optional<Consumer<TableName>> actionAfterMetaUpdate, Locator locator)
       throws Exception {
     RegionLocations locs =
       locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, false);
@@ -137,11 +139,27 @@ public final class RegionReplicaTestHelper {
       assertEquals(serverName, loc.getServerName());
     }
     ServerName newServerName = moveRegion(util, locs.getDefaultRegionLocation());
+    actionAfterMetaUpdate.ifPresent(c -> c.accept(TableName.META_TABLE_NAME));
     // The cached location should not be changed
     assertEquals(locs.getDefaultRegionLocation().getServerName(),
       locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, false)
         .getDefaultRegionLocation().getServerName());
     // should get the new location when reload = true
+    // when meta replica LoadBalance mode is enabled, it may delay a bit.
+    util.waitFor(3000, new ExplainingPredicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        ServerName sn = locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID,
+          true).getDefaultRegionLocation().getServerName();
+        return newServerName.equals(sn);
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return "New location does not show up in meta (replica) region";
+      }
+    });
+
     assertEquals(newServerName,
       locator.getRegionLocations(tableName, RegionReplicaUtil.DEFAULT_REPLICA_ID, true)
         .getDefaultRegionLocation().getServerName());

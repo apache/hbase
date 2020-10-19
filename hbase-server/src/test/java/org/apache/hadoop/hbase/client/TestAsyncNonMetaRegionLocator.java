@@ -29,12 +29,15 @@ import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -55,35 +58,53 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ MediumTests.class, ClientTests.class })
+@RunWith(Parameterized.class)
 public class TestAsyncNonMetaRegionLocator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAsyncNonMetaRegionLocator.class);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final Logger LOG = LoggerFactory.getLogger(TestAsyncNonMetaRegionLocator.class);
+
+  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static TableName TABLE_NAME = TableName.valueOf("async");
 
   private static byte[] FAMILY = Bytes.toBytes("cf");
+  private static final int META_STOREFILE_REFRESH_PERIOD = 100;
+  private static final int NB_SERVERS = 4;
+  private static int numOfMetaReplica = NB_SERVERS - 1;
 
   private static AsyncConnectionImpl CONN;
 
   private static AsyncNonMetaRegionLocator LOCATOR;
+  private static ConnectionRegistry registry;
 
   private static byte[][] SPLIT_KEYS;
+  private CatalogReplicaMode metaReplicaMode;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL.startMiniCluster(3);
-    TEST_UTIL.getAdmin().balancerSwitch(false, true);
-    ConnectionRegistry registry =
-        ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
-    CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
-      registry.getClusterId().get(), null, User.getCurrent());
-    LOCATOR = new AsyncNonMetaRegionLocator(CONN);
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setInt("hbase.regionserver.meta.storefile.refresh.period",
+      META_STOREFILE_REFRESH_PERIOD);
+
+    TEST_UTIL.startMiniCluster(NB_SERVERS);
+    Admin admin = TEST_UTIL.getAdmin();
+    admin.balancerSwitch(false, true);
+    // Enable hbase:meta replication.
+    HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, numOfMetaReplica);
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getRegions(
+      TableName.META_TABLE_NAME).size() >= numOfMetaReplica);
+
+    registry = ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     SPLIT_KEYS = new byte[8][];
     for (int i = 111; i < 999; i += 111) {
       SPLIT_KEYS[i / 111 - 1] = Bytes.toBytes(String.format("%03d", i));
@@ -106,6 +127,41 @@ public class TestAsyncNonMetaRegionLocator {
       TEST_UTIL.getAdmin().deleteTable(TABLE_NAME);
     }
     LOCATOR.clearCache(TABLE_NAME);
+  }
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> parameters() {
+    return Arrays.asList(new Object[][] {
+      { null },
+      { CatalogReplicaMode.LOAD_BALANCE.toString() }
+    });
+  }
+
+  public TestAsyncNonMetaRegionLocator(String clientMetaReplicaMode) throws Exception {
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+    // Enable meta replica LoadBalance mode for this connection.
+    if (clientMetaReplicaMode != null) {
+      c.set(RegionLocator.LOCATOR_META_REPLICAS_MODE, clientMetaReplicaMode);
+      metaReplicaMode = CatalogReplicaMode.fromString(clientMetaReplicaMode);
+    }
+
+    CONN = new AsyncConnectionImpl(c, registry,
+      registry.getClusterId().get(), null, User.getCurrent());
+    LOCATOR = new AsyncNonMetaRegionLocator(CONN);
+  }
+
+  private void actionAfterMetaUpdated(TableName tableName) {
+    if (metaReplicaMode == CatalogReplicaMode.LOAD_BALANCE) {
+      // Flush meta and wait for enough time that meta hfile refresh happens.
+      // This is to simulate the "real-time" replication of meta replica regions.
+      try {
+        Admin admin = TEST_UTIL.getAdmin();
+        admin.flush(tableName);
+        Thread.sleep(5 * META_STOREFILE_REFRESH_PERIOD);
+      } catch (Exception e) {
+        LOG.error("Run into exception when flush the meta table", e);
+      }
+    }
   }
 
   private void createSingleRegionTable() throws IOException, InterruptedException {
@@ -156,6 +212,7 @@ public class TestAsyncNonMetaRegionLocator {
   @Test
   public void testSingleRegionTable() throws IOException, InterruptedException, ExecutionException {
     createSingleRegionTable();
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
     ServerName serverName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
     for (RegionLocateType locateType : RegionLocateType.values()) {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName,
@@ -202,6 +259,7 @@ public class TestAsyncNonMetaRegionLocator {
   @Test
   public void testMultiRegionTable() throws IOException, InterruptedException {
     createMultiRegionTable();
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
     byte[][] startKeys = getStartKeys();
     ServerName[] serverNames = getLocations(startKeys);
     IntStream.range(0, 2).forEach(n -> IntStream.range(0, startKeys.length).forEach(i -> {
@@ -242,6 +300,7 @@ public class TestAsyncNonMetaRegionLocator {
   @Test
   public void testRegionMove() throws IOException, InterruptedException, ExecutionException {
     createSingleRegionTable();
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
     ServerName serverName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
     HRegionLocation loc =
       getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, false).get();
@@ -255,6 +314,7 @@ public class TestAsyncNonMetaRegionLocator {
       .equals(newServerName)) {
       Thread.sleep(100);
     }
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
     // Should be same as it is in cache
     assertSame(loc,
       getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, false).get());
@@ -275,6 +335,7 @@ public class TestAsyncNonMetaRegionLocator {
     byte[] splitKey = Arrays.copyOf(row, 2);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY, new byte[][] { splitKey });
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
     HRegionLocation currentLoc =
       getDefaultRegionLocation(TABLE_NAME, row, RegionLocateType.CURRENT, false).get();
     ServerName currentServerName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
@@ -297,6 +358,7 @@ public class TestAsyncNonMetaRegionLocator {
   @Test
   public void testConcurrentLocate() throws IOException, InterruptedException, ExecutionException {
     createMultiRegionTable();
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
     byte[][] startKeys = getStartKeys();
     byte[][] endKeys = getEndKeys();
     ServerName[] serverNames = getLocations(startKeys);
@@ -316,6 +378,7 @@ public class TestAsyncNonMetaRegionLocator {
   @Test
   public void testReload() throws Exception {
     createSingleRegionTable();
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
     ServerName serverName = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName();
     for (RegionLocateType locateType : RegionLocateType.values()) {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName,
@@ -341,14 +404,28 @@ public class TestAsyncNonMetaRegionLocator {
       }
 
     });
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
     // The cached location will not change
     for (RegionLocateType locateType : RegionLocateType.values()) {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName,
         getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType, false).get());
     }
     // should get the new location when reload = true
-    assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, newServerName,
-      getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, true).get());
+    // when meta replica LoadBalance mode is enabled, it may delay a bit.
+    TEST_UTIL.waitFor(3000, new ExplainingPredicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        HRegionLocation loc = getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW,
+          RegionLocateType.CURRENT, true).get();
+        return newServerName.equals(loc.getServerName());
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return "New location does not show up in meta (replica) region";
+      }
+    });
+
     // the cached location should be replaced
     for (RegionLocateType locateType : RegionLocateType.values()) {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, newServerName,
@@ -361,6 +438,7 @@ public class TestAsyncNonMetaRegionLocator {
   public void testLocateBeforeLastRegion()
       throws IOException, InterruptedException, ExecutionException {
     createMultiRegionTable();
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
     getDefaultRegionLocation(TABLE_NAME, SPLIT_KEYS[0], RegionLocateType.CURRENT, false).join();
     HRegionLocation loc =
       getDefaultRegionLocation(TABLE_NAME, EMPTY_END_ROW, RegionLocateType.BEFORE, false).get();
@@ -373,7 +451,8 @@ public class TestAsyncNonMetaRegionLocator {
     TEST_UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_NAME)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setRegionReplication(3).build());
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME);
-    testLocator(TEST_UTIL, TABLE_NAME, new Locator() {
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
+    testLocator(TEST_UTIL, TABLE_NAME, Optional.of(this::actionAfterMetaUpdated), new Locator() {
 
       @Override
       public void updateCachedLocationOnError(HRegionLocation loc, Throwable error)
@@ -394,6 +473,7 @@ public class TestAsyncNonMetaRegionLocator {
   @Test
   public void testLocateBeforeInOnlyRegion() throws IOException, InterruptedException {
     createSingleRegionTable();
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
     HRegionLocation loc =
       getDefaultRegionLocation(TABLE_NAME, Bytes.toBytes(1), RegionLocateType.BEFORE, false).join();
     // should locate to the only region
@@ -404,6 +484,7 @@ public class TestAsyncNonMetaRegionLocator {
   @Test
   public void testConcurrentUpdateCachedLocationOnError() throws Exception {
     createSingleRegionTable();
+    actionAfterMetaUpdated(TableName.META_TABLE_NAME);
     HRegionLocation loc =
         getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, false)
             .get();

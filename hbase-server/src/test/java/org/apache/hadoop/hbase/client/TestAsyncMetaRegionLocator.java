@@ -33,6 +33,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import java.util.Optional;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncMetaRegionLocator {
@@ -66,7 +67,7 @@ public class TestAsyncMetaRegionLocator {
 
   @Test
   public void test() throws Exception {
-    testLocator(TEST_UTIL, TableName.META_TABLE_NAME, new Locator() {
+    testLocator(TEST_UTIL, TableName.META_TABLE_NAME, Optional.empty(), new Locator() {
 
       @Override
       public void updateCachedLocationOnError(HRegionLocation loc, Throwable error)
