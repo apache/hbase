@@ -50,7 +50,7 @@ public class MetricsSource implements BaseSource {
   private String id;
 
   private final MetricsReplicationSourceSource singleSourceSource;
-  private final MetricsReplicationGlobalSourceSource globalSourceSource;
+  private final MetricsReplicationSourceSource globalSourceSource;
   private Map<String, MetricsReplicationTableSource> singleSourceSourceByTable;
 
   /**
@@ -74,7 +74,7 @@ public class MetricsSource implements BaseSource {
    * @param globalSourceSource Class to monitor global-scoped metrics
    */
   public MetricsSource(String id, MetricsReplicationSourceSource singleSourceSource,
-                       MetricsReplicationGlobalSourceSource globalSourceSource,
+                       MetricsReplicationSourceSource globalSourceSource,
                        Map<String, MetricsReplicationTableSource> singleSourceSourceByTable) {
     this.id = id;
     this.singleSourceSource = singleSourceSource;
@@ -427,7 +427,9 @@ public class MetricsSource implements BaseSource {
    * Sets the amount of memory in bytes used in this RegionServer by edits pending replication.
    */
   public void setWALReaderEditsBufferUsage(long usageInBytes) {
-    globalSourceSource.setWALReaderEditsBufferBytes(usageInBytes);
+    if (globalSourceSource instanceof MetricsReplicationGlobalSourceSource) {
+      ((MetricsReplicationGlobalSourceSource) globalSourceSource).setWALReaderEditsBufferBytes(usageInBytes);
+    }
   }
 
   /**
@@ -435,6 +437,11 @@ public class MetricsSource implements BaseSource {
    * @return the amount of memory in bytes used in this RegionServer by edits pending replication.
    */
   public long getWALReaderEditsBufferUsage() {
-    return globalSourceSource.getWALReaderEditsBufferBytes();
+    if (globalSourceSource instanceof MetricsReplicationGlobalSourceSource) {
+      return ((MetricsReplicationGlobalSourceSource) globalSourceSource).getWALReaderEditsBufferBytes();
+    }
+    else {
+      return 0L;
+    }
   }
 }
