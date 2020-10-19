@@ -685,6 +685,11 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
     Collection<ReplicationSourceShipper> workers = workerThreads.values();
 
+
+    if (this.replicationEndpoint != null) {
+      this.replicationEndpoint.stop();
+    }
+
     for (ReplicationSourceShipper worker : workers) {
       worker.stopWorker();
       if (worker.entryReader != null) {
@@ -712,9 +717,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
       worker.clearWALEntryBatch();
     }
 
-    if (this.replicationEndpoint != null) {
-      this.replicationEndpoint.stop();
-    }
     if (join) {
       for (ReplicationSourceShipper worker : workers) {
         Threads.shutdown(worker, this.sleepForRetries);
