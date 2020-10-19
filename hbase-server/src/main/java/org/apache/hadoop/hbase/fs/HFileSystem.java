@@ -82,6 +82,9 @@ public class HFileSystem extends FilterFileSystem {
     // Create the default filesystem with checksum verification switched on.
     // By default, any operation to this FilterFileSystem occurs on
     // the underlying filesystem that has checksums switched on.
+    // This FS#get(URI, conf) clearly indicates in the javadoc that if the FS is
+    // not created it will initialize the FS and return that created FS. If it is
+    // already created it will just return the FS that was already created.
     this.fs = FileSystem.get(getDefaultUri(conf), conf);
     this.useHBaseChecksum = useHBaseChecksum;
 

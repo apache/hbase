@@ -345,6 +345,13 @@ public final class CommonFSUtils {
     return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
+  /**
+   * Returns the URI in the strig format
+   * @param c configuration
+   * @param p path
+   * @return - the URI's to string format
+   * @throws IOException
+   */
   public static String getDirUri(final Configuration c, Path p) throws IOException {
     if (p.toUri().getScheme() != null) {
       return p.toUri().toString();
