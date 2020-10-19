@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationGlobal
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceImpl;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceSource;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceSourceImpl;
-import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationTableSource;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -345,7 +344,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     MetricsReplicationGlobalSourceSource spyglobalSourceSource = spy(globalSourceSource);
     doNothing().when(spyglobalSourceSource).incrFailedRecoveryQueue();
 
-    Map<String, MetricsReplicationTableSource> singleSourceSourceByTable =
+    Map<String, MetricsReplicationSourceSource> singleSourceSourceByTable =
       new HashMap<>();
     MetricsSource source = new MetricsSource(id, singleSourceSource,
       spyglobalSourceSource, singleSourceSourceByTable);
@@ -401,7 +400,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     containsRandomNewTable = source.getSingleSourceSourceByTable()
         .containsKey("RandomNewTable");
     Assert.assertEquals(true, containsRandomNewTable);
-    MetricsReplicationTableSource msr = source.getSingleSourceSourceByTable()
+    MetricsReplicationSourceSource msr = source.getSingleSourceSourceByTable()
         .get("RandomNewTable");
 
     // age should be greater than zero we created the entry with time in the past

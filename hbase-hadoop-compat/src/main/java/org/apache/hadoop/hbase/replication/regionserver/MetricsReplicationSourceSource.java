@@ -60,6 +60,7 @@ public interface MetricsReplicationSourceSource extends BaseSource {
   void incrBatchesShipped(int batches);
   void incrOpsShipped(long ops);
   void incrShippedBytes(long size);
+  long getShippedBytes();
   void incrLogReadInBytes(long size);
   void incrLogReadInEdits(long size);
   void clear();
