@@ -426,7 +426,7 @@ module Hbase
     define_test "create should fail without columns when called with options" do
       drop_test_table(@create_test_name)
       assert_raise(ArgumentError) do
-        command(:create, @create_test_name, { })
+        command(:create, @create_test_name, { VERSIONS => '1' })
       end
     end
 
@@ -469,7 +469,6 @@ module Hbase
               MERGE_ENABLED => 'false')
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
       assert_match(/12345678/, admin.describe(@create_test_name))
-      assert_match(/987654321/, admin.describe(@create_test_name))
       assert_match(/77/, admin.describe(@create_test_name))
       assert_match(/'COMPACTION_ENABLED' => 'false'/, admin.describe(@create_test_name))
       assert_match(/'SPLIT_ENABLED' => 'false'/, admin.describe(@create_test_name))
@@ -485,7 +484,6 @@ module Hbase
       drop_test_table(@create_test_name)
       command(:create, @create_test_name, 'a', 'b', METHOD => 'table_att')
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
-      assert_match(/987654321/, admin.describe(@create_test_name))
     end
 
     define_test "create should work with SPLITALGO" do

@@ -1756,7 +1756,7 @@ public class TestAccessController extends SecureTestUtil {
         new UserPermission(user, Permission.newBuilder().withActions(Action.values()).build()));
     }
     assertTrue("Only super users, global users and user admin has permission on table hbase:acl " +
-        "per setup", perms.size() == 5 + superUsers.size() &&
+        "per setup", perms.size() == 6 + superUsers.size() &&
         hasFoundUserPermission(adminPerms, perms));
   }
 
@@ -2856,7 +2856,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // Verify that we can read sys-tables
     String aclTableName = PermissionStorage.ACL_TABLE_NAME.getNameAsString();
-    assertEquals(5, SUPERUSER.runAs(getPrivilegedAction(aclTableName)).size());
+    assertEquals(6, SUPERUSER.runAs(getPrivilegedAction(aclTableName)).size());
     assertEquals(0, testRegexHandler.runAs(getPrivilegedAction(aclTableName)).size());
 
     // Grant TABLE ADMIN privs to testUserPerms
@@ -3515,10 +3515,10 @@ public class TestAccessController extends SecureTestUtil {
 
     // Validate global user permission
     List<UserPermission> userPermissions;
-    assertEquals(5 + superUserCount, AccessControlClient.getUserPermissions(conn, null).size());
-    assertEquals(5 + superUserCount,
+    assertEquals(6 + superUserCount, AccessControlClient.getUserPermissions(conn, null).size());
+    assertEquals(6 + superUserCount,
       AccessControlClient.getUserPermissions(conn, HConstants.EMPTY_STRING).size());
-    assertEquals(5 + superUserCount,
+    assertEquals(6 + superUserCount,
       AccessControlClient.getUserPermissions(conn, null, HConstants.EMPTY_STRING).size());
     userPermissions = AccessControlClient.getUserPermissions(conn, null, USER_ADMIN.getName());
     verifyGetUserPermissionResult(userPermissions, 1, null, null, USER_ADMIN.getName(), superUsers);

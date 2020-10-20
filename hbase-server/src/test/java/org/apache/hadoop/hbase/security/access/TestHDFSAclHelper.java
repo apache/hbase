@@ -39,6 +39,8 @@ import static org.junit.Assert.assertEquals;
 final class TestHDFSAclHelper {
   private static final Logger LOG = LoggerFactory.getLogger(TestHDFSAclHelper.class);
 
+  private static final String USER_OWNER = "owner";
+
   private TestHDFSAclHelper() {
   }
 
@@ -55,15 +57,17 @@ final class TestHDFSAclHelper {
     }
   }
 
-  static Table createTable(HBaseTestingUtility util, TableName tableName) throws IOException {
+  static Table createTable(HBaseTestingUtility util, TableName tableName) throws Exception {
     createNamespace(util, tableName.getNamespaceAsString());
     TableDescriptor td = getTableDescriptorBuilder(util, tableName)
         .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
-    return util.createTable(td, splits);
+    User user = User.createUserForTesting(util.getConfiguration(), USER_OWNER, new String[] {});
+    SecureTestUtil.createTable(util, user, td, splits);
+    return util.getConnection().getTable(tableName);
   }
 
-  static Table createMobTable(HBaseTestingUtility util, TableName tableName) throws IOException {
+  static Table createMobTable(HBaseTestingUtility util, TableName tableName) throws Exception {
     createNamespace(util, tableName.getNamespaceAsString());
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN1).setMobEnabled(true)
@@ -72,15 +76,19 @@ final class TestHDFSAclHelper {
             .setMobThreshold(0).build())
         .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
-    return util.createTable(td, splits);
+    User user = User.createUserForTesting(util.getConfiguration(), USER_OWNER, new String[] {});
+    SecureTestUtil.createTable(util, user, td, splits);
+    return util.getConnection().getTable(tableName);
   }
 
   static TableDescriptor createUserScanSnapshotDisabledTable(HBaseTestingUtility util,
-      TableName tableName) throws IOException {
+      TableName tableName) throws Exception {
     createNamespace(util, tableName.getNamespaceAsString());
     TableDescriptor td = getTableDescriptorBuilder(util, tableName).build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
-    try (Table t = util.createTable(td, splits)) {
+    User user = User.createUserForTesting(util.getConfiguration(), USER_OWNER, new String[] {});
+    SecureTestUtil.createTable(util, user, td, splits);
+    try (Table t = util.getConnection().getTable(tableName)) {
       put(t);
     }
     return td;
@@ -93,7 +101,7 @@ final class TestHDFSAclHelper {
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).build());
   }
 
-  static void createTableAndPut(HBaseTestingUtility util, TableName tableNam) throws IOException {
+  static void createTableAndPut(HBaseTestingUtility util, TableName tableNam) throws Exception {
     try (Table t = createTable(util, tableNam)) {
       put(t);
     }

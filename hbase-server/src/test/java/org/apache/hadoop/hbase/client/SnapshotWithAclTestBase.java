@@ -203,9 +203,9 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     TableName tableName2 = TableName.valueOf(TEST_UTIL.getRandomUUID().toString());
     cloneSnapshot(snapshotName1, tableName2, false);
     verifyRows(tableName2);
-    verifyAllowed(new AccessReadAction(tableName2), USER_OWNER);
+    verifyDenied(new AccessReadAction(tableName2), USER_OWNER);
     verifyDenied(new AccessReadAction(tableName2), USER_NONE, USER_RO, USER_RW);
-    verifyAllowed(new AccessWriteAction(tableName2), USER_OWNER);
+    verifyDenied(new AccessWriteAction(tableName2), USER_OWNER);
     verifyDenied(new AccessWriteAction(tableName2), USER_RO, USER_RW, USER_NONE);
 
     // remove read permission for USER_RO.
