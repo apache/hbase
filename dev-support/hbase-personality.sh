@@ -318,7 +318,7 @@ function get_include_exclude_tests_arg
       fi
   else
     # Use branch specific exclude list when EXCLUDE_TESTS_URL and INCLUDE_TESTS_URL are empty
-    FLAKY_URL="https://ci-hadoop.apache.org/job/HBase/job/HBase-Find-Flaky-Tests/job/${PATCH_BRANCH}/lastSuccessfulBuild/artifact/excludes/"
+    FLAKY_URL="https://ci-hadoop.apache.org/job/HBase/job/HBase-Find-Flaky-Tests/job/${PATCH_BRANCH}/lastSuccessfulBuild/artifact/output/excludes"
     if wget "${FLAKY_URL}" -O "excludes"; then
       excludes=$(cat excludes)
         yetus_debug "excludes=${excludes}"
