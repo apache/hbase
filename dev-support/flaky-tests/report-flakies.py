@@ -60,6 +60,8 @@ parser.add_argument(
          "strings are written to files so they can be saved as artifacts and easily imported in "
          "other projects. Also writes timeout and failing tests in separate files for "
          "reference.")
+parser.add_argument("-o", "--output", metavar='dir', action='store', required=False,
+                    help="the output directory")
 parser.add_argument("-v", "--verbose", help="Prints more logs.", action="store_true")
 args = parser.parse_args()
 
@@ -68,6 +70,11 @@ logger = logging.getLogger(__name__)
 if args.verbose:
     logger.setLevel(logging.INFO)
 
+output_dir = '.'
+if args.output is not None:
+    output_dir = args.output
+    if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
 
 def get_bad_tests(build_url, is_yetus):
     """
@@ -257,24 +264,24 @@ for url_max_build in expanded_urls:
 all_bad_tests = all_hanging_tests.union(all_failed_tests)
 if args.mvn:
     includes = ",".join(all_bad_tests)
-    with open("./includes", "w") as inc_file:
+    with open(output_dir + "/includes", "w") as inc_file:
         inc_file.write(includes)
 
     excludes = ["**/{0}.java".format(bad_test) for bad_test in all_bad_tests]
-    with open("./excludes", "w") as exc_file:
+    with open(output_dir + "/excludes", "w") as exc_file:
         exc_file.write(",".join(excludes))
 
-    with open("./timeout", "w") as timeout_file:
+    with open(output_dir + "/timeout", "w") as timeout_file:
         timeout_file.write(",".join(all_timeout_tests))
 
-    with open("./failed", "w") as failed_file:
+    with open(output_dir + "/failed", "w") as failed_file:
         failed_file.write(",".join(all_failed_tests))
 
 dev_support_dir = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(dev_support_dir, "flaky-dashboard-template.html"), "r") as f:
     template = Template(f.read())
 
-with open("dashboard.html", "w") as f:
+with open(output_dir + "/dashboard.html", "w") as f:
     datetime = time.strftime("%m/%d/%Y %H:%M:%S")
     f.write(template.render(datetime=datetime, bad_tests_count=len(all_bad_tests),
                             results=url_to_bad_test_results, build_ids=url_to_build_ids))
