@@ -443,9 +443,9 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
         // See http://hbase.apache.org/book.html#maven.release
         stage ('create source tarball') {
           tools {
-            maven 'Maven (latest)'
+            maven 'maven_latest'
             // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
-            jdk "JDK 1.7 (latest)"
+            jdk "jdk_1.7_latest"
           }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
