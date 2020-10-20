@@ -5324,20 +5324,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   private void handleException(FileSystem fs, Path edits, IOException e) throws IOException {
-    boolean skipErrors = conf.getBoolean(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS,
-      conf.getBoolean("hbase.skip.errors", HConstants.DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS));
-    if (conf.get("hbase.skip.errors") != null) {
-      LOG.warn("The property 'hbase.skip.errors' has been deprecated. Please use "
-          + HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
-    }
-    if (skipErrors) {
+    if (isSkipErrorEnabled()) {
       Path p = WALSplitUtil.moveAsideBadEditsFile(fs, edits);
-      LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + "=true so continuing. Renamed "
-          + edits + " as " + p,
-        e);
+      LOG.info(
+        HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + "=true so continuing. Renamed " + edits +
+          " as " + p, e);
     } else {
       throw e;
     }
+  }
+
+  private boolean isSkipErrorEnabled() {
+    if (conf.get("hbase.skip.errors") != null) {
+      LOG.warn("The property 'hbase.skip.errors' has been deprecated. Please use "
+        + HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
+    }
+    return conf.getBoolean(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS,
+      conf.getBoolean("hbase.skip.errors", HConstants.DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS));
   }
 
   /**
@@ -5942,6 +5945,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           Path filePath = file.getPath();
           // If file length is zero then delete it
           if (isZeroLengthThenDelete(fs.getFileSystem(), file, filePath)) {
+            continue;
+          }
+          if (isSkipErrorEnabled() && filePath.getName().endsWith(
+            HConstants.HREGION_EDITS_CORRUPTED_SUFFIX))  {
+            LOG.info("Skip corrupted HFile {}", filePath);
             continue;
           }
           try {

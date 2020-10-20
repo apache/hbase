@@ -335,7 +335,8 @@ public final class WALSplitUtil {
   public static Path moveAsideBadEditsFile(final FileSystem fs, final Path edits)
       throws IOException {
     Path moveAsideName =
-        new Path(edits.getParent(), edits.getName() + "." + System.currentTimeMillis());
+        new Path(edits.getParent(), edits.getName() + "." + System.currentTimeMillis() +
+          HConstants.HREGION_EDITS_CORRUPTED_SUFFIX);
     if (!fs.rename(edits, moveAsideName)) {
       LOG.warn("Rename failed from {} to {}", edits, moveAsideName);
     }

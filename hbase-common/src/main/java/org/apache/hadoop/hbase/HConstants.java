@@ -435,6 +435,8 @@ public final class HConstants {
   public static final boolean DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS =
       false;
 
+  public static final String HREGION_EDITS_CORRUPTED_SUFFIX = ".corrupted";
+
   /** Maximum value length, enforced on KeyValue construction */
   public static final int MAXIMUM_VALUE_LENGTH = Integer.MAX_VALUE - 1;
 
