@@ -63,7 +63,8 @@ public class MetricsSource implements BaseSource {
     singleSourceSource =
         CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
             .getSource(id);
-    globalSourceSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+    globalSourceSource = CompatibilitySingletonFactory
+            .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     singleSourceSourceByTable = new HashMap<>();
   }
 
@@ -428,7 +429,8 @@ public class MetricsSource implements BaseSource {
    */
   public void setWALReaderEditsBufferUsage(long usageInBytes) {
     if (globalSourceSource instanceof MetricsReplicationGlobalSourceSource) {
-      ((MetricsReplicationGlobalSourceSource) globalSourceSource).setWALReaderEditsBufferBytes(usageInBytes);
+      ((MetricsReplicationGlobalSourceSource) globalSourceSource)
+              .setWALReaderEditsBufferBytes(usageInBytes);
     }
   }
 
@@ -438,7 +440,8 @@ public class MetricsSource implements BaseSource {
    */
   public long getWALReaderEditsBufferUsage() {
     if (globalSourceSource instanceof MetricsReplicationGlobalSourceSource) {
-      return ((MetricsReplicationGlobalSourceSource) globalSourceSource).getWALReaderEditsBufferBytes();
+      return ((MetricsReplicationGlobalSourceSource) globalSourceSource)
+              .getWALReaderEditsBufferBytes();
     }
     else {
       return 0L;
