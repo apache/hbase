@@ -34,8 +34,8 @@ pipeline {
   }
   tools {
     // this should match what the yetus nightly job for the branch will use
-    maven 'Maven (latest)'
-    jdk "JDK 1.8 (latest)"
+    maven 'maven_latest'
+    jdk "jdk_1.8_latest"
   }
   stages {
     stage ('run flaky tests') {
