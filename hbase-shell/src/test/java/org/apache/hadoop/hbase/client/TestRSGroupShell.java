@@ -47,10 +47,8 @@ public class TestRSGroupShell extends AbstractTestShell {
     setUpJRubyRuntime();
   }
 
-  @Test
-  public void testRunShellTests() throws IOException {
-    System.setProperty("shell.test.include", "rsgroup_shell_test.rb");
-    // Start all ruby tests
-    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
+  @Override
+  protected String getIncludeList() {
+    return "rsgroup_shell_test.rb";
   }
 }

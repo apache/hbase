@@ -18,7 +18,7 @@
 #
 
 require 'hbase_constants'
-require 'shell'
+require 'hbase_shell'
 
 module Hbase
   class ListProceduresTest < Test::Unit::TestCase

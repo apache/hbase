@@ -15,7 +15,7 @@
 # limitations under the License.
 
 require 'hbase_constants'
-require 'shell'
+require 'hbase_shell'
 
 module Hbase
   class ConverterTest < Test::Unit::TestCase
