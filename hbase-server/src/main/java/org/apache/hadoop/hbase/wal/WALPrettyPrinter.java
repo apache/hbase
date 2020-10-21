@@ -346,7 +346,7 @@ public class WALPrettyPrinter {
           }
           for (int i = 0; i < actions.size(); i++) {
             Map<String, Object> op = actions.get(i);
-            printCell(out, op, outputOnlyRowKey, outputValues);
+            printCell(out, op, outputValues, outputOnlyRowKey);
           }
         }
         if (!outputOnlyRowKey) {
@@ -363,7 +363,7 @@ public class WALPrettyPrinter {
   }
 
   public static void printCell(PrintStream out, Map<String, Object> op,
-    boolean outputOnlyRowKey, boolean outputValues) {
+    boolean outputValues, boolean outputOnlyRowKey) {
     String rowDetails = "row=" + op.get("row");
     if (outputOnlyRowKey) {
       out.println(rowDetails);
