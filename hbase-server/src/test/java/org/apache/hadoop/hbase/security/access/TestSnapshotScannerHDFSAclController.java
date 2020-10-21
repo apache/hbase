@@ -340,9 +340,6 @@ public class TestSnapshotScannerHDFSAclController {
 
   @Test
   public void testGrantTable() throws Exception {
-    final User ownerUser = User.createUserForTesting(conf, "owner", new String[] {});
-    SecureTestUtil.grantGlobal(TEST_UTIL, ownerUser.getShortName(), Permission.Action.CREATE);
-
     final String grantUserName = name.getMethodName();
     User grantUser = User.createUserForTesting(conf, grantUserName, new String[] {});
 
@@ -357,7 +354,8 @@ public class TestSnapshotScannerHDFSAclController {
       snapshotAndWait(snapshot1, table1);
       // table owner can scan table snapshot
       LOG.info("Scan snapshot");
-      TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, ownerUser, snapshot1, 6);
+      TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL,
+        User.createUserForTesting(conf, "owner", new String[] {}), snapshot1, 6);
       // grant table1 family(R)
       SecureTestUtil.grantOnTable(TEST_UTIL, grantUserName, table1, TestHDFSAclHelper.COLUMN1, null,
         READ);

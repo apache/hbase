@@ -63,6 +63,7 @@ final class TestHDFSAclHelper {
         .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
     User user = User.createUserForTesting(util.getConfiguration(), USER_OWNER, new String[] {});
+    SecureTestUtil.grantGlobal(util, user.getShortName(), Permission.Action.CREATE);
     SecureTestUtil.createTable(util, user, td, splits);
     return util.getConnection().getTable(tableName);
   }
@@ -77,6 +78,7 @@ final class TestHDFSAclHelper {
         .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
     User user = User.createUserForTesting(util.getConfiguration(), USER_OWNER, new String[] {});
+    SecureTestUtil.grantGlobal(util, user.getShortName(), Permission.Action.CREATE);
     SecureTestUtil.createTable(util, user, td, splits);
     return util.getConnection().getTable(tableName);
   }
@@ -87,6 +89,7 @@ final class TestHDFSAclHelper {
     TableDescriptor td = getTableDescriptorBuilder(util, tableName).build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
     User user = User.createUserForTesting(util.getConfiguration(), USER_OWNER, new String[] {});
+    SecureTestUtil.grantGlobal(util, user.getShortName(), Permission.Action.CREATE);
     SecureTestUtil.createTable(util, user, td, splits);
     try (Table t = util.getConnection().getTable(tableName)) {
       put(t);
