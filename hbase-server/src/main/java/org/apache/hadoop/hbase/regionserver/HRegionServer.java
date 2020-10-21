@@ -105,6 +105,9 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.MetricsIO;
+import org.apache.hadoop.hbase.io.MetricsIOSource;
+import org.apache.hadoop.hbase.io.MetricsIOWrapperImpl;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -390,6 +393,7 @@ public class HRegionServer extends Thread implements
 
   private MetricsRegionServer metricsRegionServer;
   MetricsRegionServerWrapperImpl metricsRegionServerImpl;
+  private static MetricsIO metricsIO;
   private SpanReceiverHost spanReceiverHost;
 
   /**
@@ -1597,6 +1601,9 @@ public class HRegionServer extends Thread implements
       this.metricsRegionServerImpl = new MetricsRegionServerWrapperImpl(this);
       this.metricsRegionServer = new MetricsRegionServer(
           metricsRegionServerImpl, conf, metricsTable);
+      // init it here.
+      metricsIO = new MetricsIO(new MetricsIOWrapperImpl(), MetricsIOSource.METRICS_CONTEXT,
+          MetricsIOSource.METRICS_JMX_CONTEXT_PREFIX);
       // Now that we have a metrics source, start the pause monitor
       this.pauseMonitor = new JvmPauseMonitor(conf, getMetrics().getMetricsSource());
       pauseMonitor.start();
@@ -3730,6 +3737,10 @@ public class HRegionServer extends Thread implements
   @Override
   public MetricsRegionServer getMetrics() {
     return metricsRegionServer;
+  }
+
+  public static MetricsIO getMetricsIO() {
+    return metricsIO;
   }
 
   @Override

@@ -95,6 +95,9 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.MetricsIO;
+import org.apache.hadoop.hbase.io.MetricsIOSource;
+import org.apache.hadoop.hbase.io.MetricsIOWrapperImpl;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -462,6 +465,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
 
+  private static MetricsIO metricsIO;
+
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302473L;
     private final int regionServerInfoPort;
@@ -546,6 +551,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
 
       this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(this));
+      // init it here.
+      metricsIO = new MetricsIO(new MetricsIOWrapperImpl(), MetricsIOSource.MASTER_METRICS_CONTEXT,
+          MetricsIOSource.MASTER_METRICS_JMX_CONTEXT_PREFIX);
 
       // preload table descriptor at startup
       this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);
@@ -1317,6 +1325,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     getChoreService().scheduleChore(mobFileCleanerChore);
     this.mobFileCompactionChore = new MobFileCompactionChore(this);
     getChoreService().scheduleChore(mobFileCompactionChore);
+  }
+
+  public MetricsIO getMetricsMaster() {
+    return metricsIO;
   }
 
   /**

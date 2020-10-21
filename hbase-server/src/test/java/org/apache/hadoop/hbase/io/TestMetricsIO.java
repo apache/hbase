@@ -39,7 +39,7 @@ public class TestMetricsIO {
     MetricsIO metrics = new MetricsIO(new MetricsIOWrapper() {
       @Override
       public long getChecksumFailures() { return 40; }
-    });
+    }, "regionserver","regionserver");
 
     metrics.updateFsReadTime(100);
     metrics.updateFsReadTime(200);

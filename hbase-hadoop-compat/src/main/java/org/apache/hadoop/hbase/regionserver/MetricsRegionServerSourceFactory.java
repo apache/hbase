@@ -80,8 +80,9 @@ public interface MetricsRegionServerSourceFactory {
 
   /**
    * Create a MetricsIOSource from a MetricsIOWrapper.
-   *
+   * @param jmxContext
+   * @param context
    * @return A metrics IO source
    */
-  MetricsIOSource createIO(MetricsIOWrapper wrapper);
+  MetricsIOSource createIO(MetricsIOWrapper wrapper, String context, String jmxContext);
 }
