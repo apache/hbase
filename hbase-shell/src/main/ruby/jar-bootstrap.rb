@@ -208,9 +208,9 @@ if interactive
 
       IRB.setup(ap_path)
       IRB.conf[:PROMPT][:CUSTOM] = {
-        :PROMPT_I => "%N:%03n> ",
-        :PROMPT_S => "%N:%03n%l ",
-        :PROMPT_C => "%N:%03n* ",
+        :PROMPT_I => "%N:%03n:%i> ",
+        :PROMPT_S => "%N:%03n:%i%l ",
+        :PROMPT_C => "%N:%03n:%i* ",
         :RETURN => "=> %s\n"
       }
 
