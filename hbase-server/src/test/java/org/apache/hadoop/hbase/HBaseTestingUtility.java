@@ -2096,13 +2096,14 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Create an HRegion that writes to the local tmp dirs with specified wal
    * @param info regioninfo
+   * @param conf configuration
    * @param desc table descriptor
    * @param wal wal for this region.
    * @return created hregion
    * @throws IOException
    */
-  public HRegion createLocalHRegion(RegionInfo info, Configuration conf, TableDescriptor desc, WAL wal)
-      throws IOException {
+  public HRegion createLocalHRegion(RegionInfo info, Configuration conf, TableDescriptor desc,
+      WAL wal) throws IOException {
     return HRegion.createHRegion(info, getDataTestDir(), conf, desc, wal);
   }
 

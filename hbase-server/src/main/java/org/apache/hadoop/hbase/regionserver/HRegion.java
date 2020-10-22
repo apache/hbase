@@ -8834,7 +8834,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closing");
     }
     lock(lock.readLock());
-    // Update regionLockHolders ONLY for any startRegionOperation call that is invoked from an RPC handler
+    // Update regionLockHolders ONLY for any startRegionOperation call that is invoked from
+    // an RPC handler
     Thread thisThread = Thread.currentThread();
     if (isInterruptableOp) {
       regionLockHolders.add(thisThread);
