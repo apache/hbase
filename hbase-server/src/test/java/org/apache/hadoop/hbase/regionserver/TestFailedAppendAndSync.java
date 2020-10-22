@@ -176,7 +176,7 @@ public class TestFailedAppendAndSync {
     boolean threwOnAppend = false;
     boolean threwOnBoth = false;
 
-    HRegion region = initHRegion(tableName, null, null, dodgyWAL);
+    HRegion region = initHRegion(tableName, null, null, CONF, dodgyWAL);
     try {
       // Get some random bytes.
       byte[] value = Bytes.toBytes(getName());
@@ -264,10 +264,9 @@ public class TestFailedAppendAndSync {
    * @return A region on which you must call
    *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
-  public HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, WAL wal)
-  throws IOException {
+  public HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
+      Configuration conf, WAL wal) throws IOException {
     return TEST_UTIL.createLocalHRegion(tableName.getName(), startKey, stopKey,
-      getName(), CONF, false, Durability.SYNC_WAL,
-      wal, COLUMN_FAMILY_BYTES);
+      getName(), conf, false, Durability.SYNC_WAL, wal, COLUMN_FAMILY_BYTES);
   }
 }
