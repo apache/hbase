@@ -49,7 +49,7 @@ pipeline {
     ARCHIVE_PATTERN_LIST = 'TEST-*.xml,org.apache.h*.txt,*.dumpstream,*.dump'
     // These tests currently have known failures. Once they burn down to 0, remove from here so that new problems will cause a failure.
     TESTS_FILTER = 'cc,checkstyle,javac,javadoc,pylint,shellcheck,whitespace,perlcritic,ruby-lint,rubocop,mvnsite'
-    EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/excludes"
+    EXCLUDE_TESTS_URL = "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/output/excludes"
       // TODO does hadoopcheck need to be jdk specific?
     SHALLOW_CHECKS = 'all,-shadedjars,-unit' // run by the 'yetus general check'
     DEEP_CHECKS = 'compile,htmlout,javac,maven,mvninstall,shadedjars,unit' // run by 'yetus jdkX (HadoopY) checks'
@@ -593,9 +593,9 @@ pipeline {
         // TODO (HBASE-23870): replace this with invocation of the release tool
         stage ('packaging and integration') {
           tools {
-            maven 'Maven (latest)'
+            maven 'maven_latest'
             // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
-            jdk "JDK 1.8 (latest)"
+            jdk "jdk_1.8_latest"
           }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
