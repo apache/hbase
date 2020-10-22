@@ -104,14 +104,10 @@ public class EnableTableProcedure
           // count
           TableDescriptor hTableDescriptor =
               env.getMasterServices().getTableDescriptors().get(tableName);
-
-          // Get the replica count
           int regionReplicaCount = hTableDescriptor.getRegionReplication();
-
-          // Get the regions for the table from memory; get both online and offline regions
-          // ('true').
+          // Get regions for the table from memory
           List<RegionInfo> regionsOfTable =
-              env.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName, true);
+              env.getAssignmentManager().getRegionStates().getRegionsOfTableForEnabling(tableName);
 
           int currentMaxReplica = 0;
           // Check if the regions in memory have replica regions as marked in META table
