@@ -153,7 +153,7 @@ public class RegionStates {
     regionInfos.forEach(this::deleteRegion);
   }
 
-  ArrayList<RegionStateNode> getTableRegionStateNodes(final TableName tableName) {
+  List<RegionStateNode> getTableRegionStateNodes(final TableName tableName) {
     final ArrayList<RegionStateNode> regions = new ArrayList<RegionStateNode>();
     for (RegionStateNode node: regionsMap.tailMap(tableName.getName()).values()) {
       if (!node.getTable().equals(tableName)) break;
@@ -223,8 +223,10 @@ public class RegionStates {
   /**
    * @return Return online regions of table; does not include OFFLINE or SPLITTING regions.
    */
-  public List<RegionInfo> getRegionsOfTable(final TableName table) {
-    return getRegionsOfTable(table, false);
+  public List<RegionInfo> getRegionsOfTable(TableName table) {
+    return getRegionsOfTable(table,
+      regionNode -> !regionNode.isInState(State.OFFLINE, State.SPLIT) &&
+        !regionNode.getRegionInfo().isSplitParent());
   }
 
   private HRegionLocation createRegionForReopen(RegionStateNode node) {
@@ -328,16 +330,22 @@ public class RegionStates {
   }
 
   /**
-   * @return Return online regions of table; does not include OFFLINE or SPLITTING regions.
+   * Get the regions for enabling a table.
+   * <p/>
+   * Here we want the EnableTableProcedure to be more robust and can be used to fix some nasty
+   * states, so the checks in this method will be a bit strange. In general, a region can only be
+   * offline when it is split, for merging we will just delete the parent regions, but with HBCK we
+   * may force update the state of a region to fix some nasty bugs, so in this method we will try to
+   * bring the offline regions back if it is not split. That's why we only check for split state
+   * here.
    */
-  public List<RegionInfo> getRegionsOfTable(TableName table, boolean offline) {
-    return getRegionsOfTable(table, state -> include(state, offline));
+  public List<RegionInfo> getRegionsOfTableForEnabling(TableName table) {
+    return getRegionsOfTable(table,
+      regionNode -> !regionNode.isInState(State.SPLIT) && !regionNode.getRegionInfo().isSplit());
   }
 
   /**
-   * @return Return the regions of the table; does not include OFFLINE unless you set
-   *         <code>offline</code> to true. Does not include regions that are in the
-   *         {@link State#SPLIT} state.
+   * @return Return the regions of the table and filter them.
    */
   private List<RegionInfo> getRegionsOfTable(TableName table, Predicate<RegionStateNode> filter) {
     return getTableRegionStateNodes(table).stream().filter(filter).map(n -> n.getRegionInfo())
@@ -350,7 +358,7 @@ public class RegionStates {
    * @return True if we should include the <code>node</code> (do not include
    * if split or offline unless <code>offline</code> is set to true.
    */
-  boolean include(final RegionStateNode node, final boolean offline) {
+  private boolean include(final RegionStateNode node, final boolean offline) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("WORKING ON " + node + " " + node.getRegionInfo());
     }

@@ -103,9 +103,9 @@ public class EnableTableProcedure
           TableDescriptor tableDescriptor =
               env.getMasterServices().getTableDescriptors().get(tableName);
           int configuredReplicaCount = tableDescriptor.getRegionReplication();
-          // Get regions for the table from memory; get both online and offline regions ('true').
+          // Get regions for the table from memory
           List<RegionInfo> regionsOfTable =
-              env.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName, true);
+              env.getAssignmentManager().getRegionStates().getRegionsOfTableForEnabling(tableName);
 
           // How many replicas do we currently have? Check regions returned from
           // in-memory state.
