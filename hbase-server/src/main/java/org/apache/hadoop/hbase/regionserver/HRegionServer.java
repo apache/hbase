@@ -21,7 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
-import static org.apache.hadoop.hbase.util.DNS.RS_HOSTNAME_KEY;
+import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
 import java.io.IOException;
 import java.lang.management.MemoryType;
@@ -467,16 +467,17 @@ public class HRegionServer extends Thread implements
   protected String useThisHostnameInstead;
 
   /**
-   * @deprecated
-   *  Use {@link HRegionServer#UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY} instead.
+   * @deprecated since 2.4.0 and will be removed in 4.0.0.
+   * Use {@link HRegionServer#UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY} instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-24667">HBASE-24667</a>
    */
   @Deprecated
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-  final static String DEPRECATED_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY =
+  final static String RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY =
     "hbase.regionserver.hostname.disable.master.reversedns";
 
   /**
-   * HBASE-18226: This config and hbase.regionserver.hostname are mutually exclusive.
+   * HBASE-18226: This config and hbase.unasfe.regionserver.hostname are mutually exclusive.
    * Exception will be thrown if both are used.
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -489,7 +490,7 @@ public class HRegionServer extends Thread implements
    * compatibility.
    */
   static {
-    Configuration.addDeprecation(DEPRECATED_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY);
+    Configuration.addDeprecation(RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY);
   }
 
   /**
@@ -709,12 +710,12 @@ public class HRegionServer extends Thread implements
 
   // HMaster should override this method to load the specific config for master
   protected String getUseThisHostnameInstead(Configuration conf) throws IOException {
-    String hostname = conf.get(RS_HOSTNAME_KEY);
+    String hostname = conf.get(UNSAFE_RS_HOSTNAME_KEY);
     if (conf.getBoolean(UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false)) {
       if (!StringUtils.isBlank(hostname)) {
-        String msg = UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY + " and " + RS_HOSTNAME_KEY +
+        String msg = UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY + " and " + UNSAFE_RS_HOSTNAME_KEY +
           " are mutually exclusive. Do not set " + UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY +
-          " to true while " + RS_HOSTNAME_KEY + " is used";
+          " to true while " + UNSAFE_RS_HOSTNAME_KEY + " is used";
         throw new IOException(msg);
       } else {
         return rpcServices.isa.getHostName();

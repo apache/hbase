@@ -1119,7 +1119,7 @@ possible configurations would overwhelm and obscure the important.
     http://docs.oracle.com/javase/1.5.0/docs/api/java/net/Socket.html#getTcpNoDelay()</description>
   </property>
   <property>
-    <name>hbase.regionserver.hostname</name>
+    <name>hbase.unsafe.regionserver.hostname</name>
     <value></value>
     <description>This config is for experts: don't set its value unless you really know what you are doing.
     When set to a non-empty value, this represents the (external facing) hostname for the underlying server.
@@ -1131,7 +1131,7 @@ possible configurations would overwhelm and obscure the important.
     <description>This config is for experts: don't set its value unless you really know what you are doing.
     When set to true, regionserver will use the current node hostname for the servername and HMaster will
     skip reverse DNS lookup and use the hostname sent by regionserver instead. Note that this config and
-    hbase.regionserver.hostname are mutually exclusive. See https://issues.apache.org/jira/browse/HBASE-18226
+    hbase.unsafe.regionserver.hostname are mutually exclusive. See https://issues.apache.org/jira/browse/HBASE-18226
     for more details.</description>
   </property>
   <!-- The following properties configure authentication information for

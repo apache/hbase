@@ -77,7 +77,7 @@ public class TestRegionServerHostname {
   @Test
   public void testInvalidRegionServerHostnameAbortsServer() throws Exception {
     String invalidHostname = "hostAddr.invalid";
-    TEST_UTIL.getConfiguration().set(DNS.RS_HOSTNAME_KEY, invalidHostname);
+    TEST_UTIL.getConfiguration().set(DNS.UNSAFE_RS_HOSTNAME_KEY, invalidHostname);
     HRegionServer hrs = null;
     try {
       hrs = new HRegionServer(TEST_UTIL.getConfiguration());
@@ -106,7 +106,7 @@ public class TestRegionServerHostname {
         LOG.info("Found " + hostName + " on " + ni + ", addr=" + addr);
 
         TEST_UTIL.getConfiguration().set(DNS.MASTER_HOSTNAME_KEY, hostName);
-        TEST_UTIL.getConfiguration().set(DNS.RS_HOSTNAME_KEY, hostName);
+        TEST_UTIL.getConfiguration().set(DNS.UNSAFE_RS_HOSTNAME_KEY, hostName);
         StartMiniClusterOption option = StartMiniClusterOption.builder()
             .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
         TEST_UTIL.startMiniCluster(option);
@@ -132,14 +132,23 @@ public class TestRegionServerHostname {
   public void testDeprecatedConfigs() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     new HRegionServer(conf);
-    conf.setBoolean(HRegionServer.DEPRECATED_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false);
+    conf.setBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false);
     assertFalse(conf.getBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true));
-    conf.setBoolean(HRegionServer.DEPRECATED_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
+    conf.setBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
     assertTrue(conf.getBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false));
     conf.setBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
-    assertTrue(conf.getBoolean(HRegionServer.DEPRECATED_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false));
+    assertTrue(conf.getBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false));
     conf.setBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false);
-    assertFalse(conf.getBoolean(HRegionServer.DEPRECATED_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true));
+    assertFalse(conf.getBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true));
+
+    conf.setBoolean(DNS.RS_HOSTNAME_KEY, false);
+    assertFalse(conf.getBoolean(DNS.UNSAFE_RS_HOSTNAME_KEY, true));
+    conf.setBoolean(DNS.RS_HOSTNAME_KEY, true);
+    assertTrue(conf.getBoolean(DNS.UNSAFE_RS_HOSTNAME_KEY, false));
+    conf.setBoolean(DNS.UNSAFE_RS_HOSTNAME_KEY, true);
+    assertTrue(conf.getBoolean(DNS.RS_HOSTNAME_KEY, false));
+    conf.setBoolean(DNS.UNSAFE_RS_HOSTNAME_KEY, false);
+    assertFalse(conf.getBoolean(DNS.RS_HOSTNAME_KEY, true));
   }
 
   @Test
@@ -158,9 +167,9 @@ public class TestRegionServerHostname {
         LOG.info("Found " + hostName + " on " + ni);
 
         TEST_UTIL.getConfiguration().set(DNS.MASTER_HOSTNAME_KEY, hostName);
-        // "hbase.regionserver.hostname" and "hbase.unsafe.regionserver.hostname.disable.master.reversedns"
+        // "hbase.unsafe.regionserver.hostname" and "hbase.unsafe.regionserver.hostname.disable.master.reversedns"
         // are mutually exclusive. Exception should be thrown if both are used.
-        TEST_UTIL.getConfiguration().set(DNS.RS_HOSTNAME_KEY, hostName);
+        TEST_UTIL.getConfiguration().set(DNS.UNSAFE_RS_HOSTNAME_KEY, hostName);
         TEST_UTIL.getConfiguration().setBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
         try {
           StartMiniClusterOption option = StartMiniClusterOption.builder()
@@ -171,7 +180,7 @@ public class TestRegionServerHostname {
           Throwable t2 = t1.getCause();
           assertTrue(t1.getMessage()+" - "+t2.getMessage(), t2.getMessage().contains(
             HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY + " and " +
-                DNS.RS_HOSTNAME_KEY + " are mutually exclusive"));
+                DNS.UNSAFE_RS_HOSTNAME_KEY + " are mutually exclusive"));
           return;
         } finally {
           TEST_UTIL.shutdownMiniCluster();
