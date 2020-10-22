@@ -2125,19 +2125,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Create an HRegion that writes to the local tmp dirs with specified wal
    * @param info regioninfo
-   * @param desc table descriptor
-   * @param wal wal for this region.
-   * @return created hregion
-   * @throws IOException
-   */
-  public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc, WAL wal)
-      throws IOException {
-    return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc, wal);
-  }
-
-  /**
-   * Create an HRegion that writes to the local tmp dirs with specified wal
-   * @param info regioninfo
    * @param info configuration
    * @param desc table descriptor
    * @param wal wal for this region.

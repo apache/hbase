@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
@@ -47,7 +48,6 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
@@ -66,7 +66,6 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestRegionInterrupt {
@@ -78,7 +77,7 @@ public class TestRegionInterrupt {
   static final byte[] FAMILY = Bytes.toBytes("info");
 
   @Rule
-  public TestName name = new TestName();
+  public TableNameTestRule name = new TableNameTestRule();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -100,7 +99,7 @@ public class TestRegionInterrupt {
 
   @Test(timeout=120000)
   public void testCloseInterruptScanning() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     LOG.info("Creating table " + tableName);
     try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
       // load some data
@@ -127,15 +126,7 @@ public class TestRegionInterrupt {
             }
           } catch (IOException e) {
             LOG.info("Scanner caught exception", e);
-            Throwable t;
-            if (e instanceof RetriesExhaustedWithDetailsException) {
-              t = ((RetriesExhaustedWithDetailsException)e).getCause(0);
-            } else {
-              t = e.getCause();
-            }
-            if (t instanceof NotServingRegionException) {
-              expectedExceptionCaught.set(true);
-            }
+            expectedExceptionCaught.set(true);
           } finally {
             LOG.info("Finished scan");
           }
@@ -168,7 +159,7 @@ public class TestRegionInterrupt {
 
   @Test(timeout=120000)
   public void testCloseInterruptMutation() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = name.getTableName();
     final Admin admin = TEST_UTIL.getHBaseAdmin();
     // Create the test table
     HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -195,15 +186,7 @@ public class TestRegionInterrupt {
           }
         } catch (IOException e) {
           LOG.info("Inserter caught exception", e);
-          Throwable t;
-          if (e instanceof RetriesExhaustedWithDetailsException) {
-            t = ((RetriesExhaustedWithDetailsException)e).getCause(0);
-          } else {
-            t = e.getCause();
-          }
-          if (t instanceof NotServingRegionException) {
-            expectedExceptionCaught.set(true);
-          }
+          expectedExceptionCaught.set(true);
         }
       }
     });
@@ -261,9 +244,9 @@ public class TestRegionInterrupt {
     }
 
     @Override
-    void throwOnInterrupt(Throwable t) throws NotServingRegionException, InterruptedIOException {
+    IOException throwOnInterrupt(Throwable t) {
       interrupted = true;
-      super.throwOnInterrupt(t);
+      return super.throwOnInterrupt(t);
     }
 
   }

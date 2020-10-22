@@ -5321,9 +5321,9 @@ public class TestHRegion {
     byte[] col2 = Bytes.toBytes("col2");
     long ts = 1;
     String method = this.getName();
-    HBaseConfiguration config = new HBaseConfiguration();
-    config.setInt("test.block.size", 1);
-    this.region = initHRegion(tableName, method, config, families);
+    Configuration conf = new Configuration(CONF);
+    conf.setInt("test.block.size", 1);
+    this.region = initHRegion(tableName, method, conf, families);
     KeyValue kv1 = new KeyValue(rowA, cf, col1, ts, KeyValue.Type.Put, null);
     KeyValue kv2 = new KeyValue(rowB, cf, col1, ts, KeyValue.Type.Put, null);
     KeyValue kv3 = new KeyValue(rowC, cf, col1, ts, KeyValue.Type.Put, null);
@@ -5398,7 +5398,7 @@ public class TestHRegion {
     byte[] col = Bytes.toBytes("C");
     long ts = 1;
     String method = this.getName();
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = new Configuration(CONF);
     // disable compactions in this test.
     conf.setInt("hbase.hstore.compactionThreshold", 10000);
     this.region = initHRegion(tableName, method, conf, families);
@@ -5553,7 +5553,7 @@ public class TestHRegion {
     byte[] col = Bytes.toBytes("C");
     long ts = 1;
     String method = this.getName();
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = new Configuration(CONF);
     // disable compactions in this test.
     conf.setInt("hbase.hstore.compactionThreshold", 10000);
     this.region = initHRegion(tableName, method, conf, families);
@@ -5616,8 +5616,7 @@ public class TestHRegion {
     byte[][] families = {cf1};
     byte[] col = Bytes.toBytes("C");
     String method = this.getName();
-    HBaseConfiguration conf = new HBaseConfiguration();
-    this.region = initHRegion(tableName, method, conf, families);
+    this.region = initHRegion(tableName, method, CONF, families);
     // setup with one storefile and one memstore, to create scanner and get an earlier readPt
     Put put = new Put(Bytes.toBytes("19998"));
     put.add(cf1, col, Bytes.toBytes("val"));
@@ -6644,12 +6643,12 @@ public class TestHRegion {
       currRow.get(1).getRowOffset(), currRow.get(1).getRowLength()));
   }
 
-  @Test(timeout=20000)
+  @Test
   public void testCloseNoInterrupt() throws Exception {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = { cf1 };
 
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = new Configuration(CONF);
     // Disable close thread interrupt and server abort behavior
     conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, false);
     region = initHRegion(tableName, method, conf, families);
@@ -6684,17 +6683,18 @@ public class TestHRegion {
     holder.start();
     latch.await();
     region.close();
+    holder.join();
     region = null;
 
     assertFalse("Region lock holder should not have been interrupted", holderInterrupted.get());
   }
 
-  @Test(timeout=20000)
+  @Test
   public void testCloseInterrupt() throws Exception {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = { cf1 };
 
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = new Configuration(CONF);
     // Enable close thread interrupt and server abort behavior
     conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
     region = initHRegion(tableName, method, conf, families);
@@ -6729,17 +6729,18 @@ public class TestHRegion {
     holder.start();
     latch.await();
     region.close();
+    holder.join();
     region = null;
 
     assertTrue("Region lock holder was not interrupted", holderInterrupted.get());
   }
 
-  @Test(timeout=20000)
+  @Test
   public void testCloseAbort() throws Exception {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = { cf1 };
 
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = new Configuration(CONF);
     // Enable close thread interrupt and server abort behavior
     // Set the close lock acquisition wait time to 5 seconds
     conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
@@ -6788,6 +6789,7 @@ public class TestHRegion {
     } catch (IOException e) {
       LOG.info("Caught expected exception", e);
     }
+    holder.join();
     region = null;
 
     // Verify the region tried to abort the server
