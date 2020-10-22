@@ -156,11 +156,11 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
    * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
    *         when done.
    */
-  public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, Configuration conf, WAL wal)
-    throws IOException {
+  public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
+      Configuration conf, WAL wal) throws IOException {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
       0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, conf, false, Durability.USE_DEFAULT,
-      wal, COLUMN_FAMILY_BYTES);
+    return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, conf, false,
+      Durability.USE_DEFAULT, wal, COLUMN_FAMILY_BYTES);
   }
 }
