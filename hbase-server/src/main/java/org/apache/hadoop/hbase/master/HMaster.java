@@ -3824,7 +3824,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     CompactionState compactionState = CompactionState.NONE;
     try {
       List<RegionInfo> regions =
-        assignmentManager.getRegionStates().getRegionsOfTable(tableName, false);
+        assignmentManager.getRegionStates().getRegionsOfTable(tableName);
       for (RegionInfo regionInfo : regions) {
         ServerName serverName =
           assignmentManager.getRegionStates().getRegionServerOfRegion(regionInfo);
