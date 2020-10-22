@@ -2101,9 +2101,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @return created hregion
    * @throws IOException
    */
-  public HRegion createLocalHRegion(RegionInfo info, TableDescriptor desc, WAL wal)
+  public HRegion createLocalHRegion(RegionInfo info, Configuration conf, TableDescriptor desc, WAL wal)
       throws IOException {
-    return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc, wal);
+    return HRegion.createHRegion(info, getDataTestDir(), conf, desc, wal);
   }
 
   /**

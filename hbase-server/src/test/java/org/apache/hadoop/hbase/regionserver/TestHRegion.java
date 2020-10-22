@@ -3508,7 +3508,7 @@ public class TestHRegion {
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(method + ".log");
     final WAL wal = HBaseTestingUtility.createWal(TEST_UTIL.getConfiguration(), logDir, info);
-    this.region = TEST_UTIL.createLocalHRegion(info, htd, wal);
+    this.region = TEST_UTIL.createLocalHRegion(info, CONF, htd, wal);
 
     // Put 4 version to memstore
     long ts = 0;
@@ -6038,9 +6038,9 @@ public class TestHRegion {
     byte[] col1 = Bytes.toBytes("col1");
     byte[] col2 = Bytes.toBytes("col2");
     long ts = 1;
-    HBaseConfiguration config = new HBaseConfiguration();
-    config.setInt("test.block.size", 1);
-    this.region = initHRegion(tableName, method, config, families);
+    Configuration conf = new Configuration(CONF);
+    conf.setInt("test.block.size", 1);
+    this.region = initHRegion(tableName, method, conf, families);
     KeyValue kv1 = new KeyValue(rowA, cf, col1, ts, KeyValue.Type.Put, null);
     KeyValue kv2 = new KeyValue(rowB, cf, col1, ts, KeyValue.Type.Put, null);
     KeyValue kv3 = new KeyValue(rowC, cf, col1, ts, KeyValue.Type.Put, null);
@@ -6118,7 +6118,7 @@ public class TestHRegion {
     byte[][] families = { cf1, cf2, cf3 };
     byte[] col = Bytes.toBytes("C");
     long ts = 1;
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = new Configuration(CONF);
     // disable compactions in this test.
     conf.setInt("hbase.hstore.compactionThreshold", 10000);
     this.region = initHRegion(tableName, method, conf, families);
@@ -6280,7 +6280,7 @@ public class TestHRegion {
     byte[][] families = { cf1, cf2, cf3, cf4 };
     byte[] col = Bytes.toBytes("C");
     long ts = 1;
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = new Configuration(CONF);
     // disable compactions in this test.
     conf.setInt("hbase.hstore.compactionThreshold", 10000);
     this.region = initHRegion(tableName, method, conf, families);
@@ -6346,7 +6346,7 @@ public class TestHRegion {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = {cf1};
     byte[] col = Bytes.toBytes("C");
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = new Configuration(CONF);
     this.region = initHRegion(tableName, method, conf, families);
     // setup with one storefile and one memstore, to create scanner and get an earlier readPt
     Put put = new Put(Bytes.toBytes("19998"));
@@ -6395,8 +6395,7 @@ public class TestHRegion {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = { cf1 };
     byte[] col = Bytes.toBytes("C");
-    HBaseConfiguration conf = new HBaseConfiguration();
-    this.region = initHRegion(tableName, method, conf, families);
+    this.region = initHRegion(tableName, method, CONF, families);
     // setup with one storefile and one memstore, to create scanner and get an earlier readPt
     Put put = new Put(Bytes.toBytes("19996"));
     put.addColumn(cf1, col, Bytes.toBytes("val"));
@@ -6448,8 +6447,7 @@ public class TestHRegion {
     byte[][] families = { cf1 };
     byte[] col = Bytes.toBytes("C");
 
-    HBaseConfiguration conf = new HBaseConfiguration();
-    this.region = initHRegion(tableName, method, conf, families);
+    this.region = initHRegion(tableName, method, CONF, families);
 
     Put put = new Put(Bytes.toBytes("199996"));
     put.addColumn(cf1, col, Bytes.toBytes("val"));
@@ -7349,12 +7347,12 @@ public class TestHRegion {
     }
   }
 
-  @Test(timeout=20000)
+  @Test
   public void testCloseNoInterrupt() throws Exception {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = { cf1 };
 
-    Configuration conf = HBaseConfiguration.create();
+    Configuration conf = new Configuration(CONF);
     // Disable close thread interrupt and server abort behavior
     conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, false);
     region = initHRegion(tableName, method, conf, families);
@@ -7389,17 +7387,18 @@ public class TestHRegion {
     holder.start();
     latch.await();
     region.close();
+    holder.join();
     region = null;
 
     assertFalse("Region lock holder should not have been interrupted", holderInterrupted.get());
   }
 
-  @Test(timeout=20000)
+  @Test
   public void testCloseInterrupt() throws Exception {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = { cf1 };
 
-    Configuration conf = HBaseConfiguration.create();
+    Configuration conf = new Configuration(CONF);
     // Enable close thread interrupt and server abort behavior
     conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
     region = initHRegion(tableName, method, conf, families);
@@ -7434,17 +7433,18 @@ public class TestHRegion {
     holder.start();
     latch.await();
     region.close();
+    holder.join();
     region = null;
 
     assertTrue("Region lock holder was not interrupted", holderInterrupted.get());
   }
 
-  @Test(timeout=20000)
+  @Test
   public void testCloseAbort() throws Exception {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = { cf1 };
 
-    Configuration conf = HBaseConfiguration.create();
+    Configuration conf = new Configuration(CONF);
     // Enable close thread interrupt and server abort behavior
     // Set the close lock acquisition wait time to 5 seconds
     conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
@@ -7493,6 +7493,7 @@ public class TestHRegion {
     } catch (IOException e) {
       LOG.info("Caught expected exception", e);
     }
+    holder.join();
     region = null;
 
     // Verify the region tried to abort the server
