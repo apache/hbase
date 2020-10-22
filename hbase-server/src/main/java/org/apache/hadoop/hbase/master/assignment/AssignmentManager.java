@@ -883,8 +883,13 @@ public class AssignmentManager {
   private TransitRegionStateProcedure forceCreateUnssignProcedure(RegionStateNode regionNode) {
     regionNode.lock();
     try {
-      if (!regionStates.include(regionNode, false) ||
-        regionStates.isRegionOffline(regionNode.getRegionInfo())) {
+      if (regionNode.isInState(State.OFFLINE, State.CLOSED, State.SPLIT)) {
+        return null;
+      }
+      // in general, a split parent should be in CLOSED or SPLIT state, but anyway, let's check it
+      // here for safety
+      if (regionNode.getRegionInfo().isSplit()) {
+        LOG.warn("{} is a split parent but not in CLOSED or SPLIT state", regionNode);
         return null;
       }
       // As in DisableTableProcedure or ModifyTableProcedure, we will hold the xlock for table, so
@@ -1922,6 +1927,14 @@ public class AssignmentManager {
     nodeB.setState(State.SPLITTING_NEW);
 
     TableDescriptor td = master.getTableDescriptors().get(parent.getTable());
+    // TODO: here we just update the parent region info in meta, to set split and offline to true,
+    // without changing the one in the region node. This is a bit confusing but the region info
+    // field in RegionStateNode is not expected to be changed in the current design. Need to find a
+    // possible way to address this problem, or at least adding more comments about the trick to
+    // deal with this problem, that when you want to filter out split parent, you need to check both
+    // the RegionState on whether it is split, and also the region info. If one of them matches then
+    // it is a split parent. And usually only one of them can match, as after restart, the region
+    // state will be changed from SPLIT to CLOSED.
     regionStateStore.splitRegion(parent, daughterA, daughterB, serverName, td);
     if (shouldAssignFavoredNodes(parent)) {
       List<ServerName> onlineServers = this.master.getServerManager().getOnlineServersList();
