@@ -68,7 +68,7 @@ public class HLogPrettyPrinter extends WALPrettyPrinter {
    * Basic constructor that simply initializes values to reasonable defaults.
    */
   public HLogPrettyPrinter() {
-    this(false, false, -1l, null, null, null, null, false, System.out);
+    this(false, false, -1L, null, null, null, null, false, System.out);
   }
 
   /**
