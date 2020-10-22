@@ -89,7 +89,7 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
     FileSystem fs = FileSystem.get(conf);
     Path rootDir = new Path(dir + getName());
     T wal = getWAL(fs, rootDir, getName(), conf);
-    HRegion region = initHRegion(tableName, null, null, wal);
+    HRegion region = initHRegion(tableName, null, null, conf, wal);
     try {
       resetSyncFlag(wal);
       assertNull(getSyncFlag(wal));
@@ -114,7 +114,7 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
     conf.set(HRegion.WAL_HSYNC_CONF_KEY, "true");
     fs = FileSystem.get(conf);
     wal = getWAL(fs, rootDir, getName(), conf);
-    region = initHRegion(tableName, null, null, wal);
+    region = initHRegion(tableName, null, null, conf, wal);
 
     try {
       resetSyncFlag(wal);
@@ -156,11 +156,11 @@ public abstract class WALDurabilityTestBase<T extends WAL> {
    * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
    *         when done.
    */
-  public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, WAL wal)
+  public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, Configuration conf, WAL wal)
     throws IOException {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
       0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, false, Durability.USE_DEFAULT,
+    return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, conf, false, Durability.USE_DEFAULT,
       wal, COLUMN_FAMILY_BYTES);
   }
 }
