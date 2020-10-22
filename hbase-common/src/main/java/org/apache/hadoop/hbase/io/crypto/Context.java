@@ -94,7 +94,7 @@ public class Context implements Configurable {
         ", want=" + cipher.getKeyLength());
     }
     this.key = key;
-    this.keyHash = new String(Hex.encodeHex(Encryption.computeHash(conf, encoded)));
+    this.keyHash = new String(Hex.encodeHex(Encryption.computeCryptoKeyHash(conf, encoded)));
     return this;
   }
 }

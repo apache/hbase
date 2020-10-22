@@ -122,6 +122,26 @@ public class TestEncryptionUtil {
     EncryptionUtil.unwrapWALKey(conf, "other", wrappedKeyBytes);
   }
 
+  @Test(expected = KeyException.class)
+  public void testHashAlgorithmMismatchWhenFailExpected() throws Exception {
+    Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
+    conf.setBoolean(Encryption.CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY, true);
+    testKeyWrappingWithMismatchingAlgorithms(conf);
+  }
+
+  @Test
+  public void testHashAlgorithmMismatchWhenFailNotExpected() throws Exception {
+    Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
+    conf.setBoolean(Encryption.CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY, false);
+    testKeyWrappingWithMismatchingAlgorithms(conf);
+  }
+
+  @Test
+  public void testHashAlgorithmMismatchShouldNotFailWithDefaultConfig() throws Exception {
+    Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
+    testKeyWrappingWithMismatchingAlgorithms(conf);
+  }
+
   private void testKeyWrapping(String hashAlgorithm) throws Exception {
     // set up the key provider for testing to resolve a key for our test subject
     Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
@@ -185,6 +205,36 @@ public class TestEncryptionUtil {
     // did we get back what we wrapped?
     assertTrue("Unwrapped key bytes do not match original",
                Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+  }
+
+  private void testKeyWrappingWithMismatchingAlgorithms(Configuration conf) throws Exception {
+    // we use MD5 to hash the encryption key during wrapping
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, "MD5");
+
+    // generate a test key
+    byte[] keyBytes = new byte[AES.KEY_LENGTH];
+    new SecureRandom().nextBytes(keyBytes);
+    String algorithm =
+      conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Key key = new SecretKeySpec(keyBytes, algorithm);
+
+    // wrap the test key
+    byte[] wrappedKeyBytes = EncryptionUtil.wrapKey(conf, "hbase", key);
+    assertNotNull(wrappedKeyBytes);
+
+    // we set the default hash algorithm to SHA-384 during unwrapping
+    conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, "SHA-384");
+
+    // unwrap
+    // we expect to fail, if CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY == true
+    // otherwise we will use the algorithm written during wrapping
+    Key unwrappedKey = EncryptionUtil.unwrapKey(conf, "hbase", wrappedKeyBytes);
+    assertNotNull(unwrappedKey);
+
+    // did we get back what we wrapped?
+    assertTrue("Unwrapped key bytes do not match original",
+      Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
   }
 
 }

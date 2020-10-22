@@ -67,6 +67,24 @@ public final class Encryption {
    */
   public static final String CRYPTO_KEY_HASH_ALGORITHM_CONF_DEFAULT = "MD5";
 
+  /**
+   * Configuration key for specifying the behaviour if the configured hash algorithm
+   * differs from the one used for generating key hash in encrypted HFiles currently being read.
+   *
+   * - "false" (default): we won't fail but use the hash algorithm stored in the HFile
+   * - "true": we throw an exception (this can be useful if regulations are enforcing the usage
+   *           of certain algorithms, e.g. on FIPS compliant clusters)
+   */
+  public static final String CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY =
+    "hbase.crypto.key.hash.algorithm.failOnMismatchfalse";
+
+  /**
+   * Default behaviour is not to fail if the hash algorithm configured differs from the one
+   * used in the HFile. (this is the more fail-safe approach, allowing us to read
+   * encrypted HFiles written using a different encryption key hash algorithm)
+   */
+  public static final boolean CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_DEFAULT = false;
+
 
   /**
    * Crypto context
@@ -152,18 +170,25 @@ public final class Encryption {
   }
 
   /**
+   * Returns the Hash Algorithm mismatch behaviour defined in the crypto configuration.
+   */
+  public static boolean failOnHashAlgorithmMismatch(Configuration conf) {
+    return conf.getBoolean(CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY,
+                           CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_DEFAULT);
+  }
+
+  /**
    * Returns the hash of the supplied argument, using the hash algorithm
    * specified in the given config.
    */
-  public static byte[] computeHash(Configuration conf, byte[] arg) {
+  public static byte[] computeCryptoKeyHash(Configuration conf, byte[] arg) {
     String algorithm = getConfiguredHashAlgorithm(conf);
     try {
-      MessageDigest md = MessageDigest.getInstance(algorithm);
-      return md.digest(arg);
-    } catch (NoSuchAlgorithmException e) {
-      String message = format("unable to use algorithm %s (please check your configuration " +
-                              "parameter %s and the security providers configured for the JVM)",
-                              algorithm, CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY);
+      return hashWithAlg(algorithm, arg);
+    } catch (RuntimeException e) {
+      String message = format("Error in computeCryptoKeyHash (please check your configuration " +
+                              "parameter %s and the security provider configuration of the JVM)",
+                              CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY);
       throw new RuntimeException(message, e);
     }
   }
@@ -172,28 +197,28 @@ public final class Encryption {
    * Return the MD5 digest of the concatenation of the supplied arguments.
    */
   public static byte[] hash128(String... args) {
-    return hashWithAlg("MD5", 16, args);
+    return hashWithAlg("MD5", args);
   }
 
   /**
    * Return the MD5 digest of the concatenation of the supplied arguments.
    */
   public static byte[] hash128(byte[]... args) {
-    return hashWithAlg("MD5", 16, args);
+    return hashWithAlg("MD5", args);
   }
 
   /**
    * Return the SHA-256 digest of the concatenation of the supplied arguments.
    */
   public static byte[] hash256(String... args) {
-    return hashWithAlg("SHA-256", 32, args);
+    return hashWithAlg("SHA-256", args);
   }
 
   /**
    * Return the SHA-256 digest of the concatenation of the supplied arguments.
    */
   public static byte[] hash256(byte[]... args) {
-    return hashWithAlg("SHA-256", 32, args);
+    return hashWithAlg("SHA-256", args);
   }
 
   /**
@@ -584,31 +609,31 @@ public final class Encryption {
     } while (v > 0);
   }
 
-  private static byte[] hashWithAlg(String algorithm, int hashLength, byte[]... args) {
-    byte[] result = new byte[hashLength];
+  /**
+   * Return the hash of the concatenation of the supplied arguments, using the 
+   * hash algorithm provided.
+   */
+  public static byte[] hashWithAlg(String algorithm, byte[]... args) {
     try {
       MessageDigest md = MessageDigest.getInstance(algorithm);
       for (byte[] arg: args) {
         md.update(arg);
       }
-      md.digest(result, 0, result.length);
-      return result;
-    } catch (NoSuchAlgorithmException | DigestException e) {
-      throw new RuntimeException(e);
+      return md.digest();
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("unable to use hash algorithm: " + algorithm, e);
     }
   }
 
-  private static byte[] hashWithAlg(String algorithm, int hashLength, String... args) {
-    byte[] result = new byte[hashLength];
+  private static byte[] hashWithAlg(String algorithm, String... args) {
     try {
       MessageDigest md = MessageDigest.getInstance(algorithm);
       for (String arg: args) {
         md.update(Bytes.toBytes(arg));
       }
-      md.digest(result, 0, result.length);
-      return result;
-    } catch (NoSuchAlgorithmException | DigestException e) {
-      throw new RuntimeException(e);
+      return md.digest();
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("unable to use hash algorithm: " + algorithm, e);
     }
   }
 

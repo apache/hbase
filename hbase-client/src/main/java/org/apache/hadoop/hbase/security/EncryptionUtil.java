@@ -103,7 +103,7 @@ public final class EncryptionUtil {
     builder.setLength(keyBytes.length);
     builder.setHashAlgorithm(Encryption.getConfiguredHashAlgorithm(conf));
     builder.setHash(
-      UnsafeByteOperations.unsafeWrap(Encryption.computeHash(conf, keyBytes)));
+      UnsafeByteOperations.unsafeWrap(Encryption.computeCryptoKeyHash(conf, keyBytes)));
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Encryption.encryptWithSubjectKey(out, new ByteArrayInputStream(keyBytes), subject,
       conf, cipher, iv);
@@ -140,8 +140,14 @@ public final class EncryptionUtil {
   private static Key getUnwrapKey(Configuration conf, String subject,
       EncryptionProtos.WrappedKey wrappedKey, Cipher cipher) throws IOException, KeyException {
     String configuredHashAlgorithm = Encryption.getConfiguredHashAlgorithm(conf);
-    if(!configuredHashAlgorithm.equalsIgnoreCase(wrappedKey.getHashAlgorithm().trim())) {
-      throw new KeyException("Unexpected hash algorithm: " + wrappedKey.getHashAlgorithm());
+    String wrappedHashAlgorithm = wrappedKey.getHashAlgorithm().trim();
+    if(!configuredHashAlgorithm.equalsIgnoreCase(wrappedHashAlgorithm)) {
+      String msg = String.format("Unexpected encryption key hash algorithm: %s (expecting: %s)",
+        wrappedHashAlgorithm, configuredHashAlgorithm);
+      if(Encryption.failOnHashAlgorithmMismatch(conf)) {
+        throw new KeyException(msg);
+      }
+      LOG.debug(msg);
     }
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     byte[] iv = wrappedKey.hasIv() ? wrappedKey.getIv().toByteArray() : null;
@@ -150,7 +156,7 @@ public final class EncryptionUtil {
     byte[] keyBytes = out.toByteArray();
     if (wrappedKey.hasHash()) {
       if (!Bytes.equals(wrappedKey.getHash().toByteArray(),
-                        Encryption.computeHash(conf, keyBytes))) {
+                        Encryption.hashWithAlg(wrappedHashAlgorithm, keyBytes))) {
         throw new KeyException("Key was not successfully unwrapped");
       }
     }
