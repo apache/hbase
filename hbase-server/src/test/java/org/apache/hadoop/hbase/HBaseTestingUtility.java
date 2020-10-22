@@ -2000,14 +2000,15 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @throws IOException
    */
   public HRegion createLocalHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      boolean isReadOnly, Durability durability, WAL wal, byte[]... families) throws IOException {
-    return createLocalHRegionWithInMemoryFlags(tableName,startKey, stopKey, isReadOnly,
+      Configuration conf, boolean isReadOnly, Durability durability, WAL wal, byte[]... families)
+      throws IOException {
+    return createLocalHRegionWithInMemoryFlags(tableName, startKey, stopKey, conf, isReadOnly,
         durability, wal, null, families);
   }
 
   public HRegion createLocalHRegionWithInMemoryFlags(TableName tableName, byte[] startKey,
-    byte[] stopKey, boolean isReadOnly, Durability durability, WAL wal, boolean[] compactedMemStore,
-    byte[]... families) throws IOException {
+    byte[] stopKey, Configuration conf, boolean isReadOnly, Durability durability, WAL wal,
+    boolean[] compactedMemStore, byte[]... families) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     builder.setReadOnly(isReadOnly);
     int i = 0;

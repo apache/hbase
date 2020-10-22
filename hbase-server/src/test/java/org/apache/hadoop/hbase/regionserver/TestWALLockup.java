@@ -226,7 +226,7 @@ public class TestWALLockup {
     // There is no 'stop' once a logRoller is running.. it just dies.
     logRoller.start();
     // Now get a region and start adding in edits.
-    final HRegion region = initHRegion(tableName, null, null, dodgyWAL);
+    final HRegion region = initHRegion(tableName, null, null, CONF, dodgyWAL);
     byte [] bytes = Bytes.toBytes(getName());
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(
         Bytes.BYTES_COMPARATOR);
@@ -557,11 +557,11 @@ public class TestWALLockup {
    * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
    *         when done.
    */
-  private static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, WAL wal)
+  private static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, Configuration conf, WAL wal)
       throws IOException {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
       0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, false, Durability.SYNC_WAL,
+    return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, conf, false, Durability.SYNC_WAL,
       wal, COLUMN_FAMILY_BYTES);
   }
 }
