@@ -2116,8 +2116,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @return created hregion
    * @throws IOException
    */
-  public HRegion createLocalHRegion(HRegionInfo info, Configuration conf, HTableDescriptor desc, WAL wal)
-      throws IOException {
+  public HRegion createLocalHRegion(HRegionInfo info, Configuration conf, HTableDescriptor desc,
+      WAL wal) throws IOException {
     return HRegion.createHRegion(info, getDataTestDir(), conf, desc, wal);
   }
 
@@ -2142,9 +2142,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
       String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
       WAL wal, byte[]... families) throws IOException {
-    return this
-        .createLocalHRegion(TableName.valueOf(tableName), startKey, stopKey, conf, isReadOnly, durability,
-            wal, families);
+    return createLocalHRegion(TableName.valueOf(tableName), startKey, stopKey, conf, isReadOnly,
+      durability, wal, families);
   }
 
   /**
