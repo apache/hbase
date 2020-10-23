@@ -1585,7 +1585,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String CLOSE_WAIT_TIME = "hbase.regionserver.close.wait.time.ms";
   public static final long DEFAULT_CLOSE_WAIT_TIME = 300000;    // 5 minutes
   public static final String CLOSE_WAIT_ABORT = "hbase.regionserver.close.wait.abort";
-  public static final boolean DEFAULT_CLOSE_WAIT_ABORT = false;
+  public static final boolean DEFAULT_CLOSE_WAIT_ABORT = true;
 
   public Map<byte[], List<HStoreFile>> close(boolean abort) throws IOException {
     return close(abort, false);
