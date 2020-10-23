@@ -8822,21 +8822,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void startRegionOperation(Operation op) throws IOException {
     boolean isInterruptableOp = false;
     switch (op) {
-    case GET:  // interruptible read operations
-    case SCAN:
-      isInterruptableOp = true;
-      checkReadsEnabled();
-      break;
-    case INCREMENT: // interruptible write operations
-    case APPEND:
-    case PUT:
-    case DELETE:
-    case BATCH_MUTATE:
-    case CHECK_AND_MUTATE:
-      isInterruptableOp = true;
-      break;
-    default:  // all others
-      break;
+      case GET:  // interruptible read operations
+      case SCAN:
+        isInterruptableOp = true;
+        checkReadsEnabled();
+        break;
+      case INCREMENT: // interruptible write operations
+      case APPEND:
+      case PUT:
+      case DELETE:
+      case BATCH_MUTATE:
+      case CHECK_AND_MUTATE:
+        isInterruptableOp = true;
+        break;
+      default:  // all others
+        break;
     }
     // when a region is in recovering state, no read, split, merge or snapshot is allowed
     if (isRecovering() && (this.disallowWritesInRecovering ||
