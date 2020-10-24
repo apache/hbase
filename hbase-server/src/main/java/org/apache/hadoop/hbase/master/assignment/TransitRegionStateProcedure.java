@@ -348,6 +348,7 @@ public class TransitRegionStateProcedure
               LOG.error(
                 "Cannot assign replica region {} because its primary region {} does not exist.",
                 regionNode.getRegionInfo(), defaultRI);
+              regionNode.unsetProcedure(this);
               return Flow.NO_MORE_STATE;
             }
           }

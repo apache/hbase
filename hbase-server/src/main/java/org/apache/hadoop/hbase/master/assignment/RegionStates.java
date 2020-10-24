@@ -345,6 +345,18 @@ public class RegionStates {
   }
 
   /**
+   * Get the regions for deleting a table.
+   * <p/>
+   * Here we need to return all the regions irrespective of the states in order to archive them
+   * all. This is because if we don't archive OFFLINE/SPLIT regions and if a snapshot or a cloned
+   * table references to the regions, we will lose the data of the regions.
+   */
+  public List<RegionInfo> getRegionsOfTableForDeleting(TableName table) {
+    return getTableRegionStateNodes(table).stream().map(RegionStateNode::getRegionInfo)
+      .collect(Collectors.toList());
+  }
+
+  /**
    * @return Return the regions of the table and filter them.
    */
   private List<RegionInfo> getRegionsOfTable(TableName table, Predicate<RegionStateNode> filter) {
