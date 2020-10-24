@@ -96,7 +96,8 @@ public class DeleteTableProcedure
 
           // TODO: Move out... in the acquireLock()
           LOG.debug("Waiting for RIT for {}", this);
-          regions = env.getAssignmentManager().getRegionStates().getRegionsOfTable(getTableName());
+          regions = env.getAssignmentManager().getRegionStates()
+            .getRegionsOfTableForDeleting(getTableName());
           assert regions != null && !regions.isEmpty() : "unexpected 0 regions";
           ProcedureSyncWait.waitRegionInTransition(env, regions);
 
