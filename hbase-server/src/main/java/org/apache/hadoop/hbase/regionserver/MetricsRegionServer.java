@@ -145,15 +145,24 @@ public class MetricsRegionServer {
     serverSource.updateDeleteBatch(t);
   }
 
-  public void updateCheckAndDelete(long t) {
+  public void updateCheckAndDelete(TableName tn, long t) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateCheckAndDelete(tn, t);
+    }
     serverSource.updateCheckAndDelete(t);
   }
 
-  public void updateCheckAndPut(long t) {
+  public void updateCheckAndPut(TableName tn, long t) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateCheckAndPut(tn, t);
+    }
     serverSource.updateCheckAndPut(t);
   }
 
-  public void updateCheckAndMutate(long t) {
+  public void updateCheckAndMutate(TableName tn, long t) {
+    if (tableMetrics != null && tn != null) {
+      tableMetrics.updateCheckAndMutate(tn, t);
+    }
     serverSource.updateCheckAndMutate(t);
   }
 

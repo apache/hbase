@@ -2997,15 +2997,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
     if (metricsRegionServer != null) {
       long after = EnvironmentEdgeManager.currentTime();
-      metricsRegionServer.updateCheckAndMutate(after - before);
+      metricsRegionServer.updateCheckAndMutate(
+        region.getRegionInfo().getTable(), after - before);
 
       MutationType type = mutation.getMutateType();
       switch (type) {
         case PUT:
-          metricsRegionServer.updateCheckAndPut(after - before);
+          metricsRegionServer.updateCheckAndPut(
+            region.getRegionInfo().getTable(), after - before);
           break;
         case DELETE:
-          metricsRegionServer.updateCheckAndDelete(after - before);
+          metricsRegionServer.updateCheckAndDelete(
+            region.getRegionInfo().getTable(), after - before);
           break;
         default:
           break;
