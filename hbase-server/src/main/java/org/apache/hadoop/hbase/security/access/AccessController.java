@@ -804,16 +804,18 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
             + PermissionStorage.ACL_TABLE_NAME + " is not yet created. "
             + getClass().getSimpleName() + " should be configured as the first Coprocessor");
       } else {
-        String owner = desc.getOwnerString();
-        // default the table owner to current user, if not specified.
-        if (owner == null)
-          owner = getActiveUser(c).getShortName();
+        final String owner = (desc.getOwnerString() != null) ? desc.getOwnerString() :
+          getActiveUser(c).getShortName();
         final UserPermission userPermission = new UserPermission(owner,
             Permission.newBuilder(desc.getTableName()).withActions(Action.values()).build());
         // switch to the real hbase master user for doing the RPC on the ACL table
         User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
+            // We don't need to add the user permission if the user is superuser
+            if (Superusers.isSuperUser(owner)) {
+              return null;
+            }
             try (Table table =
                 c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
               PermissionStorage.addUserPermission(c.getEnvironment().getConfiguration(),
@@ -911,6 +913,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
+        // We don't need to add the user permission if the user is superuser
+        if (Superusers.isSuperUser(owner)) {
+          return null;
+        }
         UserPermission userperm = new UserPermission(owner,
             Permission.newBuilder(currentDesc.getTableName()).withActions(Action.values()).build());
         try (Table table =
