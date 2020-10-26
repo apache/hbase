@@ -82,8 +82,9 @@ public class TestRegionInterrupt {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionInterrupt.class);
 
-  static final int SLEEP_TIME = 10 * 1000;
   static final byte[] FAMILY = Bytes.toBytes("info");
+
+  static long sleepTime;
 
   @Rule
   public TableNameTestRule name = new TableNameTestRule();
@@ -91,9 +92,15 @@ public class TestRegionInterrupt {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     conf.setClass(HConstants.REGION_IMPL, InterruptInterceptingHRegion.class, Region.class);
     conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    // Ensure the sleep interval is long enough for interrupts to occur.
+    long waitInterval = conf.getLong(HRegion.CLOSE_WAIT_INTERVAL,
+      HRegion.DEFAULT_CLOSE_WAIT_INTERVAL);
+    sleepTime = waitInterval * 2;
+    // Try to bound the running time of this unit if expected actions do not take place.
+    conf.setLong(HRegion.CLOSE_WAIT_TIME, sleepTime * 2);
   }
 
   @Before
@@ -106,7 +113,7 @@ public class TestRegionInterrupt {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=120000)
+  @Test
   public void testCloseInterruptScanning() throws Exception {
     final TableName tableName = name.getTableName();
     LOG.info("Creating table " + tableName);
@@ -166,7 +173,7 @@ public class TestRegionInterrupt {
     }
   }
 
-  @Test(timeout=120000)
+  @Test
   public void testCloseInterruptMutation() throws Exception {
     final TableName tableName = name.getTableName();
     final Admin admin = TEST_UTIL.getAdmin();
@@ -275,7 +282,7 @@ public class TestRegionInterrupt {
       LOG.info("Starting sleep on " + v);
       sleeping = true;
       try {
-        Thread.sleep(SLEEP_TIME);
+        Thread.sleep(sleepTime);
       } catch (InterruptedException e) {
         // restore interrupt status so region scanner can handle it as expected
         Thread.currentThread().interrupt();
@@ -307,7 +314,7 @@ public class TestRegionInterrupt {
       LOG.info("Starting sleep for " + op);
       sleeping = true;
       try {
-        Thread.sleep(SLEEP_TIME);
+        Thread.sleep(sleepTime);
       } catch (InterruptedException e) {
         // restore interrupt status so doMiniBatchMutation etc. can handle it as expected
         Thread.currentThread().interrupt();
