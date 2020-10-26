@@ -269,8 +269,10 @@ class SimpleRpcServerResponder extends Thread {
         if (resp == null) {
           return true;
         }
+        simpleRpcServer.getMetrics().removeCallFromResponseQueue(resp.getResponse().getRemaining());
         if (!processResponse(connection, resp)) {
           connection.responseQueue.addFirst(resp);
+          simpleRpcServer.getMetrics().addCallToResponseQueue(resp.getResponse().getRemaining());
           return false;
         }
       }
@@ -298,6 +300,7 @@ class SimpleRpcServerResponder extends Thread {
           }
           // Too big to fit, putting ahead.
           conn.responseQueue.addFirst(resp);
+          simpleRpcServer.getMetrics().addCallToResponseQueue(resp.getResponse().getRemaining());
           added = true; // We will register to the selector later, outside of the lock.
         }
       } finally {
@@ -307,6 +310,7 @@ class SimpleRpcServerResponder extends Thread {
 
     if (!added) {
       conn.responseQueue.addLast(resp);
+      simpleRpcServer.getMetrics().addCallToResponseQueue(resp.getResponse().getRemaining());
     }
     registerForWrite(conn);
   }

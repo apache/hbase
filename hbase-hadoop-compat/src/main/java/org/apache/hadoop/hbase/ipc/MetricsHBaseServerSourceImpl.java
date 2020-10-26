@@ -38,6 +38,8 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
   private final MutableFastCounter authenticationFallbacks;
   private final MutableFastCounter sentBytes;
   private final MutableFastCounter receivedBytes;
+  private final MutableFastCounter numCallsInResponseQueue;
+  private final MutableFastCounter numSizeInResponseQueue;
 
 
   private MetricHistogram queueCallTime;
@@ -78,6 +80,10 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
         REQUEST_SIZE_DESC);
     this.responseSize = this.getMetricsRegistry().newSizeHistogram(RESPONSE_SIZE_NAME,
               RESPONSE_SIZE_DESC);
+    this.numCallsInResponseQueue = this.getMetricsRegistry().newCounter(NUM_CALL_RESPONSE_QUEUE_NAME,
+      NUM_CALL_RESPONSE_QUEUE_DESC, 0L);
+    this.numSizeInResponseQueue = this.getMetricsRegistry().newCounter(NUM_SIZE_RESPONSE_QUEUE_NAME,
+      NUM_SIZE_RESPONSE_QUEUE_DESC, 0L);
   }
 
   @Override
@@ -138,6 +144,18 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
   @Override
   public void queuedAndProcessedCall(int totalTime) {
     totalCallTime.add(totalTime);
+  }
+
+  @Override
+  public void addCallToResponseQueue(long size) {
+    numCallsInResponseQueue.incr();
+    numSizeInResponseQueue.incr(size);
+  }
+
+  @Override
+  public void removeCallFromResponseQueue(long size) {
+    numCallsInResponseQueue.incr(-1);
+    numSizeInResponseQueue.incr(-size);
   }
 
   @Override
