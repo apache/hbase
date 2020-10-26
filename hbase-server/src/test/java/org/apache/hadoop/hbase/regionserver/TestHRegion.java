@@ -7352,10 +7352,12 @@ public class TestHRegion {
   public void testCloseNoInterrupt() throws Exception {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = { cf1 };
+    final int SLEEP_TIME = 10 * 1000;
 
     Configuration conf = new Configuration(CONF);
     // Disable close thread interrupt and server abort behavior
     conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, false);
+    conf.setInt(HRegion.CLOSE_WAIT_INTERVAL, 1000);
     region = initHRegion(tableName, method, conf, families);
 
     final CountDownLatch latch = new CountDownLatch(1);
@@ -7368,7 +7370,7 @@ public class TestHRegion {
           region.startRegionOperation(Operation.SCAN);
           latch.countDown();
           try {
-            Thread.sleep(10*1000);
+            Thread.sleep(SLEEP_TIME);
           } catch (InterruptedException e) {
             LOG.info("Interrupted");
             holderInterrupted.set(true);
@@ -7388,8 +7390,8 @@ public class TestHRegion {
     holder.start();
     latch.await();
     region.close();
-    holder.join();
     region = null;
+    holder.join();
 
     assertFalse("Region lock holder should not have been interrupted", holderInterrupted.get());
   }
@@ -7398,10 +7400,13 @@ public class TestHRegion {
   public void testCloseInterrupt() throws Exception {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = { cf1 };
+    final int SLEEP_TIME = 10 * 1000;
 
     Configuration conf = new Configuration(CONF);
     // Enable close thread interrupt and server abort behavior
     conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
+    // Speed up the unit test, no need to wait default 10 seconds.
+    conf.setInt(HRegion.CLOSE_WAIT_INTERVAL, 1000);
     region = initHRegion(tableName, method, conf, families);
 
     final CountDownLatch latch = new CountDownLatch(1);
@@ -7414,7 +7419,7 @@ public class TestHRegion {
           region.startRegionOperation(Operation.SCAN);
           latch.countDown();
           try {
-            Thread.sleep(10*1000);
+            Thread.sleep(SLEEP_TIME);
           } catch (InterruptedException e) {
             LOG.info("Interrupted");
             holderInterrupted.set(true);
@@ -7434,8 +7439,8 @@ public class TestHRegion {
     holder.start();
     latch.await();
     region.close();
-    holder.join();
     region = null;
+    holder.join();
 
     assertTrue("Region lock holder was not interrupted", holderInterrupted.get());
   }
@@ -7444,14 +7449,18 @@ public class TestHRegion {
   public void testCloseAbort() throws Exception {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = { cf1 };
+    final int SLEEP_TIME = 10 * 1000;
 
     Configuration conf = new Configuration(CONF);
-    // Enable close thread interrupt and server abort behavior
-    // Set the close lock acquisition wait time to 5 seconds
+    // Enable close thread interrupt and server abort behavior.
     conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
-    conf.setInt(HRegion.CLOSE_WAIT_TIME, 5*1000);
+    // Set the abort interval to a fraction of sleep time so we are guaranteed to be aborted.
+    conf.setInt(HRegion.CLOSE_WAIT_TIME, SLEEP_TIME / 2);
+    // Set the wait interval to a fraction of sleep time so we are guaranteed to be interrupted.
+    conf.setInt(HRegion.CLOSE_WAIT_INTERVAL, SLEEP_TIME / 4);
     region = initHRegion(tableName, method, conf, families);
     RegionServerServices rsServices = mock(RegionServerServices.class);
+    when(rsServices.getServerName()).thenReturn(ServerName.valueOf("localhost", 1000, 1000));
     region.rsServices = rsServices;
 
     final CountDownLatch latch = new CountDownLatch(1);
@@ -7462,8 +7471,8 @@ public class TestHRegion {
           LOG.info("Starting region operation holder");
           region.startRegionOperation(Operation.SCAN);
           latch.countDown();
-          // Hold the lock for 10 seconds no matter how many times we are interrupted
-          int timeRemaining = 10 * 1000;
+          // Hold the lock for SLEEP_TIME seconds no matter how many times we are interrupted.
+          int timeRemaining = SLEEP_TIME;
           while (timeRemaining > 0) {
             long start = EnvironmentEdgeManager.currentTime();
             try {
@@ -7473,7 +7482,12 @@ public class TestHRegion {
             }
             long end = EnvironmentEdgeManager.currentTime();
             timeRemaining -= end - start;
-            LOG.info("Sleeping again, remaining time " + timeRemaining + " ms");
+            if (timeRemaining < 0) {
+              timeRemaining = 0;
+            }
+            if (timeRemaining > 0) {
+              LOG.info("Sleeping again, remaining time " + timeRemaining + " ms");
+            }
           }
         } catch (Exception e) {
           throw new RuntimeException(e);
@@ -7494,8 +7508,8 @@ public class TestHRegion {
     } catch (IOException e) {
       LOG.info("Caught expected exception", e);
     }
-    holder.join();
     region = null;
+    holder.join();
 
     // Verify the region tried to abort the server
     verify(rsServices, atLeast(1)).abort(anyString(),any());
