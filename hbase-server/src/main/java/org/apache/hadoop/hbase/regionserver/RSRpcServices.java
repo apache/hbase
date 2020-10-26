@@ -3062,7 +3062,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         switch (type) {
         case DELETE:
           if (request.hasCondition()) {
-            metricsRegionServer.updateCheckAndDelete(after - before);
+            metricsRegionServer.updateCheckAndDelete(
+                region == null ? null : region.getRegionInfo().getTable(), after - before);
           } else {
             metricsRegionServer.updateDelete(
                 region == null ? null : region.getRegionInfo().getTable(), after - before);
@@ -3070,10 +3071,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           break;
         case PUT:
           if (request.hasCondition()) {
-            metricsRegionServer.updateCheckAndPut(after - before);
+            metricsRegionServer.updateCheckAndPut(
+                region == null ? null : region.getRegionInfo().getTable(), after - before);
           } else {
             metricsRegionServer.updatePut(
-                region == null ? null : region.getRegionInfo().getTable(),after - before);
+                region == null ? null : region.getRegionInfo().getTable(), after - before);
           }
           break;
         default:

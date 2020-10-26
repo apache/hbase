@@ -47,6 +47,8 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
     final MetricHistogram deleteBatchTimeHisto;
     final MetricHistogram scanTimeHisto;
     final MetricHistogram scanSizeHisto;
+    final MetricHistogram checkAndDeleteTimeHisto;
+    final MetricHistogram checkAndPutTimeHisto;
 
     TableHistograms(DynamicMetricsRegistry registry, TableName tn) {
       getTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, GET_TIME));
@@ -60,6 +62,10 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
           qualifyMetricsName(tn, DELETE_BATCH_TIME));
       scanTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, SCAN_TIME));
       scanSizeHisto = registry.newSizeHistogram(qualifyMetricsName(tn, SCAN_SIZE));
+      checkAndDeleteTimeHisto =
+          registry.newTimeHistogram(qualifyMetricsName(tn, CHECK_AND_DELETE_TIME));
+      checkAndPutTimeHisto =
+          registry.newTimeHistogram(qualifyMetricsName(tn, CHECK_AND_PUT_TIME));
     }
 
     public void updatePut(long time) {
@@ -97,6 +103,15 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
     public void updateScanTime(long t) {
       scanTimeHisto.add(t);
     }
+
+    public void updateCheckAndDeleteTime(long t) {
+      checkAndDeleteTimeHisto.add(t);
+    }
+
+    public void updateCheckAndPutTime(long t) {
+      checkAndPutTimeHisto.add(t);
+    }
+
   }
 
   @VisibleForTesting
@@ -172,6 +187,16 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
   @Override
   public void updateScanTime(String tableName, long t) {
     getOrCreateTableHistogram(tableName).updateScanTime(t);
+  }
+
+  @Override
+  public void updateCheckAndDelete(String tableName, long time) {
+    getOrCreateTableHistogram(tableName).updateCheckAndDeleteTime(time);
+  }
+
+  @Override
+  public void updateCheckAndPut(String tableName, long time) {
+    getOrCreateTableHistogram(tableName).updateCheckAndPutTime(time);
   }
 
   @Override
