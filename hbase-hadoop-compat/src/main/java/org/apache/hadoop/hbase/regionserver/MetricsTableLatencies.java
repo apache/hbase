@@ -53,6 +53,8 @@ public interface MetricsTableLatencies {
   String DELETE_BATCH_TIME = "deleteBatchTime";
   String INCREMENT_TIME = "incrementTime";
   String APPEND_TIME = "appendTime";
+  String CHECK_AND_DELETE_TIME = "checkAndDeleteTime";
+  String CHECK_AND_PUT_TIME = "checkAndPutTime";
 
   /**
    * Update the Put time histogram
@@ -125,4 +127,19 @@ public interface MetricsTableLatencies {
    * @param t time it took
    */
   void updateScanTime(String tableName, long t);
+
+  /**
+   * Update the CheckAndDelete time histogram.
+   * @param nameAsString The table the metric is for
+   * @param time time it took
+   */
+  void updateCheckAndDelete(String nameAsString, long time);
+
+  /**
+   * Update the CheckAndPut time histogram.
+   * @param nameAsString The table the metric is for
+   * @param time time it took
+   */
+  void updateCheckAndPut(String nameAsString, long time);
+
 }
