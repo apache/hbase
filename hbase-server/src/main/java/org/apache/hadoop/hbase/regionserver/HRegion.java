@@ -1486,10 +1486,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public static final long MAX_FLUSH_PER_CHANGES = 1000000000; // 1G
 
-  public static final String CLOSE_WAIT_TIME = "hbase.regionserver.close.wait.time.ms";
-  public static final long DEFAULT_CLOSE_WAIT_TIME = 300000;    // 5 minutes
   public static final String CLOSE_WAIT_ABORT = "hbase.regionserver.close.wait.abort";
   public static final boolean DEFAULT_CLOSE_WAIT_ABORT = false;
+  public static final String CLOSE_WAIT_TIME = "hbase.regionserver.close.wait.time.ms";
+  public static final long DEFAULT_CLOSE_WAIT_TIME = 60000;     // 1 minute
+  public static final String CLOSE_WAIT_INTERVAL = "hbase.regionserver.close.wait.interval.ms";
+  public static final long DEFAULT_CLOSE_WAIT_INTERVAL = 10000; // 10 seconds
 
   /**
    * Close down this HRegion.  Flush the cache unless abort parameter is true,
@@ -1586,35 +1588,58 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // we will not attempt to interrupt threads servicing requests nor crash out
     // the regionserver if something remains stubborn.
 
-    boolean canAbort = conf.getBoolean(CLOSE_WAIT_ABORT, DEFAULT_CLOSE_WAIT_ABORT);
+    final boolean canAbort = conf.getBoolean(CLOSE_WAIT_ABORT, DEFAULT_CLOSE_WAIT_ABORT);
+    final boolean useTimedWait = canAbort; // Redundant in branch-1, but used to minimize code delta
     if (LOG.isDebugEnabled()) {
-      LOG.debug((canAbort ? "Time limited wait" : "Waiting") + " for close lock on " + this);
+      LOG.debug((useTimedWait ? "Time limited wait" : "Waiting without time limit") +
+        " for close lock on " + this);
     }
+    final long timeoutForWriteLock = conf.getLong(CLOSE_WAIT_TIME, DEFAULT_CLOSE_WAIT_TIME);
+    final long closeWaitInterval = conf.getLong(CLOSE_WAIT_INTERVAL, DEFAULT_CLOSE_WAIT_INTERVAL);
     long elapsedWaitTime = 0;
-    if (canAbort) {
-      // Before we begin waiting, interrupt all region operations that might be in
-      // progress. This encourages them to quickly break out of waiting states or
-      // inner loops, throw back InterruptedIOException to the clients, and release
-      // the read lock via endRegionOperation.
-      interruptRegionOperations();
-
-      long waitTime = conf.getLong(CLOSE_WAIT_TIME, DEFAULT_CLOSE_WAIT_TIME);
-      boolean acquired = false;
-      long start = EnvironmentEdgeManager.currentTime();
-      try {
-        acquired = lock.writeLock().tryLock(waitTime, TimeUnit.MILLISECONDS);
-      } catch (InterruptedException e) {
-        // Doesn't seem safe to fall through after interrupt. Abort the server if we
-        // were interrupted.
-        String msg = "Interrupted while waiting for close lock on " + this;
-        LOG.fatal(msg, e);
-        rsServices.abort(msg, e);
-        throw (InterruptedIOException) new InterruptedIOException(msg).initCause(e);
+    if (useTimedWait) {
+      // Sanity check configuration
+      long remainingWaitTime = timeoutForWriteLock;
+      if (remainingWaitTime < closeWaitInterval) {
+        LOG.warn("Time limit for close wait of " + timeoutForWriteLock +
+          " ms is less than the configured lock acquisition wait interval " +
+          closeWaitInterval + " ms, using wait interval as time limit");
+        remainingWaitTime = closeWaitInterval;
       }
-      elapsedWaitTime = EnvironmentEdgeManager.currentTime() - start;
+      boolean acquired = false;
+      do {
+        long start = EnvironmentEdgeManager.currentTime();
+        try {
+          acquired = lock.writeLock().tryLock(Math.min(remainingWaitTime, closeWaitInterval),
+            TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+          // Interrupted waiting for close lock. More likely the server is shutting down, not
+          // normal operation, so aborting upon interrupt while waiting on this lock would not
+          // provide much value. Throw an IOE (as IIOE) like we would in the case where we
+          // fail to acquire the lock.
+          String msg = "Interrupted while waiting for close lock on " + this;
+          LOG.warn(msg, e);
+          throw (InterruptedIOException) new InterruptedIOException(msg).initCause(e);
+        }
+        long elapsed = EnvironmentEdgeManager.currentTime() - start;
+        elapsedWaitTime += elapsed;
+        remainingWaitTime -= elapsed;
+        if (canAbort && !acquired && remainingWaitTime > 0) {
+          // Before we loop to wait again, interrupt all region operations that might
+          // still be in progress, to encourage them to break out of waiting states or
+          // inner loops, throw an exception to clients, and release the read lock via
+          // endRegionOperation.
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Interrupting region operations after waiting for close lock for " +
+              elapsedWaitTime + " ms on " + this + ", " + remainingWaitTime +
+              " ms remaining");
+          }
+          interruptRegionOperations();
+        }
+      } while (!acquired && remainingWaitTime > 0);
 
-      // If we failed to acquire the write lock, abort the server
-
+      // If we fail to acquire the lock, trigger an abort if we can; otherwise throw an IOE
+      // to let the caller know we could not proceed with the close.
       if (!acquired) {
         String msg = "Failed to acquire close lock on " + this + " after waiting " +
           elapsedWaitTime + " ms";
@@ -1622,6 +1647,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         rsServices.abort(msg, null);
         throw new IOException(msg);
       }
+
     } else {
 
       // We are not configured to allow aborting, so preserve old behavior with an
@@ -1632,6 +1658,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       elapsedWaitTime = EnvironmentEdgeManager.currentTime() - start;
 
     }
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("Acquired close lock on " + this + " after waiting " +
         elapsedWaitTime + " ms");
@@ -8915,12 +8942,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * modifies stores in bulk. It has to be called just before a try.
    * #closeBulkRegionOperation needs to be called in the try's finally block
    * Acquires a writelock and checks if the region is closing or closed.
-   * @throws NotServingRegionException when the region is closing or closed
-   * @throws RegionTooBusyException if failed to get the lock in time
-   * @throws InterruptedIOException if interrupted while waiting for a lock
    */
-  private void startBulkRegionOperation(boolean writeLockNeeded)
-      throws NotServingRegionException, IOException {
+  private void startBulkRegionOperation(boolean writeLockNeeded) throws IOException {
     if (this.closing.get()) {
       throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closing");
     }
@@ -9228,8 +9251,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Throw the correct exception upon interrupt
    * @param t cause
-   * @throws NotServingRegionException if region is closing
-   * @throws InterruptedIOException in all cases except if region is closing
    */
   // Package scope for tests
   IOException throwOnInterrupt(Throwable t) {
