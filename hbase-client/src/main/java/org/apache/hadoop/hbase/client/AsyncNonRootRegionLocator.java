@@ -49,10 +49,10 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -131,7 +131,7 @@ class AsyncNonRootRegionLocator {
       new LinkedHashMap<>();
 
     private TableCache(TableName tableName) {
-      final KeyValue.KVComparator comparator = getComparator(tableName);
+      CellComparator comparator = CellComparator.getComparator(tableName);
       cache = new ConcurrentSkipListMap<>(new Comparator<byte[]>() {
         @Override public int compare(byte[] left, byte[] right) {
           return comparator.compareRows(left, 0, left.length, right, 0, right.length);
@@ -184,7 +184,7 @@ class AsyncNonRootRegionLocator {
         // startKey < req.row and endKey >= req.row. Here we split it to endKey == req.row ||
         // (endKey > req.row && startKey < req.row). The two conditions are equal since startKey <
         // endKey.
-        KeyValue.KVComparator comparator = getComparator(loc.getRegion().getTable());
+        CellComparator comparator = CellComparator.getComparator(loc.getRegion().getTable());
         byte[] endKey = loc.getRegion().getEndKey();
         int c = comparator.compareRows(endKey, 0, endKey.length,
           req.row,0, req.row.length);
@@ -383,7 +383,7 @@ class AsyncNonRootRegionLocator {
       recordCacheMiss();
       return null;
     }
-    KeyValue.KVComparator comparator = getComparator(tableName);
+    CellComparator comparator = CellComparator.getComparator(tableName);
     byte[] endKey = loc.getRegion().getEndKey();
     if (isEmptyStopRow(endKey) ||
       comparator.compareRows(row, 0, row.length, endKey, 0, endKey.length) < 0) {
@@ -414,7 +414,7 @@ class AsyncNonRootRegionLocator {
       recordCacheMiss();
       return null;
     }
-    KeyValue.KVComparator comparator = getComparator(tableName);
+    CellComparator comparator = CellComparator.getComparator(tableName);
     if (isEmptyStopRow(loc.getRegion().getEndKey()) ||
       (!isEmptyStopRow &&
         comparator.compareRows(
@@ -688,15 +688,5 @@ class AsyncNonRootRegionLocator {
       return 0;
     }
     return tableCache.cache.values().stream().mapToInt(RegionLocations::numNonNullElements).sum();
-  }
-
-  private static KeyValue.KVComparator getComparator(TableName tableName) {
-    if (TableName.ROOT_TABLE_NAME.equals(tableName)) {
-      return KeyValue.ROOT_COMPARATOR;
-    }
-    if (META_TABLE_NAME.equals(tableName)) {
-      return KeyValue.META_COMPARATOR;
-    }
-    return KeyValue.COMPARATOR;
   }
 }

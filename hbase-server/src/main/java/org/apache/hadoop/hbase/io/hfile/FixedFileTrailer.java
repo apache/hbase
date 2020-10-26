@@ -597,9 +597,6 @@ public class FixedFileTrailer {
     if (comparator.equals(CellComparatorImpl.class.getName())) {
       return KeyValue.COMPARATOR.getClass().getName();
     }
-    if (comparator.equals(RootCellComparator.class.getName())) {
-      return KeyValue.ROOT_COMPARATOR.getClass().getName();
-    }
     if (comparator.equals(MetaCellComparator.class.getName())) {
       return KeyValue.META_COMPARATOR.getClass().getName();
     }
@@ -615,11 +612,6 @@ public class FixedFileTrailer {
       || comparatorClassName.equals(KeyValue.COMPARATOR.getClass().getName())
       || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator"))) {
       comparatorKlass = CellComparatorImpl.class;
-    } else if (comparatorClassName.equals(KeyValue.ROOT_COMPARATOR.getLegacyKeyComparatorName())
-      || comparatorClassName.equals(KeyValue.ROOT_COMPARATOR.getClass().getName())
-      || (comparatorClassName
-      .equals("org.apache.hadoop.hbase.CellComparator$RootCellComparator"))) {
-      comparatorKlass = RootCellComparator.class;
     } else if (comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
       || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())
       || (comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator"))) {
