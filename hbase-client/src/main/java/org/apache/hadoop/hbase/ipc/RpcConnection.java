@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import io.netty.util.HashedWheelTimer;
+import io.netty.util.Timeout;
+import io.netty.util.TimerTask;
+
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -44,10 +48,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.util.Time;
-
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timeout;
-import io.netty.util.TimerTask;
 
 /**
  * Base class for ipc connection.
@@ -78,9 +78,10 @@ abstract class RpcConnection {
   // the last time we were picked up from connection pool.
   protected long lastTouched;
 
+  // Determines whether we need to do an explicit clearing of kerberos tickets with relogin
   private boolean forceReloginEnabled;
-  // Minimum time between force re-login attempts
-  private int forceReloginBackoff;
+  // Minimum time between two force re-login attempts
+  private int minTimeBeforeForceRelogin;
 
   // Time when last forceful re-login was attempted
   private long lastForceReloginAttempt = -1;
@@ -137,12 +138,13 @@ abstract class RpcConnection {
           + ", sasl=" + useSasl);
     }
 
-    reloginMaxBackoff = conf.getInt("hbase.security.relogin.maxbackoff", 5000);
+    reloginMaxBackoff = conf.getInt(HConstants.HBASE_RELOGIN_MAXBACKOFF, 5000);
     this.remoteId = remoteId;
 
-    forceReloginEnabled = conf.getBoolean("hbase.security.force.relogin.enabled", false);
+    forceReloginEnabled = conf.getBoolean(HConstants.HBASE_FORCE_RELOGIN_ENABLED, true);
     // Default minimum time between force relogin attempts is 10 minutes
-    this.forceReloginBackoff = conf.getInt("hbase.security.force.relogin.backoff", 10 * 60 * 1000);
+    this.minTimeBeforeForceRelogin =
+        conf.getInt(HConstants.HBASE_MINTIME_BEFORE_FORCE_RELOGIN, 10 * 60 * 1000);
   }
 
   private UserInformation getUserInfo(UserGroupInformation ugi) {
@@ -219,11 +221,16 @@ abstract class RpcConnection {
   }
 
   private boolean shouldForceRelogin() {
-    if (!forceReloginEnabled) return false;
+    if (!forceReloginEnabled) {
+      return false;
+    }
     long now = Time.now();
-    if (lastForceReloginAttempt != -1 && (now - lastForceReloginAttempt < forceReloginBackoff)) {
+    // If the last force relogin attempted is less than the configured minimum time, revert to the
+    // default relogin method of UGI
+    if (lastForceReloginAttempt != -1
+        && (now - lastForceReloginAttempt < minTimeBeforeForceRelogin)) {
       LOG.debug("Not attempting to force re-login since the last attempt is less than "
-          + forceReloginBackoff + " millis");
+          + minTimeBeforeForceRelogin + " millis");
       return false;
     }
     try {
