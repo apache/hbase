@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -167,6 +166,9 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
     USER_QUAL = User.createUserForTesting(conf, "rwpartial", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
+
+    // Grant table creation permission to USER_OWNER
+    grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Action.CREATE);
   }
 
   @AfterClass
@@ -177,12 +179,10 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
   @Before
   public void setUp() throws Exception {
     // Create the test table (owner added to the _acl_ table)
-    Admin admin = TEST_UTIL.getAdmin();
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(testTable.getTableName())
       .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build())
-      .setOwner(USER_OWNER).build();
-    admin.createTable(tableDescriptor, new byte[][] { Bytes.toBytes("s") });
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build()).build();
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
     TEST_UTIL.waitUntilAllRegionsAssigned(testTable.getTableName());
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(testTable.getTableName()).get(0);

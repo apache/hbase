@@ -270,6 +270,9 @@ public class TestAccessController extends SecureTestUtil {
     USER_GROUP_WRITE =
         User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
 
+    // Grant table creation permission to USER_OWNER
+    grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Action.CREATE);
+
     systemUserConnection = TEST_UTIL.getConnection();
     setUpTableAndUserPermissions();
   }
@@ -283,9 +286,8 @@ public class TestAccessController extends SecureTestUtil {
   private static void setUpTableAndUserPermissions() throws Exception {
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TABLE)
       .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build())
-      .setOwner(USER_OWNER).build();
-    createTable(TEST_UTIL, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build()).build();
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
@@ -1670,8 +1672,8 @@ public class TestAccessController extends SecureTestUtil {
     }
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family1))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family2)).setOwner(USER_OWNER).build();
-    createTable(TEST_UTIL, tableDescriptor);
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family2)).build();
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor);
     try {
       List<UserPermission> perms =
           admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
@@ -1724,13 +1726,9 @@ public class TestAccessController extends SecureTestUtil {
       assertFalse("User should not be granted permission: " + upToVerify.toString(),
         hasFoundUserPermission(upToVerify, perms));
 
-      // disable table before modification
-      admin.disableTable(tableName);
-
       User newOwner = User.createUserForTesting(conf, "new_owner", new String[] {});
-      tableDescriptor =
-        TableDescriptorBuilder.newBuilder(tableDescriptor).setOwner(newOwner).build();
-      admin.modifyTable(tableDescriptor);
+      grantOnTable(TEST_UTIL, newOwner.getShortName(), tableName,
+        null, null, Permission.Action.values());
 
       perms = admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
       UserPermission newOwnerperm = new UserPermission(newOwner.getName(),
@@ -1758,7 +1756,7 @@ public class TestAccessController extends SecureTestUtil {
         new UserPermission(user, Permission.newBuilder().withActions(Action.values()).build()));
     }
     assertTrue("Only super users, global users and user admin has permission on table hbase:acl " +
-        "per setup", perms.size() == 5 + superUsers.size() &&
+        "per setup", perms.size() == 6 + superUsers.size() &&
         hasFoundUserPermission(adminPerms, perms));
   }
 
@@ -2278,8 +2276,8 @@ public class TestAccessController extends SecureTestUtil {
   private void createTestTable(TableName tname, byte[] cf) throws Exception {
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tname)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cf).setMaxVersions(100).build())
-      .setOwner(USER_OWNER).build();
-    createTable(TEST_UTIL, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
+      .build();
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
   }
 
   @Test
@@ -2858,7 +2856,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // Verify that we can read sys-tables
     String aclTableName = PermissionStorage.ACL_TABLE_NAME.getNameAsString();
-    assertEquals(5, SUPERUSER.runAs(getPrivilegedAction(aclTableName)).size());
+    assertEquals(6, SUPERUSER.runAs(getPrivilegedAction(aclTableName)).size());
     assertEquals(0, testRegexHandler.runAs(getPrivilegedAction(aclTableName)).size());
 
     // Grant TABLE ADMIN privs to testUserPerms
@@ -3517,10 +3515,10 @@ public class TestAccessController extends SecureTestUtil {
 
     // Validate global user permission
     List<UserPermission> userPermissions;
-    assertEquals(5 + superUserCount, AccessControlClient.getUserPermissions(conn, null).size());
-    assertEquals(5 + superUserCount,
+    assertEquals(6 + superUserCount, AccessControlClient.getUserPermissions(conn, null).size());
+    assertEquals(6 + superUserCount,
       AccessControlClient.getUserPermissions(conn, HConstants.EMPTY_STRING).size());
-    assertEquals(5 + superUserCount,
+    assertEquals(6 + superUserCount,
       AccessControlClient.getUserPermissions(conn, null, HConstants.EMPTY_STRING).size());
     userPermissions = AccessControlClient.getUserPermissions(conn, null, USER_ADMIN.getName());
     verifyGetUserPermissionResult(userPermissions, 1, null, null, USER_ADMIN.getName(), superUsers);

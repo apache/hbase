@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -127,6 +126,9 @@ public class TestCellACLs extends SecureTestUtil {
     GROUP_USER = User.createUserForTesting(conf, "group_user", new String[] { GROUP });
 
     usersAndGroups = new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) };
+
+    // Grant table creation permission to USER_OWNER
+    grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Action.CREATE);
   }
 
   @AfterClass
@@ -137,12 +139,10 @@ public class TestCellACLs extends SecureTestUtil {
   @Before
   public void setUp() throws Exception {
     // Create the test table (owner added to the _acl_ table)
-    Admin admin = TEST_UTIL.getAdmin();
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(testTable.getTableName())
       .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(4).build())
-      .setOwner(USER_OWNER).build();
-    admin.createTable(tableDescriptor, new byte[][] { Bytes.toBytes("s") });
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(4).build()).build();
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
     TEST_UTIL.waitTableEnabled(testTable.getTableName());
     LOG.info("Sleeping a second because of HBASE-12581");
     Threads.sleep(1000);
