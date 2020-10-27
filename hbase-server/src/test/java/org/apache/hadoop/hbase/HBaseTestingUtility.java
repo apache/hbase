@@ -2985,7 +2985,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Get a shared Connection to the cluster.
-   * this method is threadsafe.
+   * this method is thread safe.
    * @return A Connection that can be shared. Don't close. Will be closed on shutdown of cluster.
    */
   public Connection getConnection() throws IOException {
@@ -2993,8 +2993,18 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
+   * Get a assigned Connection to the cluster.
+   * this method is thread safe.
+   * @param user assigned user
+   * @return A Connection with assigned user.
+   */
+  public Connection getConnection(User user) throws IOException {
+    return getAsyncConnection(user).toConnection();
+  }
+
+  /**
    * Get a shared AsyncClusterConnection to the cluster.
-   * this method is threadsafe.
+   * this method is thread safe.
    * @return An AsyncClusterConnection that can be shared. Don't close. Will be closed on shutdown of cluster.
    */
   public AsyncClusterConnection getAsyncConnection() throws IOException {
@@ -3003,7 +3013,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
         if (connection == null) {
           try {
             User user = UserProvider.instantiate(conf).getCurrent();
-            connection = ClusterConnectionFactory.createAsyncClusterConnection(conf, null, user);
+            connection = getAsyncConnection(user);
           } catch(IOException ioe) {
             throw new UncheckedIOException("Failed to create connection", ioe);
           }
@@ -3013,6 +3023,16 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     } catch (UncheckedIOException exception) {
       throw exception.getCause();
     }
+  }
+
+  /**
+   * Get a assigned AsyncClusterConnection to the cluster.
+   * this method is thread safe.
+   * @param user assigned user
+   * @return An AsyncClusterConnection with assigned user.
+   */
+  public AsyncClusterConnection getAsyncConnection(User user) throws IOException {
+    return ClusterConnectionFactory.createAsyncClusterConnection(conf, null, user);
   }
 
   public void closeConnection() throws IOException {
