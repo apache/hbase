@@ -236,6 +236,12 @@
             <div class="row inner_header">
               <div class="page-header">
                 <h2>Overlaps</h2>
+                <p>
+                  <span>
+                    Regions highlighted in <font color="blue">blue</font> are recently merged regions, HBase is still doing cleanup for them. Overlaps involving these regions cannot be fixed by <em>hbck2 fixMeta</em> at this moment.
+                    Please wait some time, run <i>catalogjanitor_run</i> in hbase shell, refresh ‘HBCK Report’ page, make sure these regions are not highlighted to start the fix.
+                  </span>
+                </p>
               </div>
             </div>
             <table class="table table-striped">
@@ -245,8 +251,16 @@
               </tr>
               <% for (Pair<RegionInfo, RegionInfo> p : report.getOverlaps()) { %>
               <tr>
-                <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
-                <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getEncodedName() %></span></td>
+                <% if (report.getMergedRegions().containsKey(p.getFirst())) { %>
+                  <td><span style="color:blue;" title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
+                <% } else { %>
+                  <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getEncodedName() %></span></td>
+                <% } %>
+                <% if (report.getMergedRegions().containsKey(p.getSecond())) { %>
+                  <td><span style="color:blue;" title="<%= p.getSecond() %>"><%= p.getSecond().getEncodedName() %></span></td>
+                <% } else { %>
+                  <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getEncodedName() %></span></td>
+                <% } %>
               </tr>
               <% } %>
 

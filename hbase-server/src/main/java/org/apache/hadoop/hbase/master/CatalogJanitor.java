@@ -473,6 +473,10 @@ public class CatalogJanitor extends ScheduledChore {
       return this.overlaps;
     }
 
+    public Map<RegionInfo, Result> getMergedRegions() {
+      return this.mergedRegions;
+    }
+
     public List<Pair<RegionInfo, ServerName>> getUnknownServers() {
       return unknownServers;
     }
