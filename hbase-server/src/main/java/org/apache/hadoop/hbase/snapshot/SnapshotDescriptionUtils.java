@@ -422,10 +422,8 @@ public final class SnapshotDescriptionUtils {
   }
 
   public static boolean isSecurityAvailable(Configuration conf) throws IOException {
-    try (Connection conn = ConnectionFactory.createConnection(conf)) {
-      try (Admin admin = conn.getAdmin()) {
-        return admin.tableExists(PermissionStorage.ACL_TABLE_NAME);
-      }
+    try (Connection conn = ConnectionFactory.createConnection(conf); Admin admin = conn.getAdmin()) {
+      return admin.tableExists(PermissionStorage.ACL_TABLE_NAME);
     }
   }
 
