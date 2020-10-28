@@ -67,24 +67,14 @@ public class CreateSnapshot extends AbstractHBaseTool {
 
     @Override
     protected int doWork() throws Exception {
-        Connection connection = null;
-        Admin admin = null;
-        try {
-            connection = ConnectionFactory.createConnection(getConf());
-            admin = connection.getAdmin();
+        try (Connection connection = ConnectionFactory.createConnection(getConf())) {
+          try (Admin admin = connection.getAdmin()) {
             admin.snapshot(new SnapshotDescription(snapshotName, tableName, snapshotType));
+          }
         } catch (Exception e) {
-            System.err.println("failed to take the snapshot: " + e.getMessage());
-            return -1;
-        } finally {
-            if (admin != null) {
-                admin.close();
-            }
-            if (connection != null) {
-                connection.close();
-            }
+          System.err.println("failed to take the snapshot: " + e.getMessage());
+          return -1;
         }
-        return 0;
+      return 0;
     }
-
 }
