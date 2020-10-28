@@ -93,12 +93,9 @@ public final class SnapshotManifestV2 {
       FileSystem workingDirFs = snapshotDir.getFileSystem(this.conf);
       if (workingDirFs.exists(snapshotDir)) {
         SnapshotRegionManifest manifest = region.build();
-        FSDataOutputStream stream = workingDirFs.create(
-            getRegionManifestPath(snapshotDir, manifest));
-        try {
+        try (FSDataOutputStream stream = workingDirFs.create(
+            getRegionManifestPath(snapshotDir, manifest))) {
           manifest.writeTo(stream);
-        } finally {
-          stream.close();
         }
       } else {
         LOG.warn("can't write manifest without parent dir, maybe it has been deleted by master?");
@@ -157,14 +154,10 @@ public final class SnapshotManifestV2 {
       completionService.submit(new Callable<SnapshotRegionManifest>() {
         @Override
         public SnapshotRegionManifest call() throws IOException {
-          FSDataInputStream stream = fs.open(st.getPath());
-          CodedInputStream cin = CodedInputStream.newInstance(stream);
-          cin.setSizeLimit(manifestSizeLimit);
-
-          try {
+          try (FSDataInputStream stream = fs.open(st.getPath())) {
+            CodedInputStream cin = CodedInputStream.newInstance(stream);
+            cin.setSizeLimit(manifestSizeLimit);
             return SnapshotRegionManifest.parseFrom(cin);
-          } finally {
-            stream.close();
           }
         }
       });
