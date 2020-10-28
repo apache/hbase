@@ -343,13 +343,8 @@ public final class SnapshotDescriptionUtils {
     FsPermission perms = CommonFSUtils.getFilePermissions(fs, fs.getConf(),
       HConstants.DATA_FILE_UMASK_KEY);
     Path snapshotInfo = new Path(workingDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
-    try {
-      FSDataOutputStream out = CommonFSUtils.create(fs, snapshotInfo, perms, true);
-      try {
-        snapshot.writeTo(out);
-      } finally {
-        out.close();
-      }
+    try (FSDataOutputStream out = CommonFSUtils.create(fs, snapshotInfo, perms, true)){
+      snapshot.writeTo(out);
     } catch (IOException e) {
       // if we get an exception, try to remove the snapshot info
       if (!fs.delete(snapshotInfo, false)) {
@@ -370,15 +365,8 @@ public final class SnapshotDescriptionUtils {
   public static SnapshotDescription readSnapshotInfo(FileSystem fs, Path snapshotDir)
       throws CorruptedSnapshotException {
     Path snapshotInfo = new Path(snapshotDir, SNAPSHOTINFO_FILE);
-    try {
-      FSDataInputStream in = null;
-      try {
-        in = fs.open(snapshotInfo);
-        SnapshotDescription desc = SnapshotDescription.parseFrom(in);
-        return desc;
-      } finally {
-        if (in != null) in.close();
-      }
+    try (FSDataInputStream in = fs.open(snapshotInfo)){
+      return SnapshotDescription.parseFrom(in);
     } catch (IOException e) {
       throw new CorruptedSnapshotException("Couldn't read snapshot info from:" + snapshotInfo, e);
     }
@@ -434,10 +422,8 @@ public final class SnapshotDescriptionUtils {
   }
 
   public static boolean isSecurityAvailable(Configuration conf) throws IOException {
-    try (Connection conn = ConnectionFactory.createConnection(conf)) {
-      try (Admin admin = conn.getAdmin()) {
-        return admin.tableExists(PermissionStorage.ACL_TABLE_NAME);
-      }
+    try (Connection conn = ConnectionFactory.createConnection(conf); Admin admin = conn.getAdmin()) {
+      return admin.tableExists(PermissionStorage.ACL_TABLE_NAME);
     }
   }
 
