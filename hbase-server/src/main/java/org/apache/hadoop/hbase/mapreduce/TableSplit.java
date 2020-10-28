@@ -193,7 +193,11 @@ implements Writable, Comparable<TableSplit> {
   }
 
   /**
-   * Creates a new instance without a scanner.
+   * Creates a new instance without a scanner. Having no scanner in TableSplit doesn't necessarily
+   * mean there is not scanner for map reduce job, it just means that we do not need to set
+   * it for each split. For example, it is not required to have a scan object for
+   * {@link org.apache.hadoop.hbase.mapred.TableInputFormatBase} since we use
+   * the scan from the job conf and scanner is supposed to be same for all the splits of table.
    *
    * @param tableName The name of the current table.
    * @param startRow The start row of the split.

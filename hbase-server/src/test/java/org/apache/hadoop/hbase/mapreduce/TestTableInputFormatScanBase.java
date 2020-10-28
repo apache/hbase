@@ -274,6 +274,9 @@ public abstract class TestTableInputFormatScanBase {
     List<InputSplit> splits = tif.getSplits(job);
     for (InputSplit split : splits) {
       TableSplit tableSplit = (TableSplit) split;
+      // We should have the null scan object in the TableSplit, but when we serialize
+      // null scan in the TableSplit, we put the default values instead.
+      // So, asserting here for default values.
       Assert.assertEquals(tableSplit.getScan().getStartRow(), HConstants.EMPTY_START_ROW);
       Assert.assertEquals(tableSplit.getScan().getStopRow(), HConstants.EMPTY_END_ROW);
     }
