@@ -291,16 +291,16 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * Perform a batch of mutations.
-   * <p>
-   * Note this supports only Put, Delete, Increment and Append mutations and will ignore other
-   * types passed.
+   *
+   * Please do not operate on a same column of a single row in a batch, we will not consider the
+   * previous operation in the same batch when performing the operations in the batch.
+   *
    * @param mutations the list of mutations
    * @return an array of OperationStatus which internally contains the
    *         OperationStatusCode and the exceptionMessage if any.
    * @throws IOException
    */
-  OperationStatus[] batchMutate(Mutation[] mutations)
-      throws IOException;
+  OperationStatus[] batchMutate(Mutation[] mutations) throws IOException;
 
   /**
    * Atomically checks if a row/family/qualifier value matches the expected value and if it does,

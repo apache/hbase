@@ -168,6 +168,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.CompositeFamilyCellMap;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
@@ -3243,6 +3244,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected final Map<byte[], List<Cell>>[] familyCellMaps;
     // For Increment/Append operations
     protected final Result[] results;
+    // For CheckAndMutate operations
+    protected final CheckAndMutateResult[] checkAndMutateResults;
     // For nonce operations
     protected final boolean[] canProceed;
 
@@ -3260,6 +3263,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this.walEditsFromCoprocessors = new WALEdit[operations.length];
       familyCellMaps = new Map[operations.length];
       this.results = new Result[operations.length];
+      this.checkAndMutateResults = new CheckAndMutateResult[operations.length];
       this.canProceed = new boolean[operations.length];
 
       this.region = region;
@@ -3376,7 +3380,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     public List<UUID> getClusterIds() {
       assert size() != 0;
-      return getMutation(0).getClusterIds();
+      Mutation mutation = getMutation(0);
+      if (mutation instanceof CheckAndMutate) {
+        return ((CheckAndMutate) mutation).getMutations().get(0).getClusterIds();
+      } else {
+        return mutation.getClusterIds();
+      }
     }
 
     boolean isAtomic() {
@@ -3386,9 +3395,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     /**
      * Helper method that checks and prepares only one mutation. This can be used to implement
      * {@link #checkAndPrepare()} for entire Batch.
-     * NOTE: As CP prePut()/preDelete()/preIncrement()/preAppend() hooks may modify mutations,
-     * this method should be called after prePut()/preDelete()/preIncrement()/preAppend() CP hooks
-     * are run for the mutation
+     * NOTE: As CP prePut()/preDelete()/preIncrement()/preAppend()/preCheckAndMutate() hooks may
+     * modify mutations, this method should be called after
+     * prePut()/preDelete()/preIncrement()/preAppend()/preCheckAndMutate() CP hooks are run for
+     * the mutation
      */
     protected void checkAndPrepareMutation(Mutation mutation, final long timestamp)
         throws IOException {
@@ -3401,6 +3411,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         region.prepareDelete((Delete) mutation);
       } else if (mutation instanceof Increment || mutation instanceof Append) {
         region.checkFamilies(mutation.getFamilyCellMap().keySet(), mutation.getDurability());
+      }  else if (mutation instanceof CheckAndMutate) {
+        CheckAndMutate checkAndMutate = (CheckAndMutate) mutation;
+        checkRow(checkAndMutate.getAction(), mutation.getRow());
+        if (!checkAndMutate.hasFilter()) {
+          region.checkFamily(checkAndMutate.getFamily());
+        }
+        for (Mutation m : checkAndMutate.getMutations()) {
+          checkAndPrepareMutation(m, timestamp);
+        }
+      }
+    }
+
+    private void checkRow(final Row action, final byte[] row)
+      throws DoNotRetryIOException {
+      if (!Bytes.equals(row, action.getRow())) {
+        throw new DoNotRetryIOException("Action's getRow must match");
       }
     }
 
@@ -3409,8 +3435,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       try {
         this.checkAndPrepareMutation(mutation, timestamp);
 
-        // store the family map reference to allow for mutations
-        familyCellMaps[index] = mutation.getFamilyCellMap();
+        if (mutation instanceof Put || mutation instanceof Delete) {
+          // store the family map reference to allow for mutations
+          familyCellMaps[index] = mutation.getFamilyCellMap();
+        }
+
         // store durability for the batch (highest durability of all operations in the batch)
         Durability tmpDur = region.getEffectiveDurability(mutation.getDurability());
         if (tmpDur.ordinal() > durability.ordinal()) {
@@ -3796,41 +3825,97 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (mutation instanceof Put) {
           HRegion.updateCellTimestamps(familyCellMaps[index].values(), Bytes.toBytes(timestamp));
           miniBatchOp.incrementNumOfPuts();
+          region.rewriteCellTags(familyCellMaps[index], mutation);
         } else if (mutation instanceof Delete) {
           region.prepareDeleteTimestamps(mutation, familyCellMaps[index],
             Bytes.toBytes(timestamp));
           miniBatchOp.incrementNumOfDeletes();
+          region.rewriteCellTags(familyCellMaps[index], mutation);
         } else if (mutation instanceof Increment || mutation instanceof Append) {
-          // For nonce operations
-          canProceed[index] = startNonceOperation(nonceGroup, nonce);
-          if (!canProceed[index]) {
-            // convert duplicate increment/append to get
-            List<Cell> results = region.get(toGet(mutation), false, nonceGroup, nonce);
-            retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS,
-              Result.create(results));
-            return true;
-          }
-
           boolean returnResults;
           if (mutation instanceof Increment) {
             returnResults = ((Increment) mutation).isReturnResults();
-            miniBatchOp.incrementNumOfIncrements();
           } else {
             returnResults = ((Append) mutation).isReturnResults();
-            miniBatchOp.incrementNumOfAppends();
           }
-          Result result = doCoprocessorPreCallAfterRowLock(mutation);
+
+          // For nonce operations
+          canProceed[index] = startNonceOperation(nonceGroup, nonce);
+          if (!canProceed[index]) {
+            Result result;
+            if (returnResults) {
+              // convert duplicate increment/append to get
+              List<Cell> results = region.get(toGet(mutation), false, nonceGroup, nonce);
+              result = Result.create(results);
+            } else {
+              result = Result.EMPTY_RESULT;
+            }
+            retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS, result);
+            return true;
+          }
+
+          Result result = null;
+          if (region.coprocessorHost != null) {
+            if (mutation instanceof Increment) {
+              result = region.coprocessorHost.preIncrementAfterRowLock((Increment) mutation);
+            } else {
+              result = region.coprocessorHost.preAppendAfterRowLock((Append) mutation);
+            }
+          }
           if (result != null) {
             retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS,
               returnResults ? result : Result.EMPTY_RESULT);
             return true;
           }
+
           List<Cell> results = returnResults ? new ArrayList<>(mutation.size()) : null;
           familyCellMaps[index] = reckonDeltas(mutation, results, timestamp);
-          this.results[index] = results != null ? Result.create(results): Result.EMPTY_RESULT;
-        }
-        region.rewriteCellTags(familyCellMaps[index], mutation);
+          this.results[index] = results != null ? Result.create(results) : Result.EMPTY_RESULT;
+          region.rewriteCellTags(familyCellMaps[index], mutation);
 
+          if (mutation instanceof Increment) {
+            miniBatchOp.incrementNumOfIncrements();
+          } else {
+            miniBatchOp.incrementNumOfAppends();
+          }
+        } else if (mutation instanceof CheckAndMutate) {
+          CheckAndMutateResult result = null;
+          if (region.coprocessorHost != null) {
+            result = region.coprocessorHost.preCheckAndMutateAfterRowLock(
+              (CheckAndMutate) mutation);
+          }
+          if (result != null) {
+            retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS, result);
+            return true;
+          }
+
+          List<List<Cell>> resultsList = new ArrayList<>();
+          CompositeFamilyCellMap compositeFamilyCellMap = new CompositeFamilyCellMap();
+          boolean success = checkAndMutate((CheckAndMutate) mutation, timestamp,
+            compositeFamilyCellMap, resultsList, miniBatchOp);
+          familyCellMaps[index] = compositeFamilyCellMap;
+          if (success) {
+            if (resultsList.isEmpty()) {
+              checkAndMutateResults[index] = new CheckAndMutateResult(true, null);
+            } else if (resultsList.size() == 1) {
+              checkAndMutateResults[index] = new CheckAndMutateResult(true,
+                !resultsList.get(0).isEmpty() ? Result.create(resultsList.get(0)) :
+                  Result.EMPTY_RESULT);
+            } else {
+              List<Cell> results = new ArrayList<>();
+              for (List<Cell> cells : resultsList) {
+                if (cells != null) {
+                  results.addAll(cells);
+                }
+              }
+              results.sort(CellComparator.getInstance());
+              checkAndMutateResults[index] = new CheckAndMutateResult(true,
+                !results.isEmpty() ? Result.create(results) : Result.EMPTY_RESULT);
+            }
+          } else {
+            checkAndMutateResults[index] = new CheckAndMutateResult(false, null);
+          }
+        }
         // update cell count
         if (region.getEffectiveDurability(mutation.getDurability()) != Durability.SKIP_WAL) {
           for (List<Cell> cells : mutation.getFamilyCellMap().values()) {
@@ -3909,28 +3994,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return get;
     }
 
-    /**
-     * Do coprocessor pre-increment or pre-append after row lock call.
-     * @return Result returned out of the coprocessor, which means bypass all further processing
-     *   and return the preferred Result instead, or null which means proceed.
-     */
-    private Result doCoprocessorPreCallAfterRowLock(Mutation mutation) throws IOException {
-      assert mutation instanceof Increment || mutation instanceof Append;
-      Result result = null;
-      if (region.coprocessorHost != null) {
-        if (mutation instanceof Increment) {
-          result = region.coprocessorHost.preIncrementAfterRowLock((Increment) mutation);
-        } else {
-          result = region.coprocessorHost.preAppendAfterRowLock((Append) mutation);
-        }
-      }
-      return result;
-    }
-
-    private Map<byte[], List<Cell>> reckonDeltas(Mutation mutation, List<Cell> results,
+    private NavigableMap<byte[], List<Cell>> reckonDeltas(Mutation mutation, List<Cell> results,
       long now) throws IOException {
       assert mutation instanceof Increment || mutation instanceof Append;
-      Map<byte[], List<Cell>> ret = new HashMap<>();
+      NavigableMap<byte[], List<Cell>> ret = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       // Process a Store/family at a time.
       for (Map.Entry<byte [], List<Cell>> entry: mutation.getFamilyCellMap().entrySet()) {
         final byte[] columnFamilyName = entry.getKey();
@@ -3973,14 +4040,25 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       byte[] columnFamily = store.getColumnFamilyDescriptor().getName();
       List<Pair<Cell, Cell>> cellPairs = new ArrayList<>(deltas.size());
 
+      // Sort the cells so that they match the order that they appear in the Get results.
+      // Otherwise, we won't be able to find the existing values if the cells are not specified
+      // in order by the client since cells are in an array list.
+      sort(deltas, store.getComparator());
+
       // Get previous values for all columns in this family.
+      Get get = new Get(mutation.getRow());
+      for (Cell cell: deltas) {
+        get.addColumn(columnFamily, CellUtil.cloneQualifier(cell));
+      }
       TimeRange tr;
       if (mutation instanceof Increment) {
         tr = ((Increment) mutation).getTimeRange();
       } else {
         tr = ((Append) mutation).getTimeRange();
+      } if (tr != null) {
+        get.setTimeRange(tr.getMin(), tr.getMax());
       }
-      List<Cell> currentValues = get(mutation, store, deltas, tr);
+      List<Cell> currentValues = region.get(get, false);
 
       // Iterate the input columns and update existing values if they were found, otherwise
       // add new column initialized to the delta amount
@@ -4074,29 +4152,113 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return PrivateCellUtil.getValueAsLong(cell);
     }
 
-    /**
-     * Do a specific Get on passed <code>columnFamily</code> and column qualifiers.
-     * @param mutation Mutation we are doing this Get for.
-     * @param store Which column family on row (TODO: Go all Gets in one go)
-     * @param coordinates Cells from <code>mutation</code> used as coordinates applied to Get.
-     * @return Return list of Cells found.
-     */
-    private List<Cell> get(Mutation mutation, HStore store, List<Cell> coordinates,
-      TimeRange tr) throws IOException {
-      // Sort the cells so that they match the order that they appear in the Get results.
-      // Otherwise, we won't be able to find the existing values if the cells are not specified
-      // in order by the client since cells are in an array list.
-      // TODO: I don't get why we are sorting. St.Ack 20150107
-      sort(coordinates, store.getComparator());
-      Get get = new Get(mutation.getRow());
-      for (Cell cell: coordinates) {
-        get.addColumn(store.getColumnFamilyDescriptor().getName(), CellUtil.cloneQualifier(cell));
+    public boolean checkAndMutate(CheckAndMutate checkAndMutate, long now,
+      CompositeFamilyCellMap compositeFamilyCellMap, List<List<Cell>> resultsList,
+      MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
+      Get get = new Get(checkAndMutate.getRow());
+      if (checkAndMutate.hasFilter()) {
+        get.setFilter(checkAndMutate.getFilter());
+      } else {
+        get.addColumn(checkAndMutate.getFamily(), checkAndMutate.getQualifier());
       }
-      // Increments carry time range. If an Increment instance, put it on the Get.
-      if (tr != null) {
-        get.setTimeRange(tr.getMin(), tr.getMax());
+      get.setTimeRange(checkAndMutate.getTimeRange().getMin(),
+        checkAndMutate.getTimeRange().getMax());
+
+      // NOTE: We used to wait here until mvcc caught up:  mvcc.await();
+      // Supposition is that now all changes are done under row locks, then when we go to read,
+      // we'll get the latest on this row.
+      List<Cell> result = region.get(get, false);
+      boolean matches = false;
+      long cellTs = 0;
+      if (checkAndMutate.hasFilter()) {
+        if (!result.isEmpty()) {
+          matches = true;
+          cellTs = result.get(0).getTimestamp();
+        }
+      } else {
+        boolean valueIsNull = checkAndMutate.getValue() == null ||
+          checkAndMutate.getValue().length == 0;
+        if (result.isEmpty() && valueIsNull) {
+          matches = true;
+        } else if (result.size() > 0 && result.get(0).getValueLength() == 0 && valueIsNull) {
+          matches = true;
+          cellTs = result.get(0).getTimestamp();
+        } else if (result.size() == 1 && !valueIsNull) {
+          Cell kv = result.get(0);
+          cellTs = kv.getTimestamp();
+          int compareResult = PrivateCellUtil.compareValue(kv,
+            new BinaryComparator(checkAndMutate.getValue()));
+          matches = matches(checkAndMutate.getCompareOp(), compareResult);
+        }
       }
-      return region.get(get, false);
+
+      // If matches, perform the action
+      if (matches) {
+        // We have acquired the row lock already. If the system clock is NOT monotonically
+        // non-decreasing (see HBASE-14070) we should make sure that the mutation has a
+        // larger timestamp than what was observed via Get. doBatchMutate already does this, but
+        // there is no way to pass the cellTs. See HBASE-14054.
+        long ts = Math.max(now, cellTs); // ensure write is not eclipsed
+
+        for (Mutation mutation : checkAndMutate.getMutations()) {
+          if (mutation instanceof Put) {
+            NavigableMap<byte[], List<Cell>> familyMap = mutation.getFamilyCellMap();
+            HRegion.updateCellTimestamps(familyMap.values(), Bytes.toBytes(ts));
+            region.rewriteCellTags(familyMap, mutation);
+            compositeFamilyCellMap.addFamilyCellMap(familyMap);
+            miniBatchOp.incrementNumOfPuts();
+          } else if (mutation instanceof Delete) {
+            NavigableMap<byte[], List<Cell>> familyMap = mutation.getFamilyCellMap();
+            region.prepareDeleteTimestamps(mutation, familyMap, Bytes.toBytes(now));
+            region.rewriteCellTags(familyMap, mutation);
+            compositeFamilyCellMap.addFamilyCellMap(familyMap);
+            miniBatchOp.incrementNumOfDeletes();
+          } else if (mutation instanceof Increment || mutation instanceof Append) {
+            boolean returnResults;
+            if (mutation instanceof Increment) {
+              returnResults = ((Increment) mutation).isReturnResults();
+              miniBatchOp.incrementNumOfIncrements();
+            } else {
+              returnResults = ((Append) mutation).isReturnResults();
+              miniBatchOp.incrementNumOfAppends();
+            }
+            List<Cell> results = returnResults ? new ArrayList<>(mutation.size()) : null;
+            NavigableMap<byte[], List<Cell>> familyMap = reckonDeltas(mutation, results, ts);
+            resultsList.add(results);
+            region.rewriteCellTags(familyMap, mutation);
+            compositeFamilyCellMap.addFamilyCellMap(familyMap);
+          }
+        }
+        return true;
+      }
+      return false;
+    }
+
+    private boolean matches(final CompareOperator op, final int compareResult) {
+      boolean matches;
+      switch (op) {
+        case LESS:
+          matches = compareResult < 0;
+          break;
+        case LESS_OR_EQUAL:
+          matches = compareResult <= 0;
+          break;
+        case EQUAL:
+          matches = compareResult == 0;
+          break;
+        case NOT_EQUAL:
+          matches = compareResult != 0;
+          break;
+        case GREATER_OR_EQUAL:
+          matches = compareResult >= 0;
+          break;
+        case GREATER:
+          matches = compareResult > 0;
+          break;
+        default:
+          throw new RuntimeException("Unknown Compare op " + op.name());
+      }
+      return matches;
     }
 
     @Override
@@ -4169,6 +4331,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                   retCodeDetails[i] =
                     new OperationStatus(retCodeDetails[i].getOperationStatusCode(), result);
                 }
+              } else if (m instanceof CheckAndMutate) {
+                CheckAndMutateResult result = region.getCoprocessorHost()
+                  .postCheckAndMutate((CheckAndMutate) m, checkAndMutateResults[i]);
+                if (result != checkAndMutateResults[i]) {
+                  retCodeDetails[i] =
+                    new OperationStatus(retCodeDetails[i].getOperationStatusCode(), result);
+                }
               }
             }
             return true;
@@ -4218,7 +4387,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     /**
-     * Runs prePut/preDelete/preIncrement/preAppend coprocessor hook for input mutation in a batch
+     * Runs prePut/preDelete/preIncrement/preAppend/preCheckAndMutate coprocessor hook for input
+     * mutation in a batch
      * @param metrics Array of 2 ints. index 0: count of puts, index 1: count of deletes, index 2:
      *   count of increments and 3: count of appends
      */
@@ -4264,15 +4434,29 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           metrics[3]++;
           retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS, result);
         }
-      } else {
-        String msg = "Put/Delete/Increment/Append mutations only supported in a batch";
-        retCodeDetails[index] = new OperationStatus(OperationStatusCode.FAILURE, msg);
-        if (isAtomic()) { // fail, atomic means all or none
-          throw new IOException(msg);
+      } else if (m instanceof CheckAndMutate) {
+        CheckAndMutate checkAndMutate = (CheckAndMutate) m;
+        CheckAndMutateResult result = region.coprocessorHost.preCheckAndMutate(checkAndMutate);
+        if (result != null) {
+          // pre hook says skip this CheckAndMutate
+          // mark as success and skip in doMiniBatchMutation
+          for (Mutation mutation : checkAndMutate.getMutations()) {
+            if (mutation instanceof Put) {
+              metrics[0]++;
+            } else if (mutation instanceof Delete) {
+              metrics[1]++;
+            } else if (mutation instanceof Increment) {
+              metrics[2]++;
+            } else if (mutation instanceof Append) {
+              metrics[3]++;
+            }
+          }
+          retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS, result);
         }
       }
     }
 
+    // TODO Support Increment/Append/CheckAndMutate operations
     private void checkAndMergeCPMutations(final MiniBatchOperationInProgress<Mutation> miniBatchOp,
         final List<RowLock> acquiredRowLocks, final long timestamp) throws IOException {
       visitBatchOperations(true, nextIndexToProcess + miniBatchOp.size(), (int i) -> {
@@ -4437,21 +4621,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
+  public OperationStatus[] batchMutate(Mutation[] mutations, boolean atomic) throws IOException {
+    return batchMutate(new MutationBatchOperation(this, mutations, atomic, HConstants.NO_NONCE,
+      HConstants.NO_NONCE));
+  }
+
   public OperationStatus[] batchMutate(Mutation[] mutations, boolean atomic, long nonceGroup,
       long nonce) throws IOException {
-    // As it stands, this is used for 3 things
-    //  * batchMutate with single mutation - put/delete/increment/append, separate or from
-    //    checkAndMutate.
-    //  * coprocessor calls (see ex. BulkDeleteEndpoint).
-    // So nonces are not really ever used by HBase. They could be by coprocs, and checkAnd...
     return batchMutate(new MutationBatchOperation(this, mutations, atomic, nonceGroup, nonce));
   }
 
   @Override
   public OperationStatus[] batchMutate(Mutation[] mutations) throws IOException {
-    // If the mutations has any Increment/Append operations, we need to do batchMutate atomically
+    // If the mutations has any Increment/Append/CheckAndMutate operations, we need to do
+    // batchMutate atomically
     boolean atomic = Arrays.stream(mutations)
-      .anyMatch(m -> m instanceof Increment || m instanceof Append);
+      .anyMatch(m ->
+        m instanceof Increment || m instanceof Append || m instanceof CheckAndMutate);
     return batchMutate(mutations, atomic, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
@@ -4482,7 +4668,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Perform a batch of mutations.
    *
-   * It supports Put, Delete, Increment, Append mutations and will ignore other types passed.
    * Operations in a batch are stored with highest durability specified of for all operations in a
    * batch, except for {@link Durability#SKIP_WAL}.
    *
@@ -4512,7 +4697,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (!initialized) {
           this.writeRequestsCount.add(batchOp.size());
           // validate and prepare batch for write, for MutationBatchOperation it also calls CP
-          // prePut()/preDelete()/preIncrement()/preAppend() hooks
+          // prePut()/preDelete()/preIncrement()/preAppend()/preCheckAndMutate() hooks
           batchOp.checkAndPrepare();
           initialized = true;
         }
@@ -4551,8 +4736,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // We've now grabbed as many mutations off the list as we can
       // Ensure we acquire at least one.
       if (miniBatchOp.getReadyToWriteCount() <= 0) {
-        // Nothing to put/delete/increment/append -- an exception in the above such as
-        // NoSuchColumnFamily?
+        // Nothing to put/delete/increment/append/checkAndMutate -- an exception in the above
+        // such as NoSuchColumnFamily?
         return;
       }
 
@@ -4561,8 +4746,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       // STEP 2. Update mini batch of all operations in progress with LATEST_TIMESTAMP timestamp
       // We should record the timestamp only after we have acquired the rowLock,
-      // otherwise, newer puts/deletes/increment/append are not guaranteed to have a newer
-      // timestamp
+      // otherwise, newer puts/deletes/increment/append/checkAndPut are not guaranteed to have a
+      // newer timestamp
       long now = EnvironmentEdgeManager.currentTime();
       batchOp.prepareMiniBatchOperations(miniBatchOp, now, acquiredRowLocks);
 
@@ -4611,16 +4796,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       batchOp.visitBatchOperations(true, finalLastIndexExclusive,
         (int i) -> {
           Mutation mutation = batchOp.getMutation(i);
-          if (mutation instanceof Increment || mutation instanceof Append) {
-            if (finalSuccess) {
+          if (finalSuccess) {
+            if (mutation instanceof Increment || mutation instanceof Append) {
               batchOp.retCodeDetails[i] = new OperationStatus(OperationStatusCode.SUCCESS,
                 batchOp.results[i]);
+            } else if (mutation instanceof CheckAndMutate) {
+              batchOp.retCodeDetails[i] = new OperationStatus(OperationStatusCode.SUCCESS,
+                batchOp.checkAndMutateResults[i]);
             } else {
-              batchOp.retCodeDetails[i] = OperationStatus.FAILURE;
+              batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
             }
           } else {
-            batchOp.retCodeDetails[i] =
-              finalSuccess ? OperationStatus.SUCCESS : OperationStatus.FAILURE;
+            batchOp.retCodeDetails[i] = OperationStatus.FAILURE;
           }
           return true;
         });
@@ -4713,175 +4900,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
-    byte[] row = checkAndMutate.getRow();
-    Filter filter = null;
-    byte[] family = null;
-    byte[] qualifier = null;
-    CompareOperator op = null;
-    ByteArrayComparable comparator = null;
-    if (checkAndMutate.hasFilter()) {
-      filter = checkAndMutate.getFilter();
-    } else {
-      family = checkAndMutate.getFamily();
-      qualifier = checkAndMutate.getQualifier();
-      op = checkAndMutate.getCompareOp();
-      comparator = new BinaryComparator(checkAndMutate.getValue());
-    }
-    TimeRange timeRange = checkAndMutate.getTimeRange();
-
-    Mutation mutation = null;
-    RowMutations rowMutations = null;
-    if (checkAndMutate.getAction() instanceof Mutation) {
-      mutation = (Mutation) checkAndMutate.getAction();
-    } else {
-      rowMutations = (RowMutations) checkAndMutate.getAction();
-    }
-
-    if (mutation != null) {
-      checkMutationType(mutation);
-      checkRow(mutation, row);
-    } else {
-      checkRow(rowMutations, row);
-    }
     checkReadOnly();
     // TODO, add check for value length also move this check to the client
     checkResources();
     startRegionOperation();
     try {
-      Get get = new Get(row);
-      if (family != null) {
-        checkFamily(family);
-        get.addColumn(family, qualifier);
-      }
-      if (filter != null) {
-        get.setFilter(filter);
-      }
-      if (timeRange != null) {
-        get.setTimeRange(timeRange.getMin(), timeRange.getMax());
-      }
-      // Lock row - note that doBatchMutate will relock this row if called
-      checkRow(row, "doCheckAndRowMutate");
-      RowLock rowLock = getRowLockInternal(get.getRow(), false, null);
-      try {
-        if (this.getCoprocessorHost() != null) {
-          CheckAndMutateResult result =
-            getCoprocessorHost().preCheckAndMutateAfterRowLock(checkAndMutate);
-          if (result != null) {
-            return result;
-          }
-        }
-
-        // NOTE: We used to wait here until mvcc caught up:  mvcc.await();
-        // Supposition is that now all changes are done under row locks, then when we go to read,
-        // we'll get the latest on this row.
-        List<Cell> result = get(get, false);
-        boolean matches = false;
-        long cellTs = 0;
-        if (filter != null) {
-          if (!result.isEmpty()) {
-            matches = true;
-            cellTs = result.get(0).getTimestamp();
-          }
-        } else {
-          boolean valueIsNull = comparator.getValue() == null || comparator.getValue().length == 0;
-          if (result.isEmpty() && valueIsNull) {
-            matches = true;
-          } else if (result.size() > 0 && result.get(0).getValueLength() == 0 && valueIsNull) {
-            matches = true;
-            cellTs = result.get(0).getTimestamp();
-          } else if (result.size() == 1 && !valueIsNull) {
-            Cell kv = result.get(0);
-            cellTs = kv.getTimestamp();
-            int compareResult = PrivateCellUtil.compareValue(kv, comparator);
-            matches = matches(op, compareResult);
-          }
-        }
-
-        // If matches, perform the mutation or the rowMutations
-        if (matches) {
-          // We have acquired the row lock already. If the system clock is NOT monotonically
-          // non-decreasing (see HBASE-14070) we should make sure that the mutation has a
-          // larger timestamp than what was observed via Get. doBatchMutate already does this, but
-          // there is no way to pass the cellTs. See HBASE-14054.
-          long now = EnvironmentEdgeManager.currentTime();
-          long ts = Math.max(now, cellTs); // ensure write is not eclipsed
-          byte[] byteTs = Bytes.toBytes(ts);
-          if (mutation != null) {
-            if (mutation instanceof Put) {
-              updateCellTimestamps(mutation.getFamilyCellMap().values(), byteTs);
-            }
-            // And else 'delete' is not needed since it already does a second get, and sets the
-            // timestamp from get (see prepareDeleteTimestamps).
-          } else {
-            for (Mutation m: rowMutations.getMutations()) {
-              if (m instanceof Put) {
-                updateCellTimestamps(m.getFamilyCellMap().values(), byteTs);
-              }
-            }
-            // And else 'delete' is not needed since it already does a second get, and sets the
-            // timestamp from get (see prepareDeleteTimestamps).
-          }
-          // All edits for the given row (across all column families) must happen atomically.
-          Result r = null;
-          if (mutation != null) {
-            r = doBatchMutate(mutation, true).getResult();
-          } else {
-            mutateRow(rowMutations);
-          }
-          this.checkAndMutateChecksPassed.increment();
-          return new CheckAndMutateResult(true, r);
-        }
+      CheckAndMutateResult result = doBatchMutate(checkAndMutate, true).getCheckAndMutateResult();
+      if (result.isSuccess()) {
+        this.checkAndMutateChecksPassed.increment();
+      } else {
         this.checkAndMutateChecksFailed.increment();
-        return new CheckAndMutateResult(false, null);
-      } finally {
-        rowLock.release();
       }
+      return result;
     } finally {
       closeRegionOperation();
     }
-  }
-
-  private void checkMutationType(final Mutation mutation)
-  throws DoNotRetryIOException {
-    if (!(mutation instanceof Put) && !(mutation instanceof Delete) &&
-      !(mutation instanceof Increment) && !(mutation instanceof Append)) {
-      throw new org.apache.hadoop.hbase.DoNotRetryIOException(
-        "Action must be Put or Delete or Increment or Delete");
-    }
-  }
-
-  private void checkRow(final Row action, final byte[] row)
-    throws DoNotRetryIOException {
-    if (!Bytes.equals(row, action.getRow())) {
-      throw new org.apache.hadoop.hbase.DoNotRetryIOException("Action's getRow must match");
-    }
-  }
-
-  private boolean matches(final CompareOperator op, final int compareResult) {
-    boolean matches = false;
-    switch (op) {
-      case LESS:
-        matches = compareResult < 0;
-        break;
-      case LESS_OR_EQUAL:
-        matches = compareResult <= 0;
-        break;
-      case EQUAL:
-        matches = compareResult == 0;
-        break;
-      case NOT_EQUAL:
-        matches = compareResult != 0;
-        break;
-      case GREATER_OR_EQUAL:
-        matches = compareResult >= 0;
-        break;
-      case GREATER:
-        matches = compareResult > 0;
-        break;
-      default:
-        throw new RuntimeException("Unknown Compare op " + op.name());
-    }
-    return matches;
   }
 
   private OperationStatus doBatchMutate(Mutation mutation) throws IOException {

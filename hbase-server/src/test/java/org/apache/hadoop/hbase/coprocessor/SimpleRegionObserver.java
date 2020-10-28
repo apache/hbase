@@ -777,12 +777,24 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
     return ctPreBatchMutate.get() > 0;
   }
 
+  public int getPreBatchMutate() {
+    return ctPreBatchMutate.get();
+  }
+
   public boolean hadPostBatchMutate() {
     return ctPostBatchMutate.get() > 0;
   }
 
+  public int getPostBatchMutate() {
+    return ctPostBatchMutate.get();
+  }
+
   public boolean hadPostBatchMutateIndispensably() {
     return ctPostBatchMutateIndispensably.get() > 0;
+  }
+
+  public int getPostBatchMutateIndispensably() {
+    return ctPostBatchMutateIndispensably.get();
   }
 
   public boolean hadPostStartRegionOperation() {

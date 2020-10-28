@@ -113,6 +113,7 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
         return true;
       }
     }
+    current = null;
     return false;
   }
 

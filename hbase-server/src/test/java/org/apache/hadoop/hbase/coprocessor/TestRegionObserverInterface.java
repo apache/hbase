@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -241,14 +242,16 @@ public class TestRegionObserverInterface {
       inc.addColumn(A, A, 1);
 
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreIncrement", "hadPostIncrement", "hadPreIncrementAfterRowLock" },
-        tableName, new Boolean[] { false, false, false });
+        new String[] { "hadPreIncrement", "hadPostIncrement", "hadPreIncrementAfterRowLock",
+          "hadPreBatchMutate", "hadPostBatchMutate", "hadPostBatchMutateIndispensably" },
+        tableName, new Boolean[] { false, false, false, false, false, false });
 
       table.increment(inc);
 
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreIncrement", "hadPostIncrement", "hadPreIncrementAfterRowLock" },
-        tableName, new Boolean[] { true, true, true });
+        new String[] { "hadPreIncrement", "hadPostIncrement", "hadPreIncrementAfterRowLock",
+          "hadPreBatchMutate", "hadPostBatchMutate", "hadPostBatchMutateIndispensably" },
+        tableName, new Boolean[] { true, true, true, true, true, true });
     } finally {
       util.deleteTable(tableName);
       table.close();
@@ -262,32 +265,37 @@ public class TestRegionObserverInterface {
       Put p = new Put(Bytes.toBytes(0));
       p.addColumn(A, A, A);
       table.put(p);
+
       p = new Put(Bytes.toBytes(0));
       p.addColumn(A, A, A);
-      verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
-          "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
-          "getPostCheckAndPutWithFilter", "getPreCheckAndMutate",
-          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
-        tableName, new Integer[] { 0, 0, 0, 0, 0, 0, 0, 0, 0 });
 
-      table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenPut(p);
       verifyMethodResult(SimpleRegionObserver.class,
         new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
           "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
           "getPostCheckAndPutWithFilter", "getPreCheckAndMutate",
-          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
-        tableName, new Integer[] { 1, 1, 1, 0, 0, 0, 1, 1, 1 });
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 });
 
-      table.checkAndMutate(Bytes.toBytes(0),
-          new SingleColumnValueFilter(A, A, CompareOperator.EQUAL, A))
-        .thenPut(p);
+      table.checkAndMutate(CheckAndMutate
+        .newBuilder(Bytes.toBytes(0)).ifEquals(A, A, A).build(p));
       verifyMethodResult(SimpleRegionObserver.class,
         new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
           "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
           "getPostCheckAndPutWithFilter", "getPreCheckAndMutate",
-          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
-        tableName, new Integer[] { 1, 1, 1, 1, 1, 1, 2, 2, 2 });
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 1, 1, 1, 0, 0, 0, 1, 1, 1, 2, 2, 2 });
+
+      table.checkAndMutate(CheckAndMutate.newBuilder(Bytes.toBytes(0))
+        .ifMatches(new SingleColumnValueFilter(A, A, CompareOperator.EQUAL, A)).build(p));
+      verifyMethodResult(SimpleRegionObserver.class,
+        new String[] { "getPreCheckAndPut", "getPreCheckAndPutAfterRowLock", "getPostCheckAndPut",
+          "getPreCheckAndPutWithFilter", "getPreCheckAndPutWithFilterAfterRowLock",
+          "getPostCheckAndPutWithFilter", "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3 });
     } finally {
       util.deleteTable(tableName);
     }
@@ -301,35 +309,39 @@ public class TestRegionObserverInterface {
       Put p = new Put(Bytes.toBytes(0));
       p.addColumn(A, A, A);
       table.put(p);
+
       Delete d = new Delete(Bytes.toBytes(0));
-      table.delete(d);
-      verifyMethodResult(
-        SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
-          "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
-          "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
-          "getPostCheckAndDeleteWithFilter", "getPreCheckAndMutate",
-          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
-        tableName, new Integer[] { 0, 0, 0, 0, 0, 0, 0, 0, 0 });
 
-      table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenDelete(d);
       verifyMethodResult(
         SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
           "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
           "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
           "getPostCheckAndDeleteWithFilter", "getPreCheckAndMutate",
-          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
-        tableName, new Integer[] { 1, 1, 1, 0, 0, 0, 1, 1, 1 });
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 });
 
-      table.checkAndMutate(Bytes.toBytes(0),
-          new SingleColumnValueFilter(A, A, CompareOperator.EQUAL, A))
-        .thenDelete(d);
+      table.checkAndMutate(CheckAndMutate
+        .newBuilder(Bytes.toBytes(0)).ifEquals(A, A, A).build(d));
       verifyMethodResult(
         SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
           "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
           "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
           "getPostCheckAndDeleteWithFilter", "getPreCheckAndMutate",
-          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
-        tableName, new Integer[] { 1, 1, 1, 1, 1, 1, 2, 2, 2 });
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 1, 1, 1, 0, 0, 0, 1, 1, 1, 2, 2, 2 });
+
+      table.checkAndMutate(CheckAndMutate.newBuilder(Bytes.toBytes(0)).
+          ifMatches(new SingleColumnValueFilter(A, A, CompareOperator.EQUAL, A)).build(d));
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndDelete",
+          "getPreCheckAndDeleteAfterRowLock", "getPostCheckAndDelete",
+          "getPreCheckAndDeleteWithFilter", "getPreCheckAndDeleteWithFilterAfterRowLock",
+          "getPostCheckAndDeleteWithFilter", "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3 });
     } finally {
       util.deleteTable(tableName);
       table.close();
@@ -337,19 +349,93 @@ public class TestRegionObserverInterface {
   }
 
   @Test
-  public void testCheckAndMutateWithRowMutationsHooks() throws Exception {
+  public void testCheckAndIncrementHooks() throws Exception {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." +
       name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
     try {
       byte[] row = Bytes.toBytes(0);
 
-      Put p = new Put(row).addColumn(A, A, A);
-      table.put(p);
       verifyMethodResult(
         SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
-          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
-        tableName, new Integer[] { 0, 0, 0 });
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 0, 0, 0, 0, 0, 0 });
+
+      table.checkAndMutate(CheckAndMutate.newBuilder(row)
+        .ifEquals(A, A, Bytes.toBytes(0L))
+        .build(new Increment(row).addColumn(A, A, 1)));
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 1, 1, 1, 1, 1, 1 });
+
+      table.checkAndMutate(CheckAndMutate.newBuilder(row)
+        .ifEquals(A, A, Bytes.toBytes(0L))
+        .build(new Increment(row).addColumn(A, A, 1)));
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 2, 2, 2, 2, 2, 2 });
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
+  }
+
+  @Test
+  public void testCheckAndAppendHooks() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." +
+      name.getMethodName());
+    Table table = util.createTable(tableName, new byte[][] { A, B, C });
+    try {
+      byte[] row = Bytes.toBytes(0);
+
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 0, 0, 0, 0, 0, 0 });
+
+      table.checkAndMutate(CheckAndMutate.newBuilder(row)
+        .ifEquals(A, A, HConstants.EMPTY_BYTE_ARRAY)
+        .build(new Append(row).addColumn(A, A, A)));
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 1, 1, 1, 1, 1, 1 });
+
+      table.checkAndMutate(CheckAndMutate.newBuilder(row)
+        .ifEquals(A, A, HConstants.EMPTY_BYTE_ARRAY)
+        .build(new Append(row).addColumn(A, A, A)));
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 2, 2, 2, 2, 2, 2 });
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }  }
+
+  @Test
+  public void testCheckAndRowMutationsHooks() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." +
+      name.getMethodName());
+    Table table = util.createTable(tableName, new byte[][] { A, B, C });
+    try {
+      byte[] row = Bytes.toBytes(0);
+      Put p = new Put(row).addColumn(A, A, A);
+      table.put(p);
+
+      verifyMethodResult(
+        SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 0, 0, 0, 1, 1, 1 });
 
       table.checkAndMutate(CheckAndMutate.newBuilder(row)
         .ifEquals(A, A, A)
@@ -358,8 +444,9 @@ public class TestRegionObserverInterface {
           .add((Mutation) new Delete(row))));
       verifyMethodResult(
         SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
-          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
-        tableName, new Integer[] { 1, 1, 1 });
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 1, 1, 1, 2, 2, 2 });
 
       Object[] result = new Object[2];
       table.batch(Arrays.asList(p, CheckAndMutate.newBuilder(row)
@@ -369,8 +456,9 @@ public class TestRegionObserverInterface {
           .add((Mutation) new Delete(row)))), result);
       verifyMethodResult(
         SimpleRegionObserver.class, new String[] { "getPreCheckAndMutate",
-          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate" },
-        tableName, new Integer[] { 2, 2, 2 });
+          "getPreCheckAndMutateAfterRowLock", "getPostCheckAndMutate", "getPreBatchMutate",
+          "getPostBatchMutate", "getPostBatchMutateIndispensably" },
+        tableName, new Integer[] { 2, 2, 2, 4, 4, 4 });
     } finally {
       util.deleteTable(tableName);
       table.close();
@@ -386,14 +474,18 @@ public class TestRegionObserverInterface {
       app.addColumn(A, A, A);
 
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock" }, tableName,
-        new Boolean[] { false, false, false });
+        new String[] { "hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock",
+          "hadPreBatchMutate", "hadPostBatchMutate", "hadPostBatchMutateIndispensably" },
+        tableName,
+        new Boolean[] { false, false, false, false, false, false });
 
       table.append(app);
 
       verifyMethodResult(SimpleRegionObserver.class,
-        new String[] { "hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock" }, tableName,
-        new Boolean[] { true, true, true });
+        new String[] { "hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock",
+          "hadPreBatchMutate", "hadPostBatchMutate", "hadPostBatchMutateIndispensably" },
+        tableName,
+        new Boolean[] { true, true, true, true, true, true });
     } finally {
       util.deleteTable(tableName);
       table.close();

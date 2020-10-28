@@ -441,8 +441,8 @@ public interface RegionObserver {
   /**
    * This will be called for every batch mutation operation happening at the server. This will be
    * called after acquiring the locks on the mutating rows and after applying the proper timestamp
-   * for each Mutation at the server. The batch may contain Put/Delete/Increment/Append. By
-   * setting OperationStatus of Mutations
+   * for each Mutation at the server. The batch may contain
+   * Put/Delete/Increment/Append/CheckAndMutate. By setting OperationStatus of Mutations
    * ({@link MiniBatchOperationInProgress#setOperationStatus(int, OperationStatus)}),
    * {@link RegionObserver} can make Region to skip these Mutations.
    * <p>
@@ -460,7 +460,8 @@ public interface RegionObserver {
    * {@link #postPut(ObserverContext, Put, WALEdit, Durability)}
    * and {@link #postDelete(ObserverContext, Delete, WALEdit, Durability)}
    * and {@link #postIncrement(ObserverContext, Increment, Result)}
-   * and {@link #postAppend(ObserverContext, Append, Result)} is
+   * and {@link #postAppend(ObserverContext, Append, Result)}
+   * and {@link #postCheckAndMutate(ObserverContext, CheckAndMutate, CheckAndMutateResult)} is
    * this hook will be executed before the mvcc transaction completion.
    * <p>
    * Note: Do not retain references to any Cells in Mutations beyond the life of this invocation.
@@ -491,8 +492,8 @@ public interface RegionObserver {
       Operation operation) throws IOException {}
 
   /**
-   * Called after the completion of batch put/delete/increment/append and will be called even if
-   * the batch operation fails.
+   * Called after the completion of batch put/delete/increment/append/checkAndMutate and will be
+   * called even if the batch operation fails.
    * <p>
    * Note: Do not retain references to any Cells in Mutations beyond the life of this invocation.
    * If need a Cell reference for later use, copy the cell and use that.
@@ -919,7 +920,7 @@ public interface RegionObserver {
   /**
    * Called after checkAndMutate
    * <p>
-   * Note: Do not retain references to any Cells in 'delete' beyond the life of this invocation.
+   * Note: Do not retain references to any Cells in actions beyond the life of this invocation.
    * If need a Cell reference for later use, copy the cell and use that.
    * @param c the environment provided by the region server
    * @param checkAndMutate the CheckAndMutate object
@@ -1358,7 +1359,8 @@ public interface RegionObserver {
 
   /**
    * Called after a list of new cells has been created during an increment operation, but before
-   * they are committed to the WAL or memstore.
+   * they are committed to the WAL or memstore. This is also called in case of an increment
+   * operation in checkAndMutate.
    *
    * @param ctx       the environment provided by the region server
    * @param mutation  the current mutation
@@ -1380,7 +1382,8 @@ public interface RegionObserver {
 
   /**
    * Called after a list of new cells has been created during an append operation, but before
-   * they are committed to the WAL or memstore.
+   * they are committed to the WAL or memstore. This is also called in case of an append
+   * operation in checkAndMutate.
    *
    * @param ctx       the environment provided by the region server
    * @param mutation  the current mutation

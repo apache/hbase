@@ -629,17 +629,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         return new CheckAndMutateResult(true, null);
       } else {
         CheckAndMutate checkAndMutate = ProtobufUtil.toCheckAndMutate(condition, mutations);
-        CheckAndMutateResult result = null;
-        if (region.getCoprocessorHost() != null) {
-          result = region.getCoprocessorHost().preCheckAndMutate(checkAndMutate);
-        }
-        if (result == null) {
-          result = region.checkAndMutate(checkAndMutate);
-          if (region.getCoprocessorHost() != null) {
-            result = region.getCoprocessorHost().postCheckAndMutate(checkAndMutate, result);
-          }
-        }
-        return result;
+        return region.checkAndMutate(checkAndMutate);
       }
     } finally {
       // Currently, the checkAndMutate isn't supported by batch so it won't mess up the cell scanner
@@ -3062,17 +3052,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     checkCellSizeLimit(region, (Mutation) checkAndMutate.getAction());
     spaceQuota.getPolicyEnforcement(region).check((Mutation) checkAndMutate.getAction());
     quota.addMutation((Mutation) checkAndMutate.getAction());
-
-    CheckAndMutateResult result = null;
-    if (region.getCoprocessorHost() != null) {
-      result = region.getCoprocessorHost().preCheckAndMutate(checkAndMutate);
-    }
-    if (result == null) {
-      result = region.checkAndMutate(checkAndMutate);
-      if (region.getCoprocessorHost() != null) {
-        result = region.getCoprocessorHost().postCheckAndMutate(checkAndMutate, result);
-      }
-    }
+    CheckAndMutateResult result = region.checkAndMutate(checkAndMutate);
     MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
     if (metricsRegionServer != null) {
       long after = EnvironmentEdgeManager.currentTime();

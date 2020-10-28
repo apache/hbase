@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -288,79 +289,91 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     // TODO this can be made as a global LRU cache at HRS level?
     Map<String, List<Tag>> labelCache = new HashMap<>();
     for (int i = 0; i < miniBatchOp.size(); i++) {
-      Mutation m = miniBatchOp.getOperation(i);
-      CellVisibility cellVisibility = null;
-      try {
-        cellVisibility = m.getCellVisibility();
-      } catch (DeserializationException de) {
-        miniBatchOp.setOperationStatus(i,
-            new OperationStatus(SANITY_CHECK_FAILURE, de.getMessage()));
-        continue;
+      Mutation mutation = miniBatchOp.getOperation(i);
+      if (mutation instanceof CheckAndMutate) {
+        for (Mutation m : ((CheckAndMutate) mutation).getMutations()) {
+          sanityCheck(miniBatchOp, i, m, labelCache);
+        }
+      } else {
+        sanityCheck(miniBatchOp, i, mutation, labelCache);
       }
-      boolean sanityFailure = false;
-      boolean modifiedTagFound = false;
-      Pair<Boolean, Tag> pair = new Pair<>(false, null);
-      for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-        pair = checkForReservedVisibilityTagPresence(cellScanner.current(), pair);
-        if (!pair.getFirst()) {
-          // Don't disallow reserved tags if authorization is disabled
-          if (authorizationEnabled) {
-            miniBatchOp.setOperationStatus(i, new OperationStatus(SANITY_CHECK_FAILURE,
-              "Mutation contains cell with reserved type tag"));
-            sanityFailure = true;
-          }
-          break;
-        } else {
-          // Indicates that the cell has a the tag which was modified in the src replication cluster
-          Tag tag = pair.getSecond();
-          if (cellVisibility == null && tag != null) {
-            // May need to store only the first one
-            cellVisibility = new CellVisibility(Tag.getValueAsString(tag));
-            modifiedTagFound = true;
-          }
+    }
+  }
+
+  private void sanityCheck(MiniBatchOperationInProgress<Mutation> miniBatchOp,
+    int i, Mutation mutation, Map<String, List<Tag>> labelCache) throws IOException {
+    CellVisibility cellVisibility;
+    try {
+      cellVisibility = mutation.getCellVisibility();
+    } catch (DeserializationException e) {
+      miniBatchOp.setOperationStatus(i, new OperationStatus(SANITY_CHECK_FAILURE, e.getMessage()));
+      return;
+    }
+    boolean sanityFailure = false;
+    boolean modifiedTagFound = false;
+    Pair<Boolean, Tag> pair = new Pair<>(false, null);
+    for (CellScanner cellScanner = mutation.cellScanner(); cellScanner.advance();) {
+      pair = checkForReservedVisibilityTagPresence(cellScanner.current(), pair);
+      if (!pair.getFirst()) {
+        // Don't disallow reserved tags if authorization is disabled
+        if (authorizationEnabled) {
+          miniBatchOp.setOperationStatus(i, new OperationStatus(SANITY_CHECK_FAILURE,
+            "Mutation contains cell with reserved type tag"));
+          sanityFailure = true;
+        }
+        break;
+      } else {
+        // Indicates that the cell has a the tag which was modified in the src replication cluster
+        Tag tag = pair.getSecond();
+        if (cellVisibility == null && tag != null) {
+          // May need to store only the first one
+          cellVisibility = new CellVisibility(Tag.getValueAsString(tag));
+          modifiedTagFound = true;
         }
       }
-      if (!sanityFailure && (m instanceof Put || m instanceof Delete)) {
-        if (cellVisibility != null) {
-          String labelsExp = cellVisibility.getExpression();
-          List<Tag> visibilityTags = labelCache.get(labelsExp);
-          if (visibilityTags == null) {
-            // Don't check user auths for labels with Mutations when the user is super user
-            boolean authCheck = authorizationEnabled && checkAuths && !(isSystemOrSuperUser());
-            try {
-              visibilityTags = this.visibilityLabelService.createVisibilityExpTags(labelsExp, true,
-                  authCheck);
-            } catch (InvalidLabelException e) {
-              miniBatchOp.setOperationStatus(i,
-                  new OperationStatus(SANITY_CHECK_FAILURE, e.getMessage()));
-            }
-            if (visibilityTags != null) {
-              labelCache.put(labelsExp, visibilityTags);
-            }
+    }
+    // Add the cell visibility tags to the cells for Put and Delete. For Increment/Append, we do
+    // this in postIncrementBeforeWAL/postAppendBeforeWAL
+    if (!sanityFailure && (mutation instanceof Put || mutation instanceof Delete)) {
+      if (cellVisibility != null) {
+        String labelsExp = cellVisibility.getExpression();
+        List<Tag> visibilityTags = labelCache.get(labelsExp);
+        if (visibilityTags == null) {
+          // Don't check user auths for labels with Mutations when the user is super user
+          boolean authCheck = authorizationEnabled && checkAuths && !(isSystemOrSuperUser());
+          try {
+            visibilityTags = this.visibilityLabelService.createVisibilityExpTags(labelsExp, true,
+              authCheck);
+          } catch (InvalidLabelException e) {
+            miniBatchOp.setOperationStatus(i, new OperationStatus(SANITY_CHECK_FAILURE,
+              e.getMessage()));
           }
           if (visibilityTags != null) {
-            List<Cell> updatedCells = new ArrayList<>();
-            for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-              Cell cell = cellScanner.current();
-              List<Tag> tags = PrivateCellUtil.getTags(cell);
-              if (modifiedTagFound) {
-                // Rewrite the tags by removing the modified tags.
-                removeReplicationVisibilityTag(tags);
-              }
-              tags.addAll(visibilityTags);
-              Cell updatedCell = PrivateCellUtil.createCell(cell, tags);
-              updatedCells.add(updatedCell);
+            labelCache.put(labelsExp, visibilityTags);
+          }
+        }
+        if (visibilityTags != null) {
+          List<Cell> updatedCells = new ArrayList<>();
+          for (CellScanner cellScanner = mutation.cellScanner(); cellScanner.advance();) {
+            Cell cell = cellScanner.current();
+            List<Tag> tags = PrivateCellUtil.getTags(cell);
+            if (modifiedTagFound) {
+              // Rewrite the tags by removing the modified tags.
+              removeReplicationVisibilityTag(tags);
             }
-            m.getFamilyCellMap().clear();
-            // Clear and add new Cells to the Mutation.
-            for (Cell cell : updatedCells) {
-              if (m instanceof Put) {
-                Put p = (Put) m;
-                p.add(cell);
-              } else {
-                Delete d = (Delete) m;
-                d.add(cell);
-              }
+            tags.addAll(visibilityTags);
+            Cell updatedCell = PrivateCellUtil.createCell(cell, tags);
+            updatedCells.add(updatedCell);
+          }
+          mutation.getFamilyCellMap().clear();
+          // Clear and add new Cells to the Mutation.
+          for (Cell cell : updatedCells) {
+            if (mutation instanceof Put) {
+              Put p = (Put) mutation;
+              p.add(cell);
+            } else {
+              Delete d = (Delete) mutation;
+              d.add(cell);
             }
           }
         }

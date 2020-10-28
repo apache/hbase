@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -53,6 +52,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
@@ -86,7 +87,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
-import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -127,7 +127,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -427,8 +426,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     SCAN("scan"),
     PUT("put"),
     DELETE("delete"),
-    CHECK_AND_PUT("checkAndPut"),
-    CHECK_AND_DELETE("checkAndDelete"),
+    CHECK_AND_MUTATE("checkAndMutate"),
     APPEND("append"),
     INCREMENT("increment");
 
@@ -1497,45 +1495,79 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       TableName table = c.getEnvironment().getRegion().getRegionInfo().getTable();
       User user = getActiveUser(c);
       for (int i = 0; i < miniBatchOp.size(); i++) {
-        Mutation m = miniBatchOp.getOperation(i);
-        if (m.getAttribute(CHECK_COVERING_PERM) != null) {
-          // We have a failure with table, cf and q perm checks and now giving a chance for cell
-          // perm check
-          OpType opType;
-          long timestamp;
-          if (m instanceof Put) {
-            checkForReservedTagPresence(user, m);
-            opType = OpType.PUT;
-            timestamp = m.getTimestamp();
-          } else if (m instanceof Delete) {
-            opType = OpType.DELETE;
-            timestamp = m.getTimestamp();
-          } else if (m instanceof Increment) {
-            opType = OpType.INCREMENT;
-            timestamp = ((Increment) m).getTimeRange().getMax();
-          } else if (m instanceof Append) {
-            opType = OpType.APPEND;
-            timestamp = ((Append) m).getTimeRange().getMax();
+        Mutation mutation = miniBatchOp.getOperation(i);
+        if (mutation.getAttribute(CHECK_COVERING_PERM) != null) {
+          if (mutation instanceof CheckAndMutate) {
+            CheckAndMutate checkAndMutate = (CheckAndMutate) mutation;
+            // We had failure with table, cf and q perm checks and now giving a chance for cell
+            // perm check on the condition
+            Map<byte[], ? extends Collection<byte[]>> families = makeFamilyMap(
+              checkAndMutate.getFamily(), checkAndMutate.getQualifier());
+            AuthResult authResult;
+            if (checkCoveringPermission(user, OpType.CHECK_AND_MUTATE, c.getEnvironment(),
+              checkAndMutate.getRow(), families, HConstants.LATEST_TIMESTAMP, Action.READ)) {
+              authResult = AuthResult.allow(OpType.CHECK_AND_MUTATE.toString(),
+                "Covering cell set", user, Action.READ, table, families);
+            } else {
+              authResult = AuthResult.deny(OpType.CHECK_AND_MUTATE.toString(),
+                "Covering cell set", user, Action.READ, table, families);
+            }
+            AccessChecker.logResult(authResult);
+            if (authorizationEnabled && !authResult.isAllowed()) {
+              throw new AccessDeniedException("Insufficient permissions " +
+                authResult.toContextString());
+            }
+
+            // For the mutations in CheckAndMutate
+            for (Mutation m : checkAndMutate.getMutations()) {
+              if (m.getAttribute(CHECK_COVERING_PERM) != null) {
+                // We have a failure with table, cf and q perm checks and now giving a chance for
+                // cell perm check
+                checkCoveringPermission(c.getEnvironment(), user, table, m);
+              }
+            }
           } else {
-            // If the operation type is not Put/Delete/Increment/Append, do nothing
-            continue;
-          }
-          AuthResult authResult = null;
-          if (checkCoveringPermission(user, opType, c.getEnvironment(), m.getRow(),
-            m.getFamilyCellMap(), timestamp, Action.WRITE)) {
-            authResult = AuthResult.allow(opType.toString(), "Covering cell set",
-              user, Action.WRITE, table, m.getFamilyCellMap());
-          } else {
-            authResult = AuthResult.deny(opType.toString(), "Covering cell set",
-              user, Action.WRITE, table, m.getFamilyCellMap());
-          }
-          AccessChecker.logResult(authResult);
-          if (authorizationEnabled && !authResult.isAllowed()) {
-            throw new AccessDeniedException("Insufficient permissions "
-              + authResult.toContextString());
+            // We have a failure with table, cf and q perm checks and now giving a chance for cell
+            // perm check
+            checkCoveringPermission(c.getEnvironment(), user, table, mutation);
           }
         }
       }
+    }
+  }
+
+  private void checkCoveringPermission(RegionCoprocessorEnvironment env, User user,
+    TableName table, Mutation mutation) throws IOException {
+    OpType opType;
+    long timestamp;
+    if (mutation instanceof Put) {
+      opType = OpType.PUT;
+      timestamp = mutation.getTimestamp();
+    } else if (mutation instanceof Delete) {
+      opType = OpType.DELETE;
+      timestamp = mutation.getTimestamp();
+    } else if (mutation instanceof Increment) {
+      opType = OpType.INCREMENT;
+      timestamp = ((Increment) mutation).getTimeRange().getMax();
+    } else if (mutation instanceof Append) {
+      opType = OpType.APPEND;
+      timestamp = ((Append) mutation).getTimeRange().getMax();
+    } else {
+      throw new AssertionError("Unexpected mutation type");
+    }
+    AuthResult authResult;
+    if (checkCoveringPermission(user, opType, env, mutation.getRow(), mutation.getFamilyCellMap(),
+      timestamp, Action.WRITE)) {
+      authResult = AuthResult.allow(opType.toString(), "Covering cell set", user,
+        Action.WRITE, table, mutation.getFamilyCellMap());
+    } else {
+      authResult = AuthResult.deny(opType.toString(), "Covering cell set", user,
+        Action.WRITE, table, mutation.getFamilyCellMap());
+    }
+    AccessChecker.logResult(authResult);
+    if (authorizationEnabled && !authResult.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions " +
+        authResult.toContextString());
     }
   }
 
@@ -1549,125 +1581,74 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public boolean preCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOperator op,
-      final ByteArrayComparable comparator, final Put put,
-      final boolean result) throws IOException {
+  public CheckAndMutateResult preCheckAndMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    CheckAndMutate checkAndMutate, CheckAndMutateResult result) throws IOException {
     User user = getActiveUser(c);
-    checkForReservedTagPresence(user, put);
-
-    // Require READ and WRITE permissions on the table, CF, and KV to update
     RegionCoprocessorEnvironment env = c.getEnvironment();
-    Map<byte[],? extends Collection<byte[]>> families = makeFamilyMap(family, qualifier);
-    AuthResult authResult = permissionGranted(OpType.CHECK_AND_PUT,
-        user, env, families, Action.READ, Action.WRITE);
+
+    // Require READ permissions on the table, CF, and qualifier of the condition
+    Map<byte[],? extends Collection<byte[]>> families = makeFamilyMap(checkAndMutate.getFamily(),
+      checkAndMutate.getQualifier());
+    AuthResult authResult = permissionGranted(OpType.CHECK_AND_MUTATE, user, env, families,
+      Action.READ);
     AccessChecker.logResult(authResult);
     if (!authResult.isAllowed()) {
       if (cellFeaturesEnabled && !compatibleEarlyTermination) {
-        put.setAttribute(CHECK_COVERING_PERM, TRUE);
+        checkAndMutate.setAttribute(CHECK_COVERING_PERM, TRUE);
       } else if (authorizationEnabled) {
         throw new AccessDeniedException("Insufficient permissions " +
           authResult.toContextString());
       }
     }
 
-    byte[] bytes = put.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
-    if (bytes != null) {
-      if (cellFeaturesEnabled) {
-        addCellPermissions(bytes, put.getFamilyCellMap());
+    // For the mutations in CheckAndMutate
+    for (Mutation mutation : checkAndMutate.getMutations()) {
+      OpType opType;
+      if (mutation instanceof Delete) {
+        opType = OpType.DELETE;
+        Delete delete = (Delete) mutation;
+        // An ACL on a delete is useless, we shouldn't allow it
+        if (delete.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL) != null) {
+          throw new DoNotRetryIOException("ACL on checkAndDelete has no effect: " +
+            delete.toString());
+        }
       } else {
-        throw new DoNotRetryIOException("Cell ACLs cannot be persisted");
-      }
-    }
-    return result;
-  }
+        if (mutation instanceof Put) {
+          opType = OpType.PUT;
+        } else if (mutation instanceof Increment) {
+          opType = OpType.INCREMENT;
+        } else if (mutation instanceof Append) {
+          opType = OpType.APPEND;
+        } else {
+          throw new AssertionError("Unexpected mutation type");
+        }
 
-  @Override
-  public boolean preCheckAndPutAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte[] row, final byte[] family, final byte[] qualifier,
-      final CompareOperator opp, final ByteArrayComparable comparator, final Put put,
-      final boolean result) throws IOException {
-    if (put.getAttribute(CHECK_COVERING_PERM) != null) {
-      // We had failure with table, cf and q perm checks and now giving a chance for cell
-      // perm check
-      TableName table = c.getEnvironment().getRegion().getRegionInfo().getTable();
-      Map<byte[], ? extends Collection<byte[]>> families = makeFamilyMap(family, qualifier);
-      AuthResult authResult = null;
-      User user = getActiveUser(c);
-      if (checkCoveringPermission(user, OpType.CHECK_AND_PUT, c.getEnvironment(), row, families,
-          HConstants.LATEST_TIMESTAMP, Action.READ)) {
-        authResult = AuthResult.allow(OpType.CHECK_AND_PUT.toString(),
-            "Covering cell set", user, Action.READ, table, families);
-      } else {
-        authResult = AuthResult.deny(OpType.CHECK_AND_PUT.toString(),
-            "Covering cell set", user, Action.READ, table, families);
+        checkForReservedTagPresence(user, mutation);
+
+        byte[] bytes = mutation.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
+        if (bytes != null) {
+          if (cellFeaturesEnabled) {
+            addCellPermissions(bytes, mutation.getFamilyCellMap());
+          } else {
+            throw new DoNotRetryIOException("Cell ACLs cannot be persisted");
+          }
+        }
       }
+
+      // Require WRITE permissions on the table, CF, and qualifier of the mutation
+      authResult = permissionGranted(opType, user, env, mutation.getFamilyCellMap(), Action.WRITE);
       AccessChecker.logResult(authResult);
-      if (authorizationEnabled && !authResult.isAllowed()) {
-        throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
+      if (!authResult.isAllowed()) {
+        if (cellFeaturesEnabled && !compatibleEarlyTermination) {
+          mutation.setAttribute(CHECK_COVERING_PERM, TRUE);
+        } else if (authorizationEnabled) {
+          throw new AccessDeniedException("Insufficient permissions " +
+            authResult.toContextString());
+        }
       }
     }
-    return result;
-  }
 
-  @Override
-  public boolean preCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOperator op,
-      final ByteArrayComparable comparator, final Delete delete,
-      final boolean result) throws IOException {
-    // An ACL on a delete is useless, we shouldn't allow it
-    if (delete.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL) != null) {
-      throw new DoNotRetryIOException("ACL on checkAndDelete has no effect: " +
-          delete.toString());
-    }
-    // Require READ and WRITE permissions on the table, CF, and the KV covered
-    // by the delete
-    RegionCoprocessorEnvironment env = c.getEnvironment();
-    Map<byte[],? extends Collection<byte[]>> families = makeFamilyMap(family, qualifier);
-    User user = getActiveUser(c);
-    AuthResult authResult = permissionGranted(
-        OpType.CHECK_AND_DELETE, user, env, families, Action.READ, Action.WRITE);
-    AccessChecker.logResult(authResult);
-    if (!authResult.isAllowed()) {
-      if (cellFeaturesEnabled && !compatibleEarlyTermination) {
-        delete.setAttribute(CHECK_COVERING_PERM, TRUE);
-      } else if (authorizationEnabled) {
-        throw new AccessDeniedException("Insufficient permissions " +
-          authResult.toContextString());
-      }
-    }
-    return result;
-  }
-
-  @Override
-  public boolean preCheckAndDeleteAfterRowLock(
-      final ObserverContext<RegionCoprocessorEnvironment> c, final byte[] row,
-      final byte[] family, final byte[] qualifier, final CompareOperator op,
-      final ByteArrayComparable comparator, final Delete delete, final boolean result)
-      throws IOException {
-    if (delete.getAttribute(CHECK_COVERING_PERM) != null) {
-      // We had failure with table, cf and q perm checks and now giving a chance for cell
-      // perm check
-      TableName table = c.getEnvironment().getRegion().getRegionInfo().getTable();
-      Map<byte[], ? extends Collection<byte[]>> families = makeFamilyMap(family, qualifier);
-      AuthResult authResult = null;
-      User user = getActiveUser(c);
-      if (checkCoveringPermission(user, OpType.CHECK_AND_DELETE, c.getEnvironment(),
-          row, families, HConstants.LATEST_TIMESTAMP, Action.READ)) {
-        authResult = AuthResult.allow(OpType.CHECK_AND_DELETE.toString(),
-            "Covering cell set", user, Action.READ, table, families);
-      } else {
-        authResult = AuthResult.deny(OpType.CHECK_AND_DELETE.toString(),
-            "Covering cell set", user, Action.READ, table, families);
-      }
-      AccessChecker.logResult(authResult);
-      if (authorizationEnabled && !authResult.isAllowed()) {
-        throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
-      }
-    }
-    return result;
+    return null;
   }
 
   @Override
@@ -1770,7 +1751,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // Collect any ACLs from the old cell
     List<Tag> tags = Lists.newArrayList();
     List<Tag> aclTags = Lists.newArrayList();
-    ListMultimap<String,Permission> perms = ArrayListMultimap.create();
     if (oldCell != null) {
       Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(oldCell);
       while (tagIterator.hasNext()) {
@@ -1795,15 +1775,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       tags.add(new ArrayBackedTag(PermissionStorage.ACL_TAG_TYPE, aclBytes));
     } else {
       // No, use what we carried forward
-      if (perms != null) {
-        // TODO: If we collected ACLs from more than one tag we may have a
-        // List<Permission> of size > 1, this can be collapsed into a single
-        // Permission
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Carrying forward ACLs from " + oldCell + ": " + perms);
-        }
-        tags.addAll(aclTags);
-      }
+      tags.addAll(aclTags);
     }
 
     // If we have no tags to add, just return

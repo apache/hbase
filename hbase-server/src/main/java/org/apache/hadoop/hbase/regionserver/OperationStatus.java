@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -44,28 +45,38 @@ public class OperationStatus {
   public static final OperationStatus NOT_RUN = new OperationStatus(OperationStatusCode.NOT_RUN);
 
   private final OperationStatusCode code;
+  // For Increment/Append operations
   private final Result result;
+  // For CheckAndMutate operations
+  private final CheckAndMutateResult checkAndMutateResult;
+
   private final String exceptionMsg;
 
   public OperationStatus(OperationStatusCode code) {
-    this(code, null, "");
+    this(code, null, null, "");
   }
 
   public OperationStatus(OperationStatusCode code, Result result) {
-    this(code, result, "");
+    this(code, result, null, "");
+  }
+
+  public OperationStatus(OperationStatusCode code, CheckAndMutateResult checkAndMutateResult) {
+    this(code, null, checkAndMutateResult, "");
   }
 
   public OperationStatus(OperationStatusCode code, String exceptionMsg) {
-    this(code, null, exceptionMsg);
+    this(code, null, null, exceptionMsg);
   }
 
   public OperationStatus(OperationStatusCode code, Exception e) {
-    this(code, null, (e == null) ? "" : e.getClass().getName() + ": " + e.getMessage());
+    this(code, null, null, (e == null) ? "" : e.getClass().getName() + ": " + e.getMessage());
   }
 
-  private OperationStatus(OperationStatusCode code, Result result, String exceptionMsg) {
+  private OperationStatus(OperationStatusCode code, Result result,
+    CheckAndMutateResult checkAndMutateResult, String exceptionMsg) {
     this.code = code;
     this.result = result;
+    this.checkAndMutateResult = checkAndMutateResult;
     this.exceptionMsg = exceptionMsg;
   }
 
@@ -81,6 +92,13 @@ public class OperationStatus {
    */
   public Result getResult() {
     return result;
+  }
+
+  /**
+   * @return checkAndMutateResult
+   */
+  public CheckAndMutateResult getCheckAndMutateResult() {
+    return checkAndMutateResult;
   }
 
   /**
