@@ -24,9 +24,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * This exception is thrown by the master when a region server reports and is
- * already being processed as dead. This can happen when a region server loses
- * its session but didn't figure it yet.
+ * This exception is thrown by the master when a region server reports and is already being
+ * processed as dead. This can happen when a region server loses its session but didn't figure it
+ * yet.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private
