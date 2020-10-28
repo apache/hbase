@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.replication;
 
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT;
-import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY;
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
+import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_OPERATION_TIMEOUT;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,18 +32,17 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.AsyncReplicationServerAdmin;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
-import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -70,15 +69,19 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterServ
 /**
  * A {@link BaseReplicationEndpoint} for replication endpoints whose
  * target cluster is an HBase cluster.
+ * <p>
+ * Compatible with two implementations to fetch sink servers, fetching replication servers by
+ * accessing master and fetching region servers by listening to ZK.
+ * Give priority to fetch replication servers as sink servers by accessing master. if slave cluster
+ * isn't supported(version < 3.x) or exceptions occur, fetch region servers as sink servers via ZK.
+ * So we always register ZK listener, but ignored the ZK event if replication servers are available.
+ * </p>
  */
 @InterfaceAudience.Private
 public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   implements Abortable {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseReplicationEndpoint.class);
-
-  public static final String FETCH_SERVERS_USE_ZK_CONF_KEY =
-      "hbase.replication.fetch.servers.usezk";
 
   public static final String FETCH_SERVERS_INTERVAL_CONF_KEY =
       "hbase.replication.fetch.servers.interval";
@@ -115,10 +118,9 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
 
   private List<ServerName> sinkServers = new ArrayList<>(0);
 
-  private AsyncClusterConnection peerConnection;
-  private boolean fetchServersUseZk = false;
+  private volatile boolean fetchServersUseZk = false;
   private FetchServersChore fetchServersChore;
-  private int shortOperationTimeout;
+  private int operationTimeout;
 
   /*
    * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
@@ -139,6 +141,8 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     this.badSinkThreshold =
       ctx.getConfiguration().getInt("replication.bad.sink.threshold", DEFAULT_BAD_SINK_THRESHOLD);
     this.badReportCounts = Maps.newHashMap();
+    this.operationTimeout = ctx.getLocalConfiguration().getInt(
+        HBASE_CLIENT_OPERATION_TIMEOUT, DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
   }
 
   protected void disconnect() {
@@ -147,23 +151,15 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
         zkw.close();
       }
     }
-    if (this.conn != null) {
-      try {
-        this.conn.close();
-        this.conn = null;
-      } catch (IOException e) {
-        LOG.warn("{} Failed to close the connection", ctx.getPeerId());
-      }
-    }
     if (fetchServersChore != null) {
       ChoreService choreService = ctx.getServer().getChoreService();
       if (null != choreService) {
         choreService.cancelChore(fetchServersChore);
       }
     }
-    if (peerConnection != null) {
+    if (conn != null) {
       try {
-        peerConnection.close();
+        conn.close();
       } catch (IOException e) {
         LOG.warn("Attempt to close peerConnection failed.", e);
       }
@@ -198,27 +194,10 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   @Override
-  protected synchronized void doStart() {
-    this.shortOperationTimeout = ctx.getLocalConfiguration().getInt(
-        HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY, DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT);
+  protected void doStart() {
     try {
-      if (ctx.getLocalConfiguration().getBoolean(FETCH_SERVERS_USE_ZK_CONF_KEY, false)) {
-        fetchServersUseZk = true;
-      } else {
-        try {
-          if (ReplicationUtils.isPeerClusterSupportReplicationOffload(getPeerConnection())) {
-            fetchServersChore = new FetchServersChore(ctx.getServer(), this);
-            ctx.getServer().getChoreService().scheduleChore(fetchServersChore);
-            fetchServersUseZk = false;
-          } else {
-            fetchServersUseZk = true;
-          }
-        } catch (Throwable t) {
-          fetchServersUseZk = true;
-          LOG.warn("Peer {} try to fetch servers by admin failed. Using zk impl.",
-              ctx.getPeerId(), t);
-        }
-      }
+      fetchServersChore = new FetchServersChore(ctx.getServer(), this);
+      ctx.getServer().getChoreService().scheduleChore(fetchServersChore);
       reloadZkWatcher();
       connectPeerCluster();
       notifyStarted();
@@ -261,9 +240,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
       }
       zkw = new ZKWatcher(ctx.getConfiguration(),
           "connection to cluster: " + ctx.getPeerId(), this);
-      if (fetchServersUseZk) {
-        zkw.registerListener(new PeerRegionServerListener(this));
-      }
+      zkw.registerListener(new PeerRegionServerListener(this));
     }
   }
 
@@ -289,38 +266,25 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   /**
-   * Get the connection to peer cluster
-   * @return connection to peer cluster
-   * @throws IOException If anything goes wrong connecting
-   */
-  private synchronized AsyncClusterConnection getPeerConnection() throws IOException {
-    if (peerConnection == null) {
-      Configuration conf = ctx.getConfiguration();
-      peerConnection = ClusterConnectionFactory.createAsyncClusterConnection(conf, null,
-          UserProvider.instantiate(conf).getCurrent());
-    }
-    return peerConnection;
-  }
-
-  /**
    * Get the list of all the servers that are responsible for replication sink
    * from the specified peer master
-   * @return list of server addresses or an empty list if the slave is unavailable
+   * @return list of server addresses
    */
-  protected List<ServerName> fetchSlavesAddresses() {
+  protected List<ServerName> fetchSlavesAddresses() throws IOException {
     try {
-      AsyncClusterConnection peerConn = getPeerConnection();
-      ServerName master = FutureUtils.get(peerConn.getAdmin().getMaster());
+      ServerName master = FutureUtils.get(conn.getAdmin().getMaster());
       MasterService.BlockingInterface masterStub = MasterService.newBlockingStub(
-        peerConn.getRpcClient()
-          .createBlockingRpcChannel(master, User.getCurrent(), shortOperationTimeout));
+        conn.getRpcClient().createBlockingRpcChannel(master, User.getCurrent(), operationTimeout));
       ListReplicationSinkServersResponse resp = masterStub
         .listReplicationSinkServers(null, ListReplicationSinkServersRequest.newBuilder().build());
       return ProtobufUtil.toServerNameList(resp.getServerNameList());
-    } catch (ServiceException | IOException e) {
+    } catch (ServiceException e) {
       LOG.error("Peer {} fetches servers failed", ctx.getPeerId(), e);
+      throw ProtobufUtil.getRemoteException(e);
+    } catch (IOException e) {
+      LOG.error("Peer {} fetches servers failed", ctx.getPeerId(), e);
+      throw e;
     }
-    return Collections.emptyList();
   }
 
   /**
@@ -350,20 +314,34 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     return addresses;
   }
 
-  protected synchronized void chooseSinks() {
-    List<ServerName> slaveAddresses = Collections.emptyList();
-    if (fetchServersUseZk) {
-      slaveAddresses = fetchSlavesAddressesByZK();
-    } else {
-      slaveAddresses = fetchSlavesAddresses();
+  protected void chooseSinks() {
+    List<ServerName> slaveAddresses = Collections.EMPTY_LIST;
+    boolean useZk = fetchServersUseZk;
+    try {
+      if (!useZk || ReplicationUtils.isPeerClusterSupportReplicationOffload(conn)) {
+        useZk = false;
+        slaveAddresses = fetchSlavesAddresses();
+      } else {
+        useZk = true;
+      }
+    } catch (Throwable t) {
+      LOG.warn("Peer {} try to fetch servers by admin failed. Using zk impl.", ctx.getPeerId(), t);
+      useZk = true;
     }
+    if (useZk) {
+      slaveAddresses = fetchSlavesAddressesByZK();
+    }
+
     if (slaveAddresses.isEmpty()) {
       LOG.warn("No sinks available at peer. Will not be able to replicate");
     }
     Collections.shuffle(slaveAddresses, ThreadLocalRandom.current());
     int numSinks = (int) Math.ceil(slaveAddresses.size() * ratio);
-    this.sinkServers = slaveAddresses.subList(0, numSinks);
-    badReportCounts.clear();
+    synchronized (this) {
+      this.fetchServersUseZk = useZk;
+      this.sinkServers = slaveAddresses.subList(0, numSinks);
+      badReportCounts.clear();
+    }
   }
 
   protected synchronized int getNumSinks() {
@@ -374,16 +352,18 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * Get a randomly-chosen replication sink to replicate to.
    * @return a replication sink to replicate to
    */
-  protected synchronized SinkPeer getReplicationSink() throws IOException {
-    if (sinkServers.isEmpty()) {
-      LOG.info("Current list of sinks is out of date or empty, updating");
-      chooseSinks();
+  protected SinkPeer getReplicationSink() throws IOException {
+    ServerName serverName;
+    synchronized (this) {
+      if (sinkServers.isEmpty()) {
+        LOG.info("Current list of sinks is out of date or empty, updating");
+        chooseSinks();
+      }
+      if (sinkServers.isEmpty()) {
+        throw new IOException("No replication sinks are available");
+      }
+      serverName = sinkServers.get(ThreadLocalRandom.current().nextInt(sinkServers.size()));
     }
-    if (sinkServers.isEmpty()) {
-      throw new IOException("No replication sinks are available");
-    }
-    ServerName serverName =
-      sinkServers.get(ThreadLocalRandom.current().nextInt(sinkServers.size()));
     return createSinkPeer(serverName);
   }
 
@@ -445,7 +425,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
 
     @Override
     public synchronized void nodeChildrenChanged(String path) {
-      if (path.equals(regionServerListNode)) {
+      if (replicationEndpoint.fetchServersUseZk && path.equals(regionServerListNode)) {
         LOG.info("Detected change to peer region servers, fetching updated list");
         replicationEndpoint.chooseSinks();
       }
