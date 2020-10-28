@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -271,6 +272,11 @@ public abstract class TestTableInputFormatScanBase {
     TableInputFormat tif = new TableInputFormat();
     tif.setConf(job.getConfiguration());
     List<InputSplit> splits = tif.getSplits(job);
+    for (InputSplit split : splits) {
+      TableSplit tableSplit = (TableSplit) split;
+      Assert.assertEquals(tableSplit.getScan().getStartRow(), HConstants.EMPTY_START_ROW);
+      Assert.assertEquals(tableSplit.getScan().getStopRow(), HConstants.EMPTY_END_ROW);
+    }
     Assert.assertEquals(expectedNumOfSplits, splits.size());
   }
 

@@ -323,7 +323,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       }
       List<InputSplit> splits = new ArrayList<>(1);
       long regionSize = sizeCalculator.getRegionSize(regLoc.getRegionInfo().getRegionName());
-      TableSplit split = new TableSplit(tableName, scan,
+      TableSplit split = new TableSplit(tableName,
           HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, regLoc
           .getHostnamePort().split(Addressing.HOSTNAME_PORT_SEPARATOR)[0], regionSize);
       splits.add(split);
@@ -363,8 +363,11 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         byte[] regionName = location.getRegionInfo().getRegionName();
         String encodedRegionName = location.getRegionInfo().getEncodedName();
         long regionSize = sizeCalculator.getRegionSize(regionName);
-        TableSplit split = new TableSplit(tableName, scan,
-            splitStart, splitStop, regionLocation, encodedRegionName, regionSize);
+        // In the table format input for single table we do not need to
+        // store the scan object because it is a duplicate information to
+        // what is already store in conf SCAN
+        TableSplit split = new TableSplit(tableName, splitStart, splitStop,
+          regionLocation, encodedRegionName, regionSize);
         splits.add(split);
         if (LOG.isDebugEnabled()) {
           LOG.debug("getSplits: split -> " + i + " -> " + split);

@@ -184,9 +184,24 @@ implements Writable, Comparable<TableSplit> {
    * @param startRow The start row of the split.
    * @param endRow The end row of the split.
    * @param location The location of the region.
+   * @param encodedRegionName The region ID.
+   * @param length Size of region in bytes
    */
   public TableSplit(TableName tableName, byte[] startRow, byte[] endRow,
-      final String location) {
+    final String location, final String encodedRegionName, long length) {
+    this(tableName, null, startRow, endRow, location, encodedRegionName, length);
+  }
+
+  /**
+   * Creates a new instance without a scanner.
+   *
+   * @param tableName The name of the current table.
+   * @param startRow The start row of the split.
+   * @param endRow The end row of the split.
+   * @param location The location of the region.
+   */
+  public TableSplit(TableName tableName, byte[] startRow, byte[] endRow,
+    final String location) {
     this(tableName, null, startRow, endRow, location);
   }
 
