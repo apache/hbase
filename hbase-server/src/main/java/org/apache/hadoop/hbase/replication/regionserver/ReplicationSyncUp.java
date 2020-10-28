@@ -104,11 +104,13 @@ public class ReplicationSyncUp extends Configured implements Tool {
   class DummyServer implements Server {
     String hostname;
     ZKWatcher zkw;
+    ChoreService choreService;
 
     DummyServer(ZKWatcher zkw) {
       // a unique name in case the first run fails
       hostname = System.currentTimeMillis() + ".SyncUpTool.replication.org";
       this.zkw = zkw;
+      this.choreService = new ChoreService("ReplicationSyncUpDummyServer", true);
     }
 
     DummyServer(String hostname) {
@@ -160,7 +162,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
 
     @Override
     public ChoreService getChoreService() {
-      return null;
+      return choreService;
     }
 
     @Override

@@ -303,6 +303,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   // manager of assignment nodes in zookeeper
   private AssignmentManager assignmentManager;
 
+  // server manager to deal with replication server info
+  private ReplicationServerManager replicationServerManager;
 
   /**
    * Cache for the meta region replica's locations. Also tracks their changes to avoid stale
@@ -866,6 +868,8 @@ public class HMaster extends HRegionServer implements MasterServices {
         .collect(Collectors.toList());
     this.assignmentManager.setupRIT(ritList);
 
+    this.replicationServerManager = new ReplicationServerManager(this);
+
     // Start RegionServerTracker with listing of servers found with exiting SCPs -- these should
     // be registered in the deadServers set -- and with the list of servernames out on the
     // filesystem that COULD BE 'alive' (we'll schedule SCPs for each and let SCP figure it out).
@@ -1024,6 +1028,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.hbckChore = new HbckChore(this);
     getChoreService().scheduleChore(hbckChore);
     this.serverManager.startChore();
+    this.replicationServerManager.startChore();
 
     // Only for rolling upgrade, where we need to migrate the data in namespace table to meta table.
     if (!waitForNamespaceOnline()) {
@@ -1280,6 +1285,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public ServerManager getServerManager() {
     return this.serverManager;
+  }
+
+  @Override
+  public ReplicationServerManager getReplicationServerManager() {
+    return this.replicationServerManager;
   }
 
   @Override

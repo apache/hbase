@@ -401,6 +401,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Trans
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatusProtos.ReplicationServerStatusService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
 
@@ -412,7 +413,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.
 public class MasterRpcServices extends RSRpcServices implements
     MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
     LockService.BlockingInterface, HbckService.BlockingInterface,
-    ClientMetaService.BlockingInterface {
+    ClientMetaService.BlockingInterface, ReplicationServerStatusService.BlockingInterface {
 
   private static final Logger LOG = LoggerFactory.getLogger(MasterRpcServices.class.getName());
   private static final Logger AUDITLOG =
@@ -546,7 +547,7 @@ public class MasterRpcServices extends RSRpcServices implements
    */
   @Override
   protected List<BlockingServiceAndInterface> getServices() {
-    List<BlockingServiceAndInterface> bssi = new ArrayList<>(5);
+    List<BlockingServiceAndInterface> bssi = new ArrayList<>(6);
     bssi.add(new BlockingServiceAndInterface(
         MasterService.newReflectiveBlockingService(this),
         MasterService.BlockingInterface.class));
@@ -559,6 +560,9 @@ public class MasterRpcServices extends RSRpcServices implements
         HbckService.BlockingInterface.class));
     bssi.add(new BlockingServiceAndInterface(ClientMetaService.newReflectiveBlockingService(this),
         ClientMetaService.BlockingInterface.class));
+    bssi.add(new BlockingServiceAndInterface(
+        ReplicationServerStatusService.newReflectiveBlockingService(this),
+        ReplicationServerStatusService.BlockingInterface.class));
     bssi.addAll(super.getServices());
     return bssi;
   }
@@ -3413,5 +3417,34 @@ public class MasterRpcServices extends RSRpcServices implements
       throw new ServiceException(e);
     }
     return builder.build();
+  }
+
+  @Override
+  public RegionServerReportResponse replicationServerReport(RpcController controller,
+      RegionServerReportRequest request) throws ServiceException {
+    try {
+      master.checkServiceStarted();
+      int versionNumber = 0;
+      String version = "0.0.0";
+      VersionInfo versionInfo = VersionInfoUtil.getCurrentClientVersionInfo();
+      if (versionInfo != null) {
+        version = versionInfo.getVersion();
+        versionNumber = VersionInfoUtil.getVersionNumber(versionInfo);
+      }
+      ClusterStatusProtos.ServerLoad sl = request.getLoad();
+      ServerName serverName = ProtobufUtil.toServerName(request.getServer());
+      ServerMetrics oldMetrics = master.getReplicationServerManager().getServerMetrics(serverName);
+      ServerMetrics newMetrics =
+          ServerMetricsBuilder.toServerMetrics(serverName, versionNumber, version, sl);
+      master.getReplicationServerManager().serverReport(serverName, newMetrics);
+      if (sl != null && master.metricsMaster != null) {
+        // Up our metrics.
+        master.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests()
+            - (oldMetrics != null ? oldMetrics.getRequestCount() : 0));
+      }
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+    return RegionServerReportResponse.newBuilder().build();
   }
 }

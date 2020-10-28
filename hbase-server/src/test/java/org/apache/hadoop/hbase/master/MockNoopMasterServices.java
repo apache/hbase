@@ -154,6 +154,11 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public ReplicationServerManager getReplicationServerManager() {
+    return null;
+  }
+
+  @Override
   public ZKWatcher getZooKeeper() {
     return null;
   }
