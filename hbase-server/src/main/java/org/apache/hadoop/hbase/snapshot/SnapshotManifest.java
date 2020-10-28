@@ -582,11 +582,8 @@ public final class SnapshotManifest {
    */
   private void writeDataManifest(final SnapshotDataManifest manifest)
       throws IOException {
-    FSDataOutputStream stream = workingDirFs.create(new Path(workingDir, DATA_MANIFEST_NAME));
-    try {
+    try (FSDataOutputStream stream = workingDirFs.create(new Path(workingDir, DATA_MANIFEST_NAME))) {
       manifest.writeTo(stream);
-    } finally {
-      stream.close();
     }
   }
 
@@ -594,9 +591,7 @@ public final class SnapshotManifest {
    * Read the SnapshotDataManifest file
    */
   private SnapshotDataManifest readDataManifest() throws IOException {
-    FSDataInputStream in = null;
-    try {
-      in = workingDirFs.open(new Path(workingDir, DATA_MANIFEST_NAME));
+    try (FSDataInputStream in = workingDirFs.open(new Path(workingDir, DATA_MANIFEST_NAME))) {
       CodedInputStream cin = CodedInputStream.newInstance(in);
       cin.setSizeLimit(manifestSizeLimit);
       return SnapshotDataManifest.parseFrom(cin);
@@ -604,8 +599,6 @@ public final class SnapshotManifest {
       return null;
     } catch (InvalidProtocolBufferException e) {
       throw new CorruptedSnapshotException("unable to parse data manifest " + e.getMessage(), e);
-    } finally {
-      if (in != null) in.close();
     }
   }
 
