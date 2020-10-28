@@ -1228,7 +1228,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           ri.getRegionNameAsString(), rs, optProc.isPresent());
       // Check once-a-minute.
       if (rc == null) {
-        rc = new RetryCounterFactory(1000).create();
+        rc = new RetryCounterFactory(Integer.MAX_VALUE, 1000, 60_000).create();
       }
       Threads.sleep(rc.getBackoffTimeAndIncrementAttempts());
     }
