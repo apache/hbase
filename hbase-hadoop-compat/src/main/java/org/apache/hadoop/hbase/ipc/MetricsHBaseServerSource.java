@@ -93,8 +93,8 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
     "were served from the tail of the queue";
   String NUM_CALL_RESPONSE_QUEUE_NAME = "numCallsInResponseQueue";
   String NUM_CALL_RESPONSE_QUEUE_DESC = "Number of calls in response queue.";
-  String NUM_SIZE_RESPONSE_QUEUE_NAME = "numSizeInResponseQueue";
-  String NUM_SIZE_RESPONSE_QUEUE_DESC = "Size in response queue.";
+  String SIZE_RESPONSE_QUEUE_NAME = "sizeOfResponseQueue";
+  String SIZE_RESPONSE_QUEUE_DESC = "Size of response queue.";
 
   void authorizationSuccess();
 
