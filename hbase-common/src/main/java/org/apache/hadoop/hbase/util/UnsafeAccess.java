@@ -275,7 +275,8 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       return theUnsafe.getShort(((DirectBuffer) buf).address() + offset);
     }
-    return theUnsafe.getShort(buf.array(), (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+    return theUnsafe.getShort(buf.array(),
+      (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
   }
 
   /**
@@ -331,7 +332,8 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       return theUnsafe.getLong(((DirectBuffer) buf).address() + offset);
     }
-    return theUnsafe.getLong(buf.array(), (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+    return theUnsafe.getLong(buf.array(),
+      (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
   }
 
   /**
@@ -368,7 +370,8 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       theUnsafe.putShort(((DirectBuffer) buf).address() + offset, val);
     } else {
-      theUnsafe.putShort(buf.array(), (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
+      theUnsafe.putShort(buf.array(),
+        (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
     }
     return offset + Bytes.SIZEOF_SHORT;
   }
@@ -387,7 +390,8 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       theUnsafe.putLong(((DirectBuffer) buf).address() + offset, val);
     } else {
-      theUnsafe.putLong(buf.array(), (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
+      theUnsafe.putLong(buf.array(),
+        (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
     }
     return offset + Bytes.SIZEOF_LONG;
   }
@@ -419,7 +423,8 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       return theUnsafe.getByte(((DirectBuffer) buf).address() + offset);
     } else {
-      return theUnsafe.getByte(buf.array(), (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+      return theUnsafe.getByte(buf.array(),
+        (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
     }
   }
 }
