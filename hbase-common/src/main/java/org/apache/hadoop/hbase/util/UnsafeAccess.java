@@ -42,7 +42,7 @@ public final class UnsafeAccess {
   public static final Unsafe theUnsafe;
 
   /** The offset to the first element in a byte array. */
-  public static final int BYTE_ARRAY_BASE_OFFSET;
+  public static final long BYTE_ARRAY_BASE_OFFSET;
 
   public static final boolean LITTLE_ENDIAN =
     ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
