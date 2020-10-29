@@ -42,7 +42,7 @@ public final class UnsafeAccess {
   public static final Unsafe theUnsafe;
 
   /** The offset to the first element in a byte array. */
-  public static final int BYTE_ARRAY_BASE_OFFSET;
+  public static final long BYTE_ARRAY_BASE_OFFSET;
 
   public static final boolean LITTLE_ENDIAN =
     ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
@@ -169,9 +169,9 @@ public final class UnsafeAccess {
    */
   public static short toShort(byte[] bytes, int offset) {
     if (LITTLE_ENDIAN) {
-      return Short.reverseBytes(theUnsafe.getShort(bytes, (long)offset + BYTE_ARRAY_BASE_OFFSET));
+      return Short.reverseBytes(theUnsafe.getShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
     } else {
-      return theUnsafe.getShort(bytes, (long)offset + BYTE_ARRAY_BASE_OFFSET);
+      return theUnsafe.getShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
     }
   }
 
@@ -183,9 +183,9 @@ public final class UnsafeAccess {
    */
   public static int toInt(byte[] bytes, int offset) {
     if (LITTLE_ENDIAN) {
-      return Integer.reverseBytes(theUnsafe.getInt(bytes, (long)offset + BYTE_ARRAY_BASE_OFFSET));
+      return Integer.reverseBytes(theUnsafe.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
     } else {
-      return theUnsafe.getInt(bytes, (long)offset + BYTE_ARRAY_BASE_OFFSET);
+      return theUnsafe.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
     }
   }
 
@@ -197,9 +197,9 @@ public final class UnsafeAccess {
    */
   public static long toLong(byte[] bytes, int offset) {
     if (LITTLE_ENDIAN) {
-      return Long.reverseBytes(theUnsafe.getLong(bytes, (long)offset + BYTE_ARRAY_BASE_OFFSET));
+      return Long.reverseBytes(theUnsafe.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
     } else {
-      return theUnsafe.getLong(bytes, (long)offset + BYTE_ARRAY_BASE_OFFSET);
+      return theUnsafe.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
     }
   }
 
@@ -215,7 +215,7 @@ public final class UnsafeAccess {
     if (LITTLE_ENDIAN) {
       val = Short.reverseBytes(val);
     }
-    theUnsafe.putShort(bytes, (long)offset + BYTE_ARRAY_BASE_OFFSET, val);
+    theUnsafe.putShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
     return offset + Bytes.SIZEOF_SHORT;
   }
 
@@ -230,7 +230,7 @@ public final class UnsafeAccess {
     if (LITTLE_ENDIAN) {
       val = Integer.reverseBytes(val);
     }
-    theUnsafe.putInt(bytes, (long)offset + BYTE_ARRAY_BASE_OFFSET, val);
+    theUnsafe.putInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
     return offset + Bytes.SIZEOF_INT;
   }
 
@@ -245,7 +245,7 @@ public final class UnsafeAccess {
     if (LITTLE_ENDIAN) {
       val = Long.reverseBytes(val);
     }
-    theUnsafe.putLong(bytes, (long)offset + BYTE_ARRAY_BASE_OFFSET, val);
+    theUnsafe.putLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
     return offset + Bytes.SIZEOF_LONG;
   }
 
@@ -275,8 +275,7 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       return theUnsafe.getShort(((DirectBuffer) buf).address() + offset);
     }
-    return theUnsafe.getShort(buf.array(),
-      (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+    return theUnsafe.getShort(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
   }
 
   /**
@@ -304,7 +303,7 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       return theUnsafe.getInt(((DirectBuffer) buf).address() + offset);
     }
-    return theUnsafe.getInt(buf.array(), (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+    return theUnsafe.getInt(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
   }
 
   /**
@@ -332,8 +331,7 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       return theUnsafe.getLong(((DirectBuffer) buf).address() + offset);
     }
-    return theUnsafe.getLong(buf.array(),
-      (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+    return theUnsafe.getLong(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
   }
 
   /**
@@ -350,7 +348,7 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       theUnsafe.putInt(((DirectBuffer) buf).address() + offset, val);
     } else {
-      theUnsafe.putInt(buf.array(), (long)offset + buf.arrayOffset() + BYTE_ARRAY_BASE_OFFSET, val);
+      theUnsafe.putInt(buf.array(), offset + buf.arrayOffset() + BYTE_ARRAY_BASE_OFFSET, val);
     }
     return offset + Bytes.SIZEOF_INT;
   }
@@ -370,8 +368,7 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       theUnsafe.putShort(((DirectBuffer) buf).address() + offset, val);
     } else {
-      theUnsafe.putShort(buf.array(),
-        (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
+      theUnsafe.putShort(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
     }
     return offset + Bytes.SIZEOF_SHORT;
   }
@@ -390,8 +387,7 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       theUnsafe.putLong(((DirectBuffer) buf).address() + offset, val);
     } else {
-      theUnsafe.putLong(buf.array(),
-        (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
+      theUnsafe.putLong(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
     }
     return offset + Bytes.SIZEOF_LONG;
   }
@@ -408,7 +404,7 @@ public final class UnsafeAccess {
       theUnsafe.putByte(((DirectBuffer) buf).address() + offset, b);
     } else {
       theUnsafe.putByte(buf.array(),
-        (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, b);
+        BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, b);
     }
     return offset + 1;
   }
@@ -423,8 +419,7 @@ public final class UnsafeAccess {
     if (buf.isDirect()) {
       return theUnsafe.getByte(((DirectBuffer) buf).address() + offset);
     } else {
-      return theUnsafe.getByte(buf.array(),
-        (long)BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+      return theUnsafe.getByte(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
     }
   }
 }
