@@ -61,7 +61,7 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
    * @param length
    */
   public void setKey(ByteBuffer key, int offset, int length) {
-    setKey(key, offset, length, ByteBufferUtils.toShort(this.buf, this.offset));
+    setKey(key, offset, length, ByteBufferUtils.toShort(key, offset));
   }
 
   /**
