@@ -180,7 +180,9 @@ public class CompactionConfiguration {
   @Override
   public String toString() {
     return String.format(
-      "size [%s, %s, %s); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
+      "size [minCompactSize:%s, maxCompactSize:%s, offPeakMaxCompactSize:%s);"
+      + " files [minFilesToCompact:%d, maxFilesToCompact:%d);"
+      + " ratio %f; off-peak ratio %f; throttle point %d;"
       + " major period %d, major jitter %f, min locality to compact %f;"
       + " tiered compaction: max_age %d, incoming window min %d,"
       + " compaction policy for tiered window %s, single output for minor %b,"
