@@ -279,6 +279,7 @@ public abstract class TestTableInputFormatScanBase {
       // So, asserting here for default values.
       Assert.assertEquals(tableSplit.getScan().getStartRow(), HConstants.EMPTY_START_ROW);
       Assert.assertEquals(tableSplit.getScan().getStopRow(), HConstants.EMPTY_END_ROW);
+      Assert.assertTrue(tableSplit.getScanAsString().isEmpty());
     }
     Assert.assertEquals(expectedNumOfSplits, splits.size());
   }

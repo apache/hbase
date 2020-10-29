@@ -86,7 +86,16 @@ implements Writable, Comparable<TableSplit> {
   private byte [] endRow;
   private String regionLocation;
   private String encodedRegionName = "";
+
+  /** The scan object may be null but the serialized form of scan is never null
+   * or empty since we serialize the scan object with default values then.
+   * Having no scanner in TableSplit doesn't necessarily mean there is not scanner
+   * for mapreduce job, it just means that we do not need to set it for each split.
+   * For example, it is not required to have a scan object for
+   * {@link org.apache.hadoop.hbase.mapred.TableInputFormatBase} since we use the scan from the
+   * job conf and scanner is supposed to be same for all the splits of table.*/
   private String scan = ""; // stores the serialized form of the Scan
+
   private long length; // Contains estimation of region size in bytes
 
   /** Default constructor. */
@@ -184,28 +193,9 @@ implements Writable, Comparable<TableSplit> {
    * @param startRow The start row of the split.
    * @param endRow The end row of the split.
    * @param location The location of the region.
-   * @param encodedRegionName The region ID.
-   * @param length Size of region in bytes
    */
   public TableSplit(TableName tableName, byte[] startRow, byte[] endRow,
-    final String location, final String encodedRegionName, long length) {
-    this(tableName, null, startRow, endRow, location, encodedRegionName, length);
-  }
-
-  /**
-   * Creates a new instance without a scanner. Having no scanner in TableSplit doesn't necessarily
-   * mean there is not scanner for map reduce job, it just means that we do not need to set
-   * it for each split. For example, it is not required to have a scan object for
-   * {@link org.apache.hadoop.hbase.mapred.TableInputFormatBase} since we use
-   * the scan from the job conf and scanner is supposed to be same for all the splits of table.
-   *
-   * @param tableName The name of the current table.
-   * @param startRow The start row of the split.
-   * @param endRow The end row of the split.
-   * @param location The location of the region.
-   */
-  public TableSplit(TableName tableName, byte[] startRow, byte[] endRow,
-    final String location) {
+      final String location) {
     this(tableName, null, startRow, endRow, location);
   }
 
@@ -231,6 +221,14 @@ implements Writable, Comparable<TableSplit> {
    */
   public Scan getScan() throws IOException {
     return TableMapReduceUtil.convertStringToScan(this.scan);
+  }
+
+  /**
+   * Returns a scan object in the serialized form
+   * @return a serialized scan object
+   */
+  public String getScanAsString() {
+    return this.scan;
   }
 
   /**
