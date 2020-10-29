@@ -61,10 +61,22 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
    * @param length
    */
   public void setKey(ByteBuffer key, int offset, int length) {
+    setKey(key, offset, length, ByteBufferUtils.toShort(this.buf, this.offset));
+  }
+
+  /**
+   * A setter that helps to avoid object creation every time and whenever
+   * there is a need to create new OffheapKeyOnlyKeyValue.
+   * @param key
+   * @param offset
+   * @param length
+   * @param rowLen
+   */
+  public void setKey(ByteBuffer key, int offset, int length, short rowLen) {
     this.buf = key;
     this.offset = offset;
     this.length = length;
-    this.rowLen = ByteBufferUtils.toShort(this.buf, this.offset);
+    this.rowLen = rowLen;
   }
 
   @Override

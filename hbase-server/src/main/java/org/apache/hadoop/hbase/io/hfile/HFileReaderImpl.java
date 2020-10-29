@@ -545,7 +545,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       int klen, vlen, tlen = 0;
       int lastKeyValueSize = -1;
       int offsetFromPos;
-      int rowLenPos;
       do {
         offsetFromPos = 0;
         // Better to ensure that we use the BB Utils here
@@ -560,9 +559,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
               + " path=" + reader.getPath());
         }
         offsetFromPos += Bytes.SIZEOF_LONG;
-        rowLenPos = offsetFromPos;
+        rowLen = ((blockBuffer.getByteAfterPosition(offsetFromPos) & 0xff) << 8)
+            ^ (blockBuffer.getByteAfterPosition(offsetFromPos + 1) & 0xff);
         blockBuffer.asSubByteBuffer(blockBuffer.position() + offsetFromPos, klen, pair);
-        bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), klen);
+        bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), klen, (short)rowLen);
         int comp =
             PrivateCellUtil.compareKeyIgnoresMvcc(reader.getComparator(), key, bufBackedKeyOnlyKv);
         offsetFromPos += klen + vlen;
@@ -599,8 +599,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           currKeyLen = klen;
           currValueLen = vlen;
           currTagsLen = tlen;
-          rowLen = ((blockBuffer.getByteAfterPosition(rowLenPos) & 0xff) << 8)
-              ^ (blockBuffer.getByteAfterPosition(rowLenPos + 1) & 0xff);
           return 0; // indicate exact match
         } else if (comp < 0) {
           if (lastKeyValueSize > 0) {
@@ -1074,7 +1072,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     public int compareKey(CellComparator comparator, Cell key) {
       blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen, pair);
-      this.bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), currKeyLen);
+      this.bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), currKeyLen, (short)rowLen);
       return PrivateCellUtil.compareKeyIgnoresMvcc(comparator, key, this.bufBackedKeyOnlyKv);
     }
 
