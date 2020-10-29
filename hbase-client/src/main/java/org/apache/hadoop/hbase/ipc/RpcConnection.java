@@ -22,6 +22,8 @@ import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
 
@@ -45,6 +47,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
+import org.apache.hadoop.util.Time;
 
 /**
  * Base class for ipc connection.
@@ -74,6 +77,14 @@ abstract class RpcConnection {
 
   // the last time we were picked up from connection pool.
   protected long lastTouched;
+
+  // Determines whether we need to do an explicit clearing of kerberos tickets with relogin
+  private boolean forceReloginEnabled;
+  // Minimum time between two force re-login attempts
+  private int minTimeBeforeForceRelogin;
+
+  // Time when last forceful re-login was attempted
+  private long lastForceReloginAttempt = -1;
 
   protected RpcConnection(Configuration conf, HashedWheelTimer timeoutTimer, ConnectionId remoteId,
       String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor)
@@ -126,8 +137,14 @@ abstract class RpcConnection {
       LOG.debug("Use " + authMethod + " authentication for service " + remoteId.serviceName
           + ", sasl=" + useSasl);
     }
-    reloginMaxBackoff = conf.getInt("hbase.security.relogin.maxbackoff", 5000);
+
+    reloginMaxBackoff = conf.getInt(HConstants.HBASE_RELOGIN_MAXBACKOFF, 5000);
     this.remoteId = remoteId;
+
+    forceReloginEnabled = conf.getBoolean(HConstants.HBASE_FORCE_RELOGIN_ENABLED, true);
+    // Default minimum time between force relogin attempts is 10 minutes
+    this.minTimeBeforeForceRelogin =
+        conf.getInt(HConstants.HBASE_MINTIME_BEFORE_FORCE_RELOGIN, 10 * 60 * 1000);
   }
 
   private UserInformation getUserInfo(UserGroupInformation ugi) {
@@ -173,10 +190,60 @@ abstract class RpcConnection {
 
   protected void relogin() throws IOException {
     if (UserGroupInformation.isLoginKeytabBased()) {
-      UserGroupInformation.getLoginUser().reloginFromKeytab();
+      if (shouldForceRelogin()) {
+        LOG.debug(
+          "SASL Authentication failure. Attempting a forceful re-login for "
+              + UserGroupInformation.getLoginUser().getUserName());
+        Method logoutUserFromKeytab;
+        Method forceReloginFromKeytab;
+        try {
+          logoutUserFromKeytab = UserGroupInformation.class.getMethod("logoutUserFromKeytab");
+          forceReloginFromKeytab = UserGroupInformation.class.getMethod("forceReloginFromKeytab");
+        } catch (NoSuchMethodException e) {
+          // This shouldn't happen as we already check for the existence of these methods before
+          // entering this block
+          throw new RuntimeException("Cannot find forceReloginFromKeytab method in UGI");
+        }
+        logoutUserFromKeytab.setAccessible(true);
+        forceReloginFromKeytab.setAccessible(true);
+        try {
+          logoutUserFromKeytab.invoke(UserGroupInformation.getLoginUser());
+          forceReloginFromKeytab.invoke(UserGroupInformation.getLoginUser());
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+          throw new RuntimeException(e.getCause());
+        }
+      } else {
+        UserGroupInformation.getLoginUser().reloginFromKeytab();
+      }
     } else {
       UserGroupInformation.getLoginUser().reloginFromTicketCache();
     }
+  }
+
+  private boolean shouldForceRelogin() {
+    if (!forceReloginEnabled) {
+      return false;
+    }
+    long now = Time.now();
+    // If the last force relogin attempted is less than the configured minimum time, revert to the
+    // default relogin method of UGI
+    if (lastForceReloginAttempt != -1
+        && (now - lastForceReloginAttempt < minTimeBeforeForceRelogin)) {
+      LOG.debug("Not attempting to force re-login since the last attempt is less than "
+          + minTimeBeforeForceRelogin + " millis");
+      return false;
+    }
+    try {
+      // Check if forceRelogin method is available in UGI using reflection
+      UserGroupInformation.class.getMethod("forceReloginFromKeytab");
+      UserGroupInformation.class.getMethod("logoutUserFromKeytab");
+    } catch (NoSuchMethodException e) {
+      LOG.debug(
+        "forceReloginFromKeytab method not available in UGI. Skipping to attempt force relogin");
+      return false;
+    }
+    lastForceReloginAttempt = now;
+    return true;
   }
 
   protected void scheduleTimeoutTask(final Call call) {

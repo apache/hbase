@@ -321,6 +321,19 @@ public final class HConstants {
   public static final String HBASE_CLIENT_META_OPERATION_TIMEOUT =
     "hbase.client.meta.operation.timeout";
 
+  /** Parameter name for HBase client max backoff across SASL relogin failure retries */
+  public static final String HBASE_RELOGIN_MAXBACKOFF = "hbase.security.relogin.maxbackoff";
+
+  /** Parameter name for HBase client minimum time between forceful relogin attempts */
+  public static final String HBASE_MINTIME_BEFORE_FORCE_RELOGIN =
+      "hbase.mintime.before.force.relogin";
+
+  /**
+   * Whether forceful relogin (explicit clearing of kerberos tickets) is enabled on SASL
+   * Authentication failure
+   */
+  public static final String HBASE_FORCE_RELOGIN_ENABLED = "hbase.security.force.relogin.enabled";
+
   /** Default HBase client operation timeout, which is tantamount to a blocking call */
   public static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = 1200000;
 
@@ -330,6 +343,7 @@ public final class HConstants {
 
   /** Default HBase client meta replica scan call timeout, 1 second */
   public static final int HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT = 1000000;
+
 
   /** Used to construct the name of the log directory for a region server */
   public static final String HREGION_LOGDIR_NAME = "WALs";
