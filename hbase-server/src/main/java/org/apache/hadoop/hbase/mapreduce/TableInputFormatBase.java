@@ -323,6 +323,9 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       }
       List<InputSplit> splits = new ArrayList<>(1);
       long regionSize = sizeCalculator.getRegionSize(regLoc.getRegionInfo().getRegionName());
+      // In the table input format for single table we do not need to
+      // store the scan object in table split because it can be memory intensive and redundant
+      // information to what is already stored in conf SCAN. See HBASE-25212
       TableSplit split = new TableSplit(tableName, null,
           HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, regLoc
           .getHostnamePort().split(Addressing.HOSTNAME_PORT_SEPARATOR)[0], regionSize);
@@ -363,9 +366,9 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         byte[] regionName = location.getRegionInfo().getRegionName();
         String encodedRegionName = location.getRegionInfo().getEncodedName();
         long regionSize = sizeCalculator.getRegionSize(regionName);
-        // In the table format input for single table we do not need to
-        // store the scan object because it is a duplicate information to
-        // what is already store in conf SCAN
+        // In the table input format for single table we do not need to
+        // store the scan object in table split because it can be memory intensive and redundant
+        // information to what is already stored in conf SCAN. See HBASE-25212
         TableSplit split = new TableSplit(tableName, null, splitStart, splitStop,
           regionLocation, encodedRegionName, regionSize);
         splits.add(split);
@@ -430,6 +433,9 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     // Split Region into n chunks evenly
     byte[][] splitKeys = Bytes.split(startRow, endRow, true, n-1);
     for (int i = 0; i < splitKeys.length - 1; i++) {
+      // In the table input format for single table we do not need to
+      // store the scan object in table split because it can be memory intensive and redundant
+      // information to what is already stored in conf SCAN. See HBASE-25212
       //notice that the regionSize parameter may be not very accurate
       TableSplit tsplit =
           new TableSplit(tableName, null, splitKeys[i], splitKeys[i + 1], regionLocation,
@@ -530,7 +536,10 @@ extends InputFormat<ImmutableBytesWritable, Result> {
           }
         }
         i = j - 1;
-        TableSplit t = new TableSplit(tableName, scan, splitStartKey, splitEndKey, regionLocation,
+        // In the table input format for single table, we do not need to
+        // store the scan object in table split because it can be memory intensive and redundant
+        // information to what is already stored in conf SCAN. See HBASE-25212
+        TableSplit t = new TableSplit(tableName, null, splitStartKey, splitEndKey, regionLocation,
             encodedRegionName, totalSize);
         resultList.add(t);
       }
