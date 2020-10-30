@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,7 @@ import org.apache.yetus.audience.InterfaceStability;
 /**
  * Every class that wants to observe changes in Configuration properties,
  * must implement interface (and also, register itself with the
- * <code>ConfigurationManager</code> object.
+ * {@link ConfigurationManager}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

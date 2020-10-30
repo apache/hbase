@@ -771,6 +771,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.regionNormalizerManager =
       RegionNormalizerFactory.createNormalizerManager(conf, zooKeeper, this);
+    this.configurationManager.registerObserver(regionNormalizerManager);
     this.regionNormalizerManager.start();
 
     this.splitOrMergeTracker = new SplitOrMergeTracker(zooKeeper, conf, this);
