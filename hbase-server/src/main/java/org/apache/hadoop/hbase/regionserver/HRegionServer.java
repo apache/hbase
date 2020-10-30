@@ -1524,6 +1524,9 @@ public class HRegionServer extends HasThread implements
         }
         this.conf.set(key, value);
       }
+
+      this.cacheConfig = new CacheConfig(conf);
+
       // Set our ephemeral znode up in zookeeper now we have a name.
       createMyEphemeralNode();
 
@@ -1542,7 +1545,6 @@ public class HRegionServer extends HasThread implements
       // Save it in a file, this will allow to see if we crash
       ZNodeClearer.writeMyEphemeralNodeOnDisk(getMyEphemeralNodePath());
 
-      this.cacheConfig = new CacheConfig(conf);
       this.walFactory = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metricsRegionServerImpl = new MetricsRegionServerWrapperImpl(this);
