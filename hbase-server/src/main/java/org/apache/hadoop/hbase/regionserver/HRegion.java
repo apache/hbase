@@ -662,9 +662,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   final long threadWakeFrequency;
   // Used to guard closes
   final ReentrantReadWriteLock lock;
-  // Used to track interruptible holders of the region lock
-  // Currently that is only RPC handler threads
-  final Set<Thread> regionLockHolders;
+  // Used to track interruptible holders of the region lock. Currently that is only RPC handler
+  // threads. Boolean value in map determines if lock holder can be interrupted, normally true,
+  // but may be false when thread is transiting a critical section.
+  final ConcurrentHashMap<Thread, Boolean> regionLockHolders;
 
   // Stop updates lock
   private final ReentrantReadWriteLock updatesLock =
@@ -757,7 +758,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       .addWritableMap(htd.getValues());
     this.lock = new ReentrantReadWriteLock(conf.getBoolean(FAIR_REENTRANT_CLOSE_LOCK,
         DEFAULT_FAIR_REENTRANT_CLOSE_LOCK));
-    this.regionLockHolders = Collections.newSetFromMap(new ConcurrentHashMap<Thread,Boolean>());
+    this.regionLockHolders = new ConcurrentHashMap<Thread,Boolean>();
     this.flushCheckInterval = conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL,
         DEFAULT_CACHE_FLUSH_INTERVAL);
     this.flushPerChanges = conf.getLong(MEMSTORE_FLUSH_PER_CHANGES, DEFAULT_FLUSH_PER_CHANGES);
@@ -1630,7 +1631,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // inner loops, throw an exception to clients, and release the read lock via
           // endRegionOperation.
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Interrupting region operations after waiting for close lock for " +
+            LOG.debug("Interrupting eligible region operations after waiting to close for " +
               elapsedWaitTime + " ms on " + this + ", " + remainingWaitTime +
               " ms remaining");
           }
@@ -3368,6 +3369,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     checkInterrupt();
 
     try {
+      // From this point until memstore update this operation should not be interrupted.
+      disableInterrupts();
+
       // ------------------------------------
       // STEP 1. Try to acquire as many locks as we can, and ensure
       // we acquire at least one.
@@ -3780,6 +3784,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       success = true;
       return addedSize;
     } finally {
+      enableInterrupts();
+
       // if the wal sync was unsuccessful, remove keys from memstore
       if (doRollBackMemstore) {
         for (int j = 0; j < familyMaps.length; j++) {
@@ -7963,6 +7969,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try {
       rowLock = getRowLockInternal(row);
       assert rowLock != null;
+      // From this point until memstore update this operation should not be interrupted.
+      disableInterrupts();
       try {
         lock(this.updatesLock.readLock());
         try {
@@ -8043,11 +8051,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             tempMemstore.put(store, kvs);
           }
 
-          // Check for thread interrupt status in case we have been signaled from
-          // #interruptRegionOperation. Last chance to do this before we begin
-          // appending to the WAL.
-          checkInterrupt();
-
           // Actually write to WAL now
           if (walEdits != null && !walEdits.isEmpty()) {
             if (writeToWAL) {
@@ -8127,6 +8130,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       doRollBackMemstore = false;
     } finally {
+      enableInterrupts();
+
       if (rowLock != null) {
         rowLock.release();
       }
@@ -8274,6 +8279,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     Durability effectiveDurability = getEffectiveDurability(increment.getDurability());
     try {
       rowLock = getRowLockInternal(increment.getRow());
+      // From this point until after memstore update interrupts should be disabled.
+      disableInterrupts();
       long txid = 0;
       try {
         lock(this.updatesLock.readLock());
@@ -8375,6 +8382,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       doRollBackMemstore = false;
     } finally {
+      enableInterrupts();
       if (rowLock != null) {
         rowLock.release();
       }
@@ -8880,7 +8888,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // an RPC handler
     Thread thisThread = Thread.currentThread();
     if (isInterruptableOp) {
-      regionLockHolders.add(thisThread);
+      regionLockHolders.put(thisThread, true);
     }
     if (this.closed.get()) {
       lock.readLock().unlock();
@@ -8949,7 +8957,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       else lock.readLock().unlock();
       throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closed");
     }
-    regionLockHolders.add(Thread.currentThread());
+    regionLockHolders.put(Thread.currentThread(), true);
   }
 
   /**
@@ -8963,13 +8971,55 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
+   * If a handler thread is eligible for interrupt, make it ineligible. Should be paired
+   * with {{@link #enableInterrupts()}.
+   */
+  protected void disableInterrupts() {
+    // CHM#computeIfPresent is not available in Java 7 so we must hack an alternative.
+    // Synchronization on the region object will suffice to maintain atomicity at the
+    // cost of some potential blocking on the object monitor that would not happen if
+    // we had computeIfPresent. (The implementation of this method on branch-2 and up
+    // uses computeIfPresent.)
+    synchronized (this) {
+      Thread currentThread = Thread.currentThread();
+      Boolean value = regionLockHolders.get(currentThread);
+      if (value != null) {
+        regionLockHolders.put(currentThread, false);
+      }
+    }
+  }
+
+  /**
+   * If a handler thread was made ineligible for interrupt via {{@link #disableInterrupts()},
+   * make it eligible again. No-op if interrupts are already enabled.
+   */
+  protected void enableInterrupts() {
+    // CHM#computeIfPresent is not available in Java 7 so we must hack an alternative.
+    // Synchronization on the region object will suffice to maintain atomicity at the
+    // cost of some potential blocking on the object monitor that would not happen if
+    // we had computeIfPresent. (The implementation of this method on branch-2 and up
+    // uses computeIfPresent.)
+    synchronized (this) {
+      Thread currentThread = Thread.currentThread();
+      Boolean value = regionLockHolders.get(currentThread);
+      if (value != null) {
+        regionLockHolders.put(currentThread, true);
+      }
+    }
+  }
+
+  /**
    * Interrupt any region options that have acquired the region lock via
    * {@link #startRegionOperation(org.apache.hadoop.hbase.regionserver.Region.Operation)},
    * or {@link #startBulkRegionOperation(boolean)}.
    */
   private void interruptRegionOperations() {
-    for (Thread t: regionLockHolders) {
-      t.interrupt();
+    for (Map.Entry<Thread, Boolean> entry: regionLockHolders.entrySet()) {
+      // An entry in this map will have a boolean value indicating if it is currently
+      // eligible for interrupt; if so, we should interrupt it.
+      if (entry.getValue().booleanValue()) {
+        entry.getKey().interrupt();
+      }
     }
   }
 
