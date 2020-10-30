@@ -3292,9 +3292,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WALEdit walEdit = new WALEdit();
     if (coprocessorHost != null) {
       for (int i = 0 ; i < batchOp.operations.length; i++) {
-        // Check for thread interrupt status from within the loop in case we have
-        // been signaled from #interruptRegionOperation.
-        checkInterrupt();
         Mutation m = batchOp.getMutation(i);
         if (m instanceof Put) {
           if (coprocessorHost.prePut((Put) m, walEdit, m.getDurability())) {
@@ -3365,6 +3362,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     long mvccNum = 0;
     long addedSize = 0;
     final ObservedExceptionsInBatch observedExceptions = new ObservedExceptionsInBatch();
+
+    // Check for thread interrupt status in case we have been signaled from
+    // #interruptRegionOperation.
+    checkInterrupt();
+
     try {
       // ------------------------------------
       // STEP 1. Try to acquire as many locks as we can, and ensure
@@ -3373,9 +3375,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       int numReadyToWrite = 0;
       long now = EnvironmentEdgeManager.currentTime();
       while (lastIndexExclusive < batchOp.operations.length) {
-        // Check for thread interrupt status from within the loop in case we have
-        // been signaled from #interruptRegionOperation.
-        checkInterrupt();
         Mutation mutation = batchOp.getMutation(lastIndexExclusive);
         boolean isPutMutation = mutation instanceof Put;
 
@@ -3506,10 +3505,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // STEP 2. Update any LATEST_TIMESTAMP timestamps
       // ----------------------------------
       for (int i = firstIndex; !isInReplay && i < lastIndexExclusive; i++) {
-        // Check for thread interrupt status from within the loop in case we have
-        // been signaled from #interruptRegionOperation.
-        checkInterrupt();
-
         // skip invalid
         if (batchOp.retCodeDetails[i].getOperationStatusCode()
             != OperationStatusCode.NOT_RUN) continue;
@@ -3588,8 +3583,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // ----------------------------------
 
       // Check for thread interrupt status in case we have been signaled from
-      // #interruptRegionOperation. Last chance to do this before we begin
-      // appending to the WAL.
+      // #interruptRegionOperation. This is the last place we can do it "safely" before
+      // WAL appends.
       checkInterrupt();
 
       walEdit = new WALEdit(cellCount, isInReplay);
