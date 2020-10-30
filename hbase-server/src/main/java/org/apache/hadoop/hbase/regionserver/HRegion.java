@@ -8911,6 +8911,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * modifies stores in bulk. It has to be called just before a try.
    * #closeBulkRegionOperation needs to be called in the try's finally block
    * Acquires a writelock and checks if the region is closing or closed.
+   * @throws NotServingRegionException when the region is closing or closed
+   * @throws RegionTooBusyException if failed to get the lock in time
+   * @throws InterruptedIOException if interrupted while waiting for a lock
    */
   private void startBulkRegionOperation(boolean writeLockNeeded) throws IOException {
     if (this.closing.get()) {
