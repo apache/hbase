@@ -120,7 +120,10 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
 
   void queuedAndProcessedCall(int totalTime);
 
-  void addCallToResponseQueue(long size);
+  void addCallToResponseQueue();
 
-  void removeCallFromResponseQueue(long size);
+  void removeCallFromResponseQueue();
+
+  void updateResponseQueueSize(long size);
+
 }

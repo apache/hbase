@@ -145,15 +145,18 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
   }
 
   @Override
-  public void addCallToResponseQueue(long size) {
+  public void addCallToResponseQueue() {
     numCallsInResponseQueue.incr();
-    sizeOfResponseQueue.incr(size);
   }
 
   @Override
-  public void removeCallFromResponseQueue(long size) {
+  public void removeCallFromResponseQueue() {
     numCallsInResponseQueue.decr();
-    sizeOfResponseQueue.decr(size);
+  }
+
+  @Override
+  public void updateResponseQueueSize(long size) {
+    sizeOfResponseQueue.incr(size);
   }
 
   @Override
