@@ -4637,15 +4637,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WALEdit walEdit = null;
     WriteEntry writeEntry = null;
     boolean locked = false;
+    // Check for thread interrupt status in case we have been signaled from
+    // #interruptRegionOperation.
+    checkInterrupt();
     // We try to set up a batch in the range [batchOp.nextIndexToProcess,lastIndexExclusive)
     MiniBatchOperationInProgress<Mutation> miniBatchOp = null;
     /** Keep track of the locks we hold so we can release them in finally clause */
     List<RowLock> acquiredRowLocks = Lists.newArrayListWithCapacity(batchOp.size());
     try {
-      // Check for thread interrupt status in case we have been signaled from
-      // #interruptRegionOperation.
-      checkInterrupt();
-
       // STEP 1. Try to acquire as many locks as we can and build mini-batch of operations with
       // locked rows
       miniBatchOp = batchOp.lockRowsAndBuildMiniBatch(acquiredRowLocks);
@@ -4666,18 +4665,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // otherwise, newer puts/deletes/increment/append are not guaranteed to have a newer
       // timestamp
 
-      // Check for thread interrupt status in case we have been signaled from
-      // #interruptRegionOperation.
-      checkInterrupt();
-
       long now = EnvironmentEdgeManager.currentTime();
       batchOp.prepareMiniBatchOperations(miniBatchOp, now, acquiredRowLocks);
 
       // STEP 3. Build WAL edit
-
-      // Check for thread interrupt status in case we have been signaled from
-      // #interruptRegionOperation.
-      checkInterrupt();
 
       List<Pair<NonceKey, WALEdit>> walEdits = batchOp.buildWALEdits(miniBatchOp);
 
