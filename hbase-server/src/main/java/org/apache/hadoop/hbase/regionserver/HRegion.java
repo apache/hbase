@@ -696,9 +696,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private long blockingMemStoreSize;
   // Used to guard closes
   final ReentrantReadWriteLock lock;
-  // Used to track interruptible holders of the region lock
-  // Currently that is only RPC handler threads
-  final Set<Thread> regionLockHolders;
+  // Used to track interruptible holders of the region lock. Currently that is only RPC handler
+  // threads. Boolean value in map determines if lock holder can be interrupted, normally true,
+  // but may be false when thread is transiting a critical section.
+  final ConcurrentHashMap<Thread, Boolean> regionLockHolders;
 
   // Stop updates lock
   private final ReentrantReadWriteLock updatesLock = new ReentrantReadWriteLock();
@@ -791,7 +792,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         MetaCellComparator.META_COMPARATOR : CellComparatorImpl.COMPARATOR;
     this.lock = new ReentrantReadWriteLock(conf.getBoolean(FAIR_REENTRANT_CLOSE_LOCK,
         DEFAULT_FAIR_REENTRANT_CLOSE_LOCK));
-    this.regionLockHolders = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    this.regionLockHolders = new ConcurrentHashMap<>();
     this.flushCheckInterval = conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL,
         DEFAULT_CACHE_FLUSH_INTERVAL);
     this.flushPerChanges = conf.getLong(MEMSTORE_FLUSH_PER_CHANGES, DEFAULT_FLUSH_PER_CHANGES);
@@ -4637,13 +4638,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WALEdit walEdit = null;
     WriteEntry writeEntry = null;
     boolean locked = false;
-    // Check for thread interrupt status in case we have been signaled from
-    // #interruptRegionOperation.
-    checkInterrupt();
     // We try to set up a batch in the range [batchOp.nextIndexToProcess,lastIndexExclusive)
     MiniBatchOperationInProgress<Mutation> miniBatchOp = null;
     /** Keep track of the locks we hold so we can release them in finally clause */
     List<RowLock> acquiredRowLocks = Lists.newArrayListWithCapacity(batchOp.size());
+
+    // Check for thread interrupt status in case we have been signaled from
+    // #interruptRegionOperation.
+    checkInterrupt();
+
     try {
       // STEP 1. Try to acquire as many locks as we can and build mini-batch of operations with
       // locked rows
@@ -4660,6 +4663,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       lock(this.updatesLock.readLock(), miniBatchOp.getReadyToWriteCount());
       locked = true;
 
+      // From this point until memstore update this operation should not be interrupted.
+      disableInterrupts();
+
       // STEP 2. Update mini batch of all operations in progress with LATEST_TIMESTAMP timestamp
       // We should record the timestamp only after we have acquired the rowLock,
       // otherwise, newer puts/deletes/increment/append are not guaranteed to have a newer
@@ -4673,11 +4679,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       List<Pair<NonceKey, WALEdit>> walEdits = batchOp.buildWALEdits(miniBatchOp);
 
       // STEP 4. Append the WALEdits to WAL and sync.
-
-      // Check for thread interrupt status in case we have been signaled from
-      // #interruptRegionOperation. This is the last place we can do it "safely" before
-      // WAL appends.
-      checkInterrupt();
 
       for(Iterator<Pair<NonceKey, WALEdit>> it = walEdits.iterator(); it.hasNext();) {
         Pair<NonceKey, WALEdit> nonceKeyWALEditPair = it.next();
@@ -4713,6 +4714,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         this.updatesLock.readLock().unlock();
       }
       releaseRowLocks(acquiredRowLocks);
+
+      enableInterrupts();
 
       final int finalLastIndexExclusive =
           miniBatchOp != null ? miniBatchOp.getLastIndexExclusive() : batchOp.size();
@@ -8405,6 +8408,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // when it assigns the edit a sequencedid (A.K.A the mvcc write number).
     WriteEntry writeEntry = null;
     MemStoreSizing memstoreAccounting = new NonThreadSafeMemStoreSizing();
+
+    // Check for thread interrupt status in case we have been signaled from
+    // #interruptRegionOperation.
+    checkInterrupt();
+
     try {
       boolean success = false;
       try {
@@ -8420,9 +8428,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             prevRowLock = rowLock;
           }
         }
+
         // STEP 3. Region lock
         lock(this.updatesLock.readLock(), acquiredRowLocks.isEmpty() ? 1 : acquiredRowLocks.size());
         locked = true;
+
+        // From this point until memstore update this operation should not be interrupted.
+        disableInterrupts();
+
         long now = EnvironmentEdgeManager.currentTime();
         // STEP 4. Let the processor scan the rows, generate mutations and add waledits
         doProcessRowWithTimeout(processor, now, this, mutations, walEdit, timeout);
@@ -8488,6 +8501,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         // release locks if some were acquired but another timed out
         releaseRowLocks(acquiredRowLocks);
+
+        enableInterrupts();
       }
 
       // 12. Run post-process hook
@@ -8646,11 +8661,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     return writeEntry;
   }
-
-
-
-
-
 
   /**
    * @return Sorted list of <code>cells</code> using <code>comparator</code>
@@ -8881,7 +8891,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // an RPC handler
     Thread thisThread = Thread.currentThread();
     if (isInterruptableOp) {
-      regionLockHolders.add(thisThread);
+      regionLockHolders.put(thisThread, true);
     }
     if (this.closed.get()) {
       lock.readLock().unlock();
@@ -8942,7 +8952,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       else lock.readLock().unlock();
       throw new NotServingRegionException(getRegionInfo().getRegionNameAsString() + " is closed");
     }
-    regionLockHolders.add(Thread.currentThread());
+    regionLockHolders.put(Thread.currentThread(), true);
   }
 
   /**
@@ -9140,13 +9150,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
+   * If a handler thread is eligible for interrupt, make it ineligible. Should be paired
+   * with {{@link #enableInterrupts()}.
+   */
+  protected void disableInterrupts() {
+    regionLockHolders.computeIfPresent(Thread.currentThread(), (t,b) -> false);
+  }
+
+  /**
+   * If a handler thread was made ineligible for interrupt via {{@link #disableInterrupts()},
+   * make it eligible again. No-op if interrupts are already enabled.
+   */
+  protected void enableInterrupts() {
+    regionLockHolders.computeIfPresent(Thread.currentThread(), (t,b) -> true);
+  }
+
+  /**
    * Interrupt any region options that have acquired the region lock via
    * {@link #startRegionOperation(org.apache.hadoop.hbase.regionserver.Region.Operation)},
    * or {@link #startBulkRegionOperation(boolean)}.
    */
   private void interruptRegionOperations() {
-    for (Thread t: regionLockHolders) {
-      t.interrupt();
+    for (Map.Entry<Thread, Boolean> entry: regionLockHolders.entrySet()) {
+      // An entry in this map will have a boolean value indicating if it is currently
+      // eligible for interrupt; if so, we should interrupt it.
+      if (entry.getValue().booleanValue()) {
+        entry.getKey().interrupt();
+      }
     }
   }
 
