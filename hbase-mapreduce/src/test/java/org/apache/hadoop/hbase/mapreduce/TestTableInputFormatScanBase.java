@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -86,7 +85,7 @@ public abstract class TestTableInputFormatScanBase {
    * Pass the key and value to reduce.
    */
   public static class ScanMapper
-  extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
+    extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
 
     /**
      * Pass the key and value to reduce.
@@ -99,7 +98,7 @@ public abstract class TestTableInputFormatScanBase {
     @Override
     public void map(ImmutableBytesWritable key, Result value,
       Context context)
-    throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
       if (value.size() != 2) {
         throw new IOException("There should be two input columns");
       }
@@ -123,7 +122,7 @@ public abstract class TestTableInputFormatScanBase {
    * Checks the last and first key seen against the scanner boundaries.
    */
   public static class ScanReducer
-  extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
+    extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
                     NullWritable, NullWritable> {
 
     private String first = null;
@@ -131,7 +130,7 @@ public abstract class TestTableInputFormatScanBase {
 
     protected void reduce(ImmutableBytesWritable key,
         Iterable<ImmutableBytesWritable> values, Context context)
-    throws IOException ,InterruptedException {
+      throws IOException ,InterruptedException {
       int count = 0;
       for (ImmutableBytesWritable value : values) {
         String val = Bytes.toStringBinary(value.get());
@@ -144,7 +143,7 @@ public abstract class TestTableInputFormatScanBase {
     }
 
     protected void cleanup(Context context)
-    throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
       Configuration c = context.getConfiguration();
       String startRow = c.get(KEY_STARTROW);
       String lastRow = c.get(KEY_LASTROW);
@@ -249,6 +248,12 @@ public abstract class TestTableInputFormatScanBase {
     tif.setConf(job.getConfiguration());
     Assert.assertEquals(TABLE_NAME, table.getName());
     List<InputSplit> splits = tif.getSplits(job);
+    for (InputSplit split : splits) {
+      TableSplit tableSplit = (TableSplit) split;
+      // In table input format, we do no store the scanner at the split level
+      // because we use the scan object from the map-reduce job conf itself.
+      Assert.assertTrue(tableSplit.getScanAsString().isEmpty());
+    }
     Assert.assertEquals(expectedNumOfSplits, splits.size());
   }
 
