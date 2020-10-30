@@ -25,10 +25,10 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -42,7 +42,7 @@ import org.apache.hadoop.mapreduce.InputSplit;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class TableSplit extends InputSplit
-implements Writable, Comparable<TableSplit> {
+  implements Writable, Comparable<TableSplit> {
   /** @deprecated LOG variable would be made private. */
   @Deprecated
   public static final Log LOG = LogFactory.getLog(TableSplit.class);
@@ -86,7 +86,18 @@ implements Writable, Comparable<TableSplit> {
   private byte [] endRow;
   private String regionLocation;
   private String encodedRegionName = "";
+
+  /**
+   * The scan object may be null but the serialized form of scan is never null
+   * or empty since we serialize the scan object with default values then.
+   * Having no scanner in TableSplit doesn't necessarily mean there is no scanner
+   * for mapreduce job, it just means that we do not need to set it for each split.
+   * For example, it is not required to have a scan object for
+   * {@link org.apache.hadoop.hbase.mapred.TableInputFormatBase} since we use the scan from the
+   * job conf and scanner is supposed to be same for all the splits of table.
+   */
   private String scan = ""; // stores the serialized form of the Scan
+
   private long length; // Contains estimation of region size in bytes
 
   /** Default constructor. */
@@ -208,10 +219,21 @@ implements Writable, Comparable<TableSplit> {
    * Returns a Scan object from the stored string representation.
    *
    * @return Returns a Scan object based on the stored scanner.
-   * @throws IOException
+   * @throws IOException throws IOException if deserialization fails
    */
   public Scan getScan() throws IOException {
     return TableMapReduceUtil.convertStringToScan(this.scan);
+  }
+
+  /**
+   * Returns a scan string
+   * @return scan as string. Should be noted that this is not same as getScan().toString()
+   *    because Scan object will have the default values when empty scan string is
+   *    deserialized. Thus, getScan().toString() can never be empty
+   */
+  @InterfaceAudience.Private
+  public String getScanAsString() {
+    return this.scan;
   }
 
   /**

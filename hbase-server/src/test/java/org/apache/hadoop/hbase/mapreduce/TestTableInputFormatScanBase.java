@@ -23,7 +23,11 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,7 +41,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -271,6 +274,12 @@ public abstract class TestTableInputFormatScanBase {
     TableInputFormat tif = new TableInputFormat();
     tif.setConf(job.getConfiguration());
     List<InputSplit> splits = tif.getSplits(job);
+    for (InputSplit split : splits) {
+      TableSplit tableSplit = (TableSplit) split;
+      // In table input format, we do no store the scanner at the split level
+      // because we use the scan object from the map-reduce job conf itself.
+      Assert.assertTrue(tableSplit.getScanAsString().isEmpty());
+    }
     Assert.assertEquals(expectedNumOfSplits, splits.size());
   }
 
