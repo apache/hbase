@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -388,6 +389,11 @@ public class RegionLoad implements RegionMetrics {
   @Override
   public long getBlocksTotalWeight() {
     return metrics.getBlocksTotalWeight();
+  }
+
+  @Override
+  public CompactionState getCompactionState() {
+    return metrics.getCompactionState();
   }
 
   /**
