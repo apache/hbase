@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UserMetrics;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -506,6 +507,11 @@ public class TestRegionsRecoveryChore {
       @Override
       public long getBlocksTotalWeight() {
         return 0;
+      }
+
+      @Override
+      public CompactionState getCompactionState() {
+        return null;
       }
     };
     return regionMetrics;

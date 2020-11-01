@@ -74,13 +74,16 @@ import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -223,7 +226,7 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.webapp.WebAppContext;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
@@ -3326,12 +3329,12 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @param tableName The current table name.
    * @return If a given table is in mob file compaction now.
    */
-  public CompactionState getMobCompactionState(TableName tableName) {
+  public GetRegionInfoResponse.CompactionState getMobCompactionState(TableName tableName) {
     AtomicInteger compactionsCount = mobCompactionStates.get(tableName);
     if (compactionsCount != null && compactionsCount.get() != 0) {
-      return CompactionState.MAJOR_AND_MINOR;
+      return GetRegionInfoResponse.CompactionState.MAJOR_AND_MINOR;
     }
-    return CompactionState.NONE;
+    return GetRegionInfoResponse.CompactionState.NONE;
   }
 
   public void reportMobCompactionStart(TableName tableName) throws IOException {
@@ -3758,5 +3761,48 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   public MetaRegionLocationCache getMetaRegionLocationCache() {
     return this.metaRegionLocationCache;
+  }
+
+  /**
+   * Get the compaction state of the table
+   *
+   * @param tableName The table name
+   * @return CompactionState Compaction state of the table
+   */
+  public CompactionState getCompactionState(final TableName tableName) {
+    CompactionState compactionState = CompactionState.NONE;
+    try {
+      List<RegionInfo> regions =
+        assignmentManager.getRegionStates().getRegionsOfTable(tableName);
+      for (RegionInfo regionInfo : regions) {
+        ServerName serverName =
+          assignmentManager.getRegionStates().getRegionServerOfRegion(regionInfo);
+        if (serverName == null) {
+          continue;
+        }
+        ServerMetrics sl = serverManager.getLoad(serverName);
+        if (sl == null) {
+          continue;
+        }
+        RegionMetrics regionMetrics = sl.getRegionMetrics().get(regionInfo.getRegionName());
+        if (regionMetrics.getCompactionState() == CompactionState.MAJOR) {
+          if (compactionState == CompactionState.MINOR) {
+            compactionState = CompactionState.MAJOR_AND_MINOR;
+          } else {
+            compactionState = CompactionState.MAJOR;
+          }
+        } else if (regionMetrics.getCompactionState() == CompactionState.MINOR) {
+          if (compactionState == CompactionState.MAJOR) {
+            compactionState = CompactionState.MAJOR_AND_MINOR;
+          } else {
+            compactionState = CompactionState.MINOR;
+          }
+        }
+      }
+    } catch (Exception e) {
+      compactionState = null;
+      LOG.error("Exception when get compaction state for " + tableName.getNameAsString(), e);
+    }
+    return compactionState;
   }
 }
