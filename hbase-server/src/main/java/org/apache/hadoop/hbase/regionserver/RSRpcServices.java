@@ -271,7 +271,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
 public class RSRpcServices implements HBaseRPCErrorHandler,
     AdminService.BlockingInterface, ClientService.BlockingInterface, PriorityFunction,
     ConfigurationObserver {
-  protected static final Logger LOG = LoggerFactory.getLogger(RSRpcServices.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RSRpcServices.class);
 
   /** RPC scheduler to use for the region server. */
   public static final String REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS =
@@ -3076,15 +3076,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
     if (metricsRegionServer != null) {
       long after = EnvironmentEdgeManager.currentTime();
-      metricsRegionServer.updateCheckAndMutate(after - before);
+      metricsRegionServer.updateCheckAndMutate(
+        region.getRegionInfo().getTable(), after - before);
 
       MutationType type = mutation.getMutateType();
       switch (type) {
         case PUT:
-          metricsRegionServer.updateCheckAndPut(after - before);
+          metricsRegionServer.updateCheckAndPut(
+            region.getRegionInfo().getTable(), after - before);
           break;
         case DELETE:
-          metricsRegionServer.updateCheckAndDelete(after - before);
+          metricsRegionServer.updateCheckAndDelete(
+            region.getRegionInfo().getTable(), after - before);
           break;
         default:
           break;

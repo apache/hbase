@@ -37,7 +37,7 @@ pipeline {
         DOCKERFILE_REL = "${SRC_REL}/dev-support/docker/Dockerfile"
         YETUS_DRIVER_REL = "${SRC_REL}/dev-support/jenkins_precommit_github_yetus.sh"
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION = 'rel/0.11.1'
+        YETUS_VERSION = 'rel/0.12.0'
         GENERAL_CHECK_PLUGINS = 'all,-compile,-javac,-javadoc,-jira,-shadedjars,-unit'
         JDK_SPECIFIC_PLUGINS = 'compile,github,htmlout,javac,javadoc,maven,mvninstall,shadedjars,unit'
         // output from surefire; sadly the archive function in yetus only works on file names.

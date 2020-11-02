@@ -189,6 +189,9 @@ public class TestAccessController3 extends SecureTestUtil {
     USER_GROUP_WRITE =
         User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
 
+    // Grant table creation permission to USER_OWNER
+    grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Permission.Action.CREATE);
+
     systemUserConnection = TEST_UTIL.getConnection();
     setUpTableAndUserPermissions();
   }
@@ -207,9 +210,8 @@ public class TestAccessController3 extends SecureTestUtil {
   private static void setUpTableAndUserPermissions() throws Exception {
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TABLE)
       .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build())
-      .setOwner(USER_OWNER).build();
-    createTable(TEST_UTIL, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build()).build();
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();

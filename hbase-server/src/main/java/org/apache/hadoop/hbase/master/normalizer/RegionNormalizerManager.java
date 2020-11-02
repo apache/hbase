@@ -22,8 +22,11 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -35,7 +38,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * This class encapsulates the details of the {@link RegionNormalizer} subsystem.
  */
 @InterfaceAudience.Private
-public class RegionNormalizerManager {
+public class RegionNormalizerManager implements PropagatingConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(RegionNormalizerManager.class);
 
   private final RegionNormalizerTracker regionNormalizerTracker;
@@ -48,7 +51,7 @@ public class RegionNormalizerManager {
   private boolean started = false;
   private boolean stopped = false;
 
-  public RegionNormalizerManager(
+  RegionNormalizerManager(
     @NonNull  final RegionNormalizerTracker regionNormalizerTracker,
     @Nullable final RegionNormalizerChore regionNormalizerChore,
     @Nullable final RegionNormalizerWorkQueue<TableName> workQueue,
@@ -65,6 +68,25 @@ public class RegionNormalizerManager {
         (thread, throwable) ->
           LOG.error("Uncaught exception, worker thread likely terminated.", throwable))
       .build());
+  }
+
+  @Override
+  public void registerChildren(ConfigurationManager manager) {
+    if (worker != null) {
+      manager.registerObserver(worker);
+    }
+  }
+
+  @Override
+  public void deregisterChildren(ConfigurationManager manager) {
+    if (worker != null) {
+      manager.deregisterObserver(worker);
+    }
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    // no configuration managed here directly.
   }
 
   public void start() {

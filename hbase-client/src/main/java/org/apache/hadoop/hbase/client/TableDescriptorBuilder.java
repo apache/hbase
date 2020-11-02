@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -70,12 +69,6 @@ public class TableDescriptorBuilder {
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
   private static final Bytes MAX_FILESIZE_KEY
           = new Bytes(Bytes.toBytes(MAX_FILESIZE));
-
-  @InterfaceAudience.Private
-  public static final String OWNER = "OWNER";
-  @InterfaceAudience.Private
-  public static final Bytes OWNER_KEY
-          = new Bytes(Bytes.toBytes(OWNER));
 
   /**
    * Used by rest interface to access this metadata attribute
@@ -482,26 +475,6 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder setNormalizationEnabled(final boolean isEnable) {
     desc.setNormalizationEnabled(isEnable);
-    return this;
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
-   */
-  @Deprecated
-  public TableDescriptorBuilder setOwner(User owner) {
-    desc.setOwner(owner);
-    return this;
-  }
-
-  /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
-   */
-  @Deprecated
-  public TableDescriptorBuilder setOwnerString(String ownerString) {
-    desc.setOwnerString(ownerString);
     return this;
   }
 
@@ -1548,38 +1521,6 @@ public class TableDescriptorBuilder {
       if (match != null) {
         ModifyableTableDescriptor.this.removeValue(match);
       }
-    }
-
-    /**
-     * @deprecated since 2.0.0 and will be removed in 3.0.0.
-     * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
-     */
-    @Deprecated
-    public ModifyableTableDescriptor setOwner(User owner) {
-      return setOwnerString(owner != null ? owner.getShortName() : null);
-    }
-
-    /**
-     * @deprecated since 2.0.0 and will be removed in 3.0.0.
-     * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
-     */
-    // used by admin.rb:alter(table_name,*args) to update owner.
-    @Deprecated
-    public ModifyableTableDescriptor setOwnerString(String ownerString) {
-      return setValue(OWNER_KEY, ownerString);
-    }
-
-    /**
-     * @deprecated since 2.0.0 and will be removed in 3.0.0.
-     * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
-     */
-    @Override
-    @Deprecated
-    public String getOwnerString() {
-      // Note that every table should have an owner (i.e. should have OWNER_KEY set).
-      // hbase:meta should return system user as owner, not null (see
-      // MasterFileSystem.java:bootstrap()).
-      return getOrDefault(OWNER_KEY, Function.identity(), null);
     }
 
     /**

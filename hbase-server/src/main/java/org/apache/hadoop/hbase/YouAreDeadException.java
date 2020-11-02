@@ -1,4 +1,5 @@
-/*
+/**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,24 +16,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.conf;
+package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.conf.Configuration;
+import java.io.IOException;
+
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Every class that wants to observe changes in Configuration properties,
- * must implement interface (and also, register itself with the
- * {@link ConfigurationManager}.
+ * This exception is thrown by the master when a region server reports and is already being
+ * processed as dead. This can happen when a region server loses its session but didn't figure it
+ * yet.
  */
+@SuppressWarnings("serial")
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
-public interface ConfigurationObserver {
-
+@InterfaceStability.Stable
+public class YouAreDeadException extends IOException {
   /**
-   * This method would be called by the {@link ConfigurationManager}
-   * object when the {@link Configuration} object is reloaded from disk.
+   * @param message the message for this exception
    */
-  void onConfigurationChange(Configuration conf);
+  public YouAreDeadException(String message) {
+    super(message);
+  }
 }

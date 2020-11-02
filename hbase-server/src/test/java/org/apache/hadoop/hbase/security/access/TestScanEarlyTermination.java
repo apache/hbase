@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -107,6 +106,9 @@ public class TestScanEarlyTermination extends SecureTestUtil {
     // create a set of test users
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
     USER_OTHER = User.createUserForTesting(conf, "other", new String[0]);
+
+    // Grant table creation permission to USER_OWNER
+    grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Action.CREATE);
   }
 
   @AfterClass
@@ -116,9 +118,8 @@ public class TestScanEarlyTermination extends SecureTestUtil {
 
   @Before
   public void setUp() throws Exception {
-    Admin admin = TEST_UTIL.getAdmin();
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(testTable.getTableName()).setOwner(USER_OWNER)
+      TableDescriptorBuilder.newBuilder(testTable.getTableName())
         .setColumnFamily(
           ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY1).setMaxVersions(10).build())
         .setColumnFamily(
@@ -127,7 +128,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
         // want to confirm that the per-table configuration is properly picked up.
         .setValue(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, "true").build();
 
-    admin.createTable(tableDescriptor);
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor);
     TEST_UTIL.waitUntilAllRegionsAssigned(testTable.getTableName());
   }
 

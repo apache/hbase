@@ -199,13 +199,14 @@ class _RepoReader:
     _identify_amend_jira_id_pattern = re.compile(r'^amend (.+)', re.IGNORECASE)
 
     def __init__(self, db, fallback_actions_path, remote_name, development_branch,
-                 release_line_regexp, parse_release_tags, **_kwargs):
+                 release_line_regexp, branch_filter_regexp, parse_release_tags, **_kwargs):
         self._db = db
         self._repo = _RepoReader._open_repo()
         self._fallback_actions = _RepoReader._load_fallback_actions(fallback_actions_path)
         self._remote_name = remote_name
         self._development_branch = development_branch
         self._release_line_regexp = release_line_regexp
+        self._branch_filter_regexp = branch_filter_regexp
         self._parse_release_tags = parse_release_tags
 
     @property
@@ -364,6 +365,10 @@ class _RepoReader:
             release_branch (str): The name of the ref whose history is to be parsed.
         """
         global MANAGER
+        branch_filter_pattern = re.compile('%s/%s' % (self._remote_name, self._branch_filter_regexp))
+        if not branch_filter_pattern.match(release_branch):
+            return
+
         commits = list(self._repo.iter_commits(
             "%s...%s" % (origin_commit.hexsha, release_branch), reverse=True))
         LOG.info("%s has %d commits since its origin at %s.", release_branch, len(commits),
@@ -638,6 +643,10 @@ class Auditor:
             '--fallback-actions-path',
             help='Path to a file containing _DB.Actions applicable to specific git shas.',
             default='fallback_actions.csv')
+        git_repo_group.add_argument(
+            '--branch-filter-regexp',
+            help='Limit repo parsing to branch names that match this filter expression.',
+            default=r'.*')
         jira_group = parser.add_argument_group('Interactions with Jira')
         jira_group.add_argument(
             '--jira-url',

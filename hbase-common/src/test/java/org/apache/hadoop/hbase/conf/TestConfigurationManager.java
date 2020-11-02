@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.conf;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -39,9 +38,9 @@ public class TestConfigurationManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestConfigurationManager.class);
 
-  class DummyConfigurationObserver implements ConfigurationObserver {
+  static class DummyConfigurationObserver implements ConfigurationObserver {
     private boolean notifiedOnChange = false;
-    private ConfigurationManager cm;
+    private final ConfigurationManager cm;
 
     public DummyConfigurationObserver(ConfigurationManager cm) {
       this.cm = cm;
@@ -63,11 +62,11 @@ public class TestConfigurationManager {
     }
 
     public void register() {
-      this.cm.registerObserver(this);
+      cm.registerObserver(this);
     }
 
     public void deregister() {
-      this.cm.deregisterObserver(this);
+      cm.deregisterObserver(this);
     }
   }
 

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,26 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.exceptions;
 
-import java.io.IOException;
-
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * This exception is thrown by the master when a region server reports and is
- * already being processed as dead. This can happen when a region server loses
- * its session but didn't figure it yet.
+ * Thrown when the master is stopped
  */
-@SuppressWarnings("serial")
 @InterfaceAudience.Private
-@InterfaceStability.Stable
-public class YouAreDeadException extends IOException {
-  /**
-   * @param message the message for this exception
-   */
-  public YouAreDeadException(String message) {
-    super(message);
+public class MasterStoppedException extends DoNotRetryIOException {
+
+  private static final long serialVersionUID = -4284604435898100365L;
+
+  public MasterStoppedException() {
+    super();
   }
 }
