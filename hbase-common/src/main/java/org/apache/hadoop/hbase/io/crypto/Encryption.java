@@ -86,7 +86,7 @@ public final class Encryption {
    *           of certain algorithms, e.g. on FIPS compliant clusters)
    */
   public static final String CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY =
-    "hbase.crypto.key.hash.algorithm.failOnMismatchfalse";
+    "hbase.crypto.key.hash.algorithm.failOnMismatch";
 
   /**
    * Default behaviour is not to fail if the hash algorithm configured differs from the one
