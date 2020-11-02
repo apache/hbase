@@ -29,14 +29,8 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CatalogAccessor;
-import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.ScheduledChore;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -226,10 +220,10 @@ public class CatalogJanitor extends ScheduledChore {
     // Null tablename means scan all of meta.
     CatalogAccessor.scanCatalog(this.services.getConnection(),
       TableName.ROOT_TABLE_NAME, null,null,
-      ClientMetaTableAccessor.QueryType.REGION, Integer.MAX_VALUE, visitor);
+      ClientCatalogAccessor.QueryType.REGION, Integer.MAX_VALUE, visitor);
     CatalogAccessor.scanCatalog(this.services.getConnection(),
       TableName.META_TABLE_NAME, null,null,
-      ClientMetaTableAccessor.QueryType.REGION, Integer.MAX_VALUE, visitor);
+      ClientCatalogAccessor.QueryType.REGION, Integer.MAX_VALUE, visitor);
     return visitor.getReport();
   }
 

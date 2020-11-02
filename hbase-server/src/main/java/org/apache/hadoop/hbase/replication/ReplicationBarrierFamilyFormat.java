@@ -25,15 +25,11 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.Cell;
+
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.Cell.Type;
-import org.apache.hadoop.hbase.CellBuilderFactory;
-import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor.QueryType;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
+import org.apache.hadoop.hbase.ClientCatalogAccessor.QueryType;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -230,8 +226,8 @@ public final class ReplicationBarrierFamilyFormat {
     TableName tableName) throws IOException {
     List<Pair<String, Long>> list = new ArrayList<>();
     MetaTableAccessor.scanMeta(conn,
-      ClientMetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REPLICATION),
-      ClientMetaTableAccessor.getTableStopRowForMeta(tableName, QueryType.REPLICATION),
+      ClientCatalogAccessor.getTableStartRowForCatalog(tableName, QueryType.REPLICATION),
+      ClientCatalogAccessor.getTableStopRowForCatalog(tableName, QueryType.REPLICATION),
       QueryType.REPLICATION, r -> {
         byte[] value =
           r.getValue(HConstants.REPLICATION_BARRIER_FAMILY, HConstants.SEQNUM_QUALIFIER);
@@ -250,8 +246,8 @@ public final class ReplicationBarrierFamilyFormat {
     TableName tableName) throws IOException {
     List<String> list = new ArrayList<>();
     MetaTableAccessor.scanMeta(conn,
-      ClientMetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REPLICATION),
-      ClientMetaTableAccessor.getTableStopRowForMeta(tableName, QueryType.REPLICATION),
+      ClientCatalogAccessor.getTableStartRowForCatalog(tableName, QueryType.REPLICATION),
+      ClientCatalogAccessor.getTableStopRowForCatalog(tableName, QueryType.REPLICATION),
       QueryType.REPLICATION, new FirstKeyOnlyFilter(), Integer.MAX_VALUE, r -> {
         list.add(RegionInfo.encodeRegionName(r.getRow()));
         return true;

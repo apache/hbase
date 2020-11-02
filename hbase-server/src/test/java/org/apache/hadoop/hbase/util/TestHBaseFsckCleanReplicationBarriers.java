@@ -17,12 +17,9 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
+
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -114,10 +111,10 @@ public class TestHBaseFsckCleanReplicationBarriers {
     barrierScan.setCaching(100);
     barrierScan.addFamily(HConstants.REPLICATION_BARRIER_FAMILY);
     barrierScan
-      .withStartRow(ClientMetaTableAccessor.getTableStartRowForMeta(tableName,
-        ClientMetaTableAccessor.QueryType.REGION))
-      .withStopRow(ClientMetaTableAccessor.getTableStopRowForMeta(tableName,
-        ClientMetaTableAccessor.QueryType.REGION));
+      .withStartRow(ClientCatalogAccessor.getTableStartRowForCatalog(tableName,
+        ClientCatalogAccessor.QueryType.REGION))
+      .withStopRow(ClientCatalogAccessor.getTableStopRowForCatalog(tableName,
+        ClientCatalogAccessor.QueryType.REGION));
     Result result;
     try (ResultScanner scanner =
         MetaTableAccessor.getMetaHTable(UTIL.getConnection()).getScanner(barrierScan)) {

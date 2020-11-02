@@ -66,25 +66,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -2738,7 +2722,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * @throws IOException if an error is encountered
    */
   boolean loadMetaEntries() throws IOException {
-    ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
+    ClientCatalogAccessor.Visitor visitor = new ClientCatalogAccessor.Visitor() {
       int countRecord = 1;
 
       // comparator to sort KeyValues with latest modtime
@@ -3900,10 +3884,10 @@ public class HBaseFsck extends Configured implements Closeable {
     barrierScan.setCaching(100);
     barrierScan.addFamily(HConstants.REPLICATION_BARRIER_FAMILY);
     barrierScan
-        .withStartRow(ClientMetaTableAccessor.getTableStartRowForMeta(cleanReplicationBarrierTable,
-          ClientMetaTableAccessor.QueryType.REGION))
-        .withStopRow(ClientMetaTableAccessor.getTableStopRowForMeta(cleanReplicationBarrierTable,
-          ClientMetaTableAccessor.QueryType.REGION));
+        .withStartRow(ClientCatalogAccessor.getTableStartRowForCatalog(cleanReplicationBarrierTable,
+          ClientCatalogAccessor.QueryType.REGION))
+        .withStopRow(ClientCatalogAccessor.getTableStopRowForCatalog(cleanReplicationBarrierTable,
+          ClientCatalogAccessor.QueryType.REGION));
     Result result;
     try (ResultScanner scanner = meta.getScanner(barrierScan)) {
       while ((result = scanner.next()) != null) {

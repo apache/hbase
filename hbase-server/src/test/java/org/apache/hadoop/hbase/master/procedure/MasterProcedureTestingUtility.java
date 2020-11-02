@@ -30,15 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -246,7 +239,7 @@ public class MasterProcedureTestingUtility {
   private static int countMetaRegions(final HMaster master, final TableName tableName)
       throws IOException {
     final AtomicInteger actualRegCount = new AtomicInteger(0);
-    final ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
+    final ClientCatalogAccessor.Visitor visitor = new ClientCatalogAccessor.Visitor() {
       @Override
       public boolean visit(Result rowResult) throws IOException {
         RegionLocations list = CatalogFamilyFormat.getRegionLocations(rowResult);

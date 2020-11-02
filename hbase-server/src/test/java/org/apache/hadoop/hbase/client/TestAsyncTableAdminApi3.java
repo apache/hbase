@@ -30,7 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -281,7 +281,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName, splitKeys);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
-    List<HRegionLocation> regions = ClientMetaTableAccessor
+    List<HRegionLocation> regions = ClientCatalogAccessor
       .getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
@@ -292,7 +292,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     // Enable table, use retain assignment to assign regions.
     admin.enableTable(tableName).join();
 
-    List<HRegionLocation> regions2 = ClientMetaTableAccessor
+    List<HRegionLocation> regions2 = ClientCatalogAccessor
       .getTableHRegionLocations(metaTable, tableName).get();
     // Check the assignment.
     assertEquals(regions.size(), regions2.size());

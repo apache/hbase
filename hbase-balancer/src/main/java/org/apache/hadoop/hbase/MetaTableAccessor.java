@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.Type;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor.QueryType;
+import org.apache.hadoop.hbase.ClientCatalogAccessor.QueryType;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
@@ -85,7 +85,7 @@ public class MetaTableAccessor {
    * @param visitor Visitor invoked against each row in regions family.
    */
   public static void fullScanRegions(Connection connection,
-    final ClientMetaTableAccessor.Visitor visitor) throws IOException {
+    final ClientCatalogAccessor.Visitor visitor) throws IOException {
     scanMeta(connection, null, null, QueryType.REGION, visitor);
   }
 
@@ -97,8 +97,8 @@ public class MetaTableAccessor {
    * @param visitor Visitor invoked against each row in regions family.
    */
   public static void fullScanRegions(Connection connection, TableName catalogTableName,
-    final ClientMetaTableAccessor.Visitor visitor) throws IOException {
-    scanCatalog(connection, catalogTableName, null, null, ClientMetaTableAccessor.QueryType.REGION,
+    final ClientCatalogAccessor.Visitor visitor) throws IOException {
+    scanCatalog(connection, catalogTableName, null, null, ClientCatalogAccessor.QueryType.REGION,
       null, Integer.MAX_VALUE, visitor);
   }
 
@@ -119,7 +119,7 @@ public class MetaTableAccessor {
    * @param visitor Visitor invoked against each row in tables family.
    */
   public static void fullScanTables(Connection connection,
-    final ClientMetaTableAccessor.Visitor visitor) throws IOException {
+    final ClientCatalogAccessor.Visitor visitor) throws IOException {
     scanMeta(connection, null, null, QueryType.TABLE, visitor);
   }
 
@@ -130,7 +130,7 @@ public class MetaTableAccessor {
    * @return List of {@link Result}
    */
   private static List<Result> fullScan(Connection connection, QueryType type) throws IOException {
-    ClientMetaTableAccessor.CollectAllVisitor v = new ClientMetaTableAccessor.CollectAllVisitor();
+    ClientCatalogAccessor.CollectAllVisitor v = new ClientCatalogAccessor.CollectAllVisitor();
     scanMeta(connection, null, null, type, v);
     return v.getResults();
   }
@@ -195,7 +195,7 @@ public class MetaTableAccessor {
     RegionInfo parsedInfo = null;
     try {
       parsedInfo = CatalogFamilyFormat.parseRegionInfoFromRegionName(regionName);
-      row = CatalogFamilyFormat.getMetaKeyForRegion(parsedInfo);
+      row = CatalogFamilyFormat.getCatalogKeyForRegion(parsedInfo);
     } catch (Exception parseEx) {
       // This is used with tableName passed as regionName.
       return null;
@@ -228,7 +228,7 @@ public class MetaTableAccessor {
    */
   public static Result getCatalogFamilyRow(Connection connection, RegionInfo ri)
     throws IOException {
-    Get get = new Get(CatalogFamilyFormat.getMetaKeyForRegion(ri));
+    Get get = new Get(CatalogFamilyFormat.getCatalogKeyForRegion(ri));
     get.addFamily(HConstants.CATALOG_FAMILY);
     try (Table t = getCatalogHTable(connection, getCatalogTableForTable(ri.getTable()))) {
       return t.get(get);
@@ -379,9 +379,9 @@ public class MetaTableAccessor {
    */
   public static Scan getScanForTableName(Configuration conf, TableName tableName) {
     // Start key is just the table name with delimiters
-    byte[] startKey = ClientMetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REGION);
+    byte[] startKey = ClientCatalogAccessor.getTableStartRowForCatalog(tableName, QueryType.REGION);
     // Stop key appends the smallest possible char to the table name
-    byte[] stopKey = ClientMetaTableAccessor.getTableStopRowForMeta(tableName, QueryType.REGION);
+    byte[] stopKey = ClientCatalogAccessor.getTableStopRowForCatalog(tableName, QueryType.REGION);
 
     Scan scan = getCatalogScan(conf, -1);
     scan.withStartRow(startKey);
@@ -391,8 +391,8 @@ public class MetaTableAccessor {
 
   private static Scan getCatalogScan(Configuration conf, int rowUpperLimit) {
     Scan scan = new Scan();
-    int scannerCaching = conf.getInt(HConstants.HBASE_META_SCANNER_CACHING,
-      HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
+    int scannerCaching = conf.getInt(HConstants.HBASE_CATALOG_SCANNER_CACHING,
+      HConstants.DEFAULT_HBASE_CATALOG_SCANNER_CACHING);
     if (conf.getBoolean(HConstants.USE_META_REPLICAS, HConstants.DEFAULT_USE_META_REPLICAS)) {
       scan.setConsistency(Consistency.TIMELINE);
     }
@@ -431,10 +431,10 @@ public class MetaTableAccessor {
         "This method can't be used to locate root regions; use RootTableLocator instead");
     }
     // Make a version of CollectingVisitor that collects RegionInfo and ServerAddress
-    ClientMetaTableAccessor.CollectRegionLocationsVisitor visitor =
-      new ClientMetaTableAccessor.CollectRegionLocationsVisitor(excludeOfflinedSplitParents);
-    byte[] startRow = ClientMetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REGION);
-    byte[] stopRow = ClientMetaTableAccessor.getTableStopRowForMeta(tableName, QueryType.REGION);
+    ClientCatalogAccessor.CollectRegionLocationsVisitor visitor =
+      new ClientCatalogAccessor.CollectRegionLocationsVisitor(excludeOfflinedSplitParents);
+    byte[] startRow = ClientCatalogAccessor.getTableStartRowForCatalog(tableName, QueryType.REGION);
+    byte[] stopRow = ClientCatalogAccessor.getTableStopRowForCatalog(tableName, QueryType.REGION);
     TableName parentTable = TableName.META_TABLE_NAME;
     if (TableName.META_TABLE_NAME.equals(tableName)) {
       parentTable = TableName.ROOT_TABLE_NAME;
@@ -446,14 +446,14 @@ public class MetaTableAccessor {
       parentTable,
       startRow,
       stopRow,
-      ClientMetaTableAccessor.QueryType.REGION,
+      ClientCatalogAccessor.QueryType.REGION,
       Integer.MAX_VALUE,
       visitor);
     return visitor.getResults();
   }
 
   public static void fullScanMetaAndPrint(Connection connection) throws IOException {
-    ClientMetaTableAccessor.Visitor v = r -> {
+    ClientCatalogAccessor.Visitor v = r -> {
       if (r == null || r.isEmpty()) {
         return true;
       }
@@ -478,20 +478,20 @@ public class MetaTableAccessor {
   }
 
   public static void scanMetaForTableRegions(Connection connection,
-    ClientMetaTableAccessor.Visitor visitor, TableName tableName) throws IOException {
+    ClientCatalogAccessor.Visitor visitor, TableName tableName) throws IOException {
     scanCatalogForTableRegions(connection, QueryType.REGION, Integer.MAX_VALUE, visitor, tableName);
   }
 
   public static void scanCatalogForTableRegions(Connection connection, QueryType type, int maxRows,
-    final ClientMetaTableAccessor.Visitor visitor, TableName table) throws IOException {
+    final ClientCatalogAccessor.Visitor visitor, TableName table) throws IOException {
     scanCatalog(connection, getCatalogTableForTable(table),
-      ClientMetaTableAccessor.getTableStartRowForMeta(table, type),
-      ClientMetaTableAccessor.getTableStopRowForMeta(table, type),
+      ClientCatalogAccessor.getTableStartRowForCatalog(table, type),
+      ClientCatalogAccessor.getTableStopRowForCatalog(table, type),
       type, maxRows, visitor);
   }
 
   public static void scanMeta(Connection connection, @Nullable final byte[] startRow,
-    @Nullable final byte[] stopRow, QueryType type, final ClientMetaTableAccessor.Visitor visitor)
+    @Nullable final byte[] stopRow, QueryType type, final ClientCatalogAccessor.Visitor visitor)
     throws IOException {
     scanCatalog(connection, TableName.META_TABLE_NAME, startRow, stopRow, type, Integer.MAX_VALUE,
       visitor);
@@ -505,18 +505,18 @@ public class MetaTableAccessor {
    * @param row start scan from this row
    * @param rowLimit max number of rows to return
    */
-  public static void scanMeta(Connection connection, final ClientMetaTableAccessor.Visitor visitor,
+  public static void scanMeta(Connection connection, final ClientCatalogAccessor.Visitor visitor,
     final TableName tableName, final byte[] row, final int rowLimit) throws IOException {
     byte[] startRow = null;
     byte[] stopRow = null;
     if (tableName != null) {
-      startRow = ClientMetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REGION);
+      startRow = ClientCatalogAccessor.getTableStartRowForCatalog(tableName, QueryType.REGION);
       if (row != null) {
         RegionInfo closestRi = getClosestRegionInfo(connection, tableName, row);
         startRow =
           RegionInfo.createRegionName(tableName, closestRi.getStartKey(), HConstants.ZEROES, false);
       }
-      stopRow = ClientMetaTableAccessor.getTableStopRowForMeta(tableName, QueryType.REGION);
+      stopRow = ClientCatalogAccessor.getTableStopRowForCatalog(tableName, QueryType.REGION);
     }
     scanCatalog(connection, TableName.META_TABLE_NAME, startRow, stopRow, QueryType.REGION,
       rowLimit, visitor);
@@ -534,20 +534,20 @@ public class MetaTableAccessor {
    */
   public static void scanCatalog(Connection connection, TableName catalogTable,
     @Nullable final byte[] startRow, @Nullable final byte[] stopRow, QueryType type, int maxRows,
-    final ClientMetaTableAccessor.Visitor visitor) throws IOException {
+    final ClientCatalogAccessor.Visitor visitor) throws IOException {
     scanCatalog(connection, catalogTable, startRow, stopRow, type, null, maxRows, visitor);
   }
 
   public static void scanMeta(Connection connection,
     @Nullable final byte[] startRow, @Nullable final byte[] stopRow, QueryType type, int maxRows,
-    final ClientMetaTableAccessor.Visitor visitor) throws IOException {
+    final ClientCatalogAccessor.Visitor visitor) throws IOException {
     scanCatalog(connection, TableName.META_TABLE_NAME, startRow, stopRow, type, maxRows, visitor);
   }
 
   public static void scanMeta(Connection connection,
     @Nullable final byte[] startRow, @Nullable final byte[] stopRow,
     QueryType type, @Nullable Filter filter, int maxRows,
-    final ClientMetaTableAccessor.Visitor visitor) throws IOException {
+    final ClientCatalogAccessor.Visitor visitor) throws IOException {
     scanCatalog(connection,
       TableName.META_TABLE_NAME, startRow, stopRow, type, filter, maxRows, visitor);
   }
@@ -555,7 +555,7 @@ public class MetaTableAccessor {
   public static void scanCatalog(Connection connection, TableName catalogTableName,
     @Nullable final byte[] startRow, @Nullable final byte[] stopRow,
     QueryType type, @Nullable Filter filter, int maxRows,
-    final ClientMetaTableAccessor.Visitor visitor) throws IOException {
+    final ClientCatalogAccessor.Visitor visitor) throws IOException {
     int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
     Scan scan = getCatalogScan(connection.getConfiguration(), rowUpperLimit);
 
@@ -696,7 +696,7 @@ public class MetaTableAccessor {
    */
   public static Map<TableName, TableState> getTableStates(Connection conn) throws IOException {
     final Map<TableName, TableState> states = new LinkedHashMap<>();
-    ClientMetaTableAccessor.Visitor collector = r -> {
+    ClientCatalogAccessor.Visitor collector = r -> {
       TableState state = CatalogFamilyFormat.getTableState(r);
       if (state != null) {
         states.put(state.getTableName(), state);
@@ -991,7 +991,7 @@ public class MetaTableAccessor {
   private static void updateLocation(Connection connection, RegionInfo regionInfo, ServerName sn,
     long openSeqNum, long masterSystemTime) throws IOException {
     // region replicas are kept in the primary region's row
-    Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), masterSystemTime);
+    Put put = new Put(CatalogFamilyFormat.getCatalogKeyForRegion(regionInfo), masterSystemTime);
     addRegionInfo(put, regionInfo);
     addLocation(put, sn, openSeqNum, regionInfo.getReplicaId());
     putToCatalogTable(connection, getCatalogTableForTable(regionInfo.getTable()), put);

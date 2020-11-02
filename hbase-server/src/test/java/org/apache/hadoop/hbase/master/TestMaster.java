@@ -30,17 +30,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.PleaseHoldException;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -109,7 +100,7 @@ public class TestMaster {
       byte[] rowKey) throws IOException {
     final AtomicReference<Pair<RegionInfo, ServerName>> result = new AtomicReference<>(null);
 
-    ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
+    ClientCatalogAccessor.Visitor visitor = new ClientCatalogAccessor.Visitor() {
       @Override
       public boolean visit(Result data) throws IOException {
         if (data == null || data.size() <= 0) {

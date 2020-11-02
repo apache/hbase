@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -59,10 +59,10 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
         .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
     }
     if (TableName.isMetaTableName(tableName)) {
-      return ClientMetaTableAccessor
+      return ClientCatalogAccessor
         .getTableHRegionLocations(conn.getTable(TableName.ROOT_TABLE_NAME), tableName);
     }
-    return ClientMetaTableAccessor
+    return ClientCatalogAccessor
       .getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME), tableName);
   }
 

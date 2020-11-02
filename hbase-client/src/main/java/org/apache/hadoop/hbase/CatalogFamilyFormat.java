@@ -43,7 +43,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 
 /**
  * Helper class for generating/parsing
- * {@value org.apache.hadoop.hbase.HConstants#CATALOG_FAMILY_STR} family cells in meta table.
+ * {@value org.apache.hadoop.hbase.HConstants#CATALOG_FAMILY_STR} family cells in catalog tables.
  * <p/>
  * The cells in catalog family are:
  *
@@ -85,7 +85,7 @@ public class CatalogFamilyFormat {
 
   private static final Logger LOG = LoggerFactory.getLogger(CatalogFamilyFormat.class);
 
-  /** A regex for parsing server columns from meta. See above javadoc for meta layout */
+  /** A regex for parsing server columns from catalog. See above javadoc for catalog layout */
   private static final Pattern SERVER_COLUMN_PATTERN =
     Pattern.compile("^server(_[0-9a-fA-F]{4})?$");
 
@@ -132,12 +132,12 @@ public class CatalogFamilyFormat {
   }
 
   /**
-   * Returns the HRegionLocation parsed from the given meta row Result for the given regionInfo and
-   * replicaId. The regionInfo can be the default region info for the replica.
-   * @param r the meta row result
+   * Returns the HRegionLocation parsed from the given catalog row Result for the given regionInfo
+   * and replicaId. The regionInfo can be the default region info for the replica.
+   * @param r the catalog row result
    * @param regionInfo RegionInfo for default replica
    * @param replicaId the replicaId for the HRegionLocation
-   * @return HRegionLocation parsed from the given meta row Result for the given replicaId
+   * @return HRegionLocation parsed from the given catalog row Result for the given replicaId
    */
   public static HRegionLocation getRegionLocation(final Result r, final RegionInfo regionInfo,
     final int replicaId) {
@@ -251,7 +251,7 @@ public class CatalogFamilyFormat {
   }
 
   /**
-   * The latest seqnum that the server writing to meta observed when opening the region. E.g. the
+   * The latest seqnum that the server writing to catalog observed when opening the region. E.g. the
    * seqNum when the result of {@link getServerName} was written.
    * @param r Result to pull the seqNum from
    * @return SeqNum, or HConstants.NO_SEQNUM if there's no value written.
@@ -281,7 +281,7 @@ public class CatalogFamilyFormat {
 
   /**
    * Parses the replicaId from the server column qualifier. See top of the class javadoc for the
-   * actual meta layout
+   * actual catalog layout
    * @param serverColumn the column qualifier
    * @return an int for the replicaId
    */
@@ -302,7 +302,7 @@ public class CatalogFamilyFormat {
   }
 
   /** Returns the row key to use for this regionInfo */
-  public static byte[] getMetaKeyForRegion(RegionInfo regionInfo) {
+  public static byte[] getCatalogKeyForRegion(RegionInfo regionInfo) {
     return RegionReplicaUtil.getRegionInfoForDefaultReplica(regionInfo).getRegionName();
   }
 
@@ -329,7 +329,7 @@ public class CatalogFamilyFormat {
   }
 
   /**
-   * Decode table state from META Result. Should contain cell from HConstants.TABLE_FAMILY
+   * Decode table state from Catalog Result. Should contain cell from HConstants.TABLE_FAMILY
    * @return null if not found
    */
   @Nullable

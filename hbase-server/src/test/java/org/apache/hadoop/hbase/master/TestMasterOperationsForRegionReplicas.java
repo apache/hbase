@@ -35,18 +35,9 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.StartMiniClusterOption;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -337,7 +328,7 @@ public class TestMasterOperationsForRegionReplicas {
       Connection connection) throws IOException {
     assert (ADMIN.tableExists(table));
     final AtomicInteger count = new AtomicInteger();
-    ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
+    ClientCatalogAccessor.Visitor visitor = new ClientCatalogAccessor.Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
         if (CatalogFamilyFormat.getRegionInfo(r).getTable().equals(table)) {

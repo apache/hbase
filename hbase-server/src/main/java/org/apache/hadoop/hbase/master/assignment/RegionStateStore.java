@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -105,7 +105,7 @@ public class RegionStateStore {
   public void visitCatalogTable(TableName catalogTableName, final RegionStateVisitor visitor)
     throws IOException {
     CatalogAccessor.fullScanRegions(master.getConnection(), catalogTableName,
-      new ClientMetaTableAccessor.Visitor() {
+      new ClientCatalogAccessor.Visitor() {
         final boolean isDebugEnabled = LOG.isDebugEnabled();
 
         @Override
@@ -206,7 +206,7 @@ public class RegionStateStore {
         TableName.ROOT_TABLE_NAME : TableName.META_TABLE_NAME;
     long time = EnvironmentEdgeManager.currentTime();
     final int replicaId = regionInfo.getReplicaId();
-    final Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), time);
+    final Put put = new Put(CatalogFamilyFormat.getCatalogKeyForRegion(regionInfo), time);
     CatalogAccessor.addRegionInfo(put, regionInfo);
     final StringBuilder info =
       new StringBuilder("pid=").append(pid).append(" updating "+catalogTableName+" row=")
@@ -304,7 +304,7 @@ public class RegionStateStore {
 
   private Result getRegionCatalogResult(RegionInfo region) throws IOException {
     Get get =
-      new Get(CatalogFamilyFormat.getMetaKeyForRegion(region)).addFamily(HConstants.CATALOG_FAMILY);
+      new Get(CatalogFamilyFormat.getCatalogKeyForRegion(region)).addFamily(HConstants.CATALOG_FAMILY);
     try (Table table = getCatalogTableForTable(region.getTable())) {
       return table.get(get);
     }

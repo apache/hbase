@@ -17,48 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell.Type;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor.QueryType;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.Consistency;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.filter.RowFilter;
-import org.apache.hadoop.hbase.filter.SubstringComparator;
-import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ExceptionUtil;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * NOTE: This class is currently empty as all it's contents is in MetaTableAccessor. The
@@ -93,7 +52,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * The actual layout of meta should be encapsulated inside CatalogAccessor methods, and should not
  * leak out of it (through Result objects, etc)
  * @see CatalogFamilyFormat
- * @see ClientMetaTableAccessor
+ * @see ClientCatalogAccessor
  */
 @InterfaceAudience.Private
 public final class CatalogAccessor extends MetaTableAccessor {

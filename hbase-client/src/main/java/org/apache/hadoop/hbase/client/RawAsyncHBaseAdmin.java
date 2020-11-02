@@ -50,7 +50,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsAggregator;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -515,7 +515,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     if (TableName.isRootTableName(tableName) || TableName.isMetaTableName(tableName)) {
       return CompletableFuture.completedFuture(true);
     }
-    return ClientMetaTableAccessor.tableExists(metaTable, tableName);
+    return ClientCatalogAccessor.tableExists(metaTable, tableName);
   }
 
   @Override
@@ -730,7 +730,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return CompletableFuture.completedFuture(true);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(ClientMetaTableAccessor.getTableState(metaTable, tableName),
+    addListener(ClientCatalogAccessor.getTableState(metaTable, tableName),
       (tableState, error) -> {
         completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
           TableState.State.ENABLED, tableName);
@@ -744,7 +744,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return CompletableFuture.completedFuture(false);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(ClientMetaTableAccessor.getTableState(metaTable, tableName),
+    addListener(ClientCatalogAccessor.getTableState(metaTable, tableName),
       (tableState, error) -> {
         completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
           TableState.State.DISABLED, tableName);
@@ -772,7 +772,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.complete(false);
       } else {
         addListener(
-          ClientMetaTableAccessor.getTableHRegionLocations(
+          ClientCatalogAccessor.getTableHRegionLocations(
             TableName.isMetaTableName(tableName) ? rootTable : metaTable,
             tableName),
           (locations, error1) -> {
@@ -899,7 +899,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .thenApply(locs -> Stream.of(locs.getRegionLocations()).map(HRegionLocation::getRegion)
           .collect(Collectors.toList()));
     } else {
-      return ClientMetaTableAccessor.getTableHRegionLocations(
+      return ClientCatalogAccessor.getTableHRegionLocations(
         tableName.equals(META_TABLE_NAME) ? rootTable : metaTable,
         tableName)
         .thenApply(
@@ -1158,7 +1158,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return future;
     } else {
       // For non-root table, we fetch all locations by scanning the appropriate catalog table
-      return ClientMetaTableAccessor.getTableHRegionLocations(
+      return ClientCatalogAccessor.getTableHRegionLocations(
         META_TABLE_NAME.equals(tableName) ? rootTable : metaTable,
         tableName);
     }
@@ -1372,10 +1372,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
       addListener((META_TABLE_NAME.equals(tableName) ? rootTable : metaTable)
         .scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY)
-          .withStartRow(ClientMetaTableAccessor.getTableStartRowForMeta(tableName,
-            ClientMetaTableAccessor.QueryType.REGION))
-          .withStopRow(ClientMetaTableAccessor.getTableStopRowForMeta(tableName,
-            ClientMetaTableAccessor.QueryType.REGION))),
+          .withStartRow(ClientCatalogAccessor.getTableStartRowForCatalog(tableName,
+            ClientCatalogAccessor.QueryType.REGION))
+          .withStopRow(ClientCatalogAccessor.getTableStopRowForCatalog(tableName,
+            ClientCatalogAccessor.QueryType.REGION))),
         (results, err2) -> {
           if (err2 != null) {
             future.completeExceptionally(err2);
@@ -2426,11 +2426,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
           parentTable = null;
         } else if (encodedName.length() < RegionInfo.MD5_HEX_LENGTH) {
-          future = ClientMetaTableAccessor.getRegionLocationWithEncodedName(rootTable,
+          future = ClientCatalogAccessor.getRegionLocationWithEncodedName(rootTable,
             regionNameOrEncodedRegionName);
           parentTable = ROOT_TABLE_NAME;
         } else {
-          future = ClientMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
+          future = ClientCatalogAccessor.getRegionLocationWithEncodedName(metaTable,
             regionNameOrEncodedRegionName);
           parentTable = META_TABLE_NAME;
         }
@@ -2447,11 +2447,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         } else if (regionInfo.isMetaRegion())   {
           parentTable = ROOT_TABLE_NAME;
           future =
-            ClientMetaTableAccessor.getRegionLocation(rootTable, regionNameOrEncodedRegionName);
+            ClientCatalogAccessor.getRegionLocation(rootTable, regionNameOrEncodedRegionName);
         } else {
           parentTable = META_TABLE_NAME;
           future =
-            ClientMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
+            ClientCatalogAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
         }
       }
 
@@ -2468,7 +2468,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               "Didn't find encoded name in hbase:meta, trying hbase:root for region : {}",
                 Bytes.toStringBinary(regionNameOrEncodedRegionName));
             CompletableFuture<Optional<HRegionLocation>> innerfuture =
-              ClientMetaTableAccessor.getRegionLocationWithEncodedName(rootTable,
+              ClientCatalogAccessor.getRegionLocationWithEncodedName(rootTable,
                 regionNameOrEncodedRegionName);
             addListener(innerfuture, (innerlocation, innererr) -> {
               if (innererr != null) {

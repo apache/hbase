@@ -877,12 +877,12 @@ public final class HConstants {
    * enable faster scanners but will eat up more memory and some calls of next
    * may take longer and longer times when the cache is empty.
    */
-  public static final String HBASE_META_SCANNER_CACHING = "hbase.meta.scanner.caching";
+  public static final String HBASE_CATALOG_SCANNER_CACHING = "hbase.meta.scanner.caching";
 
   /**
-   * Default value of {@link #HBASE_META_SCANNER_CACHING}.
+   * Default value of {@link #HBASE_CATALOG_SCANNER_CACHING}.
    */
-  public static final int DEFAULT_HBASE_META_SCANNER_CACHING = 100;
+  public static final int DEFAULT_HBASE_CATALOG_SCANNER_CACHING = 100;
 
   /**
    * Parameter name for number of versions, kept by meta table.

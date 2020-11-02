@@ -3240,7 +3240,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   @Nullable
   public TableState findLastTableState(final TableName table) throws IOException {
     final AtomicReference<TableState> lastTableState = new AtomicReference<>(null);
-    ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
+    ClientCatalogAccessor.Visitor visitor = new ClientCatalogAccessor.Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
         if (!Arrays.equals(r.getRow(), table.getName())) {
@@ -3254,7 +3254,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       }
     };
     MetaTableAccessor.scanMeta(getConnection(), null, null,
-      ClientMetaTableAccessor.QueryType.TABLE, Integer.MAX_VALUE, visitor);
+      ClientCatalogAccessor.QueryType.TABLE, Integer.MAX_VALUE, visitor);
     return lastTableState.get();
   }
 

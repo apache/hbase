@@ -33,18 +33,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.ipc.CallRunner;
 import org.apache.hadoop.hbase.ipc.DelegatingRpcScheduler;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -425,7 +421,7 @@ public class TestCatalogAccessor {
     // Make sure all the regions are deployed
     HBaseTestingUtility.countRows(table);
 
-    ClientMetaTableAccessor.Visitor visitor = mock(ClientMetaTableAccessor.Visitor.class);
+    ClientCatalogAccessor.Visitor visitor = mock(ClientCatalogAccessor.Visitor.class);
     doReturn(true).when(visitor).visit((Result) anyObject());
 
     // Scanning the entire table should give us three rows

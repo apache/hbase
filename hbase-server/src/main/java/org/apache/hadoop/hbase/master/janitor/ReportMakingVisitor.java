@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.master.janitor;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * {@link #close()}'d.
  */
 @InterfaceAudience.Private
-class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
+class ReportMakingVisitor implements ClientCatalogAccessor.CloseableVisitor {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReportMakingVisitor.class);
 

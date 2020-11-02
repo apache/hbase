@@ -31,14 +31,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
@@ -106,7 +101,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
     LOG.info("Start to scan the hbase:meta for the current region assignment " +
       "snappshot");
     // TODO: at some point this code could live in the MetaTableAccessor
-    ClientMetaTableAccessor.Visitor v = new ClientMetaTableAccessor.Visitor() {
+    ClientCatalogAccessor.Visitor v = new ClientCatalogAccessor.Visitor() {
       @Override
       public boolean visit(Result result) throws IOException {
         try {

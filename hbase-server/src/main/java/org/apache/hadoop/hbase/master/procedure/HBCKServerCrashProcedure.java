@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.CatalogAccessor;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.ClientMetaTableAccessor;
+import org.apache.hadoop.hbase.ClientCatalogAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -116,7 +116,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
    * Visitor for hbase:meta that 'fixes' Unknown Server issues. Collects a List of Regions to
    * reassign as 'result'.
    */
-  private static final class UnknownServerVisitor implements ClientMetaTableAccessor.Visitor {
+  private static final class UnknownServerVisitor implements ClientCatalogAccessor.Visitor {
     private final List<RegionInfo> reassigns = new ArrayList<>();
     private final ServerName unknownServerName;
     private final Connection connection;
