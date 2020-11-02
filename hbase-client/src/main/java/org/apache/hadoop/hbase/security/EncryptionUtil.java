@@ -198,6 +198,10 @@ public final class EncryptionUtil {
     Encryption.Context cryptoContext = Encryption.Context.NONE;
     String cipherName = family.getEncryptionType();
     if (cipherName != null) {
+      if(!Encryption.isEncryptionEnabled(conf)) {
+        throw new RuntimeException("Encryption for family '" + family.getNameAsString()
+          + "' configured with type '" + cipherName + "' but the encryption feature is disabled");
+      }
       Cipher cipher;
       Key key;
       byte[] keyBytes = family.getEncryptionKey();

@@ -21,7 +21,6 @@ import static java.lang.String.format;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.DigestException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -53,6 +52,17 @@ public final class Encryption {
 
   private static final Logger LOG = LoggerFactory.getLogger(Encryption.class);
 
+
+  /**
+   * Configuration key for globally enable / disable column family encryption
+   */
+  public static final String CRYPTO_ENABLED_CONF_KEY = "hbase.crypto.enabled";
+
+  /**
+   * Default value for globally enable / disable column family encryption
+   * (set to "true" for backward compatibility)
+   */
+  public static final boolean CRYPTO_ENABLED_CONF_DEFAULT = true;
 
   /**
    * Configuration key for the hash algorithm used for generating key hash in encrypted HFiles.
@@ -132,6 +142,14 @@ public final class Encryption {
   // Prevent instantiation
   private Encryption() {
     super();
+  }
+
+
+  /**
+   * Returns true if the column family encryption feature is enabled globally.
+   */
+  public static boolean isEncryptionEnabled(Configuration conf) {
+    return conf.getBoolean(CRYPTO_ENABLED_CONF_KEY, CRYPTO_ENABLED_CONF_DEFAULT);
   }
 
   /**
