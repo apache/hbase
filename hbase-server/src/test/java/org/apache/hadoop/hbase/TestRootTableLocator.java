@@ -139,7 +139,7 @@ public class TestRootTableLocator {
     assertNull(RootTableLocator.getRootRegionLocation(this.watcher));
   }
 
-  @Test(expected = NotAllRootRegionsOnlineException.class)
+  @Test(expected = NotAllMetaRegionsOnlineException.class)
   public void testTimeoutWaitForMeta() throws IOException, InterruptedException {
     RootTableLocator.waitRootRegionLocation(watcher, 100);
   }
@@ -198,7 +198,7 @@ public class TestRootTableLocator {
             break;
           }
         }
-      } catch (NotAllRootRegionsOnlineException e) {
+      } catch (NotAllMetaRegionsOnlineException e) {
         // Ignore
       }
     }

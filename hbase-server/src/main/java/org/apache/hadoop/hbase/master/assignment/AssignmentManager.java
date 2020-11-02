@@ -506,7 +506,6 @@ public class AssignmentManager {
 
   private ProcedureEvent<?> getRootAssignEvent(RegionInfo rootRegionInfo) {
     assert isRootRegion(rootRegionInfo) : "unexpected non-catalog region " + rootRegionInfo;
-    // TODO: handle multiple root.
     return rootAssignEvent;
   }
 
@@ -1667,13 +1666,13 @@ public class AssignmentManager {
     LOG.debug("Joining cluster...");
 
     // FIRST Catalog tables READ!!!!
-    // The below cannot make progress w/o hbase:meta being online.
-    // This is the FIRST attempt at going to hbase:meta. Meta on-lining is going on in background
-    // as procedures run -- in particular SCPs for crashed servers... One should put up hbase:meta
-    // if it is down. It may take a while to come online. So, wait here until meta if for sure
-    // available. That's what waitForXXXXOnline does.
-
-
+    // The section below cannot make progress w/o the catalog tables loaded (ie into RegionStates).
+    // The tables are onlined and loaded serially as we need to load hbase:root to determine
+    // the hbase:meta regions to online and load.
+    // This is the first time the catalog tables will be onlined. The assignment process is
+    // going to be done in the background as procedures run (eg SCP).
+    // We have to wait until each catalog table is onlined as we need to read the contents
+    // before proceding to the next step in the sequence.
 
     LOG.debug("Waiting for hbase:root to be online.");
     if (shouldWaitForRootOnline && !waitForRootOnline()) {

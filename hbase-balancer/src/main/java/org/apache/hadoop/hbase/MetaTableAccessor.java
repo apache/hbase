@@ -77,6 +77,9 @@ public class MetaTableAccessor {
   ////////////////////////
 
   /**
+   * This scans hbase:meta only. Method will be renamed once this class
+   * is fully replaced by CatalogAccessor.
+   *
    * Performs a full scan of <code>hbase:meta</code> for regions.
    * @param connection connection we're using
    * @param visitor Visitor invoked against each row in regions family.
@@ -87,7 +90,9 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Performs a full scan of <code>hbase:meta</code> for regions.
+   * Performs a full scan of the specified catalog table for regions.
+   *
+   * @param catalogTableName the catalog table to scan
    * @param connection connection we're using
    * @param visitor Visitor invoked against each row in regions family.
    */
@@ -98,6 +103,9 @@ public class MetaTableAccessor {
   }
 
   /**
+   * This scans hbase:meta only. Method will be renamed (or replaced) once this class
+   * is fully replaced by CatalogAccessor.
+   *
    * Performs a full scan of <code>hbase:meta</code> for regions.
    * @param connection connection we're using
    */
@@ -176,21 +184,21 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Returns the HRegionLocation from meta for the given region
+   * Returns the HRegionLocation from the appropriate catalog table for the given region
    * @param connection connection we're using
    * @param regionName region we're looking for
-   * @return HRegionLocation for the given region
+   * @return HRegionLocation for the given region or null if not found
    */
   public static HRegionLocation getRegionLocation(Connection connection, byte[] regionName)
     throws IOException {
-    byte[] row = regionName;
+    byte[] row;
     RegionInfo parsedInfo = null;
     try {
       parsedInfo = CatalogFamilyFormat.parseRegionInfoFromRegionName(regionName);
       row = CatalogFamilyFormat.getMetaKeyForRegion(parsedInfo);
     } catch (Exception parseEx) {
+      // This is used with tableName passed as regionName.
       return null;
-      // Ignore. This is used with tableName passed as regionName.
     }
     Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
@@ -204,7 +212,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Returns the HRegionLocation from meta for the given region
+   * Returns the HRegionLocation from the appropriate catalog table for the given region
    * @param connection connection we're using
    * @param regionInfo region information
    * @return HRegionLocation for the given region
@@ -216,7 +224,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @return Return the {@link HConstants#CATALOG_FAMILY} row from hbase:meta.
+   * @return Return the {@link HConstants#CATALOG_FAMILY} row from the appropriate catalog table.
    */
   public static Result getCatalogFamilyRow(Connection connection, RegionInfo ri)
     throws IOException {
@@ -227,6 +235,9 @@ public class MetaTableAccessor {
     }
   }
 
+  /**
+   * @return the table name of the catalog that contains the passed table name
+   */
   public static TableName getCatalogTableForTable(TableName tableName) {
     if (TableName.ROOT_TABLE_NAME.equals(tableName)) {
       throw new IllegalStateException("Can't get catalog table for hbase:root table");
@@ -237,13 +248,16 @@ public class MetaTableAccessor {
     return TableName.META_TABLE_NAME;
   }
 
+  /**
+   * @return true if the passed tableName is a catalog table (eg hbase:root or hbase:meta)
+   */
   public static boolean isCatalogTable(TableName tableName) {
     return tableName.equals(TableName.ROOT_TABLE_NAME) ||
       tableName.equals(TableName.META_TABLE_NAME);
   }
 
   /**
-   * Gets the result in hbase:meta for the specified region.
+   * Gets the result in the appropriate catalog table for the specified region.
    * @param connection connection we're using
    * @param regionName region we're looking for
    * @return result of the specified region
@@ -254,23 +268,24 @@ public class MetaTableAccessor {
     if (Bytes.equals(RegionInfoBuilder.ROOT_REGIONINFO.getRegionName(), regionName)) {
       throw new IllegalStateException("This method cannot be used for hbase:root region");
     }
+    Get get = new Get(regionName);
+    get.addFamily(HConstants.CATALOG_FAMILY);
     catalogTable = getCatalogHTable(connection,
       getCatalogTableForTable(
         CatalogFamilyFormat.parseRegionInfoFromRegionName(regionName).getTable()));
-    Get get = new Get(regionName);
-    get.addFamily(HConstants.CATALOG_FAMILY);
     try (Table t = catalogTable) {
       return t.get(get);
     }
   }
 
   /**
-   * Scans META table for a row whose key contains the specified <B>regionEncodedName</B>, returning
+   * Scans catalog tables for a row whose key contains the specified <B>regionEncodedName</B>, returning
    * a single related <code>Result</code> instance if any row is found, null otherwise.
-   * @param connection the connection to query META table.
-   * @param regionEncodedName the region encoded name to look for at META.
-   * @return <code>Result</code> instance with the row related info in META, null otherwise.
-   * @throws IOException if any errors occur while querying META.
+   * @param connection the connection to query the catalog tables.
+   * @param regionEncodedName the region encoded name to look for in the catalog.
+   * @return <code>Result</code> instance with the row related info in the catalogtables,
+   * null otherwise.
+   * @throws IOException if any errors occur while querying the catalog tables.
    */
   public static Result scanByRegionEncodedName(Connection connection, String regionEncodedName)
     throws IOException {
@@ -295,6 +310,9 @@ public class MetaTableAccessor {
   }
 
   /**
+   * This method will be renamed/replaced once this class is fully deprecated and replaced
+   * by CatalogAccessor.
+   *
    * Lists all of the regions currently in META.
    * @param connection to connect with
    * @param excludeOfflinedSplitParents False if we are to include offlined/splitparents regions,
@@ -313,7 +331,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Gets all of the regions of the specified table. Do not use this method to get meta table
+   * Gets all of the regions of the specified table. Do not use this method to get root table
    * regions, use methods in RootTableLocator instead.
    * @param connection connection we're using
    * @param tableName table we're looking for
@@ -325,7 +343,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Gets all of the regions of the specified table. Do not use this method to get meta table
+   * Gets all of the regions of the specified table. Do not use this method to get root table
    * regions, use methods in RootTableLocator instead.
    * @param connection connection we're using
    * @param tableName table we're looking for
@@ -387,7 +405,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Do not use this method to get meta table regions, use methods in RootTableLocator instead.
+   * Do not use this method to get root table regions, use methods in RootTableLocator instead.
    * @param connection connection we're using
    * @param tableName table we're looking for
    * @return Return list of regioninfos and server.
@@ -398,7 +416,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Do not use this method to get meta table regions, use methods in RootTableLocator instead.
+   * Do not use this method to get root table regions, use methods in RootTableLocator instead.
    * @param connection connection we're using
    * @param tableName table to work with, can be null for getting all regions
    * @param excludeOfflinedSplitParents don't return split parents
@@ -505,8 +523,9 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Performs a scan of META table.
+   * Performs a scan of specified table.
    * @param connection connection we're using
+   * @param catalogTable the catalog table to scan
    * @param startRow Where to start the scan. Pass null if want to begin scan at first row.
    * @param stopRow Where to stop the scan. Pass null if want to scan all rows from the start one
    * @param type scanned part of meta
@@ -554,9 +573,9 @@ public class MetaTableAccessor {
     }
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Scanning META" + " starting at row=" + Bytes.toStringBinary(startRow) +
-        " stopping at row=" + Bytes.toStringBinary(stopRow) + " for max=" + rowUpperLimit +
-        " with caching=" + scan.getCaching());
+      LOG.trace("Scanning " + catalogTableName + " starting at row=" +
+        Bytes.toStringBinary(startRow) + " stopping at row=" + Bytes.toStringBinary(stopRow) +
+        " for max=" + rowUpperLimit + " with caching=" + scan.getCaching());
     }
 
     int currentRow = 0;
@@ -588,7 +607,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @return Get closest metatable region row to passed <code>row</code>
+   * @return Get closest catalog table region row to passed <code>row</code>
    */
   @NonNull
   private static RegionInfo getClosestRegionInfo(Connection connection,
@@ -741,12 +760,14 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Put the passed <code>p</code> to the <code>hbase:meta</code> table.
+   * Put the passed <code>p</code> to the specified catalog table.
    * @param connection connection we're using
-   * @param p Put to add to hbase:meta
+   * @param catalogTable hbase:root or hbase:meta table
+   * @param p Put to add to catalog table
    */
-  private static void putToMetaTable(Connection connection, Put p) throws IOException {
-    try (Table table = getCatalogHTable(connection, TableName.META_TABLE_NAME)) {
+  private static void putToCatalogTable(Connection connection, TableName catalogTable, Put p)
+    throws IOException {
+    try (Table table = getCatalogHTable(connection, catalogTable)) {
       put(table, p);
     }
   }
@@ -908,7 +929,7 @@ public class MetaTableAccessor {
    */
   private static void updateTableState(Connection connection, TableState state) throws IOException {
     Put put = makePutFromTableState(state, EnvironmentEdgeManager.currentTime());
-    putToMetaTable(connection, put);
+    putToCatalogTable(connection, TableName.META_TABLE_NAME, put);
     LOG.info("Updated {} in hbase:meta", state);
   }
 
@@ -940,8 +961,8 @@ public class MetaTableAccessor {
    * Updates the location of the specified region in hbase:meta to be the specified server hostname
    * and startcode.
    * <p>
-   * Uses passed catalog tracker to get a connection to the server hosting hbase:meta and makes
-   * edits to that region.
+   * Uses passed catalog tracker to get a connection to the server hosting the appropriate
+   * catalog table region and makes edits to that region.
    * @param connection connection we're using
    * @param regionInfo region to update location of
    * @param openSeqNum the latest sequence number obtained when the region was open
@@ -973,7 +994,7 @@ public class MetaTableAccessor {
     Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), masterSystemTime);
     addRegionInfo(put, regionInfo);
     addLocation(put, sn, openSeqNum, regionInfo.getReplicaId());
-    putToMetaTable(connection, put);
+    putToCatalogTable(connection, getCatalogTableForTable(regionInfo.getTable()), put);
     LOG.info("Updated row {} with server=", regionInfo.getRegionNameAsString(), sn);
   }
 

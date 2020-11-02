@@ -175,6 +175,11 @@ public interface CellComparator extends Comparator<Cell> {
    */
   Comparator getSimpleComparator();
 
+  /**
+   * Utility method that makes a guess at comparator to use based off passed tableName.
+   * Use in extreme when no comparator specified.
+   * @return CellComparator to use going off the {@code tableName} passed.
+   */
   static CellComparator getComparator(TableName tableName) {
     if (tableName.equals(TableName.ROOT_TABLE_NAME)) {
       return RootCellComparator.ROOT_COMPARATOR;

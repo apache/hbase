@@ -51,8 +51,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveM
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetActiveMasterResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRootRegionLocationsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRootRegionLocationsResponse;
 
 @Category({MediumTests.class, MasterTests.class})
 public class TestClientMetaServiceRPCs {
@@ -150,10 +150,10 @@ public class TestClientMetaServiceRPCs {
       TEST_UTIL.getMiniHBaseCluster().getMasterThreads()) {
       ClientMetaService.BlockingInterface stub =
           getMasterStub(masterThread.getMaster().getServerName());
-      GetMetaRegionLocationsResponse resp = stub.getMetaRegionLocations(
-          rpcController, GetMetaRegionLocationsRequest.getDefaultInstance());
+      GetRootRegionLocationsResponse resp = stub.getRootRegionLocations(
+          rpcController, GetRootRegionLocationsRequest.getDefaultInstance());
       List<HRegionLocation> result = new ArrayList<>();
-      resp.getMetaLocationsList().forEach(
+      resp.getRootLocationsList().forEach(
         location -> result.add(ProtobufUtil.toRegionLocation(location)));
       Collections.sort(result);
       assertEquals(metaLocations, result);

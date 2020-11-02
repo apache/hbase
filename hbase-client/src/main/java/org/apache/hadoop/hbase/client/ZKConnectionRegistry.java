@@ -191,7 +191,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   }
 
   @Override
-  public CompletableFuture<RegionLocations> getMetaRegionLocations() {
+  public CompletableFuture<RegionLocations> getRootRegionLocations() {
     CompletableFuture<RegionLocations> future = new CompletableFuture<>();
     addListener(
       zk.list(znodePaths.baseZNode)

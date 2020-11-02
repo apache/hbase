@@ -123,7 +123,7 @@ public class TestMasterRegistry {
         assertEquals(registry.getClusterId().get(), activeMaster.getClusterId());
         assertEquals(registry.getActiveMaster().get(), activeMaster.getServerName());
         List<HRegionLocation> metaLocations =
-          Arrays.asList(registry.getMetaRegionLocations().get().getRegionLocations());
+          Arrays.asList(registry.getRootRegionLocations().get().getRegionLocations());
         List<HRegionLocation> actualMetaLocations =
           activeMaster.getMetaRegionLocationCache().getMetaRegionLocations().get();
         Collections.sort(metaLocations);

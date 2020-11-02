@@ -32,7 +32,7 @@ public class DummyConnectionRegistry implements ConnectionRegistry {
       HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY;
 
   @Override
-  public CompletableFuture<RegionLocations> getMetaRegionLocations() {
+  public CompletableFuture<RegionLocations> getRootRegionLocations() {
     return null;
   }
 

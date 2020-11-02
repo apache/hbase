@@ -50,7 +50,7 @@ public class TestAsyncRootRegionLocatorFailFast {
     }
 
     @Override
-    public CompletableFuture<RegionLocations> getMetaRegionLocations() {
+    public CompletableFuture<RegionLocations> getRootRegionLocations() {
       return FutureUtils.failedFuture(new DoNotRetryRegionException("inject error"));
     }
   }

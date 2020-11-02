@@ -26,7 +26,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.NotAllRootRegionsOnlineException;
+import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
@@ -225,14 +225,14 @@ public final class ProcedureSyncWait {
   protected static void waitMetaRegions(final MasterProcedureEnv env) throws IOException {
     int timeout = env.getMasterConfiguration().getInt("hbase.client.catalog.timeout", 10000);
     try {
-      //TODO francis we actually need to check for meta here since it is called in
-      // CreateTableProcedure, we might need an equivalent root check too?
-      if (RootTableLocator.waitRootRegionLocation(env.getMasterServices().getZooKeeper(),
-        timeout) == null) {
-        throw new NotAllRootRegionsOnlineException();
-      }
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+      waitFor(env, timeout,  "meta regions online",
+          new ProcedureSyncWait.Predicate<Boolean>() {
+        @Override public Boolean evaluate() throws IOException {
+          return env.getAssignmentManager().waitForMetaOnline();
+        }
+      });
+    } catch (TimeoutIOException ex) {
+      throw new NotAllMetaRegionsOnlineException();
     }
   }
 

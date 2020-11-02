@@ -96,7 +96,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * @see ClientMetaTableAccessor
  */
 @InterfaceAudience.Private
-public class CatalogAccessor extends MetaTableAccessor {
+public final class CatalogAccessor extends MetaTableAccessor {
 
 
 }

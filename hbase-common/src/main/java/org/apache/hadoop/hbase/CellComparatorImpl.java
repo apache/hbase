@@ -284,28 +284,4 @@ public class CellComparatorImpl implements CellComparator {
   public Comparator getSimpleComparator() {
     return new BBKVComparator(this);
   }
-
-  /**
-   * Utility method that makes a guess at comparator to use based off passed tableName.
-   * Use in extreme when no comparator specified.
-   * @return CellComparator to use going off the {@code tableName} passed.
-   */
-  public static CellComparator getCellComparator(TableName tableName) {
-    return getCellComparator(tableName.toBytes());
-  }
-
-  /**
-   * Utility method that makes a guess at comparator to use based off passed tableName.
-   * Use in extreme when no comparator specified.
-   * @return CellComparator to use going off the {@code tableName} passed.
-   */
-  public static CellComparator getCellComparator(byte [] tableName) {
-    if (Bytes.equals(tableName, TableName.ROOT_TABLE_NAME.toBytes())) {
-      return RootCellComparator.ROOT_COMPARATOR;
-    }
-    if (Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())) {
-      return MetaCellComparator.META_COMPARATOR;
-    }
-    return CellComparatorImpl.COMPARATOR;
-  }
 }

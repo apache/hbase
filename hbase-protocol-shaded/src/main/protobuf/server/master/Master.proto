@@ -1302,12 +1302,12 @@ message GetMastersResponse {
   repeated GetMastersResponseEntry master_servers = 1;
 }
 
-/** Request and response to get the current list of meta region locations */
-message GetMetaRegionLocationsRequest {
+/** Request and response to get the current list of root region locations */
+message GetRootRegionLocationsRequest {
 }
-message GetMetaRegionLocationsResponse {
+message GetRootRegionLocationsResponse {
   /** Not set if meta region locations could not be determined. */
-  repeated RegionLocation meta_locations = 1;
+  repeated RegionLocation root_locations = 1;
 }
 
 /**
@@ -1334,5 +1334,5 @@ service ClientMetaService {
   /**
    * Get current meta replicas' region locations.
    */
-  rpc GetMetaRegionLocations(GetMetaRegionLocationsRequest) returns(GetMetaRegionLocationsResponse);
+  rpc GetRootRegionLocations(GetRootRegionLocationsRequest) returns(GetRootRegionLocationsResponse);
 }

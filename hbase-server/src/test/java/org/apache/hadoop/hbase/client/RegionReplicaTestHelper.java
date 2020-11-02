@@ -58,7 +58,7 @@ public final class RegionReplicaTestHelper {
         @Override
         public boolean evaluate() {
           try {
-            RegionLocations locs = registry.getMetaRegionLocations().get();
+            RegionLocations locs = registry.getRootRegionLocations().get();
             if (locs.size() < regionReplicaCount) {
               return false;
             }

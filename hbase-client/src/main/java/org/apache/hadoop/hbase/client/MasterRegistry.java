@@ -64,8 +64,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCluster
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersResponseEntry;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRootRegionLocationsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRootRegionLocationsResponse;
 
 /**
  * Master based registry implementation. Makes RPCs to the configured master addresses from config
@@ -259,18 +259,18 @@ public class MasterRegistry implements ConnectionRegistry {
   /**
    * Simple helper to transform the result of getMetaRegionLocations() rpc.
    */
-  private static RegionLocations transformMetaRegionLocations(GetMetaRegionLocationsResponse resp) {
+  private static RegionLocations transformRootRegionLocations(GetRootRegionLocationsResponse resp) {
     List<HRegionLocation> regionLocations = new ArrayList<>();
-    resp.getMetaLocationsList()
+    resp.getRootLocationsList()
       .forEach(location -> regionLocations.add(ProtobufUtil.toRegionLocation(location)));
     return new RegionLocations(regionLocations);
   }
 
   @Override
-  public CompletableFuture<RegionLocations> getMetaRegionLocations() {
-    return this.<GetMetaRegionLocationsResponse> call((c, s, d) -> s.getMetaRegionLocations(c,
-      GetMetaRegionLocationsRequest.getDefaultInstance(), d), r -> r.getMetaLocationsCount() != 0,
-      "getMetaLocationsCount").thenApply(MasterRegistry::transformMetaRegionLocations);
+  public CompletableFuture<RegionLocations> getRootRegionLocations() {
+    return this.<GetRootRegionLocationsResponse> call((c, s, d) -> s.getRootRegionLocations(c,
+      GetRootRegionLocationsRequest.getDefaultInstance(), d), r -> r.getRootLocationsCount() != 0,
+      "getMetaLocationsCount").thenApply(MasterRegistry::transformRootRegionLocations);
   }
 
   @Override

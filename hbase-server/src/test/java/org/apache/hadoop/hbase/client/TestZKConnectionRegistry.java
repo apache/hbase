@@ -84,7 +84,7 @@ public class TestZKConnectionRegistry {
       REGISTRY.getActiveMaster().get());
     RegionReplicaTestHelper
       .waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
-    RegionLocations locs = REGISTRY.getMetaRegionLocations().get();
+    RegionLocations locs = REGISTRY.getRootRegionLocations().get();
     assertEquals(3, locs.getRegionLocations().length);
     IntStream.range(0, 3).forEach(i -> {
       HRegionLocation loc = locs.getRegionLocation(i);
@@ -118,7 +118,7 @@ public class TestZKConnectionRegistry {
     conf.set("zookeeper.znode.metaserver", "whatever");
     try (ZKConnectionRegistry registry = new ZKConnectionRegistry(conf)) {
       try {
-        registry.getMetaRegionLocations().get();
+        registry.getRootRegionLocations().get();
         fail("Should have failed since we set an incorrect meta znode prefix");
       } catch (ExecutionException e) {
         assertThat(e.getCause(), instanceOf(IOException.class));

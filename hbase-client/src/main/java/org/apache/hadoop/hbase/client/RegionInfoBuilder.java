@@ -34,13 +34,11 @@ public class RegionInfoBuilder {
     RegionInfoBuilder.newBuilder(TableName.valueOf("__UNDEFINED__")).build();
 
   /**
-   * RegionInfo for first root region
+   * RegionInfo for root region
    * You cannot use this builder to make an instance of the {@link #ROOT_REGIONINFO}.
    * Just refer to this instance. Also, while the instance is actually a MutableRI, its type is
    * just RI so the mutable methods are not available (unless you go casting); it appears
    * as immutable (I tried adding Immutable type but it just makes a mess).
-   *
-   * We are using the non-legacy encoding format to reduce the boilerplace code
    */
   public static final RegionInfo ROOT_REGIONINFO =
     new MutableRegionInfo(TableName.ROOT_TABLE_NAME,

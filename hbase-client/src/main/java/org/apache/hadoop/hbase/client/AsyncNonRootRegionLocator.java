@@ -67,7 +67,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 
 /**
- * The asynchronous locator for regions other than meta.
+ * The asynchronous locator for regions other than root.
  */
 @InterfaceAudience.Private
 class AsyncNonRootRegionLocator {

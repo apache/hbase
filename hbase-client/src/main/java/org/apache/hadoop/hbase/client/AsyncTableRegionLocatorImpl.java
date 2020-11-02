@@ -55,7 +55,7 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
   @Override
   public CompletableFuture<List<HRegionLocation>> getAllRegionLocations() {
     if (TableName.isRootTableName(tableName)) {
-      return conn.registry.getMetaRegionLocations()
+      return conn.registry.getRootRegionLocations()
         .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
     }
     if (TableName.isMetaTableName(tableName)) {

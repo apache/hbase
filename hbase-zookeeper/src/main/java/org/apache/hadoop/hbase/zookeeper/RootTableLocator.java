@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.NotAllRootRegionsOnlineException;
+import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -153,10 +153,10 @@ public final class RootTableLocator {
    * @return server name for server hosting root region formatted as per {@link ServerName}, or null
    *         if none available
    * @throws InterruptedException if interrupted while waiting
-   * @throws NotAllRootRegionsOnlineException if a meta or root region is not online
+   * @throws NotAllMetaRegionsOnlineException if a meta or root region is not online
    */
   public static ServerName waitRootRegionLocation(ZKWatcher zkw, long timeout)
-      throws InterruptedException, NotAllRootRegionsOnlineException {
+      throws InterruptedException, NotAllMetaRegionsOnlineException {
     return waitRootRegionLocation(zkw, RegionInfo.DEFAULT_REPLICA_ID, timeout);
   }
 
@@ -170,10 +170,10 @@ public final class RootTableLocator {
    * @return server name for server hosting root region formatted as per {@link ServerName}, or null
    *         if none available
    * @throws InterruptedException if waiting for the socket operation fails
-   * @throws NotAllRootRegionsOnlineException if a roo or root region is not online
+   * @throws NotAllMetaRegionsOnlineException if a roo or root region is not online
    */
   public static ServerName waitRootRegionLocation(ZKWatcher zkw, int replicaId, long timeout)
-      throws InterruptedException, NotAllRootRegionsOnlineException {
+      throws InterruptedException, NotAllMetaRegionsOnlineException {
     try {
       if (ZKUtil.checkExists(zkw, zkw.getZNodePaths().baseZNode) == -1) {
         String errorMsg = "Check the value configured in 'zookeeper.znode.parent'. " +
@@ -187,7 +187,7 @@ public final class RootTableLocator {
     ServerName sn = blockUntilAvailable(zkw, replicaId, timeout);
 
     if (sn == null) {
-      throw new NotAllRootRegionsOnlineException("Timed out; " + timeout + "ms");
+      throw new NotAllMetaRegionsOnlineException("Timed out; " + timeout + "ms");
     }
 
     return sn;

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -115,7 +116,8 @@ public class HFileContext implements HeapSize, Cloneable {
     // If no cellComparator specified, make a guess based off tablename. If hbase:meta, then should
     // be the meta table comparator. Comparators are per table.
     this.cellComparator = cellComparator != null ? cellComparator : this.tableName != null ?
-      CellComparatorImpl.getCellComparator(this.tableName) : CellComparator.getInstance();
+      CellComparator.getComparator(TableName.valueOf(this.tableName)) :
+          CellComparator.getInstance();
   }
 
   /**

@@ -32,9 +32,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 interface ConnectionRegistry extends Closeable {
 
   /**
-   * Get the location of meta region(s).
+   * Get the location of root region.
    */
-  CompletableFuture<RegionLocations> getMetaRegionLocations();
+  CompletableFuture<RegionLocations> getRootRegionLocations();
 
   /**
    * Should only be called once.

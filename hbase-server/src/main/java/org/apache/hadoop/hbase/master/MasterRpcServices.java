@@ -220,8 +220,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetLocksRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersResponseEntry;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRootRegionLocationsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetRootRegionLocationsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
@@ -2994,15 +2994,14 @@ public class MasterRpcServices extends RSRpcServices implements
     return resp.build();
   }
 
-  //TODO francis this needs to be get RootLocation now?
   @Override
-  public GetMetaRegionLocationsResponse getMetaRegionLocations(RpcController rpcController,
-      GetMetaRegionLocationsRequest request) throws ServiceException {
-    GetMetaRegionLocationsResponse.Builder response = GetMetaRegionLocationsResponse.newBuilder();
+  public GetRootRegionLocationsResponse getRootRegionLocations(RpcController rpcController,
+      GetRootRegionLocationsRequest request) throws ServiceException {
+    GetRootRegionLocationsResponse.Builder response = GetRootRegionLocationsResponse.newBuilder();
     Optional<List<HRegionLocation>> metaLocations =
         master.getMetaRegionLocationCache().getMetaRegionLocations();
     metaLocations.ifPresent(hRegionLocations -> hRegionLocations.forEach(
-      location -> response.addMetaLocations(ProtobufUtil.toRegionLocation(location))));
+      location -> response.addRootLocations(ProtobufUtil.toRegionLocation(location))));
     return response.build();
   }
 

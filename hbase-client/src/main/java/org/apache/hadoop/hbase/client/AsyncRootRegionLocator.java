@@ -60,7 +60,7 @@ class AsyncRootRegionLocator {
    */
   CompletableFuture<RegionLocations> getRegionLocations(int replicaId, boolean reload) {
     return ConnectionUtils.getOrFetch(metaRegionLocations, metaRelocateFuture, reload,
-      registry::getMetaRegionLocations, locs -> isGood(locs, replicaId), "meta region location");
+      registry::getRootRegionLocations, locs -> isGood(locs, replicaId), "meta region location");
   }
 
   private HRegionLocation getCacheLocation(HRegionLocation loc) {

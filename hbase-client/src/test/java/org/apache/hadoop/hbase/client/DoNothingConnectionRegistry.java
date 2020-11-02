@@ -33,7 +33,7 @@ class DoNothingConnectionRegistry implements ConnectionRegistry {
   }
 
   @Override
-  public CompletableFuture<RegionLocations> getMetaRegionLocations() {
+  public CompletableFuture<RegionLocations> getRootRegionLocations() {
     return CompletableFuture.completedFuture(null);
   }
 
