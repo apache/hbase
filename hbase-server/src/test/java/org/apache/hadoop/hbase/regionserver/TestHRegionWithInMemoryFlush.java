@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -51,7 +53,8 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion {
    */
   @Override
   public HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      boolean isReadOnly, Durability durability, WAL wal, byte[]... families) throws IOException {
+      Configuration conf, boolean isReadOnly, Durability durability, WAL wal, byte[]... families)
+      throws IOException {
     boolean[] inMemory = new boolean[families.length];
     for(int i = 0; i < inMemory.length; i++) {
       inMemory[i] = true;
@@ -59,7 +62,7 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
       0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     return TEST_UTIL.createLocalHRegionWithInMemoryFlags(tableName, startKey, stopKey,
-        isReadOnly, durability, wal, inMemory, families);
+        conf, isReadOnly, durability, wal, inMemory, families);
   }
 
   @Override int getTestCountForTestWritesWhileScanning() {
