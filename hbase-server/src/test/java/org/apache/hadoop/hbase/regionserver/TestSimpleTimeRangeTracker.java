@@ -61,7 +61,7 @@ public class TestSimpleTimeRangeTracker {
   @Test
   public void testTimeRangeInitialized() {
     TimeRangeTracker src = getTimeRangeTracker();
-    TimeRange tr = new TimeRange(System.currentTimeMillis());
+    TimeRange tr = TimeRange.from(System.currentTimeMillis());
     assertFalse(src.includesTimeRange(tr));
   }
 
@@ -108,7 +108,7 @@ public class TestSimpleTimeRangeTracker {
     TimeRangeTracker trr = getTimeRangeTracker();
     trr.includeTimestamp(0);
     trr.includeTimestamp(2);
-    assertTrue(trr.includesTimeRange(new TimeRange(1)));
+    assertTrue(trr.includesTimeRange(TimeRange.from(1)));
   }
 
   @Test
@@ -118,27 +118,27 @@ public class TestSimpleTimeRangeTracker {
     assertEquals(Long.MAX_VALUE, defaultRange.getMax());
     assertTrue(defaultRange.isAllTime());
 
-    TimeRange oneArgRange = new TimeRange(0L);
+    TimeRange oneArgRange = TimeRange.from(0L);
     assertEquals(0L, oneArgRange.getMin());
     assertEquals(Long.MAX_VALUE, oneArgRange.getMax());
     assertTrue(oneArgRange.isAllTime());
 
-    TimeRange oneArgRange2 = new TimeRange(1);
+    TimeRange oneArgRange2 = TimeRange.from(1);
     assertEquals(1, oneArgRange2.getMin());
     assertEquals(Long.MAX_VALUE, oneArgRange2.getMax());
     assertFalse(oneArgRange2.isAllTime());
 
-    TimeRange twoArgRange = new TimeRange(0L, Long.MAX_VALUE);
+    TimeRange twoArgRange = TimeRange.between(0L, Long.MAX_VALUE);
     assertEquals(0L, twoArgRange.getMin());
     assertEquals(Long.MAX_VALUE, twoArgRange.getMax());
     assertTrue(twoArgRange.isAllTime());
 
-    TimeRange twoArgRange2 = new TimeRange(0L, Long.MAX_VALUE - 1);
+    TimeRange twoArgRange2 = TimeRange.between(0L, Long.MAX_VALUE - 1);
     assertEquals(0L, twoArgRange2.getMin());
     assertEquals(Long.MAX_VALUE - 1, twoArgRange2.getMax());
     assertFalse(twoArgRange2.isAllTime());
 
-    TimeRange twoArgRange3 = new TimeRange(1, Long.MAX_VALUE);
+    TimeRange twoArgRange3 = TimeRange.between(1, Long.MAX_VALUE);
     assertEquals(1, twoArgRange3.getMin());
     assertEquals(Long.MAX_VALUE, twoArgRange3.getMax());
     assertFalse(twoArgRange3.isAllTime());
