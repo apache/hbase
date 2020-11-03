@@ -43,7 +43,7 @@ public final class GsonUtil {
    */
   public static GsonBuilder createGson() {
     return new GsonBuilder().setLongSerializationPolicy(LongSerializationPolicy.STRING)
-      .registerTypeAdapter(LongAdder.class, new TypeAdapter<LongAdder>() {
+      .disableHtmlEscaping().registerTypeAdapter(LongAdder.class, new TypeAdapter<LongAdder>() {
 
         @Override
         public void write(JsonWriter out, LongAdder value) throws IOException {
