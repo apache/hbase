@@ -1525,7 +1525,7 @@ public class HRegionServer extends HasThread implements
         this.conf.set(key, value);
       }
 
-      this.cacheConfig = new CacheConfig(conf);
+      instantiateBlockCache();
 
       // Set our ephemeral znode up in zookeeper now we have a name.
       createMyEphemeralNode();
@@ -1585,6 +1585,11 @@ public class HRegionServer extends HasThread implements
     }
   }
 
+  @VisibleForTesting
+  protected void instantiateBlockCache() {
+    this.cacheConfig = new CacheConfig(conf);
+  }
+
   private void startHeapMemoryManager() {
     this.hMemManager = HeapMemoryManager.create(this.conf, this.cacheFlusher,
         this, this.regionServerAccounting);
@@ -1593,7 +1598,8 @@ public class HRegionServer extends HasThread implements
     }
   }
 
-  private void createMyEphemeralNode() throws KeeperException, IOException {
+  @VisibleForTesting
+  protected void createMyEphemeralNode() throws KeeperException, IOException {
     RegionServerInfo.Builder rsInfo = RegionServerInfo.newBuilder();
     rsInfo.setInfoPort(infoServer != null ? infoServer.getPort() : -1);
     rsInfo.setVersionInfo(ProtobufUtil.getVersionInfo());
@@ -3451,7 +3457,8 @@ public class HRegionServer extends HasThread implements
     }
   }
 
-  private String getMyEphemeralNodePath() {
+  @VisibleForTesting
+  protected String getMyEphemeralNodePath() {
     return ZKUtil.joinZNode(this.zooKeeper.rsZNode, getServerName().toString());
   }
 
