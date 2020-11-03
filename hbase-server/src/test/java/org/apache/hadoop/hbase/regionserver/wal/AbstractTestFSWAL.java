@@ -563,7 +563,7 @@ public abstract class AbstractTestFSWAL {
     RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
       0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    TEST_UTIL.createLocalHRegion(hri, htd, wal).close();
+    TEST_UTIL.createLocalHRegion(hri, CONF, htd, wal).close();
     RegionServerServices rsServices = mock(RegionServerServices.class);
     when(rsServices.getServerName()).thenReturn(ServerName.valueOf("localhost:12345", 123456));
     when(rsServices.getConfiguration()).thenReturn(conf);

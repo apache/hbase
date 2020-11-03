@@ -1709,6 +1709,6 @@ public class TestHRegionReplayEvents {
 
   private static HRegion initHRegion(byte[] tableName, byte[]... families) throws IOException {
     return TEST_UTIL.createLocalHRegion(TableName.valueOf(tableName), HConstants.EMPTY_START_ROW,
-      HConstants.EMPTY_END_ROW, false, Durability.SYNC_WAL, null, families);
+      HConstants.EMPTY_END_ROW, CONF, false, Durability.SYNC_WAL, null, families);
   }
 }
