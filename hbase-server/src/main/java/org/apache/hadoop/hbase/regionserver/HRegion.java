@@ -3784,8 +3784,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       success = true;
       return addedSize;
     } finally {
-      enableInterrupts();
-
       // if the wal sync was unsuccessful, remove keys from memstore
       if (doRollBackMemstore) {
         for (int j = 0; j < familyMaps.length; j++) {
@@ -3823,6 +3821,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           this.metricsRegion.updateDelete();
         }
       }
+
+      enableInterrupts();
+
       if (!success) {
         for (int i = firstIndex; i < lastIndexExclusive; i++) {
           if (batchOp.retCodeDetails[i].getOperationStatusCode() == OperationStatusCode.NOT_RUN) {
@@ -7742,9 +7743,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // use a writer lock for mixed reads and writes
           acquiredRowLocks.add(getRowLockInternal(row));
         }
+
         // 3. Region lock
+
+        // Check for thread interrupt status in case we have been signaled from
+        // #interruptRegionOperation. Do it before we take the lock and disable interrupts for
+        // the WAL append.
+        checkInterrupt();
+
+        // STEP 3. Region lock
         lock(this.updatesLock.readLock(), acquiredRowLocks.isEmpty() ? 1 : acquiredRowLocks.size());
         locked = true;
+
+        // From this point until memstore update this operation should not be interrupted.
+        disableInterrupts();
 
         long now = EnvironmentEdgeManager.currentTime();
         // 4. Let the processor scan the rows, generate mutations and add
@@ -7777,8 +7789,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // 7. Start mvcc transaction
           writeEntry = walKey.getWriteEntry();
           mvccNum = walKey.getSequenceId();
-
-
 
           // 8. Apply to memstore
           for (Mutation m : mutations) {
@@ -7848,6 +7858,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         // release locks if some were acquired but another timed out
         releaseRowLocks(acquiredRowLocks);
+
+        enableInterrupts();
       }
 
       // 14. Run post-process hook
@@ -8130,8 +8142,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       doRollBackMemstore = false;
     } finally {
-      enableInterrupts();
-
       if (rowLock != null) {
         rowLock.release();
       }
@@ -8150,6 +8160,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       } else if (we != null) {
         mvcc.completeAndWait(we);
       }
+
+      enableInterrupts();
 
       closeRegionOperation(op);
     }
@@ -8382,7 +8394,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       doRollBackMemstore = false;
     } finally {
-      enableInterrupts();
       if (rowLock != null) {
         rowLock.release();
       }
@@ -8403,6 +8414,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           mvcc.completeAndWait(we);
         }
       }
+      enableInterrupts();
     }
 
     // Request a cache flush.  Do it outside update lock.
