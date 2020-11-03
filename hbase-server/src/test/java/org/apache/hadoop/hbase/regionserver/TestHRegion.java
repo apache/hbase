@@ -30,6 +30,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -139,6 +141,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion.MutationBatchOperation;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
+import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.Region.RowLock;
 import org.apache.hadoop.hbase.regionserver.TestHStore.FaultyFileSystem;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
@@ -358,7 +361,7 @@ public class TestHRegion {
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + "testMemstoreSnapshotSize");
     MyFaultyFSLog faultyLog = new MyFaultyFSLog(fs, rootDir, "testMemstoreSnapshotSize", CONF);
-    region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, faultyLog,
+    region = initHRegion(tableName, null, null, CONF, false, Durability.SYNC_WAL, faultyLog,
         COLUMN_FAMILY_BYTES);
 
     HStore store = region.getStore(COLUMN_FAMILY_BYTES);
@@ -406,7 +409,7 @@ public class TestHRegion {
     Path rootDir = new Path(dir + testName);
     FSHLog hLog = new FSHLog(fs, rootDir, testName, CONF);
     hLog.init();
-    HRegion region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
+    HRegion region = initHRegion(tableName, null, null, CONF, false, Durability.SYNC_WAL, hLog,
         COLUMN_FAMILY_BYTES);
     HStore store = region.getStore(COLUMN_FAMILY_BYTES);
     assertEquals(0, region.getMemStoreDataSize());
@@ -505,7 +508,7 @@ public class TestHRegion {
         HRegion region = null;
         try {
           // Initialize region
-          region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, wal,
+          region = initHRegion(tableName, null, null, CONF, false, Durability.SYNC_WAL, wal,
               COLUMN_FAMILY_BYTES);
           long size = region.getMemStoreDataSize();
           Assert.assertEquals(0, size);
@@ -570,7 +573,7 @@ public class TestHRegion {
         HRegion region = null;
         try {
           // Initialize region
-          region = initHRegion(tableName, null, null, false,
+          region = initHRegion(tableName, null, null, CONF, false,
               Durability.SYNC_WAL, wal, COLUMN_FAMILY_BYTES);
           long size = region.getMemStoreDataSize();
           Assert.assertEquals(0, size);
@@ -1060,7 +1063,7 @@ public class TestHRegion {
     final WAL wal = wals.getWAL(RegionInfoBuilder.newBuilder(tableName).build());
 
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
-      HConstants.EMPTY_END_ROW, false, Durability.USE_DEFAULT, wal, family);
+      HConstants.EMPTY_END_ROW, CONF, false, Durability.USE_DEFAULT, wal, family);
     try {
       Path regiondir = region.getRegionFileSystem().getRegionDir();
       FileSystem fs = region.getRegionFileSystem().getFileSystem();
@@ -1265,7 +1268,7 @@ public class TestHRegion {
       CommonFSUtils.getRootDir(walConf), method, walConf);
     wal.init();
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
-      HConstants.EMPTY_END_ROW, false, Durability.USE_DEFAULT, wal, family);
+      HConstants.EMPTY_END_ROW, CONF, false, Durability.USE_DEFAULT, wal, family);
     int i = 0;
     Put put = new Put(Bytes.toBytes(i));
     put.setDurability(Durability.SKIP_WAL); // have to skip mocked wal
@@ -1296,7 +1299,7 @@ public class TestHRegion {
       method, walConf);
     wal.init();
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
-      HConstants.EMPTY_END_ROW, false, Durability.USE_DEFAULT, wal, family);
+      HConstants.EMPTY_END_ROW, CONF, false, Durability.USE_DEFAULT, wal, family);
     region.put(put);
     // 3. Test case where ABORT_FLUSH will throw exception.
     // Even if ABORT_FLUSH throws exception, we should not fail with IOE, but continue with
@@ -3245,7 +3248,7 @@ public class TestHRegion {
     hLog.init();
     // This chunk creation is done throughout the code base. Do we want to move it into core?
     // It is missing from this test. W/o it we NPE.
-    region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
+    region = initHRegion(tableName, null, null, CONF, false, Durability.SYNC_WAL, hLog,
         COLUMN_FAMILY_BYTES);
 
     Cell originalCell = CellUtil.createCell(row, COLUMN_FAMILY_BYTES, qual1,
@@ -3505,7 +3508,7 @@ public class TestHRegion {
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(method + ".log");
     final WAL wal = HBaseTestingUtility.createWal(TEST_UTIL.getConfiguration(), logDir, info);
-    this.region = TEST_UTIL.createLocalHRegion(info, htd, wal);
+    this.region = TEST_UTIL.createLocalHRegion(info, CONF, htd, wal);
 
     // Put 4 version to memstore
     long ts = 0;
@@ -5387,7 +5390,7 @@ public class TestHRegion {
     final WALFactory wals = new WALFactory(walConf, TEST_UTIL.getRandomUUID().toString());
     final WAL wal = spy(wals.getWAL(RegionInfoBuilder.newBuilder(tableName).build()));
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
-        HConstants.EMPTY_END_ROW, false, tableDurability, wal,
+        HConstants.EMPTY_END_ROW, CONF, false, tableDurability, wal,
         new byte[][] { family });
 
     Put put = new Put(Bytes.toBytes("r1"));
@@ -5755,7 +5758,7 @@ public class TestHRegion {
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(callingMethod + ".log");
     HRegionInfo hri = new HRegionInfo(tableName, startKey, stopKey);
     final WAL wal = HBaseTestingUtility.createWal(conf, logDir, hri);
-    return initHRegion(tableName, startKey, stopKey, isReadOnly,
+    return initHRegion(tableName, startKey, stopKey, conf, isReadOnly,
         Durability.SYNC_WAL, wal, families);
   }
 
@@ -5764,11 +5767,12 @@ public class TestHRegion {
    *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
   public HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      boolean isReadOnly, Durability durability, WAL wal, byte[]... families) throws IOException {
+      Configuration conf, boolean isReadOnly, Durability durability, WAL wal,
+      byte[]... families) throws IOException {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
       0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey,
-        isReadOnly, durability, wal, families);
+        conf, isReadOnly, durability, wal, families);
   }
 
   /**
@@ -6035,9 +6039,9 @@ public class TestHRegion {
     byte[] col1 = Bytes.toBytes("col1");
     byte[] col2 = Bytes.toBytes("col2");
     long ts = 1;
-    HBaseConfiguration config = new HBaseConfiguration();
-    config.setInt("test.block.size", 1);
-    this.region = initHRegion(tableName, method, config, families);
+    Configuration conf = new Configuration(CONF);
+    conf.setInt("test.block.size", 1);
+    this.region = initHRegion(tableName, method, conf, families);
     KeyValue kv1 = new KeyValue(rowA, cf, col1, ts, KeyValue.Type.Put, null);
     KeyValue kv2 = new KeyValue(rowB, cf, col1, ts, KeyValue.Type.Put, null);
     KeyValue kv3 = new KeyValue(rowC, cf, col1, ts, KeyValue.Type.Put, null);
@@ -6115,7 +6119,7 @@ public class TestHRegion {
     byte[][] families = { cf1, cf2, cf3 };
     byte[] col = Bytes.toBytes("C");
     long ts = 1;
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = new Configuration(CONF);
     // disable compactions in this test.
     conf.setInt("hbase.hstore.compactionThreshold", 10000);
     this.region = initHRegion(tableName, method, conf, families);
@@ -6277,7 +6281,7 @@ public class TestHRegion {
     byte[][] families = { cf1, cf2, cf3, cf4 };
     byte[] col = Bytes.toBytes("C");
     long ts = 1;
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = new Configuration(CONF);
     // disable compactions in this test.
     conf.setInt("hbase.hstore.compactionThreshold", 10000);
     this.region = initHRegion(tableName, method, conf, families);
@@ -6343,7 +6347,7 @@ public class TestHRegion {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = {cf1};
     byte[] col = Bytes.toBytes("C");
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = new Configuration(CONF);
     this.region = initHRegion(tableName, method, conf, families);
     // setup with one storefile and one memstore, to create scanner and get an earlier readPt
     Put put = new Put(Bytes.toBytes("19998"));
@@ -6392,8 +6396,7 @@ public class TestHRegion {
     byte[] cf1 = Bytes.toBytes("CF1");
     byte[][] families = { cf1 };
     byte[] col = Bytes.toBytes("C");
-    HBaseConfiguration conf = new HBaseConfiguration();
-    this.region = initHRegion(tableName, method, conf, families);
+    this.region = initHRegion(tableName, method, CONF, families);
     // setup with one storefile and one memstore, to create scanner and get an earlier readPt
     Put put = new Put(Bytes.toBytes("19996"));
     put.addColumn(cf1, col, Bytes.toBytes("val"));
@@ -6445,8 +6448,7 @@ public class TestHRegion {
     byte[][] families = { cf1 };
     byte[] col = Bytes.toBytes("C");
 
-    HBaseConfiguration conf = new HBaseConfiguration();
-    this.region = initHRegion(tableName, method, conf, families);
+    this.region = initHRegion(tableName, method, CONF, families);
 
     Put put = new Put(Bytes.toBytes("199996"));
     put.addColumn(cf1, col, Bytes.toBytes("val"));
@@ -7345,4 +7347,226 @@ public class TestHRegion {
       return super.doCompaction(cr, filesToCompact, user, compactionStartTime, newFiles);
     }
   }
+
+  @Test
+  public void testCloseNoInterrupt() throws Exception {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+    final int SLEEP_TIME = 10 * 1000;
+
+    Configuration conf = new Configuration(CONF);
+    // Disable close thread interrupt and server abort behavior
+    conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, false);
+    conf.setInt(HRegion.CLOSE_WAIT_INTERVAL, 1000);
+    region = initHRegion(tableName, method, conf, families);
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final AtomicBoolean holderInterrupted = new AtomicBoolean();
+    Thread holder = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          LOG.info("Starting region operation holder");
+          region.startRegionOperation(Operation.SCAN);
+          latch.countDown();
+          try {
+            Thread.sleep(SLEEP_TIME);
+          } catch (InterruptedException e) {
+            LOG.info("Interrupted");
+            holderInterrupted.set(true);
+          }
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        } finally {
+          try {
+            region.closeRegionOperation();
+          } catch (IOException e) {
+          }
+          LOG.info("Stopped region operation holder");
+        }
+      }
+    });
+
+    holder.start();
+    latch.await();
+    region.close();
+    region = null;
+    holder.join();
+
+    assertFalse("Region lock holder should not have been interrupted", holderInterrupted.get());
+  }
+
+  @Test
+  public void testCloseInterrupt() throws Exception {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+    final int SLEEP_TIME = 10 * 1000;
+
+    Configuration conf = new Configuration(CONF);
+    // Enable close thread interrupt and server abort behavior
+    conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
+    // Speed up the unit test, no need to wait default 10 seconds.
+    conf.setInt(HRegion.CLOSE_WAIT_INTERVAL, 1000);
+    region = initHRegion(tableName, method, conf, families);
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final AtomicBoolean holderInterrupted = new AtomicBoolean();
+    Thread holder = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          LOG.info("Starting region operation holder");
+          region.startRegionOperation(Operation.SCAN);
+          latch.countDown();
+          try {
+            Thread.sleep(SLEEP_TIME);
+          } catch (InterruptedException e) {
+            LOG.info("Interrupted");
+            holderInterrupted.set(true);
+          }
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        } finally {
+          try {
+            region.closeRegionOperation();
+          } catch (IOException e) {
+          }
+          LOG.info("Stopped region operation holder");
+        }
+      }
+    });
+
+    holder.start();
+    latch.await();
+    region.close();
+    region = null;
+    holder.join();
+
+    assertTrue("Region lock holder was not interrupted", holderInterrupted.get());
+  }
+
+  @Test
+  public void testCloseAbort() throws Exception {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+    final int SLEEP_TIME = 10 * 1000;
+
+    Configuration conf = new Configuration(CONF);
+    // Enable close thread interrupt and server abort behavior.
+    conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
+    // Set the abort interval to a fraction of sleep time so we are guaranteed to be aborted.
+    conf.setInt(HRegion.CLOSE_WAIT_TIME, SLEEP_TIME / 2);
+    // Set the wait interval to a fraction of sleep time so we are guaranteed to be interrupted.
+    conf.setInt(HRegion.CLOSE_WAIT_INTERVAL, SLEEP_TIME / 4);
+    region = initHRegion(tableName, method, conf, families);
+    RegionServerServices rsServices = mock(RegionServerServices.class);
+    when(rsServices.getServerName()).thenReturn(ServerName.valueOf("localhost", 1000, 1000));
+    region.rsServices = rsServices;
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    Thread holder = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          LOG.info("Starting region operation holder");
+          region.startRegionOperation(Operation.SCAN);
+          latch.countDown();
+          // Hold the lock for SLEEP_TIME seconds no matter how many times we are interrupted.
+          int timeRemaining = SLEEP_TIME;
+          while (timeRemaining > 0) {
+            long start = EnvironmentEdgeManager.currentTime();
+            try {
+              Thread.sleep(timeRemaining);
+            } catch (InterruptedException e) {
+              LOG.info("Interrupted");
+            }
+            long end = EnvironmentEdgeManager.currentTime();
+            timeRemaining -= end - start;
+            if (timeRemaining < 0) {
+              timeRemaining = 0;
+            }
+            if (timeRemaining > 0) {
+              LOG.info("Sleeping again, remaining time " + timeRemaining + " ms");
+            }
+          }
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        } finally {
+          try {
+            region.closeRegionOperation();
+          } catch (IOException e) {
+          }
+          LOG.info("Stopped region operation holder");
+        }
+      }
+    });
+
+    holder.start();
+    latch.await();
+    try {
+      region.close();
+    } catch (IOException e) {
+      LOG.info("Caught expected exception", e);
+    }
+    region = null;
+    holder.join();
+
+    // Verify the region tried to abort the server
+    verify(rsServices, atLeast(1)).abort(anyString(),any());
+  }
+
+  @Test
+  public void testInterruptProtection() throws Exception {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+    final int SLEEP_TIME = 10 * 1000;
+
+    Configuration conf = new Configuration(CONF);
+    // Enable close thread interrupt and server abort behavior.
+    conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
+    conf.setInt(HRegion.CLOSE_WAIT_INTERVAL, 1000);
+    region = initHRegion(tableName, method, conf, families);
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final AtomicBoolean holderInterrupted = new AtomicBoolean();
+    Thread holder = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          LOG.info("Starting region operation holder");
+          region.startRegionOperation(Operation.SCAN);
+          LOG.info("Protecting against interrupts");
+          region.disableInterrupts();
+          try {
+            latch.countDown();
+            try {
+              Thread.sleep(SLEEP_TIME);
+            } catch (InterruptedException e) {
+              LOG.info("Interrupted");
+              holderInterrupted.set(true);
+            }
+          } finally {
+            region.enableInterrupts();
+          }
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        } finally {
+          try {
+            region.closeRegionOperation();
+          } catch (IOException e) {
+          }
+          LOG.info("Stopped region operation holder");
+        }
+      }
+    });
+
+    holder.start();
+    latch.await();
+    region.close();
+    region = null;
+    holder.join();
+
+    assertFalse("Region lock holder should not have been interrupted", holderInterrupted.get());
+  }
+
 }
