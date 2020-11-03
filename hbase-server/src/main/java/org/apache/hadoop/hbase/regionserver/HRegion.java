@@ -4625,6 +4625,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         return;
       }
 
+      // Check for thread interrupt status in case we have been signaled from
+      // #interruptRegionOperation. Do it before we take the lock and disable interrupts for
+      // the WAL append.
+      checkInterrupt();
+
       lock(this.updatesLock.readLock(), miniBatchOp.getReadyToWriteCount());
       locked = true;
 
@@ -8377,6 +8382,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             prevRowLock = rowLock;
           }
         }
+
+        // Check for thread interrupt status in case we have been signaled from
+        // #interruptRegionOperation. Do it before we take the lock and disable interrupts for
+        // the WAL append.
+        checkInterrupt();
 
         // STEP 3. Region lock
         lock(this.updatesLock.readLock(), acquiredRowLocks.isEmpty() ? 1 : acquiredRowLocks.size());
