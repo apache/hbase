@@ -2096,14 +2096,29 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Create an HRegion that writes to the local tmp dirs with specified wal
    * @param info regioninfo
+   * @param conf configuration
    * @param desc table descriptor
    * @param wal wal for this region.
    * @return created hregion
    * @throws IOException
    */
-  public HRegion createLocalHRegion(RegionInfo info, TableDescriptor desc, WAL wal)
-      throws IOException {
-    return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc, wal);
+  public HRegion createLocalHRegion(RegionInfo info, Configuration conf, TableDescriptor desc,
+      WAL wal) throws IOException {
+    return HRegion.createHRegion(info, getDataTestDir(), conf, desc, wal);
+  }
+
+  /**
+   * Create an HRegion that writes to the local tmp dirs with specified wal
+   * @param info regioninfo
+   * @param info configuration
+   * @param desc table descriptor
+   * @param wal wal for this region.
+   * @return created hregion
+   * @throws IOException
+   */
+  public HRegion createLocalHRegion(HRegionInfo info, Configuration conf, HTableDescriptor desc,
+      WAL wal) throws IOException {
+    return HRegion.createHRegion(info, getDataTestDir(), conf, desc, wal);
   }
 
   /**
@@ -2127,9 +2142,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
       String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
       WAL wal, byte[]... families) throws IOException {
-    return this
-        .createLocalHRegion(TableName.valueOf(tableName), startKey, stopKey, isReadOnly, durability,
-            wal, families);
+    return createLocalHRegion(TableName.valueOf(tableName), startKey, stopKey, conf, isReadOnly,
+      durability, wal, families);
   }
 
   /**
@@ -2143,13 +2157,14 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @throws IOException
    */
   public HRegion createLocalHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      boolean isReadOnly, Durability durability, WAL wal, byte[]... families) throws IOException {
-    return createLocalHRegionWithInMemoryFlags(tableName,startKey, stopKey, isReadOnly,
+      Configuration conf, boolean isReadOnly, Durability durability, WAL wal, byte[]... families)
+      throws IOException {
+    return createLocalHRegionWithInMemoryFlags(tableName,startKey, stopKey, conf, isReadOnly,
         durability, wal, null, families);
   }
 
   public HRegion createLocalHRegionWithInMemoryFlags(TableName tableName, byte[] startKey,
-      byte[] stopKey,
+      byte[] stopKey, Configuration conf,
       boolean isReadOnly, Durability durability, WAL wal, boolean[] compactedMemStore,
       byte[]... families)
       throws IOException {
@@ -2171,7 +2186,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     }
     htd.setDurability(durability);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false);
-    return createLocalHRegion(info, htd, wal);
+    return createLocalHRegion(info, conf, htd, wal);
   }
 
   //

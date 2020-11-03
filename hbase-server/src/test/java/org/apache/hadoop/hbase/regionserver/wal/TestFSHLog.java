@@ -168,7 +168,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
       ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
         0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-      final HRegion region = TEST_UTIL.createLocalHRegion(hri, htd, log);
+      final HRegion region = TEST_UTIL.createLocalHRegion(hri, CONF, htd, log);
       ExecutorService exec = Executors.newFixedThreadPool(2);
 
       // do a regular write first because of memstore size calculation.
