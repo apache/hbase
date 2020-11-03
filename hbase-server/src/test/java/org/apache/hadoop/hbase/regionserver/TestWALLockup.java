@@ -214,7 +214,7 @@ public class TestWALLockup {
     logRoller.start();
     // Now get a region and start adding in edits.
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
-    final HRegion region = initHRegion(tableName, null, null, dodgyWAL);
+    final HRegion region = initHRegion(tableName, null, null, CONF, dodgyWAL);
     byte [] bytes = Bytes.toBytes(getName());
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     try {
@@ -387,7 +387,7 @@ public class TestWALLockup {
     logRoller.start();
     // Now get a region and start adding in edits.
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
-    final HRegion region = initHRegion(tableName, null, null, dodgyWAL1);
+    final HRegion region = initHRegion(tableName, null, null, CONF, dodgyWAL1);
     byte[] bytes = Bytes.toBytes(getName());
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     try {
@@ -569,10 +569,9 @@ public class TestWALLockup {
    * @return A region on which you must call
    *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
-  public HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, WAL wal)
-  throws IOException {
+  public HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
+      Configuration conf, WAL wal) throws IOException {
     return TEST_UTIL.createLocalHRegion(tableName.getName(), startKey, stopKey,
-      getName(), CONF, false, Durability.SYNC_WAL,
-      wal, COLUMN_FAMILY_BYTES);
+      getName(), conf, false, Durability.SYNC_WAL, wal, COLUMN_FAMILY_BYTES);
   }
 }

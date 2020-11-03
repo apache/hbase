@@ -173,7 +173,7 @@ public class TestCacheOnWriteInSchema {
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     walFactory = new WALFactory(conf, null, id);
 
-    region = TEST_UTIL.createLocalHRegion(info, htd,
+    region = TEST_UTIL.createLocalHRegion(info, conf, htd,
         walFactory.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()));
     store = new HStore(region, hcd, conf);
   }

@@ -498,7 +498,7 @@ public class TestFSHLog {
       HRegionInfo hri =
           new HRegionInfo(htd.getTableName(), HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
 
-      final HRegion region = TEST_UTIL.createLocalHRegion(hri, htd, log);
+      final HRegion region = TEST_UTIL.createLocalHRegion(hri, conf, htd, log);
       ExecutorService exec = Executors.newFixedThreadPool(2);
 
       // do a regular write first because of memstore size calculation.
