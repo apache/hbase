@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -36,9 +37,12 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterators;
 
 @Category(MediumTests.class)
 public class TestVersionUpgrade {
@@ -55,6 +59,14 @@ public class TestVersionUpgrade {
     cluster = new LocalHBaseCluster(testingUtility.getConfiguration(), 0, 0);
   }
 
+  @After
+  public void tearDown() throws Exception {
+    cluster.shutdown();
+    cluster.join();
+    testingUtility.shutdownMiniZKCluster();
+    testingUtility.shutdownMiniDFSCluster();
+  }
+
   public static class SlowlyInitializingRegionServerWithHigherVersion
     extends MiniHBaseClusterRegionServer {
     private static final AtomicInteger version = new AtomicInteger();
@@ -63,7 +75,8 @@ public class TestVersionUpgrade {
       return "0.0." + version.getAndIncrement();
     }
 
-    public SlowlyInitializingRegionServerWithHigherVersion(Configuration conf, CoordinatedStateManager cp)
+    public SlowlyInitializingRegionServerWithHigherVersion(Configuration conf,
+        CoordinatedStateManager cp)
       throws IOException, InterruptedException {
       super(conf, cp);
     }
@@ -112,9 +125,23 @@ public class TestVersionUpgrade {
       public boolean evaluate() throws Exception {
         final RegionStates regionStates =
           master.getMaster().getAssignmentManager().getRegionStates();
-        return !regionStates.isMetaRegionInTransition() &&
-          regionStates.getServerRegions(rs2.getRegionServer().getServerName())
-            .contains(HRegionInfo.FIRST_META_REGIONINFO);
+        final Set<HRegionInfo> regionsOnRS1 =
+          regionStates.getServerRegions(rs1.getRegionServer().getServerName());
+        final Set<HRegionInfo> regionsOnRS2 =
+          regionStates.getServerRegions(rs2.getRegionServer().getServerName());
+
+        // all system tables should be in rs2.
+        return !regionStates.isRegionsInTransition()
+          && regionsOnRS1 == null
+          && regionsOnRS2 != null
+          && Iterators.all(regionsOnRS2.iterator(),
+               new Predicate<HRegionInfo>() {
+                 @Override
+                 public boolean apply(HRegionInfo hri) {
+                   return hri.isSystemTable()
+                     && regionStates.isRegionInState(hri, RegionState.State.OPEN);
+                 }
+               });
       }
     });
   }
@@ -122,7 +149,7 @@ public class TestVersionUpgrade {
   private static void waitForClusterOnline(MasterThread master, int numRs)
     throws InterruptedException, KeeperException {
     while (!master.getMaster().isInitialized()
-      || master.getMaster().getNumLiveRegionServers() != numRs) {
+            || master.getMaster().getNumLiveRegionServers() != numRs) {
       Thread.sleep(100);
     }
   }
