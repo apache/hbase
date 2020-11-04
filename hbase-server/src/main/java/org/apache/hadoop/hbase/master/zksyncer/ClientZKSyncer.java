@@ -19,12 +19,11 @@
 package org.apache.hadoop.hbase.master.zksyncer;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.util.Threads;
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,22 +40,68 @@ import org.slf4j.LoggerFactory;
  * Tracks the target znode(s) on server ZK cluster and synchronize them to client ZK cluster if
  * changed
  * <p/>
- * The target znode(s) is given through {@link #getNodesToWatch()} method
+ * The target znode(s) is given through {@link #getPathsToWatch()} method
  */
 @InterfaceAudience.Private
 public abstract class ClientZKSyncer extends ZKListener {
   private static final Logger LOG = LoggerFactory.getLogger(ClientZKSyncer.class);
   private final Server server;
   private final ZKWatcher clientZkWatcher;
+
+  /**
+   * Used to store the newest data which we want to sync to client zk.
+   * <p/>
+   * For meta location, since we may reduce the replica number, so here we add a {@code delete} flag
+   * to tell the updater delete the znode on client zk and quit.
+   */
+  private static final class ZKData {
+
+    byte[] data;
+
+    boolean delete = false;
+
+    synchronized void set(byte[] data) {
+      this.data = data;
+      notifyAll();
+    }
+
+    synchronized byte[] get() throws InterruptedException {
+      while (!delete && data == null) {
+        wait();
+      }
+      byte[] d = data;
+      data = null;
+      return d;
+    }
+
+    synchronized void delete() {
+      this.delete = true;
+      notifyAll();
+    }
+
+    synchronized boolean isDeleted() {
+      return delete;
+    }
+  }
+
   // We use queues and daemon threads to synchronize the data to client ZK cluster
   // to avoid blocking the single event thread for watchers
-  private final Map<String, BlockingQueue<byte[]>> queues;
+  private final ConcurrentMap<String, ZKData> queues;
 
   public ClientZKSyncer(ZKWatcher watcher, ZKWatcher clientZkWatcher, Server server) {
     super(watcher);
     this.server = server;
     this.clientZkWatcher = clientZkWatcher;
-    this.queues = new HashMap<>();
+    this.queues = new ConcurrentHashMap<>();
+  }
+
+  private void startNewSyncThread(String path) {
+    ZKData zkData = new ZKData();
+    queues.put(path, zkData);
+    Thread updater = new ClientZkUpdater(path, zkData);
+    updater.setDaemon(true);
+    updater.start();
+    watchAndCheckExists(path);
   }
 
   /**
@@ -69,17 +113,12 @@ public abstract class ClientZKSyncer extends ZKListener {
     this.watcher.registerListener(this);
     // create base znode on remote ZK
     ZKUtil.createWithParents(clientZkWatcher, watcher.getZNodePaths().baseZNode);
-    // set meta znodes for client ZK
-    Collection<String> nodes = getNodesToWatch();
-    LOG.debug("Znodes to watch: " + nodes);
+    // set znodes for client ZK
+    Set<String> paths = getPathsToWatch();
+    LOG.debug("ZNodes to watch: {}", paths);
     // initialize queues and threads
-    for (String node : nodes) {
-      BlockingQueue<byte[]> queue = new ArrayBlockingQueue<>(1);
-      queues.put(node, queue);
-      Thread updater = new ClientZkUpdater(node, queue);
-      updater.setDaemon(true);
-      updater.start();
-      watchAndCheckExists(node);
+    for (String path : paths) {
+      startNewSyncThread(path);
     }
   }
 
@@ -112,10 +151,9 @@ public abstract class ClientZKSyncer extends ZKListener {
    * @param data the data to write to queue
    */
   private void upsertQueue(String node, byte[] data) {
-    BlockingQueue<byte[]> queue = queues.get(node);
-    synchronized (queue) {
-      queue.poll();
-      queue.offer(data);
+    ZKData zkData = queues.get(node);
+    if (zkData != null) {
+      zkData.set(data);
     }
   }
 
@@ -126,32 +164,46 @@ public abstract class ClientZKSyncer extends ZKListener {
    * @param data the data to set to client ZK
    * @throws InterruptedException if the thread is interrupted during process
    */
-  private final void setDataForClientZkUntilSuccess(String node, byte[] data)
-      throws InterruptedException {
+  private void setDataForClientZkUntilSuccess(String node, byte[] data)
+    throws InterruptedException {
+    boolean create = false;
     while (!server.isStopped()) {
       try {
         LOG.debug("Set data for remote " + node + ", client zk wather: " + clientZkWatcher);
-        ZKUtil.setData(clientZkWatcher, node, data);
-        break;
-      } catch (KeeperException.NoNodeException nne) {
-        // Node doesn't exist, create it and set value
-        try {
+        if (create) {
           ZKUtil.createNodeIfNotExistsNoWatch(clientZkWatcher, node, data, CreateMode.PERSISTENT);
-          break;
-        } catch (KeeperException.ConnectionLossException
-            | KeeperException.SessionExpiredException ee) {
-          reconnectAfterExpiration();
-        } catch (KeeperException e) {
-          LOG.warn(
-            "Failed to create znode " + node + " due to: " + e.getMessage() + ", will retry later");
+        } else {
+          ZKUtil.setData(clientZkWatcher, node, data);
         }
-      } catch (KeeperException.ConnectionLossException
-          | KeeperException.SessionExpiredException ee) {
-        reconnectAfterExpiration();
+        break;
       } catch (KeeperException e) {
-        LOG.debug("Failed to set data to client ZK, will retry later", e);
+        LOG.debug("Failed to set data for {} to client ZK, will retry later", node, e);
+        if (e.code() == KeeperException.Code.SESSIONEXPIRED) {
+          reconnectAfterExpiration();
+        }
+        if (e.code() == KeeperException.Code.NONODE) {
+          create = true;
+        }
+        if (e.code() == KeeperException.Code.NODEEXISTS) {
+          create = false;
+        }
       }
       Threads.sleep(HConstants.SOCKET_RETRY_WAIT_MS);
+    }
+  }
+
+  private void deleteDataForClientZkUntilSuccess(String node) throws InterruptedException {
+    while (!server.isStopped()) {
+      LOG.debug("Delete remote " + node + ", client zk wather: " + clientZkWatcher);
+      try {
+        ZKUtil.deleteNode(clientZkWatcher, node);
+      } catch (KeeperException e) {
+        LOG.debug("Failed to delete node from client ZK, will retry later", e);
+        if (e.code() == KeeperException.Code.SESSIONEXPIRED) {
+          reconnectAfterExpiration();
+        }
+        
+      }
     }
   }
 
@@ -164,11 +216,7 @@ public abstract class ClientZKSyncer extends ZKListener {
     }
   }
 
-  @Override
-  public void nodeCreated(String path) {
-    if (!validate(path)) {
-      return;
-    }
+  private void getDataAndWatch(String path) {
     try {
       byte[] data = ZKUtil.getDataAndWatch(watcher, path);
       upsertQueue(path, data);
@@ -177,11 +225,25 @@ public abstract class ClientZKSyncer extends ZKListener {
     }
   }
 
+  private void removeQueue(String path) {
+    ZKData zkData = queues.remove(path);
+    if (zkData != null) {
+      zkData.delete();
+    }
+  }
+
+  @Override
+  public void nodeCreated(String path) {
+    if (validate(path)) {
+      getDataAndWatch(path);
+    } else {
+      removeQueue(path);
+    }
+  }
+
   @Override
   public void nodeDataChanged(String path) {
-    if (validate(path)) {
-      nodeCreated(path);
-    }
+    nodeCreated(path);
   }
 
   @Override
@@ -189,11 +251,13 @@ public abstract class ClientZKSyncer extends ZKListener {
     if (validate(path)) {
       try {
         if (ZKUtil.watchAndCheckExists(watcher, path)) {
-          nodeCreated(path);
+          getDataAndWatch(path);
         }
       } catch (KeeperException e) {
         LOG.warn("Unexpected exception handling nodeDeleted event for path: " + path, e);
       }
+    } else {
+      removeQueue(path);
     }
   }
 
@@ -202,41 +266,67 @@ public abstract class ClientZKSyncer extends ZKListener {
    * @param path the path to validate
    * @return true if the znode is watched by us
    */
-  abstract boolean validate(String path);
+  protected abstract boolean validate(String path);
 
   /**
-   * @return the znode(s) to watch
+   * @return the zk path(s) to watch
    */
-  abstract Collection<String> getNodesToWatch() throws KeeperException;
+  protected abstract Set<String> getPathsToWatch();
+
+  protected final void refreshWatchingList() {
+    Set<String> newPaths = getPathsToWatch();
+    LOG.debug("New ZNodes to watch: {}", newPaths);
+    Iterator<Map.Entry<String, ZKData>> iter = queues.entrySet().iterator();
+    // stop unused syncers
+    while (iter.hasNext()) {
+      Map.Entry<String, ZKData> entry = iter.next();
+      if (!newPaths.contains(entry.getKey())) {
+        iter.remove();
+        entry.getValue().delete();
+      }
+    }
+    // start new syncers
+    for (String newPath : newPaths) {
+      if (!queues.containsKey(newPath)) {
+        startNewSyncThread(newPath);
+      }
+    }
+  }
 
   /**
    * Thread to synchronize znode data to client ZK cluster
    */
-  class ClientZkUpdater extends Thread {
-    final String znode;
-    final BlockingQueue<byte[]> queue;
+  private final class ClientZkUpdater extends Thread {
+    private final String znode;
+    private final ZKData zkData;
 
-    public ClientZkUpdater(String znode, BlockingQueue<byte[]> queue) {
+    public ClientZkUpdater(String znode, ZKData zkData) {
       this.znode = znode;
-      this.queue = queue;
+      this.zkData = zkData;
       setName("ClientZKUpdater-" + znode);
     }
 
     @Override
     public void run() {
+      LOG.debug("Client zk updater for znode {} started", znode);
       while (!server.isStopped()) {
         try {
-          byte[] data = queue.take();
-          setDataForClientZkUntilSuccess(znode, data);
-        } catch (InterruptedException e) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-              "Interrupted while checking whether need to update meta location to client zk");
+          byte[] data = zkData.get();
+          if (data != null) {
+            setDataForClientZkUntilSuccess(znode, data);
+          } else {
+            if (zkData.isDeleted()) {
+              deleteDataForClientZkUntilSuccess(znode);
+              break;
+            }
           }
+        } catch (InterruptedException e) {
+          LOG.debug("Interrupted while checking whether need to update meta location to client zk");
           Thread.currentThread().interrupt();
           break;
         }
       }
+      LOG.debug("Client zk updater for znode {} stopped", znode);
     }
   }
 }

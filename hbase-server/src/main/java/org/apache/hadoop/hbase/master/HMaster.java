@@ -322,8 +322,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Tracker for load balancer state
   LoadBalancerTracker loadBalancerTracker;
   // Tracker for meta location, if any client ZK quorum specified
-  MetaLocationSyncer metaLocationSyncer;
+  private MetaLocationSyncer metaLocationSyncer;
   // Tracker for active master location, if any client ZK quorum specified
+  @VisibleForTesting
   MasterAddressSyncer masterAddressSyncer;
   // Tracker for auto snapshot cleanup state
   SnapshotCleanupTracker snapshotCleanupTracker;
@@ -3851,5 +3852,10 @@ public class HMaster extends HRegionServer implements MasterServices {
       LOG.error("Exception when get compaction state for " + tableName.getNameAsString(), e);
     }
     return compactionState;
+  }
+
+  @Override
+  public MetaLocationSyncer getMetaLocationSyncer() {
+    return metaLocationSyncer;
   }
 }

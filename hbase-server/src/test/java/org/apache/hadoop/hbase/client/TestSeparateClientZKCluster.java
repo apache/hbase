@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -26,6 +30,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -35,13 +40,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,11 +64,11 @@ public class TestSeparateClientZKCluster {
   private final byte[] newVal = Bytes.toBytes("v2");
 
   @Rule
-  public TestName name = new TestName();
+  public TableNameTestRule name = new TableNameTestRule();
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSeparateClientZKCluster.class);
+    HBaseClassTestRule.forClass(TestSeparateClientZKCluster.class);
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -78,13 +81,15 @@ public class TestSeparateClientZKCluster {
     TEST_UTIL.getConfiguration().setInt("hbase.client.start.log.errors.counter", -1);
     TEST_UTIL.getConfiguration().setInt("zookeeper.recovery.retry", 1);
     // core settings for testing client ZK cluster
+    TEST_UTIL.getConfiguration().setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+      ZKConnectionRegistry.class, ConnectionRegistry.class);
     TEST_UTIL.getConfiguration().set(HConstants.CLIENT_ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
     TEST_UTIL.getConfiguration().setInt(HConstants.CLIENT_ZOOKEEPER_CLIENT_PORT, clientZkPort);
     // reduce zk session timeout to easier trigger session expiration
     TEST_UTIL.getConfiguration().setInt(HConstants.ZK_SESSION_TIMEOUT, ZK_SESSION_TIMEOUT);
     // Start a cluster with 2 masters and 3 regionservers.
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    StartMiniClusterOption option =
+      StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
     TEST_UTIL.startMiniCluster(option);
   }
 
@@ -97,7 +102,7 @@ public class TestSeparateClientZKCluster {
 
   @Test
   public void testBasicOperation() throws Exception {
-    TableName tn = TableName.valueOf(name.getMethodName());
+    TableName tn = name.getTableName();
     // create table
     Connection conn = TEST_UTIL.getConnection();
     try (Admin admin = conn.getAdmin(); Table table = conn.getTable(tn)) {
@@ -113,7 +118,7 @@ public class TestSeparateClientZKCluster {
       Get get = new Get(row);
       Result result = table.get(get);
       LOG.debug("Result: " + Bytes.toString(result.getValue(family, qualifier)));
-      Assert.assertArrayEquals(value, result.getValue(family, qualifier));
+      assertArrayEquals(value, result.getValue(family, qualifier));
     }
   }
 
@@ -133,24 +138,24 @@ public class TestSeparateClientZKCluster {
       }
       LOG.info("Shutdown master {}", master.getServerName());
       while (cluster.getMaster() == null || !cluster.getMaster().isInitialized()) {
-        LOG.info("Get master {}", cluster.getMaster() == null? "null":
-          cluster.getMaster().getServerName());
+        LOG.info("Get master {}",
+          cluster.getMaster() == null ? "null" : cluster.getMaster().getServerName());
         Thread.sleep(200);
       }
       LOG.info("Got master {}", cluster.getMaster().getServerName());
       // confirm client access still works
-      Assert.assertTrue(admin.balance(false));
+      assertTrue(admin.balance(false));
     }
   }
 
   @Test
   public void testMetaRegionMove() throws Exception {
-    TableName tn = TableName.valueOf(name.getMethodName());
+    TableName tn = name.getTableName();
     // create table
     Connection conn = TEST_UTIL.getConnection();
     try (Admin admin = conn.getAdmin();
-        Table table = conn.getTable(tn);
-        RegionLocator locator = conn.getRegionLocator(tn)) {
+      Table table = conn.getTable(tn);
+      RegionLocator locator = conn.getRegionLocator(tn)) {
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       ColumnFamilyDescriptorBuilder cfDescBuilder =
         ColumnFamilyDescriptorBuilder.newBuilder(family);
@@ -191,13 +196,13 @@ public class TestSeparateClientZKCluster {
       table.put(put);
       result = table.get(get);
       LOG.debug("Result: " + Bytes.toString(result.getValue(family, qualifier)));
-      Assert.assertArrayEquals(newVal, result.getValue(family, qualifier));
+      assertArrayEquals(newVal, result.getValue(family, qualifier));
     }
   }
 
   @Test
   public void testMetaMoveDuringClientZkClusterRestart() throws Exception {
-    TableName tn = TableName.valueOf(name.getMethodName());
+    TableName tn = name.getTableName();
     // create table
     Connection conn = TEST_UTIL.getConnection();
     try (Admin admin = conn.getAdmin(); Table table = conn.getTable(tn)) {
@@ -233,18 +238,18 @@ public class TestSeparateClientZKCluster {
       Get get = new Get(row);
       Result result = table.get(get);
       LOG.debug("Result: " + Bytes.toString(result.getValue(family, qualifier)));
-      Assert.assertArrayEquals(value, result.getValue(family, qualifier));
+      assertArrayEquals(value, result.getValue(family, qualifier));
     }
   }
 
   @Test
   public void testAsyncTable() throws Exception {
-    TableName tn = TableName.valueOf(name.getMethodName());
+    TableName tn = name.getTableName();
     ColumnFamilyDescriptorBuilder cfDescBuilder = ColumnFamilyDescriptorBuilder.newBuilder(family);
     TableDescriptorBuilder tableDescBuilder =
-        TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
+      TableDescriptorBuilder.newBuilder(tn).setColumnFamily(cfDescBuilder.build());
     try (AsyncConnection ASYNC_CONN =
-        ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
       ASYNC_CONN.getAdmin().createTable(tableDescBuilder.build()).get();
       AsyncTable<?> table = ASYNC_CONN.getTable(tn);
       // put some data
@@ -255,7 +260,22 @@ public class TestSeparateClientZKCluster {
       Get get = new Get(row);
       Result result = table.get(get).get();
       LOG.debug("Result: " + Bytes.toString(result.getValue(family, qualifier)));
-      Assert.assertArrayEquals(value, result.getValue(family, qualifier));
+      assertArrayEquals(value, result.getValue(family, qualifier));
+    }
+  }
+
+  @Test
+  public void testChangeMetaReplicaCount() throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    try (RegionLocator locator =
+      TEST_UTIL.getConnection().getRegionLocator(TableName.META_TABLE_NAME)) {
+      assertEquals(1, locator.getAllRegionLocations().size());
+      HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 3);
+      TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 3);
+      HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 2);
+      TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 2);
+      HBaseTestingUtility.setReplicas(admin, TableName.META_TABLE_NAME, 1);
+      TEST_UTIL.waitFor(30000, () -> locator.getAllRegionLocations().size() == 1);
     }
   }
 }
