@@ -730,8 +730,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       return null;
     }
     HRegionLocation loc =
-      conn.getRegionLocator(region.getTable()).getRegionLocation(region.getStartKey(),
-        region.getReplicaId(),true);
+      conn.getRegionLocator(region.getTable()).getRegionLocation(region.getStartKey(), true);
     if (loc != null) {
       return loc.getServerName();
     } else {
