@@ -292,7 +292,7 @@ public class TestMasterNoCluster {
     while (!master.isInitialized()) {
       Threads.sleep(200);
     }
-    Assert.assertNull(master.metaLocationSyncer);
+    Assert.assertNull(master.getMetaLocationSyncer());
     Assert.assertNull(master.masterAddressSyncer);
     master.stopMaster();
     master.join();

@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -491,5 +492,10 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public boolean normalizeRegions(NormalizeTableFilterParams ntfp, boolean isHighPriority) {
     return false;
+  }
+
+  @Override
+  public MetaLocationSyncer getMetaLocationSyncer() {
+    return null;
   }
 }
