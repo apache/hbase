@@ -18,13 +18,12 @@
  */
 package org.apache.hadoop.hbase.master.zksyncer;
 
-import java.util.Collection;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Tracks the meta region locations on server ZK cluster and synchronize them to client ZK cluster
@@ -32,19 +31,28 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public class MetaLocationSyncer extends ClientZKSyncer {
+
+  private volatile int metaReplicaCount = 1;
+
   public MetaLocationSyncer(ZKWatcher watcher, ZKWatcher clientZkWatcher, Server server) {
     super(watcher, clientZkWatcher, server);
   }
 
   @Override
-  boolean validate(String path) {
+  protected boolean validate(String path) {
     return watcher.getZNodePaths().isMetaZNodePath(path);
   }
 
   @Override
-  Collection<String> getNodesToWatch() throws KeeperException {
-    return watcher.getMetaReplicaNodes().stream()
-      .map(znode -> ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, znode))
-      .collect(Collectors.toList());
+  protected Set<String> getPathsToWatch() {
+    return IntStream.range(0, metaReplicaCount)
+      .mapToObj(watcher.getZNodePaths()::getZNodeForReplica).collect(Collectors.toSet());
+  }
+
+  public void setMetaReplicaCount(int replicaCount) {
+    if (replicaCount != metaReplicaCount) {
+      metaReplicaCount = replicaCount;
+      refreshWatchingList();
+    }
   }
 }
