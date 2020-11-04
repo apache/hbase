@@ -74,7 +74,6 @@ public class Get extends Query implements Row {
   private int storeOffset = 0;
   private TimeRange tr = TimeRange.allTime();
   private boolean checkExistenceOnly = false;
-  private boolean closestRowBefore = false;
   private Map<byte [], NavigableSet<byte []>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
@@ -199,11 +198,10 @@ public class Get extends Query implements Row {
    * [minStamp, maxStamp).
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
-   * @throws IOException
    * @return this for invocation chaining
    */
   public Get setTimeRange(long minStamp, long maxStamp) throws IOException {
-    tr = new TimeRange(minStamp, maxStamp);
+    tr = TimeRange.between(minStamp, maxStamp);
     return this;
   }
 
@@ -214,17 +212,17 @@ public class Get extends Query implements Row {
    */
   public Get setTimestamp(long timestamp) {
     try {
-      tr = new TimeRange(timestamp, timestamp + 1);
+      tr = TimeRange.at(timestamp);
     } catch(Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
       throw e;
     }
-
     return this;
   }
 
-  @Override public Get setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
+  @Override
+  public Get setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
     return (Get) super.setColumnFamilyTimeRange(cf, minStamp, maxStamp);
   }
 
