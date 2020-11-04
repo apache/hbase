@@ -4771,6 +4771,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         recoveredEditsDir);
       if (files != null) {
         for (FileStatus file : files) {
+          // it is safe to trust the zero-length in this case because we've been through rename and
+          // lease recovery in the above.
+          if (isZeroLengthThenDelete(fs, file, file.getPath())) {
+            continue;
+          }
           seqId =
             Math.max(seqId, replayRecoveredEdits(file.getPath(), maxSeqIdInStores, reporter, fs));
         }
@@ -5935,6 +5940,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
+   * make sure have been through lease recovery before get file status, so the file length can be
+   * trusted.
    * @param p File to check.
    * @return True if file was zero-length (and if so, we'll delete it in here).
    * @throws IOException
