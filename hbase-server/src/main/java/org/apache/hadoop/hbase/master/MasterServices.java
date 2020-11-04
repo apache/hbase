@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -570,4 +571,11 @@ public interface MasterServices extends Server {
    */
   boolean normalizeRegions(
     final NormalizeTableFilterParams ntfp, final boolean isHighPriority) throws IOException;
+
+  /**
+   * Get the meta location syncer.
+   * <p/>
+   * We need to get this in MTP to tell the syncer the new meta replica count.
+   */
+  MetaLocationSyncer getMetaLocationSyncer();
 }

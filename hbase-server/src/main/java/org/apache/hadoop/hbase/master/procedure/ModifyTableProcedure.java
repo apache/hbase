@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
@@ -157,6 +158,12 @@ public class ModifyTableProcedure
           break;
         case MODIFY_TABLE_ASSIGN_NEW_REPLICAS:
           assignNewReplicasIfNeeded(env);
+          if (TableName.isMetaTableName(getTableName())) {
+            MetaLocationSyncer syncer = env.getMasterServices().getMetaLocationSyncer();
+            if (syncer != null) {
+              syncer.setMetaReplicaCount(modifiedTableDescriptor.getRegionReplication());
+            }
+          }
           if (deleteColumnFamilyInModify) {
             setNextState(ModifyTableState.MODIFY_TABLE_DELETE_FS_LAYOUT);
           } else {
