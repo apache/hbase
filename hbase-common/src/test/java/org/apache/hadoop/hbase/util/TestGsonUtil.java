@@ -34,12 +34,12 @@ public class TestGsonUtil {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestGsonUtil.class);
 
-  private static final Gson GSON = GsonUtil.createGson().create();
+  private static final Gson DHE_GSON = GsonUtil.createGsonWithDisableHtmlEscaping().create();
 
   @Test
   public void testDisableHtmlEscaping() {
     String testStr = "===";
-    String json = GSON.toJson(testStr);
+    String json = DHE_GSON.toJson(testStr);
     assertEquals(testStr.length() + 2, json.length());
     assertEquals(testStr, json.substring(1, 1 + testStr.length()));
   }
