@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -34,13 +35,24 @@ public class TestGsonUtil {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestGsonUtil.class);
 
+  private static final Gson GSON = GsonUtil.createGson().create();
   private static final Gson DHE_GSON = GsonUtil.createGsonWithDisableHtmlEscaping().create();
 
   @Test
   public void testDisableHtmlEscaping() {
     String testStr = "===";
+
+    // disable html escaping
     String json = DHE_GSON.toJson(testStr);
+    assertTrue(json.startsWith("\"") && json.endsWith("\""));
     assertEquals(testStr.length() + 2, json.length());
-    assertEquals(testStr, json.substring(1, 1 + testStr.length()));
+    assertEquals(testStr, json.substring(1, json.length() - 1));
+
+    // enable html escaping, turn '=' into '\u003d'
+    json = GSON.toJson(testStr);
+    assertTrue(json.startsWith("\"") && json.endsWith("\""));
+    assertEquals(testStr.length() * 6 + 2, json.length());
+    assertEquals(testStr.replaceAll("=", "\\\\u003d"),
+      json.substring(1, json.length() - 1));
   }
 }
