@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterators;
 import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,8 +43,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterators;
 
 @Category(MediumTests.class)
 public class TestVersionUpgrade {
@@ -133,15 +133,14 @@ public class TestVersionUpgrade {
         // all system tables should be in rs2.
         return !regionStates.isRegionsInTransition()
           && regionsOnRS1 == null
-          && regionsOnRS2 != null
-          && Iterators.all(regionsOnRS2.iterator(),
-               new Predicate<HRegionInfo>() {
-                 @Override
-                 public boolean apply(HRegionInfo hri) {
-                   return hri.isSystemTable()
-                     && regionStates.isRegionInState(hri, RegionState.State.OPEN);
-                 }
-               });
+          && regionsOnRS2 != null && !regionsOnRS2.isEmpty()
+          && Iterators.all(regionsOnRS2.iterator(), new Predicate<HRegionInfo>() {
+              @Override
+              public boolean apply(HRegionInfo hri) {
+                return hri.isSystemTable()
+                    && regionStates.isRegionInState(hri, RegionState.State.OPEN);
+              }
+            });
       }
     });
   }
