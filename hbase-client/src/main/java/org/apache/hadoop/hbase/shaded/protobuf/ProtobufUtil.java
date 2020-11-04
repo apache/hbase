@@ -2861,10 +2861,18 @@ public final class ProtobufUtil {
   }
 
   public static TimeRange toTimeRange(HBaseProtos.TimeRange timeRange) {
-    return timeRange == null ?
-      TimeRange.allTime() :
-      new TimeRange(timeRange.hasFrom() ? timeRange.getFrom() : 0,
-        timeRange.hasTo() ? timeRange.getTo() : Long.MAX_VALUE);
+    if (timeRange == null) {
+      return TimeRange.allTime();
+    }
+    if (timeRange.hasFrom()) {
+      if (timeRange.hasTo()) {
+        return TimeRange.between(timeRange.getFrom(), timeRange.getTo());
+      } else {
+        return TimeRange.from(timeRange.getFrom());
+      }
+    } else {
+      return TimeRange.until(timeRange.getTo());
+    }
   }
 
   /**

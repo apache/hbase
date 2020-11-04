@@ -128,15 +128,15 @@ public class TestAppendTimeRange {
 
       time = EnvironmentEdgeManager.currentTime();
       mee.setValue(time);
-      TimeRange range10 = new TimeRange(1, time + 10);
-      Result r = table.append(new Append(ROW).addColumn(TEST_FAMILY, QUAL, Bytes.toBytes("b"))
-          .setTimeRange(range10.getMin(), range10.getMax()));
+      TimeRange range10 = TimeRange.between(1, time + 10);
+      table.append(new Append(ROW).addColumn(TEST_FAMILY, QUAL, Bytes.toBytes("b"))
+        .setTimeRange(range10.getMin(), range10.getMax()));
       checkRowValue(table, ROW, Bytes.toBytes("ab"));
       assertEquals(MyObserver.tr10.getMin(), range10.getMin());
       assertEquals(MyObserver.tr10.getMax(), range10.getMax());
       time = EnvironmentEdgeManager.currentTime();
       mee.setValue(time);
-      TimeRange range2 = new TimeRange(1, time+20);
+      TimeRange range2 = TimeRange.between(1, time + 20);
       List<Row> actions =
           Arrays.asList(new Row[] {
               new Append(ROW).addColumn(TEST_FAMILY, QUAL, Bytes.toBytes("c"))
