@@ -354,7 +354,10 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
       serializer.deserialize(RegionRemoteProcedureBaseStateData.class);
     region = ProtobufUtil.toRegionInfo(data.getRegion());
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
-    state = data.getState();
+    // 'state' may not be present if we are reading an 'old' form of this pb Message.
+    if (data.hasState()) {
+      state = data.getState();
+    }
     if (data.hasTransitionCode()) {
       transitionCode = data.getTransitionCode();
       seqId = data.getSeqId();
