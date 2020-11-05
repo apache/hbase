@@ -30,9 +30,9 @@ public class MetricsIO {
   private final MetricsIOSource source;
   private final MetricsIOWrapper wrapper;
 
-  public MetricsIO(MetricsIOWrapper wrapper) {
+  public MetricsIO(MetricsIOWrapper wrapper, String context, String jmxContext) {
     this(CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-            .createIO(wrapper), wrapper);
+        .createIO(wrapper, context, jmxContext), wrapper);
   }
 
   MetricsIO(MetricsIOSource source, MetricsIOWrapper wrapper) {

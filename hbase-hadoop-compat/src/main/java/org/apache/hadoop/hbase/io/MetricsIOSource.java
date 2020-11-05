@@ -35,6 +35,21 @@ public interface MetricsIOSource extends BaseSource {
   String METRICS_CONTEXT = "regionserver";
 
   /**
+   * The name of the metrics context that metrics will be under JMX context.
+   */
+  String METRICS_JMX_CONTEXT_PREFIX = "Regionserver";
+
+  /**
+   * The name of the metrics context that metrics will be under JMX context
+   */
+  String MASTER_METRICS_JMX_CONTEXT_PREFIX = "Master";
+
+  /**
+   * The name of the metrics context that metrics will be under.
+   */
+  String MASTER_METRICS_CONTEXT = "master";
+
+  /**
    * Description
    */
   String METRICS_DESCRIPTION = "Metrics about FileSystem IO";
@@ -42,7 +57,9 @@ public interface MetricsIOSource extends BaseSource {
   /**
    * The name of the metrics context that metrics will be under in jmx
    */
-  String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
+  String METRICS_JMX_CONTEXT = METRICS_JMX_CONTEXT_PREFIX + ",sub=" + METRICS_NAME;
+
+  String MASTER_METRICS_JMX_CONTEXT = MASTER_METRICS_JMX_CONTEXT_PREFIX + ",sub=" + METRICS_NAME;
 
 
   String FS_READ_TIME_HISTO_KEY = "fsReadTime";

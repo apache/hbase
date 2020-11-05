@@ -90,8 +90,8 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
     return new MetricsTableSourceImpl(table, getTableAggregate(), wrapper);
   }
 
-  public MetricsIOSource createIO(MetricsIOWrapper wrapper) {
-    return new MetricsIOSourceImpl(wrapper);
+  public MetricsIOSource createIO(MetricsIOWrapper wrapper, String context, String jmxContext) {
+    return new MetricsIOSourceImpl(wrapper, context, jmxContext);
   }
 
   @Override

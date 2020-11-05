@@ -34,8 +34,8 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
   private final MetricHistogram fsPReadTimeHisto;
   private final MetricHistogram fsWriteTimeHisto;
 
-  public MetricsIOSourceImpl(MetricsIOWrapper wrapper) {
-    this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, wrapper);
+  public MetricsIOSourceImpl(MetricsIOWrapper wrapper, String context, String jmxContext) {
+    this(METRICS_NAME, METRICS_DESCRIPTION, context, jmxContext, wrapper);
   }
 
   public MetricsIOSourceImpl(String metricsName,

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.regionserver.CellSink;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -172,9 +173,6 @@ public final class HFile {
   // For tests. Gets incremented when we read a block whether from HDFS or from Cache.
   public static final LongAdder DATABLOCK_READ_COUNT = new LongAdder();
 
-  /** Static instance for the metrics so that HFileReaders access the same instance */
-  static final MetricsIO metrics = new MetricsIO(new MetricsIOWrapperImpl());
-
   /**
    * Shutdown constructor.
    */
@@ -198,14 +196,14 @@ public final class HFile {
 
   public static final void updateReadLatency(long latencyMillis, boolean pread) {
     if (pread) {
-      metrics.updateFsPreadTime(latencyMillis);
+      HRegionServer.getMetricsIO().updateFsPreadTime(latencyMillis);
     } else {
-      metrics.updateFsReadTime(latencyMillis);
+      HRegionServer.getMetricsIO().updateFsReadTime(latencyMillis);
     }
   }
 
   public static final void updateWriteLatency(long latencyMillis) {
-    metrics.updateFsWriteTime(latencyMillis);
+    HRegionServer.getMetricsIO().updateFsWriteTime(latencyMillis);
   }
 
   /** API required to write an {@link HFile} */
