@@ -195,7 +195,7 @@ public abstract class RpcServer implements RpcServerInterface,
   protected static final String TRACE_LOG_MAX_LENGTH = "hbase.ipc.trace.log.max.length";
   protected static final String KEY_WORD_TRUNCATED = " <TRUNCATED>";
 
-  protected static final Gson GSON = GsonUtil.createGson().create();
+  protected static final Gson GSON = GsonUtil.createGsonWithDisableHtmlEscaping().create();
 
   protected final int maxRequestSize;
   protected final int warnResponseTime;
