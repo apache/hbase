@@ -2755,8 +2755,8 @@ public final class ProtobufUtil {
       ClusterStatusProtos.ReplicationLoadSink rls) {
     return new ReplicationLoadSink(rls.getAgeOfLastAppliedOp(),
         rls.getTimeStampsOfLastAppliedOp(),
-        rls.getTimestampStarted(),
-        rls.getTotalOpsProcessed());
+        rls.hasTimestampStarted()? rls.getTimestampStarted(): -1L,
+        rls.hasTotalOpsProcessed()? rls.getTotalOpsProcessed(): -1L);
   }
 
   public static ReplicationLoadSource toReplicationLoadSource(
