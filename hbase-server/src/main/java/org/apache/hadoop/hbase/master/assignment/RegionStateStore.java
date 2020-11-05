@@ -103,7 +103,7 @@ public class RegionStateStore {
   }
 
   public void visitMeta(final RegionStateVisitor visitor) throws IOException {
-    MetaTableAccessor.fullScanRegions(master.getConnection(),
+    MetaTableAccessor.fullScanRegions(true, master.getConnection(),
       new ClientMetaTableAccessor.Visitor() {
         final boolean isDebugEnabled = LOG.isDebugEnabled();
 
