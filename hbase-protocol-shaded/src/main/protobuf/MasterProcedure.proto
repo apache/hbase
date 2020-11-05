@@ -510,7 +510,9 @@ enum RegionRemoteProcedureBaseState {
 message RegionRemoteProcedureBaseStateData {
   required RegionInfo region = 1;
   required ServerName target_server = 2;
-  required RegionRemoteProcedureBaseState state = 3;
+  // state is actually 'required' but we can't set it as 'required' here else it breaks old
+  // Messages; see HBASE-22074.
+  optional RegionRemoteProcedureBaseState state = 3;
   optional RegionStateTransition.TransitionCode transition_code = 4;
   optional int64 seq_id = 5;
 }
