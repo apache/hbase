@@ -283,7 +283,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   private static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
   private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
 
-  protected static final Gson GSON = GsonUtil.createGson().create();
+  protected static final Gson GSON = GsonUtil.createGsonWithDisableHtmlEscaping().create();
 
   protected static final int DEFAULT_TRACE_LOG_MAX_LENGTH = 1000;
   protected static final String TRACE_LOG_MAX_LENGTH = "hbase.ipc.trace.log.max.length";
