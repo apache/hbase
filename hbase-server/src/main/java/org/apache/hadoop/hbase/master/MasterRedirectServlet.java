@@ -59,22 +59,21 @@ class MasterRedirectServlet extends HttpServlet {
       if (!Addressing.isLocalAddress(InetAddress.getByName(redirectHost))) {
         LOG.warn("Couldn't resolve '" + redirectHost + "' as an address local to this node and '" +
           MASTER_HOSTNAME_KEY + "' is not set; client will get an HTTP 400 response. If " +
-          "your HBase deployment relies on client accessible names that the region server process " +
-          "can't resolve locally, then you should set the previously mentioned configuration variable " +
-          "to an appropriate hostname.");
+          "your HBase deployment relies on client accessible names that the region server " +
+          "process can't resolve locally, then you should set the previously mentioned " +
+          "configuration variable to an appropriate hostname.");
         // no sending client provided input back to the client, so the goal host is just in the
         // logs.
         response.sendError(400,
           "Request was to a host that I can't resolve for any of the network interfaces on " +
-            "this node. If this is due to an intermediary such as an HTTP load balancer or other proxy, your HBase " +
-            "administrator can set '" + MASTER_HOSTNAME_KEY +
+            "this node. If this is due to an intermediary such as an HTTP load balancer or " +
+            "other proxy, your HBase administrator can set '" + MASTER_HOSTNAME_KEY +
             "' to point to the correct hostname.");
         return;
       }
     }
-    // TODO this scheme should come from looking at the scheme registered in the infoserver's http
-    // server for the
-    // host and port we're using, but it's buried way too deep to do that ATM.
+    // TODO: this scheme should come from looking at the scheme registered in the infoserver's http
+    // server for the host and port we're using, but it's buried way too deep to do that ATM.
     String redirectUrl = request.getScheme() + "://" + redirectHost + ":" + regionServerInfoPort +
       request.getRequestURI();
     response.sendRedirect(redirectUrl);
