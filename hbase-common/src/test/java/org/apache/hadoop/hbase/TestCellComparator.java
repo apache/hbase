@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -138,15 +139,25 @@ public class TestCellComparator {
    * in 2.0.
    */
   @Test
-  public void testMetaComparisons() throws Exception {
+  public void testRootMetaComparisons() throws Exception {
     long now = System.currentTimeMillis();
+
+    KeyValue a = new KeyValue(Bytes.toBytes("hbase:meta,,99999999999999"), now);
+    KeyValue b = new KeyValue(Bytes.toBytes("hbase:meta,,1"), now);
+    CellComparator c = RootCellComparator.ROOT_COMPARATOR;
+    assertTrue(c.compare(b, a) < 0);
+    KeyValue aa = new KeyValue(Bytes.toBytes("hbase:meta,,1"), now);
+    KeyValue bb = new KeyValue(
+      Bytes.toBytes("hbase:meta,,1"), Bytes.toBytes("info"), Bytes.toBytes("regioninfo"),
+      1235943454602L, (byte[]) null);
+    assertTrue(c.compare(aa, bb) < 0);
 
     // Meta compares
     Cell aaa = createByteBufferKeyValueFromKeyValue(new KeyValue(
         Bytes.toBytes("TestScanMultipleVersions,row_0500,1236020145502"), now));
     Cell bbb = createByteBufferKeyValueFromKeyValue(new KeyValue(
         Bytes.toBytes("TestScanMultipleVersions,,99999999999999"), now));
-    CellComparator c = MetaCellComparator.META_COMPARATOR;
+    c = MetaCellComparator.META_COMPARATOR;
     assertTrue(c.compare(bbb, aaa) < 0);
 
     Cell ccc = createByteBufferKeyValueFromKeyValue(
@@ -166,44 +177,6 @@ public class TestCellComparator {
     assertTrue(c.compare(x, y) < 0);
   }
 
-  /**
-   * Test meta comparisons using our new ByteBufferKeyValue Cell type, the type we use everywhere
-   * in 2.0.
-   */
-  @Test
-  public void testRootComparisons() throws Exception {
-    long now = System.currentTimeMillis();
-
-    // Meta compares
-    Cell aaa = createByteBufferKeyValueFromKeyValue(new KeyValue(
-      Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+
-        ",TestScanMultipleVersions,row_0500,1236020145502,1236020145502"), now));
-    Cell bbb = createByteBufferKeyValueFromKeyValue(new KeyValue(
-      Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+
-        ",TestScanMultipleVersions,,99999999999999,99999999999999"), now));
-    CellComparator c = RootCellComparator.ROOT_COMPARATOR;
-    assertTrue(c.compare(bbb, aaa) < 0);
-
-    Cell ccc = createByteBufferKeyValueFromKeyValue(
-      new KeyValue(Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+
-        ",TestScanMultipleVersions,,99999999999999,1236023996656"),
-        Bytes.toBytes("info"), Bytes.toBytes("regioninfo"), 1236024396271L,
-        (byte[])null));
-    assertTrue(c.compare(ccc, bbb) < 0);
-
-    Cell x = createByteBufferKeyValueFromKeyValue(
-      new KeyValue(Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+
-        ",TestScanMultipleVersions,row_0500,1236034574162,1236034574162"),
-        Bytes.toBytes("info"), Bytes.toBytes(""), 9223372036854775807L,
-        (byte[])null));
-    Cell y = createByteBufferKeyValueFromKeyValue(
-      new KeyValue(Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+
-        ",TestScanMultipleVersions,row_0500,1236034574162,1236034574162"),
-        Bytes.toBytes("info"), Bytes.toBytes("regioninfo"), 1236034574912L,
-        (byte[])null));
-    assertTrue(c.compare(x, y) < 0);
-  }
-
   private static Cell createByteBufferKeyValueFromKeyValue(KeyValue kv) {
     ByteBuffer bb = ByteBuffer.wrap(kv.getBuffer());
     return new ByteBufferKeyValue(bb, 0, bb.remaining());
@@ -213,65 +186,48 @@ public class TestCellComparator {
    * More tests using ByteBufferKeyValue copied over from TestKeyValue which uses old KVs only.
    */
   @Test
-  public void testMetaComparisons2() {
+  public void testRootMetaComparisons2() {
     long now = System.currentTimeMillis();
-    CellComparator c = MetaCellComparator.META_COMPARATOR;
-    assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
-            Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now)),
-        createByteBufferKeyValueFromKeyValue(new KeyValue(
-            Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now))) == 0);
-    Cell a = createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now));
-    Cell b = createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,2"), now));
-    assertTrue(c.compare(a, b) < 0);
-    assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
-            Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,2"), now)),
-        createByteBufferKeyValueFromKeyValue(new KeyValue(
-            Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now))) > 0);
-    assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
-            Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now)),
-        createByteBufferKeyValueFromKeyValue(new KeyValue(
-            Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now))) == 0);
-    assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
-            Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now)),
-        createByteBufferKeyValueFromKeyValue(new KeyValue(
-            Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,2"), now))) < 0);
-    assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
-            Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,2"), now)),
-        createByteBufferKeyValueFromKeyValue(new KeyValue(
-            Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now))) > 0);
-  }
-
-  @Test
-  public void testRootComparisons2() {
-    long now = System.currentTimeMillis();
-    CellComparator c = RootCellComparator.ROOT_COMPARATOR;
-    assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now)),
-      createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now))) == 0);
-    Cell a = createByteBufferKeyValueFromKeyValue(new KeyValue(
-      Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now));
-    Cell b = createByteBufferKeyValueFromKeyValue(new KeyValue(
-      Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,2"), now));
-    assertTrue(c.compare(a, b) < 0);
-    assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,2"), now)),
-      createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now))) > 0);
-    assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now)),
-      createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now))) == 0);
-    assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now)),
-      createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,2"), now))) < 0);
-    assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,2"), now)),
-      createByteBufferKeyValueFromKeyValue(new KeyValue(
-        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now))) > 0);
+    for (CellComparator c : new CellComparator[]{RootCellComparator.ROOT_COMPARATOR,
+        MetaCellComparator.META_COMPARATOR}) {
+      assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes(
+          TableName.META_TABLE_NAME.getNameAsString() + ",a,,0,1"), now)),
+        createByteBufferKeyValueFromKeyValue(
+          new KeyValue(Bytes.toBytes(
+            TableName.META_TABLE_NAME.getNameAsString() + ",a,,0,1"), now))) == 0);
+      Cell a = createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes(
+          TableName.META_TABLE_NAME.getNameAsString() + ",a,,0,1"), now));
+      Cell b = createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes(
+          TableName.META_TABLE_NAME.getNameAsString() + ",a,,0,2"), now));
+      assertTrue(c.compare(a, b) < 0);
+      assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes(
+          TableName.META_TABLE_NAME.getNameAsString() + ",a,,0,2"), now)),
+        createByteBufferKeyValueFromKeyValue(
+          new KeyValue(Bytes.toBytes(
+            TableName.META_TABLE_NAME.getNameAsString() + ",a,,0,1"), now))) > 0);
+      assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes(
+          TableName.META_TABLE_NAME.getNameAsString() + ",,1"), now)),
+        createByteBufferKeyValueFromKeyValue(
+          new KeyValue(Bytes.toBytes(
+            TableName.META_TABLE_NAME.getNameAsString() + ",,1"), now))) == 0);
+      assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes(
+          TableName.META_TABLE_NAME.getNameAsString() + ",,1"), now)),
+        createByteBufferKeyValueFromKeyValue(
+          new KeyValue(Bytes.toBytes(
+            TableName.META_TABLE_NAME.getNameAsString() + ",,2"), now))) < 0);
+      assertTrue(c.compare(createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes(
+          TableName.META_TABLE_NAME.getNameAsString() + ",,2"), now)),
+        createByteBufferKeyValueFromKeyValue(
+          new KeyValue(Bytes.toBytes(
+            TableName.META_TABLE_NAME.getNameAsString() + ",,1"), now))) > 0);
+    }
   }
 
   @Test
@@ -314,6 +270,52 @@ public class TestCellComparator {
     count = 0;
     for (Cell k: set) {
       assertTrue("count=" + count + ", " + k.toString(), count++ == k.getTimestamp());
+    }
+
+    // Make up hbase:root table keys.
+    Cell [] rootKeys = {
+      createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes("hbase:meta,aaaaa,\u0000\u0000,0,2"),
+          fam, qf, 2, nb)),
+      createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes("hbase:meta,aaaaa,\u0001,0,3"), fam, qf, 3, nb)),
+      createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes("hbase:meta,aaaaa,,0,1"), fam, qf, 1, nb)),
+      createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes("hbase:meta,aaaaa,\u1000,0,5"), fam, qf, 5, nb)),
+      createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes("hbase:meta,aaaaa,a,0,4"), fam, qf, 4, nb)),
+      createByteBufferKeyValueFromKeyValue(
+        new KeyValue(Bytes.toBytes("hbase:meta,,0"), fam, qf, 0, nb))
+    };
+
+    // This will output the keys incorrectly.
+    set = new TreeSet<Cell>(MetaCellComparator.META_COMPARATOR);
+    // Add to set with bad comparator
+    for (int i = 0; i < keys.length; i++) {
+      set.add(rootKeys[i]);
+    }
+    assertion = false;
+    count = 0;
+    try {
+      for (Cell k: set) {
+        assertTrue("count=" + count + ", " + k.toString(),count++ == k.getTimestamp());
+      }
+      fail("Expected to fail");
+    } catch (AssertionError e) {
+      // Expected
+      assertion = true;
+    }
+    assertTrue(assertion);
+    // Now with right comparator
+    set = new TreeSet<Cell>(RootCellComparator.ROOT_COMPARATOR);
+    // Add to set with bad comparator
+    for (int i = 0; i < keys.length; i++) {
+      set.add(rootKeys[i]);
+    }
+    count = 0;
+    for (Cell k: set) {
+      assertTrue("count=" + count + ", " + k.toString(),count++ == k.getTimestamp());
     }
   }
 }

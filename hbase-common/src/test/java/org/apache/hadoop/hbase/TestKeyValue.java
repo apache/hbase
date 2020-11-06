@@ -146,12 +146,22 @@ public class TestKeyValue {
   public void testMoreComparisons() {
     long now = System.currentTimeMillis();
 
+    KeyValue a = new KeyValue(Bytes.toBytes("hbase:meta,,99999999999999"), now);
+    KeyValue b = new KeyValue(Bytes.toBytes("hbase:meta,,1"), now);
+    CellComparator c = RootCellComparator.ROOT_COMPARATOR;
+    assertTrue(c.compare(b, a) < 0);
+    KeyValue aa = new KeyValue(Bytes.toBytes("hbase:meta,,1"), now);
+    KeyValue bb = new KeyValue(Bytes.toBytes("hbase:meta,,1"),
+      Bytes.toBytes("info"), Bytes.toBytes("regioninfo"), 1235943454602L,
+      (byte[])null);
+    assertTrue(c.compare(aa, bb) < 0);
+
     // Meta compares
     KeyValue aaa = new KeyValue(
         Bytes.toBytes("TestScanMultipleVersions,row_0500,1236020145502"), now);
     KeyValue bbb = new KeyValue(
         Bytes.toBytes("TestScanMultipleVersions,,99999999999999"), now);
-    CellComparator c = MetaCellComparator.META_COMPARATOR;
+    c = MetaCellComparator.META_COMPARATOR;
     assertTrue(c.compare(bbb, aaa) < 0);
 
     KeyValue aaaa = new KeyValue(Bytes.toBytes("TestScanMultipleVersions,,1236023996656"),
@@ -168,6 +178,7 @@ public class TestKeyValue {
     assertTrue(c.compare(x, y) < 0);
     comparisons(MetaCellComparator.META_COMPARATOR);
     comparisons(CellComparatorImpl.COMPARATOR);
+    metacomparisons(RootCellComparator.ROOT_COMPARATOR);
     metacomparisons(MetaCellComparator.META_COMPARATOR);
   }
 
@@ -201,6 +212,12 @@ public class TestKeyValue {
     rowB = new KeyValue(Bytes.toBytes("testtable,$www.hbase.org/,99999"),
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     assertTrue(MetaCellComparator.META_COMPARATOR.compare(rowA, rowB) < 0);
+
+    rowA = new KeyValue(Bytes.toBytes("hbase:meta,testtable,www.hbase.org/,1234,4321"),
+      Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
+    rowB = new KeyValue(Bytes.toBytes("hbase:meta,testtable,www.hbase.org/%20,99999,99999"),
+      Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
+    assertTrue(RootCellComparator.ROOT_COMPARATOR.compare(rowA, rowB) < 0);
   }
 
   private void metacomparisons(final CellComparatorImpl c) {
@@ -268,6 +285,46 @@ public class TestKeyValue {
     Collections.addAll(set, keys);
     count = 0;
     for (KeyValue k : set) {
+      assertEquals(count++, k.getTimestamp());
+    }
+
+
+    // Make up hbase:root table keys.
+    KeyValue [] rootKeys = {
+        new KeyValue(Bytes.toBytes("hbase:meta,aaaaa,\u0000\u0000,0,2"),
+          fam, qf, 2, nb),
+        new KeyValue(Bytes.toBytes("hbase:meta,aaaaa,\u0001,0,3"), fam, qf, 3, nb),
+        new KeyValue(Bytes.toBytes("hbase:meta,aaaaa,,0,1"), fam, qf, 1, nb),
+        new KeyValue(Bytes.toBytes("hbase:meta,aaaaa,\u1000,0,5"), fam, qf, 5, nb),
+        new KeyValue(Bytes.toBytes("hbase:meta,aaaaa,a,0,4"), fam, qf, 4, nb),
+        new KeyValue(Bytes.toBytes("hbase:meta,,0"), fam, qf, 0, nb)
+    };
+
+    // This will output the keys incorrectly.
+    set = new TreeSet<>(MetaCellComparator.META_COMPARATOR);
+    // Add to set with bad comparator
+    for (int i = 0; i < keys.length; i++) {
+      set.add(rootKeys[i]);
+    }
+    assertion = false;
+    count = 0;
+    try {
+      for (KeyValue k: set) {
+        assertEquals(count++, k.getTimestamp());
+      }
+    } catch (AssertionError e) {
+      // Expected
+      assertion = true;
+    }
+    assertTrue(assertion);
+    // Now with right comparator
+    set = new TreeSet<>(RootCellComparator.ROOT_COMPARATOR);
+    // Add to set with bad comparator
+    for (int i = 0; i < keys.length; i++) {
+      set.add(rootKeys[i]);
+    }
+    count = 0;
+    for (KeyValue k: set) {
       assertEquals(count++, k.getTimestamp());
     }
   }
