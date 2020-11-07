@@ -52,10 +52,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -97,7 +94,6 @@ import org.apache.hadoop.hbase.exceptions.MasterStoppedException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
-import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -230,74 +226,23 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
- * run the cluster.  All others park themselves in their constructor until
- * master or cluster shutdown or until the active master loses its lease in
- * zookeeper.  Thereafter, all running master jostle to take over master role.
- *
- * <p>The Master can be asked shutdown the cluster. See {@link #shutdown()}.  In
- * this case it will tell all regionservers to go down and then wait on them
- * all reporting in that they are down.  This master will then shut itself down.
- *
- * <p>You can also shutdown just this master.  Call {@link #stopMaster()}.
- *
+ * HMaster is the "master server" for HBase. An HBase cluster has one active master. If many masters
+ * are started, all compete. Whichever wins goes on to run the cluster. All others park themselves
+ * in their constructor until master or cluster shutdown or until the active master loses its lease
+ * in zookeeper. Thereafter, all running master jostle to take over master role.
+ * <p/>
+ * The Master can be asked shutdown the cluster. See {@link #shutdown()}. In this case it will tell
+ * all regionservers to go down and then wait on them all reporting in that they are down. This
+ * master will then shut itself down.
+ * <p/>
+ * You can also shutdown just this master. Call {@link #stopMaster()}.
  * @see org.apache.zookeeper.Watcher
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings("deprecation")
 public class HMaster extends HRegionServer implements MasterServices {
-  private static Logger LOG = LoggerFactory.getLogger(HMaster.class);
 
-  /**
-   * Protection against zombie master. Started once Master accepts active responsibility and
-   * starts taking over responsibilities. Allows a finite time window before giving up ownership.
-   */
-  private static class InitializationMonitor extends Thread {
-    /** The amount of time in milliseconds to sleep before checking initialization status. */
-    public static final String TIMEOUT_KEY = "hbase.master.initializationmonitor.timeout";
-    public static final long TIMEOUT_DEFAULT = TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES);
-
-    /**
-     * When timeout expired and initialization has not complete, call {@link System#exit(int)} when
-     * true, do nothing otherwise.
-     */
-    public static final String HALT_KEY = "hbase.master.initializationmonitor.haltontimeout";
-    public static final boolean HALT_DEFAULT = false;
-
-    private final HMaster master;
-    private final long timeout;
-    private final boolean haltOnTimeout;
-
-    /** Creates a Thread that monitors the {@link #isInitialized()} state. */
-    InitializationMonitor(HMaster master) {
-      super("MasterInitializationMonitor");
-      this.master = master;
-      this.timeout = master.getConfiguration().getLong(TIMEOUT_KEY, TIMEOUT_DEFAULT);
-      this.haltOnTimeout = master.getConfiguration().getBoolean(HALT_KEY, HALT_DEFAULT);
-      this.setDaemon(true);
-    }
-
-    @Override
-    public void run() {
-      try {
-        while (!master.isStopped() && master.isActiveMaster()) {
-          Thread.sleep(timeout);
-          if (master.isInitialized()) {
-            LOG.debug("Initialization completed within allotted tolerance. Monitor exiting.");
-          } else {
-            LOG.error("Master failed to complete initialization after " + timeout + "ms. Please"
-                + " consider submitting a bug report including a thread dump of this process.");
-            if (haltOnTimeout) {
-              LOG.error("Zombie Master exiting. Thread dump to stdout");
-              Threads.printThreadInfo(System.out, "Zombie HMaster");
-              System.exit(-1);
-            }
-          }
-        }
-      } catch (InterruptedException ie) {
-        LOG.trace("InitMonitor thread interrupted. Existing.");
-      }
-    }
-  }
+  private static final Logger LOG = LoggerFactory.getLogger(HMaster.class);
 
   // MASTER is name of the webapp and the attribute name used stuffing this
   //instance into web context.
@@ -452,48 +397,6 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   // Cached clusterId on stand by masters to serve clusterID requests from clients.
   private final CachedClusterId cachedClusterId;
-
-  public static class RedirectServlet extends HttpServlet {
-    private static final long serialVersionUID = 2894774810058302473L;
-    private final int regionServerInfoPort;
-    private final String regionServerHostname;
-
-    /**
-     * @param infoServer that we're trying to send all requests to
-     * @param hostname may be null. if given, will be used for redirects instead of host from client.
-     */
-    public RedirectServlet(InfoServer infoServer, String hostname) {
-       regionServerInfoPort = infoServer.getPort();
-       regionServerHostname = hostname;
-    }
-
-    @Override
-    public void doGet(HttpServletRequest request,
-        HttpServletResponse response) throws ServletException, IOException {
-      String redirectHost = regionServerHostname;
-      if(redirectHost == null) {
-        redirectHost = request.getServerName();
-        if(!Addressing.isLocalAddress(InetAddress.getByName(redirectHost))) {
-          LOG.warn("Couldn't resolve '" + redirectHost + "' as an address local to this node and '" +
-              MASTER_HOSTNAME_KEY + "' is not set; client will get an HTTP 400 response. If " +
-              "your HBase deployment relies on client accessible names that the region server process " +
-              "can't resolve locally, then you should set the previously mentioned configuration variable " +
-              "to an appropriate hostname.");
-          // no sending client provided input back to the client, so the goal host is just in the logs.
-          response.sendError(400, "Request was to a host that I can't resolve for any of the network interfaces on " +
-              "this node. If this is due to an intermediary such as an HTTP load balancer or other proxy, your HBase " +
-              "administrator can set '" + MASTER_HOSTNAME_KEY + "' to point to the correct hostname.");
-          return;
-        }
-      }
-      // TODO this scheme should come from looking at the scheme registered in the infoserver's http server for the
-      // host and port we're using, but it's buried way too deep to do that ATM.
-      String redirectUrl = request.getScheme() + "://"
-        + redirectHost + ":" + regionServerInfoPort
-        + request.getRequestURI();
-      response.sendRedirect(redirectUrl);
-    }
-  }
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -667,7 +570,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     final String redirectHostname =
         StringUtils.isBlank(useThisHostnameInstead) ? null : useThisHostnameInstead;
 
-    final RedirectServlet redirect = new RedirectServlet(infoServer, redirectHostname);
+    final MasterRedirectServlet redirect = new MasterRedirectServlet(infoServer, redirectHostname);
     final WebAppContext context = new WebAppContext(null, "/", null, null, null, null, WebAppContext.NO_SESSIONS);
     context.addServlet(new ServletHolder(redirect), "/*");
     context.setServer(masterJettyServer);
@@ -964,7 +867,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.activeMaster = true;
 
     // Start the Zombie master detector after setting master as active, see HBASE-21535
-    Thread zombieDetector = new Thread(new InitializationMonitor(this),
+    Thread zombieDetector = new Thread(new MasterInitializationMonitor(this),
         "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
     zombieDetector.setDaemon(true);
     zombieDetector.start();
