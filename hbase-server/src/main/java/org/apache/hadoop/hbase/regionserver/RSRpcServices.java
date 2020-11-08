@@ -1108,34 +1108,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  // Exposed for testing
-  interface LogDelegate {
-    void logBatchWarning(String firstRegionName, int sum, int rowSizeWarnThreshold);
-  }
-
-  private static LogDelegate DEFAULT_LOG_DELEGATE = new LogDelegate() {
-    @Override
-    public void logBatchWarning(String firstRegionName, int sum, int rowSizeWarnThreshold) {
-      if (LOG.isWarnEnabled()) {
-        LOG.warn("Large batch operation detected (greater than " + rowSizeWarnThreshold
-            + ") (HBASE-18023)." + " Requested Number of Rows: " + sum + " Client: "
-            + RpcServer.getRequestUserName().orElse(null) + "/"
-            + RpcServer.getRemoteAddress().orElse(null)
-            + " first region in multi=" + firstRegionName);
-      }
-    }
-  };
-
-  private final LogDelegate ld;
-
-  public RSRpcServices(final HRegionServer rs) throws IOException {
-    this(rs, DEFAULT_LOG_DELEGATE);
-  }
-
   // Directly invoked only for testing
-  RSRpcServices(final HRegionServer rs, final LogDelegate ld) throws IOException {
+  public RSRpcServices(final HRegionServer rs) throws IOException {
     final Configuration conf = rs.getConfiguration();
-    this.ld = ld;
     regionServer = rs;
     rowSizeWarnThreshold = conf.getInt(
       HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
@@ -2600,12 +2575,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       sum += regionAction.getActionCount();
     }
     if (sum > rowSizeWarnThreshold) {
-      ld.logBatchWarning(firstRegionName, sum, rowSizeWarnThreshold);
+      LOG.warn("Large batch operation detected (greater than " + rowSizeWarnThreshold +
+        ") (HBASE-18023)." + " Requested Number of Rows: " + sum + " Client: " +
+        RpcServer.getRequestUserName().orElse(null) + "/" +
+        RpcServer.getRemoteAddress().orElse(null) + " first region in multi=" + firstRegionName);
       if (rejectRowsWithSizeOverThreshold) {
         throw new ServiceException(
-          "Rejecting large batch operation for current batch with firstRegionName: "
-            + firstRegionName + " , Requested Number of Rows: " + sum + " , Size Threshold: "
-            + rowSizeWarnThreshold);
+          "Rejecting large batch operation for current batch with firstRegionName: " +
+            firstRegionName + " , Requested Number of Rows: " + sum + " , Size Threshold: " +
+            rowSizeWarnThreshold);
       }
     }
   }
