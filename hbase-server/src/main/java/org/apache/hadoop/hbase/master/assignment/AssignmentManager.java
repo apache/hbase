@@ -1588,6 +1588,7 @@ public class AssignmentManager {
   }
 
   private void loadMeta() throws IOException {
+    master.getTableStateManager().asyncLoadTableState();
     // TODO: use a thread pool
     regionStateStore.visitMeta(new RegionMetaLoadingVisitor());
     // every assignment is blocked until meta is loaded.
