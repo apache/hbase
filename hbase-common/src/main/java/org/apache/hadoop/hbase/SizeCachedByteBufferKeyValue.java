@@ -33,7 +33,8 @@ public class SizeCachedByteBufferKeyValue extends ByteBufferKeyValue {
   private short rowLen;
   private int keyLen;
 
-  public SizeCachedByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId, int keyLen) {
+  public SizeCachedByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId,
+      int keyLen) {
     super(buf, offset, length);
     // We will read all these cached values at least once. Initialize now itself so that we can
     // avoid uninitialized checks with every time call
@@ -75,5 +76,10 @@ public class SizeCachedByteBufferKeyValue extends ByteBufferKeyValue {
   @Override
   public int getSerializedSize() {
     return this.length;
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    return super.equals(other);
   }
 }

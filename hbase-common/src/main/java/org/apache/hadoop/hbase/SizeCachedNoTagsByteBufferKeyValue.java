@@ -67,4 +67,9 @@ public class SizeCachedNoTagsByteBufferKeyValue extends NoTagsByteBufferKeyValue
   public long heapSize() {
     return super.heapSize() + FIXED_OVERHEAD;
   }
+
+  @Override
+  public boolean equals(Object other) {
+    return super.equals(other);
+  }
 }

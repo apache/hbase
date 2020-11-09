@@ -18,13 +18,11 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
-import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.NoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.SizeCachedByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
