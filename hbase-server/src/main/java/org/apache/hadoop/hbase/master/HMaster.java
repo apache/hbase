@@ -877,14 +877,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
         .map(p -> (ServerCrashProcedure) p).map(p -> p.getServerName()).collect(Collectors.toSet()),
       walManager.getLiveServersFromWALDir(), walManager.getSplittingServersFromWALDir());
-    // This manager will be started AFTER hbase:meta is confirmed on line.
-    // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
-    // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
-    this.tableStateManager =
-      this.conf.getBoolean(MirroringTableStateManager.MIRROR_TABLE_STATE_TO_ZK_KEY, true)
-        ?
-        new MirroringTableStateManager(this):
-        new TableStateManager(this);
+    // This manager must be accessed AFTER hbase:meta is confirmed on line..
+    this.tableStateManager = new TableStateManager(this);
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -970,7 +964,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
-    this.tableStateManager.start();
 
     // for migrating from a version without HBASE-25099, and also for honoring the configuration
     // first.
@@ -1004,11 +997,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
     }
-    // Below has to happen after tablestatemanager has started in the case where this hbase-2.x
-    // is being started over an hbase-1.x dataset. tablestatemanager runs a migration as part
-    // of its 'start' moving table state from zookeeper to hbase:meta. This migration needs to
-    // complete before we do this next step processing offline regions else it fails reading
-    // table states messing up master launch (namespace table, etc., are not assigned).
     this.assignmentManager.processOfflineRegions();
     // Initialize after meta is up as below scans meta
     if (getFavoredNodesManager() != null && !maintenanceMode) {
