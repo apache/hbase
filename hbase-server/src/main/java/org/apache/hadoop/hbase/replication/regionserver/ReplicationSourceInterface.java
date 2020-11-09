@@ -52,6 +52,7 @@ public interface ReplicationSourceInterface {
    * @param queueStorage the replication queue storage
    * @param replicationPeer the replication peer
    * @param server the server which start and run this replication source
+   * @param producer the name of region server which produce WAL to the replication queue
    * @param queueId the id of our replication queue
    * @param clusterId unique UUID for the cluster
    * @param walFileLengthProvider used to get the WAL length
@@ -59,8 +60,9 @@ public interface ReplicationSourceInterface {
    */
   void init(Configuration conf, FileSystem fs, Path walDir,
     ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
-    ReplicationPeer replicationPeer, Server server, String queueId, UUID clusterId,
-    WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException;
+    ReplicationPeer replicationPeer, Server server, ServerName producer, String queueId,
+    UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
+    throws IOException;
 
   /**
    * Add a log to the list of logs to replicate

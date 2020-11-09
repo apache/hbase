@@ -80,7 +80,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  * </pre>
  */
 @InterfaceAudience.Private
-class ZKReplicationQueueStorage extends ZKReplicationStorageBase
+public class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     implements ReplicationQueueStorage {
 
   private static final Logger LOG = LoggerFactory.getLogger(ZKReplicationQueueStorage.class);
@@ -123,7 +123,7 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     return ZNodePaths.joinZNode(queuesZNode, serverName.getServerName());
   }
 
-  private String getQueueNode(ServerName serverName, String queueId) {
+  public String getQueueNode(ServerName serverName, String queueId) {
     return ZNodePaths.joinZNode(getRsNode(serverName), queueId);
   }
 

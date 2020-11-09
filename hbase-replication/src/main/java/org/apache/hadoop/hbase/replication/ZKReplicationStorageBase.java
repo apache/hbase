@@ -74,4 +74,8 @@ public abstract class ZKReplicationStorageBase {
       throw new RuntimeException(e);
     }
   }
+
+  public ZKWatcher getZookeeper() {
+    return this.zookeeper;
+  }
 }
