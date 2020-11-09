@@ -363,8 +363,8 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
     WALFileLengthProvider walFileLengthProvider =
       this.walFactory.getWALProvider() != null?
         this.walFactory.getWALProvider().getWALFileLengthProvider() : p -> OptionalLong.empty();
-    src.init(conf, fs, logDir, this, queueStorage, replicationPeer, server, queueId, clusterId,
-      walFileLengthProvider, new MetricsSource(queueId));
+    src.init(conf, fs, logDir, this, queueStorage, replicationPeer, server, server.getServerName(),
+      queueId, clusterId, walFileLengthProvider, new MetricsSource(queueId));
     return src;
   }
 
@@ -1050,8 +1050,9 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
     CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
       this.clusterId.toString());
     final ReplicationSourceInterface crs = new CatalogReplicationSource();
-    crs.init(conf, fs, logDir, this, new NoopReplicationQueueStorage(), peer, server, peer.getId(),
-      clusterId, walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
+    crs.init(conf, fs, logDir, this, new NoopReplicationQueueStorage(), peer, server,
+      server.getServerName(), peer.getId(), clusterId, walProvider.getWALFileLengthProvider(),
+      new MetricsSource(peer.getId()));
     // Add listener on the provider so we can pick up the WAL to replicate on roll.
     WALActionsListener listener = new WALActionsListener() {
       @Override public void postLogRoll(Path oldPath, Path newPath) throws IOException {

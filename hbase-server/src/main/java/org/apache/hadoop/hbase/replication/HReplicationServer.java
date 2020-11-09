@@ -20,10 +20,19 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.lang.management.MemoryUsage;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.OptionalLong;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -33,18 +42,31 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.ReplicationService;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationGlobalSourceSource;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceFactory;
+import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
+import org.apache.hadoop.hbase.replication.regionserver.RecoveredReplicationSource;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceFactory;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
+import org.apache.hadoop.hbase.security.SecurityConstants;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -66,7 +88,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatus
  */
 @InterfaceAudience.Private
 @SuppressWarnings({ "deprecation"})
-public class HReplicationServer extends Thread implements Server {
+public class HReplicationServer extends Thread implements Server, ReplicationSourceController  {
 
   private static final Logger LOG = LoggerFactory.getLogger(HReplicationServer.class);
 
@@ -76,7 +98,7 @@ public class HReplicationServer extends Thread implements Server {
   /**
    * This servers start code.
    */
-  protected final long startCode;
+  private final long startCode;
 
   private volatile boolean stopped = false;
 
@@ -85,7 +107,11 @@ public class HReplicationServer extends Thread implements Server {
   private AtomicBoolean abortRequested;
 
   // flag set after we're done setting up server threads
-  final AtomicBoolean online = new AtomicBoolean(false);
+  private final AtomicBoolean online = new AtomicBoolean(false);
+
+  private final int msgInterval;
+  // A sleeper that sleeps for msgInterval.
+  private final Sleeper sleeper;
 
   /**
    * The server name the Master sees us as.  Its made from the hostname the
@@ -94,18 +120,22 @@ public class HReplicationServer extends Thread implements Server {
    */
   private ServerName serverName;
 
-  protected final Configuration conf;
+  private final Configuration conf;
 
-  private ReplicationSinkService replicationSinkService;
+  // zookeeper connection and watcher
+  private final ZKWatcher zooKeeper;
 
-  final int msgInterval;
-  // A sleeper that sleeps for msgInterval.
-  protected final Sleeper sleeper;
+  private final UUID clusterId;
 
   private final int shortOperationTimeout;
 
-  // zookeeper connection and watcher
-  protected final ZKWatcher zooKeeper;
+  private HFileSystem walFs;
+  private Path walRootDir;
+
+  /**
+   * ChoreService used to schedule tasks that we want to run periodically
+   */
+  private ChoreService choreService;
 
   // master address tracker
   private final MasterAddressTracker masterAddressTracker;
@@ -113,11 +143,23 @@ public class HReplicationServer extends Thread implements Server {
   /**
    * The asynchronous cluster connection to be shared by services.
    */
-  protected AsyncClusterConnection asyncClusterConnection;
+  private AsyncClusterConnection asyncClusterConnection;
 
   private UserProvider userProvider;
 
-  protected final ReplicationServerRpcServices rpcServices;
+  final ReplicationServerRpcServices rpcServices;
+
+  // Total buffer size on this RegionServer for holding batched edits to be shipped.
+  private final long totalBufferLimit;
+  private AtomicLong totalBufferUsed = new AtomicLong();
+
+  private final MetricsReplicationGlobalSourceSource globalMetrics;
+  private final Map<String, MetricsSource> sourceMetrics = new HashMap<>();
+  private final ConcurrentMap<String, ReplicationSourceInterface> sources =
+    new ConcurrentHashMap<>();
+
+  private final ReplicationQueueStorage queueStorage;
+  private final ReplicationPeers replicationPeers;
 
   // Stub to do region server status calls against the master.
   private volatile ReplicationServerStatusService.BlockingInterface rssStub;
@@ -125,12 +167,9 @@ public class HReplicationServer extends Thread implements Server {
   // RPC client. Used to make the stub above that does region server status checking.
   private RpcClient rpcClient;
 
-  /**
-   * ChoreService used to schedule tasks that we want to run periodically
-   */
-  private ChoreService choreService;
+  private ReplicationSinkService replicationSinkService;
 
-  public HReplicationServer(final Configuration conf) throws IOException {
+  public HReplicationServer(final Configuration conf) throws Exception {
     TraceUtil.initTracer(conf);
     try {
       this.startCode = System.currentTimeMillis();
@@ -144,12 +183,29 @@ public class HReplicationServer extends Thread implements Server {
       serverName = ServerName.valueOf(hostName, this.rpcServices.isa.getPort(), this.startCode);
 
       this.userProvider = UserProvider.instantiate(conf);
+      // login the zookeeper client principal (if using security)
+      ZKUtil.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
+        HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL, hostName);
+      // login the server principal (if using secure Hadoop)
+      this.userProvider.login(SecurityConstants.REGIONSERVER_KRB_KEYTAB_FILE,
+        SecurityConstants.REGIONSERVER_KRB_PRINCIPAL, hostName);
+      // init superusers and add the server principal (if using security)
+      // or process owner as default super user.
+      Superusers.initialize(conf);
 
       this.msgInterval = conf.getInt("hbase.replicationserver.msginterval", 3 * 1000);
       this.sleeper = new Sleeper(this.msgInterval, this);
 
       this.shortOperationTimeout = conf.getInt(HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT);
+      this.totalBufferLimit = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
+        HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
+      this.globalMetrics =
+        CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
+          .getGlobalSource();
+
+      initializeFileSystem();
+      this.choreService = new ChoreService(getName(), true);
 
       // Some unit tests don't need a cluster, so no zookeeper at all
       if (!conf.getBoolean("hbase.testing.nocluster", false)) {
@@ -162,6 +218,12 @@ public class HReplicationServer extends Thread implements Server {
         zooKeeper = null;
         masterAddressTracker = null;
       }
+
+      this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zooKeeper, conf);
+      this.replicationPeers =
+        ReplicationFactory.getReplicationPeers(zooKeeper, this.conf);
+      this.replicationPeers.init();
+      this.clusterId = ZKClusterId.getUUIDForCluster(zooKeeper);
       this.rpcServices.start(zooKeeper);
       this.choreService = new ChoreService(getName(), true);
     } catch (Throwable t) {
@@ -170,6 +232,15 @@ public class HReplicationServer extends Thread implements Server {
       LOG.error("Failed construction ReplicationServer", t);
       throw t;
     }
+  }
+
+  private void initializeFileSystem() throws IOException {
+    // Get fs instance used by this RS. Do we use checksum verification in the hbase? If hbase
+    // checksum verification enabled, then automatically switch off hdfs checksum verification.
+    boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
+    CommonFSUtils.setFsDefault(this.conf, CommonFSUtils.getWALRootDir(this.conf));
+    this.walFs = new HFileSystem(this.conf, useHBaseChecksum);
+    this.walRootDir = CommonFSUtils.getWALRootDir(this.conf);
   }
 
   public String getProcessName() {
@@ -291,6 +362,9 @@ public class HReplicationServer extends Thread implements Server {
     if (this.replicationSinkService != null) {
       this.replicationSinkService.stopReplicationService();
     }
+    if (this.choreService != null) {
+      this.choreService.shutdown();
+    }
   }
 
   @Override
@@ -330,7 +404,7 @@ public class HReplicationServer extends Thread implements Server {
 
   @Override
   public ChoreService getChoreService() {
-    return this.choreService;
+    return choreService;
   }
 
   @Override
@@ -593,5 +667,70 @@ public class HReplicationServer extends Thread implements Server {
       interrupted = true;
     }
     return interrupted;
+  }
+
+  @Override
+  public long getTotalBufferLimit() {
+    return this.totalBufferLimit;
+  }
+
+  @Override
+  public AtomicLong getTotalBufferUsed() {
+    return this.totalBufferUsed;
+  }
+
+  @Override
+  public MetricsReplicationGlobalSourceSource getGlobalMetrics() {
+    return this.globalMetrics;
+  }
+
+  @Override
+  public void finishRecoveredSource(RecoveredReplicationSource src) {
+    this.sources.remove(src.getQueueId());
+    this.sourceMetrics.remove(src.getQueueId());
+    deleteQueue(src.getQueueId());
+    LOG.info("Finished recovering queue {} with the following stats: {}", src.getQueueId(),
+      src.getStats());
+  }
+
+  public void startReplicationSource(ServerName producer, String queueId)
+    throws IOException, ReplicationException {
+    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);
+    String peerId = replicationQueueInfo.getPeerId();
+    this.replicationPeers.addPeer(peerId);
+    Path walDir =
+      new Path(walRootDir, AbstractFSWALProvider.getWALDirectoryName(producer.toString()));
+    MetricsSource metrics = new MetricsSource(queueId);
+
+    ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, queueId);
+    // init replication source
+    src.init(conf, walFs, walDir, this, queueStorage, replicationPeers.getPeer(peerId), this,
+      producer, queueId, clusterId, p -> OptionalLong.empty(), metrics);
+    queueStorage.getWALsInQueue(producer, queueId)
+      .forEach(walName -> src.enqueueLog(new Path(walDir, walName)));
+    src.startup();
+    sources.put(queueId, src);
+    sourceMetrics.put(queueId, metrics);
+  }
+
+  /**
+   * Delete a complete queue of wals associated with a replication source
+   * @param queueId the id of replication queue to delete
+   */
+  private void deleteQueue(String queueId) {
+    abortWhenFail(() -> this.queueStorage.removeQueue(getServerName(), queueId));
+  }
+
+  @FunctionalInterface
+  private interface ReplicationQueueOperation {
+    void exec() throws ReplicationException;
+  }
+
+  private void abortWhenFail(ReplicationQueueOperation op) {
+    try {
+      op.exec();
+    } catch (ReplicationException e) {
+      abort("Failed to operate on replication queue", e);
+    }
   }
 }

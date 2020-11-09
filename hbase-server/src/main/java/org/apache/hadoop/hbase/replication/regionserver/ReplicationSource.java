@@ -61,10 +61,13 @@ import org.apache.hadoop.hbase.replication.ReplicationSourceController;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
+import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -148,6 +151,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private int waitOnEndpointSeconds = -1;
 
   private Thread initThread;
+  private Thread fetchWALsThread;
 
   /**
    * WALs to replicate.
@@ -185,8 +189,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
   @Override
   public void init(Configuration conf, FileSystem fs, Path walDir,
     ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
-    ReplicationPeer replicationPeer, Server server, String queueId, UUID clusterId,
-    WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
+    ReplicationPeer replicationPeer, Server server, ServerName producer, String queueId,
+    UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
+    throws IOException {
     this.server = server;
     this.conf = HBaseConfiguration.create(conf);
     this.walDir = walDir;
@@ -218,6 +223,19 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.abortOnError = this.conf.getBoolean("replication.source.regionserver.abort",
       true);
 
+    if (conf.getBoolean(HConstants.REPLICATION_OFFLOAD_ENABLE_KEY,
+      HConstants.REPLICATION_OFFLOAD_ENABLE_DEFAULT)) {
+      if (queueStorage instanceof ZKReplicationQueueStorage) {
+        ZKReplicationQueueStorage zkQueueStorage = (ZKReplicationQueueStorage) queueStorage;
+        zkQueueStorage.getZookeeper().registerListener(
+          new ReplicationQueueListener(this, zkQueueStorage, producer, queueId, walDir));
+        LOG.info("Register a ZKListener to track the WALs from {}'s replication queue, queueId={}",
+          producer, queueId);
+      } else {
+        throw new UnsupportedOperationException(
+          "hbase.replication.offload.enabled=true only support ZKReplicationQueueStorage");
+      }
+    }
     LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
       replicationPeer.getId(), this.currentBandwidth);
   }
@@ -911,6 +929,38 @@ public class ReplicationSource implements ReplicationSourceInterface {
           e.getCause().getCause());
       }
       server.abort("Failed to operate on replication queue", e);
+    }
+  }
+
+  /**
+   * Tracks changes to the WALs in the replication queue.
+   */
+  public static class ReplicationQueueListener extends ZKListener {
+
+    private final ReplicationSource source;
+    private final String queueNode;
+    private final Path walDir;
+
+    public ReplicationQueueListener(ReplicationSource source,
+      ZKReplicationQueueStorage zkQueueStorage, ServerName producer, String queueId, Path walDir) {
+      super(zkQueueStorage.getZookeeper());
+      this.source = source;
+      this.queueNode = zkQueueStorage.getQueueNode(producer, queueId);
+      this.walDir = walDir;
+    }
+
+    @Override
+    public synchronized void nodeChildrenChanged(String path) {
+      if (path.equals(queueNode)) {
+        LOG.info("Detected change to the WALs in the replication queue {}", queueNode);
+        try {
+          ZKUtil.listChildrenNoWatch(watcher, queueNode).forEach(walName -> {
+            source.enqueueLog(new Path(walDir, walName));
+          });
+        } catch (KeeperException e) {
+          LOG.warn("Failed to read WALs in the replication queue {}", queueNode, e);
+        }
+      }
     }
   }
 }

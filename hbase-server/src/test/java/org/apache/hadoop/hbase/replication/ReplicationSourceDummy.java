@@ -48,8 +48,9 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   @Override
   public void init(Configuration conf, FileSystem fs, Path walDir,
     ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
-    ReplicationPeer replicationPeer, Server server, String queueId, UUID clusterId,
-    WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
+    ReplicationPeer replicationPeer, Server server, ServerName producer, String queueId,
+    UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
+    throws IOException {
     this.queueId = queueId;
     this.metrics = metrics;
     this.walFileLengthProvider = walFileLengthProvider;

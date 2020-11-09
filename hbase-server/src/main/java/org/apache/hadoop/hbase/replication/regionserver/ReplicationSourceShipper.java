@@ -367,8 +367,8 @@ public class ReplicationSourceShipper extends Thread {
       LOG.trace("Decrementing totalBufferUsed by {}B while stopping Replication WAL Readers.",
         totalToDecrement.longValue());
     }
-    long newBufferUsed = source.manager.getTotalBufferUsed()
+    long newBufferUsed = source.controller.getTotalBufferUsed()
       .addAndGet(-totalToDecrement.longValue());
-    source.manager.getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
+    source.controller.getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
   }
 }
