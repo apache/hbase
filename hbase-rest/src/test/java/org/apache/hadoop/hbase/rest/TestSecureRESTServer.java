@@ -168,7 +168,7 @@ public class TestSecureRESTServer {
     HBaseKerberosUtils.setKeytabFileForTesting(serviceKeytab.getAbsolutePath());
     // Why doesn't `setKeytabFileForTesting` do this?
     conf.set("hbase.master.keytab.file", serviceKeytab.getAbsolutePath());
-    conf.set("hbase.regionserver.hostname", "localhost");
+    conf.set("hbase.unsafe.regionserver.hostname", "localhost");
     conf.set("hbase.master.hostname", "localhost");
     HBaseKerberosUtils.setSecuredConfiguration(conf,
         SERVICE_PRINCIPAL+ "@" + KDC.getRealm(), SPNEGO_SERVICE_PRINCIPAL+ "@" + KDC.getRealm());
