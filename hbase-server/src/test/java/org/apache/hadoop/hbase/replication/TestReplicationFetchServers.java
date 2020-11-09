@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,13 +38,14 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListReplicationSinkServersRequest;
@@ -53,10 +54,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterServ
 
 @Category({ ReplicationTests.class, MediumTests.class })
 public class TestReplicationFetchServers extends TestReplicationBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationFetchServers.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestReplicationFetchServers.class);
+
+  private static HReplicationServer replicationServer;
 
   private static AtomicBoolean fetchFlag = new AtomicBoolean(false);
 
@@ -77,6 +81,17 @@ public class TestReplicationFetchServers extends TestReplicationBase {
   public static void setUpBeforeClass() throws Exception {
     CONF2.set(MASTER_COPROCESSOR_CONF_KEY, MyObserver.class.getName());
     TestReplicationBase.setUpBeforeClass();
+    replicationServer = new HReplicationServer(CONF2);
+    replicationServer.start();
+    UTIL2.waitFor(60000, () -> replicationServer.isOnline());
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TestReplicationBase.tearDownAfterClass();
+    if (!replicationServer.isStopped()) {
+      replicationServer.stop("test");
+    }
   }
 
   @Before
@@ -85,15 +100,23 @@ public class TestReplicationFetchServers extends TestReplicationBase {
   }
 
   @Test
-  public void testMasterListReplicationPeerServers() throws IOException, ServiceException {
+  public void testMasterListReplicationPeerServers() throws IOException {
     AsyncClusterConnection conn = UTIL2.getAsyncConnection();
     ServerName master = UTIL2.getAdmin().getMaster();
-    MasterService.BlockingInterface masterStub = MasterService.newBlockingStub(
-        conn.getRpcClient().createBlockingRpcChannel(master, User.getCurrent(), 1000));
-    ListReplicationSinkServersResponse resp = masterStub.listReplicationSinkServers(
-        null, ListReplicationSinkServersRequest.newBuilder().build());
-    List<ServerName> servers = ProtobufUtil.toServerNameList(resp.getServerNameList());
-    assertFalse(servers.isEmpty());
+    // Wait for the replication server report to master
+    UTIL2.waitFor(60000, () -> {
+      List<ServerName> servers = new ArrayList<>();
+      try {
+        MasterService.BlockingInterface masterStub = MasterService.newBlockingStub(
+          conn.getRpcClient().createBlockingRpcChannel(master, User.getCurrent(), 1000));
+        ListReplicationSinkServersResponse resp = masterStub.listReplicationSinkServers(
+          null, ListReplicationSinkServersRequest.newBuilder().build());
+        servers = ProtobufUtil.toServerNameList(resp.getServerNameList());
+      } catch (Exception e) {
+        LOG.debug("Failed to list replication servers", e);
+      }
+      return servers.size() == 1;
+    });
     assertTrue(fetchFlag.get());
   }
 

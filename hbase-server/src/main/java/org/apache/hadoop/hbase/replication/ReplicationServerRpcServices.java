@@ -56,11 +56,14 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerProtos.ReplicationServerService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerProtos.StartReplicationSourceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerProtos.StartReplicationSourceResponse;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -319,6 +322,18 @@ public class ReplicationServerRpcServices implements HBaseRPCErrorHandler,
       }
     } catch (IOException ie) {
       throw new ServiceException(ie);
+    }
+  }
+
+  @Override
+  public StartReplicationSourceResponse startReplicationSource(RpcController controller,
+    StartReplicationSourceRequest request) throws ServiceException {
+    try {
+      replicationServer.startReplicationSource(ProtobufUtil.toServerName(request.getServerName()),
+        request.getQueueId());
+      return StartReplicationSourceResponse.newBuilder().build();
+    } catch (Exception e) {
+      throw new ServiceException(e);
     }
   }
 }
