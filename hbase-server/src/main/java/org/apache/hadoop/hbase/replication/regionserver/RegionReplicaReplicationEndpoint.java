@@ -189,7 +189,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       // later it is changed to multiple replicas. The cached location for meta may only has
       // the primary region. In this case, it needs to clean up and refresh the cached meta
       // locations.
-      if (tableDesc.isMergeEnabled()) {
+      if (tableDesc.isMetaTable()) {
         connection.getRegionLocator(tableDesc.getTableName()).clearRegionLocationCache();
       }
       future.complete(Long.valueOf(entries.size()));
