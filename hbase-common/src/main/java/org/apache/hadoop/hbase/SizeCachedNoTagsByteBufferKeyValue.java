@@ -29,11 +29,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class SizeCachedNoTagsByteBufferKeyValue extends NoTagsByteBufferKeyValue {
 
-
+  public static final  int FIXED_OVERHEAD = Bytes.SIZEOF_SHORT + Bytes.SIZEOF_INT;
   private short rowLen;
   private int keyLen;
-
-  public static final int FIXED_OVERHEAD = Bytes.SIZEOF_SHORT + Bytes.SIZEOF_INT;
 
   public SizeCachedNoTagsByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId,
       int keyLen) {

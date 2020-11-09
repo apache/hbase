@@ -29,10 +29,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class SizeCachedByteBufferKeyValue extends ByteBufferKeyValue {
 
+  public static final int FIXED_OVERHEAD = Bytes.SIZEOF_SHORT + Bytes.SIZEOF_INT;
   private short rowLen;
   private int keyLen;
-
-  public static final int FIXED_OVERHEAD = Bytes.SIZEOF_SHORT + Bytes.SIZEOF_INT;
 
   public SizeCachedByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId, int keyLen) {
     super(buf, offset, length);

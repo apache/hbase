@@ -449,8 +449,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       this.currKeyLen = (int)(ll >> Integer.SIZE);
       this.currValueLen = (int)(Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
       checkKeyValueLen();
-      this.rowLen = ((blockBuffer.getByteAfterPosition(Bytes.SIZEOF_LONG) & 0xff) << 8)
-          ^ (blockBuffer.getByteAfterPosition(Bytes.SIZEOF_LONG + 1) & 0xff);
+      this.rowLen = blockBuffer.getShortAfterPosition(Bytes.SIZEOF_LONG);
       // Move position past the key and value lengths and then beyond the key and value
       int p = (Bytes.SIZEOF_LONG + currKeyLen + currValueLen);
       if (reader.getFileContext().isIncludesTags()) {
@@ -559,8 +558,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
               + " path=" + reader.getPath());
         }
         offsetFromPos += Bytes.SIZEOF_LONG;
-        rowLen = ((blockBuffer.getByteAfterPosition(offsetFromPos) & 0xff) << 8)
-            ^ (blockBuffer.getByteAfterPosition(offsetFromPos + 1) & 0xff);
+        this.rowLen = blockBuffer.getShortAfterPosition(offsetFromPos);
         blockBuffer.asSubByteBuffer(blockBuffer.position() + offsetFromPos, klen, pair);
         bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), klen, (short)rowLen);
         int comp =
