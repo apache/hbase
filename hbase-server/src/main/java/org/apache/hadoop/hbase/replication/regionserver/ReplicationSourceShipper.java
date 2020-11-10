@@ -367,13 +367,16 @@ public class ReplicationSourceShipper extends Thread {
     entryReader.entryBatchQueue.forEach(w -> {
       entryReader.entryBatchQueue.remove(w);
       w.getWalEntries().forEach(e -> {
-        long entrySizeExcludeBulkLoad = entryReader.getEntrySizeExcludeBulkLoad(e);
+        long entrySizeExcludeBulkLoad = ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(e);
         totalToDecrement.accumulate(entrySizeExcludeBulkLoad);
       });
     });
-
-    LOG.trace("Decrementing totalBufferUsed by {}B while stopping Replication WAL Readers.",
-      totalToDecrement.longValue());
-    source.getSourceManager().getTotalBufferUsed().addAndGet(-totalToDecrement.longValue());
+    if( LOG.isTraceEnabled()) {
+      LOG.trace("Decrementing totalBufferUsed by {}B while stopping Replication WAL Readers.",
+        totalToDecrement.longValue());
+    }
+    long newBufferUsed = source.getSourceManager().getTotalBufferUsed()
+      .addAndGet(-totalToDecrement.longValue());
+    source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
   }
 }
