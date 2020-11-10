@@ -318,6 +318,20 @@ public class RESTServer implements Constants {
       sslCtxFactory.setKeyStorePassword(password);
       sslCtxFactory.setKeyManagerPassword(keyPassword);
 
+      String trustStore = conf.get(REST_SSL_TRUSTSTORE_STORE);
+      if(StringUtils.isNotBlank(trustStore)) {
+        sslCtxFactory.setTrustStorePath(trustStore);
+      }
+      String trustStorePassword =
+        HBaseConfiguration.getPassword(conf, REST_SSL_TRUSTSTORE_PASSWORD, null);
+      if(StringUtils.isNotBlank(trustStorePassword)) {
+        sslCtxFactory.setTrustStorePassword(trustStorePassword);
+      }
+      String trustStoreType = conf.get(REST_SSL_TRUSTSTORE_TYPE);
+      if(StringUtils.isNotBlank(trustStoreType)) {
+        sslCtxFactory.setTrustStoreType(trustStoreType);
+      }
+
       String[] excludeCiphers = servlet.getConfiguration().getStrings(
           REST_SSL_EXCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
       if (excludeCiphers.length != 0) {
