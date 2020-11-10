@@ -53,7 +53,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * By default, it carries no tables.
    * TODO: Add any | system as flags to indicate what it can do.
    *
-   * @deprecated since 3.0.0, will be removed in 4.0.0.
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
   @Deprecated
@@ -62,7 +62,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   /**
    * Master carries system tables.
    *
-   * @deprecated since 3.0.0, will be removed in 4.0.0.
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
   @Deprecated
@@ -167,7 +167,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
 
   /**
    * @return true if Master carries regions
-   * @deprecated since 3.0.0, will be removed in 4.0.0.
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
   @Deprecated
@@ -176,7 +176,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   }
 
   /**
-   * @deprecated since 3.0.0, will be removed in 4.0.0.
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
   @Deprecated
@@ -185,7 +185,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   }
 
   /**
-   * @deprecated since 3.0.0, will be removed in 4.0.0.
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
   @Deprecated

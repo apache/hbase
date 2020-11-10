@@ -147,7 +147,7 @@ public final class ZNodeClearer {
 
   /**
    * @return true if cluster is configured with master-rs collocation
-   * @deprecated since 3.0.0, will be removed in 4.0.0.
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
   @Deprecated
