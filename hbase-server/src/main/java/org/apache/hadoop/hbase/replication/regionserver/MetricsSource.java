@@ -19,8 +19,11 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +64,8 @@ public class MetricsSource implements BaseSource {
     singleSourceSource =
         CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
             .getSource(id);
-    globalSourceSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+    globalSourceSource = CompatibilitySingletonFactory
+            .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     singleSourceSourceByTable = new HashMap<>();
   }
 
@@ -91,6 +95,29 @@ public class MetricsSource implements BaseSource {
     globalSourceSource.setLastShippedAge(age);
     this.ageOfLastShippedOp.put(walGroup, age);
     this.lastShippedTimeStamps.put(walGroup, timestamp);
+  }
+
+  /**
+   * Update the table level replication metrics per table
+   *
+   * @param walEntries List of pairs of WAL entry and it's size
+   */
+  public void updateTableLevelMetrics(List<Pair<Entry, Long>> walEntries) {
+    for (Pair<Entry, Long> walEntryWithSize : walEntries) {
+      Entry entry = walEntryWithSize.getFirst();
+      long entrySize = walEntryWithSize.getSecond();
+      String tableName = entry.getKey().getTableName().getNameAsString();
+      long writeTime = entry.getKey().getWriteTime();
+      long age = EnvironmentEdgeManager.currentTime() - writeTime;
+
+      // get the replication metrics source for table at the run time
+      MetricsReplicationSourceSource tableSource = this.getSingleSourceSourceByTable()
+        .computeIfAbsent(tableName,
+          t -> CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
+            .getSource(t));
+      tableSource.setLastShippedAge(age);
+      tableSource.incrShippedBytes(entrySize);
+    }
   }
 
   /**
@@ -438,5 +465,29 @@ public class MetricsSource implements BaseSource {
   @VisibleForTesting
   public Map<String, MetricsReplicationSourceSource> getSingleSourceSourceByTable() {
     return singleSourceSourceByTable;
+  }
+
+  /**
+   * Sets the amount of memory in bytes used in this RegionServer by edits pending replication.
+   */
+  public void setWALReaderEditsBufferUsage(long usageInBytes) {
+    if (globalSourceSource instanceof MetricsReplicationGlobalSourceSource) {
+      ((MetricsReplicationGlobalSourceSource) globalSourceSource)
+              .setWALReaderEditsBufferBytes(usageInBytes);
+    }
+  }
+
+  /**
+   * Returns the amount of memory in bytes used in this RegionServer by edits pending replication.
+   * @return the amount of memory in bytes used in this RegionServer by edits pending replication.
+   */
+  public long getWALReaderEditsBufferUsage() {
+    if (globalSourceSource instanceof MetricsReplicationGlobalSourceSource) {
+      return ((MetricsReplicationGlobalSourceSource) globalSourceSource)
+              .getWALReaderEditsBufferBytes();
+    }
+    else {
+      return 0L;
+    }
   }
 }
