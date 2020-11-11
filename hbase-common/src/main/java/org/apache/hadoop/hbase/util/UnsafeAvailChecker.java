@@ -22,6 +22,9 @@ import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +42,10 @@ public class UnsafeAvailChecker {
       @Override
       public Boolean run() {
         try {
+          final Configuration conf = HBaseConfiguration.create();
+          if (!conf.getBoolean(HConstants.HBASE_UNSAFE_USAGE_ENABLED, true)) {
+            return false;
+          }
           Class<?> clazz = Class.forName(CLASS_NAME);
           Field f = clazz.getDeclaredField("theUnsafe");
           f.setAccessible(true);

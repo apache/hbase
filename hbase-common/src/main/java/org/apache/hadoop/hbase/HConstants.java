@@ -966,6 +966,11 @@ public final class HConstants {
   public static final int DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT = 10000;
 
   /**
+   * Parameter name to enable/disable Unsafe package usage for Bytes conversion
+   */
+  public static final String HBASE_UNSAFE_USAGE_ENABLED = "hbase.unsafe.usage.enabled";
+
+  /**
    * Value indicating the server name was saved with no sequence number.
    */
   public static final long NO_SEQNUM = -1;
