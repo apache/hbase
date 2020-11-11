@@ -42,11 +42,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ RestTests.class, MediumTests.class})
-public class TestSslRestServer {
+public class TestRESTServerSSL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSslRestServer.class);
+      HBaseClassTestRule.forClass(TestRESTServerSSL.class);
 
   private static final String KEY_STORE_PASSWORD = "myKSPassword";
   private static final String TRUST_STORE_PASSWORD = "myTSPassword";
@@ -96,7 +96,7 @@ public class TestSslRestServer {
 
   @Test
   public void testSslConnection() throws Exception {
-    startServletWithDefaultKeystoreType();
+    startRESTServerWithDefaultKeystoreType();
 
     Response response = sslClient.get("/version", Constants.MIMETYPE_TEXT);
     assertEquals(200, response.getCode());
@@ -104,7 +104,7 @@ public class TestSslRestServer {
 
   @Test(expected = org.apache.http.client.ClientProtocolException.class)
   public void testNonSslClientDenied() throws Exception {
-    startServletWithDefaultKeystoreType();
+    startRESTServerWithDefaultKeystoreType();
 
     Cluster localCluster = new Cluster().add("localhost", REST_TEST_UTIL.getServletPort());
     Client nonSslClient = new Client(localCluster, false);
@@ -114,7 +114,7 @@ public class TestSslRestServer {
 
   @Test
   public void testSslConnectionUsingKeystoreFormatJKS() throws Exception {
-    startServlet("jks");
+    startRESTServer("jks");
 
     Response response = sslClient.get("/version", Constants.MIMETYPE_TEXT);
     assertEquals(200, response.getCode());
@@ -122,7 +122,7 @@ public class TestSslRestServer {
 
   @Test
   public void testSslConnectionUsingKeystoreFormatJCEKS() throws Exception {
-    startServlet("jceks");
+    startRESTServer("jceks");
 
     Response response = sslClient.get("/version", Constants.MIMETYPE_TEXT);
     assertEquals(200, response.getCode());
@@ -130,7 +130,7 @@ public class TestSslRestServer {
 
   @Test
   public void testSslConnectionUsingKeystoreFormatPKCS12() throws Exception {
-    startServlet("pkcs12");
+    startRESTServer("pkcs12");
 
     Response response = sslClient.get("/version", Constants.MIMETYPE_TEXT);
     assertEquals(200, response.getCode());
@@ -142,7 +142,7 @@ public class TestSslRestServer {
     final File target = new File(System.getProperty("user.dir"), "target");
     assertTrue(target.exists());
     String dataTestDir = TEST_UTIL.getDataTestDir().toString();
-    File keystoreDir = new File(dataTestDir,TestSslRestServer.class.getSimpleName() + "_keys");
+    File keystoreDir = new File(dataTestDir, TestRESTServerSSL.class.getSimpleName() + "_keys");
     keystoreDir.mkdirs();
     return keystoreDir;
   }
@@ -169,7 +169,7 @@ public class TestSslRestServer {
     return String.format("%s/serverTS.%s", keyDir.getAbsolutePath(), trustStoreType);
   }
 
-  private void startServletWithDefaultKeystoreType() throws Exception {
+  private void startRESTServerWithDefaultKeystoreType() throws Exception {
     conf.set(Constants.REST_SSL_KEYSTORE_STORE, getKeystoreFilePath("jks"));
     conf.set(Constants.REST_SSL_TRUSTSTORE_STORE, getTruststoreFilePath("jks"));
 
@@ -179,7 +179,7 @@ public class TestSslRestServer {
       Optional.of(TRUST_STORE_PASSWORD), Optional.empty());
   }
 
-  private void startServlet(String storeType) throws Exception {
+  private void startRESTServer(String storeType) throws Exception {
     conf.set(Constants.REST_SSL_KEYSTORE_TYPE, storeType);
     conf.set(Constants.REST_SSL_KEYSTORE_STORE, getKeystoreFilePath(storeType));
 

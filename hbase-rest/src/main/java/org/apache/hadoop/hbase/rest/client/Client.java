@@ -103,6 +103,12 @@ public class Client {
       setConnectTimeout(2000).build();
     httpClientBuilder.setDefaultRequestConfig(requestConfig);
 
+    // Since HBASE-25267 we don't use the deprecated DefaultHttpClient anymore.
+    // The new http client would decompress the gzip content automatically.
+    // In order to keep the original behaviour of this public class, we disable
+    // automatic content compression.
+    httpClientBuilder.disableContentCompression();
+
     if(sslEnabled && trustStore.isPresent()) {
       try {
         SSLContext sslcontext =
@@ -782,7 +788,7 @@ public class Client {
   }
 
 
-  public class ClientTrustStoreInitializationException extends RuntimeException {
+  public static class ClientTrustStoreInitializationException extends RuntimeException {
 
     public ClientTrustStoreInitializationException(String message, Throwable cause) {
       super(message, cause);
