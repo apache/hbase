@@ -22,8 +22,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.AsyncClusterConnection;
+import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
+import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
@@ -38,6 +46,9 @@ import org.apache.zookeeper.KeeperException.SessionExpiredException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+
 /**
  * A {@link BaseReplicationEndpoint} for replication endpoints whose
  * target cluster is an HBase cluster.
@@ -49,13 +60,70 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   private static final Logger LOG = LoggerFactory.getLogger(HBaseReplicationEndpoint.class);
 
   private ZKWatcher zkw = null;
+  private final Object zkwLock = new Object();
 
-  private List<ServerName> regionServers = new ArrayList<>(0);
-  private long lastRegionServerUpdate;
+  protected Configuration conf;
 
-  protected synchronized void disconnect() {
-    if (zkw != null) {
-      zkw.close();
+  private AsyncClusterConnection conn;
+
+  /**
+   * Default maximum number of times a replication sink can be reported as bad before
+   * it will no longer be provided as a sink for replication without the pool of
+   * replication sinks being refreshed.
+   */
+  public static final int DEFAULT_BAD_SINK_THRESHOLD = 3;
+
+  /**
+   * Default ratio of the total number of peer cluster region servers to consider
+   * replicating to.
+   */
+  public static final float DEFAULT_REPLICATION_SOURCE_RATIO = 0.5f;
+
+  // Ratio of total number of potential peer region servers to be used
+  private float ratio;
+
+  // Maximum number of times a sink can be reported as bad before the pool of
+  // replication sinks is refreshed
+  private int badSinkThreshold;
+  // Count of "bad replication sink" reports per peer sink
+  private Map<ServerName, Integer> badReportCounts;
+
+  private List<ServerName> sinkServers = new ArrayList<>(0);
+
+  /*
+   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
+   * Connection implementations, or initialize it in a different way, so defining createConnection
+   * as protected for possible overridings.
+   */
+  protected AsyncClusterConnection createConnection(Configuration conf) throws IOException {
+    return ClusterConnectionFactory.createAsyncClusterConnection(conf,
+      null, User.getCurrent());
+  }
+
+  @Override
+  public void init(Context context) throws IOException {
+    super.init(context);
+    this.conf = HBaseConfiguration.create(ctx.getConfiguration());
+    this.ratio =
+      ctx.getConfiguration().getFloat("replication.source.ratio", DEFAULT_REPLICATION_SOURCE_RATIO);
+    this.badSinkThreshold =
+      ctx.getConfiguration().getInt("replication.bad.sink.threshold", DEFAULT_BAD_SINK_THRESHOLD);
+    this.badReportCounts = Maps.newHashMap();
+  }
+
+  protected void disconnect() {
+    synchronized (zkwLock) {
+      if (zkw != null) {
+        zkw.close();
+      }
+    }
+    if (this.conn != null) {
+      try {
+        this.conn.close();
+        this.conn = null;
+      } catch (IOException e) {
+        LOG.warn("{} Failed to close the connection", ctx.getPeerId());
+      }
     }
   }
 
@@ -63,15 +131,15 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * A private method used to re-establish a zookeeper session with a peer cluster.
    * @param ke
    */
-  protected void reconnect(KeeperException ke) {
+  private void reconnect(KeeperException ke) {
     if (ke instanceof ConnectionLossException || ke instanceof SessionExpiredException
         || ke instanceof AuthFailedException) {
       String clusterKey = ctx.getPeerConfig().getClusterKey();
-      LOG.warn("Lost the ZooKeeper connection for peer " + clusterKey, ke);
+      LOG.warn("Lost the ZooKeeper connection for peer {}", clusterKey, ke);
       try {
         reloadZkWatcher();
       } catch (IOException io) {
-        LOG.warn("Creation of ZookeeperWatcher failed for peer " + clusterKey, io);
+        LOG.warn("Creation of ZookeeperWatcher failed for peer {}", clusterKey, io);
       }
     }
   }
@@ -90,6 +158,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   protected void doStart() {
     try {
       reloadZkWatcher();
+      connectPeerCluster();
       notifyStarted();
     } catch (IOException e) {
       notifyFailed(e);
@@ -107,10 +176,12 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   // limit connections when multiple replication sources try to connect to
   // the peer cluster. If the peer cluster is down we can get out of control
   // over time.
-  public synchronized UUID getPeerUUID() {
+  public UUID getPeerUUID() {
     UUID peerUUID = null;
     try {
-      peerUUID = ZKClusterId.getUUIDForCluster(zkw);
+      synchronized (zkwLock) {
+        peerUUID = ZKClusterId.getUUIDForCluster(zkw);
+      }
     } catch (KeeperException ke) {
       reconnect(ke);
     }
@@ -118,22 +189,27 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   /**
-   * Get the ZK connection to this peer
-   * @return zk connection
-   */
-  protected synchronized ZKWatcher getZkw() {
-    return zkw;
-  }
-
-  /**
    * Closes the current ZKW (if not null) and creates a new one
    * @throws IOException If anything goes wrong connecting
    */
-  synchronized void reloadZkWatcher() throws IOException {
-    if (zkw != null) zkw.close();
-    zkw = new ZKWatcher(ctx.getConfiguration(),
-        "connection to cluster: " + ctx.getPeerId(), this);
-    getZkw().registerListener(new PeerRegionServerListener(this));
+  private void reloadZkWatcher() throws IOException {
+    synchronized (zkwLock) {
+      if (zkw != null) {
+        zkw.close();
+      }
+      zkw = new ZKWatcher(ctx.getConfiguration(),
+          "connection to cluster: " + ctx.getPeerId(), this);
+      zkw.registerListener(new PeerRegionServerListener(this));
+    }
+  }
+
+  private void connectPeerCluster() throws IOException {
+    try {
+      conn = createConnection(this.conf);
+    } catch (IOException ioe) {
+      LOG.warn("{} Failed to create connection for peer cluster", ctx.getPeerId(), ioe);
+      throw ioe;
+    }
   }
 
   @Override
@@ -150,13 +226,21 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
 
   /**
    * Get the list of all the region servers from the specified peer
-   * @param zkw zk connection to use
+   *
    * @return list of region server addresses or an empty list if the slave is unavailable
    */
-  protected static List<ServerName> fetchSlavesAddresses(ZKWatcher zkw)
-      throws KeeperException {
-    List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(zkw,
-            zkw.getZNodePaths().rsZNode);
+  protected List<ServerName> fetchSlavesAddresses() {
+    List<String> children = null;
+    try {
+      synchronized (zkwLock) {
+        children = ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.getZNodePaths().rsZNode);
+      }
+    } catch (KeeperException ke) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Fetch slaves addresses failed", ke);
+      }
+      reconnect(ke);
+    }
     if (children == null) {
       return Collections.emptyList();
     }
@@ -167,43 +251,70 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     return addresses;
   }
 
-  /**
-   * Get a list of all the addresses of all the region servers
-   * for this peer cluster
-   * @return list of addresses
-   */
-  // Synchronize peer cluster connection attempts to avoid races and rate
-  // limit connections when multiple replication sources try to connect to
-  // the peer cluster. If the peer cluster is down we can get out of control
-  // over time.
-  public synchronized List<ServerName> getRegionServers() {
-    try {
-      setRegionServers(fetchSlavesAddresses(this.getZkw()));
-    } catch (KeeperException ke) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Fetch slaves addresses failed", ke);
-      }
-      reconnect(ke);
+  protected synchronized void chooseSinks() {
+    List<ServerName> slaveAddresses = fetchSlavesAddresses();
+    if (slaveAddresses.isEmpty()) {
+      LOG.warn("No sinks available at peer. Will not be able to replicate");
     }
-    return regionServers;
+    Collections.shuffle(slaveAddresses, ThreadLocalRandom.current());
+    int numSinks = (int) Math.ceil(slaveAddresses.size() * ratio);
+    this.sinkServers = slaveAddresses.subList(0, numSinks);
+    badReportCounts.clear();
+  }
+
+  protected synchronized int getNumSinks() {
+    return sinkServers.size();
   }
 
   /**
-   * Set the list of region servers for that peer
-   * @param regionServers list of addresses for the region servers
+   * Get a randomly-chosen replication sink to replicate to.
+   * @return a replication sink to replicate to
    */
-  public synchronized void setRegionServers(List<ServerName> regionServers) {
-    this.regionServers = regionServers;
-    lastRegionServerUpdate = System.currentTimeMillis();
+  protected synchronized SinkPeer getReplicationSink() throws IOException {
+    if (sinkServers.isEmpty()) {
+      LOG.info("Current list of sinks is out of date or empty, updating");
+      chooseSinks();
+    }
+    if (sinkServers.isEmpty()) {
+      throw new IOException("No replication sinks are available");
+    }
+    ServerName serverName =
+      sinkServers.get(ThreadLocalRandom.current().nextInt(sinkServers.size()));
+    return new SinkPeer(serverName, conn.getRegionServerAdmin(serverName));
   }
 
   /**
-   * Get the timestamp at which the last change occurred to the list of region servers to replicate
-   * to.
-   * @return The System.currentTimeMillis at the last time the list of peer region servers changed.
+   * Report a {@code SinkPeer} as being bad (i.e. an attempt to replicate to it
+   * failed). If a single SinkPeer is reported as bad more than
+   * replication.bad.sink.threshold times, it will be removed
+   * from the pool of potential replication targets.
+   *
+   * @param sinkPeer The SinkPeer that had a failed replication attempt on it
    */
-  public long getLastRegionServerUpdate() {
-    return lastRegionServerUpdate;
+  protected synchronized void reportBadSink(SinkPeer sinkPeer) {
+    ServerName serverName = sinkPeer.getServerName();
+    int badReportCount = badReportCounts.compute(serverName, (k, v) -> v == null ? 1 : v + 1);
+    if (badReportCount > badSinkThreshold) {
+      this.sinkServers.remove(serverName);
+      if (sinkServers.isEmpty()) {
+        chooseSinks();
+      }
+    }
+  }
+
+  /**
+   * Report that a {@code SinkPeer} successfully replicated a chunk of data.
+   *
+   * @param sinkPeer
+   *          The SinkPeer that had a failed replication attempt on it
+   */
+  protected synchronized void reportSinkSuccess(SinkPeer sinkPeer) {
+    badReportCounts.remove(sinkPeer.getServerName());
+  }
+
+  @VisibleForTesting
+  List<ServerName> getSinkServers() {
+    return sinkServers;
   }
 
   /**
@@ -214,22 +325,39 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
     private final HBaseReplicationEndpoint replicationEndpoint;
     private final String regionServerListNode;
 
-    public PeerRegionServerListener(HBaseReplicationEndpoint replicationPeer) {
-      super(replicationPeer.getZkw());
-      this.replicationEndpoint = replicationPeer;
-      this.regionServerListNode = replicationEndpoint.getZkw().getZNodePaths().rsZNode;
+    public PeerRegionServerListener(HBaseReplicationEndpoint endpoint) {
+      super(endpoint.zkw);
+      this.replicationEndpoint = endpoint;
+      this.regionServerListNode = endpoint.zkw.getZNodePaths().rsZNode;
     }
 
     @Override
     public synchronized void nodeChildrenChanged(String path) {
       if (path.equals(regionServerListNode)) {
-        try {
-          LOG.info("Detected change to peer region servers, fetching updated list");
-          replicationEndpoint.setRegionServers(fetchSlavesAddresses(replicationEndpoint.getZkw()));
-        } catch (KeeperException e) {
-          LOG.error("Error reading slave addresses", e);
-        }
+        LOG.info("Detected change to peer region servers, fetching updated list");
+        replicationEndpoint.chooseSinks();
       }
+    }
+  }
+
+  /**
+   * Wraps a replication region server sink to provide the ability to identify it.
+   */
+  public static class SinkPeer {
+    private ServerName serverName;
+    private AsyncRegionServerAdmin regionServer;
+
+    public SinkPeer(ServerName serverName, AsyncRegionServerAdmin regionServer) {
+      this.serverName = serverName;
+      this.regionServer = regionServer;
+    }
+
+    ServerName getServerName() {
+      return serverName;
+    }
+
+    public AsyncRegionServerAdmin getRegionServer() {
+      return regionServer;
     }
   }
 }

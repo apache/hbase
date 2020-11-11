@@ -20,11 +20,14 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +41,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -47,6 +51,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,6 +90,7 @@ public final class SnapshotManifest {
   private final FileSystem rootFs;
   private final FileSystem workingDirFs;
   private int manifestSizeLimit;
+  private final MonitoredTask statusTask;
 
   /**
    *
@@ -98,12 +104,13 @@ public final class SnapshotManifest {
    */
   private SnapshotManifest(final Configuration conf, final FileSystem rootFs,
       final Path workingDir, final SnapshotDescription desc,
-      final ForeignExceptionSnare monitor) throws IOException {
+      final ForeignExceptionSnare monitor, final MonitoredTask statusTask) throws IOException {
     this.monitor = monitor;
     this.desc = desc;
     this.workingDir = workingDir;
     this.conf = conf;
     this.rootFs = rootFs;
+    this.statusTask = statusTask;
     this.workingDirFs = this.workingDir.getFileSystem(this.conf);
     this.manifestSizeLimit = conf.getInt(SNAPSHOT_MANIFEST_SIZE_LIMIT_CONF_KEY, 64 * 1024 * 1024);
   }
@@ -124,7 +131,14 @@ public final class SnapshotManifest {
   public static SnapshotManifest create(final Configuration conf, final FileSystem fs,
       final Path workingDir, final SnapshotDescription desc,
       final ForeignExceptionSnare monitor) throws IOException {
-    return new SnapshotManifest(conf, fs, workingDir, desc, monitor);
+    return create(conf, fs, workingDir, desc, monitor, null);
+
+  }
+
+  public static SnapshotManifest create(final Configuration conf, final FileSystem fs,
+      final Path workingDir, final SnapshotDescription desc, final ForeignExceptionSnare monitor,
+      final MonitoredTask statusTask) throws IOException {
+    return new SnapshotManifest(conf, fs, workingDir, desc, monitor, statusTask);
 
   }
 
@@ -139,7 +153,7 @@ public final class SnapshotManifest {
    */
   public static SnapshotManifest open(final Configuration conf, final FileSystem fs,
       final Path workingDir, final SnapshotDescription desc) throws IOException {
-    SnapshotManifest manifest = new SnapshotManifest(conf, fs, workingDir, desc, null);
+    SnapshotManifest manifest = new SnapshotManifest(conf, fs, workingDir, desc, null, null);
     manifest.load();
     return manifest;
   }
@@ -456,6 +470,12 @@ public final class SnapshotManifest {
     return this.regionManifests;
   }
 
+  private void setStatusMsg(String msg) {
+    if (this.statusTask != null) {
+      statusTask.setStatus(msg);
+    }
+  }
+
   /**
    * Get all the Region Manifest from the snapshot.
    * This is an helper to get a map with the region encoded name
@@ -478,7 +498,7 @@ public final class SnapshotManifest {
       FSTableDescriptors.createTableDescriptorForTableDirectory(workingDirFs, workingDir, htd,
           false);
     } else {
-      LOG.debug("Convert to Single Snapshot Manifest");
+      LOG.debug("Convert to Single Snapshot Manifest for {}", this.desc.getName());
       convertToV2SingleManifest();
     }
   }
@@ -491,47 +511,69 @@ public final class SnapshotManifest {
     // Try to load v1 and v2 regions
     List<SnapshotRegionManifest> v1Regions, v2Regions;
     ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
+    setStatusMsg("Loading Region manifests for " + this.desc.getName());
     try {
       v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, workingDirFs,
           workingDir, desc);
       v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, workingDirFs,
           workingDir, desc, manifestSizeLimit);
+
+      SnapshotDataManifest.Builder dataManifestBuilder = SnapshotDataManifest.newBuilder();
+      dataManifestBuilder.setTableSchema(ProtobufUtil.toTableSchema(htd));
+
+      if (v1Regions != null && v1Regions.size() > 0) {
+        dataManifestBuilder.addAllRegionManifests(v1Regions);
+      }
+      if (v2Regions != null && v2Regions.size() > 0) {
+        dataManifestBuilder.addAllRegionManifests(v2Regions);
+      }
+
+      // Write the v2 Data Manifest.
+      // Once the data-manifest is written, the snapshot can be considered complete.
+      // Currently snapshots are written in a "temporary" directory and later
+      // moved to the "complated" snapshot directory.
+      setStatusMsg("Writing data manifest for " + this.desc.getName());
+      SnapshotDataManifest dataManifest = dataManifestBuilder.build();
+      writeDataManifest(dataManifest);
+      this.regionManifests = dataManifest.getRegionManifestsList();
+
+      // Remove the region manifests. Everything is now in the data-manifest.
+      // The delete operation is "relaxed", unless we get an exception we keep going.
+      // The extra files in the snapshot directory will not give any problem,
+      // since they have the same content as the data manifest, and even by re-reading
+      // them we will get the same information.
+      int totalDeletes = 0;
+      ExecutorCompletionService<Void> completionService = new ExecutorCompletionService<>(tpool);
+      if (v1Regions != null) {
+        for (SnapshotRegionManifest regionManifest: v1Regions) {
+          ++totalDeletes;
+          completionService.submit(() -> {
+            SnapshotManifestV1.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
+            return null;
+          });
+        }
+      }
+      if (v2Regions != null) {
+        for (SnapshotRegionManifest regionManifest: v2Regions) {
+          ++totalDeletes;
+          completionService.submit(() -> {
+            SnapshotManifestV2.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
+            return null;
+          });
+        }
+      }
+      // Wait for the deletes to finish.
+      for (int i = 0; i < totalDeletes; i++) {
+        try {
+          completionService.take().get();
+        } catch (InterruptedException ie) {
+          throw new InterruptedIOException(ie.getMessage());
+        } catch (ExecutionException e) {
+          throw new IOException("Error deleting region manifests", e.getCause());
+        }
+      }
     } finally {
       tpool.shutdown();
-    }
-
-    SnapshotDataManifest.Builder dataManifestBuilder = SnapshotDataManifest.newBuilder();
-    dataManifestBuilder.setTableSchema(ProtobufUtil.toTableSchema(htd));
-
-    if (v1Regions != null && v1Regions.size() > 0) {
-      dataManifestBuilder.addAllRegionManifests(v1Regions);
-    }
-    if (v2Regions != null && v2Regions.size() > 0) {
-      dataManifestBuilder.addAllRegionManifests(v2Regions);
-    }
-
-    // Write the v2 Data Manifest.
-    // Once the data-manifest is written, the snapshot can be considered complete.
-    // Currently snapshots are written in a "temporary" directory and later
-    // moved to the "complated" snapshot directory.
-    SnapshotDataManifest dataManifest = dataManifestBuilder.build();
-    writeDataManifest(dataManifest);
-    this.regionManifests = dataManifest.getRegionManifestsList();
-
-    // Remove the region manifests. Everything is now in the data-manifest.
-    // The delete operation is "relaxed", unless we get an exception we keep going.
-    // The extra files in the snapshot directory will not give any problem,
-    // since they have the same content as the data manifest, and even by re-reading
-    // them we will get the same information.
-    if (v1Regions != null && v1Regions.size() > 0) {
-      for (SnapshotRegionManifest regionManifest: v1Regions) {
-        SnapshotManifestV1.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
-      }
-    }
-    if (v2Regions != null && v2Regions.size() > 0) {
-      for (SnapshotRegionManifest regionManifest: v2Regions) {
-        SnapshotManifestV2.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
-      }
     }
   }
 
@@ -540,11 +582,8 @@ public final class SnapshotManifest {
    */
   private void writeDataManifest(final SnapshotDataManifest manifest)
       throws IOException {
-    FSDataOutputStream stream = workingDirFs.create(new Path(workingDir, DATA_MANIFEST_NAME));
-    try {
+    try (FSDataOutputStream stream = workingDirFs.create(new Path(workingDir, DATA_MANIFEST_NAME))) {
       manifest.writeTo(stream);
-    } finally {
-      stream.close();
     }
   }
 
@@ -552,9 +591,7 @@ public final class SnapshotManifest {
    * Read the SnapshotDataManifest file
    */
   private SnapshotDataManifest readDataManifest() throws IOException {
-    FSDataInputStream in = null;
-    try {
-      in = workingDirFs.open(new Path(workingDir, DATA_MANIFEST_NAME));
+    try (FSDataInputStream in = workingDirFs.open(new Path(workingDir, DATA_MANIFEST_NAME))) {
       CodedInputStream cin = CodedInputStream.newInstance(in);
       cin.setSizeLimit(manifestSizeLimit);
       return SnapshotDataManifest.parseFrom(cin);
@@ -562,8 +599,6 @@ public final class SnapshotManifest {
       return null;
     } catch (InvalidProtocolBufferException e) {
       throw new CorruptedSnapshotException("unable to parse data manifest " + e.getMessage(), e);
-    } finally {
-      if (in != null) in.close();
     }
   }
 
@@ -574,7 +609,8 @@ public final class SnapshotManifest {
   public static ThreadPoolExecutor createExecutor(final Configuration conf, final String name) {
     int maxThreads = conf.getInt("hbase.snapshot.thread.pool.max", 8);
     return Threads.getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-              Threads.newDaemonThreadFactory(name));
+      new ThreadFactoryBuilder().setNameFormat(name + "-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   /**

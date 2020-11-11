@@ -429,7 +429,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     DELETE("delete"),
     CHECK_AND_PUT("checkAndPut"),
     CHECK_AND_DELETE("checkAndDelete"),
-    INCREMENT_COLUMN_VALUE("incrementColumnValue"),
     APPEND("append"),
     INCREMENT("increment");
 
@@ -805,10 +804,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
             + PermissionStorage.ACL_TABLE_NAME + " is not yet created. "
             + getClass().getSimpleName() + " should be configured as the first Coprocessor");
       } else {
-        String owner = desc.getOwnerString();
-        // default the table owner to current user, if not specified.
-        if (owner == null)
-          owner = getActiveUser(c).getShortName();
+        String owner = getActiveUser(c).getShortName();
         final UserPermission userPermission = new UserPermission(owner,
             Permission.newBuilder(desc.getTableName()).withActions(Action.values()).build());
         // switch to the real hbase master user for doing the RPC on the ACL table
@@ -907,8 +903,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     TableDescriptor oldDesc, TableDescriptor currentDesc) throws IOException {
     final Configuration conf = c.getEnvironment().getConfiguration();
     // default the table owner to current user, if not specified.
-    final String owner = (currentDesc.getOwnerString() != null) ? currentDesc.getOwnerString() :
-      getActiveUser(c).getShortName();
+    final String owner = getActiveUser(c).getShortName();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -985,8 +980,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, RegionInfo regionInfo,
-      boolean force) throws IOException {
+  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, RegionInfo regionInfo)
+      throws IOException {
     requirePermission(c, "unassign",
         regionInfo.getTable(), null, null, Action.ADMIN);
   }
@@ -1503,15 +1498,27 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           // We have a failure with table, cf and q perm checks and now giving a chance for cell
           // perm check
           OpType opType;
+          long timestamp;
           if (m instanceof Put) {
             checkForReservedTagPresence(user, m);
             opType = OpType.PUT;
-          } else {
+            timestamp = m.getTimestamp();
+          } else if (m instanceof Delete) {
             opType = OpType.DELETE;
+            timestamp = m.getTimestamp();
+          } else if (m instanceof Increment) {
+            opType = OpType.INCREMENT;
+            timestamp = ((Increment) m).getTimeRange().getMax();
+          } else if (m instanceof Append) {
+            opType = OpType.APPEND;
+            timestamp = ((Append) m).getTimeRange().getMax();
+          } else {
+            // If the operation type is not Put/Delete/Increment/Append, do nothing
+            continue;
           }
           AuthResult authResult = null;
           if (checkCoveringPermission(user, opType, c.getEnvironment(), m.getRow(),
-            m.getFamilyCellMap(), m.getTimestamp(), Action.WRITE)) {
+            m.getFamilyCellMap(), timestamp, Action.WRITE)) {
             authResult = AuthResult.allow(opType.toString(), "Covering cell set",
               user, Action.WRITE, table, m.getFamilyCellMap());
           } else {
@@ -1693,32 +1700,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public Result preAppendAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Append append) throws IOException {
-    if (append.getAttribute(CHECK_COVERING_PERM) != null) {
-      // We had failure with table, cf and q perm checks and now giving a chance for cell
-      // perm check
-      TableName table = c.getEnvironment().getRegion().getRegionInfo().getTable();
-      AuthResult authResult = null;
-      User user = getActiveUser(c);
-      if (checkCoveringPermission(user, OpType.APPEND, c.getEnvironment(), append.getRow(),
-          append.getFamilyCellMap(), append.getTimeRange().getMax(), Action.WRITE)) {
-        authResult = AuthResult.allow(OpType.APPEND.toString(),
-            "Covering cell set", user, Action.WRITE, table, append.getFamilyCellMap());
-      } else {
-        authResult = AuthResult.deny(OpType.APPEND.toString(),
-            "Covering cell set", user, Action.WRITE, table, append.getFamilyCellMap());
-      }
-      AccessChecker.logResult(authResult);
-      if (authorizationEnabled && !authResult.isAllowed()) {
-        throw new AccessDeniedException("Insufficient permissions " +
-          authResult.toContextString());
-      }
-    }
-    return null;
-  }
-
-  @Override
   public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment)
       throws IOException {
@@ -1750,32 +1731,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       }
     }
 
-    return null;
-  }
-
-  @Override
-  public Result preIncrementAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Increment increment) throws IOException {
-    if (increment.getAttribute(CHECK_COVERING_PERM) != null) {
-      // We had failure with table, cf and q perm checks and now giving a chance for cell
-      // perm check
-      TableName table = c.getEnvironment().getRegion().getRegionInfo().getTable();
-      AuthResult authResult = null;
-      User user = getActiveUser(c);
-      if (checkCoveringPermission(user, OpType.INCREMENT, c.getEnvironment(), increment.getRow(),
-          increment.getFamilyCellMap(), increment.getTimeRange().getMax(), Action.WRITE)) {
-        authResult = AuthResult.allow(OpType.INCREMENT.toString(), "Covering cell set",
-            user, Action.WRITE, table, increment.getFamilyCellMap());
-      } else {
-        authResult = AuthResult.deny(OpType.INCREMENT.toString(), "Covering cell set",
-            user, Action.WRITE, table, increment.getFamilyCellMap());
-      }
-      AccessChecker.logResult(authResult);
-      if (authorizationEnabled && !authResult.isAllowed()) {
-        throw new AccessDeniedException("Insufficient permissions " +
-          authResult.toContextString());
-      }
-    }
     return null;
   }
 
@@ -2587,7 +2542,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           result = AuthResult.allow(request, "Self user validation allowed", caller, null, null,
             null, null);
         }
-        accessChecker.logResult(result);
+        AccessChecker.logResult(result);
       }
     }
   }

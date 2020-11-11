@@ -230,7 +230,7 @@ public abstract class Query extends OperationWithAttributes {
    */
 
   public Query setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {
-    colFamTimeRangeMap.put(cf, new TimeRange(minStamp, maxStamp));
+    colFamTimeRangeMap.put(cf, TimeRange.between(minStamp, maxStamp));
     return this;
   }
 

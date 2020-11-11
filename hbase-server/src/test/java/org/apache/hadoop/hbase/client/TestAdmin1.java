@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -36,6 +37,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -530,25 +533,42 @@ public class TestAdmin1 extends TestAdminBase {
       List<RegionInfo> tableRegions;
       RegionInfo regionA;
       RegionInfo regionB;
+      RegionInfo regionC;
+      RegionInfo mergedChildRegion = null;
 
       // merge with full name
       tableRegions = ADMIN.getRegions(tableName);
       assertEquals(3, ADMIN.getRegions(tableName).size());
       regionA = tableRegions.get(0);
       regionB = tableRegions.get(1);
+      regionC = tableRegions.get(2);
       // TODO convert this to version that is synchronous (See HBASE-16668)
-      ADMIN.mergeRegionsAsync(regionA.getRegionName(), regionB.getRegionName(), false).get(60,
-        TimeUnit.SECONDS);
+      ADMIN.mergeRegionsAsync(regionA.getRegionName(), regionB.getRegionName(),
+        false).get(60, TimeUnit.SECONDS);
 
-      assertEquals(2, ADMIN.getRegions(tableName).size());
-
-      // merge with encoded name
       tableRegions = ADMIN.getRegions(tableName);
-      regionA = tableRegions.get(0);
-      regionB = tableRegions.get(1);
+
+      assertEquals(2, tableRegions.size());
+      for (RegionInfo ri : tableRegions) {
+        if (regionC.compareTo(ri) != 0) {
+          mergedChildRegion = ri;
+          break;
+        }
+      }
+
+      assertNotNull(mergedChildRegion);
+      // Need to wait GC for merged child region is done.
+      HMaster services = TEST_UTIL.getHBaseCluster().getMaster();
+      CatalogJanitor cj = services.getCatalogJanitor();
+      assertTrue(cj.scan() > 0);
+      // Wait until all procedures settled down
+      while (!services.getMasterProcedureExecutor().getActiveProcIds().isEmpty()) {
+        Thread.sleep(200);
+      }
+
       // TODO convert this to version that is synchronous (See HBASE-16668)
-      ADMIN
-        .mergeRegionsAsync(regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false)
+      ADMIN.mergeRegionsAsync(regionC.getEncodedNameAsBytes(),
+        mergedChildRegion.getEncodedNameAsBytes(), false)
         .get(60, TimeUnit.SECONDS);
 
       assertEquals(1, ADMIN.getRegions(tableName).size());

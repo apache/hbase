@@ -17,8 +17,12 @@
 # limitations under the License.
 #
 DRY_RUN=${DRY_RUN:-1} #default to dry run
-GPG="gpg --pinentry-mode loopback --no-tty --batch"
-YETUS_VERSION=${YETUS_VERSION:-0.11.1}
+DEBUG=${DEBUG:-0}
+GPG=${GPG:-gpg}
+GPG_ARGS=(--no-autostart --batch)
+if [ -n "${GPG_KEY}" ]; then
+  GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
+fi
 # Maven Profiles for publishing snapshots and release to Maven Central and Dist
 PUBLISH_PROFILES=("-P" "apache-release,release")
 
@@ -47,25 +51,37 @@ function parse_version {
     head -n 2 | tail -n 1 | cut -d'>' -f2 | cut -d '<' -f1
 }
 
+function banner {
+  local msg="$1"
+  echo "========================"
+  echo "=== ${msg}"
+  echo
+}
+
+# current number of seconds since epoch
+function get_ctime {
+  date +"%s"
+}
+
 function run_silent {
   local BANNER="$1"
   local LOG_FILE="$2"
   shift 2
+  local -i start_time
+  local -i stop_time
 
-  echo "========================"
-  echo "=== $BANNER"
+  banner "${BANNER}"
   echo "Command: $*"
   echo "Log file: $LOG_FILE"
+  start_time="$(get_ctime)"
 
-  "$@" 1>"$LOG_FILE" 2>&1
-
-  local EC=$?
-  if [ $EC != 0 ]; then
+  if ! "$@" 1>"$LOG_FILE" 2>&1; then
     echo "Command FAILED. Check full logs for details."
     tail "$LOG_FILE"
-    exit $EC
+    exit 1
   fi
-  echo "=== SUCCESS"
+  stop_time="$(get_ctime)"
+  echo "=== SUCCESS ($((stop_time - start_time)) seconds)"
 }
 
 function fcreate_secure {
@@ -73,27 +89,6 @@ function fcreate_secure {
   rm -f "$FPATH"
   touch "$FPATH"
   chmod 600 "$FPATH"
-}
-
-function check_for_tag {
-  curl -s --head --fail "$ASF_GITHUB_REPO/releases/tag/$1" > /dev/null
-}
-
-function wait_for_tag {
-  # Confirm the tag synchronizes to github.  This can take a couple minutes,
-  # but usually it just takes a few seconds.
-  local max_propagation_time=300
-  local prop_delay=30
-  while ! check_for_tag "$1"; do
-    if (( max_propagation_time <= 0 )); then
-      echo "ERROR: Taking more than 5 minutes to propagate Release Tag $1 to github mirror." >&2
-      echo "Please wait and resume other create-release steps when $1 is available in github." >&2
-      exit 1
-    fi
-    echo "Waiting up to $max_propagation_time seconds for tag to propagate to github mirror..."
-    sleep $prop_delay
-    max_propagation_time=$((max_propagation_time - prop_delay))
-  done
 }
 
 # API compare version.
@@ -175,7 +170,7 @@ function get_release_info {
   if [ "$REV" != 0 ]; then
     local PREV_REL_REV=$((REV - 1))
     PREV_REL_TAG="rel/${SHORT_VERSION}.${PREV_REL_REV}"
-    if check_for_tag "$PREV_REL_TAG"; then
+    if git ls-remote --tags "$ASF_REPO" "$PREV_REL_TAG" | grep -q "refs/tags/${PREV_REL_TAG}$" ; then
       RC_COUNT=0
       REV=$((REV + 1))
       NEXT_VERSION="${SHORT_VERSION}.${REV}-SNAPSHOT"
@@ -201,7 +196,7 @@ function get_release_info {
 
   # Check if the RC already exists, and if re-creating the RC, skip tag creation.
   SKIP_TAG=0
-  if check_for_tag "$RELEASE_TAG"; then
+  if git ls-remote --tags "$ASF_REPO" "$RELEASE_TAG" | grep -q "refs/tags/${RELEASE_TAG}$" ; then
     read -r -p "$RELEASE_TAG already exists. Continue anyway [y/n]? " ANSWER
     if [ "$ANSWER" != "y" ]; then
       echo "Exiting."
@@ -229,6 +224,14 @@ function get_release_info {
 
   GIT_EMAIL="$ASF_USERNAME@apache.org"
   GPG_KEY="$(read_config "GPG_KEY" "$GIT_EMAIL")"
+  if ! GPG_KEY_ID=$("${GPG}" "${GPG_ARGS[@]}" --keyid-format 0xshort --list-public-key "${GPG_KEY}" | grep "\[S\]" | grep -o "0x[0-9A-F]*") ||
+      [ -z "${GPG_KEY_ID}" ] ; then
+    GPG_KEY_ID=$("${GPG}" "${GPG_ARGS[@]}" --keyid-format 0xshort --list-public-key "${GPG_KEY}" | head -n 1 | grep -o "0x[0-9A-F]*" || true)
+  fi
+  read -r -p "We think the key '${GPG_KEY}' corresponds to the key id '${GPG_KEY_ID}'. Is this correct [y/n]? " ANSWER
+  if [ "$ANSWER" = "y" ]; then
+    GPG_KEY="${GPG_KEY_ID}"
+  fi
   export API_DIFF_TAG ASF_USERNAME GIT_NAME GIT_EMAIL GPG_KEY
 
   cat <<EOF
@@ -252,6 +255,7 @@ EOF
     echo "Exiting."
     exit 1
   fi
+  GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
 
   if ! is_dry_run; then
     if [ -z "$ASF_PASSWORD" ]; then
@@ -261,18 +265,15 @@ EOF
     ASF_PASSWORD="***INVALID***"
   fi
 
-  if [ -z "$GPG_PASSPHRASE" ]; then
-    stty -echo && printf "GPG_PASSPHRASE: " && read -r GPG_PASSPHRASE && printf '\n' && stty echo
-    GPG_TTY="$(tty)"
-    export GPG_TTY
-  fi
-
   export ASF_PASSWORD
-  export GPG_PASSPHRASE
 }
 
 function is_dry_run {
   [[ "$DRY_RUN" = 1 ]]
+}
+
+function is_debug {
+  [[ "${DEBUG}" = 1 ]]
 }
 
 function check_get_passwords {
@@ -349,6 +350,16 @@ function init_mvn {
   configure_maven
 }
 
+function init_yetus {
+  declare YETUS_VERSION
+  if [ -z "${YETUS_HOME}" ]; then
+    error "Missing Apache Yetus."
+  fi
+  # Work around yetus bug by asking test-patch for the version instead of rdm.
+  YETUS_VERSION=$("${YETUS_HOME}/bin/test-patch" --version)
+  echo "Apache Yetus version ${YETUS_VERSION}"
+}
+
 function configure_maven {
   # Add timestamps to mvn logs.
   MAVEN_OPTS="-Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss ${MAVEN_OPTS}"
@@ -372,8 +383,6 @@ function configure_maven {
       <password>${env.ASF_PASSWORD}</password></server>
     <server><id>apache.releases.https</id><username>${env.ASF_USERNAME}</username>
       <password>${env.ASF_PASSWORD}</password></server>
-    <server><id>gpg.passphrase</id>
-      <passphrase>${env.GPG_PASSPHRASE}</passphrase></server>
   </servers>
   <profiles>
     <profile>
@@ -389,18 +398,79 @@ function configure_maven {
 EOF
 }
 
+# clone of the repo, deleting anything that exists in the working directory named after the project.
+# optionally with auth details for pushing.
+function git_clone_overwrite {
+  local asf_repo
+  if [ -z "${PROJECT}" ] || [ "${PROJECT}" != "${PROJECT#/}" ]; then
+    error "Project name must be defined and not start with a '/'. PROJECT='${PROJECT}'"
+  fi
+  rm -rf "${PROJECT}"
+
+  if [[ -z "${GIT_REPO}" ]]; then
+    asf_repo="gitbox.apache.org/repos/asf/${PROJECT}.git"
+    echo "[INFO] clone will be of the gitbox repo for ${PROJECT}."
+    if [ -n "${ASF_USERNAME}" ] && [ -n "${ASF_PASSWORD}" ]; then
+      # Ugly!
+      encoded_username=$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''', '')")
+      encoded_password=$(python -c "import urllib; print urllib.quote('''$ASF_PASSWORD''', '')")
+      GIT_REPO="https://$encoded_username:$encoded_password@${asf_repo}"
+    else
+      GIT_REPO="https://${asf_repo}"
+    fi
+  else
+    echo "[INFO] clone will be of provided git repo."
+  fi
+  # N.B. we use the shared flag because the clone is short lived and if a local repo repo was
+  #      given this will let us refer to objects there directly instead of hardlinks or copying.
+  #      The option is silently ignored for non-local repositories. see the note on git help clone
+  #      for the --shared option for details.
+  git clone --shared -b "${GIT_BRANCH}" -- "${GIT_REPO}" "${PROJECT}"
+  # If this was a host local git repo then add in an alternates and remote that will
+  # work back on the host if the RM needs to do any post-processing steps, i.e. pushing the git tag
+  # for more info see 'git help remote' and 'git help repository-layout'.
+  if [ -n "$HOST_GIT_REPO" ]; then
+    echo "${HOST_GIT_REPO}/objects" >> "${PROJECT}/.git/objects/info/alternates"
+    (cd "${PROJECT}"; git remote add host "${HOST_GIT_REPO}")
+  fi
+}
+
+function start_step {
+  local name=$1
+  if [ -z "${name}" ]; then
+    name="${FUNCNAME[1]}"
+  fi
+  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') ${name} start" >&2
+  get_ctime
+}
+
+function stop_step {
+  local name=$2
+  local start_time=$1
+  local stop_time
+  if [ -z "${name}" ]; then
+    name="${FUNCNAME[1]}"
+  fi
+  stop_time="$(get_ctime)"
+  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') ${name} stop ($((stop_time - start_time)) seconds)"
+}
+
 # Writes report into cwd!
+# TODO should have option for maintenance release that include LimitedPrivate in report
 function generate_api_report {
   local project="$1"
   local previous_tag="$2"
   local release_tag="$3"
   local previous_version
+  local timing_token
+  timing_token="$(start_step)"
   # Generate api report.
   "${project}"/dev-support/checkcompatibility.py --annotation \
     org.apache.yetus.audience.InterfaceAudience.Public  \
     "$previous_tag" "$release_tag"
   previous_version="$(echo "${previous_tag}" | sed -e 's/rel\///')"
   cp "${project}/target/compat-check/report.html" "./api_compare_${previous_version}_to_${release_tag}.html"
+  stop_step "${timing_token}"
 }
 
 # Look up the Jira name associated with project.
@@ -423,17 +493,17 @@ function get_jira_name {
 
 # Update the CHANGES.md
 # DOES NOT DO COMMITS! Caller should do that.
+# requires yetus to have a defined home already.
 # yetus requires python2 to be on the path.
 function update_releasenotes {
   local project_dir="$1"
   local jira_fix_version="$2"
-  local yetus="apache-yetus-${YETUS_VERSION}"
   local jira_project
+  local timing_token
+  timing_token="$(start_step)"
   jira_project="$(get_jira_name "$(basename "$project_dir")")"
-  wget -qO- "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=/yetus/${YETUS_VERSION}/${yetus}-bin.tar.gz" | \
-    tar xvz -C . || exit
-  cd "./${yetus}" || exit
-  ./bin/releasedocmaker -p "${jira_project}" --fileversions -v "${jira_fix_version}" -l --sortorder=newer --skip-credits
+  "${YETUS_HOME}/bin/releasedocmaker" -p "${jira_project}" --fileversions -v "${jira_fix_version}" \
+      -l --sortorder=newer --skip-credits
   pwd
   # First clear out the changes written by previous RCs.
   if [ -f "${project_dir}/CHANGES.md" ]; then
@@ -441,7 +511,7 @@ function update_releasenotes {
         "/^## Release ${jira_fix_version}/,/^## Release/ {//!d; /^## Release ${jira_fix_version}/d;}" \
         "${project_dir}/CHANGES.md" || true
   fi
-  if [ -f "${project_dir}/RELEASENODES.md" ]; then
+  if [ -f "${project_dir}/RELEASENOTES.md" ]; then
     sed -i -e \
         "/^# ${jira_project}  ${jira_fix_version} Release Notes/,/^# ${jira_project}/{//!d; /^# ${jira_project}  ${jira_fix_version} Release Notes/d;}" \
         "${project_dir}/RELEASENOTES.md" || true
@@ -466,7 +536,7 @@ function update_releasenotes {
   else
     mv "RELEASENOTES.${jira_fix_version}.md" "${project_dir}/RELEASENOTES.md"
   fi
-  cd .. || exit
+  stop_step "${timing_token}"
 }
 
 # Make src release.
@@ -475,24 +545,25 @@ function update_releasenotes {
 # named for 'project', the first arg passed.
 # Expects the following three defines in the environment:
 # - GPG needs to be defined, with the path to GPG: defaults 'gpg'.
-# - The passphrase in the GPG_PASSPHRASE variable: no default (we don't make .asc file).
 # - GIT_REF which is the tag to create the tgz from: defaults to 'master'.
 # For example:
-# $ GPG_PASSPHRASE="XYZ" GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
+# $ GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
 make_src_release() {
   # Tar up the src and sign and hash it.
   local project="${1}"
   local version="${2}"
   local base_name="${project}-${version}"
+  local timing_token
+  timing_token="$(start_step)"
   rm -rf "${base_name}"-src*
   tgz="${base_name}-src.tar.gz"
   cd "${project}" || exit
   git clean -d -f -x
   git archive --format=tar.gz --output="../${tgz}" --prefix="${base_name}/" "${GIT_REF:-master}"
   cd .. || exit
-  echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --armour --output "${tgz}.asc" \
-    --detach-sig "${tgz}"
-  echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --print-md SHA512 "${tgz}" > "${tgz}.sha512"
+  $GPG "${GPG_ARGS[@]}" --armor --output "${tgz}.asc" --detach-sig "${tgz}"
+  $GPG "${GPG_ARGS[@]}" --print-md SHA512 "${tgz}" > "${tgz}.sha512"
+  stop_step "${timing_token}"
 }
 
 # Make binary release.
@@ -501,15 +572,16 @@ make_src_release() {
 # named for 'project', the first arg passed.
 # Expects the following three defines in the environment:
 # - GPG needs to be defined, with the path to GPG: defaults 'gpg'.
-# - The passphrase in the GPG_PASSPHRASE variable: no default (we don't make .asc file).
 # - GIT_REF which is the tag to create the tgz from: defaults to 'master'.
 # - MVN Default is "mvn -B --settings $MAVEN_SETTINGS_FILE".
 # For example:
-# $ GPG_PASSPHRASE="XYZ" GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
+# $ GIT_REF="master" make_src_release hbase-operator-tools 1.0.0
 make_binary_release() {
   local project="${1}"
   local version="${2}"
   local base_name="${project}-${version}"
+  local timing_token
+  timing_token="$(start_step)"
   rm -rf "${base_name}"-bin*
   cd "$project" || exit
 
@@ -530,13 +602,15 @@ make_binary_release() {
     cp "${f_bin_prefix}"*-bin.tar.gz ..
     cd .. || exit
     for i in "${base_name}"*-bin.tar.gz; do
-      echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --armour --output "$i.asc" --detach-sig "$i"
-      echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --print-md SHA512 "${i}" > "$i.sha512"
+      "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
+      "${GPG}" "${GPG_ARGS[@]}" --print-md SHA512 "${i}" > "${i}.sha512"
     done
   else
     cd .. || exit
     echo "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
   fi
+
+  stop_step "${timing_token}"
 }
 
 # "Wake up" the gpg agent so it responds properly to maven-gpg-plugin, and doesn't cause timeout.
@@ -545,10 +619,11 @@ make_binary_release() {
 # 'assembly' build (where gpg signing occurs) experiences timeout, without this "kick".
 function kick_gpg_agent {
   # All that's needed is to run gpg on a random file
+  # TODO could we just call gpg-connect-agent /bye
   local i
   i="$(mktemp)"
   echo "This is a test file" > "$i"
-  echo "$GPG_PASSPHRASE" | $GPG --passphrase-fd 0 --armour --output "$i.asc" --detach-sig "$i"
+  "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
   rm "$i" "$i.asc"
 }
 
@@ -567,6 +642,7 @@ function maven_get_version {
 
 # Do maven deploy to snapshot or release artifact repository, with checks.
 function maven_deploy { #inputs: <snapshot|release> <log_file_path>
+  local timing_token
   # Invoke with cwd=$PROJECT
   local deploy_type="$1"
   local mvn_log_file="$2" #secondary log file used later to extract staged_repo_id
@@ -576,6 +652,7 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   if [[ -z "$mvn_log_file" ]] || ! touch "$mvn_log_file"; then
     error "must provide writable maven log output filepath"
   fi
+  timing_token=$(start_step)
   # shellcheck disable=SC2153
   if [[ "$deploy_type" == "snapshot" ]] && ! [[ "$RELEASE_VERSION" =~ -SNAPSHOT$ ]]; then
     error "Snapshots must have a version with suffix '-SNAPSHOT'; you gave version '$RELEASE_VERSION'"
@@ -606,5 +683,13 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
     error "Deploy build failed, for details see log at '$mvn_log_file'."
   fi
   echo "BUILD SUCCESS."
+  stop_step "${timing_token}"
   return 0
+}
+
+# guess the host os
+# * DARWIN
+# * LINUX
+function get_host_os() {
+  uname -s | tr '[:lower:]' '[:upper:]'
 }

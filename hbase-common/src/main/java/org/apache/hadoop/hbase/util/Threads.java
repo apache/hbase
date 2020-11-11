@@ -29,7 +29,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -45,16 +44,9 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class Threads {
   private static final Logger LOG = LoggerFactory.getLogger(Threads.class);
-  private static final AtomicInteger poolNumber = new AtomicInteger(1);
 
   public static final UncaughtExceptionHandler LOGGING_EXCEPTION_HANDLER =
-    new UncaughtExceptionHandler() {
-    @Override
-    public void uncaughtException(Thread t, Throwable e) {
-      LOG.warn("Thread:" + t + " exited with Exception:"
-          + StringUtils.stringifyException(e));
-    }
-  };
+    (t, e) -> LOG.warn("Thread:{} exited with Exception:{}", t, StringUtils.stringifyException(e));
 
   /**
    * Utility method that sets name, daemon status and starts passed thread.
@@ -197,75 +189,6 @@ public class Threads {
     return boundedCachedThreadPool;
   }
 
-  public static ThreadPoolExecutor getBoundedCachedThreadPool(int maxCachedThread, long timeout,
-      TimeUnit unit, String prefix) {
-    return getBoundedCachedThreadPool(maxCachedThread, timeout, unit,
-        newDaemonThreadFactory(prefix));
-  }
-
-  /**
-   * Returns a {@link java.util.concurrent.ThreadFactory} that names each created thread uniquely,
-   * with a common prefix.
-   * @param prefix The prefix of every created Thread's name
-   * @return a {@link java.util.concurrent.ThreadFactory} that names threads
-   */
-  private static ThreadFactory getNamedThreadFactory(final String prefix) {
-    SecurityManager s = System.getSecurityManager();
-    final ThreadGroup threadGroup = (s != null) ? s.getThreadGroup() : Thread.currentThread()
-        .getThreadGroup();
-
-    return new ThreadFactory() {
-      final AtomicInteger threadNumber = new AtomicInteger(1);
-      private final int poolNumber = Threads.poolNumber.getAndIncrement();
-      final ThreadGroup group = threadGroup;
-
-      @Override
-      public Thread newThread(Runnable r) {
-        final String name = prefix + "-pool" + poolNumber + "-t" + threadNumber.getAndIncrement();
-        return new Thread(group, r, name);
-      }
-    };
-  }
-
-  /**
-   * Same as {#newDaemonThreadFactory(String, UncaughtExceptionHandler)},
-   * without setting the exception handler.
-   */
-  public static ThreadFactory newDaemonThreadFactory(final String prefix) {
-    return newDaemonThreadFactory(prefix, null);
-  }
-
-  /**
-   * Get a named {@link ThreadFactory} that just builds daemon threads.
-   * @param prefix name prefix for all threads created from the factory
-   * @param handler unhandles exception handler to set for all threads
-   * @return a thread factory that creates named, daemon threads with
-   *         the supplied exception handler and normal priority
-   */
-  public static ThreadFactory newDaemonThreadFactory(final String prefix,
-      final UncaughtExceptionHandler handler) {
-    final ThreadFactory namedFactory = getNamedThreadFactory(prefix);
-    return new ThreadFactory() {
-      @Override
-      public Thread newThread(Runnable r) {
-        Thread t = namedFactory.newThread(r);
-        if (handler != null) {
-          t.setUncaughtExceptionHandler(handler);
-        } else {
-          t.setUncaughtExceptionHandler(LOGGING_EXCEPTION_HANDLER);
-        }
-        if (!t.isDaemon()) {
-          t.setDaemon(true);
-        }
-        if (t.getPriority() != Thread.NORM_PRIORITY) {
-          t.setPriority(Thread.NORM_PRIORITY);
-        }
-        return t;
-      }
-
-    };
-  }
-
   /** Sets an UncaughtExceptionHandler for the thread which logs the
    * Exception stack if the thread dies.
    */
@@ -273,7 +196,7 @@ public class Threads {
     t.setUncaughtExceptionHandler(LOGGING_EXCEPTION_HANDLER);
   }
 
-  private static interface PrintThreadInfoHelper {
+  private interface PrintThreadInfoHelper {
 
     void printThreadInfo(PrintStream stream, String title);
 

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.procedure2.store.region;
 
-import static org.apache.hadoop.hbase.procedure2.store.region.RegionProcedureStore.FAMILY;
+import static org.apache.hadoop.hbase.master.region.MasterRegionFactory.PROC_FAMILY;
 
 import java.io.PrintStream;
 import java.time.Instant;
@@ -102,10 +102,10 @@ public class WALProcedurePrettyPrinter extends AbstractHBaseTool {
           String.format(KEY_TMPL, sequenceId, FORMATTER.format(Instant.ofEpochMilli(writeTime))));
         for (Cell cell : edit.getCells()) {
           Map<String, Object> op = WALPrettyPrinter.toStringMap(cell);
-          if (!Bytes.equals(FAMILY, 0, FAMILY.length, cell.getFamilyArray(), cell.getFamilyOffset(),
-            cell.getFamilyLength())) {
+          if (!Bytes.equals(PROC_FAMILY, 0, PROC_FAMILY.length, cell.getFamilyArray(),
+            cell.getFamilyOffset(), cell.getFamilyLength())) {
             // We could have cells other than procedure edits, for example, a flush marker
-            WALPrettyPrinter.printCell(out, op, false);
+            WALPrettyPrinter.printCell(out, op, false, false);
             continue;
           }
           long procId = Bytes.toLong(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());

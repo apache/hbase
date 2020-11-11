@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Random;
 import org.apache.hadoop.hbase.Cell;
@@ -28,12 +29,14 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -180,13 +183,14 @@ public class TestParallelPut {
 
   private HRegion initHRegion(byte [] tableName, String callingMethod, byte[] ... families)
       throws IOException {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
     for(byte [] family : families) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+      builder.setColumnFamily(
+        ColumnFamilyDescriptorBuilder.of(family));
     }
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    TableDescriptor tableDescriptor = builder.build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     return HBTU.createLocalHRegion(info, tableDescriptor);
   }
 

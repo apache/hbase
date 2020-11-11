@@ -26,6 +26,12 @@
     <fileSet>
       <directory>${project.basedir}/../target/site</directory>
       <outputDirectory>docs</outputDirectory>
+      <!--
+        Don't include dev apidocs. They bloat the tgz by almost 50%.
+        See HBASE-20149, HBASE-24630 -->
+      <excludes>
+        <exclude>**/*devapidocs/**</exclude>
+      </excludes>
     </fileSet>
     <!-- Include top level text files-->
     <fileSet>
@@ -69,13 +75,6 @@
         <include>hbase.cmd</include>
         <include>hbase-config.cmd</include>
       </includes>
-    </fileSet>
-    <!-- Move the ruby code over -->
-    <fileSet>
-      <directory>${project.basedir}/../hbase-shell/src/main/ruby</directory>
-      <outputDirectory>lib/ruby</outputDirectory>
-      <fileMode>0644</fileMode>
-      <directoryMode>0755</directoryMode>
     </fileSet>
     <!-- Include native libraries -->
     <fileSet>

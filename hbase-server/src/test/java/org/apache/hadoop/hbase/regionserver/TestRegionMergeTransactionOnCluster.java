@@ -33,6 +33,7 @@ import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -223,10 +224,10 @@ public class TestRegionMergeTransactionOnCluster {
         MASTER.getConnection(), mergedRegionInfo.getRegionName());
 
       // contains merge reference in META
-      assertTrue(MetaTableAccessor.hasMergeRegions(mergedRegionResult.rawCells()));
+      assertTrue(CatalogFamilyFormat.hasMergeRegions(mergedRegionResult.rawCells()));
 
       // merging regions' directory are in the file system all the same
-      List<RegionInfo> p = MetaTableAccessor.getMergeRegions(mergedRegionResult.rawCells());
+      List<RegionInfo> p = CatalogFamilyFormat.getMergeRegions(mergedRegionResult.rawCells());
       RegionInfo regionA = p.get(0);
       RegionInfo regionB = p.get(1);
       FileSystem fs = MASTER.getMasterFileSystem().getFileSystem();
@@ -297,7 +298,7 @@ public class TestRegionMergeTransactionOnCluster {
       while (true) {
         mergedRegionResult = MetaTableAccessor
           .getRegionResult(TEST_UTIL.getConnection(), mergedRegionInfo.getRegionName());
-        if (MetaTableAccessor.hasMergeRegions(mergedRegionResult.rawCells())) {
+        if (CatalogFamilyFormat.hasMergeRegions(mergedRegionResult.rawCells())) {
           LOG.info("Waiting on cleanup of merge columns {}",
             Arrays.asList(mergedRegionResult.rawCells()).stream().
               map(c -> c.toString()).collect(Collectors.joining(",")));
@@ -306,7 +307,7 @@ public class TestRegionMergeTransactionOnCluster {
           break;
         }
       }
-      assertFalse(MetaTableAccessor.hasMergeRegions(mergedRegionResult.rawCells()));
+      assertFalse(CatalogFamilyFormat.hasMergeRegions(mergedRegionResult.rawCells()));
     } finally {
       ADMIN.catalogJanitorSwitch(true);
       TEST_UTIL.deleteTable(tableName);

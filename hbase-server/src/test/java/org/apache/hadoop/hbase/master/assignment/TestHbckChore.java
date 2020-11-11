@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -47,12 +46,9 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestHbckChore extends TestAssignmentManagerBase {
-  private static final Logger LOG = LoggerFactory.getLogger(TestHbckChore.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -144,7 +140,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     assertTrue(reportedRegionServers.contains(anotherServer));
 
     // Reported right region location, then not in inconsistent regions.
-    am.reportOnlineRegions(anotherServer, Collections.EMPTY_SET);
+    am.reportOnlineRegions(anotherServer, Collections.emptySet());
     hbckChore.choreForTesting();
     inconsistentRegions = hbckChore.getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(regionName));
@@ -214,7 +210,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     assertEquals(1, hbckChore.getOrphanRegionsOnFS().size());
     assertTrue(hbckChore.getOrphanRegionsOnFS().containsKey(regionInfo.getEncodedName()));
 
-    FSUtils.deleteRegionDir(conf, new HRegionInfo(regionInfo));
+    FSUtils.deleteRegionDir(conf, regionInfo);
     hbckChore.choreForTesting();
     assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
   }

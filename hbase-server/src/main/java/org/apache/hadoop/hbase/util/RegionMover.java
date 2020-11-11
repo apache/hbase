@@ -39,7 +39,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -53,16 +52,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -84,12 +81,12 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  */
 @InterfaceAudience.Public
 public class RegionMover extends AbstractHBaseTool implements Closeable {
-  private static final String MOVE_RETRIES_MAX_KEY = "hbase.move.retries.max";
-  private static final String MOVE_WAIT_MAX_KEY = "hbase.move.wait.max";
-  static final String SERVERSTART_WAIT_MAX_KEY = "hbase.serverstart.wait.max";
-  private static final int DEFAULT_MOVE_RETRIES_MAX = 5;
-  private static final int DEFAULT_MOVE_WAIT_MAX = 60;
-  private static final int DEFAULT_SERVERSTART_WAIT_MAX = 180;
+  public static final String MOVE_RETRIES_MAX_KEY = "hbase.move.retries.max";
+  public static final String MOVE_WAIT_MAX_KEY = "hbase.move.wait.max";
+  public static final String SERVERSTART_WAIT_MAX_KEY = "hbase.serverstart.wait.max";
+  public static final int DEFAULT_MOVE_RETRIES_MAX = 5;
+  public static final int DEFAULT_MOVE_WAIT_MAX = 60;
+  public static final int DEFAULT_SERVERSTART_WAIT_MAX = 180;
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionMover.class);
 
@@ -101,6 +98,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   private String hostname;
   private String filename;
   private String excludeFile;
+  private String designatedFile;
   private int port;
   private Connection conn;
   private Admin admin;
@@ -109,6 +107,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     this.hostname = builder.hostname;
     this.filename = builder.filename;
     this.excludeFile = builder.excludeFile;
+    this.designatedFile = builder.designatedFile;
     this.maxthreads = builder.maxthreads;
     this.ack = builder.ack;
     this.port = builder.port;
@@ -130,7 +129,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   /**
    * Builder for Region mover. Use the {@link #build()} method to create RegionMover object. Has
    * {@link #filename(String)}, {@link #excludeFile(String)}, {@link #maxthreads(int)},
-   * {@link #ack(boolean)}, {@link #timeout(int)} methods to set the corresponding options
+   * {@link #ack(boolean)}, {@link #timeout(int)}, {@link #designatedFile(String)} methods to set
+   * the corresponding options.
    */
   public static class RegionMoverBuilder {
     private boolean ack = true;
@@ -139,6 +139,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     private String hostname;
     private String filename;
     private String excludeFile = null;
+    private String designatedFile = null;
     private String defaultDir = System.getProperty("java.io.tmpdir");
     @VisibleForTesting
     final int port;
@@ -206,6 +207,18 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     }
 
     /**
+     * Set the designated file. Designated file contains hostnames where region moves. Designated
+     * file should have 'host:port' per line. Port is mandatory here as we can have many RS running
+     * on a single host.
+     * @param designatedFile The designated file
+     * @return RegionMoverBuilder object
+     */
+    public RegionMoverBuilder designatedFile(String designatedFile) {
+      this.designatedFile = designatedFile;
+      return this;
+    }
+
+    /**
      * Set ack/noAck mode.
      * <p>
      * In ack mode regions are acknowledged before and after moving and the move is retried
@@ -244,105 +257,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   /**
-   * Move Regions and make sure that they are up on the target server.If a region movement fails we
-   * exit as failure
-   */
-  private class MoveWithAck implements Callable<Boolean> {
-    private RegionInfo region;
-    private ServerName targetServer;
-    private List<RegionInfo> movedRegions;
-    private ServerName sourceServer;
-
-    public MoveWithAck(RegionInfo regionInfo, ServerName sourceServer,
-        ServerName targetServer, List<RegionInfo> movedRegions) {
-      this.region = regionInfo;
-      this.targetServer = targetServer;
-      this.movedRegions = movedRegions;
-      this.sourceServer = sourceServer;
-    }
-
-    @Override
-    public Boolean call() throws IOException, InterruptedException {
-      boolean moved = false;
-      int count = 0;
-      int retries = admin.getConfiguration().getInt(MOVE_RETRIES_MAX_KEY, DEFAULT_MOVE_RETRIES_MAX);
-      int maxWaitInSeconds =
-          admin.getConfiguration().getInt(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX);
-      long startTime = EnvironmentEdgeManager.currentTime();
-      boolean sameServer = true;
-      // Assert we can scan the region in its current location
-      isSuccessfulScan(region);
-      LOG.info("Moving region:" + region.getEncodedName() + " from " + sourceServer + " to "
-          + targetServer);
-      while (count < retries && sameServer) {
-        if (count > 0) {
-          LOG.info("Retry " + Integer.toString(count) + " of maximum " + Integer.toString(retries));
-        }
-        count = count + 1;
-        admin.move(region.getEncodedNameAsBytes(), targetServer);
-        long maxWait = startTime + (maxWaitInSeconds * 1000);
-        while (EnvironmentEdgeManager.currentTime() < maxWait) {
-          sameServer = isSameServer(region, sourceServer);
-          if (!sameServer) {
-            break;
-          }
-          Thread.sleep(100);
-        }
-      }
-      if (sameServer) {
-        LOG.error("Region: " + region.getRegionNameAsString() + " stuck on " + this.sourceServer
-            + ",newServer=" + this.targetServer);
-      } else {
-        isSuccessfulScan(region);
-        LOG.info("Moved Region "
-            + region.getRegionNameAsString()
-            + " cost:"
-            + String.format("%.3f",
-            (float) (EnvironmentEdgeManager.currentTime() - startTime) / 1000));
-        moved = true;
-        movedRegions.add(region);
-      }
-      return moved;
-    }
-  }
-
-  /**
-   * Move Regions without Acknowledging.Usefule in case of RS shutdown as we might want to shut the
-   * RS down anyways and not abort on a stuck region. Improves movement performance
-   */
-  private class MoveWithoutAck implements Callable<Boolean> {
-    private RegionInfo region;
-    private ServerName targetServer;
-    private List<RegionInfo> movedRegions;
-    private ServerName sourceServer;
-
-    public MoveWithoutAck(RegionInfo regionInfo, ServerName sourceServer,
-        ServerName targetServer, List<RegionInfo> movedRegions) {
-      this.region = regionInfo;
-      this.targetServer = targetServer;
-      this.movedRegions = movedRegions;
-      this.sourceServer = sourceServer;
-    }
-
-    @Override
-    public Boolean call() {
-      try {
-        LOG.info("Moving region:" + region.getEncodedName() + " from " + sourceServer + " to "
-            + targetServer);
-        admin.move(region.getEncodedNameAsBytes(), targetServer);
-        LOG.info("Moved " + region.getEncodedName() + " from " + sourceServer + " to "
-            + targetServer);
-      } catch (Exception e) {
-        LOG.error("Error Moving Region:" + region.getEncodedName(), e);
-      } finally {
-        // we add region to the moved regions list in No Ack Mode since this is best effort
-        movedRegions.add(region);
-      }
-      return true;
-    }
-  }
-
-  /**
    * Loads the specified {@link #hostname} with regions listed in the {@link #filename} RegionMover
    * Object has to be created using {@link #RegionMover(RegionMoverBuilder)}
    * @return true if loading succeeded, false otherwise
@@ -374,12 +288,12 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         "Moving " + regionsToMove.size() + " regions to " + server + " using " + this.maxthreads
             + " threads.Ack mode:" + this.ack);
 
-    ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
+    final ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
     List<Future<Boolean>> taskList = new ArrayList<>();
     int counter = 0;
     while (counter < regionsToMove.size()) {
       RegionInfo region = regionsToMove.get(counter);
-      ServerName currentServer = getServerNameForRegion(region);
+      ServerName currentServer = MoveWithAck.getServerNameForRegion(region, admin, conn);
       if (currentServer == null) {
         LOG.warn(
             "Could not get server for Region:" + region.getRegionNameAsString() + " moving on");
@@ -392,12 +306,12 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         continue;
       }
       if (ack) {
-        Future<Boolean> task =
-            moveRegionsPool.submit(new MoveWithAck(region, currentServer, server, movedRegions));
+        Future<Boolean> task = moveRegionsPool
+          .submit(new MoveWithAck(conn, region, currentServer, server, movedRegions));
         taskList.add(task);
       } else {
-        Future<Boolean> task =
-            moveRegionsPool.submit(new MoveWithoutAck(region, currentServer, server, movedRegions));
+        Future<Boolean> task = moveRegionsPool
+          .submit(new MoveWithoutAck(admin, region, currentServer, server, movedRegions));
         taskList.add(task);
       }
       counter++;
@@ -413,7 +327,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
    * Unload regions from given {@link #hostname} using ack/noAck mode and {@link #maxthreads}.In
    * noAck mode we do not make sure that region is successfully online on the target region
    * server,hence it is best effort.We do not unload regions to hostnames given in
-   * {@link #excludeFile}.
+   * {@link #excludeFile}. If designatedFile is present with some contents, we will unload regions
+   * to hostnames provided in {@link #designatedFile}
    * @return true if unloading succeeded, false otherwise
    */
   public boolean unload() throws InterruptedException, ExecutionException, TimeoutException {
@@ -435,8 +350,11 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
           LOG.debug("List of region servers: {}", regionServers);
           return false;
         }
+        // Remove RS not present in the designated file
+        includeExcludeRegionServers(designatedFile, regionServers, true);
+
         // Remove RS present in the exclude file
-        stripExcludes(regionServers);
+        includeExcludeRegionServers(excludeFile, regionServers, false);
 
         // Remove decommissioned RS
         Set<ServerName> decommissionedRS = new HashSet<>(admin.listDecommissionedRegionServers());
@@ -492,26 +410,23 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         LOG.info("No Regions to move....Quitting now");
         break;
       }
-      int counter = 0;
-      LOG.info("Moving " + regionsToMove.size() + " regions from " + this.hostname + " to "
-          + regionServers.size() + " servers using " + this.maxthreads + " threads .Ack Mode:"
-          + ack);
-      ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
+      LOG.info("Moving {} regions from {} to {} servers using {} threads .Ack Mode: {}",
+        regionsToMove.size(), this.hostname, regionServers.size(), this.maxthreads, ack);
+      final ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
       List<Future<Boolean>> taskList = new ArrayList<>();
       int serverIndex = 0;
-      while (counter < regionsToMove.size()) {
+      for (RegionInfo regionToMove : regionsToMove) {
         if (ack) {
           Future<Boolean> task = moveRegionsPool.submit(
-              new MoveWithAck(regionsToMove.get(counter), server, regionServers.get(serverIndex),
-                  movedRegions));
+            new MoveWithAck(conn, regionToMove, server, regionServers.get(serverIndex),
+              movedRegions));
           taskList.add(task);
         } else {
           Future<Boolean> task = moveRegionsPool.submit(
-              new MoveWithoutAck(regionsToMove.get(counter), server, regionServers.get(serverIndex),
-                  movedRegions));
+            new MoveWithoutAck(admin, regionToMove, server, regionServers.get(serverIndex),
+              movedRegions));
           taskList.add(task);
         }
-        counter++;
         serverIndex = (serverIndex + 1) % regionServers.size();
       }
       moveRegionsPool.shutdown();
@@ -567,14 +482,33 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         LOG.error("Interrupted while waiting for Thread to Complete " + e.getMessage(), e);
         throw e;
       } catch (ExecutionException e) {
-        LOG.error("Got Exception From Thread While moving region " + e.getMessage(), e);
-        throw e;
+        boolean ignoreFailure = ignoreRegionMoveFailure(e);
+        if (ignoreFailure) {
+          LOG.debug("Ignore region move failure, it might have been split/merged.", e);
+        } else {
+          LOG.error("Got Exception From Thread While moving region {}", e.getMessage(), e);
+          throw e;
+        }
       } catch (CancellationException e) {
         LOG.error("Thread for moving region cancelled. Timeout for cancellation:" + timeoutInSeconds
             + "secs", e);
         throw e;
       }
     }
+  }
+
+  private boolean ignoreRegionMoveFailure(ExecutionException e) {
+    boolean ignoreFailure = false;
+    if (e.getCause() instanceof UnknownRegionException) {
+      // region does not exist anymore
+      ignoreFailure = true;
+    } else if (e.getCause() instanceof DoNotRetryRegionException
+        && e.getCause().getMessage() != null && e.getCause().getMessage()
+        .contains(AssignmentManager.UNEXPECTED_STATE_REGION + "state=SPLIT,")) {
+      // region is recently split
+      ignoreFailure = true;
+    }
+    return ignoreFailure;
   }
 
   private ServerName getTargetServer() throws Exception {
@@ -653,41 +587,52 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   /**
-   * @return List of servers from the exclude file in format 'hostname:port'.
+   * @param filename The file should have 'host:port' per line
+   * @return List of servers from the file in format 'hostname:port'.
    */
-  private List<String> readExcludes(String excludeFile) throws IOException {
-    List<String> excludeServers = new ArrayList<>();
-    if (excludeFile == null) {
-      return excludeServers;
-    } else {
+  private List<String> readServersFromFile(String filename) throws IOException {
+    List<String> servers = new ArrayList<>();
+    if (filename != null) {
       try {
-        Files.readAllLines(Paths.get(excludeFile)).stream().map(String::trim)
-            .filter(((Predicate<String>) String::isEmpty).negate()).map(String::toLowerCase)
-            .forEach(excludeServers::add);
+        Files.readAllLines(Paths.get(filename)).stream().map(String::trim)
+          .filter(((Predicate<String>) String::isEmpty).negate()).map(String::toLowerCase)
+          .forEach(servers::add);
       } catch (IOException e) {
-        LOG.warn("Exception while reading excludes file, continuing anyways", e);
+        LOG.error("Exception while reading servers from file,", e);
+        throw e;
       }
-      return excludeServers;
     }
+    return servers;
   }
 
   /**
-   * Excludes the servername whose hostname and port portion matches the list given in exclude file
+   * Designates or excludes the servername whose hostname and port portion matches the list given
+   * in the file.
+   * Example:<br>
+   * If you want to designated RSs, suppose designatedFile has RS1, regionServers has RS1, RS2 and
+   * RS3. When we call includeExcludeRegionServers(designatedFile, regionServers, true), RS2 and
+   * RS3 are removed from regionServers list so that regions can move to only RS1.
+   * If you want to exclude RSs, suppose excludeFile has RS1, regionServers has RS1, RS2 and RS3.
+   * When we call includeExcludeRegionServers(excludeFile, servers, false), RS1 is removed from
+   * regionServers list so that regions can move to only RS2 and RS3.
    */
-  private void stripExcludes(List<ServerName> regionServers) throws IOException {
-    if (excludeFile != null) {
-      List<String> excludes = readExcludes(excludeFile);
+  private void includeExcludeRegionServers(String fileName, List<ServerName> regionServers,
+      boolean isInclude) throws IOException {
+    if (fileName != null) {
+      List<String> servers = readServersFromFile(fileName);
+      if (servers.isEmpty()) {
+        LOG.warn("No servers provided in the file: {}." + fileName);
+        return;
+      }
       Iterator<ServerName> i = regionServers.iterator();
       while (i.hasNext()) {
         String rs = i.next().getServerName();
         String rsPort = rs.split(ServerName.SERVERNAME_SEPARATOR)[0].toLowerCase() + ":" + rs
-            .split(ServerName.SERVERNAME_SEPARATOR)[1];
-        if (excludes.contains(rsPort)) {
+          .split(ServerName.SERVERNAME_SEPARATOR)[1];
+        if (isInclude != servers.contains(rsPort)) {
           i.remove();
         }
       }
-      LOG.info("Valid Region server targets are:" + regionServers.toString());
-      LOG.info("Excluded Servers are" + excludes.toString());
     }
   }
 
@@ -716,54 +661,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     return null;
   }
 
-  /**
-   * Tries to scan a row from passed region
-   */
-  private void isSuccessfulScan(RegionInfo region) throws IOException {
-    Scan scan = new Scan().withStartRow(region.getStartKey()).setRaw(true).setOneRowLimit()
-        .setMaxResultSize(1L).setCaching(1).setFilter(new FirstKeyOnlyFilter())
-        .setCacheBlocks(false);
-    try (Table table = conn.getTable(region.getTable());
-        ResultScanner scanner = table.getScanner(scan)) {
-      scanner.next();
-    } catch (IOException e) {
-      LOG.error("Could not scan region:" + region.getEncodedName(), e);
-      throw e;
-    }
-  }
-
-  /**
-   * Returns true if passed region is still on serverName when we look at hbase:meta.
-   * @return true if region is hosted on serverName otherwise false
-   */
-  private boolean isSameServer(RegionInfo region, ServerName serverName)
-      throws IOException {
-    ServerName serverForRegion = getServerNameForRegion(region);
-    if (serverForRegion != null && serverForRegion.equals(serverName)) {
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Get servername that is up in hbase:meta hosting the given region. this is hostname + port +
-   * startcode comma-delimited. Can return null
-   * @return regionServer hosting the given region
-   */
-  private ServerName getServerNameForRegion(RegionInfo region) throws IOException {
-    if (!admin.isTableEnabled(region.getTable())) {
-      return null;
-    }
-    HRegionLocation loc =
-      conn.getRegionLocator(region.getTable()).getRegionLocation(region.getStartKey(),
-        region.getReplicaId(),true);
-    if (loc != null) {
-      return loc.getServerName();
-    } else {
-      return null;
-    }
-  }
-
   @Override
   protected void addOptions() {
     this.addRequiredOptWithArg("r", "regionserverhost", "region server <hostname>|<hostname:port>");
@@ -773,6 +670,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     this.addOptWithArg("x", "excludefile",
         "File with <hostname:port> per line to exclude as unload targets; default excludes only "
             + "target host; useful for rack decommisioning.");
+    this.addOptWithArg("d","designatedfile","File with <hostname:port> per line as unload targets;"
+            + "default is all online hosts");
     this.addOptWithArg("f", "filename",
         "File to save regions list into unloading, or read from loading; "
             + "default /tmp/<usernamehostname:port>");
@@ -800,6 +699,9 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     }
     if (cmd.hasOption('x')) {
       rmbuilder.excludeFile(cmd.getOptionValue('x'));
+    }
+    if (cmd.hasOption('d')) {
+      rmbuilder.designatedFile(cmd.getOptionValue('d'));
     }
     if (cmd.hasOption('t')) {
       rmbuilder.timeout(Integer.parseInt(cmd.getOptionValue('t')));

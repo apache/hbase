@@ -181,12 +181,15 @@ public class TestWALFactory {
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
     final int howmany = 3;
     RegionInfo[] infos = new RegionInfo[3];
+    Path tableDataDir = CommonFSUtils.getTableDir(hbaseDir, tableName);
+    fs.mkdirs(tableDataDir);
     Path tabledir = CommonFSUtils.getWALTableDir(conf, tableName);
     fs.mkdirs(tabledir);
     for (int i = 0; i < howmany; i++) {
       infos[i] = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("" + i))
           .setEndKey(Bytes.toBytes("" + (i + 1))).build();
       fs.mkdirs(new Path(tabledir, infos[i].getEncodedName()));
+      fs.mkdirs(new Path(tableDataDir, infos[i].getEncodedName()));
       LOG.info("allo " + new Path(tabledir, infos[i].getEncodedName()).toString());
     }
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -525,7 +528,7 @@ public class TestWALFactory {
         htd.getTableName(), System.currentTimeMillis(), mvcc, scopes), cols);
       log.sync(txid);
       log.startCacheFlush(info.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
-      log.completeCacheFlush(info.getEncodedNameAsBytes());
+      log.completeCacheFlush(info.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
       log.shutdown();
       Path filename = AbstractFSWALProvider.getCurrentFileName(log);
       // Now open a reader on the log and assert append worked.
@@ -581,7 +584,7 @@ public class TestWALFactory {
         htd.getTableName(), System.currentTimeMillis(), mvcc, scopes), cols);
       log.sync(txid);
       log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getColumnFamilyNames());
-      log.completeCacheFlush(hri.getEncodedNameAsBytes());
+      log.completeCacheFlush(hri.getEncodedNameAsBytes(), HConstants.NO_SEQNUM);
       log.shutdown();
       Path filename = AbstractFSWALProvider.getCurrentFileName(log);
       // Now open a reader on the log and assert append worked.
@@ -684,7 +687,7 @@ public class TestWALFactory {
     assertEquals(wrappedWALProvider.getClass(), walFactory.getMetaProvider().getClass());
 
     // if providers are not set and do not enable SyncReplicationWALProvider
-    walFactory = new WALFactory(conf, this.currentServername.toString(), false);
+    walFactory = new WALFactory(conf, this.currentServername.toString(), null, false);
     assertEquals(walFactory.getWALProvider().getClass(), walFactory.getMetaProvider().getClass());
   }
 

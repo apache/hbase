@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -62,6 +63,11 @@ public final class HConstants {
    * splitting code, one per region
    */
   public static final String RECOVERED_HFILES_DIR = "recovered.hfiles";
+
+  /**
+   * Date Tiered Compaction tmp dir prefix name if use storage policy
+   */
+  public static final String STORAGE_POLICY_PREFIX = "storage_policy_";
 
   /**
    * The first four bytes of Hadoop RPC connections
@@ -255,6 +261,15 @@ public final class HConstants {
   /** Configuration key for ZooKeeper session timeout */
   public static final String ZK_SESSION_TIMEOUT = "zookeeper.session.timeout";
 
+  /** Timeout for the ZK sync() call */
+  public static final String ZK_SYNC_BLOCKING_TIMEOUT_MS = "hbase.zookeeper.sync.timeout.millis";
+  // Choice of the default value is based on the following ZK recommendation (from docs). Keeping it
+  // lower lets the callers fail fast in case of any issues.
+  // "The clients view of the system is guaranteed to be up-to-date within a certain time bound.
+  // (On the order of tens of seconds.) Either system changes will be seen by a client within this
+  // bound, or the client will detect a service outage."
+  public static final long ZK_SYNC_BLOCKING_TIMEOUT_DEFAULT_MS = 30 * 1000;
+
   /** Default value for ZooKeeper session timeout */
   public static final int DEFAULT_ZK_SESSION_TIMEOUT = 90 * 1000;
 
@@ -366,6 +381,13 @@ public final class HConstants {
 
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024L;
+
+  /** Conf key for if we should sum overall region files size when check to split */
+  public static final String OVERALL_HREGION_FILES =
+    "hbase.hregion.split.overallfiles";
+
+  /** Default overall region files */
+  public static final boolean DEFAULT_OVERALL_HREGION_FILES = true;
 
   /**
    * Max size of single row for Get's or Scan's without in-row scanning flag set.
@@ -559,6 +581,9 @@ public final class HConstants {
    */
   public static final byte [] META_VERSION_QUALIFIER = Bytes.toBytes("v");
 
+  /** The family str as a key in map*/
+  public static final String FAMILY_KEY_STR = "family";
+
   /**
    * The current version of the meta table.
    * - pre-hbase 0.92.  There is no META_VERSION column in the root table
@@ -593,7 +618,7 @@ public final class HConstants {
   /**
    * Last row in a table.
    */
-  public static final byte [] EMPTY_END_ROW = EMPTY_START_ROW;
+  public static final byte [] EMPTY_END_ROW = EMPTY_BYTE_ARRAY;
 
   /**
     * Used by scanners and others when they're trying to detect the end of a
@@ -956,10 +981,12 @@ public final class HConstants {
    */
   public static final String
       REPLICATION_SOURCE_SERVICE_CLASSNAME = "hbase.replication.source.service";
-  public static final String
-      REPLICATION_SINK_SERVICE_CLASSNAME = "hbase.replication.sink.service";
   public static final String REPLICATION_SERVICE_CLASSNAME_DEFAULT =
     "org.apache.hadoop.hbase.replication.regionserver.Replication";
+  public static final String
+      REPLICATION_SINK_SERVICE_CLASSNAME = "hbase.replication.sink.service";
+  public static final String REPLICATION_SINK_SERVICE_CLASSNAME_DEFAULT =
+    "org.apache.hadoop.hbase.replication.ReplicationSinkServiceImpl";
   public static final String REPLICATION_BULKLOAD_ENABLE_KEY = "hbase.replication.bulkload.enabled";
   public static final boolean REPLICATION_BULKLOAD_ENABLE_DEFAULT = false;
   /** Replication cluster id of source cluster which uniquely identifies itself with peer cluster */
@@ -1104,7 +1131,20 @@ public final class HConstants {
   /** Conf key for enabling meta replication */
   public static final String USE_META_REPLICAS = "hbase.meta.replicas.use";
   public static final boolean DEFAULT_USE_META_REPLICAS = false;
+
+  /**
+   * @deprecated Since 2.4.0, will be removed in 4.0.0. Please change the meta replicas number by
+   *             altering meta table, i.e, set a new 'region replication' number and call
+   *             modifyTable.
+   */
+  @Deprecated
   public static final String META_REPLICAS_NUM = "hbase.meta.replica.count";
+  /**
+   * @deprecated Since 2.4.0, will be removed in 4.0.0. Please change the meta replicas number by
+   *             altering meta table, i.e, set a new 'region replication' number and call
+   *             modifyTable.
+   */
+  @Deprecated
   public static final int DEFAULT_META_REPLICA_NUM = 1;
 
   /**
@@ -1198,6 +1238,16 @@ public final class HConstants {
     Collections.unmodifiableList(Arrays.asList(new String[] {
       HBCK_SIDELINEDIR_NAME, HBASE_TEMP_DIRECTORY, MIGRATION_NAME
     }));
+
+  /**
+   * Directories that are not HBase user table directories.
+   * @deprecated Since hbase-2.3.0; no replacement as not used any more (internally at least)
+   */
+  @Deprecated
+  public static final List<String> HBASE_NON_USER_TABLE_DIRS =
+    Collections.unmodifiableList(Arrays.asList((String[])ArrayUtils.addAll(
+      new String[] { TableName.META_TABLE_NAME.getNameAsString() },
+      HBASE_NON_TABLE_DIRS.toArray())));
 
   /** Health script related settings. */
   public static final String HEALTH_SCRIPT_LOC = "hbase.node.health.script.location";
@@ -1306,7 +1356,13 @@ public final class HConstants {
   public static final String REPLICATION_SOURCE_MAXTHREADS_KEY =
       "hbase.replication.source.maxthreads";
 
-  /** Drop edits for tables that been deleted from the replication source and target */
+  /**
+   * Drop edits for tables that been deleted from the replication source and target
+   * @deprecated since 3.0.0. Will be removed in 4.0.0.
+   *             Moved it into HBaseInterClusterReplicationEndpoint.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-24359">HBASE-24359</a>
+   */
+  @Deprecated
   public static final String REPLICATION_DROP_ON_DELETED_TABLE_KEY =
       "hbase.replication.drop.on.deleted.table";
 
@@ -1411,9 +1467,18 @@ public final class HConstants {
   public static final String HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL =
     "hbase.client.fast.fail.interceptor.impl";
 
+  /**
+   * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+   *   distributed WAL splitter; see SplitWALManager.
+   */
+  @Deprecated
   public static final String HBASE_SPLIT_WAL_COORDINATED_BY_ZK = "hbase.split.wal.zk.coordinated";
 
-  public static final boolean DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK = true;
+  /**
+   * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0.
+   */
+  @Deprecated
+  public static final boolean DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK = false;
 
   public static final String HBASE_SPLIT_WAL_MAX_SPLITTER = "hbase.regionserver.wal.max.splitters";
 
@@ -1455,6 +1520,7 @@ public final class HConstants {
 
   public static final String HBASE_CANARY_READ_RAW_SCAN_KEY = "hbase.canary.read.raw.enabled";
 
+  public static final String HBASE_CANARY_READ_ALL_CF = "hbase.canary.read.all.column.famliy";
   /**
    * Configuration keys for programmatic JAAS configuration for secured ZK interaction
    */
@@ -1535,6 +1601,26 @@ public final class HConstants {
   public static final String SLOW_LOG_BUFFER_ENABLED_KEY =
     "hbase.regionserver.slowlog.buffer.enabled";
   public static final boolean DEFAULT_ONLINE_LOG_PROVIDER_ENABLED = false;
+
+  /** The slowlog info family as a string*/
+  private static final String SLOWLOG_INFO_FAMILY_STR = "info";
+
+  /** The slowlog info family */
+  public static final byte [] SLOWLOG_INFO_FAMILY = Bytes.toBytes(SLOWLOG_INFO_FAMILY_STR);
+
+  public static final String SLOW_LOG_SYS_TABLE_ENABLED_KEY =
+    "hbase.regionserver.slowlog.systable.enabled";
+  public static final boolean DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY = false;
+
+  /**
+   * Number of rows in a batch operation above which a warning will be logged.
+   */
+  public static final String BATCH_ROWS_THRESHOLD_NAME = "hbase.rpc.rows.warning.threshold";
+
+  /**
+   * Default value of {@link #BATCH_ROWS_THRESHOLD_NAME}
+   */
+  public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
   private HConstants() {
     // Can't be instantiated with this ctor.

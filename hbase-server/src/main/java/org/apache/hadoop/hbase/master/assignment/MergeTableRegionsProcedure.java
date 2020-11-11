@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.master.CatalogJanitor;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -61,7 +60,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -459,7 +457,7 @@ public class MergeTableRegionsProcedure
     if (!env.getMasterServices().isSplitOrMergeEnabled(MasterSwitchType.MERGE)) {
       String regionsStr = Arrays.deepToString(this.regionsToMerge);
       LOG.warn("Merge switch is off! skip merge of " + regionsStr);
-      super.setFailure(getClass().getSimpleName(),
+      setFailure(getClass().getSimpleName(),
           new IOException("Merge of " + regionsStr + " failed because merge switch is off"));
       return false;
     }
@@ -467,17 +465,17 @@ public class MergeTableRegionsProcedure
     if (!env.getMasterServices().getTableDescriptors().get(getTableName()).isMergeEnabled()) {
       String regionsStr = Arrays.deepToString(regionsToMerge);
       LOG.warn("Merge is disabled for the table! Skipping merge of {}", regionsStr);
-      super.setFailure(getClass().getSimpleName(), new IOException(
+      setFailure(getClass().getSimpleName(), new IOException(
           "Merge of " + regionsStr + " failed as region merge is disabled for the table"));
       return false;
     }
 
-    CatalogJanitor catalogJanitor = env.getMasterServices().getCatalogJanitor();
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
-    for (RegionInfo ri: this.regionsToMerge) {
-      if (!catalogJanitor.cleanMergeQualifier(ri)) {
+    RegionStateStore regionStateStore = env.getAssignmentManager().getRegionStateStore();
+    for (RegionInfo ri : this.regionsToMerge) {
+      if (regionStateStore.hasMergeRegions(ri)) {
         String msg = "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge) +
-            ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier " +
+          ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier " +
           "(if a 'merge column' in parent, it was recently merged but still has outstanding " +
           "references to its parents that must be cleared before it can participate in merge -- " +
           "major compact it to hurry clearing of its references)";
@@ -496,11 +494,15 @@ public class MergeTableRegionsProcedure
       // along with the failure, so we can see why regions are not mergeable at this time.
       try {
         if (!isMergeable(env, state)) {
+          setFailure(getClass().getSimpleName(),
+            new MergeRegionException(
+              "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge) +
+                ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", is not mergeable"));
           return false;
         }
       } catch (IOException e) {
         IOException ioe = new IOException(RegionInfo.getShortNameToLog(ri) + " NOT mergeable", e);
-        super.setFailure(getClass().getSimpleName(), ioe);
+        setFailure(getClass().getSimpleName(), ioe);
         return false;
       }
     }
@@ -530,8 +532,10 @@ public class MergeTableRegionsProcedure
     try {
       env.getMasterServices().getMasterQuotaManager().onRegionMerged(this.mergedRegion);
     } catch (QuotaExceededException e) {
-      env.getMasterServices().getRegionNormalizer().planSkipped(this.mergedRegion,
-          NormalizationPlan.PlanType.MERGE);
+      // TODO: why is this here? merge requests can be submitted by actors other than the normalizer
+      env.getMasterServices()
+        .getRegionNormalizerManager()
+        .planSkipped(NormalizationPlan.PlanType.MERGE);
       throw e;
     }
   }

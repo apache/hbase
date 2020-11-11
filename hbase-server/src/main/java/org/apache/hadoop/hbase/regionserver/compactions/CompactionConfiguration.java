@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -91,6 +92,20 @@ public class CompactionConfiguration {
   private static final Class<? extends CompactionWindowFactory>
     DEFAULT_DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS = ExponentialCompactionWindowFactory.class;
 
+  public static final String DATE_TIERED_STORAGE_POLICY_ENABLE_KEY =
+    "hbase.hstore.compaction.date.tiered.storage.policy.enable";
+  public static final String DATE_TIERED_HOT_WINDOW_AGE_MILLIS_KEY =
+    "hbase.hstore.compaction.date.tiered.hot.window.age.millis";
+  public static final String DATE_TIERED_HOT_WINDOW_STORAGE_POLICY_KEY =
+    "hbase.hstore.compaction.date.tiered.hot.window.storage.policy";
+  public static final String DATE_TIERED_WARM_WINDOW_AGE_MILLIS_KEY =
+    "hbase.hstore.compaction.date.tiered.warm.window.age.millis";
+  public static final String DATE_TIERED_WARM_WINDOW_STORAGE_POLICY_KEY =
+    "hbase.hstore.compaction.date.tiered.warm.window.storage.policy";
+  /** Windows older than warm age belong to COLD_WINDOW **/
+  public static final String DATE_TIERED_COLD_WINDOW_STORAGE_POLICY_KEY =
+    "hbase.hstore.compaction.date.tiered.cold.window.storage.policy";
+
   Configuration conf;
   StoreConfigInformation storeConfigInfo;
 
@@ -112,6 +127,12 @@ public class CompactionConfiguration {
   private final String compactionPolicyForDateTieredWindow;
   private final boolean dateTieredSingleOutputForMinorCompaction;
   private final String dateTieredCompactionWindowFactory;
+  private final boolean dateTieredStoragePolicyEnable;
+  private long hotWindowAgeMillis;
+  private long warmWindowAgeMillis;
+  private String hotWindowStoragePolicy;
+  private String warmWindowStoragePolicy;
+  private String coldWindowStoragePolicy;
 
   CompactionConfiguration(Configuration conf, StoreConfigInformation storeConfigInfo) {
     this.conf = conf;
@@ -146,17 +167,27 @@ public class CompactionConfiguration {
     this.dateTieredCompactionWindowFactory = conf.get(
       DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS_KEY,
       DEFAULT_DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS.getName());
+    // for Heterogeneous Storage
+    dateTieredStoragePolicyEnable = conf.getBoolean(DATE_TIERED_STORAGE_POLICY_ENABLE_KEY, false);
+    hotWindowAgeMillis = conf.getLong(DATE_TIERED_HOT_WINDOW_AGE_MILLIS_KEY, 86400000L);
+    hotWindowStoragePolicy = conf.get(DATE_TIERED_HOT_WINDOW_STORAGE_POLICY_KEY, "ALL_SSD");
+    warmWindowAgeMillis = conf.getLong(DATE_TIERED_WARM_WINDOW_AGE_MILLIS_KEY, 604800000L);
+    warmWindowStoragePolicy = conf.get(DATE_TIERED_WARM_WINDOW_STORAGE_POLICY_KEY, "ONE_SSD");
+    coldWindowStoragePolicy = conf.get(DATE_TIERED_COLD_WINDOW_STORAGE_POLICY_KEY, "HOT");
     LOG.info(toString());
   }
 
   @Override
   public String toString() {
     return String.format(
-      "size [%s, %s, %s); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
+      "size [minCompactSize:%s, maxCompactSize:%s, offPeakMaxCompactSize:%s);"
+      + " files [minFilesToCompact:%d, maxFilesToCompact:%d);"
+      + " ratio %f; off-peak ratio %f; throttle point %d;"
       + " major period %d, major jitter %f, min locality to compact %f;"
       + " tiered compaction: max_age %d, incoming window min %d,"
       + " compaction policy for tiered window %s, single output for minor %b,"
-      + " compaction window factory %s",
+      + " compaction window factory %s,"
+      + " region %s columnFamilyName %s",
       StringUtils.byteDesc(minCompactSize),
       StringUtils.byteDesc(maxCompactSize),
       StringUtils.byteDesc(offPeakMaxCompactSize),
@@ -172,7 +203,9 @@ public class CompactionConfiguration {
       dateTieredIncomingWindowMin,
       compactionPolicyForDateTieredWindow,
       dateTieredSingleOutputForMinorCompaction,
-      dateTieredCompactionWindowFactory
+      dateTieredCompactionWindowFactory,
+      RegionInfo.prettyPrint(storeConfigInfo.getRegionInfo().getEncodedName()),
+      storeConfigInfo.getColumnFamilyName()
       );
   }
 
@@ -288,5 +321,29 @@ public class CompactionConfiguration {
 
   public String getDateTieredCompactionWindowFactory() {
     return dateTieredCompactionWindowFactory;
+  }
+
+  public boolean isDateTieredStoragePolicyEnable() {
+    return dateTieredStoragePolicyEnable;
+  }
+
+  public long getHotWindowAgeMillis() {
+    return hotWindowAgeMillis;
+  }
+
+  public long getWarmWindowAgeMillis() {
+    return warmWindowAgeMillis;
+  }
+
+  public String getHotWindowStoragePolicy() {
+    return hotWindowStoragePolicy.trim().toUpperCase();
+  }
+
+  public String getWarmWindowStoragePolicy() {
+    return warmWindowStoragePolicy.trim().toUpperCase();
+  }
+
+  public String getColdWindowStoragePolicy() {
+    return coldWindowStoragePolicy.trim().toUpperCase();
   }
 }

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -69,24 +70,50 @@ public class TestCompactionState {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
-  public void testMajorCompaction() throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 8, CompactionState.MAJOR, false);
+  enum StateSource {
+    ADMIN, MASTER
   }
 
   @Test
-  public void testMinorCompaction() throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 15, CompactionState.MINOR, false);
+  public void testMajorCompactionStateFromAdmin() throws IOException, InterruptedException {
+    compaction(name.getMethodName(), 8, CompactionState.MAJOR, false, StateSource.ADMIN);
   }
 
   @Test
-  public void testMajorCompactionOnFamily() throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 8, CompactionState.MAJOR, true);
+  public void testMinorCompactionStateFromAdmin() throws IOException, InterruptedException {
+    compaction(name.getMethodName(), 15, CompactionState.MINOR, false, StateSource.ADMIN);
   }
 
   @Test
-  public void testMinorCompactionOnFamily() throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 15, CompactionState.MINOR, true);
+  public void testMajorCompactionOnFamilyStateFromAdmin() throws IOException, InterruptedException {
+    compaction(name.getMethodName(), 8, CompactionState.MAJOR, true, StateSource.ADMIN);
+  }
+
+  @Test
+  public void testMinorCompactionOnFamilyStateFromAdmin() throws IOException, InterruptedException {
+    compaction(name.getMethodName(), 15, CompactionState.MINOR, true, StateSource.ADMIN);
+  }
+
+  @Test
+  public void testMajorCompactionStateFromMaster() throws IOException, InterruptedException {
+    compaction(name.getMethodName(), 8, CompactionState.MAJOR, false, StateSource.MASTER);
+  }
+
+  @Test
+  public void testMinorCompactionStateFromMaster() throws IOException, InterruptedException {
+    compaction(name.getMethodName(), 15, CompactionState.MINOR, false, StateSource.MASTER);
+  }
+
+  @Test
+  public void testMajorCompactionOnFamilyStateFromMaster()
+      throws IOException, InterruptedException {
+    compaction(name.getMethodName(), 8, CompactionState.MAJOR, true, StateSource.MASTER);
+  }
+
+  @Test
+  public void testMinorCompactionOnFamilyStateFromMaster()
+      throws IOException, InterruptedException {
+    compaction(name.getMethodName(), 15, CompactionState.MINOR, true, StateSource.MASTER);
   }
 
   @Test
@@ -127,11 +154,12 @@ public class TestCompactionState {
    * @param flushes
    * @param expectedState
    * @param singleFamily otherwise, run compaction on all cfs
+   * @param stateSource get the state by Admin or Master
    * @throws IOException
    * @throws InterruptedException
    */
   private void compaction(final String tableName, final int flushes,
-      final CompactionState expectedState, boolean singleFamily)
+      final CompactionState expectedState, boolean singleFamily, StateSource stateSource)
       throws IOException, InterruptedException {
     // Create a table with regions
     TableName table = TableName.valueOf(tableName);
@@ -143,6 +171,7 @@ public class TestCompactionState {
       ht = TEST_UTIL.createTable(table, families);
       loadData(ht, families, 3000, flushes);
       HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+      HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
       List<HRegion> regions = rs.getRegions(table);
       int countBefore = countStoreFilesInFamilies(regions, families);
       int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
@@ -164,10 +193,10 @@ public class TestCompactionState {
       long curt = System.currentTimeMillis();
       long waitTime = 5000;
       long endt = curt + waitTime;
-      CompactionState state = admin.getCompactionState(table);
+      CompactionState state = getCompactionState(stateSource, master, admin, table);
       while (state == CompactionState.NONE && curt < endt) {
         Thread.sleep(10);
-        state = admin.getCompactionState(table);
+        state = getCompactionState(stateSource, master, admin, table);
         curt = System.currentTimeMillis();
       }
       // Now, should have the right compaction state,
@@ -179,10 +208,10 @@ public class TestCompactionState {
         }
       } else {
         // Wait until the compaction is done
-        state = admin.getCompactionState(table);
+        state = getCompactionState(stateSource, master, admin, table);
         while (state != CompactionState.NONE && curt < endt) {
           Thread.sleep(10);
-          state = admin.getCompactionState(table);
+          state = getCompactionState(stateSource, master, admin, table);
         }
         // Now, compaction should be done.
         assertEquals(CompactionState.NONE, state);
@@ -208,6 +237,14 @@ public class TestCompactionState {
         TEST_UTIL.deleteTable(table);
       }
     }
+  }
+
+  private static CompactionState getCompactionState(StateSource stateSource, HMaster master,
+      Admin admin, TableName table) throws IOException {
+    CompactionState state = stateSource == StateSource.ADMIN ?
+      admin.getCompactionState(table) :
+      master.getCompactionState(table);
+    return state;
   }
 
   private static int countStoreFilesInFamily(

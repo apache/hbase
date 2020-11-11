@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.mapred;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.List;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -32,11 +35,7 @@ import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.List;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * TableSnapshotInputFormat allows a MapReduce job to run over a table snapshot. Further
@@ -59,7 +58,7 @@ public class TableSnapshotInputFormat implements InputFormat<ImmutableBytesWrita
       this.delegate = delegate;
     }
 
-    public TableSnapshotRegionSplit(HTableDescriptor htd, HRegionInfo regionInfo,
+    public TableSnapshotRegionSplit(TableDescriptor htd, RegionInfo regionInfo,
         List<String> locations, Scan scan, Path restoreDir) {
       this.delegate =
           new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);

@@ -25,7 +25,6 @@ import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -35,6 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
@@ -83,6 +83,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
   private ClientSideRegionScanner currentRegionScanner  = null;
   private int currentRegion = -1;
 
+  private int numOfCompleteRows = 0;
   /**
    * Creates a TableSnapshotScanner.
    * @param conf the configuration
@@ -148,8 +149,8 @@ public class TableSnapshotScanner extends AbstractClientScanner {
     }
 
     regions = new ArrayList<>(regionManifests.size());
-    regionManifests.stream().map(r -> HRegionInfo.convert(r.getRegionInfo()))
-        .filter(this::isValidRegion).sorted().forEach(r -> regions.add(r));
+    regionManifests.stream().map(r -> ProtobufUtil.toRegionInfo(r.getRegionInfo()))
+      .filter(this::isValidRegion).sorted().forEach(r -> regions.add(r));
     htd = manifest.getTableDescriptor();
   }
 
@@ -193,6 +194,9 @@ public class TableSnapshotScanner extends AbstractClientScanner {
       try {
         result = currentRegionScanner.next();
         if (result != null) {
+          if (scan.getLimit() > 0 && ++this.numOfCompleteRows > scan.getLimit()) {
+            result = null;
+          }
           return result;
         }
       } finally {

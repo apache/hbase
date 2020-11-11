@@ -263,26 +263,6 @@ public class TestAdmin3 extends TestAdminBase {
     assertFalse(ADMIN.tableExists(tableName));
   }
 
-  @Test(expected = TableNotDisabledException.class)
-  public void testModifyRegionReplicasEnabledTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
-
-    // Modify region replication count
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName))
-      .setRegionReplication(3).build();
-    try {
-      // try to modify the region replication count without disabling the table
-      ADMIN.modifyTable(htd);
-      fail("Expected an exception");
-    } finally {
-      // Delete the table
-      ADMIN.disableTable(tableName);
-      ADMIN.deleteTable(tableName);
-      assertFalse(ADMIN.tableExists(tableName));
-    }
-  }
-
   @Test
   public void testDeleteLastColumnFamily() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());

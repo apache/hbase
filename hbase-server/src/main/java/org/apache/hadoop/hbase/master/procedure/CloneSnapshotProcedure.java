@@ -27,7 +27,6 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -141,6 +140,7 @@ public class CloneSnapshotProcedure
           break;
         case CLONE_SNAPSHOT_WRITE_FS_LAYOUT:
           newRegions = createFilesystemLayout(env, tableDescriptor, newRegions);
+          env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_ADD_TO_META);
           break;
         case CLONE_SNAPSHOT_ADD_TO_META:
@@ -172,8 +172,9 @@ public class CloneSnapshotProcedure
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_UPDATE_DESC_CACHE);
           break;
         case CLONE_SNAPSHOT_UPDATE_DESC_CACHE:
+          // XXX: this stage should be named as set table enabled, as now we will cache the
+          // descriptor after writing fs layout.
           CreateTableProcedure.setEnabledState(env, getTableName());
-          CreateTableProcedure.updateTableDescCache(env, getTableName());
           setNextState(CloneSnapshotState.CLONE_SNAPHOST_RESTORE_ACL);
           break;
         case CLONE_SNAPHOST_RESTORE_ACL:
@@ -328,12 +329,11 @@ public class CloneSnapshotProcedure
   /**
    * Action before any real action of cloning from snapshot.
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private void prepareClone(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
-    if (MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
-      throw new TableExistsException(getTableName());
+    if (env.getMasterServices().getTableDescriptors().exists(tableName)) {
+      throw new TableExistsException(tableName);
     }
   }
 
@@ -458,6 +458,11 @@ public class CloneSnapshotProcedure
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
     final Path tempTableDir = CommonFSUtils.getTableDir(tempdir, tableDescriptor.getTableName());
+    if (CommonFSUtils.isExists(mfs.getFileSystem(), tempTableDir)) {
+      // if the region dirs exist, will cause exception and unlimited retry (see HBASE-24546)
+      LOG.warn("temp table dir already exists on disk: {}, will be deleted.", tempTableDir);
+      CommonFSUtils.deleteDirectory(mfs.getFileSystem(), tempTableDir);
+    }
     ((FSTableDescriptors) (env.getMasterServices().getTableDescriptors()))
       .createTableDescriptorForTableDirectory(tempTableDir,
         TableDescriptorBuilder.newBuilder(tableDescriptor).build(), false);

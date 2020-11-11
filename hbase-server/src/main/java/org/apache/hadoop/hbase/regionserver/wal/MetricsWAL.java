@@ -23,6 +23,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,9 +59,10 @@ public class MetricsWAL implements WALActionsListener {
   @Override
   public void postAppend(final long size, final long time, final WALKey logkey,
       final WALEdit logEdit) throws IOException {
-    source.incrementAppendCount();
+    TableName tableName = logkey.getTableName();
+    source.incrementAppendCount(tableName);
     source.incrementAppendTime(time);
-    source.incrementAppendSize(size);
+    source.incrementAppendSize(tableName, size);
     source.incrementWrittenBytes(size);
 
     if (time > 1000) {

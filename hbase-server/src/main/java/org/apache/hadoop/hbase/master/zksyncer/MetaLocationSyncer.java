@@ -18,8 +18,9 @@
  */
 package org.apache.hadoop.hbase.master.zksyncer;
 
-import java.util.Collection;
-
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -30,17 +31,28 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MetaLocationSyncer extends ClientZKSyncer {
+
+  private volatile int metaReplicaCount = 1;
+
   public MetaLocationSyncer(ZKWatcher watcher, ZKWatcher clientZkWatcher, Server server) {
     super(watcher, clientZkWatcher, server);
   }
 
   @Override
-  boolean validate(String path) {
-    return watcher.getZNodePaths().isAnyMetaReplicaZNode(path);
+  protected boolean validate(String path) {
+    return watcher.getZNodePaths().isMetaZNodePath(path);
   }
 
   @Override
-  Collection<String> getNodesToWatch() {
-    return watcher.getZNodePaths().getMetaReplicaZNodes();
+  protected Set<String> getPathsToWatch() {
+    return IntStream.range(0, metaReplicaCount)
+      .mapToObj(watcher.getZNodePaths()::getZNodeForReplica).collect(Collectors.toSet());
+  }
+
+  public void setMetaReplicaCount(int replicaCount) {
+    if (replicaCount != metaReplicaCount) {
+      metaReplicaCount = replicaCount;
+      refreshWatchingList();
+    }
   }
 }

@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -124,7 +124,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
       MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
       for (int i = 0; i < 10; i++) {
-        addEdits(log, hri, htd, 1, mvcc, scopes);
+        addEdits(log, hri, htd, 1, mvcc, scopes, "row");
       }
     } finally {
       log.close();
@@ -166,8 +166,9 @@ public class TestFSHLog extends AbstractTestFSWAL {
           TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
             .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-      ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
-      final HRegion region = TEST_UTIL.createLocalHRegion(hri, htd, log);
+      ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+        0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+      final HRegion region = TEST_UTIL.createLocalHRegion(hri, CONF, htd, log);
       ExecutorService exec = Executors.newFixedThreadPool(2);
 
       // do a regular write first because of memstore size calculation.

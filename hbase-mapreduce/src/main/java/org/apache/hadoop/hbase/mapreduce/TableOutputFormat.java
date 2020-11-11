@@ -19,9 +19,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -41,6 +38,9 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert Map/Reduce output and write it to an HBase table. The KEY is ignored
@@ -155,11 +155,11 @@ implements Configurable {
    * @param context  The current task context.
    * @return The newly created writer instance.
    * @throws IOException When creating the writer fails.
-   * @throws InterruptedException When the jobs is cancelled.
+   * @throws InterruptedException When the job is cancelled.
    */
   @Override
   public RecordWriter<KEY, Mutation> getRecordWriter(TaskAttemptContext context)
-  throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
     return new TableRecordWriter();
   }
 
@@ -172,14 +172,14 @@ implements Configurable {
    * @see OutputFormat#checkOutputSpecs(JobContext)
    */
   @Override
-  public void checkOutputSpecs(JobContext context) throws IOException,
-      InterruptedException {
+  public void checkOutputSpecs(JobContext context) throws IOException, InterruptedException {
     Configuration hConf = getConf();
     if (hConf == null) {
       hConf = context.getConfiguration();
     }
 
-    try (Admin admin = ConnectionFactory.createConnection(hConf).getAdmin()) {
+    try (Connection connection = ConnectionFactory.createConnection(hConf);
+      Admin admin = connection.getAdmin()) {
       TableName tableName = TableName.valueOf(hConf.get(OUTPUT_TABLE));
       if (!admin.tableExists(tableName)) {
         throw new TableNotFoundException("Can't write, table does not exist:" +

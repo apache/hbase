@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -101,10 +102,8 @@ public class TestMutateRowsRecovery {
     try {
       admin = connection.getAdmin();
       hTable = connection.getTable(tableName);
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam1));
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
       admin.createTable(tableDescriptor);
 
       // Add a multi

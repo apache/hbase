@@ -38,13 +38,15 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -84,7 +86,6 @@ public class TestStoreScannerClosure {
   private static CacheConfig cacheConf;
   private static FileSystem fs;
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestHFile").toString();
   private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
       KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
   private final static byte[] fam = Bytes.toBytes("cf_1");
@@ -106,11 +107,9 @@ public class TestStoreScannerClosure {
     cacheConf = new CacheConfig(CONF);
     fs = TEST_UTIL.getTestFileSystem();
     TableName tableName = TableName.valueOf("test");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam));
-    HRegionInfo info = new HRegionInfo(tableName, null, null, false);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     Path path = TEST_UTIL.getDataTestDir("test");
     region = HBaseTestingUtility.createRegionAndWAL(info, path,
       TEST_UTIL.getConfiguration(), tableDescriptor);

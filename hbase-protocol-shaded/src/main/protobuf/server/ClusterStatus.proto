@@ -155,6 +155,28 @@ message RegionLoad {
    *  that belong to given region
    */
   optional int32 max_compacted_store_file_ref_count = 22 [default = 0];
+
+  /** The current data locality for ssd for region in the regionserver */
+  optional float data_locality_for_ssd = 23;
+
+  /** The current blocks local weight for region in the regionserver */
+  optional uint64 blocks_local_weight = 24;
+
+  /** The current blocks local weight with ssd for region in the regionserver */
+  optional uint64 blocks_local_with_ssd_weight = 25;
+
+  /** The current blocks total weight for region in the regionserver */
+  optional uint64 blocks_total_weight = 26;
+
+  /** The compaction state for region */
+  optional CompactionState compaction_state = 27;
+
+  enum CompactionState {
+    NONE = 0;
+    MINOR = 1;
+    MAJOR = 2;
+    MAJOR_AND_MINOR = 3;
+  }
 }
 
 message UserLoad {
@@ -185,6 +207,11 @@ message ClientMetrics {
 message ReplicationLoadSink {
   required uint64 ageOfLastAppliedOp = 1;
   required uint64 timeStampsOfLastAppliedOp = 2;
+  // The below two were added after hbase-2.0.0 went out. They have to be added as 'optional' else
+  // we break upgrades; old RegionServers reporting in w/ old forms of this message will fail to
+  // deserialize on the new Master. See HBASE-25234
+  optional uint64 timestampStarted = 3;
+  optional uint64 totalOpsProcessed = 4;
 }
 
 message ReplicationLoadSource {

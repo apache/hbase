@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufInputStream;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
@@ -178,8 +179,9 @@ class ClusterStatusListener implements Closeable {
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   class MulticastListener implements Listener {
     private DatagramChannel channel;
-    private final EventLoopGroup group = new NioEventLoopGroup(
-        1, Threads.newDaemonThreadFactory("hbase-client-clusterStatusListener"));
+    private final EventLoopGroup group = new NioEventLoopGroup(1,
+      new ThreadFactoryBuilder().setNameFormat("hbase-client-clusterStatusListener-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     public MulticastListener() {
     }

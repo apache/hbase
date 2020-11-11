@@ -24,8 +24,11 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -34,32 +37,30 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.AsyncClusterConnection;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
-import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -86,8 +87,13 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
 
   private static final long DEFAULT_MAX_TERMINATION_WAIT_MULTIPLIER = 2;
 
-  private AsyncClusterConnection conn;
-  private Configuration conf;
+  /** Drop edits for tables that been deleted from the replication source and target */
+  public static final String REPLICATION_DROP_ON_DELETED_TABLE_KEY =
+      "hbase.replication.drop.on.deleted.table";
+  /** Drop edits for CFs that been deleted from the replication source and target */
+  public static final String REPLICATION_DROP_ON_DELETED_COLUMN_FAMILY_KEY =
+      "hbase.replication.drop.on.deleted.columnfamily";
+
   // How long should we sleep for each retry
   private long sleepForRetries;
   // Maximum number of retries before taking bold actions
@@ -100,8 +106,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private int replicationRpcLimit;
   //Metrics for this source
   private MetricsSource metrics;
-  // Handles connecting to peer region servers
-  private ReplicationSinkManager replicationSinkMgr;
   private boolean peersSelected = false;
   private String replicationClusterId = "";
   private ThreadPoolExecutor exec;
@@ -111,31 +115,14 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private boolean replicationBulkLoadDataEnabled;
   private Abortable abortable;
   private boolean dropOnDeletedTables;
+  private boolean dropOnDeletedColumnFamilies;
   private boolean isSerial = false;
-
-  /*
-   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
-   * Connection implementations, or initialize it in a different way, so defining createConnection
-   * as protected for possible overridings.
-   */
-  protected AsyncClusterConnection createConnection(Configuration conf) throws IOException {
-    return ClusterConnectionFactory.createAsyncClusterConnection(conf,
-      null, User.getCurrent());
-  }
-
-  /*
-   * Some implementations of HBaseInterClusterReplicationEndpoint may require instantiate different
-   * ReplicationSinkManager implementations, or initialize it in a different way,
-   * so defining createReplicationSinkManager as protected for possible overridings.
-   */
-  protected ReplicationSinkManager createReplicationSinkManager(AsyncClusterConnection conn) {
-    return new ReplicationSinkManager(conn, this, this.conf);
-  }
+  //Initialising as 0 to guarantee at least one logging message
+  private long lastSinkFetchTime = 0;
 
   @Override
   public void init(Context context) throws IOException {
     super.init(context);
-    this.conf = HBaseConfiguration.create(ctx.getConfiguration());
     decorateConf();
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
     this.socketTimeoutMultiplier = this.conf.getInt("replication.source.socketTimeoutMultiplier",
@@ -147,15 +134,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         DEFAULT_MAX_TERMINATION_WAIT_MULTIPLIER);
     this.maxTerminationWait = maxTerminationWaitMultiplier *
         this.conf.getLong(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-    // TODO: This connection is replication specific or we should make it particular to
-    // replication and make replication specific settings such as compression or codec to use
-    // passing Cells.
-    this.conn = createConnection(this.conf);
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.metrics = context.getMetrics();
-    // ReplicationQueueInfo parses the peerId out of the znode for us
-    this.replicationSinkMgr = createReplicationSinkManager(conn);
     // per sink thread pool
     this.maxThreads = this.conf.getInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY,
       HConstants.REPLICATION_SOURCE_MAXTHREADS_DEFAULT);
@@ -168,7 +149,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     this.replicationRpcLimit = (int)(0.95 * conf.getLong(RpcServer.MAX_REQUEST_SIZE,
       RpcServer.DEFAULT_MAX_REQUEST_SIZE));
     this.dropOnDeletedTables =
-        this.conf.getBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
+        this.conf.getBoolean(REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
+    this.dropOnDeletedColumnFamilies = this.conf
+        .getBoolean(REPLICATION_DROP_ON_DELETED_COLUMN_FAMILY_KEY, false);
 
     this.replicationBulkLoadDataEnabled =
         conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
@@ -192,14 +175,11 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   }
 
   private void connectToPeers() {
-    getRegionServers();
-
     int sleepMultiplier = 1;
-
     // Connect to peer cluster first, unless we have to stop
-    while (this.isRunning() && replicationSinkMgr.getNumSinks() == 0) {
-      replicationSinkMgr.chooseSinks();
-      if (this.isRunning() && replicationSinkMgr.getNumSinks() == 0) {
+    while (this.isRunning() && getNumSinks() == 0) {
+      chooseSinks();
+      if (this.isRunning() && getNumSinks() == 0) {
         if (sleepForRetries("Waiting for peers", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -213,7 +193,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
    * @param sleepMultiplier by how many times the default sleeping time is augmented
    * @return True if <code>sleepMultiplier</code> is &lt; <code>maxRetriesMultiplier</code>
    */
-  protected boolean sleepForRetries(String msg, int sleepMultiplier) {
+  private boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
       if (LOG.isTraceEnabled()) {
         LOG.trace("{} {}, sleeping {} times {}",
@@ -221,8 +201,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       }
       Thread.sleep(this.sleepForRetries * sleepMultiplier);
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       if (LOG.isDebugEnabled()) {
-        LOG.debug("{} Interrupted while sleeping between retries", logPeerId());
+        LOG.debug("{} {} Interrupted while sleeping between retries", msg, logPeerId());
       }
     }
     return sleepMultiplier < maxRetriesMultiplier;
@@ -234,7 +215,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   }
 
   private List<List<Entry>> createParallelBatches(final List<Entry> entries) {
-    int numSinks = Math.max(replicationSinkMgr.getNumSinks(), 1);
+    int numSinks = Math.max(getNumSinks(), 1);
     int n = Math.min(Math.min(this.maxThreads, entries.size() / 100 + 1), numSinks);
     List<List<Entry>> entryLists =
         Stream.generate(ArrayList<Entry>::new).limit(n).collect(Collectors.toList());
@@ -279,41 +260,148 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     }
   }
 
-  private TableName parseTable(String msg) {
-    // ... TableNotFoundException: '<table>'/n...
-    Pattern p = Pattern.compile("TableNotFoundException: '([\\S]*)'");
-    Matcher m = p.matcher(msg);
-    if (m.find()) {
-      String table = m.group(1);
-      try {
-        // double check that table is a valid table name
-        TableName.valueOf(TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(table)));
-        return TableName.valueOf(table);
-      } catch (IllegalArgumentException ignore) {
+  /**
+   * Check if there's an {@link TableNotFoundException} in the caused by stacktrace.
+   */
+  @VisibleForTesting
+  public static boolean isTableNotFoundException(Throwable io) {
+    if (io instanceof RemoteException) {
+      io = ((RemoteException) io).unwrapRemoteException();
+    }
+    if (io != null && io.getMessage().contains("TableNotFoundException")) {
+      return true;
+    }
+    for (; io != null; io = io.getCause()) {
+      if (io instanceof TableNotFoundException) {
+        return true;
       }
     }
-    return null;
+    return false;
   }
 
-  // Filter a set of batches by TableName
-  private List<List<Entry>> filterBatches(final List<List<Entry>> oldEntryList, TableName table) {
-    return oldEntryList
-        .stream().map(entries -> entries.stream()
-            .filter(e -> !e.getKey().getTableName().equals(table)).collect(Collectors.toList()))
-        .collect(Collectors.toList());
+  /**
+   * Check if there's an {@link NoSuchColumnFamilyException} in the caused by stacktrace.
+   */
+  @VisibleForTesting
+  public static boolean isNoSuchColumnFamilyException(Throwable io) {
+    if (io instanceof RemoteException) {
+      io = ((RemoteException) io).unwrapRemoteException();
+    }
+    if (io != null && io.getMessage().contains("NoSuchColumnFamilyException")) {
+      return true;
+    }
+    for (; io != null; io = io.getCause()) {
+      if (io instanceof NoSuchColumnFamilyException) {
+        return true;
+      }
+    }
+    return false;
   }
 
-  private void reconnectToPeerCluster() {
-    AsyncClusterConnection connection = null;
-    try {
-      connection =
-        ClusterConnectionFactory.createAsyncClusterConnection(conf, null, User.getCurrent());
-    } catch (IOException ioe) {
-      LOG.warn("{} Failed to create connection for peer cluster", logPeerId(), ioe);
+  @VisibleForTesting
+  List<List<Entry>> filterNotExistTableEdits(final List<List<Entry>> oldEntryList) {
+    List<List<Entry>> entryList = new ArrayList<>();
+    Map<TableName, Boolean> existMap = new HashMap<>();
+    try (Connection localConn = ConnectionFactory.createConnection(ctx.getLocalConfiguration());
+         Admin localAdmin = localConn.getAdmin()) {
+      for (List<Entry> oldEntries : oldEntryList) {
+        List<Entry> entries = new ArrayList<>();
+        for (Entry e : oldEntries) {
+          TableName tableName = e.getKey().getTableName();
+          boolean exist = true;
+          if (existMap.containsKey(tableName)) {
+            exist = existMap.get(tableName);
+          } else {
+            try {
+              exist = localAdmin.tableExists(tableName);
+              existMap.put(tableName, exist);
+            } catch (IOException iox) {
+              LOG.warn("Exception checking for local table " + tableName, iox);
+              // we can't drop edits without full assurance, so we assume table exists.
+              exist = true;
+            }
+          }
+          if (exist) {
+            entries.add(e);
+          } else {
+            // Would potentially be better to retry in one of the outer loops
+            // and add a table filter there; but that would break the encapsulation,
+            // so we're doing the filtering here.
+            LOG.warn("Missing table detected at sink, local table also does not exist, "
+                + "filtering edits for table '{}'", tableName);
+          }
+        }
+        if (!entries.isEmpty()) {
+          entryList.add(entries);
+        }
+      }
+    } catch (IOException iox) {
+      LOG.warn("Exception when creating connection to check local table", iox);
+      return oldEntryList;
     }
-    if (connection != null) {
-      this.conn = connection;
+    return entryList;
+  }
+
+  @VisibleForTesting
+  List<List<Entry>> filterNotExistColumnFamilyEdits(final List<List<Entry>> oldEntryList) {
+    List<List<Entry>> entryList = new ArrayList<>();
+    Map<TableName, Set<String>> existColumnFamilyMap = new HashMap<>();
+    try (Connection localConn = ConnectionFactory.createConnection(ctx.getLocalConfiguration());
+         Admin localAdmin = localConn.getAdmin()) {
+      for (List<Entry> oldEntries : oldEntryList) {
+        List<Entry> entries = new ArrayList<>();
+        for (Entry e : oldEntries) {
+          TableName tableName = e.getKey().getTableName();
+          if (!existColumnFamilyMap.containsKey(tableName)) {
+            try {
+              Set<String> cfs = localAdmin.getDescriptor(tableName).getColumnFamilyNames().stream()
+                  .map(Bytes::toString).collect(Collectors.toSet());
+              existColumnFamilyMap.put(tableName, cfs);
+            } catch (Exception ex) {
+              LOG.warn("Exception getting cf names for local table {}", tableName, ex);
+              // if catch any exception, we are not sure about table's description,
+              // so replicate raw entry
+              entries.add(e);
+              continue;
+            }
+          }
+
+          Set<String> existColumnFamilies = existColumnFamilyMap.get(tableName);
+          Set<String> missingCFs = new HashSet<>();
+          WALEdit walEdit = new WALEdit();
+          walEdit.getCells().addAll(e.getEdit().getCells());
+          WALUtil.filterCells(walEdit, cell -> {
+            String cf = Bytes.toString(CellUtil.cloneFamily(cell));
+            if (existColumnFamilies.contains(cf)) {
+              return cell;
+            } else {
+              missingCFs.add(cf);
+              return null;
+            }
+          });
+          if (!walEdit.isEmpty()) {
+            Entry newEntry = new Entry(e.getKey(), walEdit);
+            entries.add(newEntry);
+          }
+
+          if (!missingCFs.isEmpty()) {
+            // Would potentially be better to retry in one of the outer loops
+            // and add a table filter there; but that would break the encapsulation,
+            // so we're doing the filtering here.
+            LOG.warn(
+                "Missing column family detected at sink, local column family also does not exist,"
+                    + " filtering edits for table '{}',column family '{}'", tableName, missingCFs);
+          }
+        }
+        if (!entries.isEmpty()) {
+          entryList.add(entries);
+        }
+      }
+    } catch (IOException iox) {
+      LOG.warn("Exception when creating connection to check local table", iox);
+      return oldEntryList;
     }
+    return entryList;
   }
 
   private long parallelReplicate(CompletionService<Integer> pool, ReplicateContext replicateContext,
@@ -374,10 +462,16 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       peersSelected = true;
     }
 
-    int numSinks = replicationSinkMgr.getNumSinks();
+    int numSinks = getNumSinks();
     if (numSinks == 0) {
-      LOG.warn("{} No replication sinks found, returning without replicating. "
-        + "The source should retry with the same set of edits.", logPeerId());
+      if((System.currentTimeMillis() - lastSinkFetchTime) >= (maxRetriesMultiplier*1000)) {
+        LOG.warn(
+          "No replication sinks found, returning without replicating. "
+            + "The source should retry with the same set of edits. Not logging this again for "
+            + "the next {} seconds.", maxRetriesMultiplier);
+        lastSinkFetchTime = System.currentTimeMillis();
+      }
+      sleepForRetries("No sinks available at peer", sleepMultiplier);
       return false;
     }
 
@@ -389,45 +483,31 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         }
         continue;
       }
-      if (this.conn == null) {
-        reconnectToPeerCluster();
-      }
       try {
         // replicate the batches to sink side.
         parallelReplicate(pool, replicateContext, batches);
         return true;
       } catch (IOException ioe) {
         if (ioe instanceof RemoteException) {
-          ioe = ((RemoteException) ioe).unwrapRemoteException();
-          LOG.warn("{} Can't replicate because of an error on the remote cluster: ", logPeerId(),
-            ioe);
-          if (ioe instanceof TableNotFoundException) {
-            if (dropOnDeletedTables) {
-              // this is a bit fragile, but cannot change how TNFE is serialized
-              // at least check whether the table name is legal
-              TableName table = parseTable(ioe.getMessage());
-              if (table != null) {
-                try (Connection localConn =
-                    ConnectionFactory.createConnection(ctx.getLocalConfiguration())) {
-                  if (!localConn.getAdmin().tableExists(table)) {
-                    // Would potentially be better to retry in one of the outer loops
-                    // and add a table filter there; but that would break the encapsulation,
-                    // so we're doing the filtering here.
-                    LOG.info("{} Missing table detected at sink, local table also does not "
-                      + "exist, filtering edits for '{}'", logPeerId(), table);
-                    batches = filterBatches(batches, table);
-                    continue;
-                  }
-                } catch (IOException iox) {
-                  LOG.warn("{} Exception checking for local table: ", logPeerId(), iox);
-                }
-              }
+          if (dropOnDeletedTables && isTableNotFoundException(ioe)) {
+            // Only filter the edits to replicate and don't change the entries in replicateContext
+            // as the upper layer rely on it.
+            batches = filterNotExistTableEdits(batches);
+            if (batches.isEmpty()) {
+              LOG.warn("After filter not exist table's edits, 0 edits to replicate, just return");
+              return true;
             }
-            // fall through and sleep below
+          } else if (dropOnDeletedColumnFamilies && isNoSuchColumnFamilyException(ioe)) {
+            batches = filterNotExistColumnFamilyEdits(batches);
+            if (batches.isEmpty()) {
+              LOG.warn("After filter not exist column family's edits, 0 edits to replicate, " +
+                  "just return");
+              return true;
+            }
           } else {
             LOG.warn("{} Peer encountered RemoteException, rechecking all sinks: ", logPeerId(),
-              ioe);
-            replicationSinkMgr.chooseSinks();
+                ioe);
+            chooseSinks();
           }
         } else {
           if (ioe instanceof SocketTimeoutException) {
@@ -440,7 +520,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
               this.socketTimeoutMultiplier);
           } else if (ioe instanceof ConnectException || ioe instanceof UnknownHostException) {
             LOG.warn("{} Peer is unavailable, rechecking all sinks: ", logPeerId(), ioe);
-            replicationSinkMgr.chooseSinks();
+            chooseSinks();
           } else {
             LOG.warn("{} Can't replicate because of a local or network error: ", logPeerId(), ioe);
           }
@@ -460,14 +540,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   @Override
   protected void doStop() {
     disconnect(); // don't call super.doStop()
-    if (this.conn != null) {
-      try {
-        this.conn.close();
-        this.conn = null;
-      } catch (IOException e) {
-        LOG.warn("{} Failed to close the connection", logPeerId());
-      }
-    }
     // Allow currently running replication tasks to finish
     exec.shutdown();
     try {
@@ -495,10 +567,10 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         LOG.trace("{} Replicating batch {} of {} entries with total size {} bytes to {}",
           logPeerId(), entriesHashCode, entries.size(), size, replicationClusterId);
       }
-      sinkPeer = replicationSinkMgr.getReplicationSink();
+      sinkPeer = getReplicationSink();
       AsyncRegionServerAdmin rsAdmin = sinkPeer.getRegionServer();
       try {
-        ReplicationProtbufUtil.replicateWALEntry(rsAdmin,
+        ReplicationProtobufUtil.replicateWALEntry(rsAdmin,
           entries.toArray(new Entry[entries.size()]), replicationClusterId, baseNamespaceDir,
           hfileArchiveDir, timeout);
         if (LOG.isTraceEnabled()) {
@@ -510,10 +582,10 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         }
         throw e;
       }
-      replicationSinkMgr.reportSinkSuccess(sinkPeer);
+      reportSinkSuccess(sinkPeer);
     } catch (IOException ioe) {
       if (sinkPeer != null) {
-        replicationSinkMgr.reportBadSink(sinkPeer);
+        reportBadSink(sinkPeer);
       }
       throw ioe;
     }
@@ -549,5 +621,4 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private String logPeerId(){
     return "[Source for peer " + this.ctx.getPeerId() + "]:";
   }
-
 }

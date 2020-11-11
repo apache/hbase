@@ -148,9 +148,8 @@ public class Increment extends Mutation {
    * @throws IOException if invalid time range
    * @return this
    */
-  public Increment setTimeRange(long minStamp, long maxStamp)
-  throws IOException {
-    tr = new TimeRange(minStamp, maxStamp);
+  public Increment setTimeRange(long minStamp, long maxStamp) throws IOException {
+    tr = TimeRange.between(minStamp, maxStamp);
     return this;
   }
 

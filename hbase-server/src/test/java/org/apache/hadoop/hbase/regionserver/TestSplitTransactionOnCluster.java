@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
@@ -26,6 +27,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -44,11 +47,8 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
@@ -86,6 +87,7 @@ import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -110,6 +112,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -278,6 +281,83 @@ public class TestSplitTransactionOnCluster {
     // 3, Split
     requestSplitRegion(regionServer, region, Bytes.toBytes("row3"));
     assertEquals(2, cluster.getRegions(tableName).size());
+  }
+
+  @Test
+  public void testSplitCompactWithPriority() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    // Create table then get the single region for our new table.
+    byte[] cf = Bytes.toBytes("cf");
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf)).build();
+    admin.createTable(htd);
+
+    assertNotEquals("Unable to retrieve regions of the table", -1,
+      TESTING_UTIL.waitFor(10000, () -> cluster.getRegions(tableName).size() == 1));
+
+    HRegion region = cluster.getRegions(tableName).get(0);
+    HStore store = region.getStore(cf);
+    int regionServerIndex = cluster.getServerWith(region.getRegionInfo().getRegionName());
+    HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+
+    Table table = TESTING_UTIL.getConnection().getTable(tableName);
+    // insert data
+    insertData(tableName, admin, table);
+    insertData(tableName, admin, table, 20);
+    insertData(tableName, admin, table, 40);
+
+    // Compaction Request
+    store.triggerMajorCompaction();
+    Optional<CompactionContext> compactionContext = store.requestCompaction();
+    assertTrue(compactionContext.isPresent());
+    assertFalse(compactionContext.get().getRequest().isAfterSplit());
+    assertEquals(compactionContext.get().getRequest().getPriority(), 13);
+
+    // Split
+    long procId =
+      cluster.getMaster().splitRegion(region.getRegionInfo(), Bytes.toBytes("row4"), 0, 0);
+
+    // wait for the split to complete or get interrupted.  If the split completes successfully,
+    // the procedure will return true; if the split fails, the procedure would throw exception.
+    ProcedureTestingUtility.waitProcedure(cluster.getMaster().getMasterProcedureExecutor(),
+      procId);
+    Thread.sleep(3000);
+    assertNotEquals("Table is not split properly?", -1,
+      TESTING_UTIL.waitFor(3000,
+        () -> cluster.getRegions(tableName).size() == 2));
+    // we have 2 daughter regions
+    HRegion hRegion1 = cluster.getRegions(tableName).get(0);
+    HRegion hRegion2 = cluster.getRegions(tableName).get(1);
+    HStore hStore1 = hRegion1.getStore(cf);
+    HStore hStore2 = hRegion2.getStore(cf);
+
+    // For hStore1 && hStore2, set mock reference to one of the storeFiles
+    StoreFileInfo storeFileInfo1 = new ArrayList<>(hStore1.getStorefiles()).get(0).getFileInfo();
+    StoreFileInfo storeFileInfo2 = new ArrayList<>(hStore2.getStorefiles()).get(0).getFileInfo();
+    Field field = StoreFileInfo.class.getDeclaredField("reference");
+    field.setAccessible(true);
+    field.set(storeFileInfo1, Mockito.mock(Reference.class));
+    field.set(storeFileInfo2, Mockito.mock(Reference.class));
+    hStore1.triggerMajorCompaction();
+    hStore2.triggerMajorCompaction();
+
+    compactionContext = hStore1.requestCompaction();
+    assertTrue(compactionContext.isPresent());
+    // since we set mock reference to one of the storeFiles, we will get isAfterSplit=true &&
+    // highest priority for hStore1's compactionContext
+    assertTrue(compactionContext.get().getRequest().isAfterSplit());
+    assertEquals(compactionContext.get().getRequest().getPriority(), Integer.MIN_VALUE + 1000);
+
+    compactionContext =
+      hStore2.requestCompaction(Integer.MIN_VALUE + 10, CompactionLifeCycleTracker.DUMMY, null);
+    assertTrue(compactionContext.isPresent());
+    // compaction request contains higher priority than default priority of daughter region
+    // compaction (Integer.MIN_VALUE + 1000), hence we are expecting request priority to
+    // be accepted.
+    assertTrue(compactionContext.get().getRequest().isAfterSplit());
+    assertEquals(compactionContext.get().getRequest().getPriority(), Integer.MIN_VALUE + 10);
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
   }
 
   public static class FailingSplitMasterObserver implements MasterCoprocessor, MasterObserver {
@@ -569,11 +649,11 @@ public class TestSplitTransactionOnCluster {
   @Test
   public void testSplitWithRegionReplicas() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor htd = TESTING_UTIL.createTableDescriptor(
-      TableName.valueOf(name.getMethodName()), HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3,
-      HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
-    htd.setRegionReplication(2);
-    htd.addCoprocessor(SlowMeCopro.class.getName());
+    TableDescriptor htd = TESTING_UTIL
+      .createModifyableTableDescriptor(TableName.valueOf(name.getMethodName()),
+        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED)
+      .setRegionReplication(2).setCoprocessor(SlowMeCopro.class.getName()).build();
     // Create table then get the single region for our new table.
     Table t = TESTING_UTIL.createTable(htd, new byte[][]{Bytes.toBytes("cf")}, null);
     List<HRegion> oldRegions;
@@ -591,8 +671,7 @@ public class TestSplitTransactionOnCluster {
       admin.balancerSwitch(false, true);
       // Turn off the meta scanner so it don't remove parent on us.
       cluster.getMaster().setCatalogJanitorEnabled(false);
-      boolean tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
-          tableName);
+      boolean tableExists = TESTING_UTIL.getAdmin().tableExists(tableName);
       assertEquals("The specified table should be present.", true, tableExists);
       final HRegion region = findSplittableRegion(oldRegions);
       regionServerIndex = cluster.getServerWith(region.getRegionInfo().getRegionName());
@@ -612,8 +691,7 @@ public class TestSplitTransactionOnCluster {
         Thread.sleep(1000);
       } while ((newRegions.contains(oldRegions.get(0)) || newRegions.contains(oldRegions.get(1)))
           || newRegions.size() != 4);
-      tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
-          tableName);
+      tableExists = TESTING_UTIL.getAdmin().tableExists(tableName);
       assertEquals("The specified table should be present.", true, tableExists);
       // exists works on stale and we see the put after the flush
       byte[] b1 = Bytes.toBytes("row1");
@@ -641,18 +719,21 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  private void insertData(final TableName tableName, Admin admin, Table t) throws IOException,
-      InterruptedException {
-    Put p = new Put(Bytes.toBytes("row1"));
+  private void insertData(final TableName tableName, Admin admin, Table t) throws IOException {
+    insertData(tableName, admin, t, 1);
+  }
+
+  private void insertData(TableName tableName, Admin admin, Table t, int i) throws IOException {
+    Put p = new Put(Bytes.toBytes("row" + i));
     p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("1"));
     t.put(p);
-    p = new Put(Bytes.toBytes("row2"));
+    p = new Put(Bytes.toBytes("row" + (i + 1)));
     p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("2"));
     t.put(p);
-    p = new Put(Bytes.toBytes("row3"));
+    p = new Put(Bytes.toBytes("row" + (i + 2)));
     p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("3"));
     t.put(p);
-    p = new Put(Bytes.toBytes("row4"));
+    p = new Put(Bytes.toBytes("row" + (i + 3)));
     p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("4"));
     t.put(p);
     admin.flush(tableName);

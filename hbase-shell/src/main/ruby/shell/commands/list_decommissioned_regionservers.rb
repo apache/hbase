@@ -22,7 +22,7 @@ module Shell
     # List decommissioned region servers
     class ListDecommissionedRegionservers < Command
       def help
-        <<-EOF
+        <<~EOF
   List region servers marked as decommissioned, which can not be assigned regions.
 EOF
       end

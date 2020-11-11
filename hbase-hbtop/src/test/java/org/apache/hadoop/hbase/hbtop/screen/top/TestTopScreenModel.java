@@ -63,7 +63,7 @@ public class TestTopScreenModel {
   @Before
   public void setup() throws IOException {
     when(admin.getClusterMetrics()).thenReturn(TestUtils.createDummyClusterMetrics());
-    topScreenModel = new TopScreenModel(admin, Mode.REGION);
+    topScreenModel = new TopScreenModel(admin, Mode.REGION, null, null, null, null);
 
     fields = Mode.REGION.getFieldInfos().stream()
       .map(FieldInfo::getField)
@@ -84,17 +84,17 @@ public class TestTopScreenModel {
     TestUtils.assertRecordsInRegionMode(topScreenModel.getRecords());
 
     // Namespace Mode
-    topScreenModel.switchMode(Mode.NAMESPACE, null, false);
+    topScreenModel.switchMode(Mode.NAMESPACE, false, null);
     topScreenModel.refreshMetricsData();
     TestUtils.assertRecordsInNamespaceMode(topScreenModel.getRecords());
 
     // Table Mode
-    topScreenModel.switchMode(Mode.TABLE, null, false);
+    topScreenModel.switchMode(Mode.TABLE, false, null);
     topScreenModel.refreshMetricsData();
     TestUtils.assertRecordsInTableMode(topScreenModel.getRecords());
 
     // Namespace Mode
-    topScreenModel.switchMode(Mode.REGION_SERVER, null, false);
+    topScreenModel.switchMode(Mode.REGION_SERVER, false, null);
     topScreenModel.refreshMetricsData();
     TestUtils.assertRecordsInRegionServerMode(topScreenModel.getRecords());
   }
@@ -168,7 +168,7 @@ public class TestTopScreenModel {
 
   @Test
   public void testSwitchMode() {
-    topScreenModel.switchMode(Mode.TABLE, null, false);
+    topScreenModel.switchMode(Mode.TABLE, false, null);
     assertThat(topScreenModel.getCurrentMode(), is(Mode.TABLE));
 
     // Test for initialFilters
@@ -176,7 +176,7 @@ public class TestTopScreenModel {
       RecordFilter.parse("TABLE==table1", fields, true),
       RecordFilter.parse("TABLE==table2", fields, true));
 
-    topScreenModel.switchMode(Mode.TABLE, initialFilters, false);
+    topScreenModel.switchMode(Mode.TABLE, false, initialFilters);
 
     assertThat(topScreenModel.getFilters().size(), is(initialFilters.size()));
     for (int i = 0; i < topScreenModel.getFilters().size(); i++) {
@@ -186,13 +186,13 @@ public class TestTopScreenModel {
 
     // Test when keepSortFieldAndSortOrderIfPossible is true
     topScreenModel.setSortFieldAndFields(Field.NAMESPACE, fields);
-    topScreenModel.switchMode(Mode.NAMESPACE, null, true);
+    topScreenModel.switchMode(Mode.NAMESPACE, true, null);
     assertThat(topScreenModel.getCurrentSortField(), is(Field.NAMESPACE));
   }
 
   @Test
   public void testDrillDown() {
-    topScreenModel.switchMode(Mode.TABLE, null, false);
+    topScreenModel.switchMode(Mode.TABLE, false, null);
     topScreenModel.setSortFieldAndFields(Field.NAMESPACE, fields);
     topScreenModel.refreshMetricsData();
 

@@ -33,18 +33,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.WALCoprocessor;
@@ -96,7 +96,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   private static HRegionServer rs1;
 
   private static RegionInfo hriPrimary;
-  private static HRegionInfo hriSecondary;
+  private static RegionInfo hriSecondary;
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
@@ -121,9 +121,9 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     HTU.startMiniCluster(option);
 
     // Create table then get the single region for our new table.
-    HTableDescriptor htd = HTU.createTableDescriptor(TableName.valueOf(tableName.getNameAsString()),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
+    TableDescriptor htd = HTU.createTableDescriptor(TableName.valueOf(tableName.getNameAsString()),
+      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     table = HTU.createTable(htd, new byte[][]{f}, null);
 
     try (RegionLocator locator = HTU.getConnection().getRegionLocator(tableName)) {
@@ -131,8 +131,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     }
 
     // mock a secondary region info to open
-    hriSecondary = new HRegionInfo(hriPrimary.getTable(), hriPrimary.getStartKey(),
-        hriPrimary.getEndKey(), hriPrimary.isSplit(), hriPrimary.getRegionId(), 1);
+    hriSecondary = RegionReplicaUtil.getRegionInfoForReplica(hriPrimary, 1);
 
     // No master
     TestRegionServerNoMaster.stopMasterAndAssignMeta(HTU);

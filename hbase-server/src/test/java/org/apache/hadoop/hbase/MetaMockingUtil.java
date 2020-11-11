@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -39,7 +38,7 @@ public class MetaMockingUtil {
    * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    * @throws IOException
    */
-  public static Result getMetaTableRowResult(final HRegionInfo region)
+  public static Result getMetaTableRowResult(final RegionInfo region)
       throws IOException {
     return getMetaTableRowResult(region, null, null, null);
   }
@@ -52,7 +51,7 @@ public class MetaMockingUtil {
    * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    * @throws IOException
    */
-  public static Result getMetaTableRowResult(final HRegionInfo region, final ServerName sn)
+  public static Result getMetaTableRowResult(final RegionInfo region, final ServerName sn)
       throws IOException {
     return getMetaTableRowResult(region, sn, null, null);
   }
@@ -101,7 +100,7 @@ public class MetaMockingUtil {
     }
 
     //important: sort the kvs so that binary search work
-    Collections.sort(kvs, CellComparatorImpl.META_COMPARATOR);
+    Collections.sort(kvs, MetaCellComparator.META_COMPARATOR);
 
     return Result.create(kvs);
   }

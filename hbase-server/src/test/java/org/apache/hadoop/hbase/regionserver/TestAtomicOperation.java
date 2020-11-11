@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
@@ -58,6 +57,7 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
@@ -296,20 +296,19 @@ public class TestAtomicOperation {
     initHRegion(tableName, callingMethod, null, families);
   }
 
-  private void initHRegion (byte [] tableName, String callingMethod, int [] maxVersions,
-    byte[] ... families)
-  throws IOException {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(tableName));
+  private void initHRegion(byte[] tableName, String callingMethod, int[] maxVersions,
+    byte[]... families) throws IOException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
 
-    int i=0;
-    for(byte [] family : families) {
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
-      familyDescriptor.setMaxVersions(maxVersions != null ? maxVersions[i++] : 1);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+    int i = 0;
+    for (byte[] family : families) {
+      ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setMaxVersions(maxVersions != null ? maxVersions[i++] : 1).build();
+      builder.setColumnFamily(familyDescriptor);
     }
-    HRegionInfo info = new HRegionInfo(tableDescriptor.getTableName(), null, null, false);
+    TableDescriptor tableDescriptor = builder.build();
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     region = TEST_UTIL.createLocalHRegion(info, tableDescriptor);
   }
 
@@ -657,7 +656,7 @@ public class TestAtomicOperation {
     put.addColumn(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("10"));
     puts[0] = put;
 
-    region.batchMutate(puts, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    region.batchMutate(puts);
     MultithreadedTestUtil.TestContext ctx =
       new MultithreadedTestUtil.TestContext(conf);
     ctx.addThread(new PutThread(ctx, region));

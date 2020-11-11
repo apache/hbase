@@ -53,19 +53,19 @@ for example, to change the max size of a region to 128MB, do:
 
   hbase> alter 't1', MAX_FILESIZE => '134217728'
 
-You can add a table coprocessor by setting a table coprocessor attribute:
+You can add a table coprocessor by setting a table coprocessor attribute. Only the CLASSNAME is
+required in the coprocessor specification.
 
-  hbase> alter 't1',
-    'coprocessor'=>'hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2'
+  hbase> alter 't1', COPROCESSOR => {
+           CLASSNAME => 'org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver',
+           JAR_PATH => 'hdfs:///foo.jar',
+           PRIORITY => 12,
+           PROPERTIES => {'a' => '17' }
+         }
 
 Since you can have multiple coprocessors configured for a table, a
 sequence number will be automatically appended to the attribute name
-to uniquely identify it.
-
-The coprocessor attribute must match the pattern below in order for
-the framework to understand how to load the coprocessor classes:
-
-  [coprocessor jar file location] | class name | [priority] | [arguments]
+to uniquely identify it. For example, the attribute name might be "coprocessor$1".
 
 You can also set configuration settings specific to this table or column family:
 
@@ -95,7 +95,7 @@ There could be more than one alteration in one command:
 
   hbase> alter 't1', { NAME => 'f1', VERSIONS => 3 },
    { MAX_FILESIZE => '134217728' }, { METHOD => 'delete', NAME => 'f2' },
-   OWNER => 'johndoe', METADATA => { 'mykey' => 'myvalue' }
+   METADATA => { 'mykey' => 'myvalue' }
 EOF
       end
 

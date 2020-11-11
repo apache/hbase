@@ -364,7 +364,8 @@ public final class CommonFSUtils {
     if (!qualifiedWalDir.equals(rootDir)) {
       if (qualifiedWalDir.toString().startsWith(rootDir.toString() + "/")) {
         throw new IllegalStateException("Illegal WAL directory specified. " +
-            "WAL directories are not permitted to be under the root directory if set.");
+          "WAL directories are not permitted to be under root directory: rootDir=" +
+          rootDir.toString() + ", qualifiedWALDir=" + qualifiedWalDir);
       }
     }
     return true;
@@ -421,6 +422,19 @@ public final class CommonFSUtils {
   public static Path getTableDir(Path rootdir, final TableName tableName) {
     return new Path(getNamespaceDir(rootdir, tableName.getNamespaceAsString()),
         tableName.getQualifierAsString());
+  }
+
+  /**
+   * Returns the {@link org.apache.hadoop.fs.Path} object representing the region directory under
+   * path rootdir
+   *
+   * @param rootdir qualified path of HBase root directory
+   * @param tableName name of table
+   * @param regionName The encoded region name
+   * @return {@link org.apache.hadoop.fs.Path} for region
+   */
+  public static Path getRegionDir(Path rootdir, TableName tableName, String regionName) {
+    return new Path(getTableDir(rootdir, tableName), regionName);
   }
 
   /**

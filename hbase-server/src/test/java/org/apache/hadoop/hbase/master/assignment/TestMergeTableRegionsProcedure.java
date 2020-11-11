@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -205,10 +206,12 @@ public class TestMergeTableRegionsProcedure {
     // the merged regions cleanup.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(true);
     UTIL.getHBaseCluster().getMaster().getCatalogJanitor().triggerNow();
-    byte [] mergedRegion = proc.getMergedRegion().getRegionName();
+    RegionInfo mergedRegion = proc.getMergedRegion();
+    RegionStateStore regionStateStore =
+      UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     while (ris != null && ris.get(0) != null && ris.get(1) != null) {
-      ris = MetaTableAccessor.getMergeRegions(UTIL.getConnection(), mergedRegion);
-      LOG.info("{} {}", Bytes.toStringBinary(mergedRegion), ris);
+      ris = regionStateStore.getMergeRegions(mergedRegion);
+      LOG.info("{} {}", Bytes.toStringBinary(mergedRegion.getRegionName()), ris);
       Threads.sleep(1000);
     }
     assertEquals(countOfRowsLoaded, UTIL.countRows(tableName));

@@ -44,7 +44,9 @@ EOF
         elsif !force.nil?
           raise ArgumentError, "Invalid argument #{force}."
         end
-        formatter.row([admin.balancer(force_balancer) ? 'true' : 'false'])
+        did_balancer_run = !!admin.balancer(force_balancer)
+        formatter.row([did_balancer_run.to_s])
+        did_balancer_run
       end
     end
   end

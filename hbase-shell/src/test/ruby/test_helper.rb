@@ -39,7 +39,7 @@ module Hbase
   module TestHelpers
     require 'hbase_constants'
     require 'hbase/hbase'
-    require 'shell'
+    require 'hbase_shell'
 
     def setup_hbase
       hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
@@ -119,7 +119,7 @@ module Hbase
     def create_test_table_with_region_replicas(name, num_of_replicas, splits)
       # Create the table if needed
       unless admin.exists?(name)
-        command(:create, name, 'f1', { REGION_REPLICATION => num_of_replicas },
+        command(:create, name, 'f1', { ::HBaseConstants::REGION_REPLICATION => num_of_replicas },
                 splits)
       end
 
@@ -169,7 +169,3 @@ end
 
 # Extend standard unit tests with our helpers
 Test::Unit::TestCase.extend(Testing::Declarative)
-
-# Add the $HBASE_HOME/lib/ruby directory to the ruby
-# load path so I can load up my HBase ruby modules
-$LOAD_PATH.unshift File.join(File.dirname(__FILE__), "..", "..", "main", "ruby")

@@ -23,7 +23,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,6 +34,7 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -39,6 +43,7 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
@@ -105,18 +110,33 @@ public class TestFailedAppendAndSync {
   class DodgyFSLog extends FSHLog {
     volatile boolean throwSyncException = false;
     volatile boolean throwAppendException = false;
+    volatile boolean throwArchiveException = false;
+
     final AtomicLong rolls = new AtomicLong(0);
 
-    public DodgyFSLog(FileSystem fs, Path root, String logDir, Configuration conf)
+    public DodgyFSLog(FileSystem fs, Server server, Path root, String logDir, Configuration conf)
         throws IOException {
-      super(fs, root, logDir, conf);
+      super(fs, server, root, logDir, conf);
     }
 
     @Override
-    public byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException {
-      byte[][] regions = super.rollWriter(force);
+    public Map<byte[], List<byte[]>> rollWriter(boolean force)
+        throws FailedLogCloseException, IOException {
+      Map<byte[], List<byte[]>> regions = super.rollWriter(force);
       rolls.getAndIncrement();
       return regions;
+    }
+
+    @Override
+    protected void archiveLogFile(Path p) throws IOException {
+      if (throwArchiveException) {
+        throw new IOException("throw archival exception");
+      }
+    }
+
+    @Override
+    protected void archive(Pair<Path, Long> localLogsToArchive) {
+      super.archive(localLogsToArchive);
     }
 
     @Override
@@ -148,6 +168,11 @@ public class TestFailedAppendAndSync {
         public long getLength() {
           return w.getLength();
         }
+
+        @Override
+        public long getSyncedLength() {
+          return w.getSyncedLength();
+        }
       };
     }
   }
@@ -168,7 +193,7 @@ public class TestFailedAppendAndSync {
     // the test.
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + getName());
-    DodgyFSLog dodgyWAL = new DodgyFSLog(fs, rootDir, getName(), CONF);
+    DodgyFSLog dodgyWAL = new DodgyFSLog(fs, (Server)services, rootDir, getName(), CONF);
     dodgyWAL.init();
     LogRoller logRoller = new LogRoller(services);
     logRoller.addWAL(dodgyWAL);
@@ -178,7 +203,7 @@ public class TestFailedAppendAndSync {
     boolean threwOnAppend = false;
     boolean threwOnBoth = false;
 
-    HRegion region = initHRegion(tableName, null, null, dodgyWAL);
+    HRegion region = initHRegion(tableName, null, null, CONF, dodgyWAL);
     try {
       // Get some random bytes.
       byte[] value = Bytes.toBytes(getName());
@@ -248,6 +273,27 @@ public class TestFailedAppendAndSync {
           Threads.sleep(1);
         }
       }
+
+      try {
+        dodgyWAL.throwAppendException = false;
+        dodgyWAL.throwSyncException = false;
+        dodgyWAL.throwArchiveException = true;
+        Pair<Path, Long> pair = new Pair<Path, Long>();
+        pair.setFirst(new Path("/a/b/"));
+        pair.setSecond(100L);
+        dodgyWAL.archive(pair);
+      } catch (Throwable ioe) {
+      }
+      while (true) {
+        try {
+          // one more abort needs to be called
+          Mockito.verify(services, Mockito.atLeast(2)).abort(Mockito.anyString(),
+            (Throwable) Mockito.anyObject());
+          break;
+        } catch (WantedButNotInvoked t) {
+          Threads.sleep(1);
+        }
+      }
     } finally {
       // To stop logRoller, its server has to say it is stopped.
       Mockito.when(services.isStopped()).thenReturn(true);
@@ -270,10 +316,11 @@ public class TestFailedAppendAndSync {
    * @return A region on which you must call
    *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
-  public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, WAL wal)
-  throws IOException {
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
-    return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, false, Durability.SYNC_WAL,
-      wal, COLUMN_FAMILY_BYTES);
+  public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
+      Configuration conf, WAL wal) throws IOException {
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, conf, false,
+      Durability.SYNC_WAL, wal, COLUMN_FAMILY_BYTES);
   }
 }

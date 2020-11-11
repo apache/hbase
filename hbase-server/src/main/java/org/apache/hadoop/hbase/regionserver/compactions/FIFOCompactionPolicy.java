@@ -97,11 +97,11 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
   }
 
   /**
-   * The FIFOCompactionPolicy only choose those TTL expired HFiles as the compaction candidates. So
-   * if all HFiles are TTL expired, then the compaction will generate a new empty HFile. While its
-   * max timestamp will be Long.MAX_VALUE. If not considered separately, the HFile will never be
-   * archived because its TTL will be never expired. So we'll check the empty store file separately.
-   * (See HBASE-21504)
+   * The FIFOCompactionPolicy only choose the TTL expired store files as the compaction candidates.
+   * If all the store files are TTL expired, then the compaction will generate a new empty file.
+   * While its max timestamp will be Long.MAX_VALUE. If not considered separately, the store file
+   * will never be archived because its TTL will be never expired. So we'll check the empty store
+   * file separately (See HBASE-21504).
    */
   private boolean isEmptyStoreFile(HStoreFile sf) {
     return sf.getReader().getEntries() == 0;
@@ -130,7 +130,7 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
     long currentTime = EnvironmentEdgeManager.currentTime();
     Collection<HStoreFile> expiredStores = new ArrayList<>();
     for (HStoreFile sf : files) {
-      if (isEmptyStoreFile(sf)) {
+      if (isEmptyStoreFile(sf) && !filesCompacting.contains(sf)) {
         expiredStores.add(sf);
         continue;
       }

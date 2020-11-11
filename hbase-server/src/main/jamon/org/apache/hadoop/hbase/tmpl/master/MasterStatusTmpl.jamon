@@ -38,7 +38,6 @@ org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.HConstants;
-org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.NamespaceDescriptor;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.TableName;
@@ -60,6 +59,7 @@ org.apache.hadoop.hbase.tool.CanaryTool;
 org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.util.CommonFSUtils;
 org.apache.hadoop.hbase.util.JvmVersion;
+org.apache.hadoop.hbase.util.PrettyPrinter;
 org.apache.hadoop.util.StringUtils;
 </%import>
 
@@ -224,7 +224,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <%if master.getAssignmentManager() != null %>
           <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
         </%if>
-        <%if !master.isInMaintenanceMode() %>
+        <%if !master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null %>
           <%if RSGroupUtil.isRSGroupEnabled(master.getConfiguration()) &&
             serverManager.getOnlineServersList().size() > 0 %>
             <section>
@@ -297,6 +297,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     <th>Attribute Name</th>
                     <th>Value</th>
                     <th>Description</th>
+                </tr>
+                <tr>
+                    <td>JVM Version</td>
+                    <td><% JvmVersion.getVersion() %></td>
+                    <td>JVM vendor and version</td>
                 </tr>
                 <tr>
                     <td>HBase Version</td>
@@ -494,11 +499,12 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 if (!ritTotalNum || ritTotalNum < 1) {
                   return;
                 }
+                var ritPerPage = parseInt($("#rit_per_page").val());
 
                  $("#rit_pagination").sPage({
                       page:1,
                       total:ritTotalNum,
-                      pageSize:5,
+                      pageSize:ritPerPage,
                       noData: false,
                       showPN:true,
                       prevPage:"prev",
@@ -604,8 +610,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 <tbody>
     <%for TableDescriptor desc : tables%>
     <%java>
-      HTableDescriptor htDesc = new HTableDescriptor(desc);
-      TableName tableName = htDesc.getTableName();
+      TableName tableName = desc.getTableName();
       TableState tableState = master.getTableStateManager().getTableState(tableName);
       Map<RegionState.State, List<RegionInfo>> tableRegions =
           master.getAssignmentManager().getRegionStates()
@@ -643,7 +648,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <td><% failedRegionsCount %></td>
         <td><% splitRegionsCount %></td>
         <td><% otherRegionsCount %></td>
-        <td><% htDesc.toStringCustomizedValues() %></td>
+        <td><% desc.toStringCustomizedValues() %></td>
     </tr>
     </%for>
     <p><% tables.size() %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]</p>
@@ -663,6 +668,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <th>Snapshot Name</th>
         <th>Table</th>
         <th>Creation Time</th>
+        <th>Owner</th>
+        <th>TTL</th>
     </tr>
     <%for SnapshotDescription snapshotDesc : snapshots%>
     <%java>
@@ -673,6 +680,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <td><a href="table.jsp?name=<% snapshotTable.getNameAsString() %>"><% snapshotTable.getNameAsString() %></a>
         </td>
         <td><% new Date(snapshotDesc.getCreationTime()) %></td>
+        <td><% snapshotDesc.getOwner() %></td>
+
+        <td>
+          <% snapshotDesc.getTtl() == 0 ? "FOREVER": PrettyPrinter.format(String.valueOf(snapshotDesc.getTtl()), PrettyPrinter.Unit.TIME_INTERVAL) %>
+        </td>
     </tr>
     </%for>
     <p><% snapshots.size() %> snapshot(s) in set. [<a href="/snapshotsStats.jsp">Snapshot Storefile stats</a>]</p>

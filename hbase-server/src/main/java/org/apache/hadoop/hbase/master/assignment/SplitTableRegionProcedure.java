@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,9 +74,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -167,19 +166,23 @@ public class SplitTableRegionProcedure
     return daughterTwoRI;
   }
 
+  private boolean hasBestSplitRow() {
+    return bestSplitRow != null && bestSplitRow.length > 0;
+  }
+
   /**
    * Check whether the region is splittable
    * @param env MasterProcedureEnv
    * @param regionToSplit parent Region to be split
    * @param splitRow if splitRow is not specified, will first try to get bestSplitRow from RS
-   * @throws IOException
    */
   private void checkSplittable(final MasterProcedureEnv env,
       final RegionInfo regionToSplit, final byte[] splitRow) throws IOException {
     // Ask the remote RS if this region is splittable.
-    // If we get an IOE, report it along w/ the failure so can see why we are not splittable at this time.
+    // If we get an IOE, report it along w/ the failure so can see why we are not splittable at
+    // this time.
     if(regionToSplit.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
-      throw new IllegalArgumentException ("Can't invoke split on non-default regions directly");
+      throw new IllegalArgumentException("Can't invoke split on non-default regions directly");
     }
     RegionStateNode node =
         env.getAssignmentManager().getRegionStates().getRegionStateNode(getParentRegion());
@@ -187,19 +190,20 @@ public class SplitTableRegionProcedure
     boolean splittable = false;
     if (node != null) {
       try {
-        if (bestSplitRow == null || bestSplitRow.length == 0) {
-          LOG
-            .info("splitKey isn't explicitly specified, will try to find a best split key from RS");
-        }
-        // Always set bestSplitRow request as true here,
-        // need to call Region#checkSplit to check it splittable or not
-        GetRegionInfoResponse response = AssignmentManagerUtil.getRegionInfoResponse(env,
-          node.getRegionLocation(), node.getRegionInfo(), true);
-        if(bestSplitRow == null || bestSplitRow.length == 0) {
-          bestSplitRow = response.hasBestSplitRow() ? response.getBestSplitRow().toByteArray() : null;
+        GetRegionInfoResponse response;
+        if (!hasBestSplitRow()) {
+          LOG.info(
+            "{} splitKey isn't explicitly specified, will try to find a best split key from RS {}",
+            node.getRegionInfo().getRegionNameAsString(), node.getRegionLocation());
+          response = AssignmentManagerUtil.getRegionInfoResponse(env, node.getRegionLocation(),
+            node.getRegionInfo(), true);
+          bestSplitRow =
+            response.hasBestSplitRow() ? response.getBestSplitRow().toByteArray() : null;
+        } else {
+          response = AssignmentManagerUtil.getRegionInfoResponse(env, node.getRegionLocation(),
+            node.getRegionInfo(), false);
         }
         splittable = response.hasSplittable() && response.getSplittable();
-
         if (LOG.isDebugEnabled()) {
           LOG.debug("Splittable=" + splittable + " " + node.toShortString());
         }
@@ -565,8 +569,10 @@ public class SplitTableRegionProcedure
     try {
       env.getMasterServices().getMasterQuotaManager().onRegionSplit(this.getParentRegion());
     } catch (QuotaExceededException e) {
-      env.getMasterServices().getRegionNormalizer().planSkipped(this.getParentRegion(),
-          NormalizationPlan.PlanType.SPLIT);
+      // TODO: why is this here? split requests can be submitted by actors other than the normalizer
+      env.getMasterServices()
+        .getRegionNormalizerManager()
+        .planSkipped(NormalizationPlan.PlanType.SPLIT);
       throw e;
     }
   }
@@ -675,7 +681,8 @@ public class SplitTableRegionProcedure
     LOG.info("pid=" + getProcId() + " splitting " + nbFiles + " storefiles, region=" +
         getParentRegion().getShortNameToLog() + ", threads=" + maxThreads);
     final ExecutorService threadPool = Executors.newFixedThreadPool(maxThreads,
-      Threads.newDaemonThreadFactory("StoreFileSplitter-%1$d"));
+      new ThreadFactoryBuilder().setNameFormat("StoreFileSplitter-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     final List<Future<Pair<Path, Path>>> futures = new ArrayList<Future<Pair<Path, Path>>>(nbFiles);
 
     // Split each store file.

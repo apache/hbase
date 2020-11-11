@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.snapshot;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -28,14 +29,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -60,6 +61,7 @@ public class TestSnapshotHFileCleaner {
   private static final String SNAPSHOT_NAME_STR = "testSnapshotManifest-snapshot";
   private static Path rootDir;
   private static FileSystem fs;
+  private static Configuration conf;
 
   @Rule
   public TestName name = new TestName();
@@ -69,7 +71,7 @@ public class TestSnapshotHFileCleaner {
    */
   @BeforeClass
   public static void setup() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
+    conf = TEST_UTIL.getConfiguration();
     rootDir = CommonFSUtils.getRootDir(conf);
     fs = FileSystem.get(conf);
   }
@@ -83,7 +85,6 @@ public class TestSnapshotHFileCleaner {
 
   @Test
   public void testFindsSnapshotFilesWhenCleaning() throws IOException {
-    Configuration conf = TEST_UTIL.getConfiguration();
     CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
     Path rootDir = CommonFSUtils.getRootDir(conf);
     Path archivedHfileDir = new Path(TEST_UTIL.getDataTestDir(), HConstants.HFILE_ARCHIVE_DIRECTORY);
@@ -94,10 +95,9 @@ public class TestSnapshotHFileCleaner {
 
     // write an hfile to the snapshot directory
     String snapshotName = "snapshot";
-    byte[] snapshot = Bytes.toBytes(snapshotName);
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    HRegionInfo mockRegion = new HRegionInfo(tableName);
+    RegionInfo mockRegion = RegionInfoBuilder.newBuilder(tableName).build();
     Path regionSnapshotDir = new Path(snapshotDir, mockRegion.getEncodedName());
     Path familyDir = new Path(regionSnapshotDir, "family");
     // create a reference to a supposedly valid hfile
@@ -117,9 +117,10 @@ public class TestSnapshotHFileCleaner {
 
   static class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
     @Override
-    public Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException {
+    public Collection<String> filesUnderSnapshot(final FileSystem workingFs,
+      final Path snapshotDir) throws IOException {
       Collection<String> files =  new HashSet<>();
-      files.addAll(SnapshotReferenceUtil.getHFileNames(TEST_UTIL.getConfiguration(), fs, snapshotDir));
+      files.addAll(SnapshotReferenceUtil.getHFileNames(conf, workingFs, snapshotDir));
       return files;
     }
   }
@@ -131,14 +132,20 @@ public class TestSnapshotHFileCleaner {
   @Test
   public void testCorruptedRegionManifest() throws IOException {
     SnapshotTestingUtils.SnapshotMock
-        snapshotMock = new SnapshotTestingUtils.SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
+        snapshotMock = new SnapshotTestingUtils.SnapshotMock(conf, fs, rootDir);
     SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
         SNAPSHOT_NAME_STR, TABLE_NAME_STR);
     builder.addRegionV2();
     builder.corruptOneRegionManifest();
 
-    fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir, TEST_UTIL.getConfiguration()),
-      true);
+    long period = Long.MAX_VALUE;
+    SnapshotFileCache cache = new SnapshotFileCache(conf, period, 10000000,
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    try {
+      cache.getSnapshotsInProgress();
+    } finally {
+      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir, conf), true);
+    }
   }
 
   /**
@@ -148,7 +155,7 @@ public class TestSnapshotHFileCleaner {
   @Test
   public void testCorruptedDataManifest() throws IOException {
     SnapshotTestingUtils.SnapshotMock
-        snapshotMock = new SnapshotTestingUtils.SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
+        snapshotMock = new SnapshotTestingUtils.SnapshotMock(conf, fs, rootDir);
     SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
         SNAPSHOT_NAME_STR, TABLE_NAME_STR);
     builder.addRegionV2();
@@ -156,7 +163,29 @@ public class TestSnapshotHFileCleaner {
     builder.consolidate();
     builder.corruptDataManifest();
 
-    fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir,
+    long period = Long.MAX_VALUE;
+    SnapshotFileCache cache = new SnapshotFileCache(conf, period, 10000000,
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    try {
+      cache.getSnapshotsInProgress();
+    } finally {
+      fs.delete(SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir,
           TEST_UTIL.getConfiguration()), true);
+    }
+  }
+
+  @Test
+  public void testMissedTmpSnapshot() throws IOException {
+    SnapshotTestingUtils.SnapshotMock snapshotMock =
+        new SnapshotTestingUtils.SnapshotMock(conf, fs, rootDir);
+    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(
+        SNAPSHOT_NAME_STR, TABLE_NAME_STR);
+    builder.addRegionV2();
+    builder.missOneRegionSnapshotFile();
+    long period = Long.MAX_VALUE;
+    SnapshotFileCache cache = new SnapshotFileCache(conf, period, 10000000,
+        "test-snapshot-file-cache-refresh", new SnapshotFiles());
+    cache.getSnapshotsInProgress();
+    assertTrue(fs.exists(builder.getSnapshotsDir()));
   }
 }

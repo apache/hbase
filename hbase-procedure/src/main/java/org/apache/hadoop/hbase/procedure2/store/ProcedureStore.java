@@ -186,7 +186,12 @@ public interface ProcedureStore {
 
   /**
    * Acquire the lease for the procedure store.
+   * @deprecated since 2.3.0, will be removed in 4.0.0 along with
+   *             {@link org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore}. As now we
+   *             will store the procedure data in a master local region, and master itself will deal
+   *             with the lease recovery of the region.
    */
+  @Deprecated
   void recoverLease() throws IOException;
 
   /**

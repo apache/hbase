@@ -61,6 +61,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HConstants;
@@ -82,6 +83,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -729,12 +731,7 @@ public final class FSUtils {
     HDFSBlocksDistribution blocksDistribution = new HDFSBlocksDistribution();
     BlockLocation [] blockLocations =
       fs.getFileBlockLocations(status, start, length);
-    for(BlockLocation bl : blockLocations) {
-      String [] hosts = bl.getHosts();
-      long len = bl.getLength();
-      blocksDistribution.addHostsAndBlockWeight(hosts, len);
-    }
-
+    addToHDFSBlocksDistribution(blocksDistribution, blockLocations);
     return blocksDistribution;
   }
 
@@ -749,7 +746,8 @@ public final class FSUtils {
     for (BlockLocation bl : blockLocations) {
       String[] hosts = bl.getHosts();
       long len = bl.getLength();
-      blocksDistribution.addHostsAndBlockWeight(hosts, len);
+      StorageType[] storageTypes = bl.getStorageTypes();
+      blocksDistribution.addHostsAndBlockWeight(hosts, len, storageTypes);
     }
   }
 
@@ -1660,7 +1658,8 @@ public final class FSUtils {
 
     // run in multiple threads
     final ExecutorService tpe = Executors.newFixedThreadPool(threadPoolSize,
-      Threads.newDaemonThreadFactory("FSRegionQuery"));
+      new ThreadFactoryBuilder().setNameFormat("FSRegionQuery-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     try {
       // ignore all file status items that are not of interest
       for (FileStatus regionStatus : statusList) {

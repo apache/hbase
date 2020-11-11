@@ -17,19 +17,27 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -41,6 +49,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -64,6 +74,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 @Category({ ClientTests.class, MediumTests.class })
 public class TestClientOperationTimeout {
 
+  private static final Logger LOG = LoggerFactory.getLogger(TestClientOperationTimeout.class);
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestClientOperationTimeout.class);
@@ -74,6 +86,7 @@ public class TestClientOperationTimeout {
   private static int DELAY_GET;
   private static int DELAY_SCAN;
   private static int DELAY_MUTATE;
+  private static int DELAY_BATCH_MUTATE;
 
   private static final TableName TABLE_NAME = TableName.valueOf("Timeout");
   private static final byte[] FAMILY = Bytes.toBytes("family");
@@ -85,7 +98,7 @@ public class TestClientOperationTimeout {
   private static Table TABLE;
 
   @BeforeClass
-  public static void setUpClass() throws Exception {
+  public static void setUp() throws Exception {
     // Set RegionServer class and use default values for other options.
     StartMiniClusterOption option =
       StartMiniClusterOption.builder().rsClass(DelayedRegionServer.class).build();
@@ -102,13 +115,6 @@ public class TestClientOperationTimeout {
     TABLE = CONN.getTable(TABLE_NAME);
   }
 
-  @Before
-  public void setUp() throws Exception {
-    DELAY_GET = 0;
-    DELAY_SCAN = 0;
-    DELAY_MUTATE = 0;
-  }
-
   @AfterClass
   public static void tearDown() throws Exception {
     Closeables.close(TABLE, true);
@@ -116,41 +122,96 @@ public class TestClientOperationTimeout {
     UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * Tests that a get on a table throws {@link SocketTimeoutException} when the operation takes
-   * longer than 'hbase.client.operation.timeout'.
-   */
-  @Test(expected = RetriesExhaustedException.class)
-  public void testGetTimeout() throws Exception {
-    DELAY_GET = 600;
-    TABLE.get(new Get(ROW));
+  @Before
+  public void setUpBeforeTest() throws Exception {
+    DELAY_GET = 0;
+    DELAY_SCAN = 0;
+    DELAY_MUTATE = 0;
+    DELAY_BATCH_MUTATE = 0;
   }
 
   /**
-   * Tests that a put on a table throws {@link SocketTimeoutException} when the operation takes
+   * Tests that a get on a table throws {@link RetriesExhaustedException} when the operation takes
    * longer than 'hbase.client.operation.timeout'.
    */
-  @Test(expected = RetriesExhaustedException.class)
-  public void testPutTimeout() throws Exception {
-    DELAY_MUTATE = 600;
+  @Test
+  public void testGetTimeout() {
+    DELAY_GET = 600;
+    try {
+      TABLE.get(new Get(ROW));
+      fail("should not reach here");
+    } catch (Exception e) {
+      LOG.info("Got exception for get", e);
+      assertThat(e, instanceOf(RetriesExhaustedException.class));
+      assertThat(e.getCause(), instanceOf(CallTimeoutException.class));
+    }
+  }
 
+  /**
+   * Tests that a put on a table throws {@link RetriesExhaustedException} when the operation takes
+   * longer than 'hbase.client.operation.timeout'.
+   */
+  @Test
+  public void testPutTimeout() {
+    DELAY_MUTATE = 600;
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
-    TABLE.put(put);
+    try {
+      TABLE.put(put);
+      fail("should not reach here");
+    } catch (Exception e) {
+      LOG.info("Got exception for put", e);
+      assertThat(e, instanceOf(RetriesExhaustedException.class));
+      assertThat(e.getCause(), instanceOf(CallTimeoutException.class));
+    }
+  }
+
+  /**
+   * Tests that a batch mutate on a table throws {@link RetriesExhaustedException} when the
+   * operation takes longer than 'hbase.client.operation.timeout'.
+   */
+  @Test
+  public void testMultiPutsTimeout() {
+    DELAY_BATCH_MUTATE = 600;
+    Put put1 = new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE);
+    Put put2 = new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE);
+    List<Put> puts = Arrays.asList(put1, put2);
+    try {
+      TABLE.batch(puts, new Object[2]);
+      fail("should not reach here");
+    } catch (Exception e) {
+      LOG.info("Got exception for batch", e);
+      assertThat(e, instanceOf(RetriesExhaustedException.class));
+      assertThat(e.getCause(), instanceOf(RetriesExhaustedException.class));
+      assertThat(e.getCause().getCause(), instanceOf(CallTimeoutException.class));
+    }
   }
 
   /**
    * Tests that scan on a table throws {@link RetriesExhaustedException} when the operation takes
    * longer than 'hbase.client.scanner.timeout.period'.
    */
-  @Test(expected = RetriesExhaustedException.class)
-  public void testScanTimeout() throws Exception {
+  @Test
+  public void testScanTimeout() throws IOException, InterruptedException {
+    // cache the region location.
+    try (RegionLocator locator = TABLE.getRegionLocator()) {
+      locator.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY);
+    }
+    // sleep a bit to make sure the location has been cached as it is an async operation.
+    Thread.sleep(100);
     DELAY_SCAN = 600;
-    ResultScanner scanner = TABLE.getScanner(new Scan());
-    scanner.next();
+    try (ResultScanner scanner = TABLE.getScanner(new Scan())) {
+      scanner.next();
+      fail("should not reach here");
+    } catch (Exception e) {
+      LOG.info("Got exception for scan", e);
+      assertThat(e, instanceOf(RetriesExhaustedException.class));
+      assertThat(e.getCause(), instanceOf(CallTimeoutException.class));
+    }
   }
 
-  private static class DelayedRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
+  public static final class DelayedRegionServer
+    extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
     public DelayedRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);
     }
@@ -164,14 +225,14 @@ public class TestClientOperationTimeout {
   /**
    * This {@link RSRpcServices} class injects delay for Rpc calls and after executes super methods.
    */
-  public static class DelayedRSRpcServices extends RSRpcServices {
+  private static final class DelayedRSRpcServices extends RSRpcServices {
     DelayedRSRpcServices(HRegionServer rs) throws IOException {
       super(rs);
     }
 
     @Override
     public ClientProtos.GetResponse get(RpcController controller, ClientProtos.GetRequest request)
-        throws ServiceException {
+      throws ServiceException {
       try {
         Thread.sleep(DELAY_GET);
       } catch (InterruptedException e) {
@@ -182,7 +243,7 @@ public class TestClientOperationTimeout {
 
     @Override
     public ClientProtos.MutateResponse mutate(RpcController rpcc,
-        ClientProtos.MutateRequest request) throws ServiceException {
+      ClientProtos.MutateRequest request) throws ServiceException {
       try {
         Thread.sleep(DELAY_MUTATE);
       } catch (InterruptedException e) {
@@ -193,13 +254,24 @@ public class TestClientOperationTimeout {
 
     @Override
     public ClientProtos.ScanResponse scan(RpcController controller,
-        ClientProtos.ScanRequest request) throws ServiceException {
+      ClientProtos.ScanRequest request) throws ServiceException {
       try {
         Thread.sleep(DELAY_SCAN);
       } catch (InterruptedException e) {
         LOG.error("Sleep interrupted during scan operation", e);
       }
       return super.scan(controller, request);
+    }
+
+    @Override
+    public ClientProtos.MultiResponse multi(RpcController rpcc, ClientProtos.MultiRequest request)
+      throws ServiceException {
+      try {
+        Thread.sleep(DELAY_BATCH_MUTATE);
+      } catch (InterruptedException e) {
+        LOG.error("Sleep interrupted during multi operation", e);
+      }
+      return super.multi(rpcc, request);
     }
   }
 }

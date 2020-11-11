@@ -674,6 +674,12 @@
       <email>meiyi@apache.org</email>
       <timezone>+8</timezone>
     </developer>
+    <developer>
+      <id>wangzheng</id>
+      <name>Zheng (bsglz) Wang</name>
+      <email>wangzheng@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
   </developers>
   <build>
     <extensions>
@@ -721,6 +727,14 @@
             <compilerArgument>-Xlint:-options</compilerArgument>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>${maven.javadoc.version}</version>
+          <configuration>
+            <source>${compileSource}</source>
+          </configuration>
+        </plugin>
         <!-- Test oriented plugins -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -750,6 +764,7 @@
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
             <systemPropertyVariables>
               <test.build.classes>${test.build.classes}</test.build.classes>
+              <java.io.tmpdir>${test.tmp.dir}</java.io.tmpdir>
             </systemPropertyVariables>
             <excludes>
               <!-- users can add -D option to skip particular test classes
@@ -893,6 +908,8 @@
               <!-- MIT https://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
               <exclude>**/jquery.tablesorter.min.js</exclude>
+              <!-- MIT: bootstrap -->
+              <exclude>**/src/main/resources/hbase-webapps/static/*/bootstrap*</exclude>
               <!-- vector graphics -->
               <exclude>**/*.vm</exclude>
               <!-- apache doxia generated -->
@@ -929,7 +946,6 @@
           <artifactId>protobuf-maven-plugin</artifactId>
           <version>${protobuf.plugin.version}</version>
           <configuration>
-            <protocArtifact>${external.protobuf.groupid}:protoc:${external.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
             <protoSourceRoot>${basedir}/src/main/protobuf/</protoSourceRoot>
             <clearOutputDirectory>false</clearOutputDirectory>
             <checkStaleness>true</checkStaleness>
@@ -1145,6 +1161,45 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-jetty</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.eclipse.jetty:**</exclude>
+                  </excludes>
+                  <message>
+                    Use shaded jetty instead
+                  </message>
+                  <searchTransitive>false</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-jersey</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>>org.glassfish.jersey.containers:**</exclude>
+                    <exclude>>org.glassfish.jersey.core:**</exclude>
+                  </excludes>
+                  <message>
+                    Use shaded jersey instead
+                  </message>
+                  <searchTransitive>false</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <!-- must check after LICENSE is built at 'generate-resources' -->
             <phase>process-resources</phase>
@@ -1256,6 +1311,22 @@
                   <reason>Do not use htrace v3</reason>
                   <bannedImports>
                     <bannedImport>org.htrace.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Use shaded jetty in hbase-thirdparty</reason>
+                  <bannedImports>
+                    <bannedImport>org.eclipse.jetty.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>Use shaded jersey in hbase-thirdparty</reason>
+                  <bannedImports>
+                    <bannedImport>org.glassfish.jersey.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
               </rules>
@@ -1541,22 +1612,17 @@
     <metrics-core.version>3.2.6</metrics-core.version>
     <jackson.version>2.10.1</jackson.version>
     <jackson.databind.version>2.10.1</jackson.databind.version>
-    <jaxb-api.version>2.2.12</jaxb-api.version>
-    <jetty.version>9.3.28.v20191105</jetty.version>
+    <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
-    <wx.rs.api.version>2.0.1</wx.rs.api.version>
-    <!-- Jersey 2.26 requires jetty 9.4 which breaks hadoop. Tread lightly. -->
-    <jersey.version>2.25.1</jersey.version>
+    <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
     <glassfish.el.version>3.0.1-b08</glassfish.el.version>
-    <jruby.version>9.1.17.0</jruby.version>
+    <jruby.version>9.2.13.0</jruby.version>
     <junit.version>4.13</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
     <htrace.version>4.2.0-incubating</htrace.version>
     <log4j.version>1.2.17</log4j.version>
     <mockito-core.version>2.28.2</mockito-core.version>
-    <!--Internally we use a different version of protobuf. See hbase-protocol-shaded-->
-    <external.protobuf.version>2.5.0</external.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.13.0</thrift.version>
@@ -1567,8 +1633,8 @@
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.3.8</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
-    <joni.version>2.1.11</joni.version>
-    <jcodings.version>1.0.18</jcodings.version>
+    <joni.version>2.1.31</joni.version>
+    <jcodings.version>1.0.55</jcodings.version>
     <spy.version>2.12.2</spy.version>
     <bouncycastle.version>1.60</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
@@ -1591,6 +1657,7 @@
     <maven.bundle.version>3.3.0</maven.bundle.version>
     <maven.checkstyle.version>3.1.0</maven.checkstyle.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
+    <maven.javadoc.version>3.2.0</maven.javadoc.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>2.9</maven.project.info.report.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
@@ -1600,7 +1667,7 @@
     <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>3.3.0</hbase-thirdparty.version>
+    <hbase-thirdparty.version>3.4.0</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -1660,11 +1727,12 @@
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine}</argLine>
     <jacoco.version>0.7.5.201505241946</jacoco.version>
-    <extra.enforcer.version>1.0-beta-9</extra.enforcer.version>
-    <enforcer.version>3.0.0-M2</enforcer.version>
+    <extra.enforcer.version>1.3</extra.enforcer.version>
+    <enforcer.version>3.0.0-M3</enforcer.version>
     <restrict-imports.enforcer.version>0.14.0</restrict-imports.enforcer.version>
     <!-- Location of test resources -->
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
+    <test.tmp.dir>${project.build.directory}</test.tmp.dir>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
     <!--This build.id we'll add as flag so can identify which forked processes belong to our build.
         Default is the build start timestamp. Up on jenkins pass in the jenkins build id by setting
@@ -1674,7 +1742,6 @@
     <!-- TODO HBASE-15041 clean up our javadocs so jdk8 linter can be used.
          property as of javadoc-plugin 3.0.0 -->
     <doclint>none</doclint>
-    <external.protobuf.groupid>com.google.protobuf</external.protobuf.groupid>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -2171,77 +2238,6 @@
         <version>1.2</version>
       </dependency>
       <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-server</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-servlet</artifactId>
-        <version>${jetty.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>servlet-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-security</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-http</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-util</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-io</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-jmx</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-webapp</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty</groupId>
-        <artifactId>jetty-util-ajax</artifactId>
-        <version>${jetty.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.protobuf</groupId>
-        <artifactId>protobuf-java</artifactId>
-        <version>${external.protobuf.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jersey.containers</groupId>
-        <artifactId>jersey-container-servlet-core</artifactId>
-        <version>${jersey.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jersey.core</groupId>
-        <artifactId>jersey-client</artifactId>
-        <version>${jersey.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jersey.core</groupId>
-        <artifactId>jersey-server</artifactId>
-        <version>${jersey.version}</version>
-      </dependency>
-      <dependency>
         <!--This lib has JspC in it. Needed precompiling jsps in hbase-rest, etc.-->
         <groupId>org.glassfish.web</groupId>
         <artifactId>javax.servlet.jsp</artifactId>
@@ -2404,6 +2400,16 @@
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-protobuf</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-jetty</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-jersey</artifactId>
         <version>${hbase-thirdparty.version}</version>
       </dependency>
       <dependency>
@@ -3736,7 +3742,7 @@
           <reportSet>
             <id>devapi</id>
             <reports>
-              <report>aggregate</report>
+              <report>aggregate-no-fork</report>
             </reports>
             <configuration>
               <destDir>devapidocs</destDir>
@@ -3772,6 +3778,12 @@
                   <artifactId>hamcrest-core</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
+                <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
+                <additionalDependency>
+                  <groupId>com.google.code.findbugs</groupId>
+                  <artifactId>jsr305</artifactId>
+                  <version>3.0.2</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -3779,7 +3791,7 @@
           <reportSet>
             <id>testdevapi</id>
             <reports>
-              <report>test-aggregate</report>
+              <report>test-aggregate-no-fork</report>
             </reports>
             <configuration>
               <destDir>testdevapidocs</destDir>
@@ -3815,6 +3827,12 @@
                   <artifactId>hamcrest-core</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
+                <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
+                <additionalDependency>
+                  <groupId>com.google.code.findbugs</groupId>
+                  <artifactId>jsr305</artifactId>
+                  <version>3.0.2</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -3824,7 +3842,7 @@
           <reportSet>
             <id>userapi</id>
             <reports>
-              <report>aggregate</report>
+              <report>aggregate-no-fork</report>
             </reports>
             <configuration>
               <doclet>
@@ -3870,6 +3888,12 @@
                   <artifactId>hamcrest-core</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
+                <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
+                <additionalDependency>
+                  <groupId>com.google.code.findbugs</groupId>
+                  <artifactId>jsr305</artifactId>
+                  <version>3.0.2</version>
+                </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
             </configuration>
@@ -3878,7 +3902,7 @@
           <reportSet>
             <id>testuserapi</id>
             <reports>
-              <report>test-aggregate</report>
+              <report>test-aggregate-no-fork</report>
             </reports>
             <configuration>
               <doclet>
@@ -3923,6 +3947,12 @@
                   <groupId>org.hamcrest</groupId>
                   <artifactId>hamcrest-core</artifactId>
                   <version>${hamcrest.version}</version>
+                </additionalDependency>
+                <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
+                <additionalDependency>
+                  <groupId>com.google.code.findbugs</groupId>
+                  <artifactId>jsr305</artifactId>
+                  <version>3.0.2</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>

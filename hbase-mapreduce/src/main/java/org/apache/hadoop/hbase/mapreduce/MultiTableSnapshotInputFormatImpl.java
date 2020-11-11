@@ -27,7 +27,7 @@ import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
@@ -101,7 +101,7 @@ public class MultiTableSnapshotInputFormatImpl {
 
       SnapshotManifest manifest =
           TableSnapshotInputFormatImpl.getSnapshotManifest(conf, snapshotName, rootDir, fs);
-      List<HRegionInfo> regionInfos =
+      List<RegionInfo> regionInfos =
           TableSnapshotInputFormatImpl.getRegionInfosFromManifest(manifest);
 
       for (Scan scan : entry.getValue()) {

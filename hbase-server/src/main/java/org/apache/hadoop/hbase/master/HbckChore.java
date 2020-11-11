@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
@@ -198,7 +198,7 @@ public class HbckChore extends ScheduledChore {
     // Null tablename means scan all of meta.
     MetaTableAccessor.scanMetaForTableRegions(this.master.getConnection(),
       r -> {
-        List<RegionInfo> mergeParents = MetaTableAccessor.getMergeRegions(r.rawCells());
+        List<RegionInfo> mergeParents = CatalogFamilyFormat.getMergeRegions(r.rawCells());
         if (mergeParents != null) {
           for (RegionInfo mergeRegion : mergeParents) {
             if (mergeRegion != null) {
@@ -245,20 +245,20 @@ public class HbckChore extends ScheduledChore {
           orphanRegionsOnRS.put(RegionInfo.getRegionNameAsString(regionName), serverName);
           continue;
         }
-        hri.addServer(hri.getMetaEntry(), serverName);
+        hri.addServer(hri.getMetaEntry().getRegionInfo(), serverName);
       }
       numRegions += entry.getValue().size();
     }
     LOG.info("Loaded {} regions from {} regionservers' reports and found {} orphan regions",
-        numRegions, rsReports.size(), orphanRegionsOnFS.size());
+        numRegions, rsReports.size(), orphanRegionsOnRS.size());
 
     for (Map.Entry<String, HbckRegionInfo> entry : regionInfoMap.entrySet()) {
       HbckRegionInfo hri = entry.getValue();
       ServerName locationInMeta = hri.getMetaEntry().getRegionServer();
+      if (locationInMeta == null) {
+        continue;
+      }
       if (hri.getDeployedOn().size() == 0) {
-        if (locationInMeta == null) {
-          continue;
-        }
         // skip the offline region which belong to disabled table.
         if (disabledTableRegions.contains(hri.getRegionNameAsString())) {
           continue;

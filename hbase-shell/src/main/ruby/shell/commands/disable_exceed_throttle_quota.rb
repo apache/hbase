@@ -31,7 +31,7 @@ Examples:
       end
 
       def command
-        prev_state = quotas_admin.switch_exceed_throttle_quota(false) ? 'true' : 'false'
+        prev_state = !!quotas_admin.switch_exceed_throttle_quota(false)
         formatter.row(["Previous exceed throttle quota enabled : #{prev_state}"])
         prev_state
       end

@@ -50,6 +50,15 @@ public class TestReplicationStatus extends TestReplicationBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestReplicationStatus.class);
 
+  static void insertRowsOnSource() throws IOException {
+    final byte[] qualName = Bytes.toBytes("q");
+    for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
+      Put p = new Put(Bytes.toBytes("row" + i));
+      p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
+      htable1.put(p);
+    }
+  }
+
   /**
    * Test for HBASE-9531.
    * <p/>
@@ -70,12 +79,7 @@ public class TestReplicationStatus extends TestReplicationBase {
     Admin hbaseAdmin = UTIL1.getAdmin();
     // disable peer <= WHY? I DON'T GET THIS DISABLE BUT TEST FAILS W/O IT.
     hbaseAdmin.disableReplicationPeer(PEER_ID2);
-    final byte[] qualName = Bytes.toBytes("q");
-    for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
-      Put p = new Put(Bytes.toBytes("row" + i));
-      p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
-      htable1.put(p);
-    }
+    insertRowsOnSource();
     LOG.info("AFTER PUTS");
     // TODO: Change this wait to a barrier. I tried waiting on replication stats to
     // change but sleeping in main thread seems to mess up background replication.

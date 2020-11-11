@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -119,8 +119,8 @@ public class DisableTableProcedure
                 long maxSequenceId = WALSplitUtil.getMaxRegionSequenceId(
                   env.getMasterConfiguration(), region, fs::getFileSystem, fs::getWALFileSystem);
                 long openSeqNum = maxSequenceId > 0 ? maxSequenceId + 1 : HConstants.NO_SEQNUM;
-                mutator.mutate(MetaTableAccessor.makePutForReplicationBarrier(region, openSeqNum,
-                  EnvironmentEdgeManager.currentTime()));
+                mutator.mutate(ReplicationBarrierFamilyFormat.makePutForReplicationBarrier(region,
+                  openSeqNum, EnvironmentEdgeManager.currentTime()));
               }
             }
           }
@@ -246,7 +246,7 @@ public class DisableTableProcedure
       setFailure("master-disable-table",
         new ConstraintException("Cannot disable " + this.tableName));
       canTableBeDisabled = false;
-    } else if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    } else if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
       setFailure("master-disable-table", new TableNotFoundException(tableName));
       canTableBeDisabled = false;
     } else if (!skipTableStateCheck) {

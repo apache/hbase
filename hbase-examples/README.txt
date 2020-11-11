@@ -57,11 +57,10 @@ Example code.
       3. Execute {perl DemoClient.pl}.
 
     * CPP: hbase-examples/src/main/cpp/DemoClient.cpp
-      1. Make sure you have boost and Thrift C++ libraries; modify Makefile if necessary.
-        The recent (0.9.0 as of this writing) version of Thrift can be downloaded from http://thrift.apache.org/download/.
-        Boost can be found at http://www.boost.org/users/download/.
+      1. Make sure you have Thrift C++ libraries; modify Makefile if necessary.
+        The recent (0.13.0 as of this writing) version of Thrift can be downloaded from http://thrift.apache.org/download/.
       2. Execute {make}.
-      3. Execute {./DemoClient}.
+      3. Execute {./DemoClient <host> <port>}.
 
 ON PROTOBUFS
 This maven module has core protobuf definition files ('.protos') used by hbase

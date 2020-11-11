@@ -120,6 +120,7 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
          </%if>
          </div>
          <input type="hidden" id ="rit_page_num" value="<% numOfRITs %>" />
+         <input type="hidden" id ="rit_per_page" value="<% ritsPerPage %>" />
          <nav id="rit_pagination"></nav>
      </div>
    </section>

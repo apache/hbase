@@ -23,8 +23,6 @@ java_import org.apache.hadoop.hbase.util.Pair
 
 module Hbase
   class RSGroupAdmin
-    include HBaseConstants
-
     def initialize(connection)
       @connection = connection
       @admin = @connection.getAdmin
@@ -190,6 +188,43 @@ module Hbase
     # rename rsgroup
     def rename_rsgroup(oldname, newname)
       @admin.renameRSGroup(oldname, newname)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # modify a rsgroup configuration
+    def alter_rsgroup_config(rsgroup_name, *args)
+      # Fail if table name is not a string
+      raise(ArgumentError, 'RSGroup name must be of type String') unless rsgroup_name.is_a?(String)
+
+      group = @admin.getRSGroup(rsgroup_name)
+
+      raise(ArgumentError, 'RSGroup does not exist') unless group
+
+      configuration = java.util.HashMap.new
+      configuration.putAll(group.getConfiguration)
+
+      # Flatten params array
+      args = args.flatten.compact
+
+      # Start defining the table
+      args.each do |arg|
+        unless arg.is_a?(Hash)
+          raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash type")
+        end
+        method = arg[::HBaseConstants::METHOD]
+        if method == 'unset'
+          configuration.remove(arg[::HBaseConstants::NAME])
+        elsif method == 'set'
+          arg.delete(::HBaseConstants::METHOD)
+          for k, v in arg
+            v = v.to_s unless v.nil?
+            configuration.put(k, v)
+          end
+        else
+          raise(ArgumentError, "Unknown method #{method}")
+        end
+      end
+      @admin.updateRSGroupConfig(rsgroup_name, configuration)
     end
   end
 end

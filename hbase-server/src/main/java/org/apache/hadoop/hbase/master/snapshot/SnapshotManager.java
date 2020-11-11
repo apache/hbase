@@ -42,7 +42,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -654,16 +653,26 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     TableName snapshotTable = TableName.valueOf(snapshot.getTable());
     if (master.getTableStateManager().isTableState(snapshotTable,
         TableState.State.ENABLED)) {
-      LOG.debug("Table enabled, starting distributed snapshot.");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Table enabled, starting distributed snapshots for {}",
+          ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
       snapshotEnabledTable(snapshot);
-      LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Started snapshot: {}", ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
     }
     // For disabled table, snapshot is created by the master
     else if (master.getTableStateManager().isTableState(snapshotTable,
         TableState.State.DISABLED)) {
-      LOG.debug("Table is disabled, running snapshot entirely on master.");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Table is disabled, running snapshot entirely on master for {}",
+          ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
       snapshotDisabledTable(snapshot);
-      LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Started snapshot: {}", ClientSnapshotDescriptionUtils.toString(snapshot));
+      }
     } else {
       LOG.error("Can't snapshot table '" + snapshot.getTable()
           + "', isn't open or closed, we don't know what to do!");
@@ -841,7 +850,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     // Execute the restore/clone operation
     long procId;
-    if (MetaTableAccessor.tableExists(master.getConnection(), tableName)) {
+    if (master.getTableDescriptors().exists(tableName)) {
       procId = restoreSnapshot(reqSnapshot, tableName, snapshot, snapshotTableDesc, nonceKey,
         restoreAcl);
     } else {

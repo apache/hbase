@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.HConstants.META_REPLICAS_NUM;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -33,6 +35,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -41,6 +45,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestMasterRegistry {
@@ -52,10 +58,10 @@ public class TestMasterRegistry {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL.getConfiguration().setInt(META_REPLICAS_NUM, 3);
     StartMiniClusterOption.Builder builder = StartMiniClusterOption.builder();
     builder.numMasters(3).numRegionServers(3);
     TEST_UTIL.startMiniCluster(builder.build());
+    HBaseTestingUtility.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
   }
 
   @AfterClass
@@ -124,6 +130,53 @@ public class TestMasterRegistry {
         Collections.sort(actualMetaLocations);
         assertEquals(actualMetaLocations, metaLocations);
       }
+    }
+  }
+
+  /**
+   * Tests that the list of masters configured in the MasterRegistry is dynamically refreshed in the
+   * event of errors.
+   */
+  @Test
+  public void testDynamicMasterConfigurationRefresh() throws Exception {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    String currentMasterAddrs = Preconditions.checkNotNull(conf.get(HConstants.MASTER_ADDRS_KEY));
+    HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();
+    String clusterId = activeMaster.getClusterId();
+    // Add a non-working master
+    ServerName badServer = ServerName.valueOf("localhost", 1234, -1);
+    conf.set(HConstants.MASTER_ADDRS_KEY, badServer.toShortString() + "," + currentMasterAddrs);
+    // Set the hedging fan out so that all masters are queried.
+    conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, 4);
+    // Do not limit the number of refreshes during the test run.
+    conf.setLong(MasterAddressRefresher.MIN_SECS_BETWEEN_REFRESHES, 0);
+    try (MasterRegistry registry = new MasterRegistry(conf)) {
+      final Set<ServerName> masters = registry.getParsedMasterServers();
+      assertTrue(masters.contains(badServer));
+      // Make a registry RPC, this should trigger a refresh since one of the hedged RPC fails.
+      assertEquals(registry.getClusterId().get(), clusterId);
+      // Wait for new set of masters to be populated.
+      TEST_UTIL.waitFor(5000,
+          (Waiter.Predicate<Exception>) () -> !registry.getParsedMasterServers().equals(masters));
+      // new set of masters should not include the bad server
+      final Set<ServerName> newMasters = registry.getParsedMasterServers();
+      // Bad one should be out.
+      assertEquals(3, newMasters.size());
+      assertFalse(newMasters.contains(badServer));
+      // Kill the active master
+      activeMaster.stopMaster();
+      TEST_UTIL.waitFor(10000,
+        () -> TEST_UTIL.getMiniHBaseCluster().getLiveMasterThreads().size() == 2);
+      TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(10000);
+      // Wait until the killed master de-registered. This should also trigger another refresh.
+      TEST_UTIL.waitFor(10000, () -> registry.getMasters().get().size() == 2);
+      TEST_UTIL.waitFor(20000, () -> registry.getParsedMasterServers().size() == 2);
+      final Set<ServerName> newMasters2 = registry.getParsedMasterServers();
+      assertEquals(2, newMasters2.size());
+      assertFalse(newMasters2.contains(activeMaster.getServerName()));
+    } finally {
+      // Reset the state, add a killed master.
+      TEST_UTIL.getMiniHBaseCluster().startMaster();
     }
   }
 }

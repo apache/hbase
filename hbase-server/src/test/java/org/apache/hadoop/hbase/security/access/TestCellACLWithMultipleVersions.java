@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
@@ -30,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
@@ -123,6 +124,9 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     GROUP_USER = User.createUserForTesting(conf, "group_user", new String[] { GROUP });
 
     usersAndGroups = new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) };
+
+    // Grant table creation permission to USER_OWNER
+    grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Action.CREATE);
   }
 
   @AfterClass
@@ -132,24 +136,13 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
   @Before
   public void setUp() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY1);
-    familyDescriptor.setMaxVersions(4);
-    tableDescriptor.setOwner(USER_OWNER);
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY2);
-    familyDescriptor.setMaxVersions(4);
-    tableDescriptor.setOwner(USER_OWNER);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(testTable.getTableName())
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY1).setMaxVersions(4).build())
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY2).setMaxVersions(4).build()).build();
     // Create the test table (owner added to the _acl_ table)
-    try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-      try (Admin admin = connection.getAdmin()) {
-        admin.createTable(tableDescriptor, new byte[][] { Bytes.toBytes("s") });
-      }
-    }
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
     TEST_UTIL.waitTableEnabled(testTable.getTableName());
     LOG.info("Sleeping a second because of HBASE-12581");
     Threads.sleep(1000);

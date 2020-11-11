@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.TestMetaWithReplicas;
+import org.apache.hadoop.hbase.client.TestMetaWithReplicasShutdownHandling;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -53,11 +53,11 @@ public class IntegrationTestMetaReplicas {
     if (util == null) {
       util = new IntegrationTestingUtility();
     }
-    util.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     util.getConfiguration().setInt(
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
     // Make sure there are three servers.
     util.initializeCluster(3);
+    HBaseTestingUtility.setReplicas(util.getAdmin(), TableName.META_TABLE_NAME, 3);
     ZKWatcher zkw = util.getZooKeeperWatcher();
     Configuration conf = util.getConfiguration();
     String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
@@ -96,7 +96,7 @@ public class IntegrationTestMetaReplicas {
     // server holding the primary meta replica. Then it does a put/get into/from
     // the test table. The put/get operations would use the replicas to locate the
     // location of the test table's region
-    TestMetaWithReplicas.shutdownMetaAndDoValidations(util);
+    TestMetaWithReplicasShutdownHandling.shutdownMetaAndDoValidations(util);
   }
 
   public static void main(String[] args) throws Exception {

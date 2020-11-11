@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -46,7 +47,8 @@ public class AlwaysStandByHMaster extends HMaster {
     private static final Logger LOG =
         LoggerFactory.getLogger(AlwaysStandByMasterManager.class);
 
-    AlwaysStandByMasterManager(ZKWatcher watcher, ServerName sn, Server master) {
+    AlwaysStandByMasterManager(ZKWatcher watcher, ServerName sn, Server master)
+        throws InterruptedIOException {
       super(watcher, sn, master);
     }
 
@@ -62,10 +64,10 @@ public class AlwaysStandByHMaster extends HMaster {
             if (MasterAddressTracker.getMasterAddress(watcher) != null) {
               clusterHasActiveMaster.set(true);
             }
-            Threads.sleepWithoutInterrupt(100);
           } catch (IOException e) {
             // pass, we will get notified when some other active master creates the znode.
           }
+          Threads.sleepWithoutInterrupt(1000);
         } catch (KeeperException e) {
           master.abort("Received an unexpected KeeperException, aborting", e);
           return false;
@@ -94,8 +96,8 @@ public class AlwaysStandByHMaster extends HMaster {
     super(conf);
   }
 
-  protected ActiveMasterManager createActiveMasterManager(
-      ZKWatcher zk, ServerName sn, org.apache.hadoop.hbase.Server server) {
+  protected ActiveMasterManager createActiveMasterManager(ZKWatcher zk, ServerName sn,
+      org.apache.hadoop.hbase.Server server) throws InterruptedIOException {
     return new AlwaysStandByMasterManager(zk, sn, server);
   }
 }

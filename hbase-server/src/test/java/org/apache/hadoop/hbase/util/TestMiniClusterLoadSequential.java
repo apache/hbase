@@ -169,12 +169,9 @@ public class TestMiniClusterLoadSequential {
     }
     admin.close();
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(CF)
-      .setCompressionType(compression)
-      .setDataBlockEncoding(dataBlockEncoding);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE).build();
+    ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(CF)
+      .setCompressionType(compression).setDataBlockEncoding(dataBlockEncoding).build();
     createPreSplitLoadTestTable(tableDescriptor, familyDescriptor);
 
     LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(CF);

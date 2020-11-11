@@ -176,7 +176,7 @@ fi
 
 echo "HBase version information:"
 "${component_install}/bin/hbase" version 2>/dev/null
-hbase_version=$("${component_install}/bin/hbase" version | head -n 1 2>/dev/null)
+hbase_version=$("${component_install}/bin/hbase" version 2>&1 | grep ^HBase | head -n 1)
 hbase_version="${hbase_version#HBase }"
 
 if [ ! -s "${hbase_client}/lib/shaded-clients/hbase-shaded-mapreduce-${hbase_version}.jar" ]; then

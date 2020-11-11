@@ -55,6 +55,7 @@ Used for 'tag' and 'publish' stages:
     to actually publish you have to set '-f' (force) flag in do-release.sh or do-release-docker.sh.
 
 Used only for 'tag':
+  YETUS_HOME - installation location for Apache Yetus
   GIT_NAME - Name to use with git
   GIT_EMAIL - E-mail address to use with git
   GIT_BRANCH - Git branch on which to make release. Tag is always placed at HEAD of this branch.
@@ -65,13 +66,12 @@ Used only for 'publish':
     separately define GIT_REF if RELEASE_TAG is not actually present as a tag at publish time)
     If both RELEASE_TAG and GIT_REF are undefined it will default to HEAD of master.
   GPG_KEY - GPG key id (usually email addr) used to sign release artifacts
-  GPG_PASSPHRASE - Passphrase for GPG key
   REPO - Set to full path of a directory to use as maven local repo (dependencies cache)
     to avoid re-downloading dependencies for each stage.  It is automatically set if you
     request full sequence of stages (tag, publish-dist, publish-release) in do-release.sh.
 
 For example:
- $ PROJECT="hbase-operator-tools" ASF_USERNAME=NAME ASF_PASSWORD=PASSWORD GPG_PASSPHRASE=PASSWORD GPG_KEY=stack@apache.org ./release-build.sh publish-dist
+ $ PROJECT="hbase-operator-tools" ASF_USERNAME=NAME ASF_PASSWORD=PASSWORD GPG_KEY=stack@apache.org ./release-build.sh publish-dist
 EOF
   exit 1
 }
@@ -104,17 +104,20 @@ perl --version | grep 'This is'
 
 rm -rf "${PROJECT}"
 
+if is_debug; then
+  set -x  # detailed logging during action
+fi
+
 if [[ "$1" == "tag" ]]; then
+  init_yetus
   # for 'tag' stage
   set -o pipefail
-  set -x  # detailed logging during action
   check_get_passwords ASF_PASSWORD
-  check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD RELEASE_VERSION RELEASE_TAG NEXT_VERSION \
-      GIT_EMAIL GIT_NAME GIT_BRANCH
-  ASF_REPO="gitbox.apache.org/repos/asf/${PROJECT}.git"
-  encoded_username="$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''')")"
-  encoded_password="$(python -c "import urllib; print urllib.quote('''$ASF_PASSWORD''')")"
-  git clone "https://$encoded_username:$encoded_password@$ASF_REPO" -b "$GIT_BRANCH" "${PROJECT}"
+  check_needed_vars PROJECT RELEASE_VERSION RELEASE_TAG NEXT_VERSION GIT_EMAIL GIT_NAME GIT_BRANCH
+  if [ -z "${GIT_REPO}" ]; then
+    check_needed_vars ASF_USERNAME ASF_PASSWORD
+  fi
+  git_clone_overwrite
 
   # 'update_releasenotes' searches the project's Jira for issues where 'Fix Version' matches specified
   # $jira_fix_version. For most projects this is same as ${RELEASE_VERSION}. However, all the 'hbase-*'
@@ -151,7 +154,6 @@ if [[ "$1" == "tag" ]]; then
     # Push changes
     git push origin "$RELEASE_TAG"
     git push origin "HEAD:$GIT_BRANCH"
-    wait_for_tag "$RELEASE_TAG"
     cd ..
     rm -rf "${PROJECT}"
   else
@@ -164,12 +166,7 @@ fi
 
 ### Below is for 'publish-*' stages ###
 check_get_passwords ASF_PASSWORD
-if [[ -z "$GPG_PASSPHRASE" ]]; then
-  check_get_passwords GPG_PASSPHRASE
-  GPG_TTY="$(tty)"
-  export GPG_TTY
-fi
-check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD GPG_KEY GPG_PASSPHRASE
+check_needed_vars PROJECT ASF_USERNAME ASF_PASSWORD GPG_KEY
 
 # Commit ref to checkout when building
 BASE_DIR=$(pwd)
@@ -184,8 +181,7 @@ fi
 if is_dry_run && [[ "${TAG_SAME_DRY_RUN:-}" == "true" && -d "${PROJECT}.tag" ]]; then
   ln -s "${PROJECT}.tag" "${PROJECT}"
 else
-  ASF_REPO="${ASF_REPO:-https://gitbox.apache.org/repos/asf/${PROJECT}.git}"
-  git clone "$ASF_REPO" "${PROJECT}"
+  git_clone_overwrite
 fi
 cd "${PROJECT}"
 git checkout "$GIT_REF"
@@ -211,16 +207,16 @@ fi
 
 git clean -d -f -x
 cd ..
-set -x  # detailed logging during action
 
 if [[ "$1" == "publish-dist" ]]; then
   # Source and binary tarballs
   echo "Packaging release source tarballs"
   make_src_release "${PROJECT}" "${RELEASE_VERSION}"
 
-  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Building binary dist"
-  make_binary_release "${PROJECT}" "${RELEASE_VERSION}"
-  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') Done building binary distribution"
+  # we do not have binary tarballs for hbase-thirdparty
+  if [[ "${PROJECT}" != "hbase-thirdparty" ]]; then
+    make_binary_release "${PROJECT}" "${RELEASE_VERSION}"
+  fi
 
   if [[ "$PROJECT" =~ ^hbase- ]]; then
     DEST_DIR_NAME="${PROJECT}-${package_version_name}"

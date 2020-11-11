@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -89,6 +87,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TDataBlockEncoding;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
+import org.apache.hadoop.hbase.thrift2.generated.TFilterByOperator;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THRegionInfo;
 import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
@@ -109,9 +108,9 @@ import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -1046,20 +1045,6 @@ public final class ThriftUtilities {
     return builder.build();
   }
 
-  public static HTableDescriptor hTableDescriptorFromThrift(TTableDescriptor in) {
-    return new HTableDescriptor(tableDescriptorFromThrift(in));
-  }
-
-  public static HTableDescriptor[] hTableDescriptorsFromThrift(List<TTableDescriptor> in) {
-    HTableDescriptor[] out = new HTableDescriptor[in.size()];
-    int index = 0;
-    for (TTableDescriptor tTableDescriptor : in) {
-      out[index++] = hTableDescriptorFromThrift(tTableDescriptor);
-    }
-    return out;
-  }
-
-
   public static List<TableDescriptor> tableDescriptorsFromThrift(List<TTableDescriptor> in) {
     List<TableDescriptor> out = new ArrayList<>();
     for (TTableDescriptor tableDescriptor : in) {
@@ -1515,6 +1500,8 @@ public final class ThriftUtilities {
     tLogQueryFilter.setLimit(logQueryFilter.getLimit());
     TLogType tLogType = gettLogTypeFromHBase(logQueryFilter);
     tLogQueryFilter.setLogType(tLogType);
+    TFilterByOperator tFilterByOperator = getTFilterByFromHBase(logQueryFilter);
+    tLogQueryFilter.setFilterByOperator(tFilterByOperator);
     return tLogQueryFilter;
   }
 
@@ -1536,6 +1523,24 @@ public final class ThriftUtilities {
     return tLogType;
   }
 
+  private static TFilterByOperator getTFilterByFromHBase(final LogQueryFilter logQueryFilter) {
+    TFilterByOperator tFilterByOperator;
+    switch (logQueryFilter.getFilterByOperator()) {
+      case AND: {
+        tFilterByOperator = TFilterByOperator.AND;
+        break;
+      }
+      case OR: {
+        tFilterByOperator = TFilterByOperator.OR;
+        break;
+      }
+      default: {
+        tFilterByOperator = TFilterByOperator.OR;
+      }
+    }
+    return tFilterByOperator;
+  }
+
   public static LogQueryFilter getSlowLogQueryFromThrift(
       TLogQueryFilter tLogQueryFilter) {
     LogQueryFilter logQueryFilter = new LogQueryFilter();
@@ -1546,6 +1551,8 @@ public final class ThriftUtilities {
     logQueryFilter.setLimit(tLogQueryFilter.getLimit());
     LogQueryFilter.Type type = getLogTypeFromThrift(tLogQueryFilter);
     logQueryFilter.setType(type);
+    LogQueryFilter.FilterByOperator filterByOperator = getFilterByFromThrift(tLogQueryFilter);
+    logQueryFilter.setFilterByOperator(filterByOperator);
     return logQueryFilter;
   }
 
@@ -1566,6 +1573,25 @@ public final class ThriftUtilities {
       }
     }
     return type;
+  }
+
+  private static LogQueryFilter.FilterByOperator getFilterByFromThrift(
+      final TLogQueryFilter tLogQueryFilter) {
+    LogQueryFilter.FilterByOperator filterByOperator;
+    switch (tLogQueryFilter.getFilterByOperator()) {
+      case AND: {
+        filterByOperator = LogQueryFilter.FilterByOperator.AND;
+        break;
+      }
+      case OR: {
+        filterByOperator = LogQueryFilter.FilterByOperator.OR;
+        break;
+      }
+      default: {
+        filterByOperator = LogQueryFilter.FilterByOperator.OR;
+      }
+    }
+    return filterByOperator;
   }
 
   public static List<TOnlineLogRecord> getSlowLogRecordsFromHBase(

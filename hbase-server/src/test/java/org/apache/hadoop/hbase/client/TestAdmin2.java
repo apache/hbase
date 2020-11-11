@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -36,7 +37,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -85,8 +85,8 @@ public class TestAdmin2 extends TestAdminBase {
   public void testCreateBadTables() throws IOException {
     String msg = null;
     try {
-      ADMIN.createTable(new HTableDescriptor(TableName.META_TABLE_NAME));
-    } catch(TableExistsException e) {
+      ADMIN.createTable(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
+    } catch (TableExistsException e) {
       msg = e.toString();
     }
     assertTrue("Unexcepted exception message " + msg, msg != null &&
@@ -94,13 +94,9 @@ public class TestAdmin2 extends TestAdminBase {
       msg.contains(TableName.META_TABLE_NAME.getNameAsString()));
 
     // Now try and do concurrent creation with a bunch of threads.
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(name.getMethodName()));
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        HConstants.CATALOG_FAMILY);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     int count = 10;
     Thread [] threads = new Thread [count];
     final AtomicInteger successes = new AtomicInteger(0);
@@ -141,22 +137,15 @@ public class TestAdmin2 extends TestAdminBase {
 
   /**
    * Test for hadoop-1581 'HBASE: Unopenable tablename bug'.
-   * @throws Exception
    */
   @Test
   public void testTableNameClash() throws Exception {
     final String name = this.name.getMethodName();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor1 =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(name + "SOMEUPPERCASE"));
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor2 =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(name));
-    tableDescriptor1.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        HConstants.CATALOG_FAMILY));
-    tableDescriptor2.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        HConstants.CATALOG_FAMILY));
+    TableDescriptor tableDescriptor1 =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name + "SOMEUPPERCASE"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+    TableDescriptor tableDescriptor2 = TableDescriptorBuilder.newBuilder(TableName.valueOf(name))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     ADMIN.createTable(tableDescriptor1);
     ADMIN.createTable(tableDescriptor2);
     // Before fix, below would fail throwing a NoServerForRegionException.
@@ -181,11 +170,8 @@ public class TestAdmin2 extends TestAdminBase {
       byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
       byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
       Admin hbaseadmin = TEST_UTIL.getAdmin();
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(name));
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-          HConstants.CATALOG_FAMILY));
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TableName.valueOf(name))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
       hbaseadmin.createTable(tableDescriptor, startKey, endKey, expectedRegions);
     } finally {
       TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, oldTimeout);
@@ -214,26 +200,18 @@ public class TestAdmin2 extends TestAdminBase {
    */
   @Test
   public void testTableNames() throws IOException {
-    byte[][] illegalNames = new byte[][] {
-        Bytes.toBytes("-bad"),
-        Bytes.toBytes(".bad")
-    };
+    byte[][] illegalNames = new byte[][] { Bytes.toBytes("-bad"), Bytes.toBytes(".bad") };
     for (byte[] illegalName : illegalNames) {
-      try {
-        new HTableDescriptor(TableName.valueOf(illegalName));
-        throw new IOException("Did not detect '" +
-            Bytes.toString(illegalName) + "' as an illegal user table name");
-      } catch (IllegalArgumentException e) {
-        // expected
-      }
+      assertThrows(
+        "Did not detect '" + Bytes.toString(illegalName) + "' as an illegal user table name",
+        IllegalArgumentException.class, () -> TableName.valueOf(illegalName));
     }
     byte[] legalName = Bytes.toBytes("g-oo.d");
     try {
-      new HTableDescriptor(TableName.valueOf(legalName));
+      TableName.valueOf(legalName);
     } catch (IllegalArgumentException e) {
-      throw new IOException("Legal user table name: '" +
-        Bytes.toString(legalName) + "' caused IllegalArgumentException: " +
-        e.getMessage());
+      fail("Legal user table name: '" + Bytes.toString(legalName) +
+        "' caused IllegalArgumentException: " + e.getMessage());
     }
   }
 
@@ -404,11 +382,8 @@ public class TestAdmin2 extends TestAdminBase {
     byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
 
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        HConstants.CATALOG_FAMILY));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     ADMIN.createTable(tableDescriptor, startKey, endKey, expectedRegions);
 
     List<RegionInfo> RegionInfos = ADMIN.getRegions(tableName);
@@ -505,11 +480,8 @@ public class TestAdmin2 extends TestAdminBase {
     TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
 
     // Create the test table and open it
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        HConstants.CATALOG_FAMILY));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     ADMIN.createTable(tableDescriptor);
     Table table = TEST_UTIL.getConnection().getTable(tableName);
 
@@ -541,14 +513,9 @@ public class TestAdmin2 extends TestAdminBase {
     }
     // Before the fix for HBASE-6146, the below table creation was failing as the hbase:meta table
     // actually getting disabled by the disableTable() call.
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(Bytes.toBytes(name.getMethodName())));
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        Bytes.toBytes("cf1"));
-
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(Bytes.toBytes(name.getMethodName())))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("cf1"))).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
   }
 
@@ -857,12 +824,13 @@ public class TestAdmin2 extends TestAdminBase {
     }
     Assert.assertEquals(countFailedClearSlowResponse, 0);
 
-    LogQueryFilter logQueryFilter = new LogQueryFilter();
-    List<OnlineLogRecord> onlineLogRecords = ADMIN.getSlowLogResponses(new HashSet<>(serverNames),
-      logQueryFilter);
-
+    List<LogEntry> onlineLogRecords = ADMIN.getLogEntries(new HashSet<>(serverNames),
+      "SLOW_LOG", ServerType.REGION_SERVER, 100, null);
     // after cleanup of slowlog responses, total count of slowlog payloads should be 0
     Assert.assertEquals(onlineLogRecords.size(), 0);
+    List<LogEntry> balancerDecisionRecords =
+      ADMIN.getLogEntries(null, "BALANCER_DECISION", ServerType.MASTER, 100, null);
+    Assert.assertEquals(balancerDecisionRecords.size(), 0);
   }
 
   @Test

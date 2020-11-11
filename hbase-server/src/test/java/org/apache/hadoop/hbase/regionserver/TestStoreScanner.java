@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -405,6 +407,7 @@ public class TestStoreScanner {
       // We should have gone the optimize route 5 times totally... an INCLUDE for the four cells
       // in the row plus the DONE on the end.
       assertEquals(5, scanner.count.get());
+      assertEquals(1, scanner.memstoreOnlyReads);
       // For a full row Get, there should be no opportunity for scanner optimization.
       assertEquals(0, scanner.optimization.get());
     }
@@ -479,6 +482,8 @@ public class TestStoreScanner {
       // And we should have gone through optimize twice only.
       assertEquals("First qcode is SEEK_NEXT_COL and second INCLUDE_AND_SEEK_NEXT_ROW", 3,
         scanner.count.get());
+      assertEquals("Memstore Read count should be", 1,
+        scanner.memstoreOnlyReads);
     }
   }
 
@@ -578,6 +583,28 @@ public class TestStoreScanner {
       List<Cell> results = new ArrayList<>();
       assertEquals(true, scan.next(results));
       assertEquals(1, results.size());
+      assertEquals(1, scan.memstoreOnlyReads);
+      assertEquals(kvs[0], results.get(0));
+    }
+  }
+
+  @Test
+  public void testNonUserScan() throws IOException {
+    // returns only 1 of these 2 even though same timestamp
+    KeyValue[] kvs = new KeyValue[] { create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
+        create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"), };
+    List<KeyValueScanner> scanners = Arrays.asList(
+      new KeyValueScanner[] { new KeyValueScanFixture(CellComparator.getInstance(), kvs) });
+
+    Scan scanSpec = new Scan().withStartRow(Bytes.toBytes("R1"));
+    // this only uses maxVersions (default=1) and TimeRange (default=all)
+    try (StoreScanner scan =
+        new StoreScanner(scanSpec, scanInfo, null, scanners, ScanType.COMPACT_RETAIN_DELETES)) {
+      List<Cell> results = new ArrayList<>();
+      assertEquals(true, scan.next(results));
+      assertEquals(1, results.size());
+      // the type is not a user scan. so it won't account for the memstore reads
+      assertEquals(0, scan.memstoreOnlyReads);
       assertEquals(kvs[0], results.get(0));
     }
   }

@@ -21,8 +21,11 @@ module Shell
   module Commands
     class Truncate < Command
       def help
-        <<-EOF
+        <<~EOF
   Disables, drops and recreates the specified table.
+
+  Example:
+    hbase> truncate 'my_table'
 EOF
       end
 

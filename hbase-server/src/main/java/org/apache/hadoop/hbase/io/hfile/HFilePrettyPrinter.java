@@ -58,12 +58,12 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -207,10 +207,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     if (cmd.hasOption("r")) {
       String regionName = cmd.getOptionValue("r");
       byte[] rn = Bytes.toBytes(regionName);
-      byte[][] hri = HRegionInfo.parseRegionName(rn);
+      byte[][] hri = RegionInfo.parseRegionName(rn);
       Path rootDir = CommonFSUtils.getRootDir(getConf());
       Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
-      String enc = HRegionInfo.encodeRegionName(rn);
+      String enc = RegionInfo.encodeRegionName(rn);
       Path regionDir = new Path(tableDir, enc);
       if (verbose)
         out.println("region dir -> " + regionDir);
@@ -291,7 +291,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
     if (checkRootDir) {
       Path rootPath = CommonFSUtils.getRootDir(getConf());
-      String rootString = rootPath + rootPath.SEPARATOR;
+      String rootString = rootPath + Path.SEPARATOR;
       if (!file.toString().startsWith(rootString)) {
         // First we see if fully-qualified URI matches the root dir. It might
         // also be an absolute path in the same filesystem, so we prepend the FS
@@ -322,16 +322,16 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       // scan over file and read key/value's and check if requested
       HFileScanner scanner = reader.getScanner(false, false, false);
       fileStats = new KeyValueStatsCollector();
-      boolean shouldScanKeysValues = false;
-      if (this.isSeekToRow) {
+      boolean shouldScanKeysValues;
+      if (this.isSeekToRow && !Bytes.equals(row, reader.getFirstRowKey().orElse(null))) {
         // seek to the first kv on this row
-        shouldScanKeysValues =
-          (scanner.seekTo(PrivateCellUtil.createFirstOnRow(this.row)) != -1);
+        shouldScanKeysValues = (scanner.seekTo(PrivateCellUtil.createFirstOnRow(this.row)) != -1);
       } else {
         shouldScanKeysValues = scanner.seekTo();
       }
-      if (shouldScanKeysValues)
+      if (shouldScanKeysValues) {
         scanKeysValues(file, fileStats, scanner, row);
+      }
     }
 
     // print meta data

@@ -45,6 +45,11 @@ class WriterOverAsyncWriter implements WALProvider.Writer {
   }
 
   @Override
+  public long getSyncedLength() {
+    return asyncWriter.getSyncedLength();
+  }
+
+  @Override
   public void append(Entry entry) throws IOException {
     asyncWriter.append(entry);
   }

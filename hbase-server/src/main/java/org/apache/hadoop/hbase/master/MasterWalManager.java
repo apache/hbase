@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +43,6 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -55,6 +53,9 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 public class MasterWalManager {
   private static final Logger LOG = LoggerFactory.getLogger(MasterWalManager.class);
 
+  /**
+   * Filter *in* WAL files that are for the hbase:meta Region.
+   */
   final static PathFilter META_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path p) {
@@ -62,6 +63,9 @@ public class MasterWalManager {
     }
   };
 
+  /**
+   * Filter *out* WAL files that are for the hbase:meta Region; i.e. return user-space WALs only.
+   */
   @VisibleForTesting
   public final static PathFilter NON_META_FILTER = new PathFilter() {
     @Override
@@ -81,10 +85,19 @@ public class MasterWalManager {
 
   // The Path to the old logs dir
   private final Path oldLogDir;
+
   private final Path rootDir;
 
   // create the split log lock
   private final Lock splitLogLock = new ReentrantLock();
+
+  /**
+   * Superceded by {@link SplitWALManager}; i.e. procedure-based WAL splitting rather than
+   *   'classic' zk-coordinated WAL splitting.
+   * @deprecated  since 2.3.0 and 3.0.0 to be removed in 4.0.0; replaced by {@link SplitWALManager}.
+   * @see SplitWALManager
+   */
+  @Deprecated
   private final SplitLogManager splitLogManager;
 
   // Is the fileystem ok?
@@ -102,7 +115,6 @@ public class MasterWalManager {
     this.rootDir = rootDir;
     this.services = services;
     this.splitLogManager = new SplitLogManager(services, conf);
-
     this.oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
   }
 
@@ -204,7 +216,7 @@ public class MasterWalManager {
    */
   @Deprecated
   public Set<ServerName> getFailedServersFromLogFolders() throws IOException {
-    boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
+    boolean retrySplitting = !conf.getBoolean(WALSplitter.SPLIT_SKIP_ERRORS_KEY,
         WALSplitter.SPLIT_SKIP_ERRORS_DEFAULT);
 
     Set<ServerName> serverNames = new HashSet<>();
@@ -361,11 +373,13 @@ public class MasterWalManager {
   }
 
   /**
-   * For meta region open and closed normally on a server, it may leave some meta
-   * WAL in the server's wal dir. Since meta region is no long on this server,
-   * The SCP won't split those meta wals, just leaving them there. So deleting
-   * the wal dir will fail since the dir is not empty. Actually We can safely achive those
-   * meta log and Archiving the meta log and delete the dir.
+   * The hbase:meta region may OPEN and CLOSE without issue on a server and then move elsewhere.
+   * On CLOSE, the WAL for the hbase:meta table may not be archived yet (The WAL is only needed if
+   * hbase:meta did not close cleanaly). Since meta region is no long on this server,
+   * the ServerCrashProcedure won't split these leftover hbase:meta WALs, just leaving them in
+   * the WAL splitting dir. If we try to delete the WAL splitting for the server,  it fail since
+   * the dir is not totally empty. We can safely archive these hbase:meta log; then the
+   * WAL dir can be deleted.
    * @param serverName the server to archive meta log
    */
   public void archiveMetaLog(final ServerName serverName) {
@@ -396,6 +410,4 @@ public class MasterWalManager {
       LOG.warn("Failed archiving meta log for server " + serverName, ie);
     }
   }
-
-
 }

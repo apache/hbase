@@ -47,7 +47,7 @@ public class TestMetricsUserAggregate {
 
   private MetricsRegionServerWrapperStub wrapper;
   private MetricsRegionServer rsm;
-  private MetricsUserAggregateImpl userAgg;
+  private MetricsUserAggregate userAgg;
   private TableName tableName = TableName.valueOf("testUserAggregateMetrics");
 
   @BeforeClass
@@ -60,7 +60,7 @@ public class TestMetricsUserAggregate {
     wrapper = new MetricsRegionServerWrapperStub();
     Configuration conf = HBaseConfiguration.create();
     rsm = new MetricsRegionServer(wrapper,conf , null);
-    userAgg = (MetricsUserAggregateImpl)rsm.getMetricsUserAggregate();
+    userAgg = (MetricsUserAggregate)rsm.getMetricsUserAggregate();
   }
 
   private void doOperations() {
@@ -90,6 +90,11 @@ public class TestMetricsUserAggregate {
   @Test
   public void testPerUserOperations() {
     Configuration conf = HBaseConfiguration.create();
+    // If metrics for users is not enabled, this test doesn't  make sense.
+    if (!conf.getBoolean(MetricsUserAggregateFactory.METRIC_USER_ENABLED_CONF,
+      MetricsUserAggregateFactory.DEFAULT_METRIC_USER_ENABLED_CONF)) {
+      return;
+    }
     User userFoo = User.createUserForTesting(conf, "FOO", new String[0]);
     User userBar = User.createUserForTesting(conf, "BAR", new String[0]);
 
@@ -128,6 +133,11 @@ public class TestMetricsUserAggregate {
 
   @Test public void testLossyCountingOfUserMetrics() {
     Configuration conf = HBaseConfiguration.create();
+    // If metrics for users is not enabled, this test doesn't  make sense.
+    if (!conf.getBoolean(MetricsUserAggregateFactory.METRIC_USER_ENABLED_CONF,
+      MetricsUserAggregateFactory.DEFAULT_METRIC_USER_ENABLED_CONF)) {
+      return;
+    }
     int noOfUsers = 10000;
     for (int i = 1; i <= noOfUsers; i++) {
       User.createUserForTesting(conf, "FOO" + i, new String[0]).getUGI()

@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -30,12 +30,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
-import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder.ModifyableTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -147,9 +146,8 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     }
     TableDescriptor desc = builder.build();
     admin.createTable(desc).join();
-    ModifyableTableDescriptor modifyableDesc = ((ModifyableTableDescriptor) desc);
     TableDescriptor confirmedHtd = admin.getDescriptor(tableName).get();
-    assertEquals(0, modifyableDesc.compareTo((ModifyableTableDescriptor) confirmedHtd));
+    assertEquals(0, TableDescriptor.COMPARATOR.compare(desc, confirmedHtd));
   }
 
   @Test
@@ -283,7 +281,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName, splitKeys);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
-    List<HRegionLocation> regions = AsyncMetaTableAccessor
+    List<HRegionLocation> regions = ClientMetaTableAccessor
       .getTableHRegionLocations(metaTable, tableName).get();
     assertEquals(
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
@@ -294,7 +292,7 @@ public class TestAsyncTableAdminApi3 extends TestAsyncAdminBase {
     // Enable table, use retain assignment to assign regions.
     admin.enableTable(tableName).join();
 
-    List<HRegionLocation> regions2 = AsyncMetaTableAccessor
+    List<HRegionLocation> regions2 = ClientMetaTableAccessor
       .getTableHRegionLocations(metaTable, tableName).get();
     // Check the assignment.
     assertEquals(regions.size(), regions2.size());

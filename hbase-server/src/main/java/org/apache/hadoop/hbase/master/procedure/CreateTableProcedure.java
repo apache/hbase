@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -101,6 +103,7 @@ public class CreateTableProcedure
         case CREATE_TABLE_WRITE_FS_LAYOUT:
           DeleteTableProcedure.deleteFromFs(env, getTableName(), newRegions, true);
           newRegions = createFsLayout(env, tableDescriptor, newRegions);
+          env.getMasterServices().getTableDescriptors().update(tableDescriptor, true);
           setNextState(CreateTableState.CREATE_TABLE_ADD_TO_META);
           break;
         case CREATE_TABLE_ADD_TO_META:
@@ -114,8 +117,9 @@ public class CreateTableProcedure
           setNextState(CreateTableState.CREATE_TABLE_UPDATE_DESC_CACHE);
           break;
         case CREATE_TABLE_UPDATE_DESC_CACHE:
+          // XXX: this stage should be named as set table enabled, as now we will cache the
+          // descriptor after writing fs layout.
           setEnabledState(env, getTableName());
-          updateTableDescCache(env, getTableName());
           setNextState(CreateTableState.CREATE_TABLE_POST_OPERATION);
           break;
         case CREATE_TABLE_POST_OPERATION:
@@ -241,7 +245,7 @@ public class CreateTableProcedure
 
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
-    if (MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    if (env.getMasterServices().getTableDescriptors().exists(tableName)) {
       setFailure("master-create-table", new TableExistsException(getTableName()));
       return false;
     }
@@ -361,23 +365,26 @@ public class CreateTableProcedure
   }
 
   protected static List<RegionInfo> addTableToMeta(final MasterProcedureEnv env,
-      final TableDescriptor tableDescriptor,
-      final List<RegionInfo> regions) throws IOException {
+    final TableDescriptor tableDescriptor, final List<RegionInfo> regions) throws IOException {
     assert (regions != null && regions.size() > 0) : "expected at least 1 region, got " + regions;
 
     ProcedureSyncWait.waitMetaRegions(env);
 
     // Add replicas if needed
     // we need to create regions with replicaIds starting from 1
-    List<RegionInfo> newRegions = RegionReplicaUtil.addReplicas(tableDescriptor, regions, 1,
-      tableDescriptor.getRegionReplication());
+    List<RegionInfo> newRegions =
+      RegionReplicaUtil.addReplicas(regions, 1, tableDescriptor.getRegionReplication());
 
     // Add regions to META
     addRegionsToMeta(env, tableDescriptor, newRegions);
 
     // Setup replication for region replicas if needed
     if (tableDescriptor.getRegionReplication() > 1) {
-      ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterConfiguration());
+      try {
+        ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterServices());
+      } catch (ReplicationException e) {
+        throw new HBaseIOException(e);
+      }
     }
     return newRegions;
   }
@@ -404,11 +411,6 @@ public class CreateTableProcedure
       final List<RegionInfo> regionInfos) throws IOException {
     MetaTableAccessor.addRegionsToMeta(env.getMasterServices().getConnection(),
       regionInfos, tableDescriptor.getRegionReplication());
-  }
-
-  protected static void updateTableDescCache(final MasterProcedureEnv env,
-      final TableName tableName) throws IOException {
-    env.getMasterServices().getTableDescriptors().get(tableName);
   }
 
   @Override

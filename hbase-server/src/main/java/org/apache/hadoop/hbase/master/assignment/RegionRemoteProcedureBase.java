@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -41,7 +40,6 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionRemoteProcedureBaseState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionRemoteProcedureBaseStateData;
@@ -354,7 +352,10 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
       serializer.deserialize(RegionRemoteProcedureBaseStateData.class);
     region = ProtobufUtil.toRegionInfo(data.getRegion());
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
-    state = data.getState();
+    // 'state' may not be present if we are reading an 'old' form of this pb Message.
+    if (data.hasState()) {
+      state = data.getState();
+    }
     if (data.hasTransitionCode()) {
       transitionCode = data.getTransitionCode();
       seqId = data.getSeqId();
@@ -364,5 +365,21 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   @Override
   protected void afterReplay(MasterProcedureEnv env) {
     getParent(env).attachRemoteProc(this);
+  }
+
+  @Override public String getProcName() {
+    return getClass().getSimpleName() + " " + region.getEncodedName();
+  }
+
+  @Override protected void toStringClassDetails(StringBuilder builder) {
+    builder.append(getProcName());
+    if (targetServer != null) {
+      builder.append(", server=");
+      builder.append(this.targetServer);
+    }
+    if (this.retryCounter != null) {
+      builder.append(", retry=");
+      builder.append(this.retryCounter);
+    }
   }
 }

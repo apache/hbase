@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.ServerLoca
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -83,7 +85,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           new int[]{2, 0, 0, 100},   // region 0 is hosted and entirely local on server 2
           new int[]{0, 100, 0, 0},   // region 1 is hosted and entirely on server 0
           new int[]{0, 100, 0, 0},   // region 2 is hosted and entirely on server 0
-          new int[]{1, 0, 100, 0},   // region 1 is hosted and entirely on server 1
+          new int[]{1, 0, 100, 0},   // region 3 is hosted and entirely on server 1
       },
 
       // Test 2: each region is 0% local on the server that hosts it
@@ -92,7 +94,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           new int[]{0, 0, 0, 100},   // region 0 is hosted and entirely local on server 2
           new int[]{1, 100, 0, 0},   // region 1 is hosted and entirely on server 0
           new int[]{1, 100, 0, 0},   // region 2 is hosted and entirely on server 0
-          new int[]{2, 0, 100, 0},   // region 1 is hosted and entirely on server 1
+          new int[]{2, 0, 100, 0},   // region 3 is hosted and entirely on server 1
       },
 
       // Test 3: each region is 25% local on the server that hosts it (and 50% locality is possible)
@@ -101,7 +103,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           new int[]{0, 25, 0, 50},   // region 0 is hosted and entirely local on server 2
           new int[]{1, 50, 25, 0},   // region 1 is hosted and entirely on server 0
           new int[]{1, 50, 25, 0},   // region 2 is hosted and entirely on server 0
-          new int[]{2, 0, 50, 25},   // region 1 is hosted and entirely on server 1
+          new int[]{2, 0, 50, 25},   // region 3 is hosted and entirely on server 1
       },
 
       // Test 4: each region is 25% local on the server that hosts it (and 100% locality is possible)
@@ -110,7 +112,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           new int[]{0, 25, 0, 100},   // region 0 is hosted and entirely local on server 2
           new int[]{1, 100, 25, 0},   // region 1 is hosted and entirely on server 0
           new int[]{1, 100, 25, 0},   // region 2 is hosted and entirely on server 0
-          new int[]{2, 0, 100, 25},   // region 1 is hosted and entirely on server 1
+          new int[]{2, 0, 100, 25},   // region 3 is hosted and entirely on server 1
       },
 
       // Test 5: each region is 75% local on the server that hosts it (and 75% locality is possible everywhere)
@@ -119,7 +121,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           new int[]{0, 75, 75, 75},   // region 0 is hosted and entirely local on server 2
           new int[]{1, 75, 75, 75},   // region 1 is hosted and entirely on server 0
           new int[]{1, 75, 75, 75},   // region 2 is hosted and entirely on server 0
-          new int[]{2, 75, 75, 75},   // region 1 is hosted and entirely on server 1
+          new int[]{2, 75, 75, 75},   // region 3 is hosted and entirely on server 1
       },
   };
 
@@ -194,6 +196,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertEquals(2, regionsMoveFromServerA.size());
     assertEquals(2, targetServers.size());
     assertTrue(regionsOnServerA.containsAll(regionsMoveFromServerA));
+    assertNull(loadBalancer.namedQueueRecorder);
     // reset config
     conf.setFloat("hbase.master.balancer.stochastic.cpRequestCost", 5f);
     loadBalancer.setConf(conf);
@@ -230,6 +233,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     String regionNameAsString = RegionInfo.getRegionNameAsString(Bytes.toBytes(REGION_KEY));
     assertTrue(loadBalancer.loads.get(regionNameAsString) != null);
     assertTrue(loadBalancer.loads.get(regionNameAsString).size() == 15);
+    assertNull(loadBalancer.namedQueueRecorder);
 
     Queue<BalancerRegionLoad> loads = loadBalancer.loads.get(regionNameAsString);
     int i = 0;
@@ -282,6 +286,33 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       double expected = 1 - expectedLocalities[test];
       assertEquals(expected, cost, 0.001);
     }
+    assertNull(loadBalancer.namedQueueRecorder);
+  }
+
+  @Test
+  public void testMoveCostMultiplier() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    StochasticLoadBalancer.CostFunction
+      costFunction = new StochasticLoadBalancer.MoveCostFunction(conf);
+    BaseLoadBalancer.Cluster cluster = mockCluster(clusterStateMocks[0]);
+    costFunction.init(cluster);
+    costFunction.cost();
+    assertEquals(StochasticLoadBalancer.MoveCostFunction.DEFAULT_MOVE_COST,
+      costFunction.getMultiplier(), 0.01);
+
+    // In offpeak hours, the multiplier of move cost should be lower
+    conf.setInt("hbase.offpeak.start.hour",0);
+    conf.setInt("hbase.offpeak.end.hour",23);
+    // Set a fixed time which hour is 15, so it will always in offpeak
+    // See HBASE-24898 for more info of the calculation here
+    long deltaFor15 = TimeZone.getDefault().getRawOffset() - 28800000;
+    long timeFor15 = 1597907081000L - deltaFor15;
+    EnvironmentEdgeManager.injectEdge(() -> timeFor15);
+    costFunction = new StochasticLoadBalancer.MoveCostFunction(conf);
+    costFunction.init(cluster);
+    costFunction.cost();
+    assertEquals(StochasticLoadBalancer.MoveCostFunction.DEFAULT_MOVE_COST_OFFPEAK
+      , costFunction.getMultiplier(), 0.01);
   }
 
   @Test

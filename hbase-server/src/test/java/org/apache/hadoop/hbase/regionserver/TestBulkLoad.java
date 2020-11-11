@@ -46,10 +46,11 @@ import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -255,26 +256,19 @@ public class TestBulkLoad {
     return new Pair<>(new byte[]{0x00, 0x01, 0x02}, getNotExistFilePath());
   }
 
-
   private HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,
-                                                              byte[]... families)
-  throws IOException {
-    HRegionInfo hRegionInfo = new HRegionInfo(tableName);
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
+    byte[]... families) throws IOException {
+    RegionInfo hRegionInfo = RegionInfoBuilder.newBuilder(tableName).build();
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
     for (byte[] family : families) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     // TODO We need a way to do this without creating files
-    return HRegion.createHRegion(hRegionInfo,
-        new Path(testFolder.newFolder().toURI()),
-        conf,
-        tableDescriptor,
-        log);
-
+    return HRegion.createHRegion(hRegionInfo, new Path(testFolder.newFolder().toURI()), conf,
+      builder.build(), log);
   }
 
   private HRegion testRegionWithFamilies(byte[]... families) throws IOException {

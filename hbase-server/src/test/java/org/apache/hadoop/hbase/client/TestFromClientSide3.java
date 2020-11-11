@@ -43,10 +43,8 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -308,8 +306,8 @@ public class TestFromClientSide3 {
 
         // change the compaction.min config option for this table to 5
         LOG.info("hbase.hstore.compaction.min should now be 5");
-        HTableDescriptor htd = new HTableDescriptor(table.getDescriptor());
-        htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
+        TableDescriptor htd = TableDescriptorBuilder.newBuilder(table.getDescriptor())
+          .setValue("hbase.hstore.compaction.min", String.valueOf(5)).build();
         admin.modifyTable(htd);
         LOG.info("alter status finished");
 
@@ -327,9 +325,10 @@ public class TestFromClientSide3 {
 
         // change an individual CF's config option to 2 & online schema update
         LOG.info("hbase.hstore.compaction.min should now be 2");
-        HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
-        hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
-        htd.modifyFamily(hcd);
+        htd = TableDescriptorBuilder.newBuilder(htd)
+          .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(htd.getColumnFamily(FAMILY))
+            .setValue("hbase.hstore.compaction.min", String.valueOf(2)).build())
+          .build();
         admin.modifyTable(htd);
         LOG.info("alter status finished");
 
@@ -356,9 +355,10 @@ public class TestFromClientSide3 {
         // Finally, ensure that we can remove a custom config value after we made it
         LOG.info("Removing CF config value");
         LOG.info("hbase.hstore.compaction.min should now be 5");
-        hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
-        hcd.setValue("hbase.hstore.compaction.min", null);
-        htd.modifyFamily(hcd);
+        htd = TableDescriptorBuilder.newBuilder(htd)
+          .modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(htd.getColumnFamily(FAMILY))
+            .setValue("hbase.hstore.compaction.min", null).build())
+          .build();
         admin.modifyTable(htd);
         LOG.info("alter status finished");
         assertNull(table.getDescriptor().getColumnFamily(FAMILY)
@@ -449,6 +449,89 @@ public class TestFromClientSide3 {
         String msg = e.getMessage();
         assertTrue(msg.contains("NoSuchColumnFamilyException"));
       }
+    }
+  }
+
+  @Test
+  public void testBatchWithCheckAndMutate() throws Exception {
+    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY })) {
+      byte[] row1 = Bytes.toBytes("row1");
+      byte[] row2 = Bytes.toBytes("row2");
+      byte[] row3 = Bytes.toBytes("row3");
+      byte[] row4 = Bytes.toBytes("row4");
+      byte[] row5 = Bytes.toBytes("row5");
+      byte[] row6 = Bytes.toBytes("row6");
+      byte[] row7 = Bytes.toBytes("row7");
+
+      table.put(Arrays.asList(
+        new Put(row1).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a")),
+        new Put(row2).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b")),
+        new Put(row3).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c")),
+        new Put(row4).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")),
+        new Put(row5).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")),
+        new Put(row6).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes(10L)),
+        new Put(row7).addColumn(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g"))));
+
+      CheckAndMutate checkAndMutate1 = CheckAndMutate.newBuilder(row1)
+        .ifEquals(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("a"))
+        .build(new Put(row1).addColumn(FAMILY, Bytes.toBytes("A"), Bytes.toBytes("g")));
+      Get get = new Get(row2).addColumn(FAMILY, Bytes.toBytes("B"));
+      RowMutations mutations = new RowMutations(row3)
+        .add((Mutation) new Delete(row3).addColumns(FAMILY, Bytes.toBytes("C")))
+        .add((Mutation) new Put(row3).addColumn(FAMILY, Bytes.toBytes("F"), Bytes.toBytes("f")));
+      CheckAndMutate checkAndMutate2 = CheckAndMutate.newBuilder(row4)
+        .ifEquals(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("a"))
+        .build(new Put(row4).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("h")));
+      Put put = new Put(row5).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("f"));
+      CheckAndMutate checkAndMutate3 = CheckAndMutate.newBuilder(row6)
+        .ifEquals(FAMILY, Bytes.toBytes("F"), Bytes.toBytes(10L))
+        .build(new Increment(row6).addColumn(FAMILY, Bytes.toBytes("F"), 1));
+      CheckAndMutate checkAndMutate4 = CheckAndMutate.newBuilder(row7)
+        .ifEquals(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g"))
+        .build(new Append(row7).addColumn(FAMILY, Bytes.toBytes("G"), Bytes.toBytes("g")));
+
+      List<Row> actions = Arrays.asList(checkAndMutate1, get, mutations, checkAndMutate2, put,
+        checkAndMutate3, checkAndMutate4);
+      Object[] results = new Object[actions.size()];
+      table.batch(actions, results);
+
+      assertTrue(((CheckAndMutateResult) results[0]).isSuccess());
+      assertNull(((CheckAndMutateResult) results[0]).getResult());
+      assertEquals("b",
+        Bytes.toString(((Result) results[1]).getValue(FAMILY, Bytes.toBytes("B"))));
+      assertTrue(((Result) results[2]).getExists());
+      assertFalse(((CheckAndMutateResult) results[3]).isSuccess());
+      assertNull(((CheckAndMutateResult) results[3]).getResult());
+      assertTrue(((Result) results[4]).isEmpty());
+
+      CheckAndMutateResult checkAndMutateResult = (CheckAndMutateResult) results[5];
+      assertTrue(checkAndMutateResult.isSuccess());
+      assertEquals(11, Bytes.toLong(checkAndMutateResult.getResult()
+        .getValue(FAMILY, Bytes.toBytes("F"))));
+
+      checkAndMutateResult = (CheckAndMutateResult) results[6];
+      assertTrue(checkAndMutateResult.isSuccess());
+      assertEquals("gg", Bytes.toString(checkAndMutateResult.getResult()
+        .getValue(FAMILY, Bytes.toBytes("G"))));
+
+      Result result = table.get(new Get(row1));
+      assertEquals("g", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("A"))));
+
+      result = table.get(new Get(row3));
+      assertNull(result.getValue(FAMILY, Bytes.toBytes("C")));
+      assertEquals("f", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("F"))));
+
+      result = table.get(new Get(row4));
+      assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
+
+      result = table.get(new Get(row5));
+      assertEquals("f", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("E"))));
+
+      result = table.get(new Get(row6));
+      assertEquals(11, Bytes.toLong(result.getValue(FAMILY, Bytes.toBytes("F"))));
+
+      result = table.get(new Get(row7));
+      assertEquals("gg", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("G"))));
     }
   }
 
@@ -681,14 +764,10 @@ public class TestFromClientSide3 {
     });
   }
 
-  private void testPreBatchMutate(TableName tableName, Runnable rn)throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-
-    tableDescriptor.setCoprocessor(WaitingForScanObserver.class.getName());
-    tableDescriptor.setColumnFamily(familyDescriptor);
+  private void testPreBatchMutate(TableName tableName, Runnable rn) throws Exception {
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+      .setCoprocessor(WaitingForScanObserver.class.getName()).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     // Don't use waitTableAvailable(), because the scanner will mess up the co-processor
 
@@ -720,14 +799,10 @@ public class TestFromClientSide3 {
 
   @Test
   public void testLockLeakWithDelta() throws Exception, Throwable {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-
-    tableDescriptor.setCoprocessor(WaitingForMultiMutationsObserver.class.getName());
-    tableDescriptor.setValue("hbase.rowlock.wait.duration", String.valueOf(5000));
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+      .setCoprocessor(WaitingForMultiMutationsObserver.class.getName())
+      .setValue("hbase.rowlock.wait.duration", String.valueOf(5000)).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 
@@ -779,15 +854,11 @@ public class TestFromClientSide3 {
 
   @Test
   public void testMultiRowMutations() throws Exception, Throwable {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-
-    tableDescriptor.setCoprocessor(MultiRowMutationEndpoint.class.getName());
-    tableDescriptor.setCoprocessor(WaitingForMultiMutationsObserver.class.getName());
-    tableDescriptor.setValue("hbase.rowlock.wait.duration", String.valueOf(5000));
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+      .setCoprocessor(MultiRowMutationEndpoint.class.getName())
+      .setCoprocessor(WaitingForMultiMutationsObserver.class.getName())
+      .setValue("hbase.rowlock.wait.duration", String.valueOf(5000)).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     TEST_UTIL.waitTableAvailable(tableName, WAITTABLE_MILLIS);
 

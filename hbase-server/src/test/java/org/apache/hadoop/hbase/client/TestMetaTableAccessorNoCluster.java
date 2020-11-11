@@ -24,12 +24,12 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.After;
@@ -63,26 +63,26 @@ public class TestMetaTableAccessorNoCluster {
 
   @Test
   public void testGetHRegionInfo() throws IOException {
-    assertNull(MetaTableAccessor.getRegionInfo(new Result()));
+    assertNull(CatalogFamilyFormat.getRegionInfo(new Result()));
 
     List<Cell> kvs = new ArrayList<>();
     Result r = Result.create(kvs);
-    assertNull(MetaTableAccessor.getRegionInfo(r));
+    assertNull(CatalogFamilyFormat.getRegionInfo(r));
 
     byte[] f = HConstants.CATALOG_FAMILY;
     // Make a key value that doesn't have the expected qualifier.
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f, HConstants.SERVER_QUALIFIER, f));
     r = Result.create(kvs);
-    assertNull(MetaTableAccessor.getRegionInfo(r));
+    assertNull(CatalogFamilyFormat.getRegionInfo(r));
     // Make a key that does not have a regioninfo value.
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f, HConstants.REGIONINFO_QUALIFIER, f));
-    RegionInfo hri = MetaTableAccessor.getRegionInfo(Result.create(kvs));
+    RegionInfo hri = CatalogFamilyFormat.getRegionInfo(Result.create(kvs));
     assertTrue(hri == null);
     // OK, give it what it expects
     kvs.clear();
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f, HConstants.REGIONINFO_QUALIFIER,
       RegionInfo.toByteArray(RegionInfoBuilder.FIRST_META_REGIONINFO)));
-    hri = MetaTableAccessor.getRegionInfo(Result.create(kvs));
+    hri = CatalogFamilyFormat.getRegionInfo(Result.create(kvs));
     assertNotNull(hri);
     assertTrue(RegionInfo.COMPARATOR.compare(hri, RegionInfoBuilder.FIRST_META_REGIONINFO) == 0);
   }

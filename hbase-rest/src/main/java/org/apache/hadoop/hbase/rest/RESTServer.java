@@ -45,29 +45,30 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.eclipse.jetty.http.HttpVersion;
-import org.eclipse.jetty.jmx.MBeanContainer;
-import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.HttpConnectionFactory;
-import org.eclipse.jetty.server.SecureRequestCustomizer;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.SslConnectionFactory;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.jmx.MBeanContainer;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConfiguration;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.HttpConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.FilterHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandler;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
+import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
 
 /**
  * Main class for launching REST gateway as a servlet hosted by Jetty.
@@ -381,13 +382,8 @@ public class RESTServer implements Constants {
       this.infoServer.setAttribute("hbase.conf", conf);
       this.infoServer.start();
     }
-    try {
-      // start server
-      server.start();
-    } catch (Exception e) {
-      LOG.error(HBaseMarkers.FATAL, "Failed to start server", e);
-      throw e;
-    }
+    // start server
+    server.start();
   }
 
   public synchronized void join() throws Exception {
@@ -441,6 +437,7 @@ public class RESTServer implements Constants {
       server.run();
       server.join();
     } catch (Exception e) {
+      LOG.error(HBaseMarkers.FATAL, "Failed to start server", e);
       System.exit(1);
     }
 

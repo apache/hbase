@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -330,7 +331,7 @@ public class RestoreSnapshotProcedure
   private void prepareRestore(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
     // Checks whether the table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), tableName)) {
+    if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
       throw new TableNotFoundException(tableName);
     }
 
@@ -413,12 +414,11 @@ public class RestoreSnapshotProcedure
 
   /**
    * Apply changes to hbase:meta
-   * @param env MasterProcedureEnv
-   * @throws IOException
    **/
   private void updateMETA(final MasterProcedureEnv env) throws IOException {
     try {
       Connection conn = env.getMasterServices().getConnection();
+      RegionStateStore regionStateStore = env.getAssignmentManager().getRegionStateStore();
       int regionReplication = modifiedTableDescriptor.getRegionReplication();
 
       // 1. Prepare to restore
@@ -433,7 +433,7 @@ public class RestoreSnapshotProcedure
       // not overwritten/removed, so you end up with old informations
       // that are not correct after the restore.
       if (regionsToRemove != null) {
-        MetaTableAccessor.deleteRegionInfos(conn, regionsToRemove);
+        regionStateStore.deleteRegions(regionsToRemove);
         deleteRegionsFromInMemoryStates(regionsToRemove, env, regionReplication);
       }
 
@@ -449,7 +449,7 @@ public class RestoreSnapshotProcedure
       }
 
       if (regionsToRestore != null) {
-        MetaTableAccessor.overwriteRegions(conn, regionsToRestore, regionReplication);
+        regionStateStore.overwriteRegions(regionsToRestore, regionReplication);
 
         deleteRegionsFromInMemoryStates(regionsToRestore, env, regionReplication);
         addRegionsToInMemoryStates(regionsToRestore, env, regionReplication);

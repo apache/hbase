@@ -154,7 +154,6 @@ echo "Checking against things we don't expect to include in the source tarball (
 # e.g. prior to HBASE-19152 we'd have the following lines (ignoring the bash comment marker):
 #Only in .: .gitattributes
 #Only in .: .gitignore
-#Only in .: hbase-native-client
 cat >known_excluded <<END
 Only in .: .git
 END

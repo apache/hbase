@@ -34,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -190,7 +190,7 @@ public abstract class Action {
     getLogger().info("Stopping regionserver {}", server);
     cluster.stopRegionServer(server);
     cluster.waitForRegionServerToStop(server, killRsTimeout);
-    getLogger().info("Stoppiong regionserver {}. Reported num of rs:{}", server,
+    getLogger().info("Stopping regionserver {}. Reported num of rs:{}", server,
       cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
@@ -288,7 +288,7 @@ public abstract class Action {
       getLogger().debug("Removing {} regions from {}", victimRegionCount, sn);
       for (int i = 0; i < victimRegionCount; ++i) {
         int victimIx = RandomUtils.nextInt(0, regions.size());
-        String regionId = HRegionInfo.encodeRegionName(regions.remove(victimIx));
+        String regionId = RegionInfo.encodeRegionName(regions.remove(victimIx));
         victimRegions.add(Bytes.toBytes(regionId));
       }
     }

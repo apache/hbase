@@ -38,11 +38,11 @@ import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -652,7 +652,7 @@ public class TestThriftServer {
     handler.createTable(tableAname, getColumnDescriptors());
     try {
       handler.mutateRow(tableAname, rowAname, getMutations(), null);
-      byte[] searchRow = HRegionInfo.createRegionName(
+      byte[] searchRow = RegionInfo.createRegionName(
           TableName.valueOf(tableAname.array()), rowAname.array(),
           HConstants.NINES, false);
       TRegionInfo regionInfo = handler.getRegionInfo(ByteBuffer.wrap(searchRow));

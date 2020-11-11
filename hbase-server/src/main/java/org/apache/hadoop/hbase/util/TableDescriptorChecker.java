@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -148,6 +149,11 @@ public final class TableDescriptorChecker {
     if (regionReplicas < 1) {
       String message = "Table region replication should be at least one.";
       warnOrThrowExceptionForFailure(logWarn, message, null);
+    }
+
+    // Meta table shouldn't be set as read only, otherwise it will impact region assignments
+    if (td.isReadOnly() && TableName.isMetaTableName(td.getTableName())) {
+      warnOrThrowExceptionForFailure(false, "Meta table can't be set as read only.", null);
     }
 
     for (ColumnFamilyDescriptor hcd : td.getColumnFamilies()) {

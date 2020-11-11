@@ -27,7 +27,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -48,14 +48,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTestConst;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -98,7 +101,7 @@ public class TestCompaction {
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
-  private TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor = null;
+  private TableDescriptor tableDescriptor = null;
   private static final byte [] COLUMN_FAMILY = fam1;
   private final byte [] STARTROW = Bytes.toBytes(START_KEY);
   private static final byte [] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
@@ -128,17 +131,16 @@ public class TestCompaction {
 
   @Before
   public void setUp() throws Exception {
-    this.tableDescriptor = UTIL.createModifyableTableDescriptor(name.getMethodName());
+    TableDescriptorBuilder builder = UTIL.createModifyableTableDescriptor(name.getMethodName());
     if (name.getMethodName().equals("testCompactionSeqId")) {
       UTIL.getConfiguration().set("hbase.hstore.compaction.kv.max", "10");
-      UTIL.getConfiguration().set(
-          DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY,
-          DummyCompactor.class.getName());
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-      familyDescriptor.setMaxVersions(65536);
-      this.tableDescriptor.setColumnFamily(familyDescriptor);
+      UTIL.getConfiguration().set(DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY,
+        DummyCompactor.class.getName());
+      ColumnFamilyDescriptor familyDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(65536).build();
+      builder.setColumnFamily(familyDescriptor);
     }
+    this.tableDescriptor = builder.build();
     this.r = UTIL.createLocalHRegion(tableDescriptor, null, null);
   }
 
@@ -172,7 +174,7 @@ public class TestCompaction {
         for (int j = 0; j < jmax; j++) {
           p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
         }
-        HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
+        HTestConst.addContent(loader, Bytes.toString(COLUMN_FAMILY));
         loader.put(p);
         r.flush(true);
       }
@@ -248,7 +250,7 @@ public class TestCompaction {
         for (int j = 0; j < jmax; j++) {
           p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
         }
-        HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
+        HTestConst.addContent(loader, Bytes.toString(COLUMN_FAMILY));
         loader.put(p);
         r.flush(true);
       }
@@ -328,7 +330,7 @@ public class TestCompaction {
 
   private void createStoreFile(final HRegion region, String family) throws IOException {
     Table loader = new RegionAsTable(region);
-    HBaseTestCase.addContent(loader, family);
+    HTestConst.addContent(loader, family);
     region.flush(true);
   }
 
@@ -448,7 +450,7 @@ public class TestCompaction {
     // setup a compact/split thread on a mock server
     HRegionServer mockServer = Mockito.mock(HRegionServer.class);
     Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
-    CompactSplit thread = new CompactSplit(mockServer);
+    final CompactSplit thread = new CompactSplit(mockServer);
     Mockito.when(mockServer.getCompactSplitThread()).thenReturn(thread);
     // setup a region/store with some files
     HStore store = r.getStore(COLUMN_FAMILY);
@@ -459,19 +461,26 @@ public class TestCompaction {
     thread.switchCompaction(false);
     thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
       CompactionLifeCycleTracker.DUMMY, null);
-    assertEquals(false, thread.isCompactionsEnabled());
+    assertFalse(thread.isCompactionsEnabled());
     int longCompactions = thread.getLongCompactions().getActiveCount();
     int shortCompactions = thread.getShortCompactions().getActiveCount();
     assertEquals("longCompactions=" + longCompactions + "," +
         "shortCompactions=" + shortCompactions, 0, longCompactions + shortCompactions);
     thread.switchCompaction(true);
-    assertEquals(true, thread.isCompactionsEnabled());
+    assertTrue(thread.isCompactionsEnabled());
+    // Make sure no compactions have run.
+    assertEquals(0, thread.getLongCompactions().getCompletedTaskCount() +
+        thread.getShortCompactions().getCompletedTaskCount());
+    // Request a compaction and make sure it is submitted successfully.
     thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
-      CompactionLifeCycleTracker.DUMMY, null);
-    longCompactions = thread.getLongCompactions().getActiveCount();
-    shortCompactions = thread.getShortCompactions().getActiveCount();
-    assertEquals("longCompactions=" + longCompactions + "," +
-        "shortCompactions=" + shortCompactions, 1, longCompactions + shortCompactions);
+        CompactionLifeCycleTracker.DUMMY, null);
+    // Wait until the compaction finishes.
+    Waiter.waitFor(UTIL.getConfiguration(), 5000,
+        (Waiter.Predicate<Exception>) () -> thread.getLongCompactions().getCompletedTaskCount() +
+        thread.getShortCompactions().getCompletedTaskCount() == 1);
+    // Make sure there are no compactions running.
+    assertEquals(0, thread.getLongCompactions().getActiveCount()
+        + thread.getShortCompactions().getActiveCount());
   }
 
   @Test public void testInterruptingRunningCompactions() throws Exception {
@@ -495,7 +504,7 @@ public class TestCompaction {
       for (int j = 0; j < jmax; j++) {
         p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
       }
-      HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
+      HTestConst.addContent(loader, Bytes.toString(COLUMN_FAMILY));
       loader.put(p);
       r.flush(true);
     }

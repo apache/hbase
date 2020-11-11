@@ -125,7 +125,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.master.logcleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveProcedureWALCleaner</value>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveProcedureWALCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveMasterLocalStoreWALCleaner</value>
     <description>A comma-separated list of BaseLogCleanerDelegate invoked by
     the LogsCleaner service. These WAL cleaners are called in order,
     so put the cleaner that prunes the most files in front. To
@@ -140,29 +140,11 @@ possible configurations would overwhelm and obscure the important.
     after which it will be cleaned by a Master thread. The value is in milliseconds.</description>
   </property>
   <property>
-    <name>hbase.master.procedurewalcleaner.ttl</name>
-    <value>604800000</value>
-    <description>How long a Procedure WAL will remain in the
-    archive directory, after which it will be cleaned
-    by a Master thread. The value is in milliseconds.</description>
-  </property>
-  <property>
     <name>hbase.master.hfilecleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveMasterLocalStoreHFileCleaner</value>
     <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
     the HFileCleaner service. These HFiles cleaners are called in order,
     so put the cleaner that prunes the most files in front. To
-    implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
-    and add the fully qualified class name here. Always add the above
-    default hfile cleaners in the list as they will be overwritten in
-    hbase-site.xml.</description>
-  </property>
-  <property>
-    <name>hbase.procedure.store.region.hfilecleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
-    <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
-    the RegionProcedureStore HFileCleaner service. These HFiles cleaners are
-    called in order, so put the cleaner that prunes the most files in front. To
     implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
     and add the fully qualified class name here. Always add the above
     default hfile cleaners in the list as they will be overwritten in
@@ -622,30 +604,54 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.balancer.period</name>
     <value>300000</value>
-    <description>Period at which the region balancer runs in the Master.</description>
-  </property>
-  <property>
-    <name>hbase.normalizer.period</name>
-    <value>300000</value>
-    <description>Period at which the region normalizer runs in the Master.</description>
-  </property>
-  <property>
-    <name>hbase.normalizer.min.region.count</name>
-    <value>3</value>
-    <description>configure the minimum number of regions</description>
-  </property>
-  <property>
-    <name>hbase.normalizer.min.region.merge.age</name>
-    <value>3</value>
-    <description>configure the minimum age in days for region before it is considered for merge while
-      normalizing</description>
+    <description>Period at which the region balancer runs in the Master, in
+      milliseconds.</description>
   </property>
   <property>
     <name>hbase.regions.slop</name>
     <value>0.001</value>
     <description>Rebalance if any regionserver has average + (average * slop) regions.
-      The default value of this parameter is 0.001 in StochasticLoadBalancer (the default load balancer),
-      while the default is 0.2 in other load balancers (i.e., SimpleLoadBalancer).</description>
+      The default value of this parameter is 0.001 in StochasticLoadBalancer (the default load
+      balancer), while the default is 0.2 in other load balancers (i.e.,
+      SimpleLoadBalancer).</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.period</name>
+    <value>300000</value>
+    <description>Period at which the region normalizer runs in the Master, in
+      milliseconds.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.split.enabled</name>
+    <value>true</value>
+    <description>Whether to split a region as part of normalization.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.enabled</name>
+    <value>true</value>
+    <description>Whether to merge a region as part of normalization.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.min.region.count</name>
+    <value>3</value>
+    <description>The minimum number of regions in a table to consider it for merge
+      normalization.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min_region_age.days</name>
+    <value>3</value>
+    <description>The minimum age for a region to be considered for a merge, in days.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min_region_age.days</name>
+    <value>3</value>
+    <description>The minimum age for a region to be considered for a merge, in days.</description>
+  </property>
+  <property>
+    <name>hbase.normalizer.merge.min_region_size.mb</name>
+    <value>1</value>
+    <description>The minimum size for a region to be considered for a merge, in whole
+      MBs.</description>
   </property>
   <property>
     <name>hbase.server.thread.wakefrequency</name>
@@ -762,9 +768,16 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.hregion.max.filesize</name>
     <value>10737418240</value>
-    <description>
-    Maximum HFile size. If the sum of the sizes of a region's HFiles has grown to exceed this
-    value, the region is split in two.</description>
+    <description>Maximum file size. If the sum of the sizes of a region's HFiles has
+      grown to exceed this value, the region is split in two. There are two choices of
+      how this option works, the first is when any store's size exceed the threshold
+      then split, and the other is overall region's size exceed the threshold then split,
+      it can be configed by hbase.hregion.split.overallfiles.</description>
+  </property>
+  <property>
+    <name>hbase.hregion.split.overallfiles</name>
+    <value>true</value>
+    <description>If we should sum overall region files size when check to split.</description>
   </property>
   <property>
     <name>hbase.hregion.majorcompaction</name>
@@ -1106,19 +1119,19 @@ possible configurations would overwhelm and obscure the important.
     http://docs.oracle.com/javase/1.5.0/docs/api/java/net/Socket.html#getTcpNoDelay()</description>
   </property>
   <property>
-    <name>hbase.regionserver.hostname</name>
+    <name>hbase.unsafe.regionserver.hostname</name>
     <value></value>
     <description>This config is for experts: don't set its value unless you really know what you are doing.
     When set to a non-empty value, this represents the (external facing) hostname for the underlying server.
     See https://issues.apache.org/jira/browse/HBASE-12954 for details.</description>
   </property>
   <property>
-    <name>hbase.regionserver.hostname.disable.master.reversedns</name>
+    <name>hbase.unsafe.regionserver.hostname.disable.master.reversedns</name>
     <value>false</value>
     <description>This config is for experts: don't set its value unless you really know what you are doing.
     When set to true, regionserver will use the current node hostname for the servername and HMaster will
     skip reverse DNS lookup and use the hostname sent by regionserver instead. Note that this config and
-    hbase.regionserver.hostname are mutually exclusive. See https://issues.apache.org/jira/browse/HBASE-18226
+    hbase.unsafe.regionserver.hostname are mutually exclusive. See https://issues.apache.org/jira/browse/HBASE-18226
     for more details.</description>
   </property>
   <!-- The following properties configure authentication information for
@@ -1948,6 +1961,18 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.slowlog.systable.enabled</name>
+    <value>false</value>
+    <description>
+      Should be enabled only if hbase.regionserver.slowlog.buffer.enabled is enabled. If enabled
+      (true), all slow/large RPC logs would be persisted to system table hbase:slowlog (in addition
+      to in-memory ring buffer at each RegionServer). The records are stored in increasing
+      order of time. Operators can scan the table with various combination of ColumnValueFilter.
+      More details are provided in the doc section:
+      "Get Slow/Large Response Logs from System table hbase:slowlog"
+    </description>
+  </property>
+  <property>
     <name>hbase.master.metafixer.max.merge.count</name>
     <value>64</value>
     <description>
@@ -1965,6 +1990,27 @@ possible configurations would overwhelm and obscure the important.
       warning will be logged. This config should be turned on to prevent RegionServer from serving
       very large batch size of rows and this way we can improve CPU usages by discarding
       too large batch request.
+    </description>
+  </property>
+  <property>
+    <name>hbase.namedqueue.provider.classes</name>
+    <value>org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerDecisionQueueService</value>
+    <description>
+      Default values for NamedQueueService implementors. This comma separated full class names
+      represent all implementors of NamedQueueService that we would like to be invoked by
+      LogEvent handler service. One example of NamedQueue service is SlowLogQueueService which
+      is used to store slow/large RPC logs in ringbuffer at each RegionServer.
+      All implementors of NamedQueueService should be found under package:
+      "org.apache.hadoop.hbase.namequeues.impl"
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.balancer.decision.buffer.enabled</name>
+    <value>false</value>
+    <description>
+      Indicates whether active HMaster has ring buffer running for storing
+      balancer decisions in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config: hbase.master.balancer.decision.queue.size
     </description>
   </property>
 </configuration>

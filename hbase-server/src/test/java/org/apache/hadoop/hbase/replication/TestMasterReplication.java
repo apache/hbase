@@ -25,28 +25,26 @@ import static org.junit.Assert.fail;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.ServerMetrics;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -72,10 +70,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -176,40 +173,16 @@ public class TestMasterReplication {
 
   /**
    * Tests the replication scenario 0 -> 0. By default
-   * {@link BaseReplicationEndpoint#canReplicateToSameCluster()} returns false, so the
-   * ReplicationSource should terminate, and no further logs should get enqueued
+   * {@link org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint},
+   * the replication peer should not be added.
    */
-  @Test
-  public void testLoopedReplication() throws Exception {
+  @Test(expected = DoNotRetryIOException.class)
+  public void testLoopedReplication()
+    throws Exception {
     LOG.info("testLoopedReplication");
     startMiniClusters(1);
     createTableOnClusters(table);
     addPeer("1", 0, 0);
-    Thread.sleep(SLEEP_TIME);
-
-    // wait for source to terminate
-    final ServerName rsName = utilities[0].getHBaseCluster().getRegionServer(0).getServerName();
-    Waiter.waitFor(baseConfiguration, 10000, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        ClusterMetrics clusterStatus = utilities[0].getAdmin()
-            .getClusterMetrics(EnumSet.of(ClusterMetrics.Option.LIVE_SERVERS));
-        ServerMetrics serverLoad = clusterStatus.getLiveServerMetrics().get(rsName);
-        List<ReplicationLoadSource> replicationLoadSourceList =
-            serverLoad.getReplicationLoadSourceList();
-        return replicationLoadSourceList.isEmpty();
-      }
-    });
-
-    Table[] htables = getHTablesOnClusters(tableName);
-    putAndWait(row, famName, htables[0], htables[0]);
-    rollWALAndWait(utilities[0], table.getTableName(), row);
-    ZKWatcher zkw = utilities[0].getZooKeeperWatcher();
-    String queuesZnode = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode,
-      ZNodePaths.joinZNode("replication", "rs"));
-    List<String> listChildrenNoWatch =
-        ZKUtil.listChildrenNoWatch(zkw, ZNodePaths.joinZNode(queuesZnode, rsName.toString()));
-    assertEquals(0, listChildrenNoWatch.size());
   }
 
   /**
@@ -470,6 +443,84 @@ public class TestMasterReplication {
     }
   }
 
+  /**
+   * Tests that base replication peer configs are applied on peer creation
+   * and the configs are overriden if updated as part of updateReplicationPeerConfig()
+   *
+   */
+  @Test
+  public void testBasePeerConfigsForPeerMutations()
+    throws Exception {
+    LOG.info("testBasePeerConfigsForPeerMutations");
+    String firstCustomPeerConfigKey = "hbase.xxx.custom_config";
+    String firstCustomPeerConfigValue = "test";
+    String firstCustomPeerConfigUpdatedValue = "test_updated";
+
+    String secondCustomPeerConfigKey = "hbase.xxx.custom_second_config";
+    String secondCustomPeerConfigValue = "testSecond";
+    String secondCustomPeerConfigUpdatedValue = "testSecondUpdated";
+    try {
+      baseConfiguration.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
+        firstCustomPeerConfigKey.concat("=").concat(firstCustomPeerConfigValue));
+      startMiniClusters(2);
+      addPeer("1", 0, 1);
+      addPeer("2", 0, 1);
+      Admin admin = utilities[0].getAdmin();
+
+      // Validates base configs 1 is present for both peer.
+      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("1").
+        getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("2").
+        getConfiguration().get(firstCustomPeerConfigKey));
+
+      // override value of configuration 1 for peer "1".
+      ReplicationPeerConfig updatedReplicationConfigForPeer1 = ReplicationPeerConfig.
+        newBuilder(admin.getReplicationPeerConfig("1")).
+        putConfiguration(firstCustomPeerConfigKey, firstCustomPeerConfigUpdatedValue).build();
+
+      // add configuration 2 for peer "2".
+      ReplicationPeerConfig updatedReplicationConfigForPeer2 = ReplicationPeerConfig.
+        newBuilder(admin.getReplicationPeerConfig("2")).
+        putConfiguration(secondCustomPeerConfigKey, secondCustomPeerConfigUpdatedValue).build();
+
+      admin.updateReplicationPeerConfig("1", updatedReplicationConfigForPeer1);
+      admin.updateReplicationPeerConfig("2", updatedReplicationConfigForPeer2);
+
+      // validates configuration is overridden by updateReplicationPeerConfig
+      Assert.assertEquals(firstCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("1").
+        getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(secondCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("2").
+        getConfiguration().get(secondCustomPeerConfigKey));
+
+      // Add second config to base config and perform restart.
+      utilities[0].getConfiguration().set(ReplicationPeerConfigUtil.
+        HBASE_REPLICATION_PEER_BASE_CONFIG, firstCustomPeerConfigKey.concat("=").
+        concat(firstCustomPeerConfigValue).concat(";").concat(secondCustomPeerConfigKey)
+        .concat("=").concat(secondCustomPeerConfigValue));
+
+      utilities[0].shutdownMiniHBaseCluster();
+      utilities[0].restartHBaseCluster(1);
+      admin = utilities[0].getAdmin();
+
+      // Both retains the value of base configuration 1 value as before restart.
+      // Peer 1 (Update value), Peer 2 (Base Value)
+      Assert.assertEquals(firstCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("1").
+        getConfiguration().get(firstCustomPeerConfigKey));
+      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("2").
+        getConfiguration().get(firstCustomPeerConfigKey));
+
+      // Peer 1 gets new base config as part of restart.
+      Assert.assertEquals(secondCustomPeerConfigValue, admin.getReplicationPeerConfig("1").
+        getConfiguration().get(secondCustomPeerConfigKey));
+      // Peer 2 retains the updated value as before restart.
+      Assert.assertEquals(secondCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("2").
+        getConfiguration().get(secondCustomPeerConfigKey));
+    } finally {
+      shutDownMiniClusters();
+      baseConfiguration.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
+    }
+  }
+
   @After
   public void tearDown() throws IOException {
     configurations = null;
@@ -516,8 +567,8 @@ public class TestMasterReplication {
 
   private void addPeer(String id, int masterClusterNumber,
       int slaveClusterNumber) throws Exception {
-    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
-        .getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
+      Admin admin = conn.getAdmin()) {
       admin.addReplicationPeer(id,
         new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey()));
     }
@@ -525,8 +576,8 @@ public class TestMasterReplication {
 
   private void addPeer(String id, int masterClusterNumber, int slaveClusterNumber, String tableCfs)
       throws Exception {
-    try (Admin admin =
-        ConnectionFactory.createConnection(configurations[masterClusterNumber]).getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
+      Admin admin = conn.getAdmin()) {
       admin.addReplicationPeer(
         id,
         new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey())
@@ -536,15 +587,15 @@ public class TestMasterReplication {
   }
 
   private void disablePeer(String id, int masterClusterNumber) throws Exception {
-    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
-        .getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
+      Admin admin = conn.getAdmin()) {
       admin.disableReplicationPeer(id);
     }
   }
 
   private void enablePeer(String id, int masterClusterNumber) throws Exception {
-    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
-        .getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(configurations[masterClusterNumber]);
+      Admin admin = conn.getAdmin()) {
       admin.enableReplicationPeer(id);
     }
   }

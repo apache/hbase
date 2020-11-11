@@ -22,7 +22,7 @@ module Shell
   module Commands
     class ShowPeerTableCFs < Command
       def help
-        <<-EOF
+        <<~EOF
   Show replicable table-cf config for the specified peer.
 
     hbase> show_peer_tableCFs '2'

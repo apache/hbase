@@ -316,7 +316,7 @@ public class Scan extends Query {
    * @return this
    */
   public Scan setTimeRange(long minStamp, long maxStamp) throws IOException {
-    tr = new TimeRange(minStamp, maxStamp);
+    tr = TimeRange.between(minStamp, maxStamp);
     return this;
   }
 
@@ -350,7 +350,7 @@ public class Scan extends Query {
    */
   public Scan setTimestamp(long timestamp) {
     try {
-      tr = new TimeRange(timestamp, timestamp + 1);
+      tr = TimeRange.at(timestamp);
     } catch(Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);

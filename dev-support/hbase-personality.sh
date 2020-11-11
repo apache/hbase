@@ -80,9 +80,9 @@ function personality_globals
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
   # Yetus 0.7.0 enforces limits. Default proclimit is 1000.
-  # Up it. See HBASE-19902 for how we arrived at this number.
+  # Up it. See HBASE-25081 for how we arrived at this number.
   #shellcheck disable=SC2034
-  PROC_LIMIT=12500
+  PROC_LIMIT=30000
 
   # Set docker container to run with 20g. Default is 4g in yetus.
   # See HBASE-19902 for how we arrived at 20g.
@@ -318,7 +318,7 @@ function get_include_exclude_tests_arg
       fi
   else
     # Use branch specific exclude list when EXCLUDE_TESTS_URL and INCLUDE_TESTS_URL are empty
-    FLAKY_URL="https://builds.apache.org/job/HBase-Find-Flaky-Tests/job/${PATCH_BRANCH}/lastSuccessfulBuild/artifact/excludes/"
+    FLAKY_URL="https://ci-hadoop.apache.org/job/HBase/job/HBase-Find-Flaky-Tests/job/${PATCH_BRANCH}/lastSuccessfulBuild/artifact/output/excludes"
     if wget "${FLAKY_URL}" -O "excludes"; then
       excludes=$(cat excludes)
         yetus_debug "excludes=${excludes}"
@@ -553,14 +553,7 @@ function hadoopcheck_rebuild
 
   # All supported Hadoop versions that we want to test the compilation with
   # See the Hadoop section on prereqs in the HBase Reference Guide
-  if [[ "${PATCH_BRANCH}" = branch-1.3 ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on branch-1.3 rules."
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.4.1 2.5.2 2.6.5 2.7.7"
-    else
-      hbase_hadoop2_versions="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3 2.7.4 2.7.5 2.7.6 2.7.7"
-    fi
-  elif [[ "${PATCH_BRANCH}" = branch-1.4 ]]; then
+  if [[ "${PATCH_BRANCH}" = branch-1.4 ]]; then
     yetus_info "Setting Hadoop 2 versions to test based on branch-1.4 rules."
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
       hbase_hadoop2_versions="2.7.7"
@@ -616,12 +609,19 @@ function hadoopcheck_rebuild
     else
       hbase_hadoop3_versions="3.0.3 3.1.1 3.1.2"
     fi
-  else
-    yetus_info "Setting Hadoop 3 versions to test based on branch-2.2+/master/feature branch rules"
+  elif [[ "${PATCH_BRANCH}" = branch-2.2 ]] || [[ "${PATCH_BRANCH}" = branch-2.3 ]]; then
+    yetus_info "Setting Hadoop 3 versions to test based on branch-2.2/branch-2.3 rules"
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
       hbase_hadoop3_versions="3.1.2 3.2.1"
     else
       hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1"
+    fi
+  else
+    yetus_info "Setting Hadoop 3 versions to test based on branch-2.4+/master/feature branch rules"
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop3_versions="3.1.2 3.2.1 3.3.0"
+    else
+      hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1 3.3.0"
     fi
   fi
 

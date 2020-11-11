@@ -26,14 +26,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -85,7 +85,6 @@ public class TestRecoveredEditsReplayAndAbort {
 
   protected static HBaseTestingUtility TEST_UTIL;
   public static Configuration CONF ;
-  private static FileSystem FILESYSTEM;
   private HRegion region = null;
 
   private final Random random = new Random();
@@ -93,7 +92,6 @@ public class TestRecoveredEditsReplayAndAbort {
   @Before
   public void setup() throws IOException {
     TEST_UTIL = new HBaseTestingUtility();
-    FILESYSTEM = TEST_UTIL.getTestFileSystem();
     CONF = TEST_UTIL.getConfiguration();
     method = name.getMethodName();
     tableName = TableName.valueOf(method);
@@ -115,7 +113,8 @@ public class TestRecoveredEditsReplayAndAbort {
     //mock a RegionServerServices
     final RegionServerAccounting rsAccounting = new RegionServerAccounting(CONF);
     RegionServerServices rs = Mockito.mock(RegionServerServices.class);
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     Mockito.when(rs.getRegionServerAccounting()).thenReturn(rsAccounting);
     Mockito.when(rs.isAborted()).thenReturn(false);
     Mockito.when(rs.getNonceManager()).thenReturn(null);
@@ -127,8 +126,7 @@ public class TestRecoveredEditsReplayAndAbort {
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(testTable)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam1).build())
         .build();
-    HRegionInfo info = new HRegionInfo(htd.getTableName(),
-        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     Path logDir = TEST_UTIL
         .getDataTestDirOnTestFS("TestRecoveredEidtsReplayAndAbort.log");
     final WAL wal = HBaseTestingUtility.createWal(CONF, logDir, info);
@@ -172,7 +170,7 @@ public class TestRecoveredEditsReplayAndAbort {
         }
         writer.close();
       }
-      MonitoredTask status = TaskMonitor.get().createStatus(method);
+      TaskMonitor.get().createStatus(method);
       //try to replay the edits
       try {
         region.initialize(new CancelableProgressable() {

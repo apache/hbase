@@ -60,6 +60,11 @@ class DualAsyncFSWALForTest extends DualAsyncFSWAL {
     }
 
     @Override
+    public long getSyncedLength() {
+      return this.localWriter.getSyncedLength();
+    }
+
+    @Override
     public void close() throws IOException {
       Closeables.close(localWriter, true);
       Closeables.close(remoteWriter, true);

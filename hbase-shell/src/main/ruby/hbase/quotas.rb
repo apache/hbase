@@ -61,6 +61,9 @@ end
 module Hbase
   # rubocop:disable Metrics/ClassLength
   class QuotasAdmin
+    include HBaseConstants
+    include HBaseQuotasConstants
+
     def initialize(admin)
       @admin = admin
     end

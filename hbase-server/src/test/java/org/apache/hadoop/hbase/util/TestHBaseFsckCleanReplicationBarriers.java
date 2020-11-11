@@ -17,7 +17,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
@@ -113,15 +114,15 @@ public class TestHBaseFsckCleanReplicationBarriers {
     barrierScan.setCaching(100);
     barrierScan.addFamily(HConstants.REPLICATION_BARRIER_FAMILY);
     barrierScan
-        .withStartRow(
-          MetaTableAccessor.getTableStartRowForMeta(tableName, MetaTableAccessor.QueryType.REGION))
-        .withStopRow(
-          MetaTableAccessor.getTableStopRowForMeta(tableName, MetaTableAccessor.QueryType.REGION));
+      .withStartRow(ClientMetaTableAccessor.getTableStartRowForMeta(tableName,
+        ClientMetaTableAccessor.QueryType.REGION))
+      .withStopRow(ClientMetaTableAccessor.getTableStopRowForMeta(tableName,
+        ClientMetaTableAccessor.QueryType.REGION));
     Result result;
     try (ResultScanner scanner =
         MetaTableAccessor.getMetaHTable(UTIL.getConnection()).getScanner(barrierScan)) {
       while ((result = scanner.next()) != null) {
-        assertTrue(MetaTableAccessor.getReplicationBarriers(result).length > 0);
+        assertTrue(ReplicationBarrierFamilyFormat.getReplicationBarriers(result).length > 0);
       }
     }
     boolean cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
@@ -135,7 +136,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
     cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertFalse(cleaned);
     for (RegionInfo region : regionInfos) {
-      assertEquals(0, MetaTableAccessor.getReplicationBarrier(UTIL.getConnection(),
+      assertEquals(0, ReplicationBarrierFamilyFormat.getReplicationBarriers(UTIL.getConnection(),
         region.getRegionName()).length);
     }
   }
@@ -168,14 +169,15 @@ public class TestHBaseFsckCleanReplicationBarriers {
     cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertFalse(cleaned);
     for (RegionInfo region : UTIL.getAdmin().getRegions(tableName)) {
-      assertEquals(0, MetaTableAccessor.getReplicationBarrier(UTIL.getConnection(),
+      assertEquals(0, ReplicationBarrierFamilyFormat.getReplicationBarriers(UTIL.getConnection(),
         region.getRegionName()).length);
     }
   }
 
   public static void createPeer() throws IOException {
-    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL.getClusterKey()).setSerial(true).build();
+    ReplicationPeerConfig rpc =
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL.getClusterKey() + "-test")
+        .setSerial(true).build();
     UTIL.getAdmin().addReplicationPeer(PEER_1, rpc);
     UTIL.getAdmin().addReplicationPeer(PEER_2, rpc);
   }

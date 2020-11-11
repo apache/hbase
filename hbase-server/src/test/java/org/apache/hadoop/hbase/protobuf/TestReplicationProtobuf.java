@@ -63,7 +63,7 @@ public class TestReplicationProtobuf {
     all.add(a);
     all.add(b);
     all.add(c);
-    CellScanner scanner = ReplicationProtbufUtil.getCellScanner(all, 0);
+    CellScanner scanner = ReplicationProtobufUtil.getCellScanner(all, 0);
     testAdvancetHasSameRow(scanner, akv);
     // Skip over aa
     scanner.advance();

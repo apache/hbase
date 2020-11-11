@@ -23,8 +23,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -45,7 +48,8 @@ public interface WALProvider {
    * @param conf may not be null
    * @param providerId differentiate between providers from one factory. may be null
    */
-  void init(WALFactory factory, Configuration conf, String providerId) throws IOException;
+  void init(WALFactory factory, Configuration conf, String providerId, Abortable server)
+      throws IOException;
 
   /**
    * @param region the region which we want to get a WAL for it. Could be null.
@@ -74,6 +78,22 @@ public interface WALProvider {
 
   interface WriterBase extends Closeable {
     long getLength();
+    /**
+     * NOTE: We add this method for {@link WALFileLengthProvider} used for replication,
+     * considering the case if we use {@link AsyncFSWAL},we write to 3 DNs concurrently,
+     * according to the visibility guarantee of HDFS, the data will be available immediately
+     * when arriving at DN since all the DNs will be considered as the last one in pipeline.
+     * This means replication may read uncommitted data and replicate it to the remote cluster
+     * and cause data inconsistency.
+     * The method {@link WriterBase#getLength} may return length which just in hdfs client
+     * buffer and not successfully synced to HDFS, so we use this method to return the length
+     * successfully synced to HDFS and replication thread could only read writing WAL file
+     * limited by this length.
+     * see also HBASE-14004 and this document for more details:
+     * https://docs.google.com/document/d/11AyWtGhItQs6vsLRIx32PwTxmBY3libXwGXI25obVEY/edit#
+     * @return byteSize successfully synced to underlying filesystem.
+     */
+    long getSyncedLength();
   }
 
   // Writers are used internally. Users outside of the WAL should be relying on the

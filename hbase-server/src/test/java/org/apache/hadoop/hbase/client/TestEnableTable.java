@@ -76,30 +76,25 @@ public class TestEnableTable {
    * We were only clearing rows that had a hregioninfo column in hbase:meta.  Mangled rows that
    * were missing the hregioninfo because of error were being left behind messing up any
    * subsequent table made with the same name. HBASE-12980
-   * @throws IOException
-   * @throws InterruptedException
    */
   @Test
   public void testDeleteForSureClearsAllTableRowsFromMeta()
-  throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final Admin admin = TEST_UTIL.getAdmin();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILYNAME);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYNAME)).build();
     try {
       createTable(TEST_UTIL, tableDescriptor, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("", e);
       fail("Got an exception while creating " + tableName);
     }
     // Now I have a nice table, mangle it by removing the HConstants.REGIONINFO_QUALIFIER_STR
     // content from a few of the rows.
     try (Table metaTable = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       try (ResultScanner scanner = metaTable.getScanner(
-        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
+        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConfiguration(), tableName))) {
         for (Result result : scanner) {
           // Just delete one row.
           Delete d = new Delete(result.getRow());
@@ -115,12 +110,12 @@ public class TestEnableTable {
       try {
         deleteTable(TEST_UTIL, tableName);
       } catch (Exception e) {
-        e.printStackTrace();
+        LOG.error("", e);
         fail("Got an exception while deleting " + tableName);
       }
       int rowCount = 0;
-      try (ResultScanner scanner = metaTable
-        .getScanner(MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName))) {
+      try (ResultScanner scanner = metaTable.getScanner(
+        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConfiguration(), tableName))) {
         for (Result result : scanner) {
           LOG.info("Found when none expected: " + result);
           rowCount++;
@@ -163,13 +158,12 @@ public class TestEnableTable {
     }
   }
 
-  public static void createTable(HBaseTestingUtility testUtil,
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor, byte [][] splitKeys)
-      throws Exception {
+  public static void createTable(HBaseTestingUtility testUtil, TableDescriptor tableDescriptor,
+    byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class);
+    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster().getMasterCoprocessorHost()
+      .findCoprocessor(MasterSyncObserver.class);
     observer.tableCreationLatch = new CountDownLatch(1);
     Admin admin = testUtil.getAdmin();
     if (splitKeys != null) {

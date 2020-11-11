@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,24 +22,21 @@ import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -49,6 +46,9 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple {@link InputFormat} for {@link org.apache.hadoop.hbase.wal.WAL} files.
@@ -77,10 +77,6 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
      * Represent an WALSplit, i.e. a single WAL file.
      * Start- and EndTime are managed by the split, so that WAL files can be
      * filtered before WALEdits are passed to the mapper(s).
-     * @param logFileName
-     * @param fileSize
-     * @param startTime
-     * @param endTime
      */
     public WALSplit(String logFileName, long fileSize, long startTime, long endTime) {
       this.logFileName = logFileName;
@@ -154,14 +150,13 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
       WALSplit hsplit = (WALSplit)split;
       logFile = new Path(hsplit.getLogFileName());
       conf = context.getConfiguration();
-      LOG.info("Opening reader for "+split);
+      LOG.info("Opening {} for {}", logFile, split);
       openReader(logFile);
       this.startTime = hsplit.getStartTime();
       this.endTime = hsplit.getEndTime();
     }
 
-    private void openReader(Path path) throws IOException
-    {
+    private void openReader(Path path) throws IOException {
       closeReader();
       reader = AbstractFSWALProvider.openReader(path, conf);
       seek();
@@ -187,7 +182,9 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
 
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
-      if (reader == null) return false;
+      if (reader == null) {
+        return false;
+      }
       this.currentPos = reader.getPosition();
       Entry temp;
       long i = -1;
@@ -205,7 +202,9 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
         } while (temp != null && temp.getKey().getWriteTime() < startTime);
 
         if (temp == null) {
-          if (i > 0) LOG.info("Skipped " + i + " entries.");
+          if (i > 0) {
+            LOG.info("Skipped " + i + " entries.");
+          }
           LOG.info("Reached end of file.");
           return false;
         } else if (i > 0) {
@@ -243,7 +242,9 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
     @Override
     public void close() throws IOException {
       LOG.info("Closing reader");
-      if (reader != null) this.reader.close();
+      if (reader != null) {
+        this.reader.close();
+      }
     }
   }
 
@@ -302,38 +303,54 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
       inpDirs.split(conf.get(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ",")));
   }
 
+  /**
+   * @param startTime If file looks like it has a timestamp in its name, we'll check if newer
+   *                  or equal to this value else we will filter out the file. If name does not
+   *                  seem to have a timestamp, we will just return it w/o filtering.
+   * @param endTime If file looks like it has a timestamp in its name, we'll check if older or equal
+   *                to this value else we will filter out the file. If name does not seem to
+   *                have a timestamp, we will just return it w/o filtering.
+   */
   private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime)
       throws IOException {
     List<FileStatus> result = new ArrayList<>();
     LOG.debug("Scanning " + dir.toString() + " for WAL files");
-
     RemoteIterator<LocatedFileStatus> iter = fs.listLocatedStatus(dir);
-    if (!iter.hasNext()) return Collections.emptyList();
+    if (!iter.hasNext()) {
+      return Collections.emptyList();
+    }
     while (iter.hasNext()) {
       LocatedFileStatus file = iter.next();
       if (file.isDirectory()) {
-        // recurse into sub directories
+        // Recurse into sub directories
         result.addAll(getFiles(fs, file.getPath(), startTime, endTime));
       } else {
-        String name = file.getPath().toString();
-        int idx = name.lastIndexOf('.');
-        if (idx > 0) {
-          try {
-            long fileStartTime = Long.parseLong(name.substring(idx+1));
-            if (fileStartTime <= endTime) {
-              LOG.info("Found: " + file);
-              result.add(file);
-            }
-          } catch (NumberFormatException x) {
-            idx = 0;
-          }
-        }
-        if (idx == 0) {
-          LOG.warn("File " + name + " does not appear to be an WAL file. Skipping...");
-        }
+        addFile(result, file, startTime, endTime);
       }
     }
+    // TODO: These results should be sorted? Results could be content of recovered.edits directory
+    // -- null padded increasing numeric -- or a WAL file w/ timestamp suffix or timestamp and
+    // then meta suffix. See AbstractFSWALProvider#WALStartTimeComparator
     return result;
+  }
+
+  static void addFile(List<FileStatus> result, LocatedFileStatus lfs, long startTime,
+      long endTime) {
+    long timestamp = AbstractFSWALProvider.getTimestamp(lfs.getPath().getName());
+    if (timestamp > 0) {
+      // Looks like a valid timestamp.
+      if (timestamp <= endTime && timestamp >= startTime) {
+        LOG.info("Found {}", lfs.getPath());
+        result.add(lfs);
+      } else {
+        LOG.info("Skipped {}, outside range [{}/{} - {}/{}]", lfs.getPath(),
+          startTime, Instant.ofEpochMilli(startTime), endTime, Instant.ofEpochMilli(endTime));
+      }
+    } else {
+      // If no timestamp, add it regardless.
+      LOG.info("Found (no-timestamp!) {}", lfs);
+      result.add(lfs);
+    }
   }
 
   @Override

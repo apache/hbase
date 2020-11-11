@@ -68,7 +68,7 @@ public class Append extends Mutation {
    * @return this
    */
   public Append setTimeRange(long minStamp, long maxStamp) {
-    tr = new TimeRange(minStamp, maxStamp);
+    tr = TimeRange.between(minStamp, maxStamp);
     return this;
   }
 
@@ -162,10 +162,9 @@ public class Append extends Mutation {
 
   /**
    * Add column and value to this Append operation.
-   * @param cell
    * @return This instance
    */
-  @SuppressWarnings("unchecked")
+  @Override
   public Append add(final Cell cell) {
     try {
       super.add(cell);

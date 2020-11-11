@@ -27,13 +27,12 @@ import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -810,7 +809,7 @@ class MetricsRegionServerWrapperImpl
 
           HDFSBlocksDistribution distro = r.getHDFSBlocksDistribution();
           hdfsBlocksDistribution.add(distro);
-          if (r.getRegionInfo().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+          if (r.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
             hdfsBlocksDistributionSecondaryRegions.add(distro);
           }
           regionCount++;
@@ -857,7 +856,7 @@ class MetricsRegionServerWrapperImpl
         numWALFiles = (provider == null ? 0 : provider.getNumLogFiles()) +
             (metaProvider == null ? 0 : metaProvider.getNumLogFiles());
         walFileSize = (provider == null ? 0 : provider.getLogFileSize()) +
-            (provider == null ? 0 : provider.getLogFileSize());
+          (metaProvider == null ? 0 : metaProvider.getLogFileSize());
         // Copy over computed values so that no thread sees half computed values.
         numStores = tempNumStores;
         numStoreFiles = tempNumStoreFiles;
@@ -927,6 +926,11 @@ class MetricsRegionServerWrapperImpl
   @Override
   public long getHedgedReadWins() {
     return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadWins();
+  }
+
+  @Override
+  public long getHedgedReadOpsInCurThread() {
+    return this.dfsHedgedReadMetrics == null ? 0 : this.dfsHedgedReadMetrics.getHedgedReadOpsInCurThread();
   }
 
   @Override

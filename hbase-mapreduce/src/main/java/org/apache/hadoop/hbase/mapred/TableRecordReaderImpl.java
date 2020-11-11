@@ -104,13 +104,13 @@ public class TableRecordReaderImpl {
   byte[] getStartRow() {
     return this.startRow;
   }
+
   /**
-   * @param htable the {@link org.apache.hadoop.hbase.HTableDescriptor} to scan.
+   * @param htable the table to scan.
    */
   public void setHTable(Table htable) {
     Configuration conf = htable.getConfiguration();
-    logScannerActivity = conf.getBoolean(
-      ConnectionConfiguration.LOG_SCANNER_ACTIVITY, false);
+    logScannerActivity = conf.getBoolean(ConnectionConfiguration.LOG_SCANNER_ACTIVITY, false);
     logPerRowCount = conf.getInt(LOG_PER_ROW_COUNT, 100);
     this.htable = htable;
   }

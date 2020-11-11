@@ -21,28 +21,24 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -134,6 +130,12 @@ public class ModifyTableProcedure
           break;
         case MODIFY_TABLE_PRE_OPERATION:
           preModify(env, state);
+          setNextState(ModifyTableState.MODIFY_TABLE_CLOSE_EXCESS_REPLICAS);
+          break;
+        case MODIFY_TABLE_CLOSE_EXCESS_REPLICAS:
+          if (isTableEnabled(env)) {
+            closeExcessReplicasIfNeeded(env);
+          }
           setNextState(ModifyTableState.MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR);
           break;
         case MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR:
@@ -141,7 +143,7 @@ public class ModifyTableProcedure
           setNextState(ModifyTableState.MODIFY_TABLE_REMOVE_REPLICA_COLUMN);
           break;
         case MODIFY_TABLE_REMOVE_REPLICA_COLUMN:
-          updateReplicaColumnsIfNeeded(env, unmodifiedTableDescriptor, modifiedTableDescriptor);
+          removeReplicaColumnsIfNeeded(env);
           setNextState(ModifyTableState.MODIFY_TABLE_POST_OPERATION);
           break;
         case MODIFY_TABLE_POST_OPERATION:
@@ -149,8 +151,18 @@ public class ModifyTableProcedure
           setNextState(ModifyTableState.MODIFY_TABLE_REOPEN_ALL_REGIONS);
           break;
         case MODIFY_TABLE_REOPEN_ALL_REGIONS:
-          if (env.getAssignmentManager().isTableEnabled(getTableName())) {
+          if (isTableEnabled(env)) {
             addChildProcedure(new ReopenTableRegionsProcedure(getTableName()));
+          }
+          setNextState(ModifyTableState.MODIFY_TABLE_ASSIGN_NEW_REPLICAS);
+          break;
+        case MODIFY_TABLE_ASSIGN_NEW_REPLICAS:
+          assignNewReplicasIfNeeded(env);
+          if (TableName.isMetaTableName(getTableName())) {
+            MetaLocationSyncer syncer = env.getMasterServices().getMetaLocationSyncer();
+            if (syncer != null) {
+              syncer.setMetaReplicaCount(modifiedTableDescriptor.getRegionReplication());
+            }
           }
           if (deleteColumnFamilyInModify) {
             setNextState(ModifyTableState.MODIFY_TABLE_DELETE_FS_LAYOUT);
@@ -274,7 +286,7 @@ public class ModifyTableProcedure
    */
   private void prepareModify(final MasterProcedureEnv env) throws IOException {
     // Checks whether the table exists
-    if (!MetaTableAccessor.tableExists(env.getMasterServices().getConnection(), getTableName())) {
+    if (!env.getMasterServices().getTableDescriptors().exists(getTableName())) {
       throw new TableNotFoundException(getTableName());
     }
 
@@ -303,14 +315,6 @@ public class ModifyTableProcedure
           env.getMasterServices().getTableDescriptors().get(getTableName());
     }
 
-    if (env.getMasterServices().getTableStateManager()
-        .isTableState(getTableName(), TableState.State.ENABLED)) {
-      if (modifiedTableDescriptor.getRegionReplication() != unmodifiedTableDescriptor
-          .getRegionReplication()) {
-        throw new TableNotDisabledException(
-            "REGION_REPLICATION change is not supported for enabled tables");
-      }
-    }
     this.deleteColumnFamilyInModify = isDeleteColumnFamily(unmodifiedTableDescriptor,
       modifiedTableDescriptor);
     if (!unmodifiedTableDescriptor.getRegionServerGroup()
@@ -346,8 +350,6 @@ public class ModifyTableProcedure
    * Action before modifying table.
    * @param env MasterProcedureEnv
    * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
    */
   private void preModify(final MasterProcedureEnv env, final ModifyTableState state)
       throws IOException, InterruptedException {
@@ -357,7 +359,6 @@ public class ModifyTableProcedure
   /**
    * Update descriptor
    * @param env MasterProcedureEnv
-   * @throws IOException
    **/
   private void updateTableDescriptor(final MasterProcedureEnv env) throws IOException {
     env.getMasterServices().getTableDescriptors().update(modifiedTableDescriptor);
@@ -366,7 +367,6 @@ public class ModifyTableProcedure
   /**
    * Removes from hdfs the families that are not longer present in the new table descriptor.
    * @param env MasterProcedureEnv
-   * @throws IOException
    */
   private void deleteFromFs(final MasterProcedureEnv env,
       final TableDescriptor oldTableDescriptor, final TableDescriptor newTableDescriptor)
@@ -385,62 +385,58 @@ public class ModifyTableProcedure
   }
 
   /**
-   * update replica column families if necessary.
-   * @param env MasterProcedureEnv
-   * @throws IOException
+   * remove replica columns if necessary.
    */
-  private void updateReplicaColumnsIfNeeded(
-    final MasterProcedureEnv env,
-    final TableDescriptor oldTableDescriptor,
-    final TableDescriptor newTableDescriptor) throws IOException {
-    final int oldReplicaCount = oldTableDescriptor.getRegionReplication();
-    final int newReplicaCount = newTableDescriptor.getRegionReplication();
-
-    if (newReplicaCount < oldReplicaCount) {
-      Set<byte[]> tableRows = new HashSet<>();
-      Connection connection = env.getMasterServices().getConnection();
-      Scan scan = MetaTableAccessor.getScanForTableName(connection, getTableName());
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-
-      try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
-        ResultScanner resScanner = metaTable.getScanner(scan);
-        for (Result result : resScanner) {
-          tableRows.add(result.getRow());
-        }
-        MetaTableAccessor.removeRegionReplicasFromMeta(
-          tableRows,
-          newReplicaCount,
-          oldReplicaCount - newReplicaCount,
-          connection);
-      }
+  private void removeReplicaColumnsIfNeeded(MasterProcedureEnv env) throws IOException {
+    final int oldReplicaCount = unmodifiedTableDescriptor.getRegionReplication();
+    final int newReplicaCount = modifiedTableDescriptor.getRegionReplication();
+    if (newReplicaCount >= oldReplicaCount) {
+      return;
     }
-    if (newReplicaCount > oldReplicaCount) {
-      Connection connection = env.getMasterServices().getConnection();
-      // Get the existing table regions
-      List<RegionInfo> existingTableRegions =
-          MetaTableAccessor.getTableRegions(connection, getTableName());
-      // add all the new entries to the meta table
-      addRegionsToMeta(env, newTableDescriptor, existingTableRegions);
-      if (oldReplicaCount <= 1) {
-        // The table has been newly enabled for replica. So check if we need to setup
-        // region replication
-        ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterConfiguration());
+    env.getAssignmentManager().getRegionStateStore().removeRegionReplicas(getTableName(),
+      oldReplicaCount, newReplicaCount);
+    env.getAssignmentManager().getRegionStates().getRegionsOfTable(getTableName()).stream()
+      .filter(r -> r.getReplicaId() >= newReplicaCount)
+      .forEach(env.getAssignmentManager().getRegionStates()::deleteRegion);
+  }
+
+  private void assignNewReplicasIfNeeded(MasterProcedureEnv env) throws IOException {
+    final int oldReplicaCount = unmodifiedTableDescriptor.getRegionReplication();
+    final int newReplicaCount = modifiedTableDescriptor.getRegionReplication();
+    if (newReplicaCount <= oldReplicaCount) {
+      return;
+    }
+    if (isTableEnabled(env)) {
+      List<RegionInfo> newReplicas = env.getAssignmentManager().getRegionStates()
+        .getRegionsOfTable(getTableName()).stream().filter(RegionReplicaUtil::isDefaultReplica)
+        .flatMap(primaryRegion -> IntStream.range(oldReplicaCount, newReplicaCount).mapToObj(
+          replicaId -> RegionReplicaUtil.getRegionInfoForReplica(primaryRegion, replicaId)))
+        .collect(Collectors.toList());
+      addChildProcedure(env.getAssignmentManager().createAssignProcedures(newReplicas));
+    }
+    if (oldReplicaCount <= 1) {
+      try {
+        ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterServices());
+      } catch (ReplicationException e) {
+        throw new HBaseIOException(e);
       }
     }
   }
 
-  private static void addRegionsToMeta(final MasterProcedureEnv env,
-      final TableDescriptor tableDescriptor, final List<RegionInfo> regionInfos)
-      throws IOException {
-    MetaTableAccessor.addRegionsToMeta(env.getMasterServices().getConnection(), regionInfos,
-      tableDescriptor.getRegionReplication());
+  private void closeExcessReplicasIfNeeded(MasterProcedureEnv env) {
+    final int oldReplicaCount = unmodifiedTableDescriptor.getRegionReplication();
+    final int newReplicaCount = modifiedTableDescriptor.getRegionReplication();
+    if (newReplicaCount >= oldReplicaCount) {
+      return;
+    }
+    addChildProcedure(env.getAssignmentManager()
+      .createUnassignProceduresForClosingExcessRegionReplicas(getTableName(), newReplicaCount));
   }
+
   /**
    * Action after modifying table.
    * @param env MasterProcedureEnv
    * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
    */
   private void postModify(final MasterProcedureEnv env, final ModifyTableState state)
       throws IOException, InterruptedException {
@@ -451,8 +447,6 @@ public class ModifyTableProcedure
    * Coprocessor Action.
    * @param env MasterProcedureEnv
    * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
    */
   private void runCoprocessorAction(final MasterProcedureEnv env, final ModifyTableState state)
       throws IOException, InterruptedException {

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -675,21 +676,20 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preUnassign(final RegionInfo regionInfo, final boolean force)
-      throws IOException {
+  public void preUnassign(final RegionInfo regionInfo) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preUnassign(this, regionInfo, force);
+        observer.preUnassign(this, regionInfo);
       }
     });
   }
 
-  public void postUnassign(final RegionInfo regionInfo, final boolean force) throws IOException {
+  public void postUnassign(final RegionInfo regionInfo) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postUnassign(this, regionInfo, force);
+        observer.postUnassign(this, regionInfo);
       }
     });
   }
@@ -1558,6 +1558,26 @@ public class MasterCoprocessorHost
       @Override
       protected void call(MasterObserver observer) throws IOException {
         observer.postRenameRSGroup(this, oldName, newName);
+      }
+    });
+  }
+
+  public void preUpdateRSGroupConfig(final String groupName,
+                                     final Map<String, String> configuration) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.preUpdateRSGroupConfig(this, groupName, configuration);
+      }
+    });
+  }
+
+  public void postUpdateRSGroupConfig(final String groupName,
+                                      final Map<String, String> configuration) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      protected void call(MasterObserver observer) throws IOException {
+        observer.postUpdateRSGroupConfig(this, groupName, configuration);
       }
     });
   }

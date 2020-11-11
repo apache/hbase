@@ -23,8 +23,9 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -70,9 +71,10 @@ public class TestHFileArchiveUtil {
 
   @Test
   public void testGetStoreArchivePath() throws IOException {
-      byte[] family = Bytes.toBytes("Family");
+    byte[] family = Bytes.toBytes("Family");
     Path tabledir = CommonFSUtils.getTableDir(rootDir, TableName.valueOf(name.getMethodName()));
-    HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()));
+    RegionInfo region =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     Configuration conf = new Configuration();
     CommonFSUtils.setRootDir(conf, new Path("root"));
     assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, region, tabledir, family));

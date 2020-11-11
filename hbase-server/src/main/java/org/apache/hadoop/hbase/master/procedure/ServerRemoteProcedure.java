@@ -33,21 +33,40 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 /**
- * This extract the common used methods of procedures which are send to remote servers. Developers
- * who extends this class only need to override remoteCallBuild() and complete(). This procedure
- * will help add the operation to {@link RSProcedureDispatcher}
+ * The base class for Procedures that run {@link java.util.concurrent.Callable}s on a (remote)
+ * RegionServer; e.g. asking a RegionServer to split a WAL file as a sub-procedure of
+ * the ServerCrashProcedure recovery process.
  *
- * If adding the operation to dispatcher failed, addOperationToNode will throw
- * FailedRemoteDispatchException, and this procedure will return null which procedure Executor will
- * mark this procedure as complete. Thus the upper layer of this procedure must have a way to
- * check if this procedure really succeed and how to deal with it.
+ * <p>To implement a new Procedure type, extend this class and override remoteCallBuild() and
+ * complete(). The dispatch and callback will be handled for you here, internally.
  *
- * If sending the operation to remote RS failed, dispatcher will call remoteCallFailed() to
- * handle this, which actually call remoteOperationDone with the exception.
- * If the targetServer crashed but this procedure has no response, than dispatcher will call
- * remoteOperationFailed() to handle this, which also calls remoteOperationDone with the exception.
- * If the operation is successful, then remoteOperationCompleted will be called and actually calls
- * the remoteOperationDone without exception.
+ * <p>The Procedure works as follows. It uses {@link RSProcedureDispatcher}, the same system
+ * used dispatching Region OPEN and CLOSE RPCs, to pass a Callable to a RegionServer. Examples
+ * include {@link org.apache.hadoop.hbase.regionserver.SplitWALCallable} and
+ * {@link org.apache.hadoop.hbase.replication.regionserver.RefreshPeerCallable}. Rather than
+ * assign/unassign, the Master calls #executeProcedures against the remote RegionServer wrapping
+ * a Callable in a {@link ExecuteProceduresRequest}. Upon successful dispatch,
+ * the Procedure then suspends itself on the Master-side and relinqushes its executor worker.
+ * On receipt, the RegionServer submits the Callable to its executor service. When the Callable
+ * completes, it adds itself to a queue on the RegionServer side for processing by a background
+ * thread, the {@link RemoteProcedureResultReporter}. It picks up the completed Callable from the
+ * queue and RPCs the master at #reportProcedureDone with the procedure id and whether success or
+ * failure. The master calls complete() setting success or failure state and then reschedules the
+ * suspended Procedure so it can finish.
+ *
+ * <p>Here are some details on operation:
+ * <p>If adding the operation to the dispatcher fails, addOperationToNode will throw
+ * FailedRemoteDispatchException, and this Procedure will return 'null'. The Procedure Executor
+ * will then mark this procedure as 'complete' (though we failed to dispatch our task). In this
+ * case, the upper layer of this procedure must have a way to check if this Procedure really
+ * succeeded or not and have appropriate handling.
+ *
+ * <p>If sending the operation to remote RS failed, dispatcher will call remoteCallFailed() to
+ * handle this which calls remoteOperationDone with the exception. If the targetServer crashed but
+ * this procedure has no response, than dispatcher will call remoteOperationFailed() which also
+ * calls remoteOperationDone with the exception. If the operation is successful, then
+ * remoteOperationCompleted will be called and actually calls the remoteOperationDone without
+ * exception.
  *
  * In remoteOperationDone, we'll check if the procedure is already get wake up by others. Then
  * developer could implement complete() based on their own purpose.

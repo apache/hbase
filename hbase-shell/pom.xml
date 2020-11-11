@@ -30,15 +30,9 @@
   <name>Apache HBase - Shell</name>
   <description>Shell for HBase</description>
   <build>
-    <!-- Makes sure the resources get added before they are processed
-      by placing this first -->
     <resources>
-      <!-- Add the build webabpps to the classpth -->
       <resource>
-        <directory>${project.build.directory}</directory>
-        <includes>
-          <include>hbase-webapps/**</include>
-        </includes>
+        <directory>src/main/ruby</directory>
       </resource>
     </resources>
     <testResources>
@@ -50,65 +44,21 @@
       </testResource>
     </testResources>
     <plugins>
-      <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running
-        tests (this is needed for upstream projects whose tests need this jar simply for
-        compilation) -->
-      <plugin>
-        <!--Make it so assembly:single does nothing in here-->
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
           <archive>
             <manifest>
-              <mainClass>org/apache/hadoop/hbase/mapreduce/Driver</mainClass>
+              <mainClass>org.jruby.JarBootstrapMain</mainClass>
             </manifest>
           </archive>
-          <!-- Exclude these 2 packages, because their dependency _binary_ files
-            include the sources, and Maven 2.2 appears to add them to the sources to compile,
-            weird -->
-          <excludes>
-            <exclude>org/apache/jute/**</exclude>
-            <exclude>org/apache/zookeeper/**</exclude>
-            <exclude>**/*.jsp</exclude>
-            <exclude>hbase-site.xml</exclude>
-            <exclude>hdfs-site.xml</exclude>
-            <exclude>log4j.properties</exclude>
-            <exclude>mapred-queues.xml</exclude>
-            <exclude>mapred-site.xml</exclude>
-          </excludes>
         </configuration>
       </plugin>
       <!-- Make a jar and put the sources in the jar -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-      </plugin>
-      <!-- General ant tasks, bound to different build phases -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <!-- Add the generated sources -->
-          <execution>
-            <id>jspcSource-packageInfo-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-jamon</source>
-                <source>${project.build.directory}/generated-sources/java</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <!-- General plugins -->
       <plugin>

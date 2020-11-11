@@ -61,7 +61,10 @@ import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPL
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_SUCCESS_DESC;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_SUCCESS_KEY;
 
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricHistogram;
@@ -75,6 +78,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class MetricsTableSourceImpl implements MetricsTableSource {
 
+  private static final String _COLUMNFAMILY = "_columnfamily_";
+
   private static final Logger LOG = LoggerFactory.getLogger(MetricsTableSourceImpl.class);
 
   private AtomicBoolean closed = new AtomicBoolean(false);
@@ -87,6 +92,8 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
   private final MetricsTableAggregateSourceImpl agg;
   private final DynamicMetricsRegistry registry;
   private final String tableNamePrefix;
+  private final String tableNamePrefixPart1;
+  private final String tableNamePrefixPart2;
   private final TableName tableName;
   private final int hashCode;
 
@@ -127,8 +134,11 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
 
     this.tableWrapperAgg = tblWrapperAgg;
     this.registry = agg.getMetricsRegistry();
-    this.tableNamePrefix = "Namespace_" + this.tableName.getNamespaceAsString() +
-        "_table_" + this.tableName.getQualifierAsString() + "_metric_";
+    this.tableNamePrefixPart1 = "Namespace_" + this.tableName.getNamespaceAsString() +
+            "_table_" + this.tableName.getQualifierAsString();
+    this.tableNamePrefixPart2 = "_metric_";
+    this.tableNamePrefix = tableNamePrefixPart1 +
+        tableNamePrefixPart2;
     this.hashCode = this.tableName.hashCode();
   }
 
@@ -311,6 +321,25 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
         mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
             MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC),
             tableWrapperAgg.getNumReferenceFiles(tableName.getNameAsString()));
+        addGauge(mrb, tableWrapperAgg.getMemstoreOnlyRowReadsCount(tableName.getNameAsString()),
+          MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE,
+          MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE_DESC);
+        addGauge(mrb, tableWrapperAgg.getMixedRowReadsCount(tableName.getNameAsString()),
+          MetricsRegionSource.MIXED_ROW_READS,
+          MetricsRegionSource.MIXED_ROW_READS_ON_STORE_DESC);
+      }
+    }
+  }
+
+  private void addGauge(MetricsRecordBuilder mrb, Map<String, Long> metricMap, String metricName,
+      String metricDesc) {
+    if (metricMap != null) {
+      for (Entry<String, Long> entry : metricMap.entrySet()) {
+        // append 'store' and its name to the metric
+        mrb.addGauge(Interns.info(this.tableNamePrefixPart1 + _COLUMNFAMILY
+            + entry.getKey().split(MetricsTableWrapperAggregate.HASH)[1]
+            + this.tableNamePrefixPart2 + metricName,
+          metricDesc), entry.getValue());
       }
     }
   }

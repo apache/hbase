@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -30,6 +29,7 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
@@ -131,7 +131,7 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
       if (oldPeerConfig.needToReplicate(tn)) {
         if (!peerConfig.needToReplicate(tn)) {
           // removed from peer config
-          for (String encodedRegionName : MetaTableAccessor
+          for (String encodedRegionName : ReplicationBarrierFamilyFormat
             .getTableEncodedRegionNamesForSerialReplication(conn, tn)) {
             addToList(encodedRegionNames, encodedRegionName, queueStorage);
           }

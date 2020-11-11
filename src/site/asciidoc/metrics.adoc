@@ -20,11 +20,11 @@ under the License.
 = Apache HBase (TM) Metrics
 
 == Introduction
-Apache HBase (TM) emits Hadoop link:https://hadoop.apache.org/core/docs/stable/api/org/apache/hadoop/metrics/package-summary.html[metrics].
+Apache HBase (TM) emits Hadoop link:https://hadoop.apache.org/docs/stable/api/org/apache/hadoop/metrics2/package-summary.html[metrics].
 
 == Setup
 
-First read up on Hadoop link:https://hadoop.apache.org/core/docs/stable/api/org/apache/hadoop/metrics/package-summary.html[metrics].
+First read up on Hadoop link:https://hadoop.apache.org/docs/stable/api/org/apache/hadoop/metrics2/package-summary.html[metrics].
 
 If you are using ganglia, the link:https://cwiki.apache.org/confluence/display/HADOOP2/GangliaMetrics[GangliaMetrics] wiki page is useful read.
 

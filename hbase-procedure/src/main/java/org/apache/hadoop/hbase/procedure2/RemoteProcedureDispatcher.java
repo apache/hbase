@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.procedure2.util.DelayedUtil.DelayedWithTimeout;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,8 +101,8 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
 
     // Create the thread pool that will execute RPCs
     threadPool = Threads.getBoundedCachedThreadPool(corePoolSize, 60L, TimeUnit.SECONDS,
-      Threads.newDaemonThreadFactory(this.getClass().getSimpleName(),
-          getUncaughtExceptionHandler()));
+      new ThreadFactoryBuilder().setNameFormat(this.getClass().getSimpleName() + "-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(getUncaughtExceptionHandler()).build());
     return true;
   }
 

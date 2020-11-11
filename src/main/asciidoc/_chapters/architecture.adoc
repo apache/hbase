@@ -261,8 +261,8 @@ For region name, we only accept `byte[]` as the parameter type and it may be a f
 Information on non-Java clients and custom protocols is covered in <<external_apis>>
 
 [[client.masterregistry]]
-=== Master registry (new as of release 3.0.0)
 
+=== Master Registry (new as of 2.3.0)
 Client internally works with a _connection registry_ to fetch the metadata needed by connections.
 This connection registry implementation is responsible for fetching the following metadata.
 
@@ -271,18 +271,18 @@ This connection registry implementation is responsible for fetching the followin
 * Cluster ID (unique to this cluster)
 
 This information is needed as a part of various client operations like connection set up, scans,
-gets etc. Up until releases 2.x.y, the default connection registry is based on ZooKeeper as the
-source of truth and the the clients fetched the metadata from zookeeper znodes. As of release 3.0.0,
-the default implementation for connection registry has been switched  to a master based
-implementation. With this change, the clients now fetch the required metadata from master RPC end
-points directly. This change was done for the following reasons.
+gets, etc. Traditionally, the connection registry implementation has been based on ZooKeeper as the
+source of truth and clients fetched the metadata directly from the ZooKeeper quorum. HBase 2.3.0
+introduces a new connection registry implementation based on direct communication with the Masters.
+With this implementation, clients now fetch required metadata via master RPC end points instead of
+maintaining connections to ZooKeeper. This change was done for the following reasons.
 
 * Reduce load on ZooKeeper since that is critical for cluster operation.
 * Holistic client timeout and retry configurations since the new registry brings all the client
 operations under HBase rpc framework.
 * Remove the ZooKeeper client dependency on HBase client library.
 
-This means that
+This means:
 
 * At least a single active or stand by master is needed for cluster connection setup. Refer to
 <<master.runtime>> for more details.
@@ -293,22 +293,42 @@ HMasters instead of ZooKeeper ensemble`
 
 To reduce hot-spotting on a single master, all the masters (active & stand-by) expose the needed
 service to fetch the connection metadata. This lets the client connect to any master (not just active).
+Both ZooKeeper- and Master-based connection registry implementations are available in 2.3+. For
+2.3 and earlier, the ZooKeeper-based implementation remains the default configuration.
+The Master-based implementation becomes the default in 3.0.0.
 
-==== RPC hedging
+Change the connection registry implementation by updating the value configured for
+`hbase.client.registry.impl`. To explicitly enable the ZooKeeper-based registry, use
 
-This feature also implements an new RPC channel that can hedge requests to multiple masters. This
-lets the client make the same request to multiple servers and which ever responds first is returned
-back to the client and the other other in-flight requests are canceled. This improves the
-performance, especially when a subset of servers are under load. The hedging fan out size is
-configurable, meaning the number of requests that are hedged in a single attempt, using the
-configuration key _hbase.rpc.hedged.fanout_ in the client configuration. It defaults to 2. With this
-default, the RPCs are tried in batches of 2. The hedging policy is still primitive and does not
+[source, xml]
+<property>
+    <name>hbase.client.registry.impl</name>
+    <value>org.apache.hadoop.hbase.client.ZKConnectionRegistry</value>
+ </property>
+
+To explicitly enable the Master-based registry, use
+
+[source, xml]
+<property>
+    <name>hbase.client.registry.impl</name>
+    <value>org.apache.hadoop.hbase.client.MasterRegistry</value>
+ </property>
+
+==== MasterRegistry RPC hedging
+
+MasterRegistry implements hedging of connection registry RPCs across active and stand-by masters.
+This lets the client make the same request to multiple servers and which ever responds first is
+returned back to the client immediately. This improves performance, especially when a subset of
+servers are under load. The hedging fan out size is configurable, meaning the number of requests
+that are hedged in a single attempt, using the configuration key
+_hbase.client.master_registry.hedged.fanout_ in the client configuration. It defaults to 2. With
+this default, the RPCs are tried in batches of 2. The hedging policy is still primitive and does not
 adapt to any sort of live rpc performance metrics.
 
 ==== Additional Notes
 
-* Clients hedge the requests in a randomized order to avoid hot-spotting a single server.
-* Cluster internal connections (master<->regionservers) still use ZooKeeper based connection
+* Clients hedge the requests in a randomized order to avoid hot-spotting a single master.
+* Cluster internal connections (masters &lt;-&gt; regionservers) still use ZooKeeper based connection
 registry.
 * Cluster internal state is still tracked in Zookeeper, hence ZK availability requirements are same
 as before.
@@ -1749,7 +1769,7 @@ StoreFiles are where your data lives.
 
 ===== HFile Format
 
-The _HFile_ file format is based on the SSTable file described in the link:http://research.google.com/archive/bigtable.html[BigTable [2006]] paper and on Hadoop's link:https://hadoop.apache.org/common/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html[TFile] (The unit test suite and the compression harness were taken directly from TFile). Schubert Zhang's blog post on link:http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html[HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs] makes for a thorough introduction to HBase's HFile.
+The _HFile_ file format is based on the SSTable file described in the link:http://research.google.com/archive/bigtable.html[BigTable [2006]] paper and on Hadoop's link:https://hadoop.apache.org/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html[TFile] (The unit test suite and the compression harness were taken directly from TFile). Schubert Zhang's blog post on link:http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html[HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs] makes for a thorough introduction to HBase's HFile.
 Matteo Bertozzi has also put up a helpful description, link:http://th30z.blogspot.com/2011/02/hbase-io-hfile.html?spref=tw[HBase I/O: HFile].
 
 For more information, see the HFile source code.
@@ -2522,6 +2542,60 @@ All the settings that apply to normal compactions (see <<compaction.parameters>>
 The exceptions are the minimum and maximum number of files, which are set to higher values by default because the files in stripes are smaller.
 To control these for stripe compactions, use `hbase.store.stripe.compaction.minFiles` and `hbase.store.stripe.compaction.maxFiles`, rather than `hbase.hstore.compaction.min` and `hbase.hstore.compaction.max`.
 
+[[ops.fifo]]
+===== FIFO Compaction
+
+FIFO compaction policy selects only files which have all cells expired. The column family *MUST* have non-default TTL.
+Essentially, FIFO compactor only collects expired store files.
+
+Because we don't do any real compaction, we do not use CPU and IO (disk and network) and evict hot data from a block cache. 
+As a result, both RW throughput and latency can be improved.
+
+[[ops.fifo.when]]
+===== When To Use FIFO Compaction
+
+Consider using FIFO Compaction when your use case is
+
+* Very high volume raw data which has low TTL and which is the source of another data (after additional processing).
+* Data which can be kept entirely in a a block cache (RAM/SSD). No need for compaction of a raw data at all.
+
+Do not use FIFO compaction when
+
+* Table/ColumnFamily has MIN_VERSION > 0
+* Table/ColumnFamily has TTL = FOREVER (HColumnDescriptor.DEFAULT_TTL)
+
+[[ops.fifo.enable]]
+====== Enabling FIFO Compaction
+
+For Table:
+
+[source,java]
+----
+HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+      FIFOCompactionPolicy.class.getName());
+----
+
+For Column Family:
+
+[source,java]
+----
+HColumnDescriptor desc = new HColumnDescriptor(family);
+    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+      FIFOCompactionPolicy.class.getName());
+----
+
+From HBase Shell:
+
+[source,bash]
+----
+create 'x',{NAME=>'y', TTL=>'30'}, {CONFIGURATION => {'hbase.hstore.defaultengine.compactionpolicy.class' => 'org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy', 'hbase.hstore.blockingStoreFiles' => 1000}}
+----
+
+Although region splitting is still supported, for optimal performance it should be disabled, either by setting explicitly `DisabledRegionSplitPolicy` or by setting `ConstantSizeRegionSplitPolicy` and very large max region size.
+You will have to increase to a very large number store's blocking file (`hbase.hstore.blockingStoreFiles`) as well.
+There is a sanity check on table/column family configuration in case of FIFO compaction and minimum value for number of blocking file is 1000.
+
 [[arch.bulk.load]]
 == Bulk Loading
 
@@ -2678,8 +2752,6 @@ See the above HDFS Architecture link for more information.
 
 [[arch.timelineconsistent.reads]]
 == Timeline-consistent High Available Reads
-
-NOTE: The current <<amv2, Assignment Manager V2>> does not work well with region replica, so this feature maybe broken. Use it with caution.
 
 [[casestudies.timelineconsistent.intro]]
 === Introduction
@@ -2846,7 +2918,7 @@ Instead you can change the number of region replicas per table to increase or de
     <name>hbase.regionserver.meta.storefile.refresh.period</name>
     <value>300000</value>
     <description>
-      The period (in milliseconds) for refreshing the store files for the hbase:meta tables secondary regions. 0 means this feature is disabled. Secondary regions sees new files (from flushes and compactions) from primary once the secondary region refreshes the list of files in the region (there is no notification mechanism). But too frequent refreshes might cause extra Namenode pressure. If the files cannot be refreshed for longer than HFile TTL (hbase.master.hfilecleaner.ttl) the requests are rejected. Configuring HFile TTL to a larger value is also recommended with this setting. This should be a non-zero number if meta replicas are enabled (via hbase.meta.replica.count set to greater than 1).
+      The period (in milliseconds) for refreshing the store files for the hbase:meta tables secondary regions. 0 means this feature is disabled. Secondary regions sees new files (from flushes and compactions) from primary once the secondary region refreshes the list of files in the region (there is no notification mechanism). But too frequent refreshes might cause extra Namenode pressure. If the files cannot be refreshed for longer than HFile TTL (hbase.master.hfilecleaner.ttl) the requests are rejected. Configuring HFile TTL to a larger value is also recommended with this setting. This should be a non-zero number if meta replicas are enabled.
     </description>
 </property>
 
@@ -2878,15 +2950,6 @@ Instead you can change the number of region replicas per table to increase or de
     <description>
       The period (in milliseconds) to keep store files in the archive folder before deleting them from the file system.</description>
 </property>
-
-<property>
-    <name>hbase.meta.replica.count</name>
-    <value>3</value>
-    <description>
-      Region replication count for the meta regions. Defaults to 1.
-    </description>
-</property>
-
 
 <property>
     <name>hbase.region.replica.storefile.refresh.memstore.multiplier</name>

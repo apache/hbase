@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -51,7 +51,8 @@ public class TestRegionState {
   }
 
   private void testSerializeDeserialize(final TableName tableName, final RegionState.State state) {
-    RegionState state1 = RegionState.createForTesting(new HRegionInfo(tableName), state);
+    RegionState state1 =
+      RegionState.createForTesting(RegionInfoBuilder.newBuilder(tableName).build(), state);
     ClusterStatusProtos.RegionState protobuf1 = state1.convert();
     RegionState state2 = RegionState.convert(protobuf1);
     ClusterStatusProtos.RegionState protobuf2 = state1.convert();

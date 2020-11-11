@@ -19,13 +19,13 @@ package org.apache.hadoop.hbase.hbtop.screen.top;
 
 import static org.apache.commons.lang3.time.DateFormatUtils.ISO_8601_EXTENDED_TIME_FORMAT;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.hbtop.Record;
@@ -64,28 +64,55 @@ public class TopScreenModel {
 
   private boolean ascendingSort;
 
-  public TopScreenModel(Admin admin, Mode initialMode) {
+  public TopScreenModel(Admin admin, Mode initialMode, @Nullable List<Field> initialFields,
+    @Nullable Field initialSortField, @Nullable Boolean initialAscendingSort,
+    @Nullable List<RecordFilter> initialFilters) {
     this.admin = Objects.requireNonNull(admin);
-    switchMode(Objects.requireNonNull(initialMode), null, false);
+    switchMode(Objects.requireNonNull(initialMode), initialSortField, false, initialFields,
+      initialAscendingSort, initialFilters);
   }
 
-  public void switchMode(Mode nextMode, List<RecordFilter> initialFilters,
-    boolean keepSortFieldAndSortOrderIfPossible) {
+  public void switchMode(Mode nextMode, boolean keepSortFieldAndSortOrderIfPossible,
+    List<RecordFilter> initialFilters) {
+    switchMode(nextMode, null, keepSortFieldAndSortOrderIfPossible, null, null, initialFilters);
+  }
 
+  public void switchMode(Mode nextMode, Field initialSortField,
+    boolean keepSortFieldAndSortOrderIfPossible, @Nullable List<Field> initialFields,
+    @Nullable Boolean initialAscendingSort, @Nullable List<RecordFilter> initialFilters) {
     currentMode = nextMode;
     fieldInfos = Collections.unmodifiableList(new ArrayList<>(currentMode.getFieldInfos()));
-    fields = Collections.unmodifiableList(currentMode.getFieldInfos().stream()
-      .map(FieldInfo::getField).collect(Collectors.toList()));
+
+    if (initialFields != null) {
+      List<Field> tmp = new ArrayList<>(initialFields);
+      tmp.addAll(currentMode.getFieldInfos().stream().map(FieldInfo::getField)
+        .filter(f -> !initialFields.contains(f))
+        .collect(Collectors.toList()));
+      fields = Collections.unmodifiableList(tmp);
+    } else {
+      fields = Collections.unmodifiableList(currentMode.getFieldInfos().stream()
+        .map(FieldInfo::getField).collect(Collectors.toList()));
+    }
 
     if (keepSortFieldAndSortOrderIfPossible) {
       boolean match = fields.stream().anyMatch(f -> f == currentSortField);
       if (!match) {
+        if (initialSortField != null && initialAscendingSort != null) {
+          currentSortField = initialSortField;
+          ascendingSort = initialAscendingSort;
+        } else {
+          currentSortField = nextMode.getDefaultSortField();
+          ascendingSort = false;
+        }
+      }
+    } else {
+      if (initialSortField != null && initialAscendingSort != null) {
+        currentSortField = initialSortField;
+        ascendingSort = initialAscendingSort;
+      } else {
         currentSortField = nextMode.getDefaultSortField();
         ascendingSort = false;
       }
-    } else {
-      currentSortField = nextMode.getDefaultSortField();
-      ascendingSort = false;
     }
 
     clearFilters();
@@ -173,7 +200,7 @@ public class TopScreenModel {
     if (drillDownInfo == null) {
       return false;
     }
-    switchMode(drillDownInfo.getNextMode(), drillDownInfo.getInitialFilters(), true);
+    switchMode(drillDownInfo.getNextMode(), true, drillDownInfo.getInitialFilters());
     return true;
   }
 

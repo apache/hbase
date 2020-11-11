@@ -29,7 +29,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface Terminal extends Closeable {
   void clear();
   void refresh();
-  TerminalSize getSize();
+  @Nullable TerminalSize getSize();
   @Nullable TerminalSize doResizeIfNecessary();
   @Nullable KeyPress pollKeyPress();
   CursorPosition getCursorPosition();

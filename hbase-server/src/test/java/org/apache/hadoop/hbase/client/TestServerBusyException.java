@@ -28,8 +28,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -185,8 +183,8 @@ public class TestServerBusyException {
 
   @Test()
   public void testServerBusyException() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
-    hdt.addCoprocessor(SleepCoprocessor.class.getName());
+    TableDescriptor hdt = TEST_UTIL.createModifyableTableDescriptor(name.getMethodName())
+      .setCoprocessor(SleepCoprocessor.class.getName()).build();
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c);
 

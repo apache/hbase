@@ -119,8 +119,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
     // Use a store scanner to find which rows to flush.
-    long smallestReadPoint = store.getSmallestReadPoint();
-    InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint, tracker);
+    InternalScanner scanner = createScanner(snapshot.getScanners(), tracker);
     StoreFileWriter writer;
     try {
       // TODO: We can fail in the below block before we complete adding this flush to

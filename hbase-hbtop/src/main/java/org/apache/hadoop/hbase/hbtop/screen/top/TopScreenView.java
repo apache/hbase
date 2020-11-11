@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.hbtop.Record;
+import org.apache.hadoop.hbase.hbtop.RecordFilter;
+import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.mode.Mode;
 import org.apache.hadoop.hbase.hbtop.screen.AbstractScreenView;
 import org.apache.hadoop.hbase.hbtop.screen.Screen;
@@ -50,13 +52,16 @@ public class TopScreenView extends AbstractScreenView {
   private static final int RECORD_START_ROW = 9;
 
   private final TopScreenPresenter topScreenPresenter;
-  private int pageSize;
+  private Integer pageSize;
 
   public TopScreenView(Screen screen, Terminal terminal, long initialRefreshDelay, Admin admin,
-    Mode initialMode) {
+    Mode initialMode, @Nullable List<Field> initialFields, @Nullable Field initialSortField,
+    @Nullable Boolean initialAscendingSort, @Nullable List<RecordFilter> initialFilters,
+    long numberOfIterations) {
     super(screen, terminal);
     this.topScreenPresenter = new TopScreenPresenter(this, initialRefreshDelay,
-      new TopScreenModel(admin, initialMode));
+      new TopScreenModel(admin, initialMode, initialFields, initialSortField,
+        initialAscendingSort, initialFilters), initialFields, numberOfIterations);
   }
 
   @Override
@@ -66,11 +71,12 @@ public class TopScreenView extends AbstractScreenView {
     setTimer(delay);
   }
 
+  @Nullable
   @Override
   public ScreenView handleTimer() {
     long delay = topScreenPresenter.refresh(false);
     setTimer(delay);
-    return this;
+    return topScreenPresenter.isIterationFinished() ? null : this;
   }
 
   @Nullable
@@ -79,39 +85,39 @@ public class TopScreenView extends AbstractScreenView {
     switch (keyPress.getType()) {
       case Enter:
         topScreenPresenter.refresh(true);
-        return this;
+        return topScreenPresenter.isIterationFinished() ? null : this;
 
       case ArrowUp:
         topScreenPresenter.arrowUp();
-        return this;
+        return topScreenPresenter.isIterationFinished() ? null : this;
 
       case ArrowDown:
         topScreenPresenter.arrowDown();
-        return this;
+        return topScreenPresenter.isIterationFinished() ? null : this;
 
       case ArrowLeft:
         topScreenPresenter.arrowLeft();
-        return this;
+        return topScreenPresenter.isIterationFinished() ? null : this;
 
       case ArrowRight:
         topScreenPresenter.arrowRight();
-        return this;
+        return topScreenPresenter.isIterationFinished() ? null : this;
 
       case PageUp:
         topScreenPresenter.pageUp();
-        return this;
+        return topScreenPresenter.isIterationFinished() ? null : this;
 
       case PageDown:
         topScreenPresenter.pageDown();
-        return this;
+        return topScreenPresenter.isIterationFinished() ? null : this;
 
       case Home:
         topScreenPresenter.home();
-        return this;
+        return topScreenPresenter.isIterationFinished() ? null : this;
 
       case End:
         topScreenPresenter.end();
-        return this;
+        return topScreenPresenter.isIterationFinished() ? null : this;
 
       case Escape:
         return null;
@@ -182,13 +188,18 @@ public class TopScreenView extends AbstractScreenView {
     return this;
   }
 
+  @Nullable
   @Override
   public TerminalSize getTerminalSize() {
     TerminalSize terminalSize = super.getTerminalSize();
+    if (terminalSize == null) {
+      return null;
+    }
     updatePageSize(terminalSize);
     return terminalSize;
   }
 
+  @Nullable
   @Override
   public TerminalSize doResizeIfNecessary() {
     TerminalSize terminalSize = super.doResizeIfNecessary();
@@ -206,7 +217,8 @@ public class TopScreenView extends AbstractScreenView {
     }
   }
 
-  public int getPageSize() {
+  @Nullable
+  public Integer getPageSize() {
     return pageSize;
   }
 
@@ -244,8 +256,14 @@ public class TopScreenView extends AbstractScreenView {
 
   private void showRecords(List<Header> headers, List<Record> records, Record selectedRecord) {
     TerminalPrinter printer = getTerminalPrinter(RECORD_START_ROW);
+    int size;
+    if (pageSize != null) {
+      size = pageSize;
+    } else {
+      size = records.size();
+    }
     List<String> buf = new ArrayList<>(headers.size());
-    for (int i = 0; i < pageSize; i++) {
+    for (int i = 0; i < size; i++) {
       if(i < records.size()) {
         Record record = records.get(i);
         buf.clear();

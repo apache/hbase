@@ -521,12 +521,13 @@ public class FileLink {
 
   /**
    * Checks if the specified directory path is a back reference links folder.
-   *
    * @param dirPath Directory path to verify
    * @return True if the specified directory is a link references folder
    */
   public static boolean isBackReferencesDir(final Path dirPath) {
-    if (dirPath == null) return false;
+    if (dirPath == null) {
+      return false;
+    }
     return dirPath.getName().startsWith(BACK_REFERENCES_DIRECTORY_PREFIX);
   }
 

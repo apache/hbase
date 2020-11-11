@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.SingleResponse;
@@ -105,14 +106,14 @@ public final class ResponseConverter {
    * Get the results from a protocol buffer MultiResponse
    *
    * @param request the original protocol buffer MultiRequest
-   * @param rowMutationsIndexMap Used to support RowMutations in batch
+   * @param indexMap Used to support RowMutations/CheckAndMutate in batch
    * @param response the protocol buffer MultiResponse to convert
    * @param cells Cells to go with the passed in <code>proto</code>.  Can be null.
    * @return the results that were in the MultiResponse (a Result or an Exception).
    * @throws IOException
    */
   public static org.apache.hadoop.hbase.client.MultiResponse getResults(final MultiRequest request,
-      final Map<Integer, Integer> rowMutationsIndexMap, final MultiResponse response,
+      final Map<Integer, Integer> indexMap, final MultiResponse response,
       final CellScanner cells) throws IOException {
     int requestRegionActionCount = request.getRegionActionCount();
     int responseRegionActionResultCount = response.getRegionActionResultCount();
@@ -149,37 +150,63 @@ public final class ResponseConverter {
 
       Object responseValue;
 
-      // For RowMutations action, if there is an exception, the exception is set
+      // For RowMutations/CheckAndMutate action, if there is an exception, the exception is set
       // at the RegionActionResult level and the ResultOrException is null at the original index
-      Integer rowMutationsIndex =
-          (rowMutationsIndexMap == null ? null : rowMutationsIndexMap.get(i));
-      if (rowMutationsIndex != null) {
-        // This RegionAction is from a RowMutations in a batch.
+      Integer index = (indexMap == null ? null : indexMap.get(i));
+      if (index != null) {
+        // This RegionAction is from a RowMutations/CheckAndMutate in a batch.
         // If there is an exception from the server, the exception is set at
         // the RegionActionResult level, which has been handled above.
-        responseValue = response.getProcessed() ?
+        if (actions.hasCondition()) {
+          Result result = null;
+          if (actionResult.getResultOrExceptionCount() > 0) {
+            ResultOrException roe = actionResult.getResultOrException(0);
+            if (roe.hasResult()) {
+              Result r = ProtobufUtil.toResult(roe.getResult(), cells);
+              if (!r.isEmpty()) {
+                result = r;
+              }
+            }
+          }
+          responseValue = new CheckAndMutateResult(actionResult.getProcessed(), result);
+        } else {
+          responseValue = actionResult.getProcessed() ?
             ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
             ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
-        results.add(regionName, rowMutationsIndex, responseValue);
+        }
+        results.add(regionName, index, responseValue);
         continue;
       }
 
-      for (ResultOrException roe : actionResult.getResultOrExceptionList()) {
-        if (roe.hasException()) {
-          responseValue = ProtobufUtil.toException(roe.getException());
-        } else if (roe.hasResult()) {
-          responseValue = ProtobufUtil.toResult(roe.getResult(), cells);
-        } else if (roe.hasServiceResult()) {
-          responseValue = roe.getServiceResult();
-        } else{
-          // Sometimes, the response is just "it was processed". Generally, this occurs for things
-          // like mutateRows where either we get back 'processed' (or not) and optionally some
-          // statistics about the regions we touched.
-          responseValue = response.getProcessed() ?
-                          ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
-                          ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
+      if (actions.hasCondition()) {
+        Result result = null;
+        if (actionResult.getResultOrExceptionCount() > 0) {
+          ResultOrException roe = actionResult.getResultOrException(0);
+          Result r = ProtobufUtil.toResult(roe.getResult(), cells);
+          if (!r.isEmpty()) {
+            result = r;
+          }
         }
-        results.add(regionName, roe.getIndex(), responseValue);
+        responseValue = new CheckAndMutateResult(actionResult.getProcessed(), result);
+        results.add(regionName, 0, responseValue);
+      } else {
+        for (ResultOrException roe : actionResult.getResultOrExceptionList()) {
+          if (roe.hasException()) {
+            responseValue = ProtobufUtil.toException(roe.getException());
+          } else if (roe.hasResult()) {
+            responseValue = ProtobufUtil.toResult(roe.getResult(), cells);
+          } else if (roe.hasServiceResult()) {
+            responseValue = roe.getServiceResult();
+          } else {
+            // Sometimes, the response is just "it was processed". Generally, this occurs for things
+            // like mutateRows where either we get back 'processed' (or not) and optionally some
+            // statistics about the regions we touched.
+            responseValue = actionResult.getProcessed() ?
+              ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
+              ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
+          }
+          results.add(regionName, roe.getIndex(), responseValue);
+        }
       }
     }
 
@@ -191,6 +218,21 @@ public final class ResponseConverter {
     }
 
     return results;
+  }
+
+  /**
+   * Create a CheckAndMutateResult object from a protocol buffer MutateResponse
+   *
+   * @return a CheckAndMutateResult object
+   */
+  public static CheckAndMutateResult getCheckAndMutateResult(
+    ClientProtos.MutateResponse mutateResponse, CellScanner cells) throws IOException {
+    boolean success = mutateResponse.getProcessed();
+    Result result = null;
+    if (mutateResponse.hasResult()) {
+      result = ProtobufUtil.toResult(mutateResponse.getResult(), cells);
+    }
+    return new CheckAndMutateResult(success, result);
   }
 
   /**

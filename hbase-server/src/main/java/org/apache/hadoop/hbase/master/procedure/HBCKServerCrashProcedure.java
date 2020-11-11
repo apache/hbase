@@ -21,7 +21,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -112,10 +113,10 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
   }
 
   /**
-   * Visitor for hbase:meta that 'fixes' Unknown Server issues. Collects
-   * a List of Regions to reassign as 'result'.
+   * Visitor for hbase:meta that 'fixes' Unknown Server issues. Collects a List of Regions to
+   * reassign as 'result'.
    */
-  private static class UnknownServerVisitor implements MetaTableAccessor.Visitor {
+  private static final class UnknownServerVisitor implements ClientMetaTableAccessor.Visitor {
     private final List<RegionInfo> reassigns = new ArrayList<>();
     private final ServerName unknownServerName;
     private final Connection connection;
@@ -127,7 +128,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
 
     @Override
     public boolean visit(Result result) throws IOException {
-      RegionLocations rls = MetaTableAccessor.getRegionLocations(result);
+      RegionLocations rls = CatalogFamilyFormat.getRegionLocations(result);
       if (rls == null) {
         return true;
       }
@@ -154,7 +155,8 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
             MetaTableAccessor.updateRegionState(this.connection, hrl.getRegion(),
                 RegionState.State.CLOSED);
           } catch (IOException ioe) {
-            LOG.warn("Failed moving {} from CLOSING to CLOSED", ioe);
+            LOG.warn("Failed moving {} from CLOSING to CLOSED",
+              hrl.getRegion().getRegionNameAsString(), ioe);
           }
         } else if (rs.isOpening() || rs.isOpened()) {
           this.reassigns.add(hrl.getRegion());
