@@ -77,6 +77,8 @@ public class TestRESTServerSSL {
 
   @AfterClass
   public static void afterClass() throws Exception {
+    // this will also delete the generated test keystore / teststore files,
+    // as we were placing them under the dataTestDir used by the minicluster
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -139,8 +141,6 @@ public class TestRESTServerSSL {
 
 
   private static File initKeystoreDir() {
-    final File target = new File(System.getProperty("user.dir"), "target");
-    assertTrue(target.exists());
     String dataTestDir = TEST_UTIL.getDataTestDir().toString();
     File keystoreDir = new File(dataTestDir, TestRESTServerSSL.class.getSimpleName() + "_keys");
     keystoreDir.mkdirs();
