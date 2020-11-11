@@ -49,11 +49,11 @@ public class SizeCachedKeyValue extends KeyValue {
   }
 
   public SizeCachedKeyValue(byte[] bytes, int offset, int length, long seqId, int keyLen,
-      int rowLen) {
+      short rowLen) {
     super(bytes, offset, length);
     // We will read all these cached values at least once. Initialize now itself so that we can
     // avoid uninitialized checks with every time call
-    this.rowLen = (short)rowLen;
+    this.rowLen = rowLen;
     this.keyLen = keyLen;
     setSequenceId(seqId);
   }

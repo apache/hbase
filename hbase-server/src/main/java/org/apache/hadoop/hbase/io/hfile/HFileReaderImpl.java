@@ -322,7 +322,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     private long currMemstoreTS;
     protected final HFile.Reader reader;
     private int currTagsLen;
-    private int rowLen;
+    private short rowLen;
     // buffer backed keyonlyKV
     private ByteBufferKeyOnlyKeyValue bufBackedKeyOnlyKv = new ByteBufferKeyOnlyKeyValue();
     // A pair for reusing in blockSeek() so that we don't garbage lot of objects

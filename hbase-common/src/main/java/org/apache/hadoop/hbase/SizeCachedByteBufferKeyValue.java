@@ -38,17 +38,17 @@ public class SizeCachedByteBufferKeyValue extends ByteBufferKeyValue {
     super(buf, offset, length);
     // We will read all these cached values at least once. Initialize now itself so that we can
     // avoid uninitialized checks with every time call
-    rowLen = super.getRowLength();
+    this.rowLen = super.getRowLength();
     this.keyLen = keyLen;
     setSequenceId(seqId);
   }
 
   public SizeCachedByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId,
-      int keyLen, int rowLen) {
+      int keyLen, short rowLen) {
     super(buf, offset, length);
     // We will read all these cached values at least once. Initialize now itself so that we can
     // avoid uninitialized checks with every time call
-    this.rowLen = (short) rowLen;
+    this.rowLen = rowLen;
     this.keyLen = keyLen;
     setSequenceId(seqId);
   }
