@@ -685,16 +685,18 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
     Collection<ReplicationSourceShipper> workers = workerThreads.values();
 
+    for (ReplicationSourceShipper worker : workers) {
+      worker.stopWorker();
+      if(worker.entryReader != null) {
+        worker.entryReader.setReaderRunning(false);
+      }
+    }
 
     if (this.replicationEndpoint != null) {
       this.replicationEndpoint.stop();
     }
 
     for (ReplicationSourceShipper worker : workers) {
-      worker.stopWorker();
-      if (worker.entryReader != null) {
-        worker.entryReader.setReaderRunning(false);
-      }
       if (worker.isAlive() || worker.entryReader.isAlive()) {
         try {
           // Wait worker to stop

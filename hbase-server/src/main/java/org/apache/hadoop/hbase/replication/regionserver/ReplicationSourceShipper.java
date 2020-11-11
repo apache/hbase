@@ -349,18 +349,18 @@ public class ReplicationSourceShipper extends Thread {
     while(this.isAlive() || this.entryReader.isAlive()){
       try {
         if (System.currentTimeMillis() >= timeout) {
-          LOG.warn("Interrupting source thread for peer {} without cleaning buffer usage "
-            + "because clearWALEntryBatch method timed out whilst waiting reader/shipper "
-            + "thread to stop.", this.source.getPeerId());
-          Thread.currentThread().interrupt();
+          LOG.warn("Shipper clearWALEntryBatch method timed out whilst waiting reader/shipper "
+            + "thread to stop. Not cleaning buffer usage. Shipper alive: {}; Reader alive: {}",
+            this.source.getPeerId(), this.isAlive(), this.entryReader.isAlive());
+          return;
         } else {
           // Wait both shipper and reader threads to stop
           Thread.sleep(this.sleepForRetries);
         }
       } catch (InterruptedException e) {
-        LOG.warn("{} Interrupted while waiting {} to stop on clearWALEntryBatch: {}",
-          this.source.getPeerId(), this.getName(), e);
-        Thread.currentThread().interrupt();
+        LOG.warn("{} Interrupted while waiting {} to stop on clearWALEntryBatch. "
+            + "Not cleaning buffer usage: {}", this.source.getPeerId(), this.getName(), e);
+        return;
       }
     }
     LongAccumulator totalToDecrement = new LongAccumulator((a,b) -> a + b, 0);
