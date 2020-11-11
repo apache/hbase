@@ -56,7 +56,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
  * When L0 is compacted, it's split into the files corresponding to existing stripe boundaries,
  * that can thus be added to stripes.
  * When scan or get happens, it only has to read the files from the corresponding stripes.
- * See StripeCompationPolicy on how the stripes are determined; this class doesn't care.
+ * See StripeCompactionPolicy on how the stripes are determined; this class doesn't care.
  *
  * This class should work together with StripeCompactionPolicy and StripeCompactor.
  * With regard to how they work, we make at least the following (reasonable) assumptions:
