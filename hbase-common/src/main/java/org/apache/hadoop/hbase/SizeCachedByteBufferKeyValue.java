@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,28 +17,25 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This class is an extension to KeyValue where rowLen and keyLen are cached.
- * Parsing the backing byte[] every time to get these values will affect the performance.
- * In read path, we tend to read these values many times in Comparator, SQM etc.
- * Note: Please do not use these objects in write path as it will increase the heap space usage.
- * See https://issues.apache.org/jira/browse/HBASE-13448
+ * This Cell is an implementation of {@link ByteBufferExtendedCell} where the data resides in
+ * off heap/ on heap ByteBuffer
  */
 @InterfaceAudience.Private
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_DOESNT_OVERRIDE_EQUALS")
-public class SizeCachedKeyValue extends KeyValue {
-  // Overhead in this class alone. Parent's overhead will be considered in usage places by calls to
-  // super. methods
-  private static final int FIXED_OVERHEAD = Bytes.SIZEOF_SHORT + Bytes.SIZEOF_INT;
+public class SizeCachedByteBufferKeyValue extends ByteBufferKeyValue {
 
+  public static final int FIXED_OVERHEAD = Bytes.SIZEOF_SHORT + Bytes.SIZEOF_INT;
   private short rowLen;
   private int keyLen;
 
-  public SizeCachedKeyValue(byte[] bytes, int offset, int length, long seqId, int keyLen) {
-    super(bytes, offset, length);
+  public SizeCachedByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId,
+      int keyLen) {
+    super(buf, offset, length);
     // We will read all these cached values at least once. Initialize now itself so that we can
     // avoid uninitialized checks with every time call
     this.rowLen = super.getRowLength();
@@ -48,9 +43,9 @@ public class SizeCachedKeyValue extends KeyValue {
     setSequenceId(seqId);
   }
 
-  public SizeCachedKeyValue(byte[] bytes, int offset, int length, long seqId, int keyLen,
-      short rowLen) {
-    super(bytes, offset, length);
+  public SizeCachedByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId,
+      int keyLen, short rowLen) {
+    super(buf, offset, length);
     // We will read all these cached values at least once. Initialize now itself so that we can
     // avoid uninitialized checks with every time call
     this.rowLen = rowLen;
@@ -81,5 +76,15 @@ public class SizeCachedKeyValue extends KeyValue {
   @Override
   public int getSerializedSize() {
     return this.length;
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    return super.equals(other);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
   }
 }

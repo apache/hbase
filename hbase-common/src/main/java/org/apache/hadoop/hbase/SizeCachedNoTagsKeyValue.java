@@ -32,8 +32,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class SizeCachedNoTagsKeyValue extends SizeCachedKeyValue {
 
-  public SizeCachedNoTagsKeyValue(byte[] bytes, int offset, int length, long seqId) {
-    super(bytes, offset, length, seqId);
+  public SizeCachedNoTagsKeyValue(byte[] bytes, int offset, int length, long seqId, int keyLen) {
+    super(bytes, offset, length, seqId, keyLen);
+  }
+
+  public SizeCachedNoTagsKeyValue(byte[] bytes, int offset, int length, long seqId, int keyLen,
+      short rowLen) {
+    super(bytes, offset, length, seqId, keyLen, rowLen);
   }
 
   @Override
