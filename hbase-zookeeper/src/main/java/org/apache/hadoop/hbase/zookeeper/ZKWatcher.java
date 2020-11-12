@@ -97,7 +97,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   // It is ok to do it in a single thread because the Zookeeper ClientCnxn already serializes the
   // requests using a single while loop and hence there is no performance degradation.
   private final ExecutorService zkEventProcessor = Executors.newSingleThreadExecutor(
-    new ThreadFactoryBuilder().setNameFormat("zk-event-processor-pool-%d")
+    new ThreadFactoryBuilder().setNameFormat("zk-event-processor-pool-%d").setDaemon(true)
       .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
   private final Configuration conf;
