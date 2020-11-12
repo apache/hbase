@@ -101,7 +101,12 @@ public final class KeyStoreTestUtil {
 
   private static KeyStore createEmptyKeyStore()
     throws GeneralSecurityException, IOException {
-    KeyStore ks = KeyStore.getInstance("JKS");
+    return createEmptyKeyStore("jks");
+  }
+
+  private static KeyStore createEmptyKeyStore(String keyStoreType)
+    throws GeneralSecurityException, IOException {
+    KeyStore ks = KeyStore.getInstance(keyStoreType);
     ks.load(null, null); // initialize
     return ks;
   }
@@ -117,18 +122,29 @@ public final class KeyStoreTestUtil {
     }
   }
 
+  /**
+   * Creates a keystore with a single key and saves it to a file.
+   * This method will use the same password for the keystore and for the key.
+   * This method will always generate a keystore file in JKS format.
+   *
+   * @param filename String file to save
+   * @param password String store password to set on keystore
+   * @param alias String alias to use for the key
+   * @param privateKey Key to save in keystore
+   * @param cert Certificate to use as certificate chain associated to key
+   * @throws GeneralSecurityException for any error with the security APIs
+   * @throws IOException if there is an I/O error saving the file
+   */
   public static void createKeyStore(String filename,
                                     String password, String alias,
                                     Key privateKey, Certificate cert)
     throws GeneralSecurityException, IOException {
-    KeyStore ks = createEmptyKeyStore();
-    ks.setKeyEntry(alias, privateKey, password.toCharArray(),
-                   new Certificate[]{cert});
-    saveKeyStore(ks, filename, password);
+    createKeyStore(filename, password, password, alias, privateKey, cert);
   }
 
   /**
    * Creates a keystore with a single key and saves it to a file.
+   * This method will always generate a keystore file in JKS format.
    *
    * @param filename String file to save
    * @param password String store password to set on keystore
@@ -143,17 +159,66 @@ public final class KeyStoreTestUtil {
                                     String password, String keyPassword, String alias,
                                     Key privateKey, Certificate cert)
     throws GeneralSecurityException, IOException {
-    KeyStore ks = createEmptyKeyStore();
+    createKeyStore(filename, password, keyPassword, alias, privateKey, cert, "JKS");
+  }
+
+
+  /**
+   * Creates a keystore with a single key and saves it to a file.
+   *
+   * @param filename String file to save
+   * @param password String store password to set on keystore
+   * @param keyPassword String key password to set on key
+   * @param alias String alias to use for the key
+   * @param privateKey Key to save in keystore
+   * @param cert Certificate to use as certificate chain associated to key
+   * @param keystoreType String keystore file type (e.g. "JKS")
+   * @throws GeneralSecurityException for any error with the security APIs
+   * @throws IOException if there is an I/O error saving the file
+   */
+  public static void createKeyStore(String filename, String password, String keyPassword,
+                                    String alias, Key privateKey, Certificate cert,
+                                    String keystoreType)
+          throws GeneralSecurityException, IOException {
+    KeyStore ks = createEmptyKeyStore(keystoreType);
     ks.setKeyEntry(alias, privateKey, keyPassword.toCharArray(),
                    new Certificate[]{cert});
     saveKeyStore(ks, filename, password);
   }
 
+  /**
+   * Creates a truststore with a single certificate and saves it to a file.
+   * This method uses the default JKS truststore type.
+   *
+   * @param filename String file to save
+   * @param password String store password to set on truststore
+   * @param alias String alias to use for the certificate
+   * @param cert Certificate to add
+   * @throws GeneralSecurityException for any error with the security APIs
+   * @throws IOException if there is an I/O error saving the file
+   */
   public static void createTrustStore(String filename,
                                       String password, String alias,
                                       Certificate cert)
     throws GeneralSecurityException, IOException {
-    KeyStore ks = createEmptyKeyStore();
+    createTrustStore(filename, password, alias, cert, "JKS");
+  }
+
+  /**
+   * Creates a truststore with a single certificate and saves it to a file.
+   *
+   * @param filename String file to save
+   * @param password String store password to set on truststore
+   * @param alias String alias to use for the certificate
+   * @param cert Certificate to add
+   * @param trustStoreType String keystore file type (e.g. "JKS")
+   * @throws GeneralSecurityException for any error with the security APIs
+   * @throws IOException if there is an I/O error saving the file
+   */
+  public static void createTrustStore(String filename, String password, String alias,
+                                      Certificate cert, String trustStoreType)
+    throws GeneralSecurityException, IOException {
+    KeyStore ks = createEmptyKeyStore(trustStoreType);
     ks.setCertificateEntry(alias, cert);
     saveKeyStore(ks, filename, password);
   }
