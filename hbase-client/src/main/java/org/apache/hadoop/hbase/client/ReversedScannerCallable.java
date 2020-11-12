@@ -45,35 +45,22 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class ReversedScannerCallable extends ScannerCallable {
 
   /**
-   * @param connection
-   * @param tableName
-   * @param scan
-   * @param scanMetrics
-   * @param rpcFactory to create an {@link com.google.protobuf.RpcController} to talk to the
-   *          regionserver
-   */
-  public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
-      ScanMetrics scanMetrics, RpcControllerFactory rpcFactory) {
-    super(connection, tableName, scan, scanMetrics, rpcFactory);
-  }
-
-  /**
-   * @param connection
-   * @param tableName
-   * @param scan
-   * @param scanMetrics
+   * @param connection which connection
+   * @param tableName table callable is on
+   * @param scan the scan to execute
+   * @param scanMetrics the ScanMetrics to used, if it is null, ScannerCallable won't collect
+   *          metrics
    * @param rpcFactory to create an {@link com.google.protobuf.RpcController} to talk to the
    *          regionserver
    * @param replicaId the replica id
    */
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
-      ScanMetrics scanMetrics, RpcControllerFactory rpcFactory, int replicaId) {
+    ScanMetrics scanMetrics, RpcControllerFactory rpcFactory, int replicaId) {
     super(connection, tableName, scan, scanMetrics, rpcFactory, replicaId);
   }
 
   /**
    * @param reload force reload of server location
-   * @throws IOException
    */
   @Override
   public void prepare(boolean reload) throws IOException {
@@ -86,9 +73,8 @@ public class ReversedScannerCallable extends ScannerCallable {
       // 2. the start row is empty which means we need to locate to the last region.
       if (scan.includeStartRow() && !isEmptyStartRow(getRow())) {
         // Just locate the region with the row
-        RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload, id,
-            getConnection(), getTableName(), getRow());
-        this.location = id < rl.size() ? rl.getRegionLocation(id) : null;
+        RegionLocations rl = getRegionLocations(reload, getRow());
+        this.location = getLocationForReplica(rl);
         if (location == null || location.getServerName() == null) {
           throw new IOException("Failed to find location, tableName="
               + getTableName() + ", row=" + Bytes.toStringBinary(getRow()) + ", reload="
@@ -126,7 +112,6 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param reload force reload of server location
    * @return A list of HRegionLocation corresponding to the regions that contain
    *         the specified range
-   * @throws IOException
    */
   private List<HRegionLocation> locateRegionsInRange(byte[] startKey,
       byte[] endKey, boolean reload) throws IOException {
@@ -140,15 +125,14 @@ public class ReversedScannerCallable extends ScannerCallable {
     List<HRegionLocation> regionList = new ArrayList<>();
     byte[] currentKey = startKey;
     do {
-      RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload, id,
-          getConnection(), getTableName(), currentKey);
-      HRegionLocation regionLocation = id < rl.size() ? rl.getRegionLocation(id) : null;
-      if (regionLocation != null && regionLocation.getRegionInfo().containsRow(currentKey)) {
+      RegionLocations rl = getRegionLocations(reload, currentKey);
+      HRegionLocation regionLocation = getLocationForReplica(rl);
+      if (regionLocation.getRegionInfo().containsRow(currentKey)) {
         regionList.add(regionLocation);
       } else {
-        throw new DoNotRetryIOException("Does hbase:meta exist hole? Locating row "
-            + Bytes.toStringBinary(currentKey) + " returns incorrect region "
-            + (regionLocation == null ? null : regionLocation.getRegionInfo()));
+        throw new DoNotRetryIOException(
+          "Does hbase:meta exist hole? Locating row " + Bytes.toStringBinary(currentKey) +
+            " returns incorrect region " + regionLocation.getRegionInfo());
       }
       currentKey = regionLocation.getRegionInfo().getEndKey();
     } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)

@@ -75,7 +75,7 @@ public class TestReversedScannerCallable {
     Mockito.when(connection.relocateRegion(tableName, ROW, 0)).thenReturn(regionLocations);
 
     ReversedScannerCallable callable =
-        new ReversedScannerCallable(connection, tableName, scan, null, rpcFactory);
+      new ReversedScannerCallable(connection, tableName, scan, null, rpcFactory, 0);
     callable.prepare(true);
 
     Mockito.verify(connection).relocateRegion(tableName, ROW, 0);
@@ -85,10 +85,10 @@ public class TestReversedScannerCallable {
   public void testPrepareUsesCache() throws Exception {
     TableName tableName = TableName.valueOf("MyTable");
     Mockito.when(connection.locateRegion(tableName, ROW, true, true, 0))
-        .thenReturn(regionLocations);
+      .thenReturn(regionLocations);
 
     ReversedScannerCallable callable =
-        new ReversedScannerCallable(connection, tableName, scan, null, rpcFactory);
+      new ReversedScannerCallable(connection, tableName, scan, null, rpcFactory, 0);
     callable.prepare(false);
 
     Mockito.verify(connection).locateRegion(tableName, ROW, true, true, 0);
