@@ -127,7 +127,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   }
 
   @Override
-  public Result [] call(int timeout) throws IOException {
+  public Result[] call(int timeout) throws IOException {
     // If the active replica callable was closed somewhere, invoke the RPC to
     // really close it. In the case of regular scanners, this applies. We make couple
     // of RPCs to a RegionServer, and when that region is exhausted, we set
@@ -187,7 +187,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
 
     AtomicBoolean done = new AtomicBoolean(false);
     replicaSwitched.set(false);
-    // submit call for the primary replica.
+    // submit call for the primary replica or user specified replica
     addCallsForCurrentReplica(cs);
     int startIndex = 0;
 
@@ -209,13 +209,13 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
         LOG.debug("Scan with primary region returns " + e.getCause());
       }
 
-      // If rl's size is 1 or scan's consitency is strong, it needs to throw
-      // out the exception from the primary replica
-      if ((regionReplication == 1) || (scan.getConsistency() == Consistency.STRONG)) {
+      // If rl's size is 1 or scan's consitency is strong, or scan is over specific replica,
+      // it needs to throw out the exception from the primary replica
+      if (regionReplication == 1 || scan.getConsistency() == Consistency.STRONG ||
+        scan.getReplicaId() >= 0) {
         // Rethrow the first exception
         RpcRetryingCallerWithReadReplicas.throwEnrichedException(e, retries);
       }
-
       startIndex = 1;
     } catch (CancellationException e) {
       throw new InterruptedIOException(e.getMessage());
@@ -225,8 +225,9 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
 
     // submit call for the all of the secondaries at once
     int endIndex = regionReplication;
-    if (scan.getConsistency() == Consistency.STRONG) {
-      // When scan's consistency is strong, do not send to the secondaries
+    if (scan.getConsistency() == Consistency.STRONG || scan.getReplicaId() >= 0) {
+      // When scan's consistency is strong or scan is over specific replica region, do not send to
+      // the secondaries
       endIndex = 1;
     } else {
       // TODO: this may be an overkill for large region replication
