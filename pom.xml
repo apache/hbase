@@ -1246,10 +1246,10 @@
         <configuration>
           <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
           <doctype>book</doctype>
-          <imagesDir>images</imagesDir>
-          <sourceHighlighter>coderay</sourceHighlighter>
           <attributes>
             <docVersion>${project.version}</docVersion>
+            <imagesdir>images</imagesdir>
+            <source-highlighter>coderay</source-highlighter>
           </attributes>
         </configuration>
         <executions>
@@ -1462,8 +1462,8 @@
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>4.2.0</curator.version>
     <!-- Plugin Dependencies -->
-    <asciidoctor.plugin.version>1.5.8</asciidoctor.plugin.version>
-    <asciidoctorj.pdf.version>1.5.0-rc.2</asciidoctorj.pdf.version>
+    <asciidoctor.plugin.version>2.1.0</asciidoctor.plugin.version>
+    <asciidoctorj.pdf.version>1.5.3</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <!--
