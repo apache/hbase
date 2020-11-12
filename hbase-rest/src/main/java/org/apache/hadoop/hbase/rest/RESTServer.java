@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import javax.servlet.DispatcherType;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -307,13 +308,31 @@ public class RESTServer implements Constants {
 
       SslContextFactory sslCtxFactory = new SslContextFactory();
       String keystore = conf.get(REST_SSL_KEYSTORE_STORE);
+      String keystoreType = conf.get(REST_SSL_KEYSTORE_TYPE);
       String password = HBaseConfiguration.getPassword(conf,
           REST_SSL_KEYSTORE_PASSWORD, null);
       String keyPassword = HBaseConfiguration.getPassword(conf,
           REST_SSL_KEYSTORE_KEYPASSWORD, password);
       sslCtxFactory.setKeyStorePath(keystore);
+      if(StringUtils.isNotBlank(keystoreType)) {
+        sslCtxFactory.setKeyStoreType(keystoreType);
+      }
       sslCtxFactory.setKeyStorePassword(password);
       sslCtxFactory.setKeyManagerPassword(keyPassword);
+
+      String trustStore = conf.get(REST_SSL_TRUSTSTORE_STORE);
+      if(StringUtils.isNotBlank(trustStore)) {
+        sslCtxFactory.setTrustStorePath(trustStore);
+      }
+      String trustStorePassword =
+        HBaseConfiguration.getPassword(conf, REST_SSL_TRUSTSTORE_PASSWORD, null);
+      if(StringUtils.isNotBlank(trustStorePassword)) {
+        sslCtxFactory.setTrustStorePassword(trustStorePassword);
+      }
+      String trustStoreType = conf.get(REST_SSL_TRUSTSTORE_TYPE);
+      if(StringUtils.isNotBlank(trustStoreType)) {
+        sslCtxFactory.setTrustStoreType(trustStoreType);
+      }
 
       String[] excludeCiphers = servlet.getConfiguration().getStrings(
           REST_SSL_EXCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
