@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.getArchivedLogPath;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -101,7 +102,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   protected ReplicationPeer replicationPeer;
 
   protected Configuration conf;
-  protected ReplicationQueueInfo replicationQueueInfo;
+  protected ReplicationQueueInfo queueInfo;
 
   protected Path walDir;
 
@@ -115,8 +116,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private UUID clusterId;
   // total number of edits we replicated
   private AtomicLong totalReplicatedEdits = new AtomicLong(0);
-  // The znode we currently play with
-  protected String queueId;
   // Maximum number of retries before taking bold actions
   private int maxRetriesMultiplier;
   // Indicates if this particular source is running
@@ -158,7 +157,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private int waitOnEndpointSeconds = -1;
 
   private Thread initThread;
-  private Thread fetchWALsThread;
 
   /**
    * WALs to replicate.
@@ -196,10 +194,11 @@ public class ReplicationSource implements ReplicationSourceInterface {
   @Override
   public void init(Configuration conf, FileSystem fs, Path walDir,
     ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
-    ReplicationPeer replicationPeer, Server server, ServerName producer, String queueId,
+    ReplicationPeer replicationPeer, Server server, ReplicationQueueInfo queueInfo,
     UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
     throws IOException {
     this.server = server;
+    this.queueInfo = queueInfo;
     this.conf = HBaseConfiguration.create(conf);
     this.walDir = walDir;
     this.waitOnEndpointSeconds =
@@ -216,9 +215,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.fs = fs;
     this.metrics = metrics;
     this.clusterId = clusterId;
-
-    this.queueId = queueId;
-    this.replicationQueueInfo = new ReplicationQueueInfo(queueId);
     this.logQueueWarnThreshold = this.conf.getInt("replication.source.log.queue.warn", 2);
 
     defaultBandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
@@ -233,16 +229,16 @@ public class ReplicationSource implements ReplicationSourceInterface {
       HConstants.REPLICATION_OFFLOAD_ENABLE_DEFAULT)) {
       if (queueStorage instanceof ZKReplicationQueueStorage) {
         ZKReplicationQueueStorage zkQueueStorage = (ZKReplicationQueueStorage) queueStorage;
-        zkQueueStorage.getZookeeper().registerListener(
-          new ReplicationQueueListener(this, zkQueueStorage, producer, queueId, walDir));
+        zkQueueStorage.getZookeeper()
+          .registerListener(new ReplicationQueueListener(this, zkQueueStorage, walDir));
         LOG.info("Register a ZKListener to track the WALs from {}'s replication queue, queueId={}",
-          producer, queueId);
+          queueInfo.getOwner(), queueInfo.getQueueId());
       } else {
         throw new UnsupportedOperationException(
           "hbase.replication.offload.enabled=true only support ZKReplicationQueueStorage");
       }
     }
-    LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
+    LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueInfo.getQueueId(),
       replicationPeer.getId(), this.currentBandwidth);
   }
 
@@ -282,7 +278,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
     if (LOG.isTraceEnabled()) {
       LOG.trace("{} Added wal {} to queue of source {}.", logPeerId(), walPrefix,
-        this.replicationQueueInfo.getQueueId());
+        getQueueId());
     }
     this.metrics.incrSizeOfLogQueue();
     // This will wal a warning for each new wal that gets created above the warn threshold
@@ -361,10 +357,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
         ReplicationSourceShipper worker = createNewShipper(walGroupId, queue);
         ReplicationSourceWALReader walReader =
             createNewWALReader(walGroupId, queue, worker.getStartPosition());
-        Threads.setDaemonThreadRunning(
-            walReader, Thread.currentThread().getName()
-            + ".replicationSource.wal-reader." + walGroupId + "," + queueId,
-          (t,e) -> this.uncaughtException(t, e, null, this.getPeerId()));
+        Threads.setDaemonThreadRunning(walReader,
+          "replicationSource.wal-reader." + walGroupId + "," + getQueueId(),
+          (t, e) -> this.uncaughtException(t, e, null, this.getPeerId()));
         worker.setWALReader(walReader);
         worker.startup((t,e) -> this.uncaughtException(t, e, null, this.getPeerId()));
         return worker;
@@ -584,7 +579,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       throw new IllegalStateException("Source should be active.");
     }
     LOG.info("{} queueId={} is replicating from cluster={} to cluster={}",
-      logPeerId(), this.replicationQueueInfo.getQueueId(), clusterId, peerClusterId);
+      logPeerId(), getQueueId(), clusterId, peerClusterId);
 
     initializeWALEntryFilter(peerClusterId);
     // start workers
@@ -602,8 +597,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     this.sourceRunning = true;
     startupOngoing.set(true);
     initThread = new Thread(this::initialize);
-    Threads.setDaemonThreadRunning(initThread,
-      Thread.currentThread().getName() + ".replicationSource," + this.queueId,
+    Threads.setDaemonThreadRunning(initThread, "replicationSource.init," + getQueueId(),
       (t,e) -> {
         //if first initialization attempt failed, and abortOnError is false, we will
         //keep looping in this thread until initialize eventually succeeds,
@@ -646,10 +640,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
   public void terminate(String reason, Exception cause, boolean clearMetrics,
       boolean join) {
     if (cause == null) {
-      LOG.info("{} Closing source {} because: {}", logPeerId(), this.queueId, reason);
+      LOG.info("{} Closing source {} because: {}", logPeerId(), getQueueId(), reason);
     } else {
       LOG.error("{} Closing source {} because an error occurred: {}",
-        logPeerId(), this.queueId, reason, cause);
+        logPeerId(), getQueueId(), reason, cause);
     }
     this.sourceRunning = false;
     if (initThread != null && Thread.currentThread() != initThread) {
@@ -701,7 +695,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
             TimeUnit.MILLISECONDS);
         } catch (TimeoutException te) {
           LOG.warn("{} Got exception while waiting for endpoint to shutdown "
-            + "for replication source : {}", logPeerId(), this.queueId, te);
+            + "for replication source : {}", logPeerId(), getQueueId(), te);
         }
       }
     }
@@ -711,11 +705,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
         this.metrics.clear();
       }
     }
-  }
-
-  @Override
-  public String getQueueId() {
-    return this.queueId;
   }
 
   @Override
@@ -734,8 +723,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return !this.server.isStopped() && this.sourceRunning;
   }
 
-  public ReplicationQueueInfo getReplicationQueueInfo() {
-    return replicationQueueInfo;
+  @Override
+  public ReplicationQueueInfo getQueueInfo() {
+    return queueInfo;
   }
 
   public boolean isWorkerRunning(){
@@ -792,7 +782,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   @Override
   public ServerName getServerWALsBelongTo() {
-    return server.getServerName();
+    return queueInfo.getOwner();
   }
 
   @Override
@@ -820,7 +810,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   public void setWALPosition(WALEntryBatch entryBatch) {
     String fileName = entryBatch.getLastWalPath().getName();
     interruptOrAbortWhenFail(() -> this.queueStorage
-      .setWALPosition(server.getServerName(), getQueueId(), fileName,
+      .setWALPosition(queueInfo.getOwner(), getQueueId(), fileName,
         entryBatch.getLastWalPosition(), entryBatch.getLastSeqIds()));
   }
 
@@ -840,7 +830,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     NavigableSet<String> walsToRemove = new TreeSet<>();
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log);
     try {
-      this.queueStorage.getWALsInQueue(this.server.getServerName(), getQueueId()).forEach(wal -> {
+      this.queueStorage.getWALsInQueue(queueInfo.getOwner(), getQueueId()).forEach(wal -> {
         LOG.debug("getWalsToRemove wal {}", wal);
         String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
         if (walPrefix.equals(logPrefix)) {
@@ -913,7 +903,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
     for (String wal : wals) {
       interruptOrAbortWhenFail(
-        () -> this.queueStorage.removeWAL(server.getServerName(), getQueueId(), wal));
+        () -> this.queueStorage.removeWAL(queueInfo.getOwner(), getQueueId(), wal));
     }
   }
 
@@ -959,10 +949,11 @@ public class ReplicationSource implements ReplicationSourceInterface {
     private final Path walDir;
 
     public ReplicationQueueListener(ReplicationSource source,
-      ZKReplicationQueueStorage zkQueueStorage, ServerName producer, String queueId, Path walDir) {
+      ZKReplicationQueueStorage zkQueueStorage, Path walDir) {
       super(zkQueueStorage.getZookeeper());
       this.source = source;
-      this.queueNode = zkQueueStorage.getQueueNode(producer, queueId);
+      this.queueNode =
+        zkQueueStorage.getQueueNode(source.getQueueInfo().getOwner(), source.getQueueId());
       this.walDir = walDir;
     }
 

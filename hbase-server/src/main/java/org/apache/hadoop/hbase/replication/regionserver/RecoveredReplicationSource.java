@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationSourceController;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -46,17 +47,14 @@ public class RecoveredReplicationSource extends ReplicationSource {
 
   private static final Logger LOG = LoggerFactory.getLogger(RecoveredReplicationSource.class);
 
-  private String actualPeerId;
-
   @Override
   public void init(Configuration conf, FileSystem fs, Path walDir,
     ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
-    ReplicationPeer replicationPeer, Server server, ServerName producer, String queueId,
-    UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
-    throws IOException {
-    super.init(conf, fs, walDir, overallController, queueStorage, replicationPeer, server, producer,
-      queueId, clusterId, walFileLengthProvider, metrics);
-    this.actualPeerId = this.replicationQueueInfo.getPeerId();
+    ReplicationPeer replicationPeer, Server server, ReplicationQueueInfo queueInfo, UUID clusterId,
+    WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
+    super
+      .init(conf, fs, walDir, overallController, queueStorage, replicationPeer, server, queueInfo,
+        clusterId, walFileLengthProvider, metrics);
   }
 
   @Override
@@ -85,7 +83,7 @@ public class RecoveredReplicationSource extends ReplicationSource {
       } else {
         // See if Path exists in the dead RS folder (there could be a chain of failures
         // to look at)
-        List<ServerName> deadRegionServers = this.replicationQueueInfo.getDeadRegionServers();
+        List<ServerName> deadRegionServers = this.queueInfo.getDeadRegionServers();
         LOG.info("NB dead servers : " + deadRegionServers.size());
         final Path walDir = CommonFSUtils.getWALRootDir(conf);
         for (ServerName curDeadServerName : deadRegionServers) {
@@ -154,12 +152,12 @@ public class RecoveredReplicationSource extends ReplicationSource {
 
   @Override
   public String getPeerId() {
-    return this.actualPeerId;
+    return queueInfo.getPeerId();
   }
 
   @Override
   public ServerName getServerWALsBelongTo() {
-    return this.replicationQueueInfo.getDeadRegionServers().get(0);
+    return this.queueInfo.getDeadRegionServers().get(0);
   }
 
   @Override

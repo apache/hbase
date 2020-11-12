@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   private ReplicationPeer replicationPeer;
-  private String queueId;
+  private ReplicationQueueInfo queueInfo;
   private Path currentPath;
   private MetricsSource metrics;
   private WALFileLengthProvider walFileLengthProvider;
@@ -48,10 +48,10 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   @Override
   public void init(Configuration conf, FileSystem fs, Path walDir,
     ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
-    ReplicationPeer replicationPeer, Server server, ServerName producer, String queueId,
+    ReplicationPeer replicationPeer, Server server, ReplicationQueueInfo queueInfo,
     UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
     throws IOException {
-    this.queueId = queueId;
+    this.queueInfo = queueInfo;
     this.metrics = metrics;
     this.walFileLengthProvider = walFileLengthProvider;
     this.replicationPeer = replicationPeer;
@@ -95,15 +95,13 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
-  public String getQueueId() {
-    return queueId;
+  public ReplicationQueueInfo getQueueInfo() {
+    return queueInfo;
   }
 
   @Override
   public String getPeerId() {
-    String[] parts = queueId.split("-", 2);
-    return parts.length != 1 ?
-        parts[0] : queueId;
+    return queueInfo.getPeerId();
   }
 
   @Override

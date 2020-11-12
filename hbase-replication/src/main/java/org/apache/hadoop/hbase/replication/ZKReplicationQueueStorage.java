@@ -208,7 +208,7 @@ public class ZKReplicationQueueStorage extends ZKReplicationStorageBase
 
   private void addLastSeqIdsToOps(String queueId, Map<String, Long> lastSeqIds,
       List<ZKUtilOp> listOfOps) throws KeeperException, ReplicationException {
-    String peerId = new ReplicationQueueInfo(queueId).getPeerId();
+    String peerId = ReplicationQueueInfo.parsePeerId(queueId);
     for (Entry<String, Long> lastSeqEntry : lastSeqIds.entrySet()) {
       String path = getSerialReplicationRegionPeerNode(lastSeqEntry.getKey(), peerId);
       Pair<Long, Integer> p = getLastSequenceIdWithVersion(lastSeqEntry.getKey(), peerId);

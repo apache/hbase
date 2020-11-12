@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationSourceController;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -52,17 +53,15 @@ public interface ReplicationSourceInterface {
    * @param queueStorage the replication queue storage
    * @param replicationPeer the replication peer
    * @param server the server which start and run this replication source
-   * @param producer the name of region server which produce WAL to the replication queue
-   * @param queueId the id of our replication queue
+   * @param queueInfo the replication queue
    * @param clusterId unique UUID for the cluster
    * @param walFileLengthProvider used to get the WAL length
    * @param metrics metrics for this replication source
    */
   void init(Configuration conf, FileSystem fs, Path walDir,
     ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
-    ReplicationPeer replicationPeer, Server server, ServerName producer, String queueId,
-    UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
-    throws IOException;
+    ReplicationPeer replicationPeer, Server server, ReplicationQueueInfo queueInfo, UUID clusterId,
+    WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException;
 
   /**
    * Add a log to the list of logs to replicate
@@ -107,7 +106,16 @@ public interface ReplicationSourceInterface {
    *
    * @return queue id
    */
-  String getQueueId();
+  default String getQueueId() {
+    return getQueueInfo().getQueueId();
+  }
+
+  /**
+   * Get the replication queue info
+   *
+   * @return the replication queue info
+   */
+  ReplicationQueueInfo getQueueInfo();
 
   /**
    * Get the id that the source is replicating to.

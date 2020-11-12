@@ -17,20 +17,33 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
+import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorage;
+import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerProtos;
 
 /**
  * The ReplicationServerManager class manages info about replication servers.
@@ -49,18 +62,22 @@ public class ReplicationServerManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationServerManager.class);
 
-  public static final String ONLINE_SERVER_REFRESH_INTERVAL =
-      "hbase.master.replication.server.refresh.interval";
-  public static final int ONLINE_SERVER_REFRESH_INTERVAL_DEFAULT = 60 * 1000; // 1 mins
+  public static final String REPLICATION_SERVER_REFRESH_PERIOD =
+    "hbase.replication.server.refresh.period";
+  public static final int REPLICATION_SERVER_REFRESH_PERIOD_DEFAULT = 60 * 1000; // 1 mins
 
   private final MasterServices master;
 
-  /** Map of registered servers to their current load */
-  private final ConcurrentNavigableMap<ServerName, ServerMetrics> onlineServers =
+  /**
+   * Map of registered servers to their current load
+   */
+  private final ConcurrentNavigableMap<ServerName, Pair<ServerMetrics, Set<String>>> onlineServers =
     new ConcurrentSkipListMap<>();
 
-  private OnlineServerRefresher onlineServerRefresher;
+  private ReplicationServerRefresher refresher;
   private int refreshPeriod;
+
+  private ZKReplicationQueueStorage zkQueueStorage;
 
   /**
    * Constructor.
@@ -74,55 +91,55 @@ public class ReplicationServerManager {
    */
   public void startChore() {
     Configuration conf = master.getConfiguration();
-    refreshPeriod = conf.getInt(ONLINE_SERVER_REFRESH_INTERVAL,
-        ONLINE_SERVER_REFRESH_INTERVAL_DEFAULT);
-    onlineServerRefresher = new OnlineServerRefresher("ReplicationServerRefresher", refreshPeriod);
-    master.getChoreService().scheduleChore(onlineServerRefresher);
+    this.zkQueueStorage = (ZKReplicationQueueStorage) ReplicationStorageFactory
+      .getReplicationQueueStorage(master.getZooKeeper(), conf);
+    refreshPeriod = conf.getInt(REPLICATION_SERVER_REFRESH_PERIOD,
+      REPLICATION_SERVER_REFRESH_PERIOD_DEFAULT);
+    refresher = new ReplicationServerRefresher("ReplicationServerRefresher", refreshPeriod);
+    master.getChoreService().scheduleChore(refresher);
   }
 
   /**
    * Stop the ServerManager.
    */
   public void stop() {
-    if (onlineServerRefresher != null) {
-      onlineServerRefresher.cancel();
+    if (refresher != null) {
+      refresher.cancel();
     }
   }
 
-  public void serverReport(ServerName sn, ServerMetrics sl) {
-    if (null == this.onlineServers.replace(sn, sl)) {
-      if (!checkAndRecordNewServer(sn, sl)) {
-        LOG.info("ReplicationServerReport ignored, could not record the server: {}", sn);
-      }
+  public void serverReport(ServerName sn, ServerMetrics sm, Set<String> queueNodes) {
+    if (!onlineServers.containsKey(sn)) {
+      tryRecordNewServer(sn, sm, queueNodes);
+    } else {
+      onlineServers.put(sn, new Pair<>(sm, queueNodes));
     }
   }
 
   /**
    * Check is a server of same host and port already exists,
    * if not, or the existed one got a smaller start code, record it.
-   *
-   * @param serverName the server to check and record
-   * @param sl the server load on the server
-   * @return true if the server is recorded, otherwise, false
    */
-  private boolean checkAndRecordNewServer(final ServerName serverName, final ServerMetrics sl) {
+  private void tryRecordNewServer(ServerName sn, ServerMetrics sm, Set<String> queueNodes) {
     ServerName existingServer = null;
     synchronized (this.onlineServers) {
-      existingServer = findServerWithSameHostnamePort(serverName);
-      if (existingServer != null && (existingServer.getStartcode() > serverName.getStartcode())) {
-        LOG.info("ReplicationServer serverName={} rejected; we already have {} registered with "
-          + "same hostname and port", serverName, existingServer);
-        return false;
+      existingServer = findServerWithSameHostnamePort(sn);
+      if (existingServer != null && (existingServer.getStartcode() > sn.getStartcode())) {
+        LOG.info(
+          "ReplicationServer serverName={} report rejected; we already have {} registered with "
+            + "same hostname and port", sn, existingServer);
+        return;
       }
-      recordNewServer(serverName, sl);
+      LOG.info("Registering ReplicationServer={} assigned replication queues: {}", sn,
+        String.join(",", queueNodes));
+      this.onlineServers.put(sn, new Pair<>(sm, queueNodes));
       // Note that we assume that same ts means same server, and don't expire in that case.
-      if (existingServer != null && (existingServer.getStartcode() < serverName.getStartcode())) {
+      if (existingServer != null && (existingServer.getStartcode() < sn.getStartcode())) {
         LOG.info("Triggering server recovery; existingServer {} looks stale, new server: {}",
-            existingServer, serverName);
+          existingServer, sn);
         expireServer(existingServer);
       }
     }
-    return true;
   }
 
   /**
@@ -132,7 +149,6 @@ public class ReplicationServerManager {
   private ServerName findServerWithSameHostnamePort(final ServerName serverName) {
     ServerName end = ServerName.valueOf(serverName.getHostname(), serverName.getPort(),
       Long.MAX_VALUE);
-
     ServerName r = onlineServers.lowerKey(end);
     if (r != null && ServerName.isSameAddress(r, serverName)) {
       return r;
@@ -142,29 +158,11 @@ public class ReplicationServerManager {
 
   /**
    * Assumes onlineServers is locked.
-   */
-  private void recordNewServer(final ServerName serverName, final ServerMetrics sl) {
-    LOG.info("Registering ReplicationServer={}", serverName);
-    this.onlineServers.put(serverName, sl);
-  }
-
-  /**
-   * Assumes onlineServers is locked.
    * Expire the passed server. Remove it from list of online servers
    */
   public void expireServer(final ServerName serverName) {
     LOG.info("Expiring ReplicationServer={}", serverName);
     onlineServers.remove(serverName);
-  }
-
-  /**
-   * @return Read-only map of servers to serverinfo
-   */
-  public Map<ServerName, ServerMetrics> getOnlineServers() {
-    // Presumption is that iterating the returned Map is OK.
-    synchronized (this.onlineServers) {
-      return Collections.unmodifiableMap(this.onlineServers);
-    }
   }
 
   /**
@@ -179,25 +177,80 @@ public class ReplicationServerManager {
    * @return ServerMetrics if serverName is known else null
    */
   public ServerMetrics getServerMetrics(final ServerName serverName) {
-    return this.onlineServers.get(serverName);
+    if (!this.onlineServers.containsKey(serverName)) {
+      return null;
+    }
+    return this.onlineServers.get(serverName).getFirst();
   }
 
-  private class OnlineServerRefresher extends ScheduledChore {
+  /**
+   * This chore is responsible for 3 things:
+   * 1. Find all alive replication servers.
+   * 2. Find all replication queues.
+   * 3. Assign different queue to different replication server.
+   */
+  private class ReplicationServerRefresher extends ScheduledChore {
 
-    public OnlineServerRefresher(String name, int p) {
-      super(name, master, p, 60 * 1000); // delay one minute before first execute
+    public ReplicationServerRefresher(String name, int p) {
+      super(name, master, p, p);
     }
 
     @Override
     protected void chore() {
+      // Find all alive replication servers
       synchronized (onlineServers) {
         List<ServerName> servers = getOnlineServersList();
         servers.forEach(s -> {
-          ServerMetrics metrics = onlineServers.get(s);
+          ServerMetrics metrics = onlineServers.get(s).getFirst();
           if (metrics.getReportTimestamp() + refreshPeriod < System.currentTimeMillis()) {
             expireServer(s);
           }
         });
+      }
+      Set<String> assignedQueueNodes =
+        onlineServers.values().stream().map(Pair::getSecond).flatMap(Set::stream)
+          .collect(Collectors.toSet());
+      Map<ServerName, Set<String>> unassigned = new HashMap<>();
+      // Because all replication queues is owned by region servers. List all region servers and get
+      // their replication queues.
+      for (ServerName producer : master.getServerManager().getOnlineServersList()) {
+        try {
+          List<String> queues = zkQueueStorage.getAllQueues(producer);
+          for (String queue : queues) {
+            String queueNode = zkQueueStorage.getQueueNode(producer, queue);
+            LOG.debug("Found one replication queue {}", queueNode);
+            if (!assignedQueueNodes.contains(queueNode)) {
+              unassigned.computeIfAbsent(producer, p -> new HashSet<>()).add(queue);
+            }
+          }
+        } catch (ReplicationException e) {
+          LOG.warn("Failed to get all replication queues of server {}", producer, e);
+        }
+      }
+      ServerName[] consumers = getOnlineServersList().stream().toArray(ServerName[]::new);
+      if (consumers.length == 0) {
+        LOG.warn("No replication server available!");
+        return;
+      }
+      // Assign different queue to different replication server
+      for (Map.Entry<ServerName, Set<String>> entry : unassigned.entrySet()) {
+        ServerName producer = entry.getKey();
+        for (String queueId : entry.getValue()) {
+          ServerName consumer = consumers[ThreadLocalRandom.current().nextInt(consumers.length)];
+          ReplicationServerProtos.StartReplicationSourceRequest request =
+            ReplicationServerProtos.StartReplicationSourceRequest.newBuilder()
+              .setServerName(ProtobufUtil.toServerName(producer)).setQueueId(queueId).build();
+          try {
+            FutureUtils.get(master.getAsyncClusterConnection().getReplicationServerAdmin(consumer)
+              .startReplicationSource(request, 10000));
+            LOG.warn("Started replication source on replication server {},"
+              + " replication queue: producer={}, queueId={}", consumer, producer, queueId);
+          } catch (IOException e) {
+            // Just log the exception and the replication queue will be reassigned in next chore
+            LOG.warn("Failed to start replication source on replication server {},"
+              + " replication queue: producer={}, queueId={}", consumer, producer, queueId, e);
+          }
+        }
       }
     }
   }

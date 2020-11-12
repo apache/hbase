@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationSourceController;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
@@ -414,8 +415,8 @@ public abstract class TestReplicationSourceManager {
     assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id).get(group));
     ReplicationSourceInterface source = new ReplicationSource();
     source.init(conf, fs, null, manager, manager.getQueueStorage(), rp1.getPeer("1"),
-      manager.getServer(), manager.getServer().getServerName(), id, null, p -> OptionalLong.empty(),
-      null);
+      manager.getServer(), new ReplicationQueueInfo(manager.getServer().getServerName(), id), null,
+      p -> OptionalLong.empty(), null);
     source.cleanOldWALs(file2, false);
     // log1 should be deleted
     assertEquals(Sets.newHashSet(file2), manager.getWalsByIdRecoveredQueues().get(id).get(group));
@@ -633,7 +634,8 @@ public abstract class TestReplicationSourceManager {
       ReplicationSourceInterface source = new ReplicationSource();
       source.init(conf, fs, null, manager, manager.getQueueStorage(),
         mockReplicationPeerForSyncReplication(peerId2), manager.getServer(),
-        manager.getServer().getServerName(), peerId2, null, p -> OptionalLong.empty(), null);
+        new ReplicationQueueInfo(manager.getServer().getServerName(), peerId2), null,
+        p -> OptionalLong.empty(), null);
       source.cleanOldWALs(walName, true);
       // still there if peer id does not match
       assertTrue(fs.exists(remoteWAL));
@@ -641,7 +643,8 @@ public abstract class TestReplicationSourceManager {
       source = new ReplicationSource();
       source.init(conf, fs, null, manager, manager.getQueueStorage(),
         mockReplicationPeerForSyncReplication(slaveId), manager.getServer(),
-        manager.getServer().getServerName(), slaveId, null, p -> OptionalLong.empty(), null);
+        new ReplicationQueueInfo(manager.getServer().getServerName(), slaveId), null,
+        p -> OptionalLong.empty(), null);
       source.cleanOldWALs(walName, true);
       assertFalse(fs.exists(remoteWAL));
     } finally {
@@ -822,7 +825,7 @@ public abstract class TestReplicationSourceManager {
     @Override
     public void init(Configuration conf, FileSystem fs, Path walDir,
       ReplicationSourceController overallController, ReplicationQueueStorage queueStorage,
-      ReplicationPeer replicationPeer, Server server, ServerName producer, String queueId,
+      ReplicationPeer replicationPeer, Server server, ReplicationQueueInfo queueInfo,
       UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
       throws IOException {
       throw new IOException("Failing deliberately");

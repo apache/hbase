@@ -359,9 +359,10 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
 
     MetricsSource metrics = new MetricsSource(queueId);
     sourceMetrics.put(queueId, metrics);
+    ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(server.getServerName(), queueId);
     // init replication source
-    src.init(conf, fs, logDir, this, queueStorage, replicationPeer, server, server.getServerName(),
-      queueId, clusterId, walFileLengthProvider, metrics);
+    src.init(conf, fs, logDir, this, queueStorage, replicationPeer, server, queueInfo, clusterId,
+      walFileLengthProvider, metrics);
     return src;
   }
 
@@ -713,8 +714,7 @@ public class ReplicationSourceManager implements ReplicationListener, Replicatio
         Set<String> walsSet = entry.getValue();
         try {
           // there is not an actual peer defined corresponding to peerId for the failover.
-          ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queueId);
-          String actualPeerId = replicationQueueInfo.getPeerId();
+          String actualPeerId = ReplicationQueueInfo.parsePeerId(queueId);
 
           ReplicationPeerImpl peer = replicationPeers.getPeer(actualPeerId);
           if (peer == null || !isOldPeer(actualPeerId, peer)) {

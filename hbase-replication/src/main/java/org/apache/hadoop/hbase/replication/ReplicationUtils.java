@@ -86,7 +86,7 @@ public final class ReplicationUtils {
     for (ServerName replicator : queueStorage.getListOfReplicators()) {
       List<String> queueIds = queueStorage.getAllQueues(replicator);
       for (String queueId : queueIds) {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
+        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(replicator, queueId);
         if (queueInfo.getPeerId().equals(peerId)) {
           queueStorage.removeQueue(replicator, queueId);
         }

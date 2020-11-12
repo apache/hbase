@@ -401,6 +401,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Trans
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatusProtos.ReplicationServerReportRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatusProtos.ReplicationServerReportResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatusProtos.ReplicationServerStatusService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
@@ -3408,8 +3410,8 @@ public class MasterRpcServices extends RSRpcServices implements
   }
 
   @Override
-  public RegionServerReportResponse replicationServerReport(RpcController controller,
-      RegionServerReportRequest request) throws ServiceException {
+  public ReplicationServerReportResponse replicationServerReport(RpcController controller,
+    ReplicationServerReportRequest request) throws ServiceException {
     try {
       master.checkServiceStarted();
       int versionNumber = 0;
@@ -3424,7 +3426,8 @@ public class MasterRpcServices extends RSRpcServices implements
       ServerMetrics oldMetrics = master.getReplicationServerManager().getServerMetrics(serverName);
       ServerMetrics newMetrics =
           ServerMetricsBuilder.toServerMetrics(serverName, versionNumber, version, sl);
-      master.getReplicationServerManager().serverReport(serverName, newMetrics);
+      Set<String> queueNodes = request.getQueueNodeList().stream().collect(Collectors.toSet());
+      master.getReplicationServerManager().serverReport(serverName, newMetrics, queueNodes);
       if (sl != null && master.metricsMaster != null) {
         // Up our metrics.
         master.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests()
@@ -3433,6 +3436,6 @@ public class MasterRpcServices extends RSRpcServices implements
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return RegionServerReportResponse.newBuilder().build();
+    return ReplicationServerReportResponse.newBuilder().build();
   }
 }

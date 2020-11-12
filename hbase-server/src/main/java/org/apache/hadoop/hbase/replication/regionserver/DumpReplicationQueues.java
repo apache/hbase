@@ -321,7 +321,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
         deadRegionServers.add(regionserver.getServerName());
       }
       for (String queueId : queueIds) {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
+        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(regionserver, queueId);
         List<String> wals = queueStorage.getWALsInQueue(regionserver, queueId);
         Collections.sort(wals);
         if (!peerIds.contains(queueInfo.getPeerId())) {

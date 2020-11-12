@@ -95,7 +95,8 @@ public class TestReplicationSourceManagerZkImpl extends TestReplicationSourceMan
         queueStorage.claimQueue(serverName, unclaimed.get(0), s3.getServerName()).getFirst();
     queueStorage.removeReplicatorIfQueueIsEmpty(serverName);
 
-    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queue3);
+    ReplicationQueueInfo replicationQueueInfo =
+      new ReplicationQueueInfo(s3.getServerName(), queue3);
     List<ServerName> result = replicationQueueInfo.getDeadRegionServers();
     // verify
     assertTrue(result.contains(server.getServerName()));

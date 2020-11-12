@@ -69,7 +69,7 @@ public class ReplicationChecker {
     Set<String> peerIds = new HashSet<>(peerStorage.listPeerIds());
     for (ServerName replicator : queueStorage.getListOfReplicators()) {
       for (String queueId : queueStorage.getAllQueues(replicator)) {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
+        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(replicator, queueId);
         if (!peerIds.contains(queueInfo.getPeerId())) {
           undeletedQueues.computeIfAbsent(replicator, key -> new ArrayList<>()).add(queueId);
           LOG.debug(
@@ -99,7 +99,7 @@ public class ReplicationChecker {
     undeletedQueueIds = getUnDeletedQueues();
     undeletedQueueIds.forEach((replicator, queueIds) -> {
       queueIds.forEach(queueId -> {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
+        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(replicator, queueId);
         String msg = "Undeleted replication queue for removed peer found: " +
           String.format("[removedPeerId=%s, replicator=%s, queueId=%s]", queueInfo.getPeerId(),
             replicator, queueId);

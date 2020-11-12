@@ -283,9 +283,8 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   public void startup(UncaughtExceptionHandler handler) {
-    String name = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this,
-      name + ".replicationSource.shipper" + walGroupId + "," + source.getQueueId(),
+      "replicationSource.shipper." + walGroupId + "," + source.getQueueId(),
       handler::uncaughtException);
   }
 

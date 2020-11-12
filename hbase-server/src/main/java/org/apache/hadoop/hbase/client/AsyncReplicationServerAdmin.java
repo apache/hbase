@@ -27,8 +27,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerProtos.ReplicationServerService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerProtos.StartReplicationSourceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerProtos.StartReplicationSourceResponse;
 
 /**
  * A simple wrapper of the {@link ReplicationServerService} for a replication server.
@@ -69,12 +72,23 @@ public class AsyncReplicationServerAdmin {
     }
     return future;
   }
+  private <RESP> CompletableFuture<RESP> call(RpcCall<RESP> rpcCall) {
+    return call(rpcCall, null);
+  }
 
-  public CompletableFuture<AdminProtos.ReplicateWALEntryResponse> replicateWALEntry(
-      AdminProtos.ReplicateWALEntryRequest request, CellScanner cellScanner, int timeout) {
+  public CompletableFuture<ReplicateWALEntryResponse> replicateWALEntry(
+    ReplicateWALEntryRequest request, CellScanner cellScanner, int timeout) {
     return call((stub, controller, done) -> {
       controller.setCallTimeout(timeout);
       stub.replicateWALEntry(controller, request, done);
     }, cellScanner);
+  }
+
+  public CompletableFuture<StartReplicationSourceResponse> startReplicationSource(
+    StartReplicationSourceRequest request, int timeout) {
+    return call((stub, controller, done) -> {
+      controller.setCallTimeout(timeout);
+      stub.startReplicationSource(controller, request, done);
+    });
   }
 }

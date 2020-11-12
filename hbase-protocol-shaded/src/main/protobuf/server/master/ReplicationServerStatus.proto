@@ -25,10 +25,24 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-import "server/master/RegionServerStatus.proto";
+import "HBase.proto";
+import "server/ClusterStatus.proto";
+
+message ReplicationServerReportRequest {
+  required ServerName server = 1;
+
+  /** load the server is under */
+  optional ServerLoad load = 2;
+
+  /** The replication queues which this replication server is responsible for. */
+  repeated string queue_node = 3;
+}
+
+message ReplicationServerReportResponse {
+}
 
 service ReplicationServerStatusService {
 
-  rpc ReplicationServerReport(RegionServerReportRequest)
-      returns(RegionServerReportResponse);
+  rpc ReplicationServerReport(ReplicationServerReportRequest)
+      returns(ReplicationServerReportResponse);
 }

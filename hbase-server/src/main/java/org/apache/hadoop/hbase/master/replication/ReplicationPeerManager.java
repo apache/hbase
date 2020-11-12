@@ -103,8 +103,7 @@ public class ReplicationPeerManager {
     for (ServerName replicator : queueStorage.getListOfReplicators()) {
       List<String> queueIds = queueStorage.getAllQueues(replicator);
       for (String queueId : queueIds) {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
-        if (queueInfo.getPeerId().equals(peerId)) {
+        if (ReplicationQueueInfo.parsePeerId(queueId).equals(peerId)) {
           throw new DoNotRetryIOException("undeleted queue for peerId: " + peerId +
             ", replicator: " + replicator + ", queueId: " + queueId);
         }

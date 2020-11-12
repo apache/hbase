@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.apache.hadoop.hbase.master.ReplicationServerManager.REPLICATION_SERVER_REFRESH_PERIOD;
 import static org.apache.hadoop.hbase.replication.ReplicationServerRpcServices.REPLICATION_SERVER_PORT;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.junit.AfterClass;
@@ -33,40 +33,39 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({ ReplicationTests.class, LargeTests.class })
-public class TestReplicationServerSource extends TestReplicationBase {
-
+public class TestMultiReplicationServers extends TestReplicationBase{
   @ClassRule public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationServerSource.class);
+    HBaseClassTestRule.forClass(TestMultiReplicationServers.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationServerSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiReplicationServers.class);
 
-  private static HReplicationServer replicationServer;
+  private static HReplicationServer[] replicationServers;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    // 3 RegionServers and 3 ReplicationServers
+    NUM_SLAVES1 = 3;
     UTIL1.getConfiguration().setInt(REPLICATION_SERVER_PORT, 0);
     UTIL1.getConfiguration().setBoolean(HConstants.REPLICATION_OFFLOAD_ENABLE_KEY, true);
+    UTIL1.getConfiguration().setLong(REPLICATION_SERVER_REFRESH_PERIOD, 10000);
     TestReplicationBase.setUpBeforeClass();
-    replicationServer = new HReplicationServer(UTIL1.getConfiguration());
-    replicationServer.start();
-    UTIL1.waitFor(60000, () -> replicationServer.isOnline());
+    replicationServers = new HReplicationServer[NUM_SLAVES1];
+    for (int i = 0; i < NUM_SLAVES1; i++) {
+      replicationServers[i] = new HReplicationServer(UTIL1.getConfiguration());
+      replicationServers[i].start();
+    }
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    replicationServer.stop("Tear down after test");
+    for (int i = 0; i < NUM_SLAVES1; i++) {
+      replicationServers[i].stop("Tear down after test");
+    }
     TestReplicationBase.tearDownAfterClass();
   }
 
   @Test
   public void test() throws Exception {
-    try {
-      // Only start one region server in source cluster
-      ServerName producer = UTIL1.getMiniHBaseCluster().getRegionServer(0).getServerName();
-      replicationServer.startReplicationSource(producer, PEER_ID2);
-    } catch (Throwable e) {
-      LOG.info("Failed to start replicaiton source", e);
-    }
     runSmallBatchTest();
   }
 }
