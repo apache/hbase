@@ -670,7 +670,9 @@ public class TestReplicasClient {
     byte[] start;
     if (reversed) {
       start = Bytes.toBytes("testUseRegionWithReplica" + (numRows - 1));
-    } else start = Bytes.toBytes("testUseRegionWithReplica" + 0);
+    } else {
+      start = Bytes.toBytes("testUseRegionWithReplica" + 0);
+    }
 
     scanWithReplicas(reversed, small, Consistency.TIMELINE, caching, maxResultSize, start, numRows,
       numCols, false, false);
