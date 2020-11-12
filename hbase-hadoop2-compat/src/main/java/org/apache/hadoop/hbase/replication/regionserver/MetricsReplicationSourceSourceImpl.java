@@ -162,8 +162,13 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
   @Override public void incrShippedBytes(long size) {
     shippedBytesCounter.incr(size);
-    MetricsReplicationGlobalSourceSource
+    MetricsReplicationGlobalSourceSourceImpl
       .incrementKBsCounter(shippedBytesCounter, shippedKBsCounter);
+  }
+
+  @Override
+  public long getShippedBytes() {
+    return shippedBytesCounter.value();
   }
 
   @Override public void incrLogReadInBytes(long size) {
