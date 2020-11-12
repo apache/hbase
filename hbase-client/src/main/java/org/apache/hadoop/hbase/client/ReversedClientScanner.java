@@ -37,13 +37,6 @@ public class ReversedClientScanner extends ClientScanner {
   /**
    * Create a new ReversibleClientScanner for the specified table Note that the passed
    * {@link Scan}'s start row maybe changed.
-   * @param conf
-   * @param scan
-   * @param tableName
-   * @param connection
-   * @param pool
-   * @param primaryOperationTimeout
-   * @throws IOException
    */
   public ReversedClientScanner(Configuration conf, Scan scan, TableName tableName,
       ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
@@ -65,6 +58,6 @@ public class ReversedClientScanner extends ClientScanner {
   @Override
   protected ReversedScannerCallable createScannerCallable() {
     return new ReversedScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
-        this.rpcControllerFactory);
+        this.rpcControllerFactory, getScanReplicaId());
   }
 }

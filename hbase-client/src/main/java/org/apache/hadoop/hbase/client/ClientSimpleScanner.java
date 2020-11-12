@@ -61,6 +61,6 @@ public class ClientSimpleScanner extends ClientScanner {
       scan.withStartRow(createClosestRowAfter(scan.getStartRow()), true);
     }
     return new ScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
-        this.rpcControllerFactory);
+      this.rpcControllerFactory, getScanReplicaId());
   }
 }

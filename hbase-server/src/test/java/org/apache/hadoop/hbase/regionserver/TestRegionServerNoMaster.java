@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -129,8 +130,11 @@ public class TestRegionServerNoMaster {
     }
   }
 
-  /** Flush the given region in the mini cluster. Since no master, we cannot use HBaseAdmin.flush() */
-  public static void flushRegion(HBaseTestingUtility HTU, HRegionInfo regionInfo) throws IOException {
+  /**
+   * Flush the given region in the mini cluster. Since no master, we cannot use HBaseAdmin.flush()
+   */
+  public static void flushRegion(HBaseTestingUtility HTU, RegionInfo regionInfo)
+    throws IOException {
     for (RegionServerThread rst : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
       HRegion region = rst.getRegionServer().getRegionByEncodedName(regionInfo.getEncodedName());
       if (region != null) {
