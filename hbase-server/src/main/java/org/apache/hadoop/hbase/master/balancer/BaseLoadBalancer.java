@@ -1041,7 +1041,14 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected ClusterMetrics clusterStatus = null;
   protected ServerName masterServerName;
   protected MasterServices services;
+
+  /**
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
+   */
+  @Deprecated
   protected boolean onlySystemTablesOnMaster;
+
   protected boolean maintenanceMode;
 
   @Override
@@ -1074,7 +1081,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   /**
    * Check if a region belongs to some system table.
    * If so, the primary replica may be expected to be put on the master regionserver.
+   *
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
+  @Deprecated
   public boolean shouldBeOnMaster(RegionInfo region) {
     return (this.maintenanceMode || this.onlySystemTablesOnMaster)
         && region.getTable().isSystemTable();
@@ -1082,7 +1093,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   /**
    * Balance the regions that should be on master regionserver.
+   *
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
+  @Deprecated
   protected List<RegionPlan> balanceMasterRegions(Map<ServerName, List<RegionInfo>> clusterMap) {
     if (masterServerName == null || clusterMap == null || clusterMap.size() <= 1) return null;
     List<RegionPlan> plans = null;
@@ -1131,7 +1146,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   /**
    * If master is configured to carry system tables only, in here is
    * where we figure what to assign it.
+   *
+   * @deprecated since 2.4.0, will be removed in 3.0.0.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15549">HBASE-15549</a>
    */
+  @Deprecated
   @NonNull
   protected Map<ServerName, List<RegionInfo>> assignMasterSystemRegions(
       Collection<RegionInfo> regions, List<ServerName> servers) {
