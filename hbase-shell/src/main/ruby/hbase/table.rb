@@ -303,18 +303,18 @@ EOF
 
     #----------------------------------------------------------------------------------------------
     # Count rows in a table
-    def _count_internal(interval = 1000, scan = nil)
+    def _count_internal(interval = 1000, scan = nil, cacheBlocks=false)
       raise(ArgumentError, 'Scan argument should be org.apache.hadoop.hbase.client.Scan') \
         unless scan.nil? || scan.is_a?(org.apache.hadoop.hbase.client.Scan)
       # We can safely set scanner caching with the first key only filter
 
       if scan.nil?
         scan = org.apache.hadoop.hbase.client.Scan.new
-        scan.setCacheBlocks(false)
+        scan.setCacheBlocks(cacheBlocks)
         scan.setCaching(10)
         scan.setFilter(org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new)
       else
-        scan.setCacheBlocks(false)
+        scan.setCacheBlocks(cacheBlocks)
         filter = scan.getFilter
         firstKeyOnlyFilter = org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new
         if filter.nil?
