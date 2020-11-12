@@ -165,43 +165,39 @@ public class LoadIncrementalHFilesJob extends Configured implements Tool {
       }
       Set<String> validFamilies = getValidFamiliesSet(configuration);
 
-      try {
-        Path rootPath = new Path(configuration.get(ROOT_DIR));
-        FileSystem fs = rootPath.getFileSystem(configuration);
 
-        for (FileStatus child : fs.listStatus(rootPath)) {
-          if (!child.isDirectory()) {
-            LOG.info("Skipping non dir " + child.getPath());
-            continue;
-          }
-          if (child.getPath().getName().startsWith("_")) {
-            LOG.info("Skipping " + child.getPath());
-            continue;
-          }
-          if (depth == 2) {
+      Path rootPath = new Path(configuration.get(ROOT_DIR));
+      FileSystem fs = rootPath.getFileSystem(configuration);
+
+      for (FileStatus child : fs.listStatus(rootPath)) {
+        if (!child.isDirectory()) {
+          LOG.info("Skipping non dir " + child.getPath());
+          continue;
+        }
+        if (child.getPath().getName().startsWith("_")) {
+          LOG.info("Skipping " + child.getPath());
+          continue;
+        }
+        if (depth == 2) {
+          bulkoadInputWritables
+                  .addAll(createSplitsForFamilyDirectory(fs, child.getPath(), validFamilies));
+        } else {
+          for (FileStatus family : fs.listStatus(child.getPath())) {
             bulkoadInputWritables
-                .addAll(createSplitsForFamilyDirectory(fs, child.getPath(), validFamilies));
-          } else {
-            for (FileStatus family : fs.listStatus(child.getPath())) {
-              bulkoadInputWritables
-                  .addAll(createSplitsForFamilyDirectory(fs, family.getPath(), validFamilies));
-            }
+                    .addAll(createSplitsForFamilyDirectory(fs, family.getPath(), validFamilies));
           }
         }
+      }
 
-        int maxMapTasks = configuration.getInt(MAX_MAP_TASK, 1);
+      int maxMapTasks = configuration.getInt(MAX_MAP_TASK, 1);
 
-        int filesPerMap = bulkoadInputWritables.size() / maxMapTasks;
-        for (List<BulkoadInputWritable> partition : Lists
-            .partition(bulkoadInputWritables, filesPerMap)) {
-          BulkoadInputWritableArray bulkoadInputWritableArray = new BulkoadInputWritableArray();
-          bulkoadInputWritableArray
-              .set(partition.toArray(new BulkoadInputWritable[partition.size()]));
-          result.add(new BulkloadInputSplit(bulkoadInputWritableArray));
-        }
-      } catch (Exception e) {
-        LOG.error("Error computing splits for bulkload M/R job", e);
-        throw new RuntimeException("Failed to compute splits", e);
+      int filesPerMap = bulkoadInputWritables.size() / maxMapTasks;
+      for (List<BulkoadInputWritable> partition : Lists
+              .partition(bulkoadInputWritables, filesPerMap)) {
+        BulkoadInputWritableArray bulkoadInputWritableArray = new BulkoadInputWritableArray();
+        bulkoadInputWritableArray
+                .set(partition.toArray(new BulkoadInputWritable[partition.size()]));
+        result.add(new BulkloadInputSplit(bulkoadInputWritableArray));
       }
 
       return result;

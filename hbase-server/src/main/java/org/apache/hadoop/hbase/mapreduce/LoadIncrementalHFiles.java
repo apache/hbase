@@ -489,7 +489,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
     }
 
-    if (queue != null && !queue.isEmpty()) {
+    if (!queue.isEmpty()) {
         throw new RuntimeException("Bulk load aborted with some files not yet loaded."
           + "Please check log for more details.");
     }
