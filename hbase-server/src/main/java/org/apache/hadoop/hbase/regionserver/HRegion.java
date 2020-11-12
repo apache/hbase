@@ -7374,11 +7374,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         RegionReplicaUtil.isDefaultReplica(getRegionInfo())) {
         writeRegionOpenMarker(wal, openSeqNum);
       }
-    }catch(Throwable t){
+    } catch (Throwable t) {
       // By coprocessor path wrong region will open failed,
       // MetricsRegionWrapperImpl is already init and not close,
       // add region close when open failed
-      this.close();
+      try {
+        this.close();
+      } catch (Throwable e) {
+        LOG.warn("Open region: {} failed. Try close region but got exception ", this.getRegionInfo(),
+          e);
+      }
       throw t;
     }
     return this;
