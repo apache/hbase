@@ -51,6 +51,10 @@ public interface Constants {
   String REST_SSL_ENABLED = "hbase.rest.ssl.enabled";
   String REST_SSL_KEYSTORE_STORE = "hbase.rest.ssl.keystore.store";
   String REST_SSL_KEYSTORE_PASSWORD = "hbase.rest.ssl.keystore.password";
+  String REST_SSL_KEYSTORE_TYPE = "hbase.rest.ssl.keystore.type";
+  String REST_SSL_TRUSTSTORE_STORE = "hbase.rest.ssl.truststore.store";
+  String REST_SSL_TRUSTSTORE_PASSWORD = "hbase.rest.ssl.truststore.password";
+  String REST_SSL_TRUSTSTORE_TYPE = "hbase.rest.ssl.truststore.type";
   String REST_SSL_KEYSTORE_KEYPASSWORD = "hbase.rest.ssl.keystore.keypassword";
   String REST_SSL_EXCLUDE_CIPHER_SUITES = "hbase.rest.ssl.exclude.cipher.suites";
   String REST_SSL_INCLUDE_CIPHER_SUITES = "hbase.rest.ssl.include.cipher.suites";
