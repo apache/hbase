@@ -112,6 +112,7 @@ public class MasterProcedureTestingUtility {
           AssignmentManager am = env.getAssignmentManager();
           try {
             am.joinCluster();
+            am.wakeMetaLoadedEvent();
             master.setInitialized(true);
           } catch (Exception e) {
             LOG.warn("Failed to load meta", e);
