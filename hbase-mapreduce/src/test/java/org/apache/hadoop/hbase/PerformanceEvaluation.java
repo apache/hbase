@@ -164,17 +164,16 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   static {
     addCommandDescriptor(AsyncRandomReadTest.class, "asyncRandomRead",
-        "Run async random read test");
+      "Run async random read test");
     addCommandDescriptor(AsyncRandomWriteTest.class, "asyncRandomWrite",
-        "Run async random write test");
+      "Run async random write test");
     addCommandDescriptor(AsyncSequentialReadTest.class, "asyncSequentialRead",
-        "Run async sequential read test");
+      "Run async sequential read test");
     addCommandDescriptor(AsyncSequentialWriteTest.class, "asyncSequentialWrite",
-        "Run async sequential write test");
+      "Run async sequential write test");
     addCommandDescriptor(AsyncScanTest.class, "asyncScan",
-        "Run async scan test (read every row)");
-    addCommandDescriptor(RandomReadTest.class, RANDOM_READ,
-      "Run random read test");
+      "Run async scan test (read every row)");
+    addCommandDescriptor(RandomReadTest.class, RANDOM_READ, "Run random read test");
     addCommandDescriptor(MetaRandomReadTest.class, "metaRandomRead",
       "Run getRegionLocation test");
     addCommandDescriptor(RandomSeekScanTest.class, RANDOM_SEEK_SCAN,
@@ -194,12 +193,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
     addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite",
       "Run sequential write test");
     addCommandDescriptor(MetaWriteTest.class, "metaWrite",
-      "Run addRegion test");
-    addCommandDescriptor(ScanTest.class, "scan",
-      "Run scan test (read every row)");
+      "Run addRegion test to populate meta table; used with 1 thread");
+    addCommandDescriptor(ScanTest.class, "scan", "Run scan test (read every row)");
     addCommandDescriptor(FilteredScanTest.class, "filterScan",
       "Run scan test using a filter to find a specific row based on it's value " +
-      "(make sure to use --rows=20)");
+        "(make sure to use --rows=20)");
     addCommandDescriptor(IncrementTest.class, "increment",
       "Increment on each row; clients overlap on keyspace so some concurrent operations");
     addCommandDescriptor(AppendTest.class, "append",
@@ -210,6 +208,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       "CheckAndPut on each row; clients overlap on keyspace so some concurrent operations");
     addCommandDescriptor(CheckAndDeleteTest.class, "checkAndDelete",
       "CheckAndDelete on each row; clients overlap on keyspace so some concurrent operations");
+    addCommandDescriptor(CleanMetaTest.class, "cleanMeta",
+      "Remove fake region entries on meta table inserted by metaWrite; used with 1 thread");
   }
 
   /**
@@ -1489,6 +1489,28 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
+  static abstract class MetaTest extends TableTest {
+    protected int keyLength;
+
+    MetaTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+      keyLength = Integer.toString(opts.perClientRunRows).length();
+    }
+
+    @Override
+    void onTakedown() throws IOException {
+      // No clean up
+    }
+
+    /*
+    Generate Lexicographically ascending strings
+     */
+    protected byte[] getSplitKey(final int i) {
+      return Bytes.toBytes(String.format("%0" + keyLength + "d", i));
+    }
+
+  }
+
   static abstract class AsyncTableTest extends AsyncTest {
     protected AsyncTable<?> table;
 
@@ -2006,7 +2028,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       super.testTakedown();
     }
   }
-  static class MetaRandomReadTest extends TableTest {
+  static class MetaRandomReadTest extends MetaTest {
     private Random rd = new Random();
     private RegionLocator regionLocator;
 
@@ -2017,8 +2039,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void onStartup() throws IOException {
-      this.table = connection.getTable(TableName.valueOf("hbase:meta"));
-      this.regionLocator = connection.getRegionLocator(TableName.valueOf("hbase:meta"));
+      super.onStartup();
+      this.regionLocator = connection.getRegionLocator(table.getName());
     }
 
     @Override
@@ -2026,7 +2048,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (opts.randomSleep > 0) {
         Thread.sleep(rd.nextInt(opts.randomSleep));
       }
-      HRegionLocation hRegionLocation = regionLocator.getRegionLocation(Bytes.toBytes(Integer.toString(rd.nextInt(100) + 1)), true);
+      HRegionLocation hRegionLocation = regionLocator.getRegionLocation(
+        getSplitKey(rd.nextInt(opts.perClientRunRows)), true);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("get location for region: " + hRegionLocation);
+      }
       return true;
     }
 
@@ -2231,6 +2257,32 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
+  static class CleanMetaTest extends MetaTest {
+    CleanMetaTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    @Override
+    boolean testRow(final int i, final long startTime) throws IOException {
+      try {
+        RegionInfo regionInfo = connection.getRegionLocator(table.getName())
+          .getRegionLocation(getSplitKey(i), false).getRegion();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("deleting region from meta: " + regionInfo);
+        }
+
+        Delete delete = MetaTableAccessor
+          .makeDeleteFromRegionInfo(regionInfo, HConstants.LATEST_TIMESTAMP);
+        try (Table t = MetaTableAccessor.getMetaHTable(connection)) {
+          t.delete(delete);
+        }
+      } catch (IOException ie) {
+        LOG.error("cannot find region with start key: " + i);
+      }
+      return true;
+    }
+  }
+
   static class SequentialReadTest extends TableTest {
     SequentialReadTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -2319,35 +2371,26 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return true;
     }
   }
-  static class MetaWriteTest extends Test {
+  static class MetaWriteTest extends MetaTest {
 
     MetaWriteTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
     @Override
-    void onStartup() throws IOException {
-    }
-
-    @Override
-    void onTakedown() throws IOException {
-    }
-    @Override
     boolean testRow(final int i, final long startTime) throws IOException {
       List<RegionInfo> regionInfos = new ArrayList<RegionInfo>();
+      RegionInfo regionInfo = (RegionInfoBuilder.newBuilder(TableName.valueOf(TABLE_NAME))
+        .setStartKey(getSplitKey(i))
+        .setEndKey(getSplitKey(i + 1))
+        .build());
+      regionInfos.add(regionInfo);
+      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 1);
 
-      for (int index = 0; index < i; index++) {
-        regionInfos.add(RegionInfoBuilder.newBuilder(TableName.valueOf("hbase:meta"))
-          .setRegionId(this.rand.nextLong())
-          .setStartKey(new byte [0])
-          .setEndKey(new byte [0])
-          .setOffline(false)
-          .setReplicaId(0)
-          .setSplit(false)
-          .build());
-      }
-
-      MetaTableAccessor.addRegionsToMeta(this.connection, regionInfos, 1);
+      // write the serverName columns
+      MetaTableAccessor.updateRegionLocation(connection,
+        regionInfo, ServerName.valueOf("localhost", 60010, rand.nextLong()), i,
+        System.currentTimeMillis());
       return true;
     }
   }
