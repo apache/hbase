@@ -949,6 +949,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
     this.tableStateManager.start();
+    this.assignmentManager.processOfflineRegions();
+    // this must be called after the above processOfflineRegions to prevent race
+    this.assignmentManager.wakeMetaLoadedEvent();
 
     // for migrating from a version without HBASE-25099, and also for honoring the configuration
     // first.
@@ -982,12 +985,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
     }
-    // Below has to happen after tablestatemanager has started in the case where this hbase-2.x
-    // is being started over an hbase-1.x dataset. tablestatemanager runs a migration as part
-    // of its 'start' moving table state from zookeeper to hbase:meta. This migration needs to
-    // complete before we do this next step processing offline regions else it fails reading
-    // table states messing up master launch (namespace table, etc., are not assigned).
-    this.assignmentManager.processOfflineRegions();
     // Initialize after meta is up as below scans meta
     if (favoredNodesManager != null && !maintenanceMode) {
       SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =
