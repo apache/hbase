@@ -234,15 +234,6 @@ public class CreateTableProcedure
     }
   }
 
-  @Override
-  protected boolean waitInitialized(MasterProcedureEnv env) {
-    if (getTableName().isSystemTable()) {
-      // Creating system table is part of the initialization, so do not wait here.
-      return false;
-    }
-    return super.waitInitialized(env);
-  }
-
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
     if (env.getMasterServices().getTableDescriptors().exists(tableName)) {

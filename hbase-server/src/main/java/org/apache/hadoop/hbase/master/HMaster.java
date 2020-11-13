@@ -964,6 +964,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     this.assignmentManager.joinCluster();
     // The below depends on hbase:meta being online.
+    this.assignmentManager.processOfflineRegions();
+    // this must be called after the above processOfflineRegions to prevent race
+    this.assignmentManager.wakeMetaLoadedEvent();
 
     // for migrating from a version without HBASE-25099, and also for honoring the configuration
     // first.
@@ -997,7 +1000,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
     }
-    this.assignmentManager.processOfflineRegions();
     // Initialize after meta is up as below scans meta
     if (getFavoredNodesManager() != null && !maintenanceMode) {
       SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =
