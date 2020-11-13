@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -106,7 +107,6 @@ public class LoadIncrementalHFilesJob extends Configured implements Tool {
     configuration.setBoolean("mapred.map.tasks.speculative.execution", false);
     configuration.setBoolean("mapreduce.map.speculative", false);
     configuration.setBoolean("mapreduce.task.classpath.user.precedence", true);
-    configuration.setInt("mapreduce.task.timeout", 0);
   }
 
   public static void main(String[] args) throws Exception {
@@ -115,40 +115,47 @@ public class LoadIncrementalHFilesJob extends Configured implements Tool {
     System.exit(ret);
   }
 
-  public static class BulkoadMapper extends Mapper<Text, Text, NullWritable, NullWritable> {
-    LoadIncrementalHFiles loadIncrementalHFiles;
-    private final Deque<LoadIncrementalHFiles.LoadQueueItem> queue = new LinkedList<>();
+  public static class BulkoadMapper extends Mapper<NullWritable, BulkoadInputWritableArray, NullWritable, NullWritable> {
 
-    @Override protected void setup(Context context) throws IOException, InterruptedException {
-      try {
-        loadIncrementalHFiles = new LoadIncrementalHFiles(context.getConfiguration());
-      } catch (Exception e) {
-        throw new RuntimeException("Failed to instantiate LoadIncrementalHFiles", e);
-      }
-    }
-
-    @Override protected void map(Text key, Text value, Context context)
+    @Override protected void map(NullWritable key, BulkoadInputWritableArray value, final Context context)
         throws IOException, InterruptedException {
-      byte[] family = Bytes.toBytes(key.toString());
-      Path hfilePath = new Path(value.toString());
-      LoadIncrementalHFiles.LoadQueueItem loadQueueItem =
-          new LoadIncrementalHFiles.LoadQueueItem(family, hfilePath);
-      queue.add(loadQueueItem);
-    }
+      Deque<LoadIncrementalHFiles.LoadQueueItem> queue = new LinkedList<>();
+      for (BulkoadInputWritable inputWritable : value.asArray()) {
+        LoadIncrementalHFiles.LoadQueueItem lqi =
+                new LoadIncrementalHFiles.LoadQueueItem(Bytes.toBytes(inputWritable.family.toString()), new Path(inputWritable.hfile.toString()));
+        queue.add(lqi);
+      }
 
-    @Override protected void cleanup(Context context) throws IOException, InterruptedException {
-      int queueSize = queue.size();
       String tableStr = context.getConfiguration().get(TABLE_NAME);
       try (Connection connection = ConnectionFactory.createConnection(context.getConfiguration());
-          Table table = connection.getTable(TableName.valueOf(tableStr));
-          RegionLocator regionLocator = connection.getRegionLocator(TableName.valueOf(tableStr))) {
+           Table table = connection.getTable(TableName.valueOf(tableStr));
+           RegionLocator regionLocator = connection.getRegionLocator(TableName.valueOf(tableStr))) {
+        LoadIncrementalHFiles loadIncrementalHFiles = new LoadIncrementalHFiles(context.getConfiguration());
+        loadIncrementalHFiles.setListener(new LoadIncrementalHFiles.Listener() {
+          @Override
+          public void onFileBulkloaded(byte[] family, Path filePath) {
+            try {
+              context.write(NullWritable.get(), NullWritable.get());
+            } catch (Exception ignored) {}
+            context.getCounter("Bulkload", "Files Bulkloaded").increment(1);
+          }
+
+          @Override
+          public void onFilesBulkLoaded(List<Pair<byte[], String>> filePaths) {
+            try {
+              context.write(NullWritable.get(), NullWritable.get());
+            } catch (Exception ignored) {}
+            context.getCounter("Bulkload", "Files Bulkloaded").increment(filePaths.size());
+          }
+        });
         loadIncrementalHFiles.doBulkloadFromQueue(queue, table, regionLocator, connection);
+      } catch (Exception e) {
+        throw new RuntimeException("Error running mapper", e);
       }
-      context.getCounter("Bulkload", "Files Loaded").increment(queueSize);
     }
   }
 
-  public static class BulkLoadInputFormat extends InputFormat<Text, Text> {
+  public static class BulkLoadInputFormat extends InputFormat<NullWritable, BulkoadInputWritableArray> {
 
     private static final Log LOG = LogFactory.getLog(BulkLoadInputFormat.class);
 
@@ -240,34 +247,34 @@ public class LoadIncrementalHFilesJob extends Configured implements Tool {
       return bulkloadInputSplits;
     }
 
-    @Override public RecordReader<Text, Text> createRecordReader(InputSplit inputSplit,
+    @Override public RecordReader<NullWritable, BulkoadInputWritableArray> createRecordReader(InputSplit inputSplit,
         TaskAttemptContext taskAttemptContext) throws IOException, InterruptedException {
-      return new RecordReader<Text, Text>() {
+      return new RecordReader<NullWritable, BulkoadInputWritableArray>() {
 
-        Iterator<Writable> iterator;
-        BulkoadInputWritable current;
+        Iterator<BulkoadInputWritableArray> iterator;
+        BulkoadInputWritableArray current;
 
         @Override
 
         public void initialize(InputSplit inputSplit, TaskAttemptContext taskAttemptContext)
             throws IOException, InterruptedException {
-          iterator = Iterators.forArray(((BulkloadInputSplit) inputSplit).bulkloadInputs.get());
+          iterator = Iterators.forArray(((BulkloadInputSplit) inputSplit).bulkloadInputs);
         }
 
         @Override public boolean nextKeyValue() throws IOException, InterruptedException {
           if (!iterator.hasNext()) {
             return false;
           }
-          current = (BulkoadInputWritable) iterator.next();
+          current = (BulkoadInputWritableArray) iterator.next();
           return true;
         }
 
-        @Override public Text getCurrentKey() throws IOException, InterruptedException {
-          return current.family;
+        @Override public NullWritable getCurrentKey() throws IOException, InterruptedException {
+          return NullWritable.get();
         }
 
-        @Override public Text getCurrentValue() throws IOException, InterruptedException {
-          return current.hfile;
+        @Override public BulkoadInputWritableArray getCurrentValue() throws IOException, InterruptedException {
+          return current;
         }
 
         @Override public float getProgress() throws IOException, InterruptedException {

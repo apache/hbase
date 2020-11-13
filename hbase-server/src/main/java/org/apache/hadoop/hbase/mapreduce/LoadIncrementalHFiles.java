@@ -141,6 +141,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   private List<String> clusterIds = new ArrayList<>();
 
+  private Listener listener = Listener.NO_OP;
+
   private LoadIncrementalHFiles() {}
 
   public LoadIncrementalHFiles(Configuration conf) throws Exception {
@@ -187,6 +189,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       throws IOException;
     void bulkHFile(final TFamily family, final FileStatus hfileStatus)
       throws IOException;
+  }
+
+  public interface Listener {
+    Listener NO_OP = new Listener() {
+      @Override
+      public void onFileBulkloaded(byte[] family, Path filePath) { }
+      @Override
+      public void onFilesBulkLoaded(List<Pair<byte[], String>> filePaths) { }
+    };
+    void onFileBulkloaded(byte[] family, Path filePath);
+    void onFilesBulkLoaded(List<Pair<byte[], String>> filePaths);
   }
 
   /**
@@ -889,11 +902,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           if (!isSecureBulkLoadEndpointAvailable()) {
             success = ProtobufUtil.bulkLoadHFile(getStub(), famPaths, regionName, assignSeqIds,
               clusterIds);
+            if (success) {
+              listener.onFilesBulkLoaded(famPaths);
+            }
           } else {
             try (Table table = conn.getTable(getTableName())) {
               secureClient = new SecureBulkLoadClient(table);
               success = secureClient.bulkLoadHFiles(famPaths, fsDelegationToken.getUserToken(),
                 bulkToken, getLocation().getRegionInfo().getStartKey());
+              if (success) {
+                listener.onFilesBulkLoaded(famPaths);
+              }
             }
           }
           return success;
@@ -1180,6 +1199,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    */
   public void setBulkToken(String stagingDir) {
     this.bulkToken = stagingDir;
+  }
+
+  public void setListener(Listener listener) {
+    this.listener = listener;
   }
 
 }
