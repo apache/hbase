@@ -496,8 +496,16 @@ public class AssignmentManager {
     return metaLoadEvent.suspendIfNotReady(proc);
   }
 
+  /**
+   * This method will be called in master initialization method after calling
+   * {@link #processOfflineRegions()}, as in processOfflineRegions we will generate assign
+   * procedures for offline regions, which may be conflict with creating table.
+   * <p/>
+   * This is a bit dirty, should be reconsidered after we decide whether to keep the
+   * {@link #processOfflineRegions()} method.
+   */
   @VisibleForTesting
-  void wakeMetaLoadedEvent() {
+  public void wakeMetaLoadedEvent() {
     metaLoadEvent.wake(getProcedureScheduler());
     assert isMetaLoaded() : "expected meta to be loaded";
   }
@@ -1490,12 +1498,23 @@ public class AssignmentManager {
   // Public so can be run by the Master as part of the startup. Needs hbase:meta to be online.
   // Needs to be done after the table state manager has been started.
   public void processOfflineRegions() {
-    List<RegionInfo> offlineRegions = regionStates.getRegionStates().stream()
-      .filter(RegionState::isOffline).filter(s -> isTableEnabled(s.getRegion().getTable()))
-      .map(RegionState::getRegion).collect(Collectors.toList());
-    if (!offlineRegions.isEmpty()) {
-      master.getMasterProcedureExecutor().submitProcedures(
-        master.getAssignmentManager().createRoundRobinAssignProcedures(offlineRegions));
+    TransitRegionStateProcedure[] procs =
+      regionStates.getRegionStateNodes().stream().filter(rsn -> rsn.isInState(State.OFFLINE))
+        .filter(rsn -> isTableEnabled(rsn.getRegionInfo().getTable())).map(rsn -> {
+          rsn.lock();
+          try {
+            if (rsn.getProcedure() != null) {
+              return null;
+            } else {
+              return rsn.setProcedure(TransitRegionStateProcedure.assign(getProcedureEnvironment(),
+                rsn.getRegionInfo(), null));
+            }
+          } finally {
+            rsn.unlock();
+          }
+        }).filter(p -> p != null).toArray(TransitRegionStateProcedure[]::new);
+    if (procs.length > 0) {
+      master.getMasterProcedureExecutor().submitProcedures(procs);
     }
   }
 
@@ -1575,8 +1594,6 @@ public class AssignmentManager {
   private void loadMeta() throws IOException {
     // TODO: use a thread pool
     regionStateStore.visitMeta(new RegionMetaLoadingVisitor());
-    // every assignment is blocked until meta is loaded.
-    wakeMetaLoadedEvent();
   }
 
   /**

@@ -234,8 +234,9 @@ public class CreateTableProcedure
   @Override
   protected boolean waitInitialized(MasterProcedureEnv env) {
     if (getTableName().isSystemTable()) {
-      // Creating system table is part of the initialization, so do not wait here.
-      return false;
+      // Creating system table is part of the initialization, so only wait for meta loaded instead
+      // of waiting for master fully initialized.
+      return env.getAssignmentManager().waitMetaLoaded(this);
     }
     return super.waitInitialized(env);
   }
