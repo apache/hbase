@@ -193,7 +193,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite",
       "Run sequential write test");
     addCommandDescriptor(MetaWriteTest.class, "metaWrite",
-      "Run addRegion test to populate meta table; used with 1 thread");
+      "Populate meta table;used with 1 thread; to be cleaned up by cleanMeta");
     addCommandDescriptor(ScanTest.class, "scan", "Run scan test (read every row)");
     addCommandDescriptor(FilteredScanTest.class, "filterScan",
       "Run scan test using a filter to find a specific row based on it's value " +
@@ -1489,6 +1489,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
+  /*
+  Parent class for all meta tests: MetaWriteTest, MetaRandomReadTest and CleanMetaTest
+   */
   static abstract class MetaTest extends TableTest {
     protected int keyLength;
 
@@ -1503,7 +1506,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     /*
-    Generate Lexicographically ascending strings
+    Generates Lexicographically ascending strings
      */
     protected byte[] getSplitKey(final int i) {
       return Bytes.toBytes(String.format("%0" + keyLength + "d", i));
@@ -2028,6 +2031,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       super.testTakedown();
     }
   }
+
+  /*
+  Send random reads against fake regions inserted by MetaWriteTest
+   */
   static class MetaRandomReadTest extends MetaTest {
     private Random rd = new Random();
     private RegionLocator regionLocator;
@@ -2050,9 +2057,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       HRegionLocation hRegionLocation = regionLocator.getRegionLocation(
         getSplitKey(rd.nextInt(opts.perClientRunRows)), true);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("get location for region: " + hRegionLocation);
-      }
+      LOG.debug("get location for region: " + hRegionLocation);
       return true;
     }
 
@@ -2257,6 +2262,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
+  /*
+  Delete all fake regions inserted to meta table by MetaWriteTest.
+   */
   static class CleanMetaTest extends MetaTest {
     CleanMetaTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -2267,9 +2275,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       try {
         RegionInfo regionInfo = connection.getRegionLocator(table.getName())
           .getRegionLocation(getSplitKey(i), false).getRegion();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("deleting region from meta: " + regionInfo);
-        }
+        LOG.debug("deleting region from meta: " + regionInfo);
 
         Delete delete = MetaTableAccessor
           .makeDeleteFromRegionInfo(regionInfo, HConstants.LATEST_TIMESTAMP);
@@ -2277,6 +2283,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           t.delete(delete);
         }
       } catch (IOException ie) {
+        // Log and continue
         LOG.error("cannot find region with start key: " + i);
       }
       return true;
@@ -2371,6 +2378,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return true;
     }
   }
+
+  /*
+  Insert fake regions into meta table with contiguous split keys.
+   */
   static class MetaWriteTest extends MetaTest {
 
     MetaWriteTest(Connection con, TestOptions options, Status status) {
