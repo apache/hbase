@@ -48,7 +48,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
- * Stripe implementation of StoreFileManager.
+ * Stripe implementation of {@link StoreFileManager}.
  * Not thread safe - relies on external locking (in HStore). Collections that this class
  * returns are immutable or unique to the call, so they should be safe.
  * Stripe store splits the key space of the region into non-overlapping stripes, as well as
@@ -56,9 +56,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
  * When L0 is compacted, it's split into the files corresponding to existing stripe boundaries,
  * that can thus be added to stripes.
  * When scan or get happens, it only has to read the files from the corresponding stripes.
- * See StripeCompactionPolicy on how the stripes are determined; this class doesn't care.
+ * See {@link StripeCompactionPolicy} on how the stripes are determined; this class doesn't care.
  *
- * This class should work together with StripeCompactionPolicy and StripeCompactor.
+ * This class should work together with {@link StripeCompactionPolicy} and
+ * {@link org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor}.
  * With regard to how they work, we make at least the following (reasonable) assumptions:
  *  - Compaction produces one file per new stripe (if any); that is easy to change.
  *  - Compaction has one contiguous set of stripes both in and out, except if L0 is involved.
