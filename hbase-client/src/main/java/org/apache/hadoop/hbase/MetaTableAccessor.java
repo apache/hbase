@@ -1314,7 +1314,7 @@ public class MetaTableAccessor {
   /**
    * Generates and returns a Delete containing the region info for the catalog table
    */
-  private static Delete makeDeleteFromRegionInfo(RegionInfo regionInfo, long ts) {
+  public static Delete makeDeleteFromRegionInfo(RegionInfo regionInfo, long ts) {
     if (regionInfo == null) {
       throw new IllegalArgumentException("Can't make a delete for null region");
     }
