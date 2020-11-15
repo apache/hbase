@@ -1976,7 +1976,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    boolean testRow(final int i) throws IOException, InterruptedException {
+    boolean testRow(final int i, final long startTime) throws IOException, InterruptedException {
       if (opts.randomSleep > 0) {
         Thread.sleep(rd.nextInt(opts.randomSleep));
       }
@@ -2196,7 +2196,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    boolean testRow(final int i) throws IOException {
+    boolean testRow(final int i, final long startTime) throws IOException {
       try {
         RegionInfo regionInfo = connection.getRegionLocator(table.getName())
           .getRegionLocation(getSplitKey(i), false).getRegion();
@@ -2314,7 +2314,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    boolean testRow(final int i) throws IOException {
+    boolean testRow(final int i, final long startTime) throws IOException {
       List<RegionInfo> regionInfos = new ArrayList<RegionInfo>();
       RegionInfo regionInfo = (RegionInfoBuilder.newBuilder(TableName.valueOf(TABLE_NAME))
         .setStartKey(getSplitKey(i))
