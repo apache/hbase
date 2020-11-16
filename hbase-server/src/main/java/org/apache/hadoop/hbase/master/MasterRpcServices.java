@@ -2443,7 +2443,7 @@ public class MasterRpcServices extends RSRpcServices implements
           final boolean deadInProcess = master.getServerManager().isDeadServersInProgress(server);
 
           if (!deadInProcess) {
-            throw new RuntimeException("Dead server {} is not 'dead' in fact...");
+            throw new RuntimeException(String.format("Dead server '%s' is not 'dead' in fact...", server));
           }
 
           if (!deadServer.removeDeadServer(server)) {
