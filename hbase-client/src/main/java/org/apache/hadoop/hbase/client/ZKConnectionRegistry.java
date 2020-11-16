@@ -26,7 +26,10 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -111,7 +114,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
       data.length - prefixLen);
   }
 
-  private static void tryComplete(MutableInt remaining, HRegionLocation[] locs,
+  private static void tryComplete(MutableInt remaining, Collection<HRegionLocation> locs,
       CompletableFuture<RegionLocations> future) {
     remaining.decrement();
     if (remaining.intValue() > 0) {
@@ -138,8 +141,15 @@ class ZKConnectionRegistry implements ConnectionRegistry {
     if (metaReplicaZNodes.isEmpty()) {
       future.completeExceptionally(new IOException("No meta znode available"));
     }
-    HRegionLocation[] locs = new HRegionLocation[metaReplicaZNodes.size()];
-    MutableInt remaining = new MutableInt(locs.length);
+    // Note, the list of metaReplicaZNodes may be discontiguous regards replicaId; i.e. we may have
+    // a znode for the default -- replicaId=0 -- and perhaps replicaId '2' but be could be missing
+    // znode for replicaId '1'. This is a transient condition. Because of this we are careful
+    // accumulating locations. We use a Map so retries overwrite rather than aggregate and the
+    // Map sorts just to be kind to further processing. The Map will retain the discontinuity on
+    // replicaIds but on completion (of the future), the Map values are passed to the
+    // RegionLocations constructor which knows how to deal with discontinuities.
+    final Map<Integer, HRegionLocation> locs = new TreeMap<>();
+    MutableInt remaining = new MutableInt(metaReplicaZNodes.size());
     for (String metaReplicaZNode : metaReplicaZNodes) {
       int replicaId = znodePaths.getMetaReplicaIdFromZNode(metaReplicaZNode);
       String path = ZNodePaths.joinZNode(znodePaths.baseZNode, metaReplicaZNode);
@@ -157,9 +167,9 @@ class ZKConnectionRegistry implements ConnectionRegistry {
           if (stateAndServerName.getFirst() != RegionState.State.OPEN) {
             LOG.warn("Meta region is in state " + stateAndServerName.getFirst());
           }
-          locs[DEFAULT_REPLICA_ID] = new HRegionLocation(
-            getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO), stateAndServerName.getSecond());
-          tryComplete(remaining, locs, future);
+          locs.put(replicaId, new HRegionLocation(
+            getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO), stateAndServerName.getSecond()));
+          tryComplete(remaining, locs.values(), future);
         });
       } else {
         addListener(getAndConvert(path, ZKConnectionRegistry::getMetaProto), (proto, error) -> {
@@ -168,23 +178,23 @@ class ZKConnectionRegistry implements ConnectionRegistry {
           }
           if (error != null) {
             LOG.warn("Failed to fetch " + path, error);
-            locs[replicaId] = null;
+            locs.put(replicaId, null);
           } else if (proto == null) {
             LOG.warn("Meta znode for replica " + replicaId + " is null");
-            locs[replicaId] = null;
+            locs.put(replicaId, null);
           } else {
             Pair<RegionState.State, ServerName> stateAndServerName = getStateAndServerName(proto);
             if (stateAndServerName.getFirst() != RegionState.State.OPEN) {
               LOG.warn("Meta region for replica " + replicaId + " is in state " +
                 stateAndServerName.getFirst());
-              locs[replicaId] = null;
+              locs.put(replicaId, null);
             } else {
-              locs[replicaId] =
-                new HRegionLocation(getRegionInfoForReplica(FIRST_META_REGIONINFO, replicaId),
-                  stateAndServerName.getSecond());
+              locs.put(replicaId, new HRegionLocation(
+                getRegionInfoForReplica(FIRST_META_REGIONINFO, replicaId),
+                  stateAndServerName.getSecond()));
             }
           }
-          tryComplete(remaining, locs, future);
+          tryComplete(remaining, locs.values(), future);
         });
       }
     }
