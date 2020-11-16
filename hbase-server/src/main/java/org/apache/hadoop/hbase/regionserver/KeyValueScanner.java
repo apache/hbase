@@ -181,4 +181,11 @@ public interface KeyValueScanner extends Shipper, Closeable {
    * see HFileWriterImpl#getMidpoint, or null if not known.
    */
   public Cell getNextIndexedKey();
+
+  /**
+   * @return true if we seeked to the current block(based on the seek key)
+   */
+  public default boolean isSeekToSameBlock() {
+    return false;
+  }
 }

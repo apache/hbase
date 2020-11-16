@@ -432,6 +432,11 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   }
 
   @Override
+  public boolean isSeekToSameBlock() {
+    return current == null ? false : current.isSeekToSameBlock();
+  }
+
+  @Override
   public void shipped() throws IOException {
     for (KeyValueScanner scanner : this.scannersForDelayedClose) {
       scanner.close(); // There wont be further fetch of Cells from these scanners. Just close.

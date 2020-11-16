@@ -327,6 +327,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     private ByteBufferKeyOnlyKeyValue bufBackedKeyOnlyKv = new ByteBufferKeyOnlyKeyValue();
     // A pair for reusing in blockSeek() so that we don't garbage lot of objects
     final ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<>();
+    private boolean seekToSameBlock;
 
     /**
      * The next indexed key is to keep track of the indexed key of the next data block.
@@ -383,6 +384,11 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     @Override
     public boolean isSeeked(){
       return blockBuffer != null;
+    }
+
+    @Override
+    public boolean isSeekToSameBlock() {
+      return seekToSameBlock;
     }
 
     @Override
@@ -981,8 +987,11 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         Cell key, boolean seekBefore) throws IOException {
       if (this.curBlock == null || this.curBlock.getOffset() != seekToBlock.getOffset()) {
         updateCurrentBlock(seekToBlock);
+        seekToSameBlock = true;
       } else if (rewind) {
         blockBuffer.rewind();
+      } else {
+        seekToSameBlock = true;
       }
       // Update the nextIndexedKey
       this.nextIndexedKey = nextIndexedKey;

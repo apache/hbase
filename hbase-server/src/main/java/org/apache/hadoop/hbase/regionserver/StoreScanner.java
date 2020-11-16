@@ -113,7 +113,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private Cell prevCell = null;
 
   private final long preadMaxBytes;
+  private final long switchToNextOnlyBytes;
   private long bytesRead;
+  private boolean seekToSameBlock;
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
@@ -205,6 +207,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       this.scanUsePread = this.readType != Scan.ReadType.STREAM;
     }
     this.preadMaxBytes = scanInfo.getPreadMaxBytes();
+    // TODO : Introduce config here at the ScanInfo level. Determine based on number of blocks
+    // rather than bytes read?
+    this.switchToNextOnlyBytes = this.preadMaxBytes;
     this.cellsPerHeartbeatCheck = scanInfo.getCellsPerTimeoutCheck();
     // Parallel seeking is on if the config allows and more there is more than one store file.
     if (store != null && store.getStorefilesCount() > 1) {
@@ -684,7 +689,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
               matcher.clearCurrentRow();
               seekOrSkipToNextRow(cell);
             } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
-              seekOrSkipToNextColumn(cell);
+              doSeekCol(cell);
             } else {
               this.heap.next();
             }
@@ -728,7 +733,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             break;
 
           case SEEK_NEXT_COL:
-            seekOrSkipToNextColumn(cell);
+            doSeekCol(cell);
             NextState stateAfterSeekNextColumn = needToReturn(outResult);
             if (stateAfterSeekNextColumn != null) {
               return scannerContext.setScannerState(stateAfterSeekNextColumn).hasMoreValues();
@@ -786,6 +791,19 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
   }
 
+  private void doSeekCol(Cell cell) throws IOException {
+    // we check when ever a seek_next_col happens did the seek really land in a new block.
+    // If the seek always lands in the same current block while trying to do a next,
+    // we tend to go with next() rather than seek() based on the 'seekToSameBlock'
+    // which is updated in the method 'seekOrSkipToNextColumn'
+    if (seekToSameBlock && bytesRead > switchToNextOnlyBytes) {
+      // forcefully make it to next only
+      this.heap.next();
+    } else {
+      seekOrSkipToNextColumn(cell);
+    }
+  }
+
   /**
    * If the top cell won't be flushed into disk, the new top cell may be
    * changed after #reopenAfterFlush. Because the older top cell only exist
@@ -817,7 +835,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   private void seekOrSkipToNextColumn(Cell cell) throws IOException {
     if (!trySkipToNextColumn(cell)) {
+      boolean prevIndexKeyNull = (getNextIndexedKey() == null);
       seekAsDirection(matcher.getKeyForNextColumn(cell));
+      if (prevIndexKeyNull) {
+        // even if one seek has lead to another block - reset to false.
+        // TODO : For SEEK_NEXT_ROW also?
+        seekToSameBlock = this.heap.isSeekToSameBlock();
+      }
     }
   }
 
@@ -1233,6 +1257,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   @Override
   public Cell getNextIndexedKey() {
     return this.heap.getNextIndexedKey();
+  }
+
+  @Override
+  public boolean isSeekToSameBlock() {
+    return this.heap.isSeekToSameBlock();
   }
 
   @Override
