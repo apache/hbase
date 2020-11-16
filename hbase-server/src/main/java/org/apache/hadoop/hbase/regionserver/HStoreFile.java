@@ -356,119 +356,119 @@ public class HStoreFile implements StoreFile {
     fileInfo.initHDFSBlocksDistribution();
     long readahead = fileInfo.isNoReadahead() ? 0L : -1L;
     ReaderContext context = fileInfo.createReaderContext(false, readahead, ReaderType.PREAD);
-    fileInfo.initHFileInfo(context);
-    StoreFileReader reader = fileInfo.preStoreFileReaderOpen(context, cacheConf);
-    if (reader == null) {
-      reader = fileInfo.createReader(context, cacheConf);
-      fileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
-    }
-    this.initialReader = fileInfo.postStoreFileReaderOpen(context, cacheConf, reader);
-    // Load up indices and fileinfo. This also loads Bloom filter type.
-    metadataMap = Collections.unmodifiableMap(initialReader.loadFileInfo());
-
-    // Read in our metadata.
-    byte [] b = metadataMap.get(MAX_SEQ_ID_KEY);
-    if (b != null) {
-      // By convention, if halfhfile, top half has a sequence number > bottom
-      // half. Thats why we add one in below. Its done for case the two halves
-      // are ever merged back together --rare.  Without it, on open of store,
-      // since store files are distinguished by sequence id, the one half would
-      // subsume the other.
-      this.sequenceid = Bytes.toLong(b);
-      if (fileInfo.isTopReference()) {
-        this.sequenceid += 1;
+    try {
+      fileInfo.initHFileInfo(context);
+      StoreFileReader reader = fileInfo.preStoreFileReaderOpen(context, cacheConf);
+      if (reader == null) {
+        reader = fileInfo.createReader(context, cacheConf);
+        fileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
       }
-    }
+      this.initialReader = fileInfo.postStoreFileReaderOpen(context, cacheConf, reader);
+      // Load up indices and fileinfo. This also loads Bloom filter type.
+      metadataMap = Collections.unmodifiableMap(initialReader.loadFileInfo());
 
-    if (isBulkLoadResult()){
-      // generate the sequenceId from the fileName
-      // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
-      String fileName = this.getPath().getName();
-      // Use lastIndexOf() to get the last, most recent bulk load seqId.
-      int startPos = fileName.lastIndexOf("SeqId_");
-      if (startPos != -1) {
-        this.sequenceid = Long.parseLong(fileName.substring(startPos + 6,
-            fileName.indexOf('_', startPos + 6)));
-        // Handle reference files as done above.
+      // Read in our metadata.
+      byte[] b = metadataMap.get(MAX_SEQ_ID_KEY);
+      if (b != null) {
+        // By convention, if halfhfile, top half has a sequence number > bottom
+        // half. Thats why we add one in below. Its done for case the two halves
+        // are ever merged back together --rare.  Without it, on open of store,
+        // since store files are distinguished by sequence id, the one half would
+        // subsume the other.
+        this.sequenceid = Bytes.toLong(b);
         if (fileInfo.isTopReference()) {
           this.sequenceid += 1;
         }
       }
-      // SKIP_RESET_SEQ_ID only works in bulk loaded file.
-      // In mob compaction, the hfile where the cells contain the path of a new mob file is bulk
-      // loaded to hbase, these cells have the same seqIds with the old ones. We do not want
-      // to reset new seqIds for them since this might make a mess of the visibility of cells that
-      // have the same row key but different seqIds.
-      boolean skipResetSeqId = isSkipResetSeqId(metadataMap.get(SKIP_RESET_SEQ_ID));
-      if (skipResetSeqId) {
-        // increase the seqId when it is a bulk loaded file from mob compaction.
-        this.sequenceid += 1;
+
+      if (isBulkLoadResult()) {
+        // generate the sequenceId from the fileName
+        // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
+        String fileName = this.getPath().getName();
+        // Use lastIndexOf() to get the last, most recent bulk load seqId.
+        int startPos = fileName.lastIndexOf("SeqId_");
+        if (startPos != -1) {
+          this.sequenceid =
+            Long.parseLong(fileName.substring(startPos + 6, fileName.indexOf('_', startPos + 6)));
+          // Handle reference files as done above.
+          if (fileInfo.isTopReference()) {
+            this.sequenceid += 1;
+          }
+        }
+        // SKIP_RESET_SEQ_ID only works in bulk loaded file.
+        // In mob compaction, the hfile where the cells contain the path of a new mob file is bulk
+        // loaded to hbase, these cells have the same seqIds with the old ones. We do not want
+        // to reset new seqIds for them since this might make a mess of the visibility of cells that
+        // have the same row key but different seqIds.
+        boolean skipResetSeqId = isSkipResetSeqId(metadataMap.get(SKIP_RESET_SEQ_ID));
+        if (skipResetSeqId) {
+          // increase the seqId when it is a bulk loaded file from mob compaction.
+          this.sequenceid += 1;
+        }
+        initialReader.setSkipResetSeqId(skipResetSeqId);
+        initialReader.setBulkLoaded(true);
       }
-      initialReader.setSkipResetSeqId(skipResetSeqId);
-      initialReader.setBulkLoaded(true);
-    }
-    initialReader.setSequenceID(this.sequenceid);
+      initialReader.setSequenceID(this.sequenceid);
 
-    b = metadataMap.get(HFile.Writer.MAX_MEMSTORE_TS_KEY);
-    if (b != null) {
-      this.maxMemstoreTS = Bytes.toLong(b);
-    }
+      b = metadataMap.get(HFile.Writer.MAX_MEMSTORE_TS_KEY);
+      if (b != null) {
+        this.maxMemstoreTS = Bytes.toLong(b);
+      }
 
-    b = metadataMap.get(MAJOR_COMPACTION_KEY);
-    if (b != null) {
-      boolean mc = Bytes.toBoolean(b);
-      if (this.majorCompaction == null) {
-        this.majorCompaction = new AtomicBoolean(mc);
+      b = metadataMap.get(MAJOR_COMPACTION_KEY);
+      if (b != null) {
+        boolean mc = Bytes.toBoolean(b);
+        if (this.majorCompaction == null) {
+          this.majorCompaction = new AtomicBoolean(mc);
+        } else {
+          this.majorCompaction.set(mc);
+        }
       } else {
-        this.majorCompaction.set(mc);
+        // Presume it is not major compacted if it doesn't explicity say so
+        // HFileOutputFormat explicitly sets the major compacted key.
+        this.majorCompaction = new AtomicBoolean(false);
       }
-    } else {
-      // Presume it is not major compacted if it doesn't explicity say so
-      // HFileOutputFormat explicitly sets the major compacted key.
-      this.majorCompaction = new AtomicBoolean(false);
-    }
 
-    b = metadataMap.get(EXCLUDE_FROM_MINOR_COMPACTION_KEY);
-    this.excludeFromMinorCompaction = (b != null && Bytes.toBoolean(b));
+      b = metadataMap.get(EXCLUDE_FROM_MINOR_COMPACTION_KEY);
+      this.excludeFromMinorCompaction = (b != null && Bytes.toBoolean(b));
 
-    BloomType hfileBloomType = initialReader.getBloomFilterType();
-    if (cfBloomType != BloomType.NONE) {
-      initialReader.loadBloomfilter(BlockType.GENERAL_BLOOM_META);
-      if (hfileBloomType != cfBloomType) {
-        LOG.debug("HFile Bloom filter type for "
-            + initialReader.getHFileReader().getName() + ": " + hfileBloomType
-            + ", but " + cfBloomType + " specified in column family "
+      BloomType hfileBloomType = initialReader.getBloomFilterType();
+      if (cfBloomType != BloomType.NONE) {
+        initialReader.loadBloomfilter(BlockType.GENERAL_BLOOM_META);
+        if (hfileBloomType != cfBloomType) {
+          LOG.debug("HFile Bloom filter type for " + initialReader.getHFileReader().getName() + ": "
+            + hfileBloomType + ", but " + cfBloomType + " specified in column family "
             + "configuration");
+        }
+      } else if (hfileBloomType != BloomType.NONE) {
+        LOG.info("Bloom filter turned off by CF config for " + initialReader.getHFileReader().getName());
       }
-    } else if (hfileBloomType != BloomType.NONE) {
-      LOG.info("Bloom filter turned off by CF config for "
-          + initialReader.getHFileReader().getName());
+
+      // load delete family bloom filter
+      initialReader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
+
+      try {
+        byte[] data = metadataMap.get(TIMERANGE_KEY);
+        initialReader.timeRange = data == null ? null : TimeRangeTracker.parseFrom(data).toTimeRange();
+      } catch (IllegalArgumentException e) {
+        LOG.error("Error reading timestamp range data from meta -- " + "proceeding without", e);
+        this.initialReader.timeRange = null;
+      }
+
+      try {
+        byte[] data = metadataMap.get(COMPACTION_EVENT_KEY);
+        this.compactedStoreFiles.addAll(ProtobufUtil.toCompactedStoreFiles(data));
+      } catch (IOException e) {
+        LOG.error("Error reading compacted storefiles from meta data", e);
+      }
+
+      // initialize so we can reuse them after reader closed.
+      firstKey = initialReader.getFirstKey();
+      lastKey = initialReader.getLastKey();
+      comparator = initialReader.getComparator();
+    } finally {
+      context.getInputStreamWrapper().unbuffer();
     }
-
-    // load delete family bloom filter
-    initialReader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
-
-    try {
-      byte[] data = metadataMap.get(TIMERANGE_KEY);
-      initialReader.timeRange = data == null ? null :
-          TimeRangeTracker.parseFrom(data).toTimeRange();
-    } catch (IllegalArgumentException e) {
-      LOG.error("Error reading timestamp range data from meta -- " +
-          "proceeding without", e);
-      this.initialReader.timeRange = null;
-    }
-
-    try {
-      byte[] data = metadataMap.get(COMPACTION_EVENT_KEY);
-      this.compactedStoreFiles.addAll(ProtobufUtil.toCompactedStoreFiles(data));
-    } catch (IOException e) {
-      LOG.error("Error reading compacted storefiles from meta data", e);
-    }
-
-    // initialize so we can reuse them after reader closed.
-    firstKey = initialReader.getFirstKey();
-    lastKey = initialReader.getLastKey();
-    comparator = initialReader.getComparator();
   }
 
   /**
