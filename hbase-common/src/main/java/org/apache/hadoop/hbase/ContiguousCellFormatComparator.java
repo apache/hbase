@@ -389,6 +389,7 @@ public class ContiguousCellFormatComparator implements Comparator {
     int rightRowLength = right.getRowLength();
     int diff = ByteBufferUtils.compareTo(left.getRowByteBuffer(), left.getRowPosition(),
       leftRowLength, right.getRowArray(), right.getRowOffset(), rightRowLength);
+
     if (diff != 0) {
       return diff;
     }
