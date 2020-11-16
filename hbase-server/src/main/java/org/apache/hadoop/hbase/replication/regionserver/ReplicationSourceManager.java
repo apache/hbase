@@ -1211,7 +1211,10 @@ public class ReplicationSourceManager implements ReplicationListener {
   /**
    * Create, initialize, and start the Catalog ReplicationSource.
    * Presumes called one-time only (caller must ensure one-time only call).
+   * This ReplicationSource is NOT created via {@link ReplicationSourceFactory}.
    * @see #addSource(String) This is a specialization of the addSource call.
+   * @see #catalogReplicationSource for a note on this ReplicationSource's lifecycle (and more on
+   * why the special handling).
    */
   private ReplicationSourceInterface createCatalogReplicationSource(RegionInfo regionInfo)
       throws IOException {
@@ -1222,6 +1225,11 @@ public class ReplicationSourceManager implements ReplicationListener {
     if (instantiate) {
       walProvider = this.walFactory.getMetaProvider();
     }
+    // Here we do a specialization on what {@link ReplicationSourceFactory} does. There is no need
+    // for persisting offset into WALs up in zookeeper (via ReplicationQueueInfo) as the catalog
+    // read replicas feature that makes use of the source does a reset on a crash of the WAL
+    // source process. See "4.1 Skip maintaining zookeeper replication queue (offsets/WALs)" in the
+    // design doc attached to HBASE-18070 'Enable memstore replication for meta replica' for detail.
     CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
       this.clusterId.toString(), "meta_" + ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
     final ReplicationSourceInterface crs = new CatalogReplicationSource();
