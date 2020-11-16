@@ -793,7 +793,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
               blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId);
         } else {
           ret = new SizeCachedNoTagsKeyValue(blockBuffer.array(),
-              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, seqId);
+              blockBuffer.arrayOffset() + blockBuffer.position(), cellBufSize, currKeyLen, seqId);
         }
       } else {
         ByteBuffer buf = blockBuffer.asSubByteBuffer(cellBufSize);

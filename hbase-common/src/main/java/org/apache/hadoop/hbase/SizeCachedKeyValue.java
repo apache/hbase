@@ -48,6 +48,15 @@ public class SizeCachedKeyValue extends KeyValue {
     setSequenceId(seqId);
   }
 
+  public SizeCachedKeyValue(byte[] bytes, int offset, int length, int keyLen, long seqId) {
+    super(bytes, offset, length);
+    // We will read all these cached values at least once. Initialize now itself so that we can
+    // avoid uninitialized checks with every time call
+    rowLen = super.getRowLength();
+    this.keyLen = keyLen;
+    setSequenceId(seqId);
+  }
+
   @Override
   public short getRowLength() {
     return rowLen;

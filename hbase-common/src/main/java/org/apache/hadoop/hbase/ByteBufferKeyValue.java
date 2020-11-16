@@ -20,10 +20,13 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.List;
+
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
+
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
@@ -32,16 +35,19 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * off heap/ on heap ByteBuffer
  */
 @InterfaceAudience.Private
-public class ByteBufferKeyValue extends ByteBufferExtendedCell {
+public class ByteBufferKeyValue extends ByteBufferExtendedCell implements ContiguousCellFormat {
 
-  protected final ByteBuffer buf;
-  protected final int offset;
-  protected final int length;
+  protected ByteBuffer buf;
+  protected int offset;
+  protected int length;
   private long seqId = 0;
 
   public static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
       + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_LONG;
 
+  /** Writable Constructor -- DO NOT USE */
+  public ByteBufferKeyValue() {
+  }
   public ByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId) {
     this.buf = buf;
     this.offset = offset;
@@ -49,11 +55,92 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
     this.seqId = seqId;
   }
 
+  @VisibleForTesting
+  public ByteBufferKeyValue(final byte[] row, final int roffset, final int rlength,
+      final byte[] family, final int foffset, final int flength, final byte[] qualifier,
+      final int qoffset, final int qlength, final long timestamp,
+      final org.apache.hadoop.hbase.KeyValue.Type type, final byte[] value, final int voffset,
+      final int vlength, final List<Tag> tags) {
+    this.buf = createByteBuffer(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
+      qlength, timestamp, type, value, voffset, vlength, tags);
+    this.length = this.buf.limit();
+    this.offset = 0;
+  }
+
+  /**
+   * Create offheap backed BBKVs
+   * @param qualifier can be a ByteBuffer or a byte[], or null.
+   * @param value can be a ByteBuffer or a byte[], or null.
+   */
+  private static ByteBuffer createByteBuffer(final byte[] row, final int roffset, final int rlength,
+      final byte[] family, final int foffset, int flength, final Object qualifier,
+      final int qoffset, int qlength, final long timestamp,
+      final org.apache.hadoop.hbase.KeyValue.Type type, final Object value, final int voffset,
+      int vlength, List<Tag> tags) {
+
+    // Calculate length of tags area
+    int tagsLength = 0;
+    if (tags != null && !tags.isEmpty()) {
+      for (Tag t : tags) {
+        tagsLength += t.getValueLength() + Tag.INFRASTRUCTURE_SIZE;
+      }
+    }
+    RawCell.checkForTagsLength(tagsLength);
+    // Allocate right-sized byte array.
+    int keyLength = (int) KeyValue.getKeyDataStructureSize(rlength, flength, qlength);
+    byte[] bytes = new byte[(int) KeyValue.getKeyValueDataStructureSize(rlength, flength, qlength,
+      vlength, tagsLength)];
+    ByteBuffer bb = ByteBuffer.allocateDirect(bytes.length);
+    // Write key, value and key row length.
+    int pos = 0;
+    pos = Bytes.putInt(bytes, pos, keyLength);
+
+    pos = Bytes.putInt(bytes, pos, vlength);
+    pos = Bytes.putShort(bytes, pos, (short) (rlength & 0x0000ffff));
+    pos = Bytes.putBytes(bytes, pos, row, roffset, rlength);
+    pos = Bytes.putByte(bytes, pos, (byte) (flength & 0x0000ff));
+    if (flength != 0) {
+      pos = Bytes.putBytes(bytes, pos, family, foffset, flength);
+    }
+    if (qlength > 0) {
+      if (qualifier instanceof ByteBuffer) {
+        pos = Bytes.putByteBuffer(bytes, pos, (ByteBuffer) qualifier);
+      } else {
+        pos = Bytes.putBytes(bytes, pos, (byte[]) qualifier, qoffset, qlength);
+      }
+    }
+    pos = Bytes.putLong(bytes, pos, timestamp);
+    pos = Bytes.putByte(bytes, pos, type.getCode());
+    if (vlength > 0) {
+      if (value instanceof ByteBuffer) {
+        pos = Bytes.putByteBuffer(bytes, pos, (ByteBuffer) value);
+      } else {
+        pos = Bytes.putBytes(bytes, pos, (byte[]) value, voffset, vlength);
+      }
+    }
+    // Add the tags after the value part
+    if (tagsLength > 0) {
+      pos = Bytes.putAsShort(bytes, pos, tagsLength);
+      for (Tag t : tags) {
+        int tlen = t.getValueLength();
+        pos = Bytes.putAsShort(bytes, pos, tlen + Tag.TYPE_LENGTH_SIZE);
+        pos = Bytes.putByte(bytes, pos, t.getType());
+        Tag.copyValueTo(t, bytes, pos);
+        pos += tlen;
+      }
+    }
+    bb.put(bytes);
+    bb.rewind();
+    return bb;
+  }
+
   public ByteBufferKeyValue(ByteBuffer buf, int offset, int length) {
     this.buf = buf;
     this.offset = offset;
     this.length = length;
   }
+
+
 
   @VisibleForTesting
   public ByteBuffer getBuffer() {
@@ -99,11 +186,13 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
     return getFamilyLengthPosition(getRowLength());
   }
 
-  int getFamilyLengthPosition(int rowLength) {
+  @Override
+  public int getFamilyLengthPosition(int rowLength) {
     return this.offset + KeyValue.ROW_KEY_OFFSET + rowLength;
   }
 
-  byte getFamilyLength(int famLenPos) {
+  @Override
+  public byte getFamilyLength(int famLenPos) {
     return ByteBufferUtils.toByte(this.buf, famLenPos);
   }
 
@@ -122,7 +211,8 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
     return getQualifierLength(getKeyLength(), getRowLength(), getFamilyLength());
   }
 
-  int getQualifierLength(int keyLength, int rlength, int flength) {
+  @Override
+  public int getQualifierLength(int keyLength, int rlength, int flength) {
     return keyLength - (int) KeyValue.getKeyDataStructureSize(rlength, flength, 0);
   }
 
@@ -131,12 +221,14 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
     return getTimestamp(getKeyLength());
   }
 
-  long getTimestamp(int keyLength) {
+  @Override
+  public long getTimestamp(int keyLength) {
     int offset = getTimestampOffset(keyLength);
     return ByteBufferUtils.toLong(this.buf, offset);
   }
 
-  int getKeyLength() {
+  @Override
+  public int getKeyLength() {
     return ByteBufferUtils.toInt(this.buf, this.offset);
   }
 
@@ -149,7 +241,8 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
     return getTypeByte(getKeyLength());
   }
 
-  byte getTypeByte(int keyLen) {
+  @Override
+  public byte getTypeByte(int keyLen) {
     return ByteBufferUtils.toByte(this.buf, this.offset + keyLen - 1 + KeyValue.ROW_OFFSET);
   }
 
@@ -159,7 +252,7 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
   }
 
   @Override
-  public void setSequenceId(long seqId) {
+  public void setSequenceId(long seqId) throws IOException {
     this.seqId = seqId;
   }
 
@@ -218,10 +311,11 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public int getFamilyPosition() {
-    return getFamilyPosition(getFamilyLengthPosition());
+    return getFamilyInternalPosition(getFamilyLengthPosition());
   }
 
-  public int getFamilyPosition(int familyLengthPosition) {
+  @Override
+  public int getFamilyInternalPosition(int familyLengthPosition) {
     return familyLengthPosition + Bytes.SIZEOF_BYTE;
   }
 
@@ -232,10 +326,11 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public int getQualifierPosition() {
-    return getQualifierPosition(getFamilyPosition(), getFamilyLength());
+    return getQualifierInternalPosition(getFamilyPosition(), getFamilyLength());
   }
 
-  int getQualifierPosition(int familyPosition, int familyLength) {
+  @Override
+  public int getQualifierInternalPosition(int familyPosition, byte familyLength) {
     return familyPosition + familyLength;
   }
 

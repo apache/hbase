@@ -36,6 +36,11 @@ public class SizeCachedNoTagsKeyValue extends SizeCachedKeyValue {
     super(bytes, offset, length, seqId);
   }
 
+  public SizeCachedNoTagsKeyValue(byte[] bytes, int offset, int length, int currKeyLen,
+      long seqId) {
+    super(bytes, offset, length, currKeyLen, seqId);
+  }
+
   @Override
   public int getTagsLength() {
     return 0;
