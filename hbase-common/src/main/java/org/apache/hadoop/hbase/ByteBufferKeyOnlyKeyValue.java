@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Optional;
+
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -34,12 +35,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * (onheap and offheap).
  */
 @InterfaceAudience.Private
-public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
-  public static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
-      + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT;
-  private ByteBuffer buf;
-  private int offset = 0; // offset into buffer where key starts at
-  private int length = 0; // length of this.
+public class ByteBufferKeyOnlyKeyValue extends ByteBufferKeyValue {
+  public static final int FIXED_OVERHEAD =
+      ByteBufferKeyOnlyKeyValue.FIXED_OVERHEAD + Bytes.SIZEOF_SHORT;
   private short rowLen;
 
   /**
@@ -54,8 +52,8 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
   }
 
   /**
-   * A setter that helps to avoid object creation every time and whenever
-   * there is a need to create new OffheapKeyOnlyKeyValue.
+   * A setter that helps to avoid object creation every time and whenever there is a need to create
+   * new OffheapKeyOnlyKeyValue.
    * @param key
    * @param offset
    * @param length
@@ -121,7 +119,8 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
     return getFamilyLength(getFamilyLengthPosition());
   }
 
-  private byte getFamilyLength(int famLenPos) {
+  @Override
+  public byte getFamilyLength(int famLenPos) {
     return ByteBufferUtils.toByte(this.buf, famLenPos);
   }
 
@@ -143,11 +142,12 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public int getQualifierLength() {
-    return getQualifierLength(getRowLength(), getFamilyLength());
+    return getQualifierLength(this.length, getRowLength(), getFamilyLength());
   }
 
-  private int getQualifierLength(int rlength, int flength) {
-    return this.length - (int) KeyValue.getKeyDataStructureSize(rlength, flength, 0);
+  @Override
+  public int getQualifierLength(int keyLength, int rlength, int flength) {
+    return keyLength - (int) KeyValue.getKeyDataStructureSize(rlength, flength, 0);
   }
 
   @Override
@@ -161,7 +161,7 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public byte getTypeByte() {
-    return ByteBufferUtils.toByte(this.buf, this.offset + this.length - 1);
+    return getTypeByte(this.length);
   }
 
   @Override
@@ -234,11 +234,6 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
     return getFamilyLengthPosition() + Bytes.SIZEOF_BYTE;
   }
 
-  // The position in BB where the family length is added.
-  private int getFamilyLengthPosition() {
-    return this.offset + Bytes.SIZEOF_SHORT + getRowLength();
-  }
-
   @Override
   public ByteBuffer getQualifierByteBuffer() {
     return this.buf;
@@ -291,5 +286,40 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
       return ClassSize.align(FIXED_OVERHEAD + length);
     }
     return ClassSize.align(FIXED_OVERHEAD);
+  }
+
+  @Override
+  public int getFamilyLengthPosition(int rowLen) {
+    return this.offset + Bytes.SIZEOF_SHORT + rowLen;
+  }
+
+  @Override
+  public int getFamilyInternalPosition(int familyLengthPosition) {
+    return familyLengthPosition + Bytes.SIZEOF_BYTE;
+  }
+
+  @Override
+  public int getQualifierInternalPosition(int famOffset, byte famLength) {
+    return famOffset + famLength;
+  }
+
+  private int getTimestampOffset(final int keylength) {
+    return this.offset + keylength - KeyValue.TIMESTAMP_TYPE_SIZE;
+  }
+
+  @Override
+  public long getTimestamp(int keyLength) {
+    int tsOffset = getTimestampOffset(keyLength);
+    return ByteBufferUtils.toLong(this.buf, tsOffset);
+  }
+
+  @Override
+  public byte getTypeByte(int keyLength) {
+    return ByteBufferUtils.toByte(this.buf, this.offset + keyLength - 1);
+  }
+
+  @Override
+  public int getKeyLength() {
+    return this.length;
   }
 }

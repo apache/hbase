@@ -69,15 +69,14 @@ public class TestByteBufferKeyValue {
     assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell3) < 0);
     Cell cell4 = getOffheapCell(row1, Bytes.toBytes("f"), qual2);
     assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell4) > 0);
-    BBKVComparator comparator = new BBKVComparator(null);
-    assertTrue(comparator.compare(cell1, cell2) < 0);
-    assertTrue(comparator.compare(cell1, cell3) < 0);
-    assertTrue(comparator.compare(cell1, cell4) > 0);
+    assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell2) < 0);
+    assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell3) < 0);
+    assertTrue(CellComparatorImpl.COMPARATOR.compare(cell1, cell4) > 0);
     ByteBuffer buf = ByteBuffer.allocate(row1.length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, row1, 0, row1.length);
 
     ConcurrentSkipListMap<ByteBufferKeyValue, ByteBufferKeyValue> map =
-        new ConcurrentSkipListMap<>(comparator);
+        new ConcurrentSkipListMap<>(CellComparatorImpl.COMPARATOR);
     map.put((ByteBufferKeyValue)cell1, (ByteBufferKeyValue)cell1);
     map.put((ByteBufferKeyValue)cell2, (ByteBufferKeyValue)cell2);
     map.put((ByteBufferKeyValue)cell3, (ByteBufferKeyValue)cell3);
