@@ -2440,6 +2440,12 @@ public class MasterRpcServices extends RSRpcServices implements
         Set<Address> clearedServers = new HashSet<>();
         for (HBaseProtos.ServerName pbServer : request.getServerNameList()) {
           ServerName server = ProtobufUtil.toServerName(pbServer);
+          final boolean deadInProcess = master.getServerManager().isDeadServersInProgress(server);
+
+          if (!deadInProcess) {
+            throw new RuntimeException("Dead server {} is not 'dead' in fact...");
+          }
+
           if (!deadServer.removeDeadServer(server)) {
             response.addServerName(pbServer);
           } else {

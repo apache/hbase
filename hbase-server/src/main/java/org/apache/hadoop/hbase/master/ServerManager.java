@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -62,6 +63,7 @@ import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -504,7 +506,21 @@ public class ServerManager {
    * @return true if any RS are being processed as dead, false if not
    */
   public boolean areDeadServersInProgress() {
-    return this.deadservers.areDeadServersInProgress();
+    try {
+      return master.getProcedures().stream().anyMatch(p -> p instanceof ServerCrashProcedure);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public boolean isDeadServersInProgress(ServerName serverName) {
+    try {
+      return master.getProcedures().stream().anyMatch(
+        p -> (p instanceof ServerCrashProcedure)
+          && ((ServerCrashProcedure) p).getServerName().equals(serverName));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   void letRegionServersShutdown() {
