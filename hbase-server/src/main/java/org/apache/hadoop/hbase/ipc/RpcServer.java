@@ -2358,6 +2358,15 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   }
 
   @Override
+  public void refreshAuthManager(PolicyProvider pp) {
+    if (authorize) {
+      // It was removed in HBASE-24174 and added back in HBASE-25285 for compactibility concern.
+      // In fact, this refresh doesn't take effect, since the conf is the old one, not the new.
+      refreshAuthManager(conf, pp);
+    }
+  }
+
+  @Override
   public synchronized void refreshAuthManager(Configuration conf, PolicyProvider pp) {
     // Ignore warnings that this should be accessed in a static way instead of via an instance;
     // it'll break if you go via static route.
