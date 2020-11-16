@@ -80,8 +80,8 @@ public interface RpcServerInterface {
 
   /**
    * It was removed in HBASE-24174 and added back in HBASE-25285 for compactibility concern.
-   * NOTICE: subclasses should call {@link #refreshAuthManager(Configuration, PolicyProvider)} for
-   * correctness.
+   * NOTICE: implementations should call {@link #refreshAuthManager(Configuration, PolicyProvider)}
+   * for correctness.
    * @param pp PolicyProvider
    */
   @VisibleForTesting
