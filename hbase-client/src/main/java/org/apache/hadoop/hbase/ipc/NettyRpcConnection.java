@@ -42,6 +42,8 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -52,6 +54,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
@@ -85,7 +88,8 @@ class NettyRpcConnection extends RpcConnection {
 
   NettyRpcConnection(NettyRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
-        rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
+        rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor,
+        rpcClient.metrics);
     this.rpcClient = rpcClient;
     byte[] connectionHeaderPreamble = getConnectionHeaderPreamble();
     this.connectionHeaderPreamble =
@@ -216,24 +220,33 @@ class NettyRpcConnection extends RpcConnection {
     });
   }
 
-  private void connect() {
+  private void connect() throws UnknownHostException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Connecting to " + remoteId.address);
+      LOG.debug("Connecting to " + remoteId.getAddress());
     }
-
+    if (this.rpcClient.metrics != null) {
+      this.rpcClient.metrics.incrNsLookups();
+    }
+    InetSocketAddress remoteAddr = Address.toSocketAddress(remoteId.getAddress());
+    if (remoteAddr.isUnresolved()) {
+      if (this.rpcClient.metrics != null) {
+        this.rpcClient.metrics.incrNsLookupsFailed();
+      }
+      throw new UnknownHostException(remoteId.getAddress() + " could not be resolved");
+    }
     this.channel = new Bootstrap().group(rpcClient.group).channel(rpcClient.channelClass)
         .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())
         .option(ChannelOption.SO_KEEPALIVE, rpcClient.tcpKeepAlive)
         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, rpcClient.connectTO)
         .handler(new BufferCallBeforeInitHandler()).localAddress(rpcClient.localAddr)
-        .remoteAddress(remoteId.address).connect().addListener(new ChannelFutureListener() {
+        .remoteAddress(remoteAddr).connect().addListener(new ChannelFutureListener() {
 
           @Override
           public void operationComplete(ChannelFuture future) throws Exception {
             Channel ch = future.channel();
             if (!future.isSuccess()) {
               failInit(ch, toIOE(future.cause()));
-              rpcClient.failedServers.addToFailedServers(remoteId.address, future.cause());
+              rpcClient.failedServers.addToFailedServers(remoteId.getAddress(), future.cause());
               return;
             }
             ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());

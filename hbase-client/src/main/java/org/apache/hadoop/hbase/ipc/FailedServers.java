@@ -17,16 +17,14 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.net.InetSocketAddress;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -35,8 +33,8 @@ import org.apache.hadoop.hbase.util.Pair;
  */
 @InterfaceAudience.Private
 public class FailedServers {
-  private final LinkedList<Pair<Long, String>> failedServers = new
-      LinkedList<Pair<Long, String>>();
+  private final LinkedList<Pair<Long, Address>> failedServers = new
+      LinkedList<Pair<Long, Address>>();
   private final int recheckServersTimeout;
   private static final Log LOG = LogFactory.getLog(FailedServers.class);
 
@@ -48,12 +46,12 @@ public class FailedServers {
   /**
    * Add an address to the list of the failed servers list.
    */
-  public synchronized void addToFailedServers(InetSocketAddress address, Throwable throwable) {
+  public synchronized void addToFailedServers(Address address, Throwable throwable) {
     final long expiry = EnvironmentEdgeManager.currentTime() + recheckServersTimeout;
-    failedServers.addFirst(new Pair<Long, String>(expiry, address.toString()));
+    failedServers.addFirst(new Pair<Long, Address>(expiry, address));
     if (LOG.isDebugEnabled()) {
       LOG.debug(
-        "Added failed server with address " + address.toString() + " to list caused by "
+        "Added failed server with address " + address + " to list caused by "
             + throwable.toString());
     }
   }
@@ -63,22 +61,21 @@ public class FailedServers {
    *
    * @return true if the server is in the failed servers list
    */
-  public synchronized boolean isFailedServer(final InetSocketAddress address) {
+  public synchronized boolean isFailedServer(final Address address) {
     if (failedServers.isEmpty()) {
       return false;
     }
 
-    final String lookup = address.toString();
     final long now = EnvironmentEdgeManager.currentTime();
 
     // iterate, looking for the search entry and cleaning expired entries
-    Iterator<Pair<Long, String>> it = failedServers.iterator();
+    Iterator<Pair<Long, Address>> it = failedServers.iterator();
     while (it.hasNext()) {
-      Pair<Long, String> cur = it.next();
+      Pair<Long, Address> cur = it.next();
       if (cur.getFirst() < now) {
         it.remove();
       } else {
-        if (lookup.equals(cur.getSecond())) {
+        if (address.equals(cur.getSecond())) {
           return true;
         }
       }

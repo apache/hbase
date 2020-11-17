@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -142,10 +143,10 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
   private int maxConcurrentCallsPerServer;
 
-  private static final LoadingCache<InetSocketAddress, AtomicInteger> concurrentCounterCache =
+  private static final LoadingCache<Address, AtomicInteger> concurrentCounterCache =
       CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.HOURS).
-          build(new CacheLoader<InetSocketAddress, AtomicInteger>() {
-            @Override public AtomicInteger load(InetSocketAddress key) throws Exception {
+          build(new CacheLoader<Address, AtomicInteger>() {
+            @Override public AtomicInteger load(Address key) throws Exception {
               return new AtomicInteger(0);
             }
           });
@@ -213,7 +214,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
         // have some pending calls on connection so we should not shutdown the connection outside.
         // The connection itself will disconnect if there is no pending call for maxIdleTime.
         if (conn.getLastTouched() < closeBeforeTime && !conn.isActive()) {
-          LOG.info("Cleanup idle connection to " + conn.remoteId().address);
+          LOG.info("Cleanup idle connection to " + conn.remoteId().getAddress());
           connections.removeValue(conn.remoteId(), conn);
           conn.cleanupConnection();
         }
@@ -342,11 +343,11 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   private T getConnection(ConnectionId remoteId) throws IOException {
     if (failedServers.isFailedServer(remoteId.getAddress())) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Not trying to connect to " + remoteId.address
+        LOG.debug("Not trying to connect to " + remoteId.getAddress()
             + " this server is in the failed servers list");
       }
       throw new FailedServerException(
-          "This server is in the failed servers list: " + remoteId.address);
+          "This server is in the failed servers list: " + remoteId.getAddress());
     }
     T conn;
     synchronized (connections) {
@@ -368,7 +369,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
    */
   protected abstract T createConnection(ConnectionId remoteId) throws IOException;
 
-  private void onCallFinished(Call call, HBaseRpcController hrc, InetSocketAddress addr,
+  private void onCallFinished(Call call, HBaseRpcController hrc, Address addr,
       RpcCallback<Message> callback) {
     call.callStats.setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.getStartTime());
     if (metrics != null) {
@@ -393,10 +394,11 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   }
 
   private void callMethod(final Descriptors.MethodDescriptor md, final HBaseRpcController hrc,
-      final Message param, Message returnType, final User ticket, final InetSocketAddress addr,
-      final RpcCallback<Message> callback) {
+      final Message param, Message returnType, final User ticket,
+      final InetSocketAddress inetAddr, final RpcCallback<Message> callback) {
     final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
     cs.setStartTime(EnvironmentEdgeManager.currentTime());
+    final Address addr = Address.fromSocketAddress(inetAddr);
     final AtomicInteger counter = concurrentCounterCache.getUnchecked(addr);
     Call call = new Call(nextCallId(), md, param, hrc.cellScanner(), returnType,
         hrc.getCallTimeout(), hrc.getPriority(), new RpcCallback<Call>() {
@@ -421,9 +423,15 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   }
 
   private InetSocketAddress createAddr(ServerName sn) throws UnknownHostException {
+    if (this.metrics != null) {
+      this.metrics.incrNsLookups();
+    }
     InetSocketAddress addr = new InetSocketAddress(sn.getHostname(), sn.getPort());
     if (addr.isUnresolved()) {
-      throw new UnknownHostException("can not resolve " + sn.getServerName());
+      if (this.metrics != null) {
+        this.metrics.incrNsLookupsFailed();
+      }
+      throw new UnknownHostException(sn.getServerName() + " could not be resolved");
     }
     return addr;
   }
@@ -440,8 +448,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     synchronized (connections) {
       for (T connection : connections.values()) {
         ConnectionId remoteId = connection.remoteId();
-        if (remoteId.address.getPort() == sn.getPort() &&
-            remoteId.address.getHostName().equals(sn.getHostname())) {
+        if (remoteId.getAddress().getPort() == sn.getPort() &&
+            remoteId.getAddress().getHostname().equals(sn.getHostname())) {
           LOG.info("The server on " + sn.toString() + " is dead - stopping the connection " +
               connection.remoteId);
           connections.removeValue(remoteId, connection);
@@ -512,6 +520,11 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
   private static class AbstractRpcChannel {
 
+    // We cache the resolved InetSocketAddress for the channel so we do not do a DNS lookup
+    // per method call on the channel. If the remote target is removed or reprovisioned and
+    // its identity changes a new channel with a newly resolved InetSocketAddress will be
+    // created as part of retry, so caching here is fine.
+    // Normally, caching an InetSocketAddress is an anti-pattern.
     protected final InetSocketAddress addr;
 
     protected final AbstractRpcClient<?> rpcClient;

@@ -21,10 +21,10 @@ import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
 import static org.junit.Assert.assertTrue;
 
 import java.net.ConnectException;
-import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
@@ -35,7 +35,7 @@ public class TestIPCUtil {
 
   @Test
   public void testWrapException() throws Exception {
-    final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", 0);
+    final Address address = Address.fromParts("localhost", 0);
     assertTrue(wrapException(address, new ConnectException()) instanceof ConnectException);
     assertTrue(
       wrapException(address, new SocketTimeoutException()) instanceof SocketTimeoutException);

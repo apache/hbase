@@ -19,14 +19,13 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.net.InetSocketAddress;
 
 @Category(MediumTests.class)   // Can't be small, we're playing with the EnvironmentEdge
 public class TestHBaseClient {
@@ -38,11 +37,10 @@ public class TestHBaseClient {
     FailedServers fs = new FailedServers(new Configuration());
     Throwable testThrowable = new Throwable();//throwable already tested in TestFailedServers.java
 
-    InetSocketAddress ia = InetSocketAddress.createUnresolved("bad", 12);
-    InetSocketAddress ia2 = InetSocketAddress.createUnresolved("bad", 12);  // same server as ia
-    InetSocketAddress ia3 = InetSocketAddress.createUnresolved("badtoo", 12);
-    InetSocketAddress ia4 = InetSocketAddress.createUnresolved("badtoo", 13);
-
+    Address ia = Address.fromParts("bad", 12);
+    Address ia2 = Address.fromParts("bad", 12);  // same server as ia
+    Address ia3 = Address.fromParts("badtoo", 12);
+    Address ia4 = Address.fromParts("badtoo", 13);
 
     Assert.assertFalse( fs.isFailedServer(ia) );
 

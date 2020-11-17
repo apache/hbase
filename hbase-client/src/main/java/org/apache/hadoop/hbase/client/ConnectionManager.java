@@ -29,6 +29,7 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -220,7 +221,6 @@ class ConnectionManager {
 
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   private static final String CLIENT_NONCES_ENABLED_KEY = "hbase.client.nonces.enabled";
-  private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
 
   // An LRU Map of HConnectionKey -> HConnection (TableServer).  All
   // access must be synchronized.  This map is not private because tests
@@ -564,7 +564,6 @@ class ConnectionManager {
       justification="Access to the conncurrent hash map is under a lock so should be fine.")
   static class HConnectionImplementation implements ClusterConnection, Closeable {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
-    private final boolean hostnamesCanChange;
     private final long pause;
     private final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
     private boolean useMetaReplicas;
@@ -706,7 +705,6 @@ class ConnectionManager {
       }
       this.metaCache = new MetaCache(this.metrics);
 
-      this.hostnamesCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
       boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
           HConstants.STATUS_PUBLISHED_DEFAULT);
       Class<? extends ClusterStatusListener.Listener> listenerClass =
@@ -1599,8 +1597,7 @@ class ConnectionManager {
           throw new MasterNotRunningException(sn + " is dead.");
         }
         // Use the security info interface name as our stub key
-        String key = getStubKey(getServiceName(),
-            sn.getHostname(), sn.getPort(), hostnamesCanChange);
+        String key = getStubKey(getServiceName(), sn.getHostname(), sn.getPort());
         connectionLock.putIfAbsent(key, key);
         Object stub = null;
         synchronized (connectionLock.get(key)) {
@@ -1683,7 +1680,7 @@ class ConnectionManager {
         throw new RegionServerStoppedException(serverName + " is dead.");
       }
       String key = getStubKey(AdminService.BlockingInterface.class.getName(),
-          serverName.getHostname(), serverName.getPort(), this.hostnamesCanChange);
+          serverName.getHostname(), serverName.getPort());
       this.connectionLock.putIfAbsent(key, key);
       AdminService.BlockingInterface stub = null;
       synchronized (this.connectionLock.get(key)) {
@@ -1705,7 +1702,7 @@ class ConnectionManager {
         throw new RegionServerStoppedException(sn + " is dead.");
       }
       String key = getStubKey(ClientService.BlockingInterface.class.getName(), sn.getHostname(),
-          sn.getPort(), this.hostnamesCanChange);
+          sn.getPort());
       this.connectionLock.putIfAbsent(key, key);
       ClientService.BlockingInterface stub = null;
       synchronized (this.connectionLock.get(key)) {
@@ -1722,24 +1719,27 @@ class ConnectionManager {
       return stub;
     }
 
-    static String getStubKey(final String serviceName,
-                             final String rsHostname,
-                             int port,
-                             boolean resolveHostnames) {
-
+    private String getStubKey(final String serviceName, final String rsHostname, int port)
+        throws UnknownHostException {
       // Sometimes, servers go down and they come back up with the same hostname but a different
       // IP address. Force a resolution of the rsHostname by trying to instantiate an
       // InetSocketAddress, and this way we will rightfully get a new stubKey.
       // Also, include the hostname in the key so as to take care of those cases where the
       // DNS name is different but IP address remains the same.
-      String address = rsHostname;
-      if (resolveHostnames) {
-        InetAddress i =  new InetSocketAddress(rsHostname, port).getAddress();
-        if (i != null) {
-          address = i.getHostAddress() + "-" + rsHostname;
-        }
+      if (this.metrics != null) {
+        this.metrics.incrNsLookups();
       }
-      return serviceName + "@" + address + ":" + port;
+      InetAddress i =  new InetSocketAddress(rsHostname, port).getAddress();
+      // We used to ignore when the address was unresolvable but that makes no sense. It
+      // would lead to a stub key mapping to an instance where the host cannot be resolved;
+      // and therefore, cannot be contacted anyway.
+      if (i == null) {
+        if (this.metrics != null) {
+          this.metrics.incrNsLookupsFailed();
+        }
+        throw new UnknownHostException(rsHostname + " cannot be resolved");
+      }
+      return String.format("%s@%s-%s:%d", serviceName, i.getHostAddress(), rsHostname, port);
     }
 
     private ZooKeeperKeepAliveConnection keepAliveZookeeper;
