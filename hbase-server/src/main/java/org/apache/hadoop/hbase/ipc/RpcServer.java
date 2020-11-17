@@ -2359,7 +2359,10 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
   @Override
   public void refreshAuthManager(PolicyProvider pp) {
-    // noop
+    if (authorize) {
+      // It doesn't take effect, because conf is old.
+      refreshAuthManager(conf, pp);
+    }
   }
 
   @Override
