@@ -396,7 +396,12 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    //DO nothing for now
+    boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
+    if (fallbackEnabled != newFallbackEnabled) {
+      LOG.info("Changing the value of {} from {} to {}", FALLBACK_GROUP_ENABLE_KEY,
+        fallbackEnabled, newFallbackEnabled);
+      fallbackEnabled = newFallbackEnabled;
+    }
   }
 
   @Override
