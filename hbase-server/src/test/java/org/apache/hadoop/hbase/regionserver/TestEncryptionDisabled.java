@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -37,8 +34,10 @@ import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestEncryptionDisabled {
@@ -46,6 +45,9 @@ public class TestEncryptionDisabled {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestEncryptionDisabled.class);
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf = TEST_UTIL.getConfiguration();
@@ -82,15 +84,9 @@ public class TestEncryptionDisabled {
     tdb.setColumnFamily(columnFamilyDescriptorBuilder.build());
 
     // Create the test table, we expect to get back an exception
-    try {
-      TEST_UTIL.getAdmin().createTable(tdb.build());
-    } catch (DoNotRetryIOException e) {
-      assertTrue(e.getMessage().contains("encryption is disabled on the cluster"));
-      return;
-    } catch (Exception e) {
-      throw new RuntimeException("create table command failed for the wrong reason", e);
-    }
-    fail("create table command unexpectedly succeeded");
+    exception.expect(DoNotRetryIOException.class);
+    exception.expectMessage("encryption is disabled on the cluster");
+    TEST_UTIL.getAdmin().createTable(tdb.build());
   }
 
   @Test
