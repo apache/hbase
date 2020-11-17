@@ -192,6 +192,7 @@ public final class EncryptionUtil {
    * @param family The current column descriptor.
    * @return The created encryption context.
    * @throws IOException if an encryption key for the column cannot be unwrapped
+   * @throws IllegalStateException in case of encryption related configuration errors
    */
   public static Encryption.Context createEncryptionContext(Configuration conf,
     ColumnFamilyDescriptor family) throws IOException {
@@ -199,7 +200,7 @@ public final class EncryptionUtil {
     String cipherName = family.getEncryptionType();
     if (cipherName != null) {
       if(!Encryption.isEncryptionEnabled(conf)) {
-        throw new RuntimeException("Encryption for family '" + family.getNameAsString()
+        throw new IllegalStateException("Encryption for family '" + family.getNameAsString()
           + "' configured with type '" + cipherName + "' but the encryption feature is disabled");
       }
       Cipher cipher;
@@ -211,13 +212,13 @@ public final class EncryptionUtil {
         // Use the algorithm the key wants
         cipher = Encryption.getCipher(conf, key.getAlgorithm());
         if (cipher == null) {
-          throw new RuntimeException("Cipher '" + key.getAlgorithm() + "' is not available");
+          throw new IllegalStateException("Cipher '" + key.getAlgorithm() + "' is not available");
         }
         // Fail if misconfigured
         // We use the encryption type specified in the column schema as a sanity check on
         // what the wrapped key is telling us
         if (!cipher.getName().equalsIgnoreCase(cipherName)) {
-          throw new RuntimeException("Encryption for family '" + family.getNameAsString()
+          throw new IllegalStateException("Encryption for family '" + family.getNameAsString()
             + "' configured with type '" + cipherName + "' but key specifies algorithm '"
             + cipher.getName() + "'");
         }
@@ -225,7 +226,7 @@ public final class EncryptionUtil {
         // Family does not provide key material, create a random key
         cipher = Encryption.getCipher(conf, cipherName);
         if (cipher == null) {
-          throw new RuntimeException("Cipher '" + cipherName + "' is not available");
+          throw new IllegalStateException("Cipher '" + cipherName + "' is not available");
         }
         key = cipher.getRandomKey();
       }
