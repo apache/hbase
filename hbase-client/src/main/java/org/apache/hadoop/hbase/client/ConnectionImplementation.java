@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_USE_META_REPLICAS;
 import static org.apache.hadoop.hbase.HConstants.USE_META_REPLICAS;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
 import static org.apache.hadoop.hbase.client.RegionLocator.LOCATOR_META_REPLICAS_MODE;
@@ -34,6 +33,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -157,9 +159,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionImplementation.class);
 
-  private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
-
-  private final boolean hostnamesCanChange;
   private final long pause;
   private final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
   // The mode tells if HedgedRead, LoadBalance mode is supported.
@@ -297,7 +296,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
     boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
         HConstants.STATUS_PUBLISHED_DEFAULT);
-    this.hostnamesCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
     Class<? extends ClusterStatusListener.Listener> listenerClass =
         conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
             ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS,
@@ -376,6 +374,33 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   private void spawnRenewalChore(final UserGroupInformation user) {
     ChoreService service = getChoreService();
     service.scheduleChore(AuthUtil.getAuthRenewalChore(user));
+  }
+
+  /**
+   * Get a unique key for the rpc stub to the given server.
+   */
+  private String getStubKey(String serviceName, ServerName serverName) throws UnknownHostException {
+    // Sometimes, servers go down and they come back up with the same hostname but a different
+    // IP address. Force a resolution of the hostname by trying to instantiate an
+    // InetSocketAddress, and this way we will rightfully get a new stubKey.
+    // Also, include the hostname in the key so as to take care of those cases where the
+    // DNS name is different but IP address remains the same.
+    String hostname = serverName.getHostname();
+    int port = serverName.getPort();
+    // We used to ignore when the address was unresolvable but that makes no sense. It
+    // would lead to a stub key mapping to an instance where the host cannot be resolved;
+    // and therefore, cannot be contacted anyway.
+    if (this.metrics != null) {
+      this.metrics.incrNsLookups();
+    }
+    InetAddress i =  new InetSocketAddress(hostname, port).getAddress();
+    if (i == null) {
+      if (this.metrics != null) {
+        this.metrics.incrNsLookupsFailed();
+      }
+      throw new UnknownHostException(hostname + " cannot be resolved");
+    }
+    return String.format("%s@%s-%s:%d", serviceName, i.getHostAddress(), hostname, port);
   }
 
   /**
@@ -476,7 +501,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       throw new RegionServerStoppedException(masterServer + " is dead.");
     }
     String key = getStubKey(MasterProtos.HbckService.BlockingInterface.class.getName(),
-      masterServer, this.hostnamesCanChange);
+      masterServer);
 
     return new HBaseHbck(
       (MasterProtos.HbckService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
@@ -1242,7 +1267,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       // Use the security info interface name as our stub key
       String key =
-          getStubKey(MasterProtos.MasterService.getDescriptor().getName(), sn, hostnamesCanChange);
+          getStubKey(MasterProtos.MasterService.getDescriptor().getName(), sn);
       MasterProtos.MasterService.BlockingInterface stub =
           (MasterProtos.MasterService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
             BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
@@ -1290,8 +1315,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (isDeadServer(serverName)) {
       throw new RegionServerStoppedException(serverName + " is dead.");
     }
-    String key = getStubKey(AdminProtos.AdminService.BlockingInterface.class.getName(), serverName,
-      this.hostnamesCanChange);
+    String key = getStubKey(AdminProtos.AdminService.BlockingInterface.class.getName(), serverName);
     return (AdminProtos.AdminService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
       BlockingRpcChannel channel =
           this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
@@ -1306,7 +1330,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       throw new RegionServerStoppedException(serverName + " is dead.");
     }
     String key = getStubKey(ClientProtos.ClientService.BlockingInterface.class.getName(),
-      serverName, this.hostnamesCanChange);
+      serverName);
     return (ClientProtos.ClientService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
       BlockingRpcChannel channel =
           this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);

@@ -125,6 +125,7 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.quotas.FileSystemUtilizationChore;
@@ -316,14 +317,16 @@ public class HRegionServer extends Thread implements
 
   /**
    * Map of encoded region names to the DataNode locations they should be hosted on
-   * We store the value as InetSocketAddress since this is used only in HDFS
+   * We store the value as Address since InetSocketAddress is required by the HDFS
    * API (create() that takes favored nodes as hints for placing file blocks).
    * We could have used ServerName here as the value class, but we'd need to
    * convert it to InetSocketAddress at some point before the HDFS API call, and
    * it seems a bit weird to store ServerName since ServerName refers to RegionServers
-   * and here we really mean DataNode locations.
+   * and here we really mean DataNode locations. We don't store it as InetSocketAddress
+   * here because the conversion on demand from Address to InetSocketAddress will
+   * guarantee the resolution results will be fresh when we need it.
    */
-  private final Map<String, InetSocketAddress[]> regionFavoredNodesMap = new ConcurrentHashMap<>();
+  private final Map<String, Address[]> regionFavoredNodesMap = new ConcurrentHashMap<>();
 
   private LeaseManager leaseManager;
 
@@ -3476,11 +3479,11 @@ public class HRegionServer extends Thread implements
   @Override
   public void updateRegionFavoredNodesMapping(String encodedRegionName,
       List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> favoredNodes) {
-    InetSocketAddress[] addr = new InetSocketAddress[favoredNodes.size()];
+    Address[] addr = new Address[favoredNodes.size()];
     // Refer to the comment on the declaration of regionFavoredNodesMap on why
-    // it is a map of region name to InetSocketAddress[]
+    // it is a map of region name to Address[]
     for (int i = 0; i < favoredNodes.size(); i++) {
-      addr[i] = InetSocketAddress.createUnresolved(favoredNodes.get(i).getHostName(),
+      addr[i] = Address.fromParts(favoredNodes.get(i).getHostName(),
           favoredNodes.get(i).getPort());
     }
     regionFavoredNodesMap.put(encodedRegionName, addr);
@@ -3488,13 +3491,14 @@ public class HRegionServer extends Thread implements
 
   /**
    * Return the favored nodes for a region given its encoded name. Look at the
-   * comment around {@link #regionFavoredNodesMap} on why it is InetSocketAddress[]
-   *
+   * comment around {@link #regionFavoredNodesMap} on why we convert to InetSocketAddress[]
+   * here.
+   * @param encodedRegionName
    * @return array of favored locations
    */
   @Override
   public InetSocketAddress[] getFavoredNodesForRegion(String encodedRegionName) {
-    return regionFavoredNodesMap.get(encodedRegionName);
+    return Address.toSocketAddress(regionFavoredNodesMap.get(encodedRegionName));
   }
 
   @Override
