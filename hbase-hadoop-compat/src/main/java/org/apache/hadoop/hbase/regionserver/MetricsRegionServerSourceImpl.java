@@ -351,6 +351,8 @@ public class MetricsRegionServerSourceImpl
                       rsWrap.getWriteRequestsCount())
               .addCounter(Interns.info(RPC_GET_REQUEST_COUNT, RPC_GET_REQUEST_COUNT_DESC),
                       rsWrap.getRpcGetRequestsCount())
+              .addCounter(Interns.info(RPC_FULL_SCAN_REQUEST_COUNT, RPC_FULL_SCAN_REQUEST_COUNT_DESC),
+                      rsWrap.getRpcFullScanRequestsCount())
               .addCounter(Interns.info(RPC_SCAN_REQUEST_COUNT, RPC_SCAN_REQUEST_COUNT_DESC),
                       rsWrap.getRpcScanRequestsCount())
               .addCounter(Interns.info(RPC_MULTI_REQUEST_COUNT, RPC_MULTI_REQUEST_COUNT_DESC),
