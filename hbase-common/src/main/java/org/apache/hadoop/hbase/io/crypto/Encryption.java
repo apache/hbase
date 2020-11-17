@@ -37,6 +37,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -245,21 +246,11 @@ public final class Encryption {
    *
    */
   public static byte[] pbkdf128(String... args) {
-    byte[] salt = new byte[128];
-    Bytes.random(salt);
     StringBuilder sb = new StringBuilder();
     for (String s: args) {
       sb.append(s);
     }
-    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 128);
-    try {
-      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
-        .generateSecret(spec).getEncoded();
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (InvalidKeySpecException e) {
-      throw new RuntimeException(e);
-    }
+    return generateSecretKey("PBKDF2WithHmacSHA1", AES.KEY_LENGTH, sb.toString().toCharArray());
   }
 
   /**
@@ -268,19 +259,69 @@ public final class Encryption {
    *
    */
   public static byte[] pbkdf128(byte[]... args) {
-    byte[] salt = new byte[128];
-    Bytes.random(salt);
     StringBuilder sb = new StringBuilder();
     for (byte[] b: args) {
       sb.append(Arrays.toString(b));
     }
-    PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 128);
+    return generateSecretKey("PBKDF2WithHmacSHA1", AES.KEY_LENGTH, sb.toString().toCharArray());
+  }
+
+  /**
+   * Return a key derived from the concatenation of the supplied arguments using
+   * PBKDF2WithHmacSHA384 key derivation algorithm at 10,000 iterations.
+   *
+   * The length of the returned key is determined based on the need of the cypher algorithm.
+   * E.g. for the default "AES"  we will need a 128 bit long key, while if the user is using
+   * a custom cipher, we might generate keys with other length.
+   *
+   * This key generation method is used currently e.g. in the HBase Shell (admin.rb) to generate a
+   * column family data encryption key, if the user provided an ENCRYPTION_KEY parameter.
+   */
+  public static byte[] generateSecretKey(Configuration conf, String cypherAlg, String... args) {
+    StringBuilder sb = new StringBuilder();
+    for (String s: args) {
+      sb.append(s);
+    }
+    int keyLengthBytes = Encryption.getCipher(conf, cypherAlg).getKeyLength();
+    return generateSecretKey("PBKDF2WithHmacSHA384", keyLengthBytes, sb.toString().toCharArray());
+  }
+
+  /**
+   * Return a key derived from the concatenation of the supplied arguments using
+   * PBKDF2WithHmacSHA384 key derivation algorithm at 10,000 iterations.
+   *
+   * The length of the returned key is determined based on the need of the cypher algorithm.
+   * E.g. for the default "AES"  we will need a 128 bit long key, while if the user is using
+   * a custom cipher, we might generate keys with other length.
+   *
+   * This key generation method is used currently e.g. in the HBase Shell (admin.rb) to generate a
+   * column family data encryption key, if the user provided an ENCRYPTION_KEY parameter.
+   */
+  public static byte[] generateSecretKey(Configuration conf, String cypherAlg, byte[]... args) {
+    StringBuilder sb = new StringBuilder();
+    for (byte[] b: args) {
+      sb.append(Arrays.toString(b));
+    }
+    int keyLength = Encryption.getCipher(conf, cypherAlg).getKeyLength();
+    return generateSecretKey("PBKDF2WithHmacSHA384", keyLength, sb.toString().toCharArray());
+  }
+
+  /**
+   * Return a key (byte array) derived from the supplied password argument using the given
+   * algorithm with a random salt at 10,000 iterations.
+   *
+   * @param algorithm the secret key generation algorithm to use
+   * @param keyLengthBytes the length of the key to be derived (in bytes, not in bits)
+   * @param password char array to use as password for the key generation algorithm
+   * @return secret key encoded as a byte array
+   */
+  private static byte[] generateSecretKey(String algorithm, int keyLengthBytes, char[] password) {
+    byte[] salt = new byte[keyLengthBytes];
+    Bytes.random(salt);
+    PBEKeySpec spec = new PBEKeySpec(password, salt, 10000, keyLengthBytes*8);
     try {
-      return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
-        .generateSecret(spec).getEncoded();
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    } catch (InvalidKeySpecException e) {
+      return SecretKeyFactory.getInstance(algorithm).generateSecret(spec).getEncoded();
+    } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
       throw new RuntimeException(e);
     }
   }
