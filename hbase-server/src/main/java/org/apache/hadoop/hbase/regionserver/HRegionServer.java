@@ -2806,6 +2806,7 @@ public class HRegionServer extends Thread implements
       rpcServices.requestCount.reset();
       rpcServices.rpcGetRequestCount.reset();
       rpcServices.rpcScanRequestCount.reset();
+      rpcServices.rpcFullScanRequestCount.reset();
       rpcServices.rpcMultiRequestCount.reset();
       rpcServices.rpcMutateRequestCount.reset();
       LOG.info("reportForDuty to master=" + masterServerName + " with port="

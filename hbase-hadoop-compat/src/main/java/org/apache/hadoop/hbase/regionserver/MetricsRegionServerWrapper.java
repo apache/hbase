@@ -493,6 +493,11 @@ public interface MetricsRegionServerWrapper {
   long getRpcScanRequestsCount();
 
   /**
+   * Get the number of full region rpc scan requests to this region server.
+   */
+  long getRpcFullScanRequestsCount();
+
+  /**
    * Get the number of rpc multi requests to this region server.
    */
   long getRpcMultiRequestsCount();
