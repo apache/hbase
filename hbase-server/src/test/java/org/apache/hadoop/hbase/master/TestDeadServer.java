@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -92,7 +93,7 @@ public class TestDeadServer {
   }
 
   @Test
-  public void testCrashProcedureReplay() {
+  public void testCrashProcedureReplay() throws IOException {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     final ProcedureExecutor<MasterProcedureEnv> pExecutor = master.getMasterProcedureExecutor();
     ServerCrashProcedure proc = new ServerCrashProcedure(
@@ -100,7 +101,7 @@ public class TestDeadServer {
 
     ProcedureTestingUtility.submitAndWait(pExecutor, proc);
 
-    assertFalse(!master.getServerManager().areDeadServersInProgress());
+    assertTrue(master.getServerManager().areDeadServersInProgress());
   }
 
   @Test

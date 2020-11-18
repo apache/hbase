@@ -505,23 +505,9 @@ public class ServerManager {
    * Checks if any dead servers are currently in progress.
    * @return true if any RS are being processed as dead, false if not
    */
-  public boolean areDeadServersInProgress() {
-    try {
+  public boolean areDeadServersInProgress() throws IOException {
       return master.getProcedures().stream().anyMatch(p -> p instanceof ServerCrashProcedure);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public boolean isDeadServersInProgress(ServerName serverName) {
-    try {
-      return master.getProcedures().stream().anyMatch(
-        p -> (p instanceof ServerCrashProcedure)
-          && ((ServerCrashProcedure) p).getServerName().equals(serverName));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
+ }
 
   void letRegionServersShutdown() {
     long previousLogTime = 0;
