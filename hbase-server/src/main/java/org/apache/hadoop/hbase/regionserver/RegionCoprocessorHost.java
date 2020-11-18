@@ -100,8 +100,12 @@ public class RegionCoprocessorHost
           AbstractReferenceMap.ReferenceStrength.WEAK);
 
   // optimization: no need to call postScannerFilterRow, if no coprocessor implements it
+  private final boolean hasCustomPostScannerFilterRow;
+
   @VisibleForTesting
-  public final boolean hasCustomPostScannerFilterRow;
+  public boolean hasCustomPostScannerFilterRow() {
+    return hasCustomPostScannerFilterRow;
+  }
 
   /**
    *
@@ -302,7 +306,7 @@ public class RegionCoprocessorHost
           clazz = clazz.getSuperclass();
 
           // we dont need to look postScannerFilterRow in Object class
-          if (clazz instanceof Object) {
+          if (clazz == Object.class) {
             break out;
           }
         }
