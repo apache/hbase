@@ -431,18 +431,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     return call;
   }
 
-  private InetSocketAddress createAddr(ServerName sn) throws UnknownHostException {
-    if (this.metrics != null) {
-      this.metrics.incrNsLookups();
-    }
-    InetSocketAddress addr = new InetSocketAddress(sn.getHostname(), sn.getPort());
-    if (addr.isUnresolved()) {
-      if (this.metrics != null) {
-        this.metrics.incrNsLookupsFailed();
-      }
-      throw new UnknownHostException(sn.getServerName() + " could not be resolved");
-    }
-    return addr;
+  private static Address createAddr(ServerName sn) {
+    return Address.fromParts(sn.getHostname(), sn.getPort());
   }
 
   /**
@@ -517,24 +507,25 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
   @Override
   public BlockingRpcChannel createBlockingRpcChannel(final ServerName sn, final User ticket,
-      int rpcTimeout) throws UnknownHostException {
+      int rpcTimeout) {
     return new BlockingRpcChannelImplementation(this, createAddr(sn), ticket, rpcTimeout);
   }
 
   @Override
-  public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout)
-      throws UnknownHostException {
+  public RpcChannel createRpcChannel(ServerName sn, User user, int rpcTimeout) {
     return new RpcChannelImplementation(this, createAddr(sn), user, rpcTimeout);
   }
 
   private static class AbstractRpcChannel {
+
+    protected final Address addr;
 
     // We cache the resolved InetSocketAddress for the channel so we do not do a DNS lookup
     // per method call on the channel. If the remote target is removed or reprovisioned and
     // its identity changes a new channel with a newly resolved InetSocketAddress will be
     // created as part of retry, so caching here is fine.
     // Normally, caching an InetSocketAddress is an anti-pattern.
-    protected final InetSocketAddress addr;
+    protected InetSocketAddress isa;
 
     protected final AbstractRpcClient<?> rpcClient;
 
@@ -542,7 +533,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
     protected final int rpcTimeout;
 
-    protected AbstractRpcChannel(AbstractRpcClient<?> rpcClient, InetSocketAddress addr,
+    protected AbstractRpcChannel(AbstractRpcClient<?> rpcClient, Address addr,
         User ticket, int rpcTimeout) {
       this.addr = addr;
       this.rpcClient = rpcClient;
@@ -579,15 +570,29 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       implements BlockingRpcChannel {
 
     protected BlockingRpcChannelImplementation(AbstractRpcClient<?> rpcClient,
-        InetSocketAddress addr, User ticket, int rpcTimeout) {
+        Address addr, User ticket, int rpcTimeout) {
       super(rpcClient, addr, ticket, rpcTimeout);
     }
 
     @Override
     public Message callBlockingMethod(Descriptors.MethodDescriptor md, RpcController controller,
         Message param, Message returnType) throws ServiceException {
+      // Look up remote address upon first call
+      if (isa == null) {
+        if (this.rpcClient.metrics != null) {
+          this.rpcClient.metrics.incrNsLookups();
+        }
+        isa = Address.toSocketAddress(addr);
+        if (isa.isUnresolved()) {
+          if (this.rpcClient.metrics != null) {
+            this.rpcClient.metrics.incrNsLookupsFailed();
+          }
+          isa = null;
+          throw new ServiceException(new UnknownHostException(addr + " could not be resolved"));
+        }
+      }
       return rpcClient.callBlockingMethod(md, configureRpcController(controller),
-        param, returnType, ticket, addr);
+        param, returnType, ticket, isa);
     }
   }
 
@@ -597,20 +602,35 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   public static class RpcChannelImplementation extends AbstractRpcChannel implements
       RpcChannel {
 
-    protected RpcChannelImplementation(AbstractRpcClient<?> rpcClient, InetSocketAddress addr,
-        User ticket, int rpcTimeout) throws UnknownHostException {
+    protected RpcChannelImplementation(AbstractRpcClient<?> rpcClient, Address addr,
+        User ticket, int rpcTimeout) {
       super(rpcClient, addr, ticket, rpcTimeout);
     }
 
     @Override
     public void callMethod(Descriptors.MethodDescriptor md, RpcController controller,
         Message param, Message returnType, RpcCallback<Message> done) {
+      HBaseRpcController configuredController =
+        configureRpcController(Preconditions.checkNotNull(controller,
+          "RpcController can not be null for async rpc call"));
+      // Look up remote address upon first call
+      if (isa == null || isa.isUnresolved()) {
+        if (this.rpcClient.metrics != null) {
+          this.rpcClient.metrics.incrNsLookups();
+        }
+        isa = Address.toSocketAddress(addr);
+        if (isa.isUnresolved()) {
+          if (this.rpcClient.metrics != null) {
+            this.rpcClient.metrics.incrNsLookupsFailed();
+          }
+          isa = null;
+          controller.setFailed(addr + " could not be resolved");
+          return;
+        }
+      }
       // This method does not throw any exceptions, so the caller must provide a
       // HBaseRpcController which is used to pass the exceptions.
-      this.rpcClient.callMethod(md,
-        configureRpcController(Preconditions.checkNotNull(controller,
-          "RpcController can not be null for async rpc call")),
-        param, returnType, ticket, addr, done);
+      this.rpcClient.callMethod(md, configuredController, param, returnType, ticket, isa, done);
     }
   }
 }
