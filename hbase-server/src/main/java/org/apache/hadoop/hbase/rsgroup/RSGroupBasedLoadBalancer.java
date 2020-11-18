@@ -250,7 +250,7 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
       }
       if (!fallbackRegions.isEmpty()) {
         List<ServerName> candidates = null;
-        if (fallbackEnabled) {
+        if (isFallbackEnabled()) {
           candidates = getFallBackCandidates(servers);
         }
         candidates = (candidates == null || candidates.isEmpty()) ?
@@ -385,6 +385,9 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     return this.rsGroupInfoManager.isOnline();
   }
 
+  public boolean isFallbackEnabled() {
+    return fallbackEnabled;
+  }
 
   @Override
   public void regionOnline(RegionInfo regionInfo, ServerName sn) {
