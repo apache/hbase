@@ -129,6 +129,13 @@ public final class ConnectionUtils {
   }
 
   /**
+   * Get a unique key for the rpc stub to the given server.
+   */
+  static String getStubKey(String serviceName, ServerName serverName) {
+    return String.format("%s@%s", serviceName, serverName);
+  }
+
+  /**
    * Return retires + 1. The returned value will be in range [1, Integer.MAX_VALUE].
    */
   static int retries2Attempts(int retries) {
