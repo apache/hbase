@@ -98,11 +98,4 @@ public class ConstraintProcessor implements RegionCoprocessor, RegionObserver {
     }
     // if we made it here, then the Put is valid
   }
-
-  @Override
-  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
-    return hasMore;
-  }
 }
