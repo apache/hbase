@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
 
 import com.google.protobuf.BlockingRpcChannel;
@@ -27,9 +28,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -1597,7 +1595,7 @@ class ConnectionManager {
           throw new MasterNotRunningException(sn + " is dead.");
         }
         // Use the security info interface name as our stub key
-        String key = getStubKey(getServiceName(), sn.getHostname(), sn.getPort());
+        String key = getStubKey(getServiceName(), sn);
         connectionLock.putIfAbsent(key, key);
         Object stub = null;
         synchronized (connectionLock.get(key)) {
@@ -1679,8 +1677,7 @@ class ConnectionManager {
       if (isDeadServer(serverName)) {
         throw new RegionServerStoppedException(serverName + " is dead.");
       }
-      String key = getStubKey(AdminService.BlockingInterface.class.getName(),
-          serverName.getHostname(), serverName.getPort());
+      String key = getStubKey(AdminService.BlockingInterface.class.getName(), serverName);
       this.connectionLock.putIfAbsent(key, key);
       AdminService.BlockingInterface stub = null;
       synchronized (this.connectionLock.get(key)) {
@@ -1701,8 +1698,7 @@ class ConnectionManager {
       if (isDeadServer(sn)) {
         throw new RegionServerStoppedException(sn + " is dead.");
       }
-      String key = getStubKey(ClientService.BlockingInterface.class.getName(), sn.getHostname(),
-          sn.getPort());
+      String key = getStubKey(ClientService.BlockingInterface.class.getName(), sn);
       this.connectionLock.putIfAbsent(key, key);
       ClientService.BlockingInterface stub = null;
       synchronized (this.connectionLock.get(key)) {
@@ -1717,29 +1713,6 @@ class ConnectionManager {
         }
       }
       return stub;
-    }
-
-    private String getStubKey(final String serviceName, final String rsHostname, int port)
-        throws UnknownHostException {
-      // Sometimes, servers go down and they come back up with the same hostname but a different
-      // IP address. Force a resolution of the rsHostname by trying to instantiate an
-      // InetSocketAddress, and this way we will rightfully get a new stubKey.
-      // Also, include the hostname in the key so as to take care of those cases where the
-      // DNS name is different but IP address remains the same.
-      if (this.metrics != null) {
-        this.metrics.incrNsLookups();
-      }
-      InetAddress i =  new InetSocketAddress(rsHostname, port).getAddress();
-      // We used to ignore when the address was unresolvable but that makes no sense. It
-      // would lead to a stub key mapping to an instance where the host cannot be resolved;
-      // and therefore, cannot be contacted anyway.
-      if (i == null) {
-        if (this.metrics != null) {
-          this.metrics.incrNsLookupsFailed();
-        }
-        throw new UnknownHostException(rsHostname + " cannot be resolved");
-      }
-      return String.format("%s@%s-%s:%d", serviceName, i.getHostAddress(), rsHostname, port);
     }
 
     private ZooKeeperKeepAliveConnection keepAliveZookeeper;
