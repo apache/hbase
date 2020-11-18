@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.apache.hadoop.hbase.rest.RESTServlet.HBASE_REST_SUPPORT_PROXYUSER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -24,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.Principal;
@@ -115,6 +117,7 @@ public class TestSecureRESTServer {
 
   private static final String HOSTNAME = "localhost";
   private static final String CLIENT_PRINCIPAL = "client";
+  private static final String WHEEL_PRINCIPAL = "wheel";
   // The principal for accepting SPNEGO authn'ed requests (*must* be HTTP/fqdn)
   private static final String SPNEGO_SERVICE_PRINCIPAL = "HTTP/" + HOSTNAME;
   // The principal we use to connect to HBase
@@ -126,6 +129,7 @@ public class TestSecureRESTServer {
   private static RESTServer server;
   private static File restServerKeytab;
   private static File clientKeytab;
+  private static File wheelKeytab;
   private static File serviceKeytab;
 
   @BeforeClass
@@ -148,6 +152,8 @@ public class TestSecureRESTServer {
     restServerKeytab = new File(keytabDir, "spnego.keytab");
     // Keytab for the client
     clientKeytab = new File(keytabDir, CLIENT_PRINCIPAL + ".keytab");
+    // Keytab for wheel
+    wheelKeytab = new File(keytabDir, WHEEL_PRINCIPAL + ".keytab");
 
     /*
      * Update UGI
@@ -159,6 +165,7 @@ public class TestSecureRESTServer {
      */
     KDC = TEST_UTIL.setupMiniKdc(serviceKeytab);
     KDC.createPrincipal(clientKeytab, CLIENT_PRINCIPAL);
+    KDC.createPrincipal(wheelKeytab, WHEEL_PRINCIPAL);
     KDC.createPrincipal(serviceKeytab, SERVICE_PRINCIPAL);
     // REST server's keytab contains keys for both principals REST uses
     KDC.createPrincipal(restServerKeytab, SPNEGO_SERVICE_PRINCIPAL, REST_SERVER_PRINCIPAL);
@@ -184,6 +191,8 @@ public class TestSecureRESTServer {
     conf.set("hbase.superuser", "hbase");
     conf.set("hadoop.proxyuser.rest.hosts", "*");
     conf.set("hadoop.proxyuser.rest.users", "*");
+    conf.set("hadoop.proxyuser.wheel.hosts", "*");
+    conf.set("hadoop.proxyuser.wheel.users", "*");
     UserGroupInformation.setConfiguration(conf);
 
     updateKerberosConfiguration(conf, REST_SERVER_PRINCIPAL, SPNEGO_SERVICE_PRINCIPAL,
@@ -230,6 +239,7 @@ public class TestSecureRESTServer {
         return null;
       }
     });
+    instertData();
   }
 
   @AfterClass
@@ -299,21 +309,21 @@ public class TestSecureRESTServer {
     // Keytab for both principals above
     conf.set(RESTServer.REST_KEYTAB_FILE, serverKeytab.getAbsolutePath());
     conf.set("hbase.rest.authentication.kerberos.keytab", serverKeytab.getAbsolutePath());
+    conf.set(HBASE_REST_SUPPORT_PROXYUSER, "true");
   }
 
-  @Test
-  public void testPositiveAuthorization() throws Exception {
+  private static void instertData() throws IOException, InterruptedException {
     // Create a table, write a row to it, grant read perms to the client
     UserGroupInformation superuser = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
+      SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
     final TableName table = TableName.valueOf("publicTable");
     superuser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
           TableDescriptor desc = TableDescriptorBuilder.newBuilder(table)
-              .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1"))
-              .build();
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1"))
+            .build();
           conn.getAdmin().createTable(desc);
           try (Table t = conn.getTable(table)) {
             Put p = new Put(Bytes.toBytes("a"));
@@ -331,6 +341,12 @@ public class TestSecureRESTServer {
         return null;
       }
     });
+  }
+
+  public void testProxy(String extraArgs, String PRINCIPAL, File keytab, int responseCode) throws Exception{
+    UserGroupInformation superuser = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+      SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
+    final TableName table = TableName.valueOf("publicTable");
 
     // Read that row as the client
     Pair<CloseableHttpClient,HttpClientContext> pair = getClient();
@@ -338,31 +354,53 @@ public class TestSecureRESTServer {
     HttpClientContext context = pair.getSecond();
 
     HttpGet get = new HttpGet(new URL("http://localhost:"+ REST_TEST.getServletPort()).toURI()
-        + "/" + table + "/a");
+      + "/" + table + "/a" + extraArgs);
     get.addHeader("Accept", "application/json");
     UserGroupInformation user = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        CLIENT_PRINCIPAL, clientKeytab.getAbsolutePath());
+      PRINCIPAL, keytab.getAbsolutePath());
     String jsonResponse = user.doAs(new PrivilegedExceptionAction<String>() {
       @Override
       public String run() throws Exception {
         try (CloseableHttpResponse response = client.execute(get, context)) {
           final int statusCode = response.getStatusLine().getStatusCode();
-          assertEquals(response.getStatusLine().toString(), HttpURLConnection.HTTP_OK, statusCode);
+          assertEquals(response.getStatusLine().toString(), responseCode, statusCode);
           HttpEntity entity = response.getEntity();
           return EntityUtils.toString(entity);
         }
       }
     });
-    ObjectMapper mapper = new JacksonJaxbJsonProvider()
-        .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
-    CellSetModel model = mapper.readValue(jsonResponse, CellSetModel.class);
-    assertEquals(1, model.getRows().size());
-    RowModel row = model.getRows().get(0);
-    assertEquals("a", Bytes.toString(row.getKey()));
-    assertEquals(1, row.getCells().size());
-    CellModel cell = row.getCells().get(0);
-    assertEquals("1", Bytes.toString(cell.getValue()));
+    if(responseCode == HttpURLConnection.HTTP_OK) {
+      ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+      CellSetModel model = mapper.readValue(jsonResponse, CellSetModel.class);
+      assertEquals(1, model.getRows().size());
+      RowModel row = model.getRows().get(0);
+      assertEquals("a", Bytes.toString(row.getKey()));
+      assertEquals(1, row.getCells().size());
+      CellModel cell = row.getCells().get(0);
+      assertEquals("1", Bytes.toString(cell.getValue()));
+    }
   }
+
+  @Test
+  public void testPositiveAuthorization() throws Exception {
+    testProxy("", CLIENT_PRINCIPAL, clientKeytab, HttpURLConnection.HTTP_OK);
+  }
+
+  @Test
+  public void testDoAs() throws Exception {
+    testProxy("?doAs="+CLIENT_PRINCIPAL, WHEEL_PRINCIPAL, wheelKeytab, HttpURLConnection.HTTP_OK);
+  }
+
+  @Test
+  public void testDoas() throws Exception {
+    testProxy("?doas="+CLIENT_PRINCIPAL, WHEEL_PRINCIPAL, wheelKeytab, HttpURLConnection.HTTP_OK);
+  }
+
+  @Test
+  public void testWithoutDoAs() throws Exception {
+    testProxy("", WHEEL_PRINCIPAL, wheelKeytab, HttpURLConnection.HTTP_FORBIDDEN);
+  }
+
 
   @Test
   public void testNegativeAuthorization() throws Exception {
