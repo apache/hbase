@@ -28,10 +28,8 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -44,6 +42,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -139,8 +138,7 @@ public class TestClientTimeouts {
 
     // Return my own instance, one that does random timeouts
     @Override
-    public BlockingRpcChannel createBlockingRpcChannel(ServerName sn,
-        User ticket, int rpcTimeout) throws UnknownHostException {
+    public BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User ticket, int rpcTimeout) {
       return new RandomTimeoutBlockingRpcChannel(this, sn, ticket, rpcTimeout);
     }
   }
@@ -156,7 +154,7 @@ public class TestClientTimeouts {
 
     RandomTimeoutBlockingRpcChannel(final BlockingRpcClient rpcClient, final ServerName sn,
         final User ticket, final int rpcTimeout) {
-      super(rpcClient, new InetSocketAddress(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
+      super(rpcClient, Address.fromParts(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
     }
 
     @Override
