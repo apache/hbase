@@ -29,6 +29,23 @@ module Hbase
       @admin = connection.getAdmin
     end
 
+    def add_rsgroup_and_move_one_server(group_name)
+      assert_nil(@admin.getRSGroup(group_name))
+      @shell.command(:add_rsgroup, group_name)
+      assert_not_nil(@admin.getRSGroup(group_name))
+
+      hostport = @admin.getRSGroup('default').getServers.iterator.next
+      @shell.command(:move_servers_rsgroup, group_name, [hostport.toString])
+      assert_equal(1, @admin.getRSGroup(group_name).getServers.count)
+    end
+
+    def remove_rsgroup(group_name)
+      rsgroup = @admin.getRSGroup(group_name)
+      @admin.moveServersToRSGroup(rsgroup.getServers, 'default')
+      @admin.removeRSGroup(group_name)
+      assert_nil(@admin.getRSGroup(group_name))
+    end
+
     define_test 'Test Basic RSGroup Commands' do
       group_name = 'test_group'
       table_name = 'test_table'
@@ -71,6 +88,10 @@ module Hbase
 
       # just run it to verify jruby->java api binding
       @hbase.rsgroup_admin.balance_rs_group(group_name)
+
+      @shell.command(:disable, table_name)
+      @shell.command(:drop, table_name)
+      remove_rsgroup(group_name)
     end
 
     define_test 'Test RSGroup Move Namespace RSGroup Commands' do
@@ -78,17 +99,24 @@ module Hbase
       namespace_name = 'test_namespace'
       ns_table_name = 'test_namespace:test_ns_table'
 
-      @shell.command('create_namespace', namespace_name)
-      @shell.command('create', ns_table_name, 'f')
+      add_rsgroup_and_move_one_server(group_name)
+
+      @shell.command(:create_namespace, namespace_name)
+      @shell.command(:create, ns_table_name, 'f')
 
       @shell.command('move_namespaces_rsgroup',
                      group_name,
                      [namespace_name])
-      assert_equal(2, @admin.listTablesInRSGroup(group_name).count)
+      assert_equal(1, @admin.listTablesInRSGroup(group_name).count)
 
       group = @hbase.rsgroup_admin.get_rsgroup(group_name)
       assert_not_nil(group)
       assert_true(@admin.listTablesInRSGroup(group_name).contains(org.apache.hadoop.hbase.TableName.valueOf(ns_table_name)))
+
+      @shell.command(:disable, ns_table_name)
+      @shell.command(:drop, ns_table_name)
+      @shell.command(:drop_namespace, namespace_name)
+      remove_rsgroup(group_name)
     end
 
     define_test 'Test RSGroup Move Server Namespace RSGroup Commands' do
@@ -96,12 +124,10 @@ module Hbase
       namespace_name = 'test_namespace'
       ns_table_name = 'test_namespace:test_ns_table'
 
+      @shell.command('create_namespace', namespace_name)
+      @shell.command('create', ns_table_name, 'f')
       @shell.command('add_rsgroup', ns_group_name)
       assert_not_nil(@admin.getRSGroup(ns_group_name))
-
-      @shell.command('move_tables_rsgroup',
-                     'default',
-                     [ns_table_name])
 
       group_servers = @admin.getRSGroup('default').getServers
       hostport_str = group_servers.iterator.next.toString
@@ -113,6 +139,11 @@ module Hbase
       assert_not_nil(ns_group)
       assert_equal(hostport_str, ns_group.getServers.iterator.next.toString)
       assert_equal(ns_table_name, @admin.listTablesInRSGroup(ns_group_name).iterator.next.toString)
+
+      @shell.command(:disable, ns_table_name)
+      @shell.command(:drop, ns_table_name)
+      @shell.command(:drop_namespace, namespace_name)
+      remove_rsgroup(ns_group_name)
     end
 
     # we test exceptions that could be thrown by the ruby wrappers
@@ -133,26 +164,32 @@ module Hbase
       new_rs_group_name = 'renamed_test_group'
       table_name = 'test_table'
 
+      add_rsgroup_and_move_one_server(old_rs_group_name)
+      @shell.command(:create, table_name, 'f')
+      @shell.command(:move_tables_rsgroup, old_rs_group_name, [table_name])
+
       @hbase.rsgroup_admin.rename_rsgroup(old_rs_group_name, new_rs_group_name)
       assert_not_nil(@admin.getRSGroup(new_rs_group_name))
       assert_nil(@admin.getRSGroup(old_rs_group_name))
       assert_equal(1, @admin.getRSGroup(new_rs_group_name).getServers.count)
       assert_equal(1, @admin.listTablesInRSGroup(new_rs_group_name).count)
       assert_true(@admin.listTablesInRSGroup(new_rs_group_name).contains(org.apache.hadoop.hbase.TableName.valueOf(table_name)))
+
+      @shell.command(:disable, table_name)
+      @shell.command(:drop, table_name)
+      remove_rsgroup(new_rs_group_name)
     end
 
     define_test 'Test alter rsgroup configuration' do
-      group_name = 'grp1'
-      @shell.command('add_rsgroup', group_name)
-      assert_not_nil(@admin.getRSGroup(group_name))
+      group_name = 'test_group'
+      add_rsgroup_and_move_one_server(group_name)
 
-      @hbase.rsgroup_admin.alter_rsgroup_config(group_name, {'METHOD' => 'set', 'a' => 'a'})
+      @shell.command(:alter_rsgroup_config, group_name, { 'METHOD' => 'set', 'a' => 'a' })
       assert_equal(1, @admin.getRSGroup(group_name).getConfiguration.size)
-      @hbase.rsgroup_admin.alter_rsgroup_config(group_name, {'METHOD' => 'unset', 'NAME' => 'a'})
+      @shell.command(:alter_rsgroup_config, group_name, { 'METHOD' => 'unset', 'NAME' => 'a' })
       assert_equal(0, @admin.getRSGroup(group_name).getConfiguration.size)
 
-      @shell.command('remove_rsgroup', group_name)
-      assert_nil(@admin.getRSGroup(group_name))
+      remove_rsgroup(group_name)
     end
   end
 end
