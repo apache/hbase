@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.HConstants.STATUS_PUBLISHED_DEFAULT;
 import static org.apache.hadoop.hbase.client.ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS;
 import static org.apache.hadoop.hbase.client.ClusterStatusListener.STATUS_LISTENER_CLASS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
@@ -29,7 +30,6 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -183,33 +183,6 @@ class AsyncConnectionImpl implements AsyncConnection {
       choreService = new ChoreService("AsyncConn Chore Service");
     }
     return choreService;
-  }
-
-  /**
-   * Get a unique key for the rpc stub to the given server.
-   */
-  private String getStubKey(String serviceName, ServerName serverName) throws UnknownHostException {
-    // Sometimes, servers go down and they come back up with the same hostname but a different
-    // IP address. Force a resolution of the hostname by trying to instantiate an
-    // InetSocketAddress, and this way we will rightfully get a new stubKey.
-    // Also, include the hostname in the key so as to take care of those cases where the
-    // DNS name is different but IP address remains the same.
-    String hostname = serverName.getHostname();
-    int port = serverName.getPort();
-    // We used to ignore when the address was unresolvable but that makes no sense. It
-    // would lead to a stub key mapping to an instance where the host cannot be resolved;
-    // and therefore, cannot be contacted anyway.
-    if (this.metrics.isPresent()) {
-      this.metrics.get().incrNsLookups();
-    }
-    InetAddress i =  new InetSocketAddress(hostname, port).getAddress();
-    if (i == null) {
-      if (this.metrics.isPresent()) {
-        this.metrics.get().incrNsLookupsFailed();
-      }
-      throw new UnknownHostException(hostname + " cannot be resolved");
-    }
-    return String.format("%s@%s-%s:%d", serviceName, i.getHostAddress(), hostname, port);
   }
 
   @Override
