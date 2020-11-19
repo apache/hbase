@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -185,5 +186,22 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
     Map<ServerName, List<RegionInfo>> assignments = loadBalancer
         .roundRobinAssignment(regions, onlineServers);
     assertEquals(bogusRegion, assignments.get(LoadBalancer.BOGUS_SERVER_NAME).size());
+  }
+
+  @Test
+  public void testOnConfigurationChange() {
+    // fallbackEnabled default is false
+    assertFalse(loadBalancer.isFallbackEnabled());
+
+    // change FALLBACK_GROUP_ENABLE_KEY from false to true
+    Configuration conf = loadBalancer.getConf();
+    conf.setBoolean(RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY, true);
+    loadBalancer.onConfigurationChange(conf);
+    assertTrue(loadBalancer.isFallbackEnabled());
+
+    // restore
+    conf.setBoolean(RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY, false);
+    loadBalancer.onConfigurationChange(conf);
+    assertFalse(loadBalancer.isFallbackEnabled());
   }
 }
