@@ -179,13 +179,13 @@ public class TestRegionCoprocessorHost {
     // postScannerFilterRow
     RegionCoprocessorHost host = new RegionCoprocessorHost(region, rsServices, conf);
     assertTrue("Region coprocessor implement postScannerFilterRow",
-      host.hasCustomPostScannerFilterRow);
+      host.hasCustomPostScannerFilterRow());
 
     // Initialize again to set TempRegionObserver which doesn't implement postScannerFilterRow
     init(true);
     host = new RegionCoprocessorHost(region, rsServices, conf);
     assertFalse("Region coprocessor implement postScannerFilterRow",
-      host.hasCustomPostScannerFilterRow);
+      host.hasCustomPostScannerFilterRow());
   }
 
   private void verifyScanInfo(ScanInfo newScanInfo) {
