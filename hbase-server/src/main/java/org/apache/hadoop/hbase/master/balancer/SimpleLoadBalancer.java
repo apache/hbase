@@ -136,7 +136,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     super.setConf(conf);
     LOG.info("Update configuration of SimpleLoadBalancer, previous slop is "
             + originSlop + ", current slop is " + slop + "previous overallSlop is" +
-            originOverallSlop + ", current overallSlop is " + originOverallSlop);
+            originOverallSlop + ", current overallSlop is " + overallSlop);
   }
 
   private void setLoad(List<ServerAndLoad> slList, int i, int loadChange){
