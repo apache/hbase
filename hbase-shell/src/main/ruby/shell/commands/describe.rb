@@ -44,14 +44,18 @@ EOF
           puts
         end
         formatter.footer
-        if table.to_s != 'hbase:meta'
-          # No QUOTAS if hbase:meta table
-          puts
-          formatter.header(%w[QUOTAS])
-          count = quotas_admin.list_quotas(TABLE => table.to_s) do |_, quota|
-            formatter.row([quota])
+        if admin.exists?(::HBaseQuotasConstants::QUOTA_TABLE_NAME.to_s)
+          if table.to_s != 'hbase:meta'
+            # No QUOTAS if hbase:meta table
+            puts
+            formatter.header(%w[QUOTAS])
+            count = quotas_admin.list_quotas(TABLE => table.to_s) do |_, quota|
+              formatter.row([quota])
+            end
+            formatter.footer(count)
           end
-          formatter.footer(count)
+        else
+          puts 'Quota is disabled'
         end
       end
       # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
