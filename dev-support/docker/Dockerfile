@@ -125,7 +125,7 @@ RUN apt-add-repository ppa:brightbox/ruby-ng
 RUN apt-get -q update
 
 RUN apt-get -q install --no-install-recommends -y ruby2.3 ruby2.3-dev ruby-switch
-RUN ruby-switch --set ruby2.3
+RUN ruby-switch --set ruby2.5
 
 ####
 # Install rubocop
