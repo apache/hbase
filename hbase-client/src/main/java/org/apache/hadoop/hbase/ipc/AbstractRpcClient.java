@@ -209,7 +209,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
           if (LOG.isTraceEnabled()) {
             LOG.trace("Cleanup idle connection to {}", conn.remoteId().address);
           }
-          connections.removeValue(conn.remoteId(), conn);
+          connections.remove(conn.remoteId(), conn);
           conn.cleanupConnection();
         }
       }
@@ -294,7 +294,14 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
    * @return the maximum pool size
    */
   private static int getPoolSize(Configuration config) {
-    return config.getInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, 1);
+    int poolSize = config.getInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, 1);
+
+    if (poolSize <= 0) {
+      LOG.warn("{} must be positive.", HConstants.HBASE_CLIENT_IPC_POOL_SIZE);
+      return 1;
+    } else {
+      return poolSize;
+    }
   }
 
   private int nextCallId() {
@@ -453,7 +460,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
             && remoteId.address.getHostName().equals(sn.getHostname())) {
           LOG.info("The server on " + sn.toString() + " is dead - stopping the connection "
               + connection.remoteId);
-          connections.removeValue(remoteId, connection);
+          connections.remove(remoteId, connection);
           connection.shutdown();
           connection.cleanupConnection();
         }

@@ -43,42 +43,46 @@ public class TestThreadLocalPoolMap extends PoolMapTestBase {
   }
 
   @Test
-  public void testSingleThreadedClient() throws InterruptedException, ExecutionException {
+  public void testSingleThreadedClient() throws InterruptedException {
     Random rand = ThreadLocalRandom.current();
-    String randomKey = String.valueOf(rand.nextInt());
-    String randomValue = String.valueOf(rand.nextInt());
-    // As long as the pool is not full, we should get back what we put
-    runThread(randomKey, randomValue, randomValue);
-    assertEquals(1, poolMap.size(randomKey));
+    String key = "key";
+    String value = "value";
+    runThread(key, value, value);
+    assertEquals(1, poolMap.size(key));
+    assertEquals(1, poolMap.size());
   }
 
   @Test
-  public void testMultiThreadedClients() throws InterruptedException, ExecutionException {
-    Random rand = ThreadLocalRandom.current();
-    // As long as the pool is not full, we should get back what we put
-    for (int i = 0; i < POOL_SIZE; i++) {
-      String randomKey = String.valueOf(rand.nextInt());
-      String randomValue = String.valueOf(rand.nextInt());
-      runThread(randomKey, randomValue, randomValue);
-      assertEquals(1, poolMap.size(randomKey));
+  public void testMultiThreadedClients() throws InterruptedException {
+    for (int i = 0; i < KEY_COUNT; i++) {
+      String key = Integer.toString(i);
+      String value = Integer.toString(2 * i);
+      runThread(key, value, value);
+      assertEquals(1, poolMap.size(key));
     }
-    String randomKey = String.valueOf(rand.nextInt());
-    for (int i = 0; i < POOL_SIZE; i++) {
-      String randomValue = String.valueOf(rand.nextInt());
-      runThread(randomKey, randomValue, randomValue);
-      assertEquals(i + 1, poolMap.size(randomKey));
+
+    assertEquals(KEY_COUNT, poolMap.size());
+    poolMap.clear();
+
+    String key = "key";
+    for (int i = 0; i < POOL_SIZE - 1; i++) {
+      String value = Integer.toString(i);
+      runThread(key, value, value);
+      assertEquals(i + 1, poolMap.size(key));
     }
+
+    assertEquals(1, poolMap.size());
   }
 
   @Test
-  public void testPoolCap() throws InterruptedException, ExecutionException {
-    Random rand = ThreadLocalRandom.current();
-    String randomKey = String.valueOf(rand.nextInt());
+  public void testPoolCap() throws InterruptedException {
+    String key = "key";
     for (int i = 0; i < POOL_SIZE * 2; i++) {
-      String randomValue = String.valueOf(rand.nextInt());
-      // as of HBASE-4150, pool limit is no longer used with ThreadLocalPool
-      runThread(randomKey, randomValue, randomValue);
+      String value = Integer.toString(i);
+      runThread(key, value, value);
     }
-    assertEquals(POOL_SIZE * 2, poolMap.size(randomKey));
+    /* we never discard values automatically, even if the thread exited */
+    assertEquals(POOL_SIZE * 2, poolMap.size(key));
+    assertEquals(1, poolMap.size());
   }
 }

@@ -45,58 +45,61 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
   }
 
   @Test
-  public void testSingleThreadedClient() throws InterruptedException, ExecutionException {
-    Random rand = ThreadLocalRandom.current();
-    String randomKey = String.valueOf(rand.nextInt());
-    String randomValue = String.valueOf(rand.nextInt());
-    // As long as the pool is not full, we'll get null back.
-    // This forces the user to create new values that can be used to populate
-    // the pool.
-    runThread(randomKey, randomValue, null);
-    assertEquals(1, poolMap.size(randomKey));
+  public void testSingleThreadedClient() throws InterruptedException {
+    String key = "key";
+    String value = "value";
+    // As long as the pool is not full, we'll get null back
+    // This forces the user to create new values that can be used to populate the pool.
+    runThread(key, value, null);
+    assertEquals(1, poolMap.size(key));
+    assertEquals(1, poolMap.size());
   }
 
   @Test
-  public void testMultiThreadedClients() throws InterruptedException, ExecutionException {
-    Random rand = ThreadLocalRandom.current();
-    for (int i = 0; i < POOL_SIZE; i++) {
-      String randomKey = String.valueOf(rand.nextInt());
-      String randomValue = String.valueOf(rand.nextInt());
+  public void testMultiThreadedClients() throws InterruptedException {
+    for (int i = 0; i < KEY_COUNT; i++) {
+      String key = Integer.toString(i);
+      String value = Integer.toString(2 * i);
       // As long as the pool is not full, we'll get null back
-      runThread(randomKey, randomValue, null);
-      // As long as we use distinct keys, each pool will have one value
-      assertEquals(1, poolMap.size(randomKey));
+      // This forces the user to create new values that can be used to populate the pool.
+      runThread(key, value, null);
+      assertEquals(1, poolMap.size(key));
     }
+
+    assertEquals(KEY_COUNT, poolMap.size());
     poolMap.clear();
-    String randomKey = String.valueOf(rand.nextInt());
+
+    String key = "key";
     for (int i = 0; i < POOL_SIZE - 1; i++) {
-      String randomValue = String.valueOf(rand.nextInt());
+      String value = Integer.toString(i);
       // As long as the pool is not full, we'll get null back
-      runThread(randomKey, randomValue, null);
+      runThread(key, value, null);
       // since we use the same key, the pool size should grow
-      assertEquals(i + 1, poolMap.size(randomKey));
+      assertEquals(i + 1, poolMap.size(key));
     }
     // at the end of the day, there should be as many values as we put
-    assertEquals(POOL_SIZE - 1, poolMap.size(randomKey));
+    assertEquals(POOL_SIZE - 1, poolMap.size(key));
+    assertEquals(1, poolMap.size());
   }
 
   @Test
-  public void testPoolCap() throws InterruptedException, ExecutionException {
-    Random rand = ThreadLocalRandom.current();
-    String randomKey = String.valueOf(rand.nextInt());
-    List<String> randomValues = new ArrayList<>();
-    for (int i = 0; i < POOL_SIZE * 2; i++) {
-      String randomValue = String.valueOf(rand.nextInt());
-      randomValues.add(randomValue);
-      if (i < POOL_SIZE - 1) {
-        // As long as the pool is not full, we'll get null back
-        runThread(randomKey, randomValue, null);
-      } else {
-        // when the pool becomes full, we expect the value we get back to be
-        // what we put earlier, in round-robin order
-        runThread(randomKey, randomValue, randomValues.get((i - POOL_SIZE + 1) % POOL_SIZE));
-      }
+  public void testPoolCap() throws InterruptedException {
+    String key = "key";
+    // filling pool
+    for (int i = 0; i < POOL_SIZE; i++) {
+      String value = Integer.toString(i);
+      String expected = (i < POOL_SIZE - 1) ? null : "0";
+      runThread(key, value, expected);
     }
-    assertEquals(POOL_SIZE, poolMap.size(randomKey));
+
+    assertEquals(POOL_SIZE, poolMap.size(key));
+    assertEquals(1, poolMap.size());
+
+    // pool is filled, get() should return elements round robin order
+    // starting from 1, because the first get was called by runThread()
+    for (int i = 1; i < 2 * POOL_SIZE; i++) {
+      String expected = Integer.toString(i % POOL_SIZE);
+      assertEquals(expected, poolMap.get(key));
+    }
   }
 }

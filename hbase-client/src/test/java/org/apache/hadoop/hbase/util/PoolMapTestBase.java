@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertTrue;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 import org.junit.After;
@@ -28,6 +29,7 @@ public abstract class PoolMapTestBase {
 
   protected PoolMap<String, String> poolMap;
 
+  protected static final int KEY_COUNT = 5;
   protected static final int POOL_SIZE = 3;
 
   @Before
@@ -42,16 +44,16 @@ public abstract class PoolMapTestBase {
 
   protected abstract PoolType getPoolType();
 
-  protected void runThread(final String randomKey, final String randomValue,
+  protected void runThread(final String key, final String value,
       final String expectedValue) throws InterruptedException {
     final AtomicBoolean matchFound = new AtomicBoolean(false);
     Thread thread = new Thread(new Runnable() {
       @Override
       public void run() {
-        poolMap.put(randomKey, randomValue);
-        String actualValue = poolMap.get(randomKey);
-        matchFound
-            .set(expectedValue == null ? actualValue == null : expectedValue.equals(actualValue));
+        poolMap.put(key, value);
+        String actualValue = poolMap.get(key);
+
+        matchFound.set(Objects.equals(expectedValue, actualValue));
       }
     });
     thread.start();

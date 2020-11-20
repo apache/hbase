@@ -18,14 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,6 +38,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  * key. A size of {@link Integer#MAX_VALUE} is interpreted as an unbounded pool.
  * </p>
  *
+ * <p>
+ * Pool is not thread-safe. It must be synchronized when used by multiple threads. Pool also does
+ * not remove elements automatically. Unused resources must be closed and removed explicitly.
+ * </p>
+ *
  * @param <K>
  *          the type of the key to the resource
  * @param <V>
@@ -56,7 +54,7 @@ public class PoolMap<K, V> implements Map<K, V> {
 
   private int poolMaxSize;
 
-  private Map<K, Pool<V>> pools = new ConcurrentHashMap<>();
+  private Map<K, Pool<V>> pools = new HashMap<>();
 
   public PoolMap(PoolType poolType) {
     this.poolType = poolType;
@@ -85,18 +83,17 @@ public class PoolMap<K, V> implements Map<K, V> {
   @SuppressWarnings("unchecked")
   @Override
   public V remove(Object key) {
-    Pool<V> pool = pools.remove(key);
-    if (pool != null) {
-      removeValue((K) key, pool.get());
-    }
+    pools.remove(key);
     return null;
   }
 
-  public boolean removeValue(K key, V value) {
+  @SuppressWarnings("unchecked")
+  @Override
+  public boolean remove(Object key, Object value) {
     Pool<V> pool = pools.get(key);
     boolean res = false;
     if (pool != null) {
-      res = pool.remove(value);
+      res = pool.remove((V)value);
       if (res && pool.size() == 0) {
         pools.remove(key);
       }
@@ -275,43 +272,70 @@ public class PoolMap<K, V> implements Map<K, V> {
    *
    */
   @SuppressWarnings("serial")
-  static class RoundRobinPool<R> extends CopyOnWriteArrayList<R> implements Pool<R> {
-    private int maxSize;
-    private int nextResource = 0;
+  static class RoundRobinPool<R> implements Pool<R> {
+    private final List<R> resources;
+    private final int maxSize;
+
+    private int nextIndex;
 
     public RoundRobinPool(int maxSize) {
+      if (maxSize <= 0) {
+        throw new IllegalArgumentException("maxSize must be positive");
+      }
+
+      resources = new ArrayList<>(maxSize);
       this.maxSize = maxSize;
     }
 
     @Override
-    public R put(R resource) {
-      if (super.size() < maxSize) {
-        add(resource);
-      }
-      return null;
-    }
-
-    @Override
     public R get() {
-      if (super.size() < maxSize) {
+      int size = resources.size();
+
+      /* letting pool to grow */
+      if (size < maxSize) {
         return null;
       }
-      nextResource %= super.size();
-      R resource = get(nextResource++);
+
+      R resource = resources.get(nextIndex);
+
+      /* at this point size cannot be 0 */
+      nextIndex = (nextIndex + 1) % size;
+
       return resource;
     }
 
     @Override
-    public Collection<R> values() {
-      return this;
+    public R put(R resource) {
+      resources.add(resource);
+      return null;
     }
 
+    @Override
+    public boolean remove(R resource) {
+      return resources.remove(resource);
+    }
+
+    @Override
+    public void clear() {
+      resources.clear();
+    }
+
+    @Override
+    public Collection<R> values() {
+      return resources;
+    }
+
+    @Override
+    public int size() {
+      return resources.size();
+    }
   }
 
   /**
    * The <code>ThreadLocalPool</code> represents a {@link PoolMap.Pool} that
-   * builds on the {@link ThreadLocal} class. It essentially binds the resource
-   * to the thread from which it is accessed.
+   * works similarly to {@link ThreadLocal} class. It essentially binds the resource
+   * to the thread from which it is accessed. It doesn't remove resources when a thread exists,
+   * those resources must be closed manually.
    *
    * <p>
    * Note that the size of the pool is essentially bounded by the number of threads
@@ -321,62 +345,44 @@ public class PoolMap<K, V> implements Map<K, V> {
    * @param <R>
    *          the type of the resource
    */
-  static class ThreadLocalPool<R> extends ThreadLocal<R> implements Pool<R> {
-    private static final Map<ThreadLocalPool<?>, AtomicInteger> poolSizes = new HashMap<>();
+  static class ThreadLocalPool<R> implements Pool<R> {
+    private final Map<Thread, R> resources;
 
     public ThreadLocalPool() {
+      resources = new HashMap<>();
+    }
+
+    @Override
+    public R get() {
+      Thread myself = Thread.currentThread();
+      return resources.get(myself);
     }
 
     @Override
     public R put(R resource) {
-      R previousResource = get();
-      if (previousResource == null) {
-        AtomicInteger poolSize = poolSizes.get(this);
-        if (poolSize == null) {
-          poolSizes.put(this, poolSize = new AtomicInteger(0));
-        }
-        poolSize.incrementAndGet();
-      }
-      this.set(resource);
-      return previousResource;
-    }
-
-    @Override
-    public void remove() {
-      super.remove();
-      AtomicInteger poolSize = poolSizes.get(this);
-      if (poolSize != null) {
-        poolSize.decrementAndGet();
-      }
-    }
-
-    @Override
-    public int size() {
-      AtomicInteger poolSize = poolSizes.get(this);
-      return poolSize != null ? poolSize.get() : 0;
+      Thread myself = Thread.currentThread();
+      return resources.put(myself, resource);
     }
 
     @Override
     public boolean remove(R resource) {
-      R previousResource = super.get();
-      if (resource != null && resource.equals(previousResource)) {
-        remove();
-        return true;
-      } else {
-        return false;
-      }
+      Thread myself = Thread.currentThread();
+      return resources.remove(myself, resource);
+    }
+
+    @Override
+    public int size() {
+      return resources.size();
     }
 
     @Override
     public void clear() {
-      super.remove();
+      resources.clear();
     }
 
     @Override
     public Collection<R> values() {
-      List<R> values = new ArrayList<>();
-      values.add(get());
-      return values;
+      return resources.values();
     }
   }
 }
