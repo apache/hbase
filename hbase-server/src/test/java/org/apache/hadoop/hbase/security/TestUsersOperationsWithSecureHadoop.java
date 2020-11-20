@@ -24,13 +24,11 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalFo
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getSecuredConfiguration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -40,6 +38,7 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -66,16 +65,13 @@ public class TestUsersOperationsWithSecureHadoop {
   private static String CLIENT_NAME;
 
   @BeforeClass
-  public static void checkAndSetUp() throws Exception {
-    // check localhost kerberos users
-    Process process = Runtime.getRuntime().exec(new String[]{"bash", "-c", "klist"});
-    boolean timeout = process.waitFor(2, TimeUnit.SECONDS);
-    assertTrue("localhost exec klist timeout!", timeout);
-    int ret = process.exitValue();
-    assertNotEquals("localhost have an existing ticket!", 0, ret);
-
-    // setup MiniKdc
+  public static void setUp() throws Exception {
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
+
+    // update default realm
+    sun.security.krb5.Config.refresh();
+    KerberosName.resetDefaultRealm();
+
     PRINCIPAL = "hbase/" + HOST;
     CLIENT_NAME = "foo";
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, CLIENT_NAME);
