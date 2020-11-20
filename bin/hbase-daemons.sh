@@ -56,6 +56,9 @@ case $command in
   (master-backup)
     exec "$bin/master-backup.sh" $args
     ;;
+  (replicationserver)
+    exec "$bin/replicationservers.sh" $args
+    ;;
   (*)
     exec "$bin/regionservers.sh" $args
     ;;
