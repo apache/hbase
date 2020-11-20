@@ -18,10 +18,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -39,8 +37,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </p>
  *
  * <p>
- * Pool is not thread-safe. It must be synchronized when used by multiple threads. Pool also does
- * not remove elements automatically. Unused resources must be closed and removed explicitly.
+ * PoolMap is thread-safe. It does not remove elements automatically. Unused resources
+ * must be closed and removed explicitly.
  * </p>
  *
  * @param <K>
@@ -49,170 +47,127 @@ import org.apache.yetus.audience.InterfaceAudience;
  *          the type of the resource being pooled
  */
 @InterfaceAudience.Private
-public class PoolMap<K, V> implements Map<K, V> {
-  private PoolType poolType;
+public class PoolMap<K, V> {
+  private final Map<K, Pool<V>> pools;
+  private final PoolType poolType;
+  private final int poolMaxSize;
 
-  private int poolMaxSize;
-
-  private Map<K, Pool<V>> pools = new HashMap<>();
-
-  public PoolMap(PoolType poolType) {
-    this.poolType = poolType;
+   public PoolMap(PoolType poolType, int poolMaxSize) {
+     pools = new HashMap<>();
+     this.poolType = poolType;
+     this.poolMaxSize = poolMaxSize;
   }
 
-  public PoolMap(PoolType poolType, int poolMaxSize) {
-    this.poolType = poolType;
-    this.poolMaxSize = poolMaxSize;
-  }
+  public V getOrCreate(K key, PoolResourceSupplier<V> supplier) throws IOException {
+     synchronized (pools) {
+       Pool<V> pool = pools.get(key);
 
-  @Override
-  public V get(Object key) {
-    Pool<V> pool = pools.get(key);
-    return pool != null ? pool.get() : null;
-  }
+       if (pool == null) {
+         pool = createPool();
+         pools.put(key, pool);
+       }
 
-  @Override
-  public V put(K key, V value) {
-    Pool<V> pool = pools.get(key);
-    if (pool == null) {
-      pools.put(key, pool = createPool());
-    }
-    return pool != null ? pool.put(value) : null;
-  }
+       try {
+         return pool.getOrCreate(supplier);
+       } catch (IOException | RuntimeException | Error e) {
+         if (pool.size() == 0) {
+           pools.remove(key);
+         }
 
-  @SuppressWarnings("unchecked")
-  @Override
-  public V remove(Object key) {
-    pools.remove(key);
-    return null;
+         throw e;
+       }
+     }
   }
+  public boolean remove(K key, V value) {
+    synchronized (pools) {
+      Pool<V> pool = pools.get(key);
 
-  @SuppressWarnings("unchecked")
-  @Override
-  public boolean remove(Object key, Object value) {
-    Pool<V> pool = pools.get(key);
-    boolean res = false;
-    if (pool != null) {
-      res = pool.remove((V)value);
-      if (res && pool.size() == 0) {
+      if (pool == null) {
+        return false;
+      }
+
+      boolean removed = pool.remove(value);
+
+      if (removed && pool.size() == 0) {
         pools.remove(key);
       }
-    }
-    return res;
-  }
 
-  @Override
-  public Collection<V> values() {
-    Collection<V> values = new ArrayList<>();
-    for (Pool<V> pool : pools.values()) {
-      Collection<V> poolValues = pool.values();
-      if (poolValues != null) {
-        values.addAll(poolValues);
-      }
-    }
-    return values;
-  }
-
-  public Collection<V> values(K key) {
-    Collection<V> values = new ArrayList<>();
-    Pool<V> pool = pools.get(key);
-    if (pool != null) {
-      Collection<V> poolValues = pool.values();
-      if (poolValues != null) {
-        values.addAll(poolValues);
-      }
-    }
-    return values;
-  }
-
-
-  @Override
-  public boolean isEmpty() {
-    return pools.isEmpty();
-  }
-
-  @Override
-  public int size() {
-    return pools.size();
-  }
-
-  public int size(K key) {
-    Pool<V> pool = pools.get(key);
-    return pool != null ? pool.size() : 0;
-  }
-
-  @Override
-  public boolean containsKey(Object key) {
-    return pools.containsKey(key);
-  }
-
-  @Override
-  public boolean containsValue(Object value) {
-    if (value == null) {
-      return false;
-    }
-    for (Pool<V> pool : pools.values()) {
-      if (value.equals(pool.get())) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  @Override
-  public void putAll(Map<? extends K, ? extends V> map) {
-    for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
-      put(entry.getKey(), entry.getValue());
+      return removed;
     }
   }
 
-  @Override
-  public void clear() {
-    for (Pool<V> pool : pools.values()) {
-      pool.clear();
+  public void remove(K key) {
+    synchronized (pools) {
+      pools.remove(key);
     }
-    pools.clear();
   }
 
-  @Override
-  public Set<K> keySet() {
-    return pools.keySet();
-  }
+  public List<V> values() {
+    List<V> values = new ArrayList<>();
 
-  @Override
-  public Set<Map.Entry<K, V>> entrySet() {
-    Set<Map.Entry<K, V>> entries = new HashSet<>();
-    for (Map.Entry<K, Pool<V>> poolEntry : pools.entrySet()) {
-      final K poolKey = poolEntry.getKey();
-      final Pool<V> pool = poolEntry.getValue();
-      if (pool != null) {
-        for (final V poolValue : pool.values()) {
-          entries.add(new Map.Entry<K, V>() {
-            @Override
-            public K getKey() {
-              return poolKey;
-            }
-
-            @Override
-            public V getValue() {
-              return poolValue;
-            }
-
-            @Override
-            public V setValue(V value) {
-              return pool.put(value);
-            }
-          });
+    synchronized (pools) {
+      for (Pool<V> pool : pools.values()) {
+        Collection<V> poolValues = pool.values();
+        if (poolValues != null) {
+          values.addAll(poolValues);
         }
       }
     }
-    return entries;
+
+    return values;
+  }
+
+  public List<V> values(K key) {
+    synchronized (pools) {
+      Pool<V> pool = pools.get(key);
+
+      if (pool == null) {
+        return Collections.emptyList();
+      } else {
+        return new ArrayList<>(pool.values());
+      }
+    }
+  }
+
+  public int size() {
+    synchronized (pools) {
+      return pools.size();
+    }
+  }
+
+  public int size(K key) {
+    synchronized (pools) {
+      Pool<V> pool = pools.get(key);
+
+      if (pool == null) {
+        return 0;
+      } else {
+        return pool.size();
+      }
+    }
+  }
+
+  public void clear() {
+    synchronized (pools) {
+      for (Pool<V> pool : pools.values()) {
+        pool.clear();
+      }
+
+      pools.clear();
+    }
+  }
+
+  public interface PoolResourceSupplier<R> {
+     R get() throws IOException;
+  }
+
+  protected static <V> V createResource(PoolResourceSupplier<V> supplier) throws IOException {
+    V resource = supplier.get();
+    return Objects.requireNonNull(resource, "resource cannot be null.");
   }
 
   protected interface Pool<R> {
-    R get();
-
-    R put(R resource);
+    R getOrCreate(PoolResourceSupplier<R> supplier) throws IOException;
 
     boolean remove(R resource);
 
@@ -251,8 +206,9 @@ public class PoolMap<K, V> implements Map<K, V> {
       return new RoundRobinPool<>(poolMaxSize);
     case ThreadLocal:
       return new ThreadLocalPool<>();
+    default:
+      return new RoundRobinPool<>(poolMaxSize);
     }
-    return null;
   }
 
   /**
@@ -288,26 +244,22 @@ public class PoolMap<K, V> implements Map<K, V> {
     }
 
     @Override
-    public R get() {
+    public R getOrCreate(PoolResourceSupplier<R> supplier) throws IOException {
       int size = resources.size();
+      R resource;
 
       /* letting pool to grow */
       if (size < maxSize) {
-        return null;
+        resource = createResource(supplier);
+        resources.add(resource);
+      } else {
+        resource = resources.get(nextIndex);
+
+        /* at this point size cannot be 0 */
+        nextIndex = (nextIndex + 1) % size;
       }
 
-      R resource = resources.get(nextIndex);
-
-      /* at this point size cannot be 0 */
-      nextIndex = (nextIndex + 1) % size;
-
       return resource;
-    }
-
-    @Override
-    public R put(R resource) {
-      resources.add(resource);
-      return null;
     }
 
     @Override
@@ -334,7 +286,7 @@ public class PoolMap<K, V> implements Map<K, V> {
   /**
    * The <code>ThreadLocalPool</code> represents a {@link PoolMap.Pool} that
    * works similarly to {@link ThreadLocal} class. It essentially binds the resource
-   * to the thread from which it is accessed. It doesn't remove resources when a thread exists,
+   * to the thread from which it is accessed. It doesn't remove resources when a thread exits,
    * those resources must be closed manually.
    *
    * <p>
@@ -353,15 +305,16 @@ public class PoolMap<K, V> implements Map<K, V> {
     }
 
     @Override
-    public R get() {
+    public R getOrCreate(PoolResourceSupplier<R> supplier) throws IOException {
       Thread myself = Thread.currentThread();
-      return resources.get(myself);
-    }
+      R resource = resources.get(myself);
 
-    @Override
-    public R put(R resource) {
-      Thread myself = Thread.currentThread();
-      return resources.put(myself, resource);
+      if (resource == null) {
+        resource = createResource(supplier);
+        resources.put(myself, resource);
+      }
+
+      return resource;
     }
 
     @Override

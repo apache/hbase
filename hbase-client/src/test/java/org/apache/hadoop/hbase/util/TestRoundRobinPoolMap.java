@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -48,9 +49,8 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
   public void testSingleThreadedClient() throws InterruptedException {
     String key = "key";
     String value = "value";
-    // As long as the pool is not full, we'll get null back
-    // This forces the user to create new values that can be used to populate the pool.
-    runThread(key, value, null);
+    // As long as the pool is not full, get calls the supplier
+    runThread(key, () -> value, value);
     assertEquals(1, poolMap.size(key));
     assertEquals(1, poolMap.size());
   }
@@ -60,9 +60,8 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
     for (int i = 0; i < KEY_COUNT; i++) {
       String key = Integer.toString(i);
       String value = Integer.toString(2 * i);
-      // As long as the pool is not full, we'll get null back
-      // This forces the user to create new values that can be used to populate the pool.
-      runThread(key, value, null);
+      // As long as the pool is not full, get calls the supplier
+      runThread(key, () -> value, value);
       assertEquals(1, poolMap.size(key));
     }
 
@@ -73,7 +72,7 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
     for (int i = 0; i < POOL_SIZE - 1; i++) {
       String value = Integer.toString(i);
       // As long as the pool is not full, we'll get null back
-      runThread(key, value, null);
+      runThread(key, () -> value, value);
       // since we use the same key, the pool size should grow
       assertEquals(i + 1, poolMap.size(key));
     }
@@ -83,13 +82,12 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
   }
 
   @Test
-  public void testPoolCap() throws InterruptedException {
+  public void testPoolCap() throws InterruptedException, IOException {
     String key = "key";
     // filling pool
     for (int i = 0; i < POOL_SIZE; i++) {
       String value = Integer.toString(i);
-      String expected = (i < POOL_SIZE - 1) ? null : "0";
-      runThread(key, value, expected);
+      runThread(key, () -> value, value);
     }
 
     assertEquals(POOL_SIZE, poolMap.size(key));
@@ -97,9 +95,9 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
 
     // pool is filled, get() should return elements round robin order
     // starting from 1, because the first get was called by runThread()
-    for (int i = 1; i < 2 * POOL_SIZE; i++) {
+    for (int i = 0; i < 2 * POOL_SIZE; i++) {
       String expected = Integer.toString(i % POOL_SIZE);
-      assertEquals(expected, poolMap.get(key));
+      assertEquals(expected, poolMap.getOrCreate(key, null));
     }
   }
 }

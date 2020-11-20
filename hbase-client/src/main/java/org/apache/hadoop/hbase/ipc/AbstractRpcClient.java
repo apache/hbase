@@ -297,7 +297,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     int poolSize = config.getInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, 1);
 
     if (poolSize <= 0) {
-      LOG.warn("{} must be positive.", HConstants.HBASE_CLIENT_IPC_POOL_SIZE);
+      LOG.warn("{} must be positive. Using default value: 1", HConstants.HBASE_CLIENT_IPC_POOL_SIZE);
       return 1;
     } else {
       return poolSize;
@@ -357,11 +357,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       if (!running) {
         throw new StoppedRpcClientException();
       }
-      conn = connections.get(remoteId);
-      if (conn == null) {
-        conn = createConnection(remoteId);
-        connections.put(remoteId, conn);
-      }
+      conn = connections.getOrCreate(remoteId, () -> createConnection(remoteId));
       conn.setLastTouched(EnvironmentEdgeManager.currentTime());
     }
     return conn;

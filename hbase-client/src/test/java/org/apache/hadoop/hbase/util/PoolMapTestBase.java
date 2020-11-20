@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 import org.junit.After;
 import org.junit.Before;
@@ -44,20 +47,33 @@ public abstract class PoolMapTestBase {
 
   protected abstract PoolType getPoolType();
 
-  protected void runThread(final String key, final String value,
+  protected void runThread(final String key, PoolMap.PoolResourceSupplier<String> supplier,
       final String expectedValue) throws InterruptedException {
-    final AtomicBoolean matchFound = new AtomicBoolean(false);
+    final AtomicReference<AssertionError> error = new AtomicReference<>();
     Thread thread = new Thread(new Runnable() {
       @Override
       public void run() {
-        poolMap.put(key, value);
-        String actualValue = poolMap.get(key);
+        String actualValue = null;
+        try {
+          actualValue = poolMap.getOrCreate(key, supplier);
+        } catch (IOException e) {
+          error.set(new AssertionError("Unexpected throwable.", e));
+        }
 
-        matchFound.set(Objects.equals(expectedValue, actualValue));
+        try {
+          assertEquals(expectedValue, actualValue);
+        } catch (AssertionError e) {
+          error.set(e);
+        }
       }
     });
     thread.start();
     thread.join();
-    assertTrue(matchFound.get());
+
+    AssertionError e = error.get();
+
+    if (e != null) {
+      throw e;
+    }
   }
 }
