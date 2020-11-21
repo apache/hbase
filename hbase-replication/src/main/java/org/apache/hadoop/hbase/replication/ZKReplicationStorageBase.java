@@ -43,7 +43,7 @@ public abstract class ZKReplicationStorageBase {
   /** The name of the base znode that contains all replication state. */
   protected final String replicationZNode;
 
-  protected final ZKWatcher zookeeper;
+  protected ZKWatcher zookeeper;
   protected final Configuration conf;
 
   protected ZKReplicationStorageBase(ZKWatcher zookeeper, Configuration conf) {
@@ -73,5 +73,10 @@ public abstract class ZKReplicationStorageBase {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  public ZKReplicationStorageBase updateZooKeeper(ZKWatcher zookeeper) {
+    this.zookeeper = zookeeper;
+    return this;
   }
 }

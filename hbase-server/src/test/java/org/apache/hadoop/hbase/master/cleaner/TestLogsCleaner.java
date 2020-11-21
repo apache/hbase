@@ -227,17 +227,15 @@ public class TestLogsCleaner {
 
   @Test
   public void testZooKeeperAbortDuringGetListOfReplicators() throws Exception {
-    ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
-
     List<FileStatus> dummyFiles = Arrays.asList(
         new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log1")),
         new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log2"))
     );
 
+    ReplicationLogCleaner cleaner = spy(new ReplicationLogCleaner());
     FaultyZooKeeperWatcher faultyZK =
         new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null);
     final AtomicBoolean getListOfReplicatorsFailed = new AtomicBoolean(false);
-
     try {
       faultyZK.init();
       ReplicationQueueStorage queueStorage = spy(ReplicationStorageFactory
@@ -254,6 +252,8 @@ public class TestLogsCleaner {
           }
         }
       }).when(queueStorage).getAllWALs();
+      doThrow(new IOException("reconnection failed"))
+        .when(cleaner).reconnectAfterKeeperException();
 
       cleaner.setConf(conf, faultyZK, queueStorage);
       // should keep all files due to a ConnectionLossException getting the queues znodes
@@ -268,6 +268,32 @@ public class TestLogsCleaner {
     }
   }
 
+  @Test
+  public void testZooKeeperAbortAndReconnection() throws Exception {
+    ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
+
+    List<FileStatus> dummyFiles = Arrays.asList(
+      new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log1")),
+      new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log2"))
+    );
+
+    FaultyZooKeeperWatcher faultyZK =
+      new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-reconnection", null);
+    try {
+      faultyZK.init();
+      cleaner.setConf(conf, faultyZK);
+      cleaner.preClean();
+      Iterable<FileStatus> filesToDelete = cleaner.getDeletableFiles(dummyFiles);
+      Iterator<FileStatus> iter = filesToDelete.iterator();
+      assertTrue(iter.hasNext());
+      assertEquals(new Path("log1"), iter.next().getPath());
+      assertTrue(iter.hasNext());
+      assertEquals(new Path("log2"), iter.next().getPath());
+      assertFalse(iter.hasNext());
+    } finally {
+      faultyZK.close();
+    }
+  }
   /**
    * When zk is working both files should be returned
    * @throws Exception from ZK watcher

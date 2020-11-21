@@ -28,9 +28,11 @@ import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
+import org.apache.hadoop.hbase.replication.ZKReplicationStorageBase;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,8 +61,27 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       // but they won't be deleted because they're not in the checking set.
       wals = queueStorage.getAllWALs();
     } catch (ReplicationException e) {
-      LOG.warn("Failed to read zookeeper, skipping checking deletable files");
+      if (e.getCause() instanceof KeeperException.ConnectionLossException
+        || e.getCause() instanceof KeeperException.SessionExpiredException
+        || e.getCause() instanceof KeeperException.UnknownSessionException) {
+        try {
+          reconnectAfterKeeperException();
+          wals = queueStorage.getAllWALs();
+          return ;
+        } catch (IOException | ReplicationException ex) {
+          LOG.warn("Failed to reconnect zookeeper or load all wal in replication queues.", ex);
+        }
+      }
+      LOG.warn("Failed to read zookeeper, skipping checking deletable files", e);
       wals = null;
+    }
+  }
+
+  public void reconnectAfterKeeperException() throws IOException {
+    zkw.close();
+    zkw = new ZKWatcher(getConf(), "replicationLogCleaner", null);
+    if (this.queueStorage instanceof ZKReplicationStorageBase) {
+      ((ZKReplicationStorageBase)this.queueStorage).updateZooKeeper(zkw);
     }
   }
 
