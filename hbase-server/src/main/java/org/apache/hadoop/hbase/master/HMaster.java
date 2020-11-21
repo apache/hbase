@@ -3621,8 +3621,15 @@ public class HMaster extends HRegionServer implements MasterServices {
       List<ReplicationLoadSource> replicationLoadSources =
           getServerManager().getLoad(serverName).getReplicationLoadSourceList();
       for (ReplicationLoadSource replicationLoadSource : replicationLoadSources) {
-        replicationLoadSourceMap.get(replicationLoadSource.getPeerID())
-            .add(new Pair<>(serverName, replicationLoadSource));
+        List<Pair<ServerName, ReplicationLoadSource>> replicationLoadSourceList =
+          replicationLoadSourceMap.get(replicationLoadSource.getPeerID());
+        if (replicationLoadSourceList == null) {
+          LOG.debug(replicationLoadSource.getPeerID() + " does not exist, but it exists "
+            + "in znode(/hbase/replication/rs). when the rs restarts, peerId is deleted, so "
+            + "we just need to ignore it");
+          continue;
+        }
+        replicationLoadSourceList.add(new Pair<>(serverName, replicationLoadSource));
       }
     }
     for (List<Pair<ServerName, ReplicationLoadSource>> loads : replicationLoadSourceMap.values()) {
