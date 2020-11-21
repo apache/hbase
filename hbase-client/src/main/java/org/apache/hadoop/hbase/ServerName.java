@@ -213,6 +213,10 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     return hostnameOnly;
   }
 
+  public String getHostnameLowerCase() {
+    return hostnameOnly.toLowerCase(Locale.ROOT);
+  }
+
   public int getPort() {
     return port;
   }
