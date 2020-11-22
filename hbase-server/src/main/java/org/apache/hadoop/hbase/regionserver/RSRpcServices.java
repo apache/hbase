@@ -620,8 +620,22 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             spaceQuotaEnforcement.getPolicyEnforcement(region).check(del);
             mutations.add(del);
             break;
+          case INCREMENT:
+            Increment increment = ProtobufUtil.toIncrement(action.getMutation(), cellScanner);
+            ++countOfCompleteMutation;
+            checkCellSizeLimit(region, increment);
+            spaceQuotaEnforcement.getPolicyEnforcement(region).check(increment);
+            mutations.add(increment);
+            break;
+          case APPEND:
+            Append append = ProtobufUtil.toAppend(action.getMutation(), cellScanner);
+            ++countOfCompleteMutation;
+            checkCellSizeLimit(region, append);
+            spaceQuotaEnforcement.getPolicyEnforcement(region).check(append);
+            mutations.add(append);
+            break;
           default:
-            throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
+            throw new DoNotRetryIOException("invalid mutation type : " + type);
         }
       }
 
@@ -914,7 +928,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   /**
-   * Execute a list of Put/Delete mutations.
+   * Execute a list of mutations.
    *
    * @param builder
    * @param region
@@ -944,12 +958,27 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         MutationProto m = action.getMutation();
         Mutation mutation;
-        if (m.getMutateType() == MutationType.PUT) {
-          mutation = ProtobufUtil.toPut(m, cells);
-          batchContainsPuts = true;
-        } else {
-          mutation = ProtobufUtil.toDelete(m, cells);
-          batchContainsDelete = true;
+        switch (m.getMutateType()) {
+          case PUT:
+            mutation = ProtobufUtil.toPut(m, cells);
+            batchContainsPuts = true;
+            break;
+
+          case DELETE:
+            mutation = ProtobufUtil.toDelete(m, cells);
+            batchContainsDelete = true;
+            break;
+
+          case INCREMENT:
+            mutation = ProtobufUtil.toIncrement(m, cells);
+            break;
+
+          case APPEND:
+            mutation = ProtobufUtil.toAppend(m, cells);
+            break;
+
+          default:
+            throw new DoNotRetryIOException("Invalid mutation type : " + m.getMutateType());
         }
         mutationActionMap.put(mutation, action);
         mArray[i++] = mutation;
@@ -972,11 +1001,51 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
       OperationStatus[] codes = region.batchMutate(mArray, atomic, HConstants.NO_NONCE,
         HConstants.NO_NONCE);
+
+      // When atomic is true, it indicates that the mutateRow API or the batch API with
+      // RowMutations is called. In this case, we need to merge the results of the
+      // Increment/Append operations if the mutations include those operations, and set the merged
+      // result to the first element of the ResultOrException list
+      if (atomic) {
+        List<ResultOrException> resultOrExceptions = new ArrayList<>();
+        List<Result> results = new ArrayList<>();
+        for (i = 0; i < codes.length; i++) {
+          if (codes[i].getResult() != null) {
+            results.add(codes[i].getResult());
+          }
+          if (i != 0) {
+            resultOrExceptions.add(getResultOrException(
+              ClientProtos.Result.getDefaultInstance(), i));
+          }
+        }
+
+        if (results.isEmpty()) {
+          builder.addResultOrException(getResultOrException(
+            ClientProtos.Result.getDefaultInstance(), 0));
+        } else {
+          // Merge the results of the Increment/Append operations
+          List<Cell> cellList = new ArrayList<>();
+          for (Result result : results) {
+            if (result.rawCells() != null) {
+              cellList.addAll(Arrays.asList(result.rawCells()));
+            }
+          }
+          Result result = Result.create(cellList);
+
+          // Set the merged result of the Increment/Append operations to the first element of the
+          // ResultOrException list
+          builder.addResultOrException(getResultOrException(ProtobufUtil.toResult(result), 0));
+        }
+
+        builder.addAllResultOrException(resultOrExceptions);
+        return;
+      }
+
       for (i = 0; i < codes.length; i++) {
         Mutation currentMutation = mArray[i];
         ClientProtos.Action currentAction = mutationActionMap.get(currentMutation);
-        int index = currentAction.hasIndex() || !atomic ? currentAction.getIndex() : i;
-        Exception e = null;
+        int index = currentAction.hasIndex() ? currentAction.getIndex() : i;
+        Exception e;
         switch (codes[i].getOperationStatusCode()) {
           case BAD_FAMILY:
             e = new NoSuchColumnFamilyException(codes[i].getExceptionMsg());
@@ -2821,6 +2890,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               regionActionResultBuilder.setProcessed(result.isSuccess());
               for (int i = 0; i < regionAction.getActionCount(); i++) {
                 if (i == 0 && result.getResult() != null) {
+                  // Set the result of the Increment/Append operations to the first element of the
+                  // ResultOrException list
                   resultOrExceptionOrBuilder.setIndex(i);
                   regionActionResultBuilder.addResultOrException(resultOrExceptionOrBuilder
                     .setResult(ProtobufUtil.toResult(result.getResult())).build());
@@ -2851,7 +2922,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               cellScanner, spaceQuotaEnforcement);
             regionActionResultBuilder.setProcessed(true);
             // We no longer use MultiResponse#processed. Instead, we use
-            // RegionActionResult#condition. This is for backward compatibility for old clients.
+            // RegionActionResult#processed. This is for backward compatibility for old clients.
             responseBuilder.setProcessed(true);
           } catch (IOException e) {
             rpcServer.getMetrics().exception(e);

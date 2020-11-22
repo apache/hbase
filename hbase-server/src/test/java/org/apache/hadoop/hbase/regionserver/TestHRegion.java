@@ -61,6 +61,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -2385,6 +2386,7 @@ public class TestHRegion {
     CheckAndMutateResult res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, emptyVal).build(put));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     // Putting data in key
     put = new Put(row1);
@@ -2394,17 +2396,20 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, emptyVal).build(put));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     // not empty anymore
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, emptyVal).build(put));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     Delete delete = new Delete(row1);
     delete.addColumn(fam1, qf1);
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, emptyVal).build(delete));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     put = new Put(row1);
     put.addColumn(fam1, qf1, val2);
@@ -2412,6 +2417,7 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, val1).build(put));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     // checkAndDelete with correct value
     delete = new Delete(row1);
@@ -2420,11 +2426,13 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, val2).build(delete));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     delete = new Delete(row1);
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, emptyVal).build(delete));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     // checkAndPut looking for a null value
     put = new Put(row1);
@@ -2433,6 +2441,7 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1).ifNotExists(fam1, qf1)
       .build(put));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
   }
 
   @Test
@@ -2456,6 +2465,7 @@ public class TestHRegion {
     CheckAndMutateResult res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, val2).build(put));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     // checkAndDelete with wrong value
     Delete delete = new Delete(row1);
@@ -2463,6 +2473,7 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, val2).build(put));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     // Putting data in key
     put = new Put(row1);
@@ -2473,6 +2484,7 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, Bytes.toBytes(bd2)).build(put));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     // checkAndDelete with wrong value
     delete = new Delete(row1);
@@ -2480,6 +2492,7 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, Bytes.toBytes(bd2)).build(delete));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
   }
 
   @Test
@@ -2509,6 +2522,7 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, val1).build(delete));
     assertTrue("Delete", res.isSuccess());
+    assertNull(res.getResult());
 
     // Putting data in key
     put = new Put(row1);
@@ -2519,6 +2533,7 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
         .ifMatches(fam1, qf1, CompareOperator.EQUAL, Bytes.toBytes(bd1)).build(put));
     assertTrue("Second put", res.isSuccess());
+    assertNull(res.getResult());
 
     // checkAndDelete with correct value
     delete = new Delete(row1, now + 3);
@@ -2526,6 +2541,7 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
         .ifMatches(fam1, qf1, CompareOperator.EQUAL, Bytes.toBytes(bd1)).build(delete));
     assertTrue("Second delete", res.isSuccess());
+    assertNull(res.getResult());
   }
 
   @Test
@@ -2549,11 +2565,13 @@ public class TestHRegion {
     CheckAndMutateResult res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.LESS, val3).build(put));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     // Test CompareOp.LESS: original = val3, compare with val4, fail
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.LESS, val4).build(put));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     // Test CompareOp.LESS: original = val3, compare with val2,
     // succeed (now value = val2)
@@ -2562,17 +2580,20 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.LESS, val2).build(put));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val3, fail
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.LESS_OR_EQUAL, val3).build(put));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val2,
     // succeed (value still = val2)
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.LESS_OR_EQUAL, val2).build(put));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val1,
     // succeed (now value = val3)
@@ -2581,16 +2602,19 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.LESS_OR_EQUAL, val1).build(put));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     // Test CompareOp.GREATER: original = val3, compare with val3, fail
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.GREATER, val3).build(put));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     // Test CompareOp.GREATER: original = val3, compare with val2, fail
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.GREATER, val2).build(put));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     // Test CompareOp.GREATER: original = val3, compare with val4,
     // succeed (now value = val2)
@@ -2599,22 +2623,26 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.GREATER, val4).build(put));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val1, fail
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.GREATER_OR_EQUAL, val1).build(put));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val2,
     // succeed (value still = val2)
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.GREATER_OR_EQUAL, val2).build(put));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     // Test CompareOp.GREATER_OR_EQUAL: original = val2, compare with val3, succeed
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.GREATER_OR_EQUAL, val3).build(put));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
   }
 
   @Test
@@ -2645,6 +2673,7 @@ public class TestHRegion {
     CheckAndMutateResult res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, val1).build(put));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     Get get = new Get(row1);
     get.addColumn(fam2, qf1);
@@ -2699,6 +2728,7 @@ public class TestHRegion {
     CheckAndMutateResult res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, val2).build(delete));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     Get get = new Get(row1);
     get.addColumn(fam1, qf1);
@@ -2715,6 +2745,7 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam2, qf1, CompareOperator.EQUAL, emptyVal).build(delete));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     get = new Get(row1);
     r = region.get(get);
@@ -2726,6 +2757,8 @@ public class TestHRegion {
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, val1).build(delete));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
+
     get = new Get(row1);
     r = region.get(get);
     assertEquals(0, r.size());
@@ -2754,6 +2787,7 @@ public class TestHRegion {
           Bytes.toBytes("b"))))
       .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d"))));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     Result result = region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("D")));
     assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
@@ -2767,6 +2801,7 @@ public class TestHRegion {
           Bytes.toBytes("c"))))
       .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e"))));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     assertTrue(region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("E"))).isEmpty());
 
@@ -2779,6 +2814,7 @@ public class TestHRegion {
           Bytes.toBytes("b"))))
       .build(new Delete(row).addColumns(FAMILY, Bytes.toBytes("D"))));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     assertTrue(region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("D"))).isEmpty());
 
@@ -2794,6 +2830,7 @@ public class TestHRegion {
           .addColumn(FAMILY, Bytes.toBytes("E"), Bytes.toBytes("e")))
         .add((Mutation) new Delete(row).addColumns(FAMILY, Bytes.toBytes("A")))));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     result = region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("E")));
     assertEquals("e", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("E"))));
@@ -2818,6 +2855,7 @@ public class TestHRegion {
       .timeRange(TimeRange.between(0, 101))
       .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("B"), Bytes.toBytes("b"))));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     Result result = region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("B")));
     assertEquals("b", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));
@@ -2829,10 +2867,11 @@ public class TestHRegion {
       .timeRange(TimeRange.between(0, 100))
       .build(new Put(row).addColumn(FAMILY, Bytes.toBytes("C"), Bytes.toBytes("c"))));
     assertFalse(res.isSuccess());
+    assertNull(res.getResult());
 
     assertTrue(region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("C"))).isEmpty());
 
-    // Mutate with success
+    // RowMutations with success
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row)
       .ifMatches(new SingleColumnValueFilter(FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
         Bytes.toBytes("a")))
@@ -2842,6 +2881,7 @@ public class TestHRegion {
           .addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")))
         .add((Mutation) new Delete(row).addColumns(FAMILY, Bytes.toBytes("A")))));
     assertTrue(res.isSuccess());
+    assertNull(res.getResult());
 
     result = region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("D")));
     assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
@@ -2968,6 +3008,126 @@ public class TestHRegion {
 
     result = region.get(new Get(row).addColumn(FAMILY, Bytes.toBytes("B")));
     assertEquals("bbb", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));
+  }
+
+  @Test
+  public void testCheckAndIncrementAndAppend() throws Throwable {
+    // Setting up region
+    this.region = initHRegion(tableName, method, CONF, fam1);
+
+    // CheckAndMutate with Increment and Append
+    CheckAndMutate checkAndMutate = CheckAndMutate.newBuilder(row)
+      .ifNotExists(fam1, qual)
+      .build(new RowMutations(row)
+        .add((Mutation) new Increment(row).addColumn(fam1, qual1, 1L))
+        .add((Mutation) new Append(row).addColumn(fam1, qual2, Bytes.toBytes("a")))
+      );
+
+    CheckAndMutateResult result = region.checkAndMutate(checkAndMutate);
+    assertTrue(result.isSuccess());
+    assertEquals(1L, Bytes.toLong(result.getResult().getValue(fam1, qual1)));
+    assertEquals("a", Bytes.toString(result.getResult().getValue(fam1, qual2)));
+
+    Result r = region.get(new Get(row));
+    assertEquals(1L, Bytes.toLong(r.getValue(fam1, qual1)));
+    assertEquals("a", Bytes.toString(r.getValue(fam1, qual2)));
+
+    // Set return results to false
+    checkAndMutate = CheckAndMutate.newBuilder(row)
+      .ifNotExists(fam1, qual)
+      .build(new RowMutations(row)
+        .add((Mutation) new Increment(row).addColumn(fam1, qual1, 1L).setReturnResults(false))
+        .add((Mutation) new Append(row).addColumn(fam1, qual2, Bytes.toBytes("a"))
+          .setReturnResults(false))
+      );
+
+    result = region.checkAndMutate(checkAndMutate);
+    assertTrue(result.isSuccess());
+    assertNull(result.getResult().getValue(fam1, qual1));
+    assertNull(result.getResult().getValue(fam1, qual2));
+
+    r = region.get(new Get(row));
+    assertEquals(2L, Bytes.toLong(r.getValue(fam1, qual1)));
+    assertEquals("aa", Bytes.toString(r.getValue(fam1, qual2)));
+
+    checkAndMutate = CheckAndMutate.newBuilder(row)
+      .ifNotExists(fam1, qual)
+      .build(new RowMutations(row)
+        .add((Mutation) new Increment(row).addColumn(fam1, qual1, 1L))
+        .add((Mutation) new Append(row).addColumn(fam1, qual2, Bytes.toBytes("a"))
+          .setReturnResults(false))
+      );
+
+    result = region.checkAndMutate(checkAndMutate);
+    assertTrue(result.isSuccess());
+    assertEquals(3L, Bytes.toLong(result.getResult().getValue(fam1, qual1)));
+    assertNull(result.getResult().getValue(fam1, qual2));
+
+    r = region.get(new Get(row));
+    assertEquals(3L, Bytes.toLong(r.getValue(fam1, qual1)));
+    assertEquals("aaa", Bytes.toString(r.getValue(fam1, qual2)));
+  }
+
+  @Test
+  public void testCheckAndRowMutations() throws Throwable {
+    final byte[] row = Bytes.toBytes("row");
+    final byte[] q1 = Bytes.toBytes("q1");
+    final byte[] q2 = Bytes.toBytes("q2");
+    final byte[] q3 = Bytes.toBytes("q3");
+    final byte[] q4 = Bytes.toBytes("q4");
+    final String v1 = "v1";
+
+    region = initHRegion(tableName, method, CONF, fam1);
+
+    // Initial values
+    region.batchMutate(new Mutation[] {
+      new Put(row).addColumn(fam1, q2, Bytes.toBytes("toBeDeleted")),
+      new Put(row).addColumn(fam1, q3, Bytes.toBytes(5L)),
+      new Put(row).addColumn(fam1, q4, Bytes.toBytes("a")),
+    });
+
+    // Do CheckAndRowMutations
+    CheckAndMutate checkAndMutate = CheckAndMutate.newBuilder(row)
+      .ifNotExists(fam1, q1)
+      .build(new RowMutations(row).add(Arrays.asList(
+        new Put(row).addColumn(fam1, q1, Bytes.toBytes(v1)),
+        new Delete(row).addColumns(fam1, q2),
+        new Increment(row).addColumn(fam1, q3, 1),
+        new Append(row).addColumn(fam1, q4, Bytes.toBytes("b"))))
+      );
+
+    CheckAndMutateResult result = region.checkAndMutate(checkAndMutate);
+    assertTrue(result.isSuccess());
+    assertEquals(6L, Bytes.toLong(result.getResult().getValue(fam1, q3)));
+    assertEquals("ab", Bytes.toString(result.getResult().getValue(fam1, q4)));
+
+    // Verify the value
+    Result r = region.get(new Get(row));
+    assertEquals(v1, Bytes.toString(r.getValue(fam1, q1)));
+    assertNull(r.getValue(fam1, q2));
+    assertEquals(6L, Bytes.toLong(r.getValue(fam1, q3)));
+    assertEquals("ab", Bytes.toString(r.getValue(fam1, q4)));
+
+    // Do CheckAndRowMutations again
+    checkAndMutate = CheckAndMutate.newBuilder(row)
+      .ifNotExists(fam1, q1)
+      .build(new RowMutations(row).add(Arrays.asList(
+        new Delete(row).addColumns(fam1, q1),
+        new Put(row).addColumn(fam1, q2, Bytes.toBytes(v1)),
+        new Increment(row).addColumn(fam1, q3, 1),
+        new Append(row).addColumn(fam1, q4, Bytes.toBytes("b"))))
+      );
+
+    result = region.checkAndMutate(checkAndMutate);
+    assertFalse(result.isSuccess());
+    assertNull(result.getResult());
+
+    // Verify the value
+    r = region.get(new Get(row));
+    assertEquals(v1, Bytes.toString(r.getValue(fam1, q1)));
+    assertNull(r.getValue(fam1, q2));
+    assertEquals(6L, Bytes.toLong(r.getValue(fam1, q3)));
+    assertEquals("ab", Bytes.toString(r.getValue(fam1, q4)));
   }
 
   // ////////////////////////////////////////////////////////////////////////////
@@ -7248,6 +7408,149 @@ public class TestHRegion {
         // flush because the accounting is 'off' since original DSE.
       }
       this.region = null;
+    }
+  }
+
+  @Test
+  public void testMutateRow() throws Exception {
+    final byte[] row = Bytes.toBytes("row");
+    final byte[] q1 = Bytes.toBytes("q1");
+    final byte[] q2 = Bytes.toBytes("q2");
+    final byte[] q3 = Bytes.toBytes("q3");
+    final byte[] q4 = Bytes.toBytes("q4");
+    final String v1 = "v1";
+
+    region = initHRegion(tableName, method, CONF, fam1);
+
+    // Initial values
+    region.batchMutate(new Mutation[] {
+      new Put(row).addColumn(fam1, q2, Bytes.toBytes("toBeDeleted")),
+      new Put(row).addColumn(fam1, q3, Bytes.toBytes(5L)),
+      new Put(row).addColumn(fam1, q4, Bytes.toBytes("a")),
+    });
+
+    // Do mutateRow
+    Result result = region.mutateRow(new RowMutations(row).add(Arrays.asList(
+      new Put(row).addColumn(fam1, q1, Bytes.toBytes(v1)),
+      new Delete(row).addColumns(fam1, q2),
+      new Increment(row).addColumn(fam1, q3, 1),
+      new Append(row).addColumn(fam1, q4, Bytes.toBytes("b")))));
+
+    assertNotNull(result);
+    assertEquals(6L, Bytes.toLong(result.getValue(fam1, q3)));
+    assertEquals("ab", Bytes.toString(result.getValue(fam1, q4)));
+
+    // Verify the value
+    result = region.get(new Get(row));
+    assertEquals(v1, Bytes.toString(result.getValue(fam1, q1)));
+    assertNull(result.getValue(fam1, q2));
+    assertEquals(6L, Bytes.toLong(result.getValue(fam1, q3)));
+    assertEquals("ab", Bytes.toString(result.getValue(fam1, q4)));
+  }
+
+  @Test
+  public void testMutateRowInParallel() throws Exception {
+    final int numReaderThreads = 100;
+    final CountDownLatch latch = new CountDownLatch(numReaderThreads);
+
+    final byte[] row = Bytes.toBytes("row");
+    final byte[] q1 = Bytes.toBytes("q1");
+    final byte[] q2 = Bytes.toBytes("q2");
+    final byte[] q3 = Bytes.toBytes("q3");
+    final byte[] q4 = Bytes.toBytes("q4");
+    final String v1 = "v1";
+    final String v2 = "v2";
+
+    // We need to ensure the timestamp of the delete operation is more than the previous one
+    final AtomicLong deleteTimestamp = new AtomicLong();
+
+    region = initHRegion(tableName, method, CONF, fam1);
+
+    // Initial values
+    region.batchMutate(new Mutation[] {
+      new Put(row).addColumn(fam1, q1, Bytes.toBytes(v1))
+        .addColumn(fam1, q2, deleteTimestamp.getAndIncrement(), Bytes.toBytes(v2))
+        .addColumn(fam1, q3, Bytes.toBytes(1L))
+        .addColumn(fam1, q4, Bytes.toBytes("a"))
+    });
+
+    final AtomicReference<AssertionError> assertionError = new AtomicReference<>();
+
+    // Writer thread
+    Thread writerThread = new Thread(() -> {
+      try {
+        while (true) {
+          // If all the reader threads finish, then stop the writer thread
+          if (latch.await(0, TimeUnit.MILLISECONDS)) {
+            return;
+          }
+
+          // Execute the mutations. This should be done atomically
+          region.mutateRow(new RowMutations(row).add(Arrays.asList(
+            new Put(row).addColumn(fam1, q1, Bytes.toBytes(v2)),
+            new Delete(row).addColumns(fam1, q2, deleteTimestamp.getAndIncrement()),
+            new Increment(row).addColumn(fam1, q3, 1L),
+            new Append(row).addColumn(fam1, q4, Bytes.toBytes("b")))));
+
+          // We need to ensure the timestamps of the Increment/Append operations are more than the
+          // previous ones
+          Result result = region.get(new Get(row).addColumn(fam1, q3).addColumn(fam1, q4));
+          long tsIncrement = result.getColumnLatestCell(fam1, q3).getTimestamp();
+          long tsAppend = result.getColumnLatestCell(fam1, q4).getTimestamp();
+
+          // Put the initial values
+          region.batchMutate(new Mutation[] {
+            new Put(row).addColumn(fam1, q1, Bytes.toBytes(v1))
+              .addColumn(fam1, q2, deleteTimestamp.getAndIncrement(), Bytes.toBytes(v2))
+              .addColumn(fam1, q3, tsIncrement + 1, Bytes.toBytes(1L))
+              .addColumn(fam1, q4, tsAppend + 1, Bytes.toBytes("a"))
+          });
+        }
+      } catch (Exception e) {
+        e.printStackTrace();
+        assertionError.set(new AssertionError(e.getMessage()));
+      }
+    });
+    writerThread.start();
+
+    // Reader threads
+    for (int i = 0; i < numReaderThreads; i++) {
+      new Thread(() -> {
+        try {
+          for (int j = 0; j < 10000; j++) {
+            // Verify the values
+            Result result = region.get(new Get(row));
+
+            // The values should be equals to either the initial values or the values after
+            // executing the mutations
+            String q1Value = Bytes.toString(result.getValue(fam1, q1));
+            if (v1.equals(q1Value)) {
+              assertEquals(v2, Bytes.toString(result.getValue(fam1, q2)));
+              assertEquals(1L, Bytes.toLong(result.getValue(fam1, q3)));
+              assertEquals("a", Bytes.toString(result.getValue(fam1, q4)));
+            } else if (v2.equals(q1Value)) {
+              assertNull(Bytes.toString(result.getValue(fam1, q2)));
+              assertEquals(2L, Bytes.toLong(result.getValue(fam1, q3)));
+              assertEquals("ab", Bytes.toString(result.getValue(fam1, q4)));
+            } else {
+              fail("the qualifier " + q1 + " should be " + v1 + " or " + v2 + ", but " + q1Value);
+            }
+          }
+        } catch (Exception e) {
+          e.printStackTrace();
+          assertionError.set(new AssertionError(e.getMessage()));
+        } catch (AssertionError e) {
+          assertionError.set(e);
+        }
+
+        latch.countDown();
+      }).start();
+    }
+
+    writerThread.join();
+
+    if (assertionError.get() != null) {
+      throw assertionError.get();
     }
   }
 
