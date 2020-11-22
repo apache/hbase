@@ -101,7 +101,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       new ThreadFactoryBuilder().setNameFormat("Idle-Rpc-Conn-Sweeper-pool-%d").setDaemon(true)
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
-  protected boolean running = true; // if client runs
+  private boolean running = true; // if client runs
 
   protected final Configuration conf;
   protected final String clusterId;
@@ -127,7 +127,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   protected final int readTO;
   protected final int writeTO;
 
-  protected final PoolMap<ConnectionId, T> connections;
+  private final PoolMap<ConnectionId, T> connections;
 
   private final AtomicInteger callIdCnt = new AtomicInteger(0);
 

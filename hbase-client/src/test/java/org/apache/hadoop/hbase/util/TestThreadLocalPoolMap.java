@@ -48,8 +48,7 @@ public class TestThreadLocalPoolMap extends PoolMapTestBase {
     String key = "key";
     String value = "value";
     runThread(key, () -> value, value);
-    assertEquals(1, poolMap.size(key));
-    assertEquals(1, poolMap.size());
+    assertEquals(1, poolMap.values().size());
   }
 
   @Test
@@ -58,20 +57,18 @@ public class TestThreadLocalPoolMap extends PoolMapTestBase {
       String key = Integer.toString(i);
       String value = Integer.toString(2 * i);
       runThread(key, () -> value, value);
-      assertEquals(1, poolMap.size(key));
     }
 
-    assertEquals(KEY_COUNT, poolMap.size());
+    assertEquals(KEY_COUNT, poolMap.values().size());
     poolMap.clear();
 
     String key = "key";
-    for (int i = 0; i < POOL_SIZE - 1; i++) {
+    for (int i = 0; i < POOL_SIZE; i++) {
       String value = Integer.toString(i);
       runThread(key, () -> value, value);
-      assertEquals(i + 1, poolMap.size(key));
     }
 
-    assertEquals(1, poolMap.size());
+    assertEquals(POOL_SIZE, poolMap.values().size());
   }
 
   @Test
@@ -82,7 +79,6 @@ public class TestThreadLocalPoolMap extends PoolMapTestBase {
       runThread(key, () -> value, value);
     }
     /* we never discard values automatically, even if the thread exited */
-    assertEquals(POOL_SIZE * 2, poolMap.size(key));
-    assertEquals(1, poolMap.size());
+    assertEquals(POOL_SIZE * 2, poolMap.values().size());
   }
 }

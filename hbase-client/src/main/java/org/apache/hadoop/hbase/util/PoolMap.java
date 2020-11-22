@@ -96,12 +96,6 @@ public class PoolMap<K, V> {
     }
   }
 
-  public void remove(K key) {
-    synchronized (pools) {
-      pools.remove(key);
-    }
-  }
-
   public List<V> values() {
     List<V> values = new ArrayList<>();
 
@@ -115,36 +109,6 @@ public class PoolMap<K, V> {
     }
 
     return values;
-  }
-
-  public List<V> values(K key) {
-    synchronized (pools) {
-      Pool<V> pool = pools.get(key);
-
-      if (pool == null) {
-        return Collections.emptyList();
-      } else {
-        return new ArrayList<>(pool.values());
-      }
-    }
-  }
-
-  public int size() {
-    synchronized (pools) {
-      return pools.size();
-    }
-  }
-
-  public int size(K key) {
-    synchronized (pools) {
-      Pool<V> pool = pools.get(key);
-
-      if (pool == null) {
-        return 0;
-      } else {
-        return pool.size();
-      }
-    }
   }
 
   public void clear() {
@@ -319,8 +283,8 @@ public class PoolMap<K, V> {
 
     @Override
     public boolean remove(R resource) {
-      Thread myself = Thread.currentThread();
-      return resources.remove(myself, resource);
+      /* remove can be called from any thread */
+      return resources.values().remove(resource);
     }
 
     @Override

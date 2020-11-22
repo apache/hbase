@@ -40,11 +40,6 @@ public abstract class PoolMapTestBase {
     this.poolMap = new PoolMap<>(getPoolType(), POOL_SIZE);
   }
 
-  @After
-  public void tearDown() throws Exception {
-    this.poolMap.clear();
-  }
-
   protected abstract PoolType getPoolType();
 
   protected void runThread(final String key, PoolMap.PoolResourceSupplier<String> supplier,

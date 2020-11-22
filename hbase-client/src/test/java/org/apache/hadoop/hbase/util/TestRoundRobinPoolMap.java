@@ -51,8 +51,7 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
     String value = "value";
     // As long as the pool is not full, get calls the supplier
     runThread(key, () -> value, value);
-    assertEquals(1, poolMap.size(key));
-    assertEquals(1, poolMap.size());
+    assertEquals(1, poolMap.values().size());
   }
 
   @Test
@@ -60,25 +59,22 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
     for (int i = 0; i < KEY_COUNT; i++) {
       String key = Integer.toString(i);
       String value = Integer.toString(2 * i);
-      // As long as the pool is not full, get calls the supplier
+      // As long as the pool is not full, we'll get the supplied value back
       runThread(key, () -> value, value);
-      assertEquals(1, poolMap.size(key));
     }
 
-    assertEquals(KEY_COUNT, poolMap.size());
+    assertEquals(KEY_COUNT, poolMap.values().size());
     poolMap.clear();
 
     String key = "key";
-    for (int i = 0; i < POOL_SIZE - 1; i++) {
+    for (int i = 0; i < POOL_SIZE; i++) {
       String value = Integer.toString(i);
-      // As long as the pool is not full, we'll get null back
+      // As long as the pool is not full, we'll get the supplied value back
       runThread(key, () -> value, value);
-      // since we use the same key, the pool size should grow
-      assertEquals(i + 1, poolMap.size(key));
     }
+
     // at the end of the day, there should be as many values as we put
-    assertEquals(POOL_SIZE - 1, poolMap.size(key));
-    assertEquals(1, poolMap.size());
+    assertEquals(POOL_SIZE, poolMap.values().size());
   }
 
   @Test
@@ -90,14 +86,13 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
       runThread(key, () -> value, value);
     }
 
-    assertEquals(POOL_SIZE, poolMap.size(key));
-    assertEquals(1, poolMap.size());
+    assertEquals(POOL_SIZE, poolMap.values().size());
 
     // pool is filled, get() should return elements round robin order
     // starting from 1, because the first get was called by runThread()
     for (int i = 0; i < 2 * POOL_SIZE; i++) {
       String expected = Integer.toString(i % POOL_SIZE);
-      assertEquals(expected, poolMap.getOrCreate(key, null));
+      assertEquals(expected, poolMap.getOrCreate(key, () -> null));
     }
   }
 }
