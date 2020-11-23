@@ -38,8 +38,6 @@ import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Manages tuning of Heap memory using <code>HeapMemoryTuner</code>.
  */
@@ -109,7 +107,6 @@ public class HeapMemoryManager {
     return null;
   }
 
-  @VisibleForTesting
   HeapMemoryManager(ResizableBlockCache blockCache, FlushRequester memStoreFlusher,
                 Server server, RegionServerAccounting regionServerAccounting) {
     Configuration conf = server.getConfiguration();

@@ -38,8 +38,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * A Key for an entry in the change log.
  *
@@ -60,7 +58,7 @@ public class HLogKey extends WALKey implements Writable {
     super();
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public HLogKey(final byte[] encodedRegionName, final TableName tablename, long logSeqNum,
       final long now, UUID clusterId) {
     super(encodedRegionName, tablename, logSeqNum, now, clusterId);
@@ -70,7 +68,7 @@ public class HLogKey extends WALKey implements Writable {
     super(encodedRegionName, tablename);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public HLogKey(final byte[] encodedRegionName, final TableName tablename, final long now) {
     super(encodedRegionName, tablename, now);
   }

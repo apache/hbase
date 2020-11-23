@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.Compressor;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -46,7 +45,6 @@ import com.google.common.base.Preconditions;
  * This is used only in testing.
  */
 @InterfaceAudience.Private
-@VisibleForTesting
 public class EncodedDataBlock {
   private byte[] rawKVs;
   private ByteBuffer rawBuffer;

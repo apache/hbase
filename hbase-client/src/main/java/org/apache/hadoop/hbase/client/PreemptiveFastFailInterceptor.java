@@ -35,8 +35,6 @@ import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * 
  * The concrete {@link RetryingCallerInterceptor} class that implements the preemptive fast fail
@@ -149,7 +147,6 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
    *          - the throwable to be handled.
    * @throws PreemptiveFastFailException
    */
-  @VisibleForTesting
   protected void handleFailureToServer(ServerName serverName, Throwable t) {
     if (serverName == null || t == null) {
       return;

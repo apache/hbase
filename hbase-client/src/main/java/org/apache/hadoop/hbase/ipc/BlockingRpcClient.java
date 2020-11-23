@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.net.SocketAddress;
 
@@ -44,7 +42,6 @@ public class BlockingRpcClient extends AbstractRpcClient<BlockingRpcConnection> 
    * Used in test only. Construct an IPC client for the cluster {@code clusterId} with the default
    * SocketFactory
    */
-  @VisibleForTesting
   BlockingRpcClient(Configuration conf) {
     this(conf, HConstants.CLUSTER_ID_DEFAULT, null, null);
   }

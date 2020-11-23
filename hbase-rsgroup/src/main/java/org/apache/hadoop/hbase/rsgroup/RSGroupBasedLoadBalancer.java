@@ -20,7 +20,6 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -337,7 +336,6 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
     return finalList;
   }
 
-  @VisibleForTesting
   public Set<HRegionInfo> getMisplacedRegions(
       Map<HRegionInfo, ServerName> regions) throws IOException {
     Set<HRegionInfo> misplacedRegions = new HashSet<HRegionInfo>();

@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
 import org.apache.hadoop.hbase.monitoring.ThreadMonitoring;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -87,7 +86,6 @@ public class ExecutorService {
    * started with the same name, this throws a RuntimeException.
    * @param name Name of the service to start.
    */
-  @VisibleForTesting
   public void startExecutorService(String name, int maxThreads) {
     if (this.executorMap.get(name) != null) {
       throw new RuntimeException("An executor service with the name " + name +
@@ -127,7 +125,6 @@ public class ExecutorService {
     return executor;
   }
 
-  @VisibleForTesting
   public ThreadPoolExecutor getExecutorThreadPool(final ExecutorType type) {
     return getExecutor(type).getThreadPoolExecutor();
   }

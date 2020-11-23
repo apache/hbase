@@ -40,8 +40,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Iterate over an HBase table data, return (ImmutableBytesWritable, Result)
  * pairs.
@@ -55,8 +53,9 @@ public class TableRecordReaderImpl {
   private static final Log LOG = LogFactory.getLog(TableRecordReaderImpl.class);
 
   // HBASE_COUNTER_GROUP_NAME is the name of mapreduce counter group for HBase
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static final String HBASE_COUNTER_GROUP_NAME = "HBase Counters";
+
   private ResultScanner scanner = null;
   private Scan scan = null;
   private Scan currentScan = null;

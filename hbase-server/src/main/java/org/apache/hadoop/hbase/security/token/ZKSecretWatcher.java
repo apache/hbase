@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.security.token;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.util.List;
 
@@ -232,7 +230,6 @@ public class ZKSecretWatcher extends ZooKeeperListener {
    * get token keys parent node
    * @return token keys parent node
    */
-  @VisibleForTesting
   String getKeysParentZNode() {
     return keysParentZNode;
   }

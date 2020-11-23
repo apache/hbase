@@ -47,8 +47,6 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * {@link HFile} reader for version 2.
  */
@@ -1425,7 +1423,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * Returns false if block prefetching was requested for this file and has
    * not completed, true otherwise
    */
-  @VisibleForTesting
   boolean prefetchComplete() {
     return PrefetchExecutor.isCompleted(path);
   }

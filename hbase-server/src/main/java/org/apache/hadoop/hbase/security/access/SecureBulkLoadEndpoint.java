@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
@@ -255,14 +254,12 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     done.run(null);
   }
 
-  @VisibleForTesting
   interface Consumer<T> {
     void accept(T t);
   }
 
   private static Consumer<Region> fsCreatedListener;
 
-  @VisibleForTesting
   static void setFsCreatedListener(Consumer<Region> listener) {
     fsCreatedListener = listener;
   }

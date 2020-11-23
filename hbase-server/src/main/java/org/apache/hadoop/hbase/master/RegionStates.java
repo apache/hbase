@@ -31,7 +31,6 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -611,7 +610,6 @@ public class RegionStates {
   /**
    * Used in some unit tests
    */
-  @VisibleForTesting
   synchronized boolean existsInServerHoldings(final ServerName serverName,
       final HRegionInfo hri) {
     Set<HRegionInfo> oldRegions = serverHoldings.get(serverName);
@@ -988,7 +986,6 @@ public class RegionStates {
   /**
    * Remove a region from all state maps.
    */
-  @VisibleForTesting
   public synchronized void deleteRegion(final HRegionInfo hri) {
     String encodedName = hri.getEncodedName();
     regionsInTransition.remove(encodedName);
@@ -1006,7 +1003,6 @@ public class RegionStates {
     }
   }
 
-  @VisibleForTesting
   public boolean isRegionInRegionStates(final HRegionInfo hri) {
     return (getRegionState(hri) != null || isRegionOnline(hri)) || isRegionInTransition(hri)
         || isRegionInState(hri, State.OFFLINE, State.CLOSED);

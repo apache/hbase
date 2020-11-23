@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServic
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
@@ -135,7 +134,7 @@ public interface Region extends ConfigurationObserver {
    * @deprecated Since version 1.2.0. Exposes too much about our internals; shutting it down.
    * Do not use.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   @Deprecated
   public long getOldestSeqIdOfStore(byte[] familyName);
 

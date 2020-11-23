@@ -187,7 +187,6 @@ import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -610,7 +609,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public MasterRpcServices getMasterRpcServices() {
     return (MasterRpcServices)rpcServices;
   }
@@ -1746,7 +1745,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       this.catalogJanitorChore, region_a, region_b, forcible, user));
   }
 
-  @VisibleForTesting // Public so can be accessed by tests.
+  @InterfaceAudience.Private // Public so can be accessed by tests.
   public void move(final byte[] encodedRegionName,
       byte[] destServerName) throws HBaseIOException {
     RegionState regionState = assignmentManager.getRegionStates().
@@ -2454,7 +2453,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * is found, but not currently deployed, the second element of the pair
    * may be null.
    */
-  @VisibleForTesting // Used by TestMaster.
+  @InterfaceAudience.Private // Used by TestMaster.
   Pair<HRegionInfo, ServerName> getTableRegionForRow(
       final TableName tableName, final byte [] rowKey)
   throws IOException {
@@ -2738,7 +2737,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     stop("Stopped by " + Thread.currentThread().getName());
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void checkServiceStarted() throws ServerNotRunningYetException {
     if (!serviceStarted) {
       throw new ServerNotRunningYetException("Server is not running yet");
@@ -2798,7 +2797,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return maintenanceModeTracker.isInMaintenanceMode();
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public void setInitialized(boolean isInitialized) {
     procedureExecutor.getEnvironment().setEventReady(initialized, isInitialized);
   }
@@ -2817,7 +2816,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return serverCrashProcessingEnabled.isReady();
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public void setServerCrashProcessingEnabled(final boolean b) {
     procedureExecutor.getEnvironment().setEventReady(serverCrashProcessingEnabled, b);
   }

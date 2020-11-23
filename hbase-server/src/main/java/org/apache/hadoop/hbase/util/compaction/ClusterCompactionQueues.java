@@ -23,7 +23,6 @@ import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -87,7 +86,6 @@ class ClusterCompactionQueues {
     }
   }
 
-  @VisibleForTesting
   List<MajorCompactionRequest> getQueue(ServerName serverName) {
     lock.readLock().lock();
     try {

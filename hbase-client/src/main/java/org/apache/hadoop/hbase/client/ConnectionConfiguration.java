@@ -11,7 +11,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -126,7 +125,6 @@ public class ConnectionConfiguration {
    * This is for internal testing purpose (using the default value).
    * In real usage, we should read the configuration from the Configuration object.
    */
-  @VisibleForTesting
   protected ConnectionConfiguration() {
     this.writeBufferSize = WRITE_BUFFER_SIZE_DEFAULT;
     this.writeBufferPeriodicFlushTimeoutMs = WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS_DEFAULT;

@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
@@ -757,7 +756,6 @@ public class TableAuthManager implements Closeable {
     return instance;
   }
 
-  @VisibleForTesting
   public static int getTotalRefCount() {
     int total = 0;
     for (int count : refCount.values()) {

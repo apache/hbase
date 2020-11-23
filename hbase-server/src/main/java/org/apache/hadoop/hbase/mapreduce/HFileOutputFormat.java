@@ -40,8 +40,6 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Writes HFiles. Passed KeyValues must arrive in order.
  * Writes current time as the sequence id for the file. Sets the major compacted
@@ -99,7 +97,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * @param conf to read the serialized values from
    * @return a map from column family to the configured compression algorithm
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], Algorithm> createFamilyCompressionMap(Configuration
       conf) {
     return HFileOutputFormat2.createFamilyCompressionMap(conf);
@@ -112,7 +110,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * @param conf to read the serialized values from
    * @return a map from column family to the the configured bloom filter type
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], BloomType> createFamilyBloomTypeMap(Configuration conf) {
     return HFileOutputFormat2.createFamilyBloomTypeMap(conf);
   }
@@ -124,7 +122,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * @param conf to read the serialized values from
    * @return a map from column family to the configured block size
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], Integer> createFamilyBlockSizeMap(Configuration conf) {
     return HFileOutputFormat2.createFamilyBlockSizeMap(conf);
   }
@@ -137,7 +135,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * @return a map from column family to HFileDataBlockEncoder for the
    *         configured data block type for the family
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], DataBlockEncoding> createFamilyDataBlockEncodingMap(
       Configuration conf) {
     return HFileOutputFormat2.createFamilyDataBlockEncodingMap(conf);
@@ -165,7 +163,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * @throws IOException
    *           on failure to read column family descriptors
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void configureBlockSize(Table table, Configuration conf) throws IOException {
     HFileOutputFormat2.configureBlockSize(table.getTableDescriptor(), conf);
   }
@@ -179,7 +177,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * @throws IOException
    *           on failure to read column family descriptors
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void configureBloomType(Table table, Configuration conf) throws IOException {
     HFileOutputFormat2.configureBloomType(table.getTableDescriptor(), conf);
   }
@@ -193,7 +191,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * @throws IOException
    *           on failure to read column family descriptors
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void configureDataBlockEncoding(Table table,
       Configuration conf) throws IOException {
     HTableDescriptor tableDescriptor = table.getTableDescriptor();

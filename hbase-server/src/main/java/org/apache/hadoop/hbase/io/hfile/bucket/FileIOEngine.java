@@ -30,7 +30,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -138,7 +137,6 @@ public class FileIOEngine implements PersistentIOEngine {
     return 0;
   }
 
-  @VisibleForTesting
   void closeFileChannels() {
     for (FileChannel fileChannel: fileChannels) {
       try {
@@ -262,12 +260,10 @@ public class FileIOEngine implements PersistentIOEngine {
     return fileNum;
   }
 
-  @VisibleForTesting
   FileChannel[] getFileChannels() {
     return fileChannels;
   }
 
-  @VisibleForTesting
   void refreshFileConnection(int accessFileNum, IOException ioe) throws IOException {
     ReentrantLock channelLock = channelLocks[accessFileNum];
     channelLock.lock();

@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -35,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -381,7 +379,6 @@ public class WALFactory {
    * should be package-private, visible for recovery testing.
    * @return an overwritable writer for recovered edits. caller should close.
    */
-  @VisibleForTesting
   public Writer createRecoveredEditsWriter(final FileSystem fs, final Path path)
       throws IOException {
     return DefaultWALProvider.createWriter(conf, fs, path, true);
@@ -459,7 +456,6 @@ public class WALFactory {
    * If you already have a WALFactory, you should favor the instance method.
    * @return a writer that won't overwrite files. Caller must close.
    */
-  @VisibleForTesting
   public static Writer createWALWriter(final FileSystem fs, final Path path,
       final Configuration configuration)
       throws IOException {

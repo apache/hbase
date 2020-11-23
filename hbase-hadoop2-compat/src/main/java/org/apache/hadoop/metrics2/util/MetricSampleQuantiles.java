@@ -27,8 +27,6 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Implementation of the Cormode, Korn, Muthukrishnan, and Srivastava algorithm
  * for streaming calculation of targeted high-percentile epsilon-approximate
@@ -257,7 +255,6 @@ public class MetricSampleQuantiles {
    * 
    * @return count current number of samples
    */
-  @VisibleForTesting
   synchronized public int getSampleCount() {
     return samples.size();
   }

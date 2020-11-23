@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.common.annotations.VisibleForTesting;
 import static java.lang.String.format;
 
 import java.io.FileNotFoundException;

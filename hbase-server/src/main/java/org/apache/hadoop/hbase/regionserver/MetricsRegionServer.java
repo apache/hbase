@@ -27,8 +27,6 @@ import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Timer;
 import org.apache.hadoop.conf.Configuration;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * <p>
  * This class is for maintaining the various regionserver statistics
@@ -89,12 +87,10 @@ public class MetricsRegionServer {
     return null;
   }
 
-  @VisibleForTesting
   public MetricsRegionServerSource getMetricsSource() {
     return serverSource;
   }
 
-  @VisibleForTesting
   public org.apache.hadoop.hbase.regionserver.MetricsUserAggregate getMetricsUserAggregate() {
     return userAggregate;
   }

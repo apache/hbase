@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
@@ -88,7 +87,6 @@ public class MetricsUserAggregateSourceImpl extends BaseSourceImpl
     }
   }
 
-  @VisibleForTesting
   public ConcurrentHashMap<String, MetricsUserSource> getUserSources() {
     return userSources;
   }

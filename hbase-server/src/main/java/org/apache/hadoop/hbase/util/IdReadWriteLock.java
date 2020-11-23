@@ -22,8 +22,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Allows multiple concurrent clients to lock on a numeric id with ReentrantReadWriteLock. The
  * intended usage for read lock is as follows:
@@ -66,7 +64,6 @@ public class IdReadWriteLock {
   }
 
   /** For testing */
-  @VisibleForTesting
   int purgeAndGetEntryPoolSize() {
     gc();
     Threads.sleep(200);
@@ -79,7 +76,6 @@ public class IdReadWriteLock {
     System.gc();
   }
 
-  @VisibleForTesting
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
     value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
     justification="Synchronization on rwlock is intentional")

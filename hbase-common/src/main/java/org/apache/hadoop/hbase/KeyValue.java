@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * An HBase Key/Value. This is the fundamental HBase Type.
@@ -2655,7 +2654,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
     }
 
     @Override
-    @VisibleForTesting
     public int compareOnlyKeyPortion(Cell left, Cell right) {
       int c = Bytes.BYTES_RAWCOMPARATOR.compare(left.getRowArray(), left.getRowOffset(),
         left.getRowLength(), right.getRowArray(), right.getRowOffset(), right.getRowLength());

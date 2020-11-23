@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ServiceException;
 
 import org.apache.commons.logging.Log;
@@ -668,7 +667,6 @@ public class MetaTableAccessor {
    * @param replicaId the replicaId of the region
    * @return a byte[] for server column qualifier
    */
-  @VisibleForTesting
   public static byte[] getServerColumn(int replicaId) {
     return replicaId == 0
       ? HConstants.SERVER_QUALIFIER
@@ -681,7 +679,6 @@ public class MetaTableAccessor {
    * @param replicaId the replicaId of the region
    * @return a byte[] for server start code column qualifier
    */
-  @VisibleForTesting
   public static byte[] getStartCodeColumn(int replicaId) {
     return replicaId == 0
       ? HConstants.STARTCODE_QUALIFIER
@@ -694,7 +691,6 @@ public class MetaTableAccessor {
    * @param replicaId the replicaId of the region
    * @return a byte[] for seqNum column qualifier
    */
-  @VisibleForTesting
   public static byte[] getSeqNumColumn(int replicaId) {
     return replicaId == 0
       ? HConstants.SEQNUM_QUALIFIER
@@ -708,7 +704,6 @@ public class MetaTableAccessor {
    * @param serverColumn the column qualifier
    * @return an int for the replicaId
    */
-  @VisibleForTesting
   static int parseReplicaIdFromServerColumn(byte[] serverColumn) {
     String serverStr = Bytes.toString(serverColumn);
 

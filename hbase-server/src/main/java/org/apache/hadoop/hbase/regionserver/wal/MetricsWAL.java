@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -45,7 +43,6 @@ public class MetricsWAL extends WALActionsListener.Base {
     this(CompatibilitySingletonFactory.getInstance(MetricsWALSource.class));
   }
 
-  @VisibleForTesting
   MetricsWAL(MetricsWALSource s) {
     this.source = s;
   }

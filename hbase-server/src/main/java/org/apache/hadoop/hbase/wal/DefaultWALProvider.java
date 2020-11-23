@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -158,7 +157,6 @@ public class DefaultWALProvider implements WALProvider {
   // should be package private; more visible for use in FSHLog
   public static final String WAL_FILE_NAME_DELIMITER = ".";
   /** The hbase:meta region's WAL filename extension */
-  @VisibleForTesting
   public static final String META_WAL_PROVIDER_ID = ".meta";
   static final String DEFAULT_PROVIDER_ID = "default";
 
@@ -189,7 +187,6 @@ public class DefaultWALProvider implements WALProvider {
   /**
    * returns the number of rolled WAL files.
    */
-  @VisibleForTesting
   public static int getNumRolledLogFiles(WAL wal) {
     return ((FSHLog)wal).getNumRolledLogFiles();
   }
@@ -197,7 +194,6 @@ public class DefaultWALProvider implements WALProvider {
   /**
    * return the current filename from the current wal.
    */
-  @VisibleForTesting
   public static Path getCurrentFileName(final WAL wal) {
     return ((FSHLog)wal).getCurrentFileName();
   }
@@ -205,7 +201,6 @@ public class DefaultWALProvider implements WALProvider {
   /**
    * request a log roll, but don't actually do it.
    */
-  @VisibleForTesting
   static void requestLogRoll(final WAL wal) {
     ((FSHLog)wal).requestLogRoll();
   }
@@ -217,7 +212,6 @@ public class DefaultWALProvider implements WALProvider {
    * @param wal must not be null
    * @return the file number that is part of the WAL file name
    */
-  @VisibleForTesting
   public static long extractFileNumFromWAL(final WAL wal) {
     final Path walName = ((FSHLog)wal).getCurrentFileName();
     if (walName == null) {

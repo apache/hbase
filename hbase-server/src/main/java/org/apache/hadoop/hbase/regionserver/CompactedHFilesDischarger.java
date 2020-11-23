@@ -27,8 +27,6 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.EventType;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * A chore service that periodically cleans up the compacted files when there are no active readers
  * using those compacted files and also helps in clearing the block cache with these compacted
@@ -39,7 +37,6 @@ public class CompactedHFilesDischarger extends ScheduledChore {
   private static final Log LOG = LogFactory.getLog(CompactedHFilesDischarger.class);
   private RegionServerServices regionServerServices;
   // Default is to use executor
-  @VisibleForTesting
   private boolean useExecutor = true;
 
   /**
@@ -60,7 +57,6 @@ public class CompactedHFilesDischarger extends ScheduledChore {
    * @param regionServerServices the region server that starts this chore
    * @param useExecutor true if to use the region server's executor service, false otherwise
    */
-  @VisibleForTesting
   public CompactedHFilesDischarger(final int period, final Stoppable stopper,
       final RegionServerServices regionServerServices, boolean useExecutor) {
     // Need to add the config classes

@@ -28,17 +28,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Wrapper for input stream(s) that takes care of the interaction of FS and HBase checksums,
  * as well as closing streams. Initialization is not thread-safe, but normal operation is;
  * see method comments.
  */
+@InterfaceAudience.Private
 public class FSDataInputStreamWrapper {
   private static final Log LOG = LogFactory.getLog(FSDataInputStreamWrapper.class);
   private static final boolean isLogTraceEnabled = LOG.isTraceEnabled();
@@ -160,13 +159,11 @@ public class FSDataInputStreamWrapper {
   }
 
   /** For use in tests. */
-  @VisibleForTesting
   public FSDataInputStreamWrapper(FSDataInputStream fsdis) {
     this(fsdis, fsdis);
   }
 
   /** For use in tests. */
-  @VisibleForTesting
   public FSDataInputStreamWrapper(FSDataInputStream fsdis, FSDataInputStream noChecksum) {
     doCloseStreams = false;
     stream = fsdis;

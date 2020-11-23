@@ -26,14 +26,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Immutable information for scans over a store.
  */
 // Has to be public for PartitionedMobCompactor to access; ditto on tests making use of a few of
 // the accessors below. Shutdown access. TODO
-@VisibleForTesting
 @InterfaceAudience.Private
 public class ScanInfo {
   private byte[] family;

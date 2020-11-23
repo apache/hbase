@@ -65,8 +65,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Distributes the task of log splitting to the available region servers.
  * Coordination happens via coordination engine. For every log file that has to be split a
@@ -176,7 +174,6 @@ public class SplitLogManager {
    * {@link org.apache.hadoop.hbase.wal.WALSplitter#split(Path, Path, Path, FileSystem,
    *     Configuration, WALFactory)} for tests.
    */
-  @VisibleForTesting
   public static FileStatus[] getFileList(final Configuration conf, final List<Path> logDirs,
       final PathFilter filter)
       throws IOException {
@@ -378,7 +375,6 @@ public class SplitLogManager {
     }
   }
 
-  @VisibleForTesting
   ConcurrentMap<String, Task> getTasks() {
     return tasks;
   }

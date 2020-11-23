@@ -118,7 +118,6 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.LinkedHashMultimap;
 
 /**
@@ -403,7 +402,6 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Used in some tests to mock up region state in meta
    */
-  @VisibleForTesting
   RegionStateStore getRegionStateStore() {
     return regionStateStore;
   }
@@ -1708,7 +1706,6 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Use care with forceNewPlan. It could cause double assignment.
    */
-  @VisibleForTesting
   public void assign(HRegionInfo region,
       boolean setOfflineInZK, boolean forceNewPlan) {
     if (isDisabledorDisablingRegionInRIT(region)) {
@@ -4798,7 +4795,6 @@ public class AssignmentManager extends ZooKeeperListener {
   /*
    * This is only used for unit-testing split failures.
    */
-  @VisibleForTesting
   public static void setTestSkipSplitHandling(boolean skipSplitHandling) {
     TEST_SKIP_SPLIT_HANDLING = skipSplitHandling;
   }
@@ -4806,7 +4802,6 @@ public class AssignmentManager extends ZooKeeperListener {
   /*
    * This is only used for unit-testing merge failures.
    */
-  @VisibleForTesting
   public static void setTestSkipMergeHandling(boolean skipMergeHandling) {
     TEST_SKIP_MERGE_HANDLING = skipMergeHandling;
   }

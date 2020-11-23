@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -199,7 +198,6 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
     setStub(getConnection().getClient(this.location.getServerName()));
   }
 
-  @VisibleForTesting
   ServerName getServerName() {
     return location.getServerName();
   }

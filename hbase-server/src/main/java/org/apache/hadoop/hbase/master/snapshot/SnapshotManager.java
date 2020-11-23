@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
-
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -185,7 +183,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @param coordinator procedure coordinator instance.  exposed for testing.
    * @param pool HBase ExecutorServcie instance, exposed for testing.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   SnapshotManager(final MasterServices master, ProcedureCoordinator coordinator,
       ExecutorService pool, int sentinelCleanInterval)
       throws IOException, UnsupportedOperationException {

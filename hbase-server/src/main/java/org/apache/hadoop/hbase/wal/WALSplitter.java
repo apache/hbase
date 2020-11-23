@@ -123,7 +123,6 @@ import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.io.MultipleIOException;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.TextFormat;
 
 /**
@@ -189,7 +188,6 @@ public class WALSplitter {
 
   public final static String SPLIT_WRITER_CREATION_BOUNDED = "hbase.split.writer.creation.bounded";
 
-  @VisibleForTesting
   WALSplitter(final WALFactory factory, Configuration conf, Path walDir, FileSystem walFS,
       Path rootDir, FileSystem rootFS, LastSequenceId idChecker, CoordinatedStateManager csm,
       RecoveryMode mode) {
@@ -292,7 +290,6 @@ public class WALSplitter {
    * log splitting implementation, splits one log file.
    * @param logfile should be an actual log file.
    */
-  @VisibleForTesting
   boolean splitLogFile(FileStatus logfile, CancelableProgressable reporter) throws IOException {
     Preconditions.checkState(status == null);
     Preconditions.checkArgument(logfile.isFile(),
@@ -580,7 +577,6 @@ public class WALSplitter {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  @VisibleForTesting
   static Path getRegionSplitEditsPath(final Entry logEntry, String fileNameBeingSplit,
       String tmpDirName, Configuration conf) throws IOException {
     FileSystem walFS = FSUtils.getWALFileSystem(conf);
@@ -632,7 +628,6 @@ public class WALSplitter {
     return new Path(srcPath.getParent(), fileName);
   }
 
-  @VisibleForTesting
   static String formatRecoveredEditsFileName(final long seqid) {
     return String.format("%019d", seqid);
   }
@@ -727,7 +722,6 @@ public class WALSplitter {
   /**
    * Is the given file a region open sequence id file.
    */
-  @VisibleForTesting
   public static boolean isSequenceIdFile(final Path file) {
     return file.getName().endsWith(SEQUENCE_ID_FILE_SUFFIX)
         || file.getName().endsWith(OLD_SEQUENCE_ID_FILE_SUFFIX);

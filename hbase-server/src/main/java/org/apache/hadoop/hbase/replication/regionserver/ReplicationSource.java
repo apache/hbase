@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.Service;
@@ -440,7 +439,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   }
 
   @Override
-  @VisibleForTesting
   public Path getCurrentPath() {
     for (ReplicationSourceShipperThread worker : workerThreads.values()) {
       if (worker.getCurrentPath() != null) return worker.getCurrentPath();
@@ -448,7 +446,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     return null;
   }
 
-  @VisibleForTesting
   public Path getLastLoggedPath() {
     for (ReplicationSourceShipperThread worker : workerThreads.values()) {
       return worker.getLastLoggedPath();
@@ -456,7 +453,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     return null;
   }
 
-  @VisibleForTesting
   public long getLastLoggedPosition() {
     for (ReplicationSourceShipperThread worker : workerThreads.values()) {
       return worker.getLastLoggedPosition();

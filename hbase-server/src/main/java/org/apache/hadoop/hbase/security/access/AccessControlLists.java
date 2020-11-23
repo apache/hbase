@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -511,7 +510,6 @@ public class AccessControlLists {
     return getPermissions(conf, tableName != null ? tableName.getName() : null, null);
   }
 
-  @VisibleForTesting
   public static ListMultimap<String, TablePermission> getNamespacePermissions(Configuration conf,
         String namespace) throws IOException {
     return getPermissions(conf, Bytes.toBytes(toNamespaceEntry(namespace)), null);

@@ -27,7 +27,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -160,7 +159,7 @@ public class MajorCompactor extends Configured implements Tool {
     LOG.info("All regions major compacted successfully");
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   void initializeWorkQueues() throws IOException {
     if (storesToCompact.isEmpty()) {
       for (HColumnDescriptor a : connection.getTable(tableName).getTableDescriptor()

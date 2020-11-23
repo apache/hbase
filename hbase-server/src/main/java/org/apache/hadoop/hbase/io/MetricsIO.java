@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.io;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServerSourceFactory;
-import com.google.common.annotations.VisibleForTesting;
 
 public class MetricsIO {
 
@@ -37,12 +37,12 @@ public class MetricsIO {
     this.wrapper = wrapper;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public MetricsIOSource getMetricsSource() {
     return source;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public MetricsIOWrapper getWrapper() {
     return wrapper;
   }

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.util.Map;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -77,7 +76,6 @@ public class ExecutorStatusChore extends ScheduledChore {
     }
   }
 
-  @VisibleForTesting
   public Pair<Long, Long> getExecutorStatus(String poolName) {
     MutableGaugeLong running = metricsRegistry.getGauge(poolName + "_running", 0L);
     MutableGaugeLong queued = metricsRegistry.getGauge(poolName + "_queued", 0L);

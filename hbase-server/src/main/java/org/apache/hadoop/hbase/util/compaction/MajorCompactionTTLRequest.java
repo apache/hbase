@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.util.compaction;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import java.io.IOException;
@@ -54,7 +53,6 @@ public class MajorCompactionTTLRequest extends MajorCompactionRequest {
     return request.createRequest(conf, htd);
   }
 
-  @VisibleForTesting
   private Optional<MajorCompactionRequest> createRequest(Configuration conf, HTableDescriptor htd)
       throws IOException {
     Map<String, Long> familiesToCompact = getStoresRequiringCompaction(htd);

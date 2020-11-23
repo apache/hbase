@@ -23,11 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
@@ -167,7 +167,7 @@ public class ReplicationSinkManager {
     return sinks.size();
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected List<ServerName> getSinksForTesting() {
     return Collections.unmodifiableList(sinks);
   }

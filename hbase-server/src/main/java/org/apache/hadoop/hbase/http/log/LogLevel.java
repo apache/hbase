@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.http.log;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 
 import java.io.BufferedReader;
@@ -89,7 +88,7 @@ public class LogLevel {
     return ((protocol.equals(PROTOCOL_HTTP) || protocol.equals(PROTOCOL_HTTPS)));
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class CLI extends Configured implements Tool {
     private Operations operation = Operations.UNKNOWN;
     private String protocol;

@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Pair;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * An implementation of {@link RegionLocator}. Used to view region location information for a single
  * HBase table. Lightweight. Get as needed and just close when done. Instances of this class SHOULD
@@ -117,7 +115,6 @@ public class HRegionLocator implements RegionLocator {
     return getStartEndKeys(listRegionLocations());
   }
 
-  @VisibleForTesting
   Pair<byte[][], byte[][]> getStartEndKeys(List<RegionLocations> regions) {
     final byte[][] startKeyList = new byte[regions.size()][];
     final byte[][] endKeyList = new byte[regions.size()][];
@@ -136,7 +133,6 @@ public class HRegionLocator implements RegionLocator {
     return this.tableName;
   }
 
-  @VisibleForTesting
   List<RegionLocations> listRegionLocations() throws IOException {
     return MetaScanner.listTableRegionLocations(getConfiguration(), this.connection, getName());
   }

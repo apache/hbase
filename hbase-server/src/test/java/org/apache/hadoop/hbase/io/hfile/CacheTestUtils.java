@@ -36,12 +36,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.util.ChecksumType;
-
-import com.google.common.annotations.VisibleForTesting;
 
 public class CacheTestUtils {
 
@@ -378,7 +377,7 @@ public class CacheTestUtils {
     return returnedBlocks;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static class HFileBlockPair {
     BlockCacheKey blockName;
     HFileBlock block;

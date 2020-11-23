@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
 import com.google.common.base.Objects.ToStringHelper;
 
@@ -253,7 +252,6 @@ public class MultiVersionConcurrencyControl {
     }
   }
 
-  @VisibleForTesting
   @Override
   public String toString() {
     ToStringHelper helper = Objects.toStringHelper(this).add("readPoint", readPoint)
@@ -268,7 +266,6 @@ public class MultiVersionConcurrencyControl {
     return readPoint.get();
   }
 
-  @VisibleForTesting
   public long getWritePoint() {
     return writePoint.get();
   }

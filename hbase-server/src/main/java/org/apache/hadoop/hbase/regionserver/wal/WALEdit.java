@@ -45,9 +45,6 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.Writable;
 
-import com.google.common.annotations.VisibleForTesting;
-
-
 /**
  * WALEdit: Used in HBase's transaction log (WAL) to represent
  * the collection of edits (KeyValue objects) corresponding to a
@@ -89,15 +86,15 @@ public class WALEdit implements Writable, HeapSize {
 
   // TODO: Get rid of this; see HBASE-8457
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static final byte [] METAROW = Bytes.toBytes("METAROW");
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static final byte[] COMPACTION = Bytes.toBytes("HBASE::COMPACTION");
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static final byte [] FLUSH = Bytes.toBytes("HBASE::FLUSH");
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static final byte [] REGION_EVENT = Bytes.toBytes("HBASE::REGION_EVENT");
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static final byte [] BULK_LOAD = Bytes.toBytes("HBASE::BULK_LOAD");
 
   private final int VERSION_2 = -1;

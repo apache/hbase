@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -224,12 +223,10 @@ public class HeapMemStoreLAB implements MemStoreLAB {
     }
   }
 
-  @VisibleForTesting
   Chunk getCurrentChunk() {
     return this.curChunk.get();
   }
 
-  @VisibleForTesting
   BlockingQueue<Chunk> getChunkQueue() {
     return this.chunkQueue;
   }
@@ -340,7 +337,6 @@ public class HeapMemStoreLAB implements MemStoreLAB {
         (data.length - nextFreeOffset.get());
     }
 
-    @VisibleForTesting
     int getNextFreeOffset() {
       return this.nextFreeOffset.get();
     }

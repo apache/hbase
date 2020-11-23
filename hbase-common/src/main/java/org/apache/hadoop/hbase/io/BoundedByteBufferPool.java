@@ -27,8 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.BoundedArrayQueue;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Like Hadoops' ByteBufferPool only you do not specify desired size when getting a ByteBuffer.
  * This pool keeps an upper bound on the count of ByteBuffers in the pool and on the maximum size
@@ -50,14 +48,12 @@ import com.google.common.annotations.VisibleForTesting;
 public class BoundedByteBufferPool {
   private static final Log LOG = LogFactory.getLog(BoundedByteBufferPool.class);
 
-  @VisibleForTesting
   final Queue<ByteBuffer> buffers;
 
   // Maximum size of a ByteBuffer to retain in pool
   private final int maxByteBufferSizeToCache;
 
   // A running average only it only rises, it never recedes
-  @VisibleForTesting
   volatile int runningAverage;
 
   // Scratch that keeps rough total size of pooled bytebuffers

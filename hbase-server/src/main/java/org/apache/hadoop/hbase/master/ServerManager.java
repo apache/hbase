@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
@@ -472,7 +471,6 @@ public class ServerManager {
    * @param sl
    * @return Server load from the removed server, if any.
    */
-  @VisibleForTesting
   void recordNewServerWithLock(final ServerName serverName, final ServerLoad sl) {
     LOG.info("Registering server=" + serverName);
     this.onlineServers.put(serverName, sl);
@@ -655,7 +653,6 @@ public class ServerManager {
     }
   }
 
-  @VisibleForTesting
   public void moveFromOnlineToDeadServers(final ServerName sn) {
     synchronized (onlineServers) {
       if (!this.onlineServers.containsKey(sn)) {
@@ -1312,7 +1309,6 @@ public class ServerManager {
     flushedSequenceIdByRegion.remove(encodedName);
   }
 
-  @VisibleForTesting
   public boolean isRegionInServerManagerStates(final HRegionInfo hri) {
     final byte[] encodedName = hri.getEncodedNameAsBytes();
     return (storeFlushedSequenceIdsByRegion.containsKey(encodedName)

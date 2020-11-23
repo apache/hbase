@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
@@ -105,7 +104,7 @@ public abstract class FSUtils extends CommonFSUtils {
   private static final int DEFAULT_THREAD_POOLSIZE = 2;
 
   /** Set to true on Windows platforms */
-  @VisibleForTesting // currently only used in testing. TODO refactor into a test class
+  // currently only used in testing. TODO refactor into a test class
   public static final boolean WINDOWS = System.getProperty("os.name").startsWith("Windows");
 
   protected FSUtils() {

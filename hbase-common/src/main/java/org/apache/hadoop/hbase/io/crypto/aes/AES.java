@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.io.crypto.Context;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -156,7 +155,6 @@ public class AES extends Cipher {
     return d.createDecryptionStream(in);
   }
 
-  @VisibleForTesting
   SecureRandom getRNG() {
     return rng;
   }

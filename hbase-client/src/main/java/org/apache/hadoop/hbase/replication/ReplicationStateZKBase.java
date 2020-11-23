@@ -30,9 +30,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
-
-
 /**
  * This is a base class for maintaining replication state in zookeeper.
  */
@@ -131,17 +128,14 @@ public abstract class ReplicationStateZKBase {
     return path.split("/").length == peersZNode.split("/").length + 1;
   }
 
-  @VisibleForTesting
   protected String getTableCFsNode(String id) {
     return ZKUtil.joinZNode(this.peersZNode, ZKUtil.joinZNode(id, this.tableCFsNodeName));
   }
 
-  @VisibleForTesting
   protected String getPeerStateNode(String id) {
     return ZKUtil.joinZNode(this.peersZNode, ZKUtil.joinZNode(id, this.peerStateNodeName));
   }
 
-  @VisibleForTesting
   protected String getPeerNode(String id) {
     return ZKUtil.joinZNode(this.peersZNode, id);
   }

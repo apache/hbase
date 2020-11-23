@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.regionserver.SequenceId;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 
 // imports for things that haven't moved from regionserver.wal yet.
@@ -189,7 +188,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
         new ArrayList<UUID>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, null);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public WALKey(final byte[] encodedRegionName, final TableName tablename,
                 long logSeqNum,
       final long now, UUID clusterId) {

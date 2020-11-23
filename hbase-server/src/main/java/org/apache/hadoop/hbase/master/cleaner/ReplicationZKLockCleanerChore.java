@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -40,7 +39,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
-
 /**
  * A cleaner that cleans replication locks on zk which is locked by dead region servers
  */
@@ -55,7 +53,6 @@ public class ReplicationZKLockCleanerChore extends ScheduledChore {
   // Wait some times before delete lock to prevent a session expired RS not dead fully.
   private static final long DEFAULT_TTL = 60 * 10 * 1000;//10 min
 
-  @VisibleForTesting
   public static final String TTL_CONFIG_KEY = "hbase.replication.zk.deadrs.lock.ttl";
 
   public ReplicationZKLockCleanerChore(Stoppable stopper, Abortable abortable, int period,

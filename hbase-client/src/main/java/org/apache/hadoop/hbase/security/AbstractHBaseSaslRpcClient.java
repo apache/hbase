@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.util.Map;
 
@@ -146,7 +144,6 @@ public abstract class AbstractHBaseSaslRpcClient {
     SaslUtil.safeDispose(saslClient);
   }
 
-  @VisibleForTesting
   static class SaslClientCallbackHandler implements CallbackHandler {
     private final String userName;
     private final char[] userPassword;

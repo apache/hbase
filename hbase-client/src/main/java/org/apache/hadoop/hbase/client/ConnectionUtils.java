@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -169,7 +167,6 @@ public class ConnectionUtils {
    * Setup the connection class, so that it will not depend on master being online. Used for testing
    * @param conf configuration to set
    */
-  @VisibleForTesting
   public static void setupMasterlessConnection(Configuration conf) {
     conf.set(HConnection.HBASE_CLIENT_CONNECTION_IMPL,
       MasterlessConnection.class.getName());

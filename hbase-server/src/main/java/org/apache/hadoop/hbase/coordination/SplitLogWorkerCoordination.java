@@ -30,8 +30,6 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Coordinated operations for {@link SplitLogWorker} and 
  * {@link org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler} Important
@@ -99,7 +97,6 @@ public interface SplitLogWorkerCoordination {
    * Used by unit tests to check how many tasks were processed
    * @return number of tasks
    */
-  @VisibleForTesting
   int getTaskReadySeq();
 
   /**

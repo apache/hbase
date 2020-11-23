@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.replication.master;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -143,7 +142,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public void setConf(Configuration conf, ZooKeeperWatcher zk) {
     super.setConf(conf);
     try {
@@ -156,7 +155,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public void setConf(Configuration conf, ZooKeeperWatcher zk, 
       ReplicationQueuesClient replicationQueuesClient) {
     super.setConf(conf);

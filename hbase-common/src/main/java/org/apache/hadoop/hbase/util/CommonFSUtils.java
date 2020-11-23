@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 
 import java.io.FileNotFoundException;
@@ -338,7 +337,6 @@ public abstract class CommonFSUtils {
     return p.makeQualified(fs);
   }
 
-  @VisibleForTesting
   public static void setWALRootDir(final Configuration c, final Path root) {
     c.set(HBASE_WAL_DIR, root.toString());
   }

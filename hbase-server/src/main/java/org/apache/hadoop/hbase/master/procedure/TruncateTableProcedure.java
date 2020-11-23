@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -287,7 +286,6 @@ public class TruncateTableProcedure
     }
   }
 
-  @VisibleForTesting
   HRegionInfo getFirstRegionInfo() {
     if (regions == null || regions.isEmpty()) {
       return null;

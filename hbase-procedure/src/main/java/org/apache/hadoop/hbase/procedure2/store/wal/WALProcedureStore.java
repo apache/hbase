@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -774,7 +772,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return (System.currentTimeMillis() - lastRollTs.get());
   }
 
-  @VisibleForTesting
   protected void periodicRollForTesting() throws IOException {
     lock.lock();
     try {
@@ -784,7 +781,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
-  @VisibleForTesting
   protected boolean rollWriterForTesting() throws IOException {
     lock.lock();
     try {

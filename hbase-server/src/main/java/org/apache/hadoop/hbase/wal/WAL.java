@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * A Write Ahead Log (WAL) provides service for reading, writing waledits. This interface provides
  * APIs for WAL users (such as RegionServer) to use the WAL (do append, sync, etc).
@@ -198,7 +196,6 @@ public interface WAL extends Closeable {
    * @deprecated Since version 1.2.0. Removing because not used and exposes subtle internal
    * workings. Use {@link #getEarliestMemstoreSeqNum(byte[], byte[])}
    */
-  @VisibleForTesting
   @Deprecated
   long getEarliestMemstoreSeqNum(byte[] encodedRegionName);
 

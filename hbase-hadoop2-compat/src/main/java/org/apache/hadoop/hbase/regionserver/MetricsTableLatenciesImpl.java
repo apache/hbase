@@ -26,8 +26,6 @@ import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Implementation of {@link MetricsTableLatencies} to track latencies for one table in a
  * RegionServer.
@@ -37,7 +35,6 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
 
   private final HashMap<TableName,TableHistograms> histogramsByTable = new HashMap<>();
 
-  @VisibleForTesting
   public static class TableHistograms {
     final MetricHistogram getTimeHisto;
     final MetricHistogram incrementTimeHisto;
@@ -115,7 +112,6 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
 
   }
 
-  @VisibleForTesting
   public static String qualifyMetricsName(TableName tableName, String metric) {
     StringBuilder sb = new StringBuilder();
     sb.append("Namespace_").append(tableName.getNamespaceAsString());
@@ -124,7 +120,6 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
     return sb.toString();
   }
 
-  @VisibleForTesting
   public TableHistograms getOrCreateTableHistogram(String tableName) {
     // TODO Java8's ConcurrentHashMap#computeIfAbsent would be stellar instead
     final TableName tn = TableName.valueOf(tableName);

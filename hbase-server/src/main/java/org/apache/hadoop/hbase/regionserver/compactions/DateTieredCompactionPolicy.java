@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
@@ -96,7 +95,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
    * Heuristics for guessing whether we need minor compaction.
    */
   @Override
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public boolean needsCompaction(final Collection<StoreFile> storeFiles,
       final List<StoreFile> filesCompacting) {
     ArrayList<StoreFile> candidates = new ArrayList<StoreFile>(storeFiles);

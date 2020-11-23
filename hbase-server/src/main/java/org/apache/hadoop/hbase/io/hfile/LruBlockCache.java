@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -579,12 +578,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     }
   }
 
-  @VisibleForTesting
   boolean isEvictionInProgress() {
     return evictionInProgress;
   }
 
-  @VisibleForTesting
   long getOverhead() {
     return overhead;
   }
@@ -1114,7 +1111,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   /** Clears the cache. Used in tests. */
-  @VisibleForTesting
   public void clearCache() {
     this.map.clear();
     this.elements.set(0);
@@ -1124,7 +1120,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * Used in testing. May be very inefficient.
    * @return the set of cached file names
    */
-  @VisibleForTesting
   SortedSet<String> getCachedFileNamesForTest() {
     SortedSet<String> fileNames = new TreeSet<String>();
     for (BlockCacheKey cacheKey : map.keySet()) {
@@ -1133,7 +1128,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     return fileNames;
   }
 
-  @VisibleForTesting
   Map<BlockType, Integer> getBlockTypeCountsForTest() {
     Map<BlockType, Integer> counts =
         new EnumMap<BlockType, Integer>(BlockType.class);
@@ -1145,7 +1139,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     return counts;
   }
 
-  @VisibleForTesting
   public Map<DataBlockEncoding, Integer> getEncodingCountsForTest() {
     Map<DataBlockEncoding, Integer> counts =
         new EnumMap<DataBlockEncoding, Integer>(DataBlockEncoding.class);
@@ -1163,7 +1156,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     victimHandler = handler;
   }
 
-  @VisibleForTesting
   Map<BlockCacheKey, LruCachedBlock> getMapForTests() {
     return map;
   }

@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.protobuf.ByteString;
@@ -1339,7 +1338,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws IOException if the specifier is not null,
    *    but failed to find the region
    */
-  @VisibleForTesting
   public Region getRegion(
       final RegionSpecifier regionSpecifier) throws IOException {
     ByteString value = regionSpecifier.getValue();
@@ -1357,12 +1355,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
-  @VisibleForTesting
   public PriorityFunction getPriority() {
     return priority;
   }
 
-  @VisibleForTesting
   public Configuration getConfiguration() {
     return regionServer.getConfiguration();
   }

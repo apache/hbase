@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.RemoteException;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -310,7 +309,6 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     }
   }
 
-  @VisibleForTesting
   int getChorePoolSize() {
     return pool.getSize();
   }

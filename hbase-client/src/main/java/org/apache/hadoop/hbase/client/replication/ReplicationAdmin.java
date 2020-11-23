@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeMap;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -53,7 +52,6 @@ import org.apache.hadoop.hbase.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 
 /**
@@ -223,7 +221,7 @@ public class ReplicationAdmin implements Closeable {
     return ReplicationSerDeHelper.parseTableCFsFromConfig(tableCFsConfig);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static String getTableCfsStr(Map<TableName, ? extends Collection<String>> tableCfs) {
     String tableCfsStr = null;
     if (tableCfs != null) {
@@ -608,12 +606,12 @@ public class ReplicationAdmin implements Closeable {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public void peerAdded(String id) throws ReplicationException {
     this.replicationPeers.peerAdded(id);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   List<ReplicationPeer> listReplicationPeers() {
     Map<String, ReplicationPeerConfig> peers = listPeerConfigs();
     if (peers == null || peers.size() <= 0) {

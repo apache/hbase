@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import org.apache.hadoop.hbase.security.User;
@@ -279,7 +278,6 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
     return 0;
   }
 
-  @VisibleForTesting
   void setRegionServer(final HRegionServer hrs) {
     this.rpcServices = hrs.getRSRpcServices();
   }

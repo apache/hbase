@@ -25,8 +25,8 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.InvalidProtocolBufferException;
+
 /**
  * Class represents table state on HDFS.
  */
@@ -50,7 +50,6 @@ public class TableDescriptor {
    * Creates TableDescriptor with Enabled table.
    * @param hTableDescriptor HTableDescriptor to use
    */
-  @VisibleForTesting
   public TableDescriptor(HTableDescriptor hTableDescriptor) {
     this(hTableDescriptor, TableState.State.ENABLED);
   }

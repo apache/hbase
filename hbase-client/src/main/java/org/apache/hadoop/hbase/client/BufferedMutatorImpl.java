@@ -16,7 +16,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.BufferedMutatorParams.UNSET;
-import com.google.common.annotations.VisibleForTesting;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -67,16 +66,13 @@ public class BufferedMutatorImpl implements BufferedMutator {
   protected ClusterConnection connection; // non-final so can be overridden in test
   private final TableName tableName;
   private volatile Configuration conf;
-  @VisibleForTesting
   final ConcurrentLinkedQueue<Mutation> writeAsyncBuffer = new ConcurrentLinkedQueue<Mutation>();
-  @VisibleForTesting
   AtomicLong currentWriteBufferSize = new AtomicLong(0);
 
   /**
    * Count the size of {@link BufferedMutatorImpl#writeAsyncBuffer}.
    * The {@link ConcurrentLinkedQueue#size()} is NOT a constant-time operation.
    */
-  @VisibleForTesting
   final AtomicInteger undealtMutationCount = new AtomicInteger(0);
   private long writeBufferSize;
   /**
@@ -96,7 +92,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
   private int writeRpcTimeout; // needed to pass in through AsyncProcess constructor
   private int operationTimeout;
 
-  @VisibleForTesting
   protected AsyncProcess ap; // non-final so can be overridden in test
 
   BufferedMutatorImpl(ClusterConnection conn, RpcRetryingCallerFactory rpcCallerFactory,
@@ -200,7 +195,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
     }
   }
 
-  @VisibleForTesting
   protected long getExecutedWriteBufferPeriodicFlushes() {
     return executedWriteBufferPeriodicFlushes.get();
   }
@@ -425,7 +419,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
     this.ap.setOperationTimeout(operationTimeout);
   }
 
-  @VisibleForTesting
   long getCurrentWriteBufferSize() {
     return currentWriteBufferSize.get();
   }
@@ -440,12 +433,10 @@ public class BufferedMutatorImpl implements BufferedMutator {
     return Arrays.asList(writeAsyncBuffer.toArray(new Row[0]));
   }
 
-  @VisibleForTesting
   QueueRowAccess createQueueRowAccess() {
     return new QueueRowAccess();
   }
 
-  @VisibleForTesting
   class QueueRowAccess implements RowAccess<Row>, Closeable {
     private int remainder = undealtMutationCount.getAndSet(0);
     private Mutation last = null;

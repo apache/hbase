@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -54,7 +55,6 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.T
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
@@ -1065,12 +1065,12 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     protected void setNumRegions(int numRegions) {
       this.numRegions = numRegions;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     protected void setNumMovedRegions(int numMovedRegions) {
       this.numMovedRegions = numMovedRegions;
     }

@@ -69,7 +69,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.WritableUtils;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -412,7 +411,7 @@ public class StoreFile {
     return bulkLoadedHFile || (metadataMap != null && metadataMap.containsKey(BULKLOAD_TIME_KEY));
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public boolean isCompactedAway() {
     if (this.reader != null) {
       return this.reader.isCompactedAway();
@@ -420,7 +419,7 @@ public class StoreFile {
     return true;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public int getRefCount() {
     return this.reader.refCount.get();
   }

@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.StealJobQueue;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -775,12 +774,10 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
     // No children to register
   }
 
-  @VisibleForTesting
   public ThroughputController getCompactionThroughputController() {
     return compactionThroughputController;
   }
 
-  @VisibleForTesting
   /**
    * Shutdown the long compaction thread pool.
    * Should only be used in unit test to prevent long compaction thread pool from stealing job

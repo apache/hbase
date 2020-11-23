@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemStoreLAB.Chunk;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -236,7 +235,6 @@ public class MemStoreChunkPool {
     return this.maxCount;
   }
 
-  @VisibleForTesting
   static void clearDisableFlag() {
     chunkPoolDisabled = false;
   }

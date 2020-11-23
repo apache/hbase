@@ -44,7 +44,6 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystemHelper;
 import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 
 /**
@@ -113,7 +112,6 @@ public class GlobalMetricRegistriesAdapter {
     return new GlobalMetricRegistriesAdapter();
   }
 
-  @VisibleForTesting
   public void stop() {
     stopped.set(true);
   }
@@ -185,7 +183,6 @@ public class GlobalMetricRegistriesAdapter {
    * Use reflection to unregister the Hadoop metric source, since MetricsSystem#unregisterSource()
    * is only available in Hadoop 2.6+ (HADOOP-10839)
    */
-  @VisibleForTesting
   protected void unregisterSource(MetricRegistryInfo info) {
     // unregisterSource is only available in Hadoop 2.6+ (HADOOP-10839). Don't unregister for now
     MetricsSystem metricsSystem = DefaultMetricsSystem.instance();
