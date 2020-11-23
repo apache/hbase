@@ -7047,6 +7047,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       isSuccessful = true;
+      //request compaction
+      familyWithFinalPath.keySet().forEach(family -> {
+        HStore store = getStore(family);
+        try {
+          if (this.rsServices != null && store.needsCompaction()) {
+            this.rsServices.getCompactionRequestor().requestCompaction(this, store,
+              "bulkload hfiles request compaction", Store.PRIORITY_USER + 1,
+              CompactionLifeCycleTracker.DUMMY, null);
+          }
+        } catch (IOException e) {
+          LOG.error("bulkload hfiles request compaction error ", e);
+        }
+      });
     } finally {
       if (wal != null && !storeFiles.isEmpty()) {
         // Write a bulk load event for hfiles that are loaded
@@ -7786,20 +7799,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   // Utility methods
   /**
-   * A utility method to create new instances of HRegion based on the
-   * {@link HConstants#REGION_IMPL} configuration property.
-   * @param tableDir qualified path of directory where region should be located,
-   * usually the table directory.
-   * @param wal The WAL is the outbound log for any updates to the HRegion
-   * The wal file is a logfile from the previous execution that's
-   * custom-computed for this HRegion. The HRegionServer computes and sorts the
-   * appropriate wal info for this HRegion. If there is a previous file
-   * (implying that the HRegion has been written-to before), then read it from
-   * the supplied path.
+   * A utility method to create new instances of HRegion based on the {@link HConstants#REGION_IMPL}
+   * configuration property.
+   * @param tableDir qualified path of directory where region should be located, usually the table
+   *          directory.
+   * @param wal The WAL is the outbound log for any updates to the HRegion The wal file is a logfile
+   *          from the previous execution that's custom-computed for this HRegion. The HRegionServer
+   *          computes and sorts the appropriate wal info for this HRegion. If there is a previous
+   *          file (implying that the HRegion has been written-to before), then read it from the
+   *          supplied path.
    * @param fs is the filesystem.
    * @param conf is global configuration settings.
-   * @param regionInfo - RegionInfo that describes the region
-   * is new), then read them from the supplied path.
+   * @param regionInfo - RegionInfo that describes the region is new), then read them from the
+   *          supplied path.
    * @param htd the table descriptor
    * @return the new instance
    */
@@ -7825,7 +7837,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Convenience method creating new HRegions. Used by createTable.
-   *
    * @param info Info for region to create.
    * @param rootDir Root directory for HBase instance
    * @param wal shared WAL
@@ -7833,14 +7844,30 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return new HRegion
    */
   public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
-    final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
-    final boolean initialize) throws IOException {
-    LOG.info("creating " + info + ", tableDescriptor=" +
-      (hTableDescriptor == null ? "null" : hTableDescriptor) + ", regionDir=" + rootDir);
+      final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
+      final boolean initialize) throws IOException {
+    return createHRegion(info, rootDir, conf, hTableDescriptor, wal, initialize, null);
+  }
+
+  /**
+   * Convenience method creating new HRegions. Used by createTable.
+   * @param info Info for region to create.
+   * @param rootDir Root directory for HBase instance
+   * @param wal shared WAL
+   * @param initialize - true to initialize the region
+   * @param rsRpcServices An interface we can request flushes against.
+   * @return new HRegion
+   */
+  public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
+      final Configuration conf, final TableDescriptor hTableDescriptor, final WAL wal,
+      final boolean initialize, RegionServerServices rsRpcServices) throws IOException {
+    LOG.info("creating " + info + ", tableDescriptor="
+        + (hTableDescriptor == null ? "null" : hTableDescriptor) + ", regionDir=" + rootDir);
     createRegionDir(conf, info, rootDir);
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, info.getTable());
-    HRegion region = HRegion.newHRegion(tableDir, wal, fs, conf, info, hTableDescriptor, null);
+    HRegion region =
+        HRegion.newHRegion(tableDir, wal, fs, conf, info, hTableDescriptor, rsRpcServices);
     if (initialize) {
       region.initialize(null);
     }
