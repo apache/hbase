@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -27,6 +28,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
@@ -290,5 +292,15 @@ public class TestTableDescriptorBuilder {
       "'testStringCustomizedValues', " +
         "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
       htd.toStringCustomizedValues());
+  }
+
+  @Test
+  public void testGetSetRegionServerGroup() {
+    String groupName = name.getMethodName();
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+        .setRegionServerGroup(groupName).build();
+    assertEquals(htd.getValue(RSGroupInfo.TABLE_DESC_PROP_GROUP), groupName);
+    htd = TableDescriptorBuilder.newBuilder(htd).setRegionServerGroup(null).build();
+    assertNull(htd.getValue(RSGroupInfo.TABLE_DESC_PROP_GROUP));
   }
 }
