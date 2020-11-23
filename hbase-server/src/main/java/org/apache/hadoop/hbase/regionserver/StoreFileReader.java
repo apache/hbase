@@ -54,7 +54,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Reader for a StoreFile.
@@ -115,7 +114,7 @@ public class StoreFileReader {
   /**
    * ONLY USE DEFAULT CONSTRUCTOR FOR UNIT TESTS
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   StoreFileReader() {
     this.refCount = new AtomicInteger(0);
     this.reader = null;

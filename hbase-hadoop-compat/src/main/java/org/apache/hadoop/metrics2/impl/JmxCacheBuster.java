@@ -30,8 +30,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * JMX caches the beans that have been exported; even after the values are removed from hadoop's
  * metrics system the keys and old values will still remain.  This class stops and restarts the
@@ -75,7 +73,6 @@ public final class JmxCacheBuster {
    * Stops the clearing of JMX metrics and restarting the Hadoop metrics system. This is needed for
    * some test environments where we manually inject sources or sinks dynamically.
    */
-  @VisibleForTesting
   public static void stop() {
     stopped.set(true);
     ScheduledFuture future = fut.get();
@@ -86,7 +83,6 @@ public final class JmxCacheBuster {
    * Restarts the stopped service.
    * @see #stop()
    */
-  @VisibleForTesting
   public static void restart() {
     stopped.set(false);
   }

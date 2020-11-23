@@ -62,12 +62,10 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint}
@@ -263,7 +261,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   /**
    * Check if there's an {@link TableNotFoundException} in the caused by stacktrace.
    */
-  @VisibleForTesting
   public static boolean isTableNotFoundException(Throwable io) {
     if (io instanceof RemoteException) {
       io = ((RemoteException) io).unwrapRemoteException();
@@ -282,7 +279,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   /**
    * Check if there's an {@link NoSuchColumnFamilyException} in the caused by stacktrace.
    */
-  @VisibleForTesting
   public static boolean isNoSuchColumnFamilyException(Throwable io) {
     if (io instanceof RemoteException) {
       io = ((RemoteException) io).unwrapRemoteException();
@@ -298,7 +294,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return false;
   }
 
-  @VisibleForTesting
   List<List<Entry>> filterNotExistTableEdits(final List<List<Entry>> oldEntryList) {
     List<List<Entry>> entryList = new ArrayList<>();
     Map<TableName, Boolean> existMap = new HashMap<>();
@@ -342,7 +337,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return entryList;
   }
 
-  @VisibleForTesting
   List<List<Entry>> filterNotExistColumnFamilyEdits(final List<List<Entry>> oldEntryList) {
     List<List<Entry>> entryList = new ArrayList<>();
     Map<TableName, Set<String>> existColumnFamilyMap = new HashMap<>();
@@ -556,7 +550,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     notifyStopped();
   }
 
-  @VisibleForTesting
   protected int replicateEntries(List<Entry> entries, int batchIndex, int timeout)
       throws IOException {
     SinkPeer sinkPeer = null;
@@ -612,7 +605,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return batchIndex;
   }
 
-  @VisibleForTesting
   protected Callable<Integer> createReplicator(List<Entry> entries, int batchIndex, int timeout) {
     return isSerial ? () -> serialReplicateRegionEntries(entries, batchIndex, timeout)
         : () -> replicateEntries(entries, batchIndex, timeout);

@@ -28,11 +28,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * LossyCounting utility, bounded data structure that maintains approximate high frequency
@@ -115,7 +114,6 @@ public class LossyCounting<T> {
   /**
    * sweep low frequency data
    */
-  @VisibleForTesting
   public void sweep() {
     for(Map.Entry<T, Integer> entry : data.entrySet()) {
       if(entry.getValue() < currentTerm) {
@@ -168,7 +166,7 @@ public class LossyCounting<T> {
     }
   }
 
-  @VisibleForTesting public Future<?> getSweepFuture() {
+  public Future<?> getSweepFuture() {
     return fut.get();
   }
 }

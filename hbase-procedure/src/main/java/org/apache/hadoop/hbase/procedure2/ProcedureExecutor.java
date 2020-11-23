@@ -48,19 +48,16 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureStoreListener;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
  * Thread Pool that executes the submitted procedures.
@@ -639,7 +636,6 @@ public class ProcedureExecutor<TEnvironment> {
     workerMonitorExecutor.sendStopSignal();
   }
 
-  @VisibleForTesting
   public void join() {
     assert !isRunning() : "expected not running";
 
@@ -1332,12 +1328,10 @@ public class ProcedureExecutor<TEnvironment> {
     return procId;
   }
 
-  @VisibleForTesting
   protected long getLastProcId() {
     return lastProcId.get();
   }
 
-  @VisibleForTesting
   public Set<Long> getActiveProcIds() {
     return procedures.keySet();
   }
@@ -1932,17 +1926,14 @@ public class ProcedureExecutor<TEnvironment> {
     return rollbackStack.get(rootProcId);
   }
 
-  @VisibleForTesting
   ProcedureScheduler getProcedureScheduler() {
     return scheduler;
   }
 
-  @VisibleForTesting
   int getCompletedSize() {
     return completed.size();
   }
 
-  @VisibleForTesting
   public IdLock getProcExecutionLock() {
     return procExecutionLock;
   }

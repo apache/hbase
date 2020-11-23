@@ -34,7 +34,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
@@ -175,13 +174,11 @@ class AsyncRegionLocator {
     nonMetaRegionLocator.clearCache();
   }
 
-  @VisibleForTesting
   AsyncNonMetaRegionLocator getNonMetaRegionLocator() {
     return nonMetaRegionLocator;
   }
 
   // only used for testing whether we have cached the location for a region.
-  @VisibleForTesting
   RegionLocations getRegionLocationInCache(TableName tableName, byte[] row) {
     if (TableName.isMetaTableName(tableName)) {
       return metaRegionLocator.getRegionLocationInCache();
@@ -191,7 +188,6 @@ class AsyncRegionLocator {
   }
 
   // only used for testing whether we have cached the location for a table.
-  @VisibleForTesting
   int getNumberOfCachedRegionLocations(TableName tableName) {
     if (TableName.isMetaTableName(tableName)) {
       return metaRegionLocator.getNumberOfCachedRegionLocations();

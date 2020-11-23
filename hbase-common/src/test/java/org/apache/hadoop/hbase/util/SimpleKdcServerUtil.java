@@ -22,12 +22,11 @@ import java.net.BindException;
 import java.net.InetAddress;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.net.BoundSocketMaker;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.kerby.kerberos.kerb.KrbException;
 import org.apache.kerby.kerberos.kerb.server.SimpleKdcServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Utility for running {@link SimpleKdcServer}. Kerby KDC server is favored over Hadoop
@@ -58,7 +57,6 @@ public final class SimpleKdcServerUtil {
    * @return A running SimpleKdcServer on loopback/'localhost' on a random port
    * @see #getRunningSimpleKdcServer(File, Supplier)
    */
-  @VisibleForTesting
   static SimpleKdcServer getRunningSimpleKdcServer(File testDir,
       Supplier<Integer> randomPortGenerator, final boolean portClash)
         throws KrbException, IOException {

@@ -47,10 +47,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
@@ -64,6 +60,9 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class MajorCompactor extends Configured implements Tool {
@@ -156,7 +155,8 @@ public class MajorCompactor extends Configured implements Tool {
     LOG.info("All regions major compacted successfully");
   }
 
-  @VisibleForTesting void initializeWorkQueues() throws IOException {
+  @InterfaceAudience.Private
+  void initializeWorkQueues() throws IOException {
     if (storesToCompact.isEmpty()) {
       connection.getTable(tableName).getDescriptor().getColumnFamilyNames()
           .forEach(a -> storesToCompact.add(Bytes.toString(a)));

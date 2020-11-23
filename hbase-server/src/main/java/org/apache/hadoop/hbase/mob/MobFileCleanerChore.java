@@ -48,12 +48,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hbase.thirdparty.com.google.common.collect.SetMultimap;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.SetMultimap;
 
 /**
  * The class MobFileCleanerChore for running cleaner regularly to remove the expired
@@ -101,7 +99,6 @@ public class MobFileCleanerChore extends ScheduledChore {
     }
   }
 
-  @VisibleForTesting
   public MobFileCleanerChore() {
     this.master = null;
   }

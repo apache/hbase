@@ -32,13 +32,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
+import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 
 /**
  * A manager for filesystem space quotas in the RegionServer.
@@ -68,7 +65,6 @@ public class RegionServerSpaceQuotaManager {
     this(rsServices, SpaceViolationPolicyEnforcementFactory.getInstance());
   }
 
-  @VisibleForTesting
   RegionServerSpaceQuotaManager(
       RegionServerServices rsServices, SpaceViolationPolicyEnforcementFactory factory) {
     this.rsServices = Objects.requireNonNull(rsServices);

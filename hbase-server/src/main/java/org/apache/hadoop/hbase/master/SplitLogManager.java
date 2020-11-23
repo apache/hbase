@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Distributes the task of log splitting to the available region servers.
@@ -104,7 +103,6 @@ public class SplitLogManager {
   private long unassignedTimeout;
   private long lastTaskCreateTime = Long.MAX_VALUE;
 
-  @VisibleForTesting
   final ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<>();
   private TimeoutMonitor timeoutMonitor;
 
@@ -165,7 +163,6 @@ public class SplitLogManager {
    * {@link org.apache.hadoop.hbase.wal.WALSplitter#split(Path, Path, Path, FileSystem,
    *     Configuration, org.apache.hadoop.hbase.wal.WALFactory)} for tests.
    */
-  @VisibleForTesting
   public static FileStatus[] getFileList(final Configuration conf, final List<Path> logDirs,
       final PathFilter filter)
       throws IOException {
@@ -375,7 +372,6 @@ public class SplitLogManager {
     }
   }
 
-  @VisibleForTesting
   ConcurrentMap<String, Task> getTasks() {
     return tasks;
   }

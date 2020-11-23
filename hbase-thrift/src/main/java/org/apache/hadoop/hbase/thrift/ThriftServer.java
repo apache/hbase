@@ -127,11 +127,6 @@ import org.apache.thrift.transport.TSaslServerTransport;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportFactory;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -151,6 +146,9 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletContextHandl
 import org.apache.hbase.thirdparty.org.eclipse.jetty.servlet.ServletHolder;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ThriftServer- this class starts up a Thrift server which implements the
@@ -331,7 +329,7 @@ public class ThriftServer  extends Configured implements Tool {
    * the thrift server, not null means the server is started, for test only
    * @return the tServer
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public TServer getTserver() {
     return tserver;
   }
@@ -340,7 +338,7 @@ public class ThriftServer  extends Configured implements Tool {
    * the Jetty server, not null means the HTTP server is started, for test only
    * @return the http server
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public Server getHttpServer() {
     return httpServer;
   }

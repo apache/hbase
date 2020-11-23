@@ -39,7 +39,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 /**
  * This Chore, every time it runs, will clear the HFiles in the hfile archive
  * folder that are deletable for each HFile cleaner in the chain.
@@ -82,12 +81,10 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
 
   public static final String HFILE_DELETE_THREAD_TIMEOUT_MSEC =
       "hbase.regionserver.hfilecleaner.thread.timeout.msec";
-  @VisibleForTesting
   static final long DEFAULT_HFILE_DELETE_THREAD_TIMEOUT_MSEC = 60 * 1000L;
 
   public static final String HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC =
       "hbase.regionserver.hfilecleaner.thread.check.interval.msec";
-  @VisibleForTesting
   static final long DEFAULT_HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC = 1000L;
 
   private static final Logger LOG = LoggerFactory.getLogger(HFileCleaner.class);
@@ -383,42 +380,34 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
     }
   }
 
-  @VisibleForTesting
   public List<Thread> getCleanerThreads() {
     return threads;
   }
 
-  @VisibleForTesting
   public long getNumOfDeletedLargeFiles() {
     return deletedLargeFiles.get();
   }
 
-  @VisibleForTesting
   public long getNumOfDeletedSmallFiles() {
     return deletedSmallFiles.get();
   }
 
-  @VisibleForTesting
   public long getLargeQueueInitSize() {
     return largeQueueInitSize;
   }
 
-  @VisibleForTesting
   public long getSmallQueueInitSize() {
     return smallQueueInitSize;
   }
 
-  @VisibleForTesting
   public long getThrottlePoint() {
     return throttlePoint;
   }
 
-  @VisibleForTesting
   long getCleanerThreadTimeoutMsec() {
     return cleanerThreadTimeoutMsec;
   }
 
-  @VisibleForTesting
   long getCleanerThreadCheckIntervalMsec() {
     return cleanerThreadCheckIntervalMsec;
   }

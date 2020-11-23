@@ -50,15 +50,13 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Streams;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The special {@link WALProvider} for synchronous replication.
@@ -73,7 +71,6 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   private static final Logger LOG = LoggerFactory.getLogger(SyncReplicationWALProvider.class);
 
   // only for injecting errors for testcase, do not use it for other purpose.
-  @VisibleForTesting
   public static final String DUAL_WAL_IMPL = "hbase.wal.sync.impl";
 
   private final WALProvider provider;
@@ -347,7 +344,6 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
     }
   }
 
-  @VisibleForTesting
   WALProvider getWrappedProvider() {
     return provider;
   }

@@ -48,11 +48,10 @@ import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * File format for hbase.
@@ -459,10 +458,8 @@ public final class HFile {
 
     DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction);
 
-    @VisibleForTesting
     HFileBlock.FSReader getUncachedBlockReader();
 
-    @VisibleForTesting
     boolean prefetchComplete();
 
     /**

@@ -43,14 +43,12 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import sun.misc.Unsafe;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -127,7 +125,6 @@ public class Bytes implements Comparable<Bytes> {
   // SizeOf which uses java.lang.instrument says 24 bytes. (3 longs?)
   public static final int ESTIMATED_HEAP_TAX = 16;
 
-  @VisibleForTesting
   static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
 
   /**
@@ -1270,7 +1267,6 @@ public class Bytes implements Comparable<Bytes> {
 
   }
 
-  @VisibleForTesting
   static Comparer<byte[]> lexicographicalComparerJavaImpl() {
     return LexicographicalComparerHolder.PureJavaComparer.INSTANCE;
   }
@@ -1420,7 +1416,6 @@ public class Bytes implements Comparable<Bytes> {
    * <p>Uses reflection to gracefully fall back to the Java implementation if
    * {@code Unsafe} isn't available.
    */
-  @VisibleForTesting
   static class LexicographicalComparerHolder {
     static final String UNSAFE_COMPARER_NAME =
         LexicographicalComparerHolder.class.getName() + "$UnsafeComparer";
@@ -1470,7 +1465,6 @@ public class Bytes implements Comparable<Bytes> {
       }
     }
 
-    @VisibleForTesting
     enum UnsafeComparer implements Comparer<byte[]> {
       INSTANCE;
 

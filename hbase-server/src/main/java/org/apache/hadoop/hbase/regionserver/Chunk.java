@@ -20,11 +20,9 @@ package org.apache.hadoop.hbase.regionserver;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A chunk of memory out of which allocations are sliced.
@@ -176,7 +174,6 @@ public abstract class Chunk {
         + (data.capacity() - nextFreeOffset.get());
   }
 
-  @VisibleForTesting
   int getNextFreeOffset() {
     return this.nextFreeOffset.get();
   }

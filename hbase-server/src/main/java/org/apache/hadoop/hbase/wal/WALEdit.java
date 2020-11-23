@@ -31,17 +31,14 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used in HBase's transaction log (WAL) to represent a collection of edits (Cell/KeyValue objects)
@@ -93,14 +90,14 @@ public class WALEdit implements HeapSize {
    *   {@link #isCompactionMarker(Cell)}
    */
   @Deprecated
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static final byte[] COMPACTION = Bytes.toBytes("HBASE::COMPACTION");
 
   /**
    * @deprecated Since 2.3.0. Make it protected, internal-use only.
    */
   @Deprecated
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static final byte [] FLUSH = Bytes.toBytes("HBASE::FLUSH");
 
   /**
@@ -130,7 +127,7 @@ public class WALEdit implements HeapSize {
   private static final byte [] REGION_EVENT_CLOSE =
       createRegionEventDescriptorQualifier(RegionEventDescriptor.EventType.REGION_CLOSE);
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static final byte [] BULK_LOAD = Bytes.toBytes("HBASE::BULK_LOAD");
 
   private final transient boolean replay;
@@ -332,7 +329,7 @@ public class WALEdit implements HeapSize {
     return createRegionEventWALEdit(getRowForRegion(hri), regionEventDesc);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static WALEdit createRegionEventWALEdit(byte [] rowForRegion,
       RegionEventDescriptor regionEventDesc) {
     KeyValue kv = new KeyValue(rowForRegion, METAFAMILY,
@@ -345,7 +342,7 @@ public class WALEdit implements HeapSize {
    * @return Cell qualifier for the passed in RegionEventDescriptor Type; e.g. we'll
    *   return something like a byte array with HBASE::REGION_EVENT::REGION_OPEN in it.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static byte [] createRegionEventDescriptorQualifier(RegionEventDescriptor.EventType t) {
     return Bytes.toBytes(REGION_EVENT_PREFIX_STR + t.toString());
   }

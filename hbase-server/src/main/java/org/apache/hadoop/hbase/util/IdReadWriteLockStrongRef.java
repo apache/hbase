@@ -22,14 +22,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
 public class IdReadWriteLockStrongRef<T> extends IdReadWriteLock<T> {
 
   final ConcurrentHashMap<T, ReentrantReadWriteLock> map = new ConcurrentHashMap<>();
 
-  @VisibleForTesting
   @Override
   public ReentrantReadWriteLock getLock(T id) {
     ReentrantReadWriteLock existing = map.get(id);

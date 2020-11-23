@@ -32,14 +32,11 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerSyncReplicationStateTransitionState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TransitPeerSyncReplicationStateStateData;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerSyncReplicationStateTransitionState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TransitPeerSyncReplicationStateStateData;
 
 /**
  * The procedure for transit current sync replication state for a synchronous replication peer.
@@ -110,7 +107,6 @@ public class TransitPeerSyncReplicationStateProcedure
     return PeerSyncReplicationStateTransitionState.PRE_PEER_SYNC_REPLICATION_STATE_TRANSITION;
   }
 
-  @VisibleForTesting
   protected void preTransit(MasterProcedureEnv env) throws IOException {
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
@@ -144,14 +140,12 @@ public class TransitPeerSyncReplicationStateProcedure
     }
   }
 
-  @VisibleForTesting
   protected void reopenRegions(MasterProcedureEnv env) {
     addChildProcedure(
       env.getReplicationPeerManager().getPeerConfig(peerId).get().getTableCFsMap().keySet().stream()
         .map(ReopenTableRegionsProcedure::new).toArray(ReopenTableRegionsProcedure[]::new));
   }
 
-  @VisibleForTesting
   protected void createDirForRemoteWAL(MasterProcedureEnv env) throws IOException {
     MasterFileSystem mfs = env.getMasterFileSystem();
     Path remoteWALDir = new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME);
@@ -204,7 +198,6 @@ public class TransitPeerSyncReplicationStateProcedure
     addChildProcedure(new RecoverStandbyProcedure(peerId, serial));
   }
 
-  @VisibleForTesting
   protected void setPeerNewSyncReplicationState(MasterProcedureEnv env)
       throws ReplicationException {
     if (toState.equals(SyncReplicationState.STANDBY) ||
@@ -223,12 +216,10 @@ public class TransitPeerSyncReplicationStateProcedure
     env.getReplicationPeerManager().setPeerNewSyncReplicationState(peerId, toState);
   }
 
-  @VisibleForTesting
   protected void removeAllReplicationQueues(MasterProcedureEnv env) throws ReplicationException {
     env.getReplicationPeerManager().removeAllQueues(peerId);
   }
 
-  @VisibleForTesting
   protected void transitPeerSyncReplicationState(MasterProcedureEnv env)
       throws ReplicationException {
     env.getReplicationPeerManager().transitPeerSyncReplicationState(peerId, toState);
