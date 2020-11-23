@@ -75,6 +75,10 @@ public final class StartMiniClusterOption {
    * The class to use as HRegionServer, or null for default.
    */
   private Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass;
+  /**
+   * Number of replication servers to start up.
+   */
+  private final int numReplicationServers;
 
   /**
    * Number of datanodes. Used to create mini DSF cluster. Surpassed by {@link #dataNodeHosts} size.
@@ -109,7 +113,8 @@ public final class StartMiniClusterOption {
    */
   private StartMiniClusterOption(int numMasters, int numAlwaysStandByMasters,
       Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
-      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass, int numDataNodes,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass,
+      int numReplicationServers, int numDataNodes,
       String[] dataNodeHosts, int numZkServers, boolean createRootDir, boolean createWALDir) {
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
@@ -117,6 +122,7 @@ public final class StartMiniClusterOption {
     this.numRegionServers = numRegionServers;
     this.rsPorts = rsPorts;
     this.rsClass = rsClass;
+    this.numReplicationServers = numReplicationServers;
     this.numDataNodes = numDataNodes;
     this.dataNodeHosts = dataNodeHosts;
     this.numZkServers = numZkServers;
@@ -146,6 +152,10 @@ public final class StartMiniClusterOption {
 
   public Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> getRsClass() {
     return rsClass;
+  }
+
+  public int getNumReplicationServers() {
+    return numReplicationServers;
   }
 
   public int getNumDataNodes() {
@@ -196,6 +206,7 @@ public final class StartMiniClusterOption {
     private Class<? extends HMaster> masterClass = null;
     private int numRegionServers = 1;
     private List<Integer> rsPorts = null;
+    private int numReplicationServers;
     private Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass = null;
     private int numDataNodes = 1;
     private String[] dataNodeHosts = null;
@@ -210,9 +221,9 @@ public final class StartMiniClusterOption {
       if (dataNodeHosts != null && dataNodeHosts.length != 0) {
         numDataNodes = dataNodeHosts.length;
       }
-      return new StartMiniClusterOption(numMasters,numAlwaysStandByMasters, masterClass,
-          numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
-          createRootDir, createWALDir);
+      return new StartMiniClusterOption(numMasters, numAlwaysStandByMasters, masterClass,
+          numRegionServers, rsPorts, rsClass, numReplicationServers,
+          numDataNodes, dataNodeHosts, numZkServers, createRootDir, createWALDir);
     }
 
     public Builder numMasters(int numMasters) {
@@ -267,6 +278,11 @@ public final class StartMiniClusterOption {
 
     public Builder createWALDir(boolean createWALDir) {
       this.createWALDir = createWALDir;
+      return this;
+    }
+
+    public Builder numReplicationServers(int numReplicationServers) {
+      this.numReplicationServers = numReplicationServers;
       return this;
     }
   }

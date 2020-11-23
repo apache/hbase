@@ -32,9 +32,11 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.replication.HReplicationServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.ReplicationServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -60,7 +62,10 @@ import org.slf4j.LoggerFactory;
 public class LocalHBaseCluster {
   private static final Logger LOG = LoggerFactory.getLogger(LocalHBaseCluster.class);
   private final List<JVMClusterUtil.MasterThread> masterThreads = new CopyOnWriteArrayList<>();
-  private final List<JVMClusterUtil.RegionServerThread> regionThreads = new CopyOnWriteArrayList<>();
+  private final List<JVMClusterUtil.RegionServerThread> regionThreads =
+      new CopyOnWriteArrayList<>();
+  private final List<JVMClusterUtil.ReplicationServerThread> replicationThreads =
+      new CopyOnWriteArrayList<>();
   private final static int DEFAULT_NO = 1;
   /** local mode */
   public static final String LOCAL = "local";
@@ -259,6 +264,26 @@ public class LocalHBaseCluster {
         });
   }
 
+  @SuppressWarnings("unchecked")
+  public JVMClusterUtil.ReplicationServerThread addReplicationServer(
+      Configuration config, final int index) throws IOException {
+    // Create each replication server with its own Configuration instance so each has
+    // its Connection instance rather than share (see HBASE_INSTANCES down in
+    // the guts of ConnectionManager).
+    JVMClusterUtil.ReplicationServerThread rst =
+        JVMClusterUtil.createReplicationServerThread(config, index);
+    this.replicationThreads.add(rst);
+    return rst;
+  }
+
+  public JVMClusterUtil.ReplicationServerThread addReplicationServer(
+      final Configuration config, final int index, User user)
+      throws IOException, InterruptedException {
+    return user.runAs(
+        (PrivilegedExceptionAction<ReplicationServerThread>) () -> addReplicationServer(config,
+            index));
+  }
+
   /**
    * @param serverNumber
    * @return region server
@@ -285,6 +310,40 @@ public class LocalHBaseCluster {
     for (JVMClusterUtil.RegionServerThread rst: list) {
       if (rst.isAlive()) liveServers.add(rst);
       else LOG.info("Not alive " + rst.getName());
+    }
+    return liveServers;
+  }
+
+  /**
+   * @param serverNumber replication server number
+   * @return replication server
+   */
+  public HReplicationServer getReplicationServer(int serverNumber) {
+    return replicationThreads.get(serverNumber).getReplicationServer();
+  }
+
+  /**
+   * @return Read-only list of replication server threads.
+   */
+  public List<JVMClusterUtil.ReplicationServerThread> getReplicationServers() {
+    return Collections.unmodifiableList(this.replicationThreads);
+  }
+
+  /**
+   * @return List of running servers (Some servers may have been killed or
+   *   aborted during lifetime of cluster; these servers are not included in this
+   *   list).
+   */
+  public List<JVMClusterUtil.ReplicationServerThread> getLiveReplicationServers() {
+    List<JVMClusterUtil.ReplicationServerThread> liveServers = new ArrayList<>();
+    List<ReplicationServerThread> list = getReplicationServers();
+    for (JVMClusterUtil.ReplicationServerThread rst: list) {
+      if (rst.isAlive()) {
+        liveServers.add(rst);
+      }
+      else {
+        LOG.info("Not alive {}", rst.getName());
+      }
     }
     return liveServers;
   }
@@ -430,7 +489,7 @@ public class LocalHBaseCluster {
    * Start the cluster.
    */
   public void startup() throws IOException {
-    JVMClusterUtil.startup(this.masterThreads, this.regionThreads);
+    JVMClusterUtil.startup(this.masterThreads, this.regionThreads, this.replicationThreads);
   }
 
   /**
