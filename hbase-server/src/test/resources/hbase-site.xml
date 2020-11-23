@@ -90,6 +90,13 @@
     </description>
   </property>
   <property>
+    <name>hbase.replicationserver.port</name>
+    <value>0</value>
+    <description>Always have replicationservers come up on port '0' so we don't clash over
+      default ports.
+    </description>
+  </property>
+  <property>
     <name>hbase.ipc.client.fallback-to-simple-auth-allowed</name>
     <value>true</value>
   </property>
