@@ -61,6 +61,11 @@ do
     hosts=$1
     shift
     HBASE_REGIONSERVERS=$hosts
+  elif [ "--replication-hosts" = "$1" ]
+  then
+    shift
+    HBASE_REPLICATIONS_SERVERS=$1
+    shift
   elif [ "--auth-as-server" = "$1" ]
   then
     shift
@@ -108,6 +113,8 @@ done
 HBASE_CONF_DIR="${HBASE_CONF_DIR:-$HBASE_HOME/conf}"
 # List of hbase regions servers.
 HBASE_REGIONSERVERS="${HBASE_REGIONSERVERS:-$HBASE_CONF_DIR/regionservers}"
+# List of hbase replication servers.
+HBASE_REPLICATION_SERVERS="${HBASE_REPLICATION_SERVERS:-$HBASE_CONF_DIR/replicationservers}"
 # List of hbase secondary masters.
 HBASE_BACKUP_MASTERS="${HBASE_BACKUP_MASTERS:-$HBASE_CONF_DIR/backup-masters}"
 if [ -n "$HBASE_JMX_BASE" ] && [ -z "$HBASE_JMX_OPTS" ]; then

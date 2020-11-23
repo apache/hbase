@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -88,7 +89,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationServerStatus
  */
 @InterfaceAudience.Private
 @SuppressWarnings({ "deprecation"})
-public class HReplicationServer extends Thread implements Server, ReplicationSourceController  {
+public class HReplicationServer extends Thread implements Server, ReplicationSourceController {
 
   private static final Logger LOG = LoggerFactory.getLogger(HReplicationServer.class);
 
@@ -745,5 +746,14 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
     } catch (ReplicationException e) {
       abort("Failed to operate on replication queue", e);
     }
+  }
+
+  /**
+   * @see org.apache.hadoop.hbase.replication.HReplicationServerCommandLine
+   */
+  public static void main(String[] args) {
+    LOG.info("STARTING executorService {}", HReplicationServer.class.getSimpleName());
+    VersionInfo.logVersion();
+    new HReplicationServerCommandLine().doMain(args);
   }
 }

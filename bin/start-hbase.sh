@@ -51,6 +51,8 @@ fi
 
 # HBASE-6504 - only take the first line of the output in case verbose gc is on
 distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed | head -n 1`
+# HBASE-24666 replication offload
+replicationOffloadEnabled=$("$bin"/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBaseConfTool hbase.replication.offload.enabled | head -n 1)
 
 if [ "$distMode" == 'false' ]
 then
@@ -60,6 +62,11 @@ else
   "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" $commandToRun master
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
     --hosts "${HBASE_REGIONSERVERS}" $commandToRun regionserver
+  if [ "$replicationOffloadEnabled" == 'true' ]
+  then
+    "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
+      --hosts "${HBASE_REPLICATION_SERVERS}" $commandToRun replicationserver
+  fi
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
     --hosts "${HBASE_BACKUP_MASTERS}" $commandToRun master-backup
 fi

@@ -76,16 +76,17 @@ show_usage() {
   echo "                   Pass '-j /path/to/HBCK2.jar' to run hbase-2.x HBCK2."
   echo "  snapshot         Tool for managing snapshots"
   if [ "${in_omnibus_tarball}" = "true" ]; then
-    echo "  wal              Write-ahead-log analyzer"
-    echo "  hfile            Store file analyzer"
-    echo "  zkcli            Run the ZooKeeper shell"
-    echo "  master           Run an HBase HMaster node"
-    echo "  regionserver     Run an HBase HRegionServer node"
-    echo "  zookeeper        Run a ZooKeeper server"
-    echo "  rest             Run an HBase REST server"
-    echo "  thrift           Run the HBase Thrift server"
-    echo "  thrift2          Run the HBase Thrift2 server"
-    echo "  clean            Run the HBase clean up script"
+    echo "  wal                Write-ahead-log analyzer"
+    echo "  hfile              Store file analyzer"
+    echo "  zkcli              Run the ZooKeeper shell"
+    echo "  master             Run an HBase HMaster node"
+    echo "  regionserver       Run an HBase HRegionServer node"
+    echo "  replicationserver  Run an HBase HReplicationServer node"
+    echo "  zookeeper          Run a ZooKeeper server"
+    echo "  rest               Run an HBase REST server"
+    echo "  thrift             Run the HBase Thrift server"
+    echo "  thrift2            Run the HBase Thrift2 server"
+    echo "  clean              Run the HBase clean up script"
   fi
   echo "  classpath        Dump hbase CLASSPATH"
   echo "  mapredcp         Dump CLASSPATH entries required by mapreduce"
@@ -409,7 +410,7 @@ fi
 unset IFS
 
 #Set the right GC options based on the what we are running
-declare -a server_cmds=("master" "regionserver" "thrift" "thrift2" "rest" "avro" "zookeeper")
+declare -a server_cmds=("master" "regionserver" "replicationserver" "thrift" "thrift2" "rest" "avro" "zookeeper")
 for cmd in ${server_cmds[@]}; do
 	if [[ $cmd == $COMMAND ]]; then
 		server=true
@@ -612,6 +613,11 @@ elif [ "$COMMAND" = "regionserver" ] ; then
   CLASS='org.apache.hadoop.hbase.regionserver.HRegionServer'
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_REGIONSERVER_OPTS"
+  fi
+elif [ "$COMMAND" = "replicationserver" ] ; then
+  CLASS='org.apache.hadoop.hbase.replication.HReplicationServer'
+  if [ "$1" != "stop" ] ; then
+    HBASE_OPTS="$HBASE_OPTS $HBASE_REPLICATION_SERVER_OPTS"
   fi
 elif [ "$COMMAND" = "thrift" ] ; then
   CLASS='org.apache.hadoop.hbase.thrift.ThriftServer'
