@@ -234,6 +234,16 @@ public class CreateTableProcedure
     }
   }
 
+  @Override
+  protected boolean waitInitialized(MasterProcedureEnv env) {
+    if (getTableName().isSystemTable()) {
+      // Creating system table is part of the initialization, so only wait for meta loaded instead
+      // of waiting for master fully initialized.
+      return env.getAssignmentManager().waitMetaLoaded(this);
+    }
+    return super.waitInitialized(env);
+  }
+
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
     if (env.getMasterServices().getTableDescriptors().exists(tableName)) {

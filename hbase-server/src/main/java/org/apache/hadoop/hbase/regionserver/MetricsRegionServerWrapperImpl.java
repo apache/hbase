@@ -499,6 +499,11 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getRpcFullScanRequestsCount() {
+    return regionServer.rpcServices.rpcFullScanRequestCount.sum();
+  }
+
+  @Override
   public long getRpcMultiRequestsCount() {
     return regionServer.rpcServices.rpcMultiRequestCount.sum();
   }
