@@ -445,6 +445,19 @@ public class HReplicationServer extends Thread implements Server, ReplicationSou
     return this.stopped;
   }
 
+  public void waitForServerOnline(){
+    while (!isStopped() && !isOnline()) {
+      synchronized (online) {
+        try {
+          online.wait(msgInterval);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+    }
+  }
+
   /**
    * Setup WAL log and replication if enabled. Replication setup is done in here because it wants to
    * be hooked up to WAL.
