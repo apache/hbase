@@ -28,7 +28,7 @@ public class MetricsUserAggregateFactory {
   }
 
   public static final String METRIC_USER_ENABLED_CONF = "hbase.regionserver.user.metrics.enabled";
-  public static final boolean DEFAULT_METRIC_USER_ENABLED_CONF = true;
+  public static final boolean DEFAULT_METRIC_USER_ENABLED_CONF = false;
 
   public static MetricsUserAggregate getMetricsUserAggregate(Configuration conf) {
     if (conf.getBoolean(METRIC_USER_ENABLED_CONF, DEFAULT_METRIC_USER_ENABLED_CONF)) {

@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -35,7 +36,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,14 +57,15 @@ class DisabledWALProvider implements WALProvider {
   WAL disabled;
 
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
+      throws IOException {
     if (null != disabled) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
     if (null == providerId) {
       providerId = "defaultDisabled";
     }
-    disabled = new DisabledWAL(new Path(FSUtils.getWALRootDir(conf), providerId), conf, null);
+    disabled = new DisabledWAL(new Path(CommonFSUtils.getWALRootDir(conf), providerId), conf, null);
   }
 
   @Override
@@ -116,7 +118,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public byte[][] rollWriter() {
+    public Map<byte[], List<byte[]>> rollWriter() {
       if (!listeners.isEmpty()) {
         for (WALActionsListener listener : listeners) {
           listener.logRollRequested(WALActionsListener.RollRequestReason.ERROR);
@@ -140,7 +142,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public byte[][] rollWriter(boolean force) {
+    public Map<byte[], List<byte[]>> rollWriter(boolean force) {
       return rollWriter();
     }
 
@@ -225,7 +227,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public void completeCacheFlush(final byte[] encodedRegionName) {
+    public void completeCacheFlush(final byte[] encodedRegionName, long maxFlushedSeqId) {
     }
 
     @Override

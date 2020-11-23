@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -119,13 +120,11 @@ public class TestTags {
 
       byte[] row2 = Bytes.toBytes("rowc");
 
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-      familyDescriptor.setBlockCacheEnabled(true);
-      familyDescriptor.setDataBlockEncoding(DataBlockEncoding.NONE);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      TableDescriptor tableDescriptor =
+        TableDescriptorBuilder
+          .newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam)
+            .setBlockCacheEnabled(true).setDataBlockEncoding(DataBlockEncoding.NONE).build())
+          .build();
       Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(tableDescriptor);
       byte[] value = Bytes.toBytes("value");
@@ -186,12 +185,11 @@ public class TestTags {
 
       byte[] row2 = Bytes.toBytes("rowc");
 
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-      familyDescriptor.setBlockCacheEnabled(true);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      TableDescriptor tableDescriptor =
+        TableDescriptorBuilder.newBuilder(tableName)
+          .setColumnFamily(
+            ColumnFamilyDescriptorBuilder.newBuilder(fam).setBlockCacheEnabled(true).build())
+          .build();
       Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(tableDescriptor);
 
@@ -277,13 +275,10 @@ public class TestTags {
     byte[] rowe = Bytes.toBytes("rowe");
     Table table = null;
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam);
-      familyDescriptor.setBlockCacheEnabled(true);
-      familyDescriptor.setDataBlockEncoding(encoding);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam).setBlockCacheEnabled(true)
+          .setDataBlockEncoding(encoding).build())
+        .build();
       Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(tableDescriptor);
       try {
@@ -393,11 +388,8 @@ public class TestTags {
     byte[] row1 = Bytes.toBytes("r1");
     byte[] row2 = Bytes.toBytes("r2");
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor colDesc =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(f);
-    tableDescriptor.setColumnFamily(colDesc);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(f)).build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
 
     Table table = null;

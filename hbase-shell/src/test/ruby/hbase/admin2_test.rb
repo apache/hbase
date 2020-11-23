@@ -17,18 +17,17 @@
 # limitations under the License.
 #
 
-require 'shell'
+require 'hbase_shell'
 require 'stringio'
 require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
-include HBaseConstants
-
 module Hbase
   # Tests for the `status` shell command
   class StatusTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     def setup
       setup_hbase
@@ -126,7 +125,7 @@ module Hbase
 
     define_test "Snapshot should work when SKIP_FLUSH args" do
       drop_test_snapshot()
-      command(:snapshot, @test_name, @create_test_snapshot, {SKIP_FLUSH => true})
+      command(:snapshot, @test_name, @create_test_snapshot, {::HBaseConstants::SKIP_FLUSH => true})
       list = command(:list_snapshots, @create_test_snapshot)
       assert_equal(1, list.size)
     end
@@ -156,7 +155,7 @@ module Hbase
       assert_match(/f1/, admin.describe(restore_table))
       assert_match(/f2/, admin.describe(restore_table))
       command(:snapshot, restore_table, @create_test_snapshot)
-      command(:alter, restore_table, METHOD => 'delete', NAME => 'f1')
+      command(:alter, restore_table, ::HBaseConstants::METHOD => 'delete', ::HBaseConstants::NAME => 'f1')
       assert_no_match(/f1/, admin.describe(restore_table))
       assert_match(/f2/, admin.describe(restore_table))
       drop_test_table(restore_table)
@@ -434,6 +433,48 @@ class CommissioningTest < Test::Unit::TestCase
       assert_raise(ArgumentError) do
         command(:recommission_regionserver, 'dummy', {1=>1})
       end
+    end
+  end
+
+  # Tests for the `regioninfo` shell command
+  class RegionInfoTest < Test::Unit::TestCase
+    include TestHelpers
+    include HBaseConstants
+
+    def setup
+      setup_hbase
+      # Create test table if it does not exist
+      @test_name = "hbase_shell_regioninfo_test"
+      drop_test_table(@test_name)
+      create_test_table(@test_name)
+    end
+
+    def teardown
+      shutdown
+    end
+
+    define_test "Get region info without any args" do
+      assert_raise(ArgumentError) do
+        command(:regioninfo)
+      end
+    end
+
+    define_test 'Get region info with encoded region name' do
+      region = command(:locate_region, @test_name, '')
+      encodedRegionName = region.getRegion.getEncodedName
+      output = capture_stdout { command(:regioninfo, encodedRegionName) }
+      puts "Region info output:\n#{output}"
+      assert output.include? 'ENCODED'
+      assert output.include? 'STARTKEY'
+    end
+
+    define_test 'Get region info with region name' do
+      region = command(:locate_region, @test_name, '')
+      regionName = region.getRegion.getRegionNameAsString
+      output = capture_stdout { command(:regioninfo, regionName) }
+      puts "Region info output:\n#{output}"
+      assert output.include? 'ENCODED'
+      assert output.include? 'STARTKEY'
     end
   end
   # rubocop:enable ClassLength

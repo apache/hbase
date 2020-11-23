@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
+
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -26,14 +27,11 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -43,6 +41,8 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -78,6 +78,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({SecurityTests.class, LargeTests.class})
@@ -165,6 +166,9 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
     USER_QUAL = User.createUserForTesting(conf, "rwpartial", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
+
+    // Grant table creation permission to USER_OWNER
+    grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Action.CREATE);
   }
 
   @AfterClass
@@ -175,15 +179,10 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
   @Before
   public void setUp() throws Exception {
     // Create the test table (owner added to the _acl_ table)
-    Admin admin = TEST_UTIL.getAdmin();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
-    familyDescriptor.setMaxVersions(100);
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    tableDescriptor.setOwner(USER_OWNER);
-    admin.createTable(tableDescriptor, new byte[][] { Bytes.toBytes("s") });
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(testTable.getTableName())
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build()).build();
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
     TEST_UTIL.waitUntilAllRegionsAssigned(testTable.getTableName());
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(testTable.getTableName()).get(0);
@@ -473,10 +472,9 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-          new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
-        tableDescriptor.setColumnFamily(
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+        TableDescriptor tableDescriptor =
+          TableDescriptorBuilder.newBuilder(testTable.getTableName())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
         ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
           tableDescriptor, null);
         return null;
@@ -487,12 +485,10 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-          new TableDescriptorBuilder.ModifyableTableDescriptor(testTable.getTableName());
-        tableDescriptor.setColumnFamily(
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
-        tableDescriptor.setColumnFamily(
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY2));
+        TableDescriptor tableDescriptor =
+          TableDescriptorBuilder.newBuilder(testTable.getTableName())
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY2)).build();
         ACCESS_CONTROLLER.preModifyTable(ObserverContextImpl.createAndPrepare(CP_ENV),
           testTable.getTableName(),
           null,  // not needed by AccessController
@@ -545,7 +541,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HRegionInfo region = new HRegionInfo(testTable.getTableName());
+        RegionInfo region = RegionInfoBuilder.newBuilder(testTable.getTableName()).build();
         ServerName srcServer = ServerName.valueOf("1.1.1.1", 1, 0);
         ServerName destServer = ServerName.valueOf("2.2.2.2", 2, 0);
         ACCESS_CONTROLLER.preMove(ObserverContextImpl.createAndPrepare(CP_ENV), region,
@@ -558,7 +554,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HRegionInfo region = new HRegionInfo(testTable.getTableName());
+        RegionInfo region = RegionInfoBuilder.newBuilder(testTable.getTableName()).build();
         ACCESS_CONTROLLER.preAssign(ObserverContextImpl.createAndPrepare(CP_ENV), region);
         return null;
       }
@@ -568,9 +564,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HRegionInfo region = new HRegionInfo(testTable.getTableName());
-        ACCESS_CONTROLLER.preUnassign(ObserverContextImpl.createAndPrepare(CP_ENV), region,
-          true);
+        RegionInfo region = RegionInfoBuilder.newBuilder(testTable.getTableName()).build();
+        ACCESS_CONTROLLER.preUnassign(ObserverContextImpl.createAndPrepare(CP_ENV), region);
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
@@ -599,9 +594,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         SnapshotDescription snapshot = new SnapshotDescription("foo");
-        HTableDescriptor htd = new HTableDescriptor(testTable.getTableName());
-        ACCESS_CONTROLLER.preSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV),
-          snapshot, htd);
+        TableDescriptor htd = TableDescriptorBuilder.newBuilder(testTable.getTableName()).build();
+        ACCESS_CONTROLLER.preSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV), snapshot, htd);
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
@@ -622,7 +616,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         SnapshotDescription snapshot = new SnapshotDescription("foo");
-        HTableDescriptor htd = new HTableDescriptor(testTable.getTableName());
+        TableDescriptor htd = TableDescriptorBuilder.newBuilder(testTable.getTableName()).build();
         ACCESS_CONTROLLER.preCloneSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV),
           snapshot, htd);
         return null;
@@ -634,7 +628,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         SnapshotDescription snapshot = new SnapshotDescription("foo");
-        HTableDescriptor htd = new HTableDescriptor(testTable.getTableName());
+        TableDescriptor htd = TableDescriptorBuilder.newBuilder(testTable.getTableName()).build();
         ACCESS_CONTROLLER.preRestoreSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV),
           snapshot, htd);
         return null;

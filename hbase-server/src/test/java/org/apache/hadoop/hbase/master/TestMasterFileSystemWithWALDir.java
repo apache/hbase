@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -59,9 +59,9 @@ public class TestMasterFileSystemWithWALDir {
   public void testFsUriSetProperly() throws Exception {
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     MasterFileSystem fs = master.getMasterFileSystem();
-    Path masterRoot = FSUtils.getRootDir(fs.getConfiguration());
-    Path rootDir = FSUtils.getRootDir(fs.getFileSystem().getConf());
+    Path masterRoot = CommonFSUtils.getRootDir(fs.getConfiguration());
+    Path rootDir = CommonFSUtils.getRootDir(fs.getFileSystem().getConf());
     assertEquals(masterRoot, rootDir);
-    assertEquals(FSUtils.getWALRootDir(UTIL.getConfiguration()), fs.getWALRootDir());
+    assertEquals(CommonFSUtils.getWALRootDir(UTIL.getConfiguration()), fs.getWALRootDir());
   }
 }

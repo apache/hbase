@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,19 +20,18 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.OptionalLong;
 import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,15 +50,11 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
-
 /**
  * Gateway to Replication. Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
  */
 @InterfaceAudience.Private
-public class Replication implements ReplicationSourceService, ReplicationSinkService {
+public class Replication implements ReplicationSourceService {
   private static final Logger LOG =
       LoggerFactory.getLogger(Replication.class);
   private boolean isReplicationForBulkLoadDataEnabled;
@@ -67,15 +63,13 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   private ReplicationPeers replicationPeers;
   private ReplicationTracker replicationTracker;
   private Configuration conf;
-  private ReplicationSink replicationSink;
   private SyncReplicationPeerInfoProvider syncReplicationPeerInfoProvider;
   // Hosting server
   private Server server;
-  /** Statistics thread schedule pool */
-  private ScheduledExecutorService scheduleThreadPool;
-  private int statsThreadPeriod;
+  private int statsPeriodInSecond;
   // ReplicationLoad to access replication metrics
   private ReplicationLoad replicationLoad;
+  private MetricsReplicationGlobalSourceSource globalMetricsSource;
 
   private PeerProcedureHandler peerProcedureHandler;
 
@@ -87,16 +81,11 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
 
   @Override
   public void initialize(Server server, FileSystem fs, Path logDir, Path oldLogDir,
-      WALProvider walProvider) throws IOException {
+      WALFactory walFactory) throws IOException {
     this.server = server;
     this.conf = this.server.getConfiguration();
     this.isReplicationForBulkLoadDataEnabled =
       ReplicationUtils.isReplicationForBulkLoadDataEnabled(this.conf);
-    this.scheduleThreadPool = Executors.newScheduledThreadPool(1,
-      new ThreadFactoryBuilder()
-        .setNameFormat(server.getServerName().toShortString() + "Replication Statistics #%d")
-        .setDaemon(true)
-        .build());
     if (this.isReplicationForBulkLoadDataEnabled) {
       if (conf.get(HConstants.REPLICATION_CLUSTER_ID) == null
           || conf.get(HConstants.REPLICATION_CLUSTER_ID).isEmpty()) {
@@ -124,13 +113,16 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
       throw new IOException("Could not read cluster id", ke);
     }
     SyncReplicationPeerMappingManager mapping = new SyncReplicationPeerMappingManager();
+    this.globalMetricsSource = CompatibilitySingletonFactory
+        .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers,
-        replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId,
-        walProvider != null ? walProvider.getWALFileLengthProvider() : p -> OptionalLong.empty(),
-        mapping);
+        replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId, walFactory,
+        mapping, globalMetricsSource);
     this.syncReplicationPeerInfoProvider =
         new SyncReplicationPeerInfoProviderImpl(replicationPeers, mapping);
     PeerActionListener peerActionListener = PeerActionListener.DUMMY;
+    // Get the user-space WAL provider
+    WALProvider walProvider = walFactory != null? walFactory.getWALProvider(): null;
     if (walProvider != null) {
       walProvider
         .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));
@@ -150,9 +142,8 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
               p.getSyncReplicationState(), p.getNewSyncReplicationState(), 0));
       }
     }
-    this.statsThreadPeriod =
+    this.statsPeriodInSecond =
         this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
-    LOG.debug("Replication stats-in-log period={} seconds",  this.statsThreadPeriod);
     this.replicationLoad = new ReplicationLoad();
 
     this.peerProcedureHandler =
@@ -169,53 +160,19 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
    */
   @Override
   public void stopReplicationService() {
-    join();
-  }
-
-  /**
-   * Join with the replication threads
-   */
-  public void join() {
     this.replicationManager.join();
-    if (this.replicationSink != null) {
-      this.replicationSink.stopReplicationSinkServices();
-    }
-    scheduleThreadPool.shutdown();
-  }
-
-  /**
-   * Carry on the list of log entries down to the sink
-   * @param entries list of entries to replicate
-   * @param cells The data -- the cells -- that <code>entries</code> describes (the entries do not
-   *          contain the Cells we are replicating; they are passed here on the side in this
-   *          CellScanner).
-   * @param replicationClusterId Id which will uniquely identify source cluster FS client
-   *          configurations in the replication configuration directory
-   * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
-   *          directory required for replicating hfiles
-   * @param sourceHFileArchiveDirPath Path that point to the source cluster hfile archive directory
-   * @throws IOException
-   */
-  @Override
-  public void replicateLogEntries(List<WALEntry> entries, CellScanner cells,
-      String replicationClusterId, String sourceBaseNamespaceDirPath,
-      String sourceHFileArchiveDirPath) throws IOException {
-    this.replicationSink.replicateEntries(entries, cells, replicationClusterId,
-      sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath);
   }
 
   /**
    * If replication is enabled and this cluster is a master,
    * it starts
-   * @throws IOException
    */
   @Override
   public void startReplicationService() throws IOException {
     this.replicationManager.init();
-    this.replicationSink = new ReplicationSink(this.conf, this.server);
-    this.scheduleThreadPool.scheduleAtFixedRate(
-      new ReplicationStatisticsTask(this.replicationSink, this.replicationManager),
-      statsThreadPeriod, statsThreadPeriod, TimeUnit.SECONDS);
+    this.server.getChoreService().scheduleChore(
+      new ReplicationStatisticsChore("ReplicationSourceStatistics", server,
+          (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
     LOG.info("{} started", this.server.toString());
   }
 
@@ -240,21 +197,15 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   /**
    * Statistics task. Periodically prints the cache statistics to the log.
    */
-  private final static class ReplicationStatisticsTask implements Runnable {
+  private final class ReplicationStatisticsChore extends ScheduledChore {
 
-    private final ReplicationSink replicationSink;
-    private final ReplicationSourceManager replicationManager;
-
-    public ReplicationStatisticsTask(ReplicationSink replicationSink,
-        ReplicationSourceManager replicationManager) {
-      this.replicationManager = replicationManager;
-      this.replicationSink = replicationSink;
+    ReplicationStatisticsChore(String name, Stoppable stopper, int period) {
+      super(name, stopper, period);
     }
 
     @Override
-    public void run() {
-      printStats(this.replicationManager.getStats());
-      printStats(this.replicationSink.getStats());
+    protected void chore() {
+      printStats(replicationManager.getStats());
     }
 
     private void printStats(String stats) {
@@ -270,17 +221,11 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
       return null;
     }
     // always build for latest data
-    buildReplicationLoad();
-    return this.replicationLoad;
-  }
-
-  private void buildReplicationLoad() {
     List<ReplicationSourceInterface> allSources = new ArrayList<>();
     allSources.addAll(this.replicationManager.getSources());
     allSources.addAll(this.replicationManager.getOldSources());
-    // get sink
-    MetricsSink sinkMetrics = this.replicationSink.getSinkMetrics();
-    this.replicationLoad.buildReplicationLoad(allSources, sinkMetrics);
+    this.replicationLoad.buildReplicationLoad(allSources, null);
+    return this.replicationLoad;
   }
 
   @Override

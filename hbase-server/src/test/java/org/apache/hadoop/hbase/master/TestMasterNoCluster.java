@@ -18,16 +18,18 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_QUORUM;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -42,6 +44,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Standup the master and fake it to test various aspects of master function.
@@ -58,6 +62,8 @@ public class TestMasterNoCluster {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMasterNoCluster.class);
 
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
+
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
 
   @Rule
@@ -67,7 +73,7 @@ public class TestMasterNoCluster {
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TESTUTIL.getConfiguration();
     // We use local filesystem.  Set it so it writes into the testdir.
-    FSUtils.setRootDir(c, TESTUTIL.getDataTestDir());
+    CommonFSUtils.setRootDir(c, TESTUTIL.getDataTestDir());
     DefaultMetricsSystem.setMiniClusterMode(true);
     // Startup a mini zk cluster.
     TESTUTIL.startMiniZKCluster();
@@ -94,7 +100,20 @@ public class TestMasterNoCluster {
         return false;
       }
     });
-    ZKUtil.deleteNodeRecursively(zkw, zkw.getZNodePaths().baseZNode);
+    // Before fails sometimes so retry.
+    try {
+      TESTUTIL.waitFor(10000, (Waiter.Predicate<Exception>) () -> {
+        try {
+          ZKUtil.deleteNodeRecursively(zkw, zkw.getZNodePaths().baseZNode);
+          return true;
+        } catch (KeeperException.NotEmptyException e) {
+          LOG.info("Failed delete, retrying", e);
+        }
+        return false;
+      });
+    } catch (Exception e) {
+      LOG.info("Failed zk clear", e);
+    }
     zkw.close();
   }
 
@@ -141,7 +160,7 @@ public class TestMasterNoCluster {
     while (!master.isInitialized()) {
       Threads.sleep(200);
     }
-    Assert.assertNull(master.metaLocationSyncer);
+    Assert.assertNull(master.getMetaLocationSyncer());
     Assert.assertNull(master.masterAddressSyncer);
     master.stopMaster();
     master.join();

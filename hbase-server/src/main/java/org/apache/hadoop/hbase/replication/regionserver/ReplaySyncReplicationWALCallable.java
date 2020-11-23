@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -30,12 +29,12 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
-import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -124,7 +123,7 @@ public class ReplaySyncReplicationWALCallable implements RSProcedureCallable {
     try (Reader reader = getReader(wal)) {
       List<Entry> entries = readWALEntries(reader);
       while (!entries.isEmpty()) {
-        Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtbufUtil
+        Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair = ReplicationProtobufUtil
             .buildReplicateWALEntryRequest(entries.toArray(new Entry[entries.size()]));
         ReplicateWALEntryRequest request = pair.getFirst();
         rs.getReplicationSinkService().replicateLogEntries(request.getEntryList(),
@@ -140,7 +139,7 @@ public class ReplaySyncReplicationWALCallable implements RSProcedureCallable {
     Path path = new Path(rs.getWALRootDir(), wal);
     long length = rs.getWALFileSystem().getFileStatus(path).getLen();
     try {
-      FSUtils.getInstance(fs, conf).recoverFileLease(fs, path, conf);
+      RecoverLeaseFSUtils.recoverFileLease(fs, path, conf);
       return WALFactory.createReader(rs.getWALFileSystem(), path, rs.getConfiguration());
     } catch (EOFException e) {
       if (length <= 0) {

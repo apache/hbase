@@ -179,8 +179,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
       // 1. Create table directories to make HDFS acls can be inherited
       hdfsAclHelper.createTableDirectories(tableName);
       // 2. Add table owner HDFS acls
-      String owner =
-          desc.getOwnerString() == null ? getActiveUser(c).getShortName() : desc.getOwnerString();
+      String owner = getActiveUser(c).getShortName();
       hdfsAclHelper.addTableAcl(tableName, Sets.newHashSet(owner), "create");
       // 3. Record table owner permission is synced to HDFS in acl table
       SnapshotScannerHDFSAclStorage.addUserTableHdfsAcl(c.getEnvironment().getConnection(), owner,

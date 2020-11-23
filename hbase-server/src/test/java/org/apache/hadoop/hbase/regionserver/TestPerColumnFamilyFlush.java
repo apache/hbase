@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -44,8 +42,11 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -90,15 +91,13 @@ public class TestPerColumnFamilyFlush {
   public static final byte[] FAMILY3 = FAMILIES[2];
 
   private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLENAME);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLENAME);
     for (byte[] family : FAMILIES) {
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
-    HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(TABLENAME).build();
     Path path = new Path(DIR, callingMethod);
-    return HBaseTestingUtility.createRegionAndWAL(info, path, conf, tableDescriptor);
+    return HBaseTestingUtility.createRegionAndWAL(info, path, conf, builder.build());
   }
 
   // A helper function to create puts.
@@ -561,15 +560,10 @@ public class TestPerColumnFamilyFlush {
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLENAME);
-    tableDescriptor.setCompactionEnabled(false);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY1));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY2));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY3));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLENAME)
+      .setCompactionEnabled(false).setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY1))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY2))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY3)).build();
 
     LOG.info("==============Test with selective flush disabled===============");
     int cf1StoreFileCount = -1;
@@ -636,17 +630,12 @@ public class TestPerColumnFamilyFlush {
     int numRegions = Integer.parseInt(args[0]);
     long numRows = Long.parseLong(args[1]);
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TABLENAME);
-    tableDescriptor.setMaxFileSize(10L * 1024 * 1024 * 1024);
-    tableDescriptor.setValue(HTableDescriptor.SPLIT_POLICY,
-      ConstantSizeRegionSplitPolicy.class.getName());
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY1));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY2));
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY3));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLENAME)
+      .setMaxFileSize(10L * 1024 * 1024 * 1024)
+      .setValue(TableDescriptorBuilder.SPLIT_POLICY, ConstantSizeRegionSplitPolicy.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY1))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY2))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY3)).build();
 
     Configuration conf = HBaseConfiguration.create();
     Connection conn = ConnectionFactory.createConnection(conf);

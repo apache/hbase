@@ -240,7 +240,7 @@ public abstract class TimeRangeTracker {
     if (max == INITIAL_MAX_TIMESTAMP) {
       max = TimeRange.INITIAL_MAX_TIMESTAMP;
     }
-    return new TimeRange(min, max);
+    return TimeRange.between(min, max);
   }
 
   @VisibleForTesting

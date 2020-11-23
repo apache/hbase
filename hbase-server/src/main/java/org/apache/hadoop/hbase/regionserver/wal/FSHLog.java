@@ -35,20 +35,23 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -61,8 +64,9 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 
 /**
  * The default implementation of FSWAL.
@@ -105,6 +109,19 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   //
   // We use ring buffer sequence as txid of FSWALEntry and SyncFuture.
   private static final Logger LOG = LoggerFactory.getLogger(FSHLog.class);
+
+  private static final String TOLERABLE_LOW_REPLICATION = "hbase.regionserver.hlog.tolerable.lowreplication";
+  private static final String LOW_REPLICATION_ROLL_LIMIT = "hbase.regionserver.hlog.lowreplication.rolllimit";
+  private static final int DEFAULT_LOW_REPLICATION_ROLL_LIMIT = 5;
+  private static final String ROLL_ERRORS_TOLERATED = "hbase.regionserver.logroll.errors.tolerated";
+  private static final int DEFAULT_ROLL_ERRORS_TOLERATED = 2;
+  private static final String SYNCER_COUNT = "hbase.regionserver.hlog.syncer.count";
+  private static final int DEFAULT_SYNCER_COUNT = 5;
+  private static final String MAX_BATCH_COUNT = "hbase.regionserver.wal.sync.batch.count";
+  private static final int DEFAULT_MAX_BATCH_COUNT = 200;
+
+  private static final String FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS = "hbase.wal.fshlog.wait.on.shutdown.seconds";
+  private static final int DEFAULT_FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS = 5;
 
   /**
    * The nexus at which all incoming handlers meet. Does appends and sync with an ordering. Appends
@@ -151,6 +168,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
   private final AtomicInteger closeErrorCount = new AtomicInteger();
 
+  private final int waitOnShutdownInSeconds;
+  private final ExecutorService closeExecutor = Executors.newCachedThreadPool(
+    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Close-WAL-Writer-%d").build());
+
   /**
    * Exception handler to pass the disruptor ringbuffer. Same as native implementation only it logs
    * using our logger instead of java native logger.
@@ -189,11 +210,25 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     this(fs, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null);
   }
 
+  @VisibleForTesting
+  public FSHLog(final FileSystem fs, Abortable abortable, final Path root, final String logDir,
+      final Configuration conf) throws IOException {
+    this(fs, abortable, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null,
+        null);
+  }
+
+  public FSHLog(final FileSystem fs, final Path rootDir, final String logDir,
+      final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
+      final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
+    this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
+  }
+
   /**
    * Create an edit log at the given <code>dir</code> location. You should never have to load an
    * existing log. If there is a log at startup, it should have already been processed and deleted
    * by the time the WAL object is started up.
    * @param fs filesystem handle
+   * @param abortable Abortable - the server here
    * @param rootDir path to where logs and oldlogs
    * @param logDir dir where wals are stored
    * @param archiveDir dir where wals are archived
@@ -207,31 +242,34 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * @param suffix will be url encoded. null is treated as empty. non-empty must start with
    *          {@link org.apache.hadoop.hbase.wal.AbstractFSWALProvider#WAL_FILE_NAME_DELIMITER}
    */
-  public FSHLog(final FileSystem fs, final Path rootDir, final String logDir,
-      final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
-      final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
-    super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
-    this.minTolerableReplication = conf.getInt("hbase.regionserver.hlog.tolerable.lowreplication",
-      FSUtils.getDefaultReplication(fs, this.walDir));
-    this.lowReplicationRollLimit = conf.getInt("hbase.regionserver.hlog.lowreplication.rolllimit",
-      5);
-    this.closeErrorsTolerated = conf.getInt("hbase.regionserver.logroll.errors.tolerated", 2);
-
+  public FSHLog(final FileSystem fs, final Abortable abortable, final Path rootDir,
+      final String logDir, final String archiveDir, final Configuration conf,
+      final List<WALActionsListener> listeners, final boolean failIfWALExists, final String prefix,
+      final String suffix) throws IOException {
+    super(fs, abortable, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
+        suffix);
+    this.minTolerableReplication = conf.getInt(TOLERABLE_LOW_REPLICATION,
+      CommonFSUtils.getDefaultReplication(fs, this.walDir));
+    this.lowReplicationRollLimit = conf.getInt(LOW_REPLICATION_ROLL_LIMIT, DEFAULT_LOW_REPLICATION_ROLL_LIMIT);
+    this.closeErrorsTolerated = conf.getInt(ROLL_ERRORS_TOLERATED, DEFAULT_ROLL_ERRORS_TOLERATED);
+    this.waitOnShutdownInSeconds = conf.getInt(FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS,
+        DEFAULT_FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS);
     // This is the 'writer' -- a single threaded executor. This single thread 'consumes' what is
     // put on the ring buffer.
     String hostingThreadName = Thread.currentThread().getName();
     // Using BlockingWaitStrategy. Stuff that is going on here takes so long it makes no sense
     // spinning as other strategies do.
-    this.disruptor = new Disruptor<>(RingBufferTruck::new,
-        getPreallocatedEventCount(),
-        Threads.newDaemonThreadFactory(hostingThreadName + ".append"),
-        ProducerType.MULTI, new BlockingWaitStrategy());
+    this.disruptor = new Disruptor<>(RingBufferTruck::new, getPreallocatedEventCount(),
+      new ThreadFactoryBuilder().setNameFormat(hostingThreadName + ".append-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
+      ProducerType.MULTI, new BlockingWaitStrategy());
     // Advance the ring buffer sequence so that it starts from 1 instead of 0,
     // because SyncFuture.NOT_DONE = 0.
     this.disruptor.getRingBuffer().next();
-    int maxHandlersCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200);
-    this.ringBufferEventHandler = new RingBufferEventHandler(
-        conf.getInt("hbase.regionserver.hlog.syncer.count", 5), maxHandlersCount);
+    int syncerCount = conf.getInt(SYNCER_COUNT, DEFAULT_SYNCER_COUNT);
+    int maxBatchCount = conf.getInt(MAX_BATCH_COUNT,
+      conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, DEFAULT_MAX_BATCH_COUNT));
+    this.ringBufferEventHandler = new RingBufferEventHandler(syncerCount, maxBatchCount);
     this.disruptor.setDefaultExceptionHandler(new RingBufferExceptionHandler());
     this.disruptor.handleEventsWith(new RingBufferEventHandler[] { this.ringBufferEventHandler });
     // Starting up threads in constructor is a no no; Interface should have an init call.
@@ -309,7 +347,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     SyncFuture syncFuture = null;
     SafePointZigZagLatch zigzagLatch = null;
     long sequence = -1L;
-    if (this.ringBufferEventHandler != null) {
+    if (this.writer != null && this.ringBufferEventHandler != null) {
       // Get sequence first to avoid dead lock when ring buffer is full
       // Considering below sequence
       // 1. replaceWriter is called and zigzagLatch is initialized
@@ -346,23 +384,22 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       }
       long oldFileLen = 0L;
       // It is at the safe point. Swap out writer from under the blocked writer thread.
-      // TODO: This is close is inline with critical section. Should happen in background?
       if (this.writer != null) {
         oldFileLen = this.writer.getLength();
-        try {
-          TraceUtil.addTimelineAnnotation("closing writer");
-          this.writer.close();
-          TraceUtil.addTimelineAnnotation("writer closed");
-          this.closeErrorCount.set(0);
-        } catch (IOException ioe) {
-          int errors = closeErrorCount.incrementAndGet();
-          if (!isUnflushedEntries() && (errors <= this.closeErrorsTolerated)) {
-            LOG.warn("Riding over failed WAL close of " + oldPath + ", cause=\"" + ioe.getMessage()
-                + "\", errors=" + errors
-                + "; THIS FILE WAS NOT CLOSED BUT ALL EDITS SYNCED SO SHOULD BE OK");
-          } else {
-            throw ioe;
-          }
+        // In case of having unflushed entries or we already reached the
+        // closeErrorsTolerated count, call the closeWriter inline rather than in async
+        // way so that in case of an IOE we will throw it back and abort RS.
+        if (isUnflushedEntries() || closeErrorCount.get() >= this.closeErrorsTolerated) {
+          closeWriter(this.writer, oldPath, true);
+        } else {
+          Writer localWriter = this.writer;
+          closeExecutor.execute(() -> {
+            try {
+              closeWriter(localWriter, oldPath, false);
+            } catch (IOException e) {
+              // We will never reach here.
+            }
+          });
         }
       }
       logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
@@ -404,6 +441,24 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
   }
 
+  private void closeWriter(Writer writer, Path path, boolean syncCloseCall) throws IOException {
+    try {
+      TraceUtil.addTimelineAnnotation("closing writer");
+      writer.close();
+      TraceUtil.addTimelineAnnotation("writer closed");
+    } catch (IOException ioe) {
+      int errors = closeErrorCount.incrementAndGet();
+      boolean hasUnflushedEntries = isUnflushedEntries();
+      if (syncCloseCall && (hasUnflushedEntries || (errors > this.closeErrorsTolerated))) {
+        LOG.error("Close of WAL " + path + " failed. Cause=\"" + ioe.getMessage() + "\", errors="
+            + errors + ", hasUnflushedEntries=" + hasUnflushedEntries);
+        throw ioe;
+      }
+      LOG.warn("Riding over failed WAL close of " + path
+          + "; THIS FILE WAS NOT CLOSED BUT ALL EDITS SYNCED SO SHOULD BE OK", ioe);
+    }
+  }
+
   @Override
   protected void doShutdown() throws IOException {
     // Shutdown the disruptor. Will stop after all entries have been processed. Make sure we
@@ -422,11 +477,23 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Closing WAL writer in " + FSUtils.getPath(walDir));
+      LOG.debug("Closing WAL writer in " + CommonFSUtils.getPath(walDir));
     }
     if (this.writer != null) {
       this.writer.close();
       this.writer = null;
+    }
+    closeExecutor.shutdown();
+    try {
+      if (!closeExecutor.awaitTermination(waitOnShutdownInSeconds, TimeUnit.SECONDS)) {
+        LOG.error("We have waited {} seconds but the close of writer(s) doesn't complete."
+            + "Please check the status of underlying filesystem"
+            + " or increase the wait time by the config \"{}\"", this.waitOnShutdownInSeconds,
+            FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS);
+      }
+    } catch (InterruptedException e) {
+      LOG.error("The wait for termination of FSHLog writer(s) is interrupted");
+      Thread.currentThread().interrupt();
     }
   }
 
@@ -453,7 +520,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * SyncFutures are 'artificial', something to hold the Handler until the filesystem sync
    * completes.
    */
-  private class SyncRunner extends HasThread {
+  private class SyncRunner extends Thread {
     private volatile long sequence;
     // Keep around last exception thrown. Clear on successful sync.
     private final BlockingQueue<SyncFuture> syncFutures;
@@ -587,8 +654,12 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           Throwable lastException = null;
           try {
             TraceUtil.addTimelineAnnotation("syncing writer");
+            long unSyncedFlushSeq = highestUnsyncedTxid;
             writer.sync(sf.isForceSync());
             TraceUtil.addTimelineAnnotation("writer synced");
+            if (unSyncedFlushSeq > currentSequence) {
+              currentSequence = unSyncedFlushSeq;
+            }
             currentSequence = updateHighestSyncedSequence(currentSequence);
           } catch (IOException e) {
             LOG.error("Error syncing, request close of WAL", e);
@@ -923,11 +994,11 @@ public class FSHLog extends AbstractFSWAL<Writer> {
      */
     private int syncRunnerIndex;
 
-    RingBufferEventHandler(final int syncRunnerCount, final int maxHandlersCount) {
-      this.syncFutures = new SyncFuture[maxHandlersCount];
+    RingBufferEventHandler(final int syncRunnerCount, final int maxBatchCount) {
+      this.syncFutures = new SyncFuture[maxBatchCount];
       this.syncRunners = new SyncRunner[syncRunnerCount];
       for (int i = 0; i < syncRunnerCount; i++) {
-        this.syncRunners[i] = new SyncRunner("sync." + i, maxHandlersCount);
+        this.syncRunners[i] = new SyncRunner("sync." + i, maxBatchCount);
       }
     }
 

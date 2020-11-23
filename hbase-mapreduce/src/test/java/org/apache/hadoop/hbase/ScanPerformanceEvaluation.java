@@ -20,12 +20,10 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -38,13 +36,14 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
@@ -70,7 +69,7 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     super.setConf(conf);
     Path rootDir;
     try {
-      rootDir = FSUtils.getRootDir(conf);
+      rootDir = CommonFSUtils.getRootDir(conf);
       rootDir.getFileSystem(conf);
     } catch (IOException ex) {
       throw new RuntimeException(ex);

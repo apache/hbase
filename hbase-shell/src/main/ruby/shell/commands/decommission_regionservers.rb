@@ -22,7 +22,7 @@ module Shell
     # Decommission a list of region servers, optionally offload corresponding regions
     class DecommissionRegionservers < Command
       def help
-        <<-EOF
+        <<~EOF
   Mark region server(s) as decommissioned to prevent additional regions from
   getting assigned to them.
 

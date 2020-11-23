@@ -294,12 +294,11 @@ public class ColumnFamilyDescriptorBuilder {
     DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
     DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
     DEFAULT_VALUES.put(DATA_BLOCK_ENCODING, String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
-    DEFAULT_VALUES.put(CACHE_DATA_ON_WRITE, String.valueOf(DEFAULT_CACHE_DATA_ON_WRITE));
-    DEFAULT_VALUES.put(CACHE_INDEX_ON_WRITE, String.valueOf(DEFAULT_CACHE_INDEX_ON_WRITE));
-    DEFAULT_VALUES.put(CACHE_BLOOMS_ON_WRITE, String.valueOf(DEFAULT_CACHE_BLOOMS_ON_WRITE));
-    DEFAULT_VALUES.put(EVICT_BLOCKS_ON_CLOSE, String.valueOf(DEFAULT_EVICT_BLOCKS_ON_CLOSE));
-    DEFAULT_VALUES.put(PREFETCH_BLOCKS_ON_OPEN, String.valueOf(DEFAULT_PREFETCH_BLOCKS_ON_OPEN));
-    DEFAULT_VALUES.put(NEW_VERSION_BEHAVIOR, String.valueOf(DEFAULT_NEW_VERSION_BEHAVIOR));
+    // Do NOT add this key/value by default. NEW_VERSION_BEHAVIOR is NOT defined in hbase1 so
+    // it is not possible to make an hbase1 HCD the same as an hbase2 HCD and so the replication
+    // compare of schemas will fail. It is OK not adding the below to the initial map because of
+    // fetch of this value, we will check for null and if null will return the default.
+    // DEFAULT_VALUES.put(NEW_VERSION_BEHAVIOR, String.valueOf(DEFAULT_NEW_VERSION_BEHAVIOR));
     DEFAULT_VALUES.keySet().forEach(s -> RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(s))));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION)));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION_KEY)));
@@ -583,10 +582,8 @@ public class ColumnFamilyDescriptorBuilder {
    * number of versions, compression settings, etc.
    *
    * It is used as input when creating a table or adding a column.
-   * TODO: make this package-private after removing the HColumnDescriptor
    */
-  @InterfaceAudience.Private
-  public static class ModifyableColumnFamilyDescriptor
+  private static final class ModifyableColumnFamilyDescriptor
       implements ColumnFamilyDescriptor, Comparable<ModifyableColumnFamilyDescriptor> {
 
     // Column family name
@@ -686,15 +683,6 @@ public class ColumnFamilyDescriptorBuilder {
         values.put(key, value);
       }
       return this;
-    }
-
-    /**
-     *
-     * @param key Key whose key and value we're to remove from HCD parameters.
-     * @return this (for chained invocation)
-     */
-    public ModifyableColumnFamilyDescriptor removeValue(final Bytes key) {
-      return setValue(key, (Bytes) null);
     }
 
     private static <T> Bytes toBytesOrNull(T t, Function<T, byte[]> f) {

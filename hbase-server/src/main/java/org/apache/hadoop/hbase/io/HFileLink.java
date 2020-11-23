@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.io;
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,7 +31,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -120,7 +119,7 @@ public class HFileLink extends FileLink {
    */
   public static final HFileLink buildFromHFileLinkPattern(Configuration conf, Path hFileLinkPattern)
           throws IOException {
-    return buildFromHFileLinkPattern(FSUtils.getRootDir(conf),
+    return buildFromHFileLinkPattern(CommonFSUtils.getRootDir(conf),
             HFileArchiveUtil.getArchivePath(conf), hFileLinkPattern);
   }
 
@@ -210,7 +209,9 @@ public class HFileLink extends FileLink {
    */
   public static boolean isHFileLink(String fileName) {
     Matcher m = LINK_NAME_PATTERN.matcher(fileName);
-    if (!m.matches()) return false;
+    if (!m.matches()) {
+      return false;
+    }
     return m.groupCount() > 2 && m.group(4) != null && m.group(3) != null && m.group(2) != null;
   }
 
@@ -235,7 +236,7 @@ public class HFileLink extends FileLink {
     String regionName = m.group(3);
     String hfileName = m.group(4);
     String familyName = path.getParent().getName();
-    Path tableDir = FSUtils.getTableDir(new Path("./"), tableName);
+    Path tableDir = CommonFSUtils.getTableDir(new Path("./"), tableName);
     return new Path(tableDir, new Path(regionName, new Path(familyName,
         hfileName)));
   }
@@ -396,7 +397,7 @@ public class HFileLink extends FileLink {
       final String hfileName, final boolean createBackRef) throws IOException {
     String familyName = dstFamilyPath.getName();
     String regionName = dstFamilyPath.getParent().getName();
-    String tableName = FSUtils.getTableName(dstFamilyPath.getParent().getParent())
+    String tableName = CommonFSUtils.getTableName(dstFamilyPath.getParent().getParent())
         .getNameAsString();
 
     String name = createHFileLinkName(linkedTable, linkedRegion, hfileName);
@@ -501,9 +502,9 @@ public class HFileLink extends FileLink {
     Path regionPath = familyPath.getParent();
     Path tablePath = regionPath.getParent();
 
-    String linkName = createHFileLinkName(FSUtils.getTableName(tablePath),
+    String linkName = createHFileLinkName(CommonFSUtils.getTableName(tablePath),
             regionPath.getName(), hfileName);
-    Path linkTableDir = FSUtils.getTableDir(rootDir, linkTableName);
+    Path linkTableDir = CommonFSUtils.getTableDir(rootDir, linkTableName);
     Path regionDir = HRegion.getRegionDir(linkTableDir, linkRegionName);
     return new Path(new Path(regionDir, familyPath.getName()), linkName);
   }
@@ -527,7 +528,7 @@ public class HFileLink extends FileLink {
    */
   public static Path getHFileFromBackReference(final Configuration conf, final Path linkRefPath)
       throws IOException {
-    return getHFileFromBackReference(FSUtils.getRootDir(conf), linkRefPath);
+    return getHFileFromBackReference(CommonFSUtils.getRootDir(conf), linkRefPath);
   }
 
 }

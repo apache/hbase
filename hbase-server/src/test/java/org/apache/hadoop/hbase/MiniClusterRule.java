@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.junit.ClassRule;
@@ -36,7 +37,7 @@ import org.junit.rules.TestRule;
  * <pre>{@code
  *   public class TestMyClass {
  *     @ClassRule
- *     public static final MiniClusterRule miniClusterRule = new MiniClusterRule();
+ *     public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
  *
  *     @Rule
  *     public final ConnectionRule connectionRule =
@@ -44,25 +45,54 @@ import org.junit.rules.TestRule;
  *   }
  * }</pre>
  */
-public class MiniClusterRule extends ExternalResource {
+public final class MiniClusterRule extends ExternalResource {
+
+  /**
+   * A builder for fluent composition of a new {@link MiniClusterRule}.
+   */
+  public static class Builder {
+
+    private StartMiniClusterOption miniClusterOption;
+    private Configuration conf;
+
+    /**
+     * Use the provided {@link StartMiniClusterOption} to construct the {@link MiniHBaseCluster}.
+     */
+    public Builder setMiniClusterOption(final StartMiniClusterOption miniClusterOption) {
+      this.miniClusterOption = miniClusterOption;
+      return this;
+    }
+
+    /**
+     * Seed the underlying {@link HBaseTestingUtility} with the provided {@link Configuration}.
+     */
+    public Builder setConfiguration(final Configuration conf) {
+      this.conf = conf;
+      return this;
+    }
+
+    public MiniClusterRule build() {
+      return new MiniClusterRule(
+        conf,
+        miniClusterOption != null
+          ? miniClusterOption
+          : StartMiniClusterOption.builder().build());
+    }
+  }
+
   private final HBaseTestingUtility testingUtility;
   private final StartMiniClusterOption miniClusterOptions;
 
   private MiniHBaseCluster miniCluster;
 
-  /**
-   * Create an instance over the default options provided by {@link StartMiniClusterOption}.
-   */
-  public MiniClusterRule() {
-    this(StartMiniClusterOption.builder().build());
+  private MiniClusterRule(final Configuration conf,
+    final StartMiniClusterOption miniClusterOptions) {
+    this.testingUtility = new HBaseTestingUtility(conf);
+    this.miniClusterOptions = miniClusterOptions;
   }
 
-  /**
-   * Create an instance using the provided {@link StartMiniClusterOption}.
-   */
-  public MiniClusterRule(final StartMiniClusterOption miniClusterOptions) {
-    this.testingUtility = new HBaseTestingUtility();
-    this.miniClusterOptions = miniClusterOptions;
+  public static Builder newBuilder() {
+    return new Builder();
   }
 
   /**

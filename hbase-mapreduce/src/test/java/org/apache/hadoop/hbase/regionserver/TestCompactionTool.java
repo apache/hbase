@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -74,7 +74,7 @@ public class TestCompactionTool {
     }
     HStore store = region.getStore(HBaseTestingUtility.fam1);
     assertEquals(10, store.getStorefilesCount());
-    Path tableDir = FSUtils.getTableDir(rootDir, region.getRegionInfo().getTable());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, region.getRegionInfo().getTable());
     FileSystem fs = store.getFileSystem();
     String storePath = tableDir + "/" + region.getRegionInfo().getEncodedName() + "/"
       + Bytes.toString(HBaseTestingUtility.fam1);

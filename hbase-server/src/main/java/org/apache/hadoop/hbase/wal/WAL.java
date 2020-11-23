@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.HConstants;
@@ -60,11 +61,11 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * The implementation is synchronized in order to make sure there's one rollWriter
    * running at any given time.
    *
-   * @return If lots of logs, flush the returned regions so next time through we
+   * @return If lots of logs, flush the stores of returned regions so next time through we
    *         can clean logs. Returns null if nothing to flush. Names are actual
    *         region names as returned by {@link RegionInfo#getEncodedName()}
    */
-  byte[][] rollWriter() throws FailedLogCloseException, IOException;
+  Map<byte[], List<byte[]>> rollWriter() throws FailedLogCloseException, IOException;
 
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
@@ -76,11 +77,11 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * @param force
    *          If true, force creation of a new writer even if no entries have
    *          been written to the current writer
-   * @return If lots of logs, flush the returned regions so next time through we
+   * @return If lots of logs, flush the stores of returned regions so next time through we
    *         can clean logs. Returns null if nothing to flush. Names are actual
    *         region names as returned by {@link RegionInfo#getEncodedName()}
    */
-  byte[][] rollWriter(boolean force) throws IOException;
+  Map<byte[], List<byte[]>> rollWriter(boolean force) throws IOException;
 
   /**
    * Stop accepting new writes. If we have unsynced writes still in buffer, sync them.
@@ -183,7 +184,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * being flushed; in other words, this is effectively same as a flush of all of the region
    * though we were passed a subset of regions. Otherwise, it returns the sequence id of the
    * oldest/lowest outstanding edit.
-   * @see #completeCacheFlush(byte[])
+   * @see #completeCacheFlush(byte[], long)
    * @see #abortCacheFlush(byte[])
    */
   Long startCacheFlush(final byte[] encodedRegionName, Set<byte[]> families);
@@ -193,10 +194,12 @@ public interface WAL extends Closeable, WALFileLengthProvider {
   /**
    * Complete the cache flush.
    * @param encodedRegionName Encoded region name.
+   * @param maxFlushedSeqId The maxFlushedSeqId for this flush. There is no edit in memory that is
+   *          less that this sequence id.
    * @see #startCacheFlush(byte[], Set)
    * @see #abortCacheFlush(byte[])
    */
-  void completeCacheFlush(final byte[] encodedRegionName);
+  void completeCacheFlush(final byte[] encodedRegionName, long maxFlushedSeqId);
 
   /**
    * Abort a cache flush. Call if the flush fails. Note that the only recovery

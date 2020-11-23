@@ -22,7 +22,7 @@ module Shell
   module Commands
     class SetPeerReplicateAll < Command
       def help
-        <<-EOF
+        <<~EOF
   Set the replicate_all flag to true or false for the specified peer.
 
   If replicate_all flag is true, then all user tables (REPLICATION_SCOPE != 0)

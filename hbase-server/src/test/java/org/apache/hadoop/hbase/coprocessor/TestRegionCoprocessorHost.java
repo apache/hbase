@@ -22,48 +22,80 @@ import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.REGION_COPROCE
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR;
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.USER_COPROCESSORS_ENABLED_CONF_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import java.io.IOException;
 
 @Category({SmallTests.class})
 public class TestRegionCoprocessorHost {
+  private Configuration conf;
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestRegionCoprocessorHost.class);
 
-  @Test
-  public void testLoadDuplicateCoprocessor() throws Exception {
-    Configuration conf = HBaseConfiguration.create();
+  @Rule
+  public final TestName name = new TestName();
+  private RegionInfo regionInfo;
+  private HRegion region;
+  private RegionServerServices rsServices;
+  public static final int MAX_VERSIONS = 3;
+  public static final int MIN_VERSIONS = 2;
+  public static final int TTL = 1000;
+
+  @Before
+  public void setup() throws IOException {
+    conf = HBaseConfiguration.create();
     conf.setBoolean(COPROCESSORS_ENABLED_CONF_KEY, true);
     conf.setBoolean(USER_COPROCESSORS_ENABLED_CONF_KEY, true);
-    conf.setBoolean(SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR, true);
-    conf.set(REGION_COPROCESSOR_CONF_KEY, SimpleRegionObserver.class.getName());
-    TableName tableName = TableName.valueOf("testDoubleLoadingCoprocessor");
-    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     // config a same coprocessor with system coprocessor
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-        .setCoprocessor(SimpleRegionObserver.class.getName()).build();
-    HRegion region = mock(HRegion.class);
+      .setCoprocessor(SimpleRegionObserver.class.getName()).build();
+    region = mock(HRegion.class);
     when(region.getRegionInfo()).thenReturn(regionInfo);
     when(region.getTableDescriptor()).thenReturn(tableDesc);
-    RegionServerServices rsServices = mock(RegionServerServices.class);
+    rsServices = mock(RegionServerServices.class);
+  }
+  @Test
+  public void testLoadDuplicateCoprocessor() throws Exception {
+    conf.setBoolean(SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR, true);
+    conf.set(REGION_COPROCESSOR_CONF_KEY, SimpleRegionObserver.class.getName());
     RegionCoprocessorHost host = new RegionCoprocessorHost(region, rsServices, conf);
     // Only one coprocessor SimpleRegionObserver loaded
     assertEquals(1, host.coprocEnvironments.size());
@@ -74,4 +106,73 @@ public class TestRegionCoprocessorHost {
     // Two duplicate coprocessors loaded
     assertEquals(2, host.coprocEnvironments.size());
   }
+
+  @Test
+  public void testPreStoreScannerOpen() throws IOException {
+
+    RegionCoprocessorHost host = new RegionCoprocessorHost(region, rsServices, conf);
+    Scan scan = new Scan();
+    scan.setTimeRange(TimeRange.INITIAL_MIN_TIMESTAMP, TimeRange.INITIAL_MAX_TIMESTAMP);
+    assertTrue("Scan is not for all time", scan.getTimeRange().isAllTime());
+    //SimpleRegionObserver is set to update the ScanInfo parameters if the passed-in scan
+    //is for all time. this lets us exercise both that the Scan is wired up properly in the coproc
+    //and that we can customize the metadata
+
+    ScanInfo oldScanInfo = getScanInfo();
+
+    HStore store = mock(HStore.class);
+    when(store.getScanInfo()).thenReturn(oldScanInfo);
+    ScanInfo newScanInfo = host.preStoreScannerOpen(store, scan);
+
+    verifyScanInfo(newScanInfo);
+  }
+
+  @Test
+  public void testPreCompactScannerOpen() throws IOException {
+    RegionCoprocessorHost host = new RegionCoprocessorHost(region, rsServices, conf);
+    ScanInfo oldScanInfo = getScanInfo();
+    HStore store = mock(HStore.class);
+    when(store.getScanInfo()).thenReturn(oldScanInfo);
+    ScanInfo newScanInfo = host.preCompactScannerOpen(store, ScanType.COMPACT_DROP_DELETES,
+      mock(CompactionLifeCycleTracker.class), mock(CompactionRequest.class), mock(User.class));
+    verifyScanInfo(newScanInfo);
+  }
+
+  @Test
+  public void testPreFlushScannerOpen() throws IOException {
+    RegionCoprocessorHost host = new RegionCoprocessorHost(region, rsServices, conf);
+    ScanInfo oldScanInfo = getScanInfo();
+    HStore store = mock(HStore.class);
+    when(store.getScanInfo()).thenReturn(oldScanInfo);
+    ScanInfo newScanInfo = host.preFlushScannerOpen(store, mock(FlushLifeCycleTracker.class));
+    verifyScanInfo(newScanInfo);
+  }
+
+  @Test
+  public void testPreMemStoreCompactionCompactScannerOpen() throws IOException {
+    RegionCoprocessorHost host = new RegionCoprocessorHost(region, rsServices, conf);
+    ScanInfo oldScanInfo = getScanInfo();
+    HStore store = mock(HStore.class);
+    when(store.getScanInfo()).thenReturn(oldScanInfo);
+    ScanInfo newScanInfo = host.preMemStoreCompactionCompactScannerOpen(store);
+    verifyScanInfo(newScanInfo);
+  }
+
+  private void verifyScanInfo(ScanInfo newScanInfo) {
+    assertEquals(KeepDeletedCells.TRUE, newScanInfo.getKeepDeletedCells());
+    assertEquals(MAX_VERSIONS, newScanInfo.getMaxVersions());
+    assertEquals(MIN_VERSIONS, newScanInfo.getMinVersions());
+    assertEquals(TTL, newScanInfo.getTtl());
+  }
+
+  private ScanInfo getScanInfo() {
+    int oldMaxVersions = 1;
+    int oldMinVersions = 0;
+    long oldTTL = 10000;
+
+    return new ScanInfo(conf, Bytes.toBytes("cf"), oldMinVersions, oldMaxVersions, oldTTL,
+    KeepDeletedCells.FALSE, HConstants.FOREVER, 1000,
+      CellComparator.getInstance(), true);
+  }
+
 }

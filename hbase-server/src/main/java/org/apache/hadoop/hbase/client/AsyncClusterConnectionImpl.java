@@ -74,7 +74,7 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
   public CompletableFuture<FlushRegionResponse> flush(byte[] regionName,
       boolean writeFlushWALMarker) {
     RawAsyncHBaseAdmin admin = (RawAsyncHBaseAdmin) getAdmin();
-    return admin.flushRegionInternal(regionName, writeFlushWALMarker);
+    return admin.flushRegionInternal(regionName, null, writeFlushWALMarker);
   }
 
   @Override

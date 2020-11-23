@@ -57,35 +57,15 @@
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
 
-# This will set HBASE_HOME, etc.
-. "$bin"/hbase-config.sh
-
-cygwin=false
-case "`uname`" in
-CYGWIN*) cygwin=true;;
-esac
-
-# Detect if we are in hbase sources dir
-in_dev_env=false
-if [ -d "${HBASE_HOME}/target" ]; then
-  in_dev_env=true
-fi
-
-# Detect if we are in the omnibus tarball
-in_omnibus_tarball="false"
-if [ -f "${HBASE_HOME}/bin/hbase-daemons.sh" ]; then
-  in_omnibus_tarball="true"
-fi
-
 read -d '' options_string << EOF
 Options:
   --config DIR         Configuration direction to use. Default: ./conf
   --hosts HOSTS        Override the list in 'regionservers' file
   --auth-as-server     Authenticate to ZooKeeper using servers configuration
   --internal-classpath Skip attempting to use client facing jars (WARNING: unstable results between versions)
+  --help or -h         Print this help message
 EOF
-# if no args specified, show usage
-if [ $# = 0 ]; then
+show_usage() {
   echo "Usage: hbase [<options>] <command> [<args>]"
   echo "$options_string"
   echo ""
@@ -122,6 +102,36 @@ if [ $# = 0 ]; then
   echo "  pre-upgrade      Run Pre-Upgrade validator tool"
   echo "  hbtop            Run HBTop tool"
   echo "  CLASSNAME        Run the class named CLASSNAME"
+}
+
+if [ "--help" = "$1" ] || [ "-h" = "$1" ]; then
+  show_usage
+  exit 0
+fi
+
+# This will set HBASE_HOME, etc.
+. "$bin"/hbase-config.sh
+
+cygwin=false
+case "`uname`" in
+CYGWIN*) cygwin=true;;
+esac
+
+# Detect if we are in hbase sources dir
+in_dev_env=false
+if [ -d "${HBASE_HOME}/target" ]; then
+  in_dev_env=true
+fi
+
+# Detect if we are in the omnibus tarball
+in_omnibus_tarball="false"
+if [ -f "${HBASE_HOME}/bin/hbase-daemons.sh" ]; then
+  in_omnibus_tarball="true"
+fi
+
+# if no args specified, show usage
+if [ $# = 0 ]; then
+  show_usage
   exit 1
 fi
 
@@ -248,7 +258,7 @@ if [ "${INTERNAL_CLASSPATH}" != "true" ]; then
 
   # If command needs our shaded mapreduce, use it
   # N.B "mapredcp" is not included here because in the shaded case it skips our built classpath
-  declare -a commands_in_mr_jar=("hbck" "snapshot" "canary" "regionsplitter" "pre-upgrade")
+  declare -a commands_in_mr_jar=("hbck" "snapshot" "regionsplitter" "pre-upgrade")
   for c in "${commands_in_mr_jar[@]}"; do
     if [ "${COMMAND}" = "${c}" ]; then
       # If we didn't find a jar above, this will just be blank and the
@@ -499,13 +509,22 @@ fi
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
 	#find the hbase ruby sources
+  # assume we are in a binary install if lib/ruby exists
   if [ -d "$HBASE_HOME/lib/ruby" ]; then
-    HBASE_OPTS="$HBASE_OPTS -Dhbase.ruby.sources=$HBASE_HOME/lib/ruby"
+    # We want jruby to consume these things rather than our bootstrap script;
+    # jruby will look for the env variable 'JRUBY_OPTS'.
+    JRUBY_OPTS="${JRUBY_OPTS} -X+O"
+    export JRUBY_OPTS
+    # hbase-shell.jar contains a 'jar-bootstrap.rb'
+    # for more info see
+    # https://github.com/jruby/jruby/wiki/StandaloneJarsAndClasses#standalone-executable-jar-files
+    CLASS="org.jruby.JarBootstrapMain"
+  # otherwise assume we are running in a source checkout
   else
     HBASE_OPTS="$HBASE_OPTS -Dhbase.ruby.sources=$HBASE_HOME/hbase-shell/src/main/ruby"
+    CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/hbase-shell/src/main/ruby/jar-bootstrap.rb"
   fi
   HBASE_OPTS="$HBASE_OPTS $HBASE_SHELL_OPTS"
-  CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/bin/hirb.rb"
 elif [ "$COMMAND" = "hbck" ] ; then
   # Look for the -j /path/to/HBCK2.jar parameter. Else pass through to hbck.
   case "${1}" in

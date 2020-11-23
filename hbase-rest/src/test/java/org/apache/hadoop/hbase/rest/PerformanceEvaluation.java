@@ -33,7 +33,6 @@ import java.util.Random;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -76,7 +75,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
 import org.apache.hadoop.hbase.util.Pair;
-
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -93,7 +91,6 @@ import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,7 +125,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   public static final byte[] QUALIFIER_NAME = Bytes.toBytes("data");
   private TableName tableName = TABLE_NAME;
 
-  protected TableDescriptorBuilder.ModifyableTableDescriptor TABLE_DESCRIPTOR;
+  protected TableDescriptor TABLE_DESCRIPTOR;
   protected Map<String, CmdDescriptor> commands = new TreeMap<>();
   protected static Cluster cluster = new Cluster();
 
@@ -539,15 +536,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   protected TableDescriptor getDescriptor() {
     if (TABLE_DESCRIPTOR == null) {
-      TABLE_DESCRIPTOR = new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-      ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY_NAME);
-      familyDescriptor.setDataBlockEncoding(blockEncoding);
-      familyDescriptor.setCompressionType(compression);
-      if (inMemoryCF) {
-        familyDescriptor.setInMemory(true);
-      }
-      TABLE_DESCRIPTOR.setColumnFamily(familyDescriptor);
+      TABLE_DESCRIPTOR =
+        TableDescriptorBuilder.newBuilder(tableName)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_NAME)
+            .setDataBlockEncoding(blockEncoding).setCompressionType(compression)
+            .setInMemory(inMemoryCF).build())
+          .build();
     }
     return TABLE_DESCRIPTOR;
   }

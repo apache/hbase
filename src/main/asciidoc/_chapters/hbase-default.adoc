@@ -887,11 +887,25 @@ Time to sleep in between searches for work (in milliseconds).
 +
 .Description
 
-    Maximum HFile size. If the sum of the sizes of a region's HFiles has grown to exceed this
-    value, the region is split in two.
+    Maximum file size. If the sum of the sizes of a region's HFiles has
+    grown to exceed this value, the region is split in two. There are two choices of
+    how this option works, the first is when any store's size exceed the threshold
+    then split, and the other is overall region's size exceed the threshold then split,
+    it can be configed by hbase.hregion.split.overallfiles.
 +
 .Default
 `10737418240`
+
+
+[[hbase.hregion.split.overallfiles]]
+*`hbase.hregion.split.overallfiles`*::
++
+.Description
+
+    If we should sum overall region files size when check to split.
++
+.Default
+`true`
 
 
 [[hbase.hregion.majorcompaction]]
@@ -2246,6 +2260,38 @@ The percent of region server RPC threads failed to abort RS.
 `false`
 
 
+[[hbase.regionserver.slowlog.systable.enabled]]
+*`hbase.regionserver.slowlog.systable.enabled`*::
++
+.Description
+
+      Should be enabled only if hbase.regionserver.slowlog.buffer.enabled is enabled.
+      If enabled (true), all slow/large RPC logs would be persisted to system table
+      hbase:slowlog (in addition to in-memory ring buffer at each RegionServer).
+      The records are stored in increasing order of time.
+      Operators can scan the table with various combination of ColumnValueFilter and
+      time range.
+      More details are provided in the doc section:
+      "Get Slow/Large Response Logs from System table hbase:slowlog"
+
++
+.Default
+`false`
+
+
+[[hbase.master.metafixer.max.merge.count]]
+*`hbase.master.metafixer.max.merge.count`*::
++
+.Description
+
+      Maximum regions to merge at a time when we fix overlaps noted in
+      CJ consistency report, but avoid merging 100 regions in one go!
+
++
+.Default
+`64`
+
+
 [[hbase.rpc.rows.size.threshold.reject]]
 *`hbase.rpc.rows.size.threshold.reject`*::
 +
@@ -2264,3 +2310,18 @@ The percent of region server RPC threads failed to abort RS.
 +
 .Default
 `false`
+
+[[hbase.master.balancer.decision.buffer.enabled]]
+*`hbase.master.balancer.decision.buffer.enabled`*::
++
+.Description
+
+      Indicates whether active HMaster has ring buffer running for storing
+      balancer decisions in FIFO manner with limited entries. The size of
+      the ring buffer is indicated by config:
+      hbase.master.balancer.decision.queue.size
+
++
+.Default
+`false`
+

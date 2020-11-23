@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -87,18 +87,13 @@ public class TestDeleteMobTable {
     return mobVal;
   }
 
-  private TableDescriptorBuilder.ModifyableTableDescriptor createTableDescriptor(
-      TableName tableName, boolean hasMob) {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
+  private TableDescriptor createTableDescriptor(TableName tableName, boolean hasMob) {
+    ColumnFamilyDescriptorBuilder builder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
     if (hasMob) {
-      familyDescriptor.setMobEnabled(true);
-      familyDescriptor.setMobThreshold(0);
+      builder.setMobEnabled(true);
+      builder.setMobThreshold(0);
     }
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    return tableDescriptor;
+    return TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(builder.build()).build();
   }
 
   private Table createTableWithOneFile(TableDescriptor tableDescriptor) throws IOException {
@@ -173,12 +168,10 @@ public class TestDeleteMobTable {
   @Test
   public void testMobFamilyDelete() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      createTableDescriptor(tableName, true);
+    TableDescriptor tableDescriptor = createTableDescriptor(tableName, true);
     ColumnFamilyDescriptor familyDescriptor = tableDescriptor.getColumnFamily(FAMILY);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        Bytes.toBytes("family2")));
+    tableDescriptor = TableDescriptorBuilder.newBuilder(tableDescriptor)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("family2"))).build();
 
     Table table = createTableWithOneFile(tableDescriptor);
     try {
@@ -223,7 +216,8 @@ public class TestDeleteMobTable {
 
   private boolean mobTableDirExist(TableName tn) throws IOException {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    Path tableDir = FSUtils.getTableDir(MobUtils.getMobHome(TEST_UTIL.getConfiguration()), tn);
+    Path tableDir =
+      CommonFSUtils.getTableDir(MobUtils.getMobHome(TEST_UTIL.getConfiguration()), tn);
     return fs.exists(tableDir);
   }
 

@@ -58,6 +58,7 @@ public class MetricsConnection implements StatisticTrackable {
   /** Set this key to {@code true} to enable metrics collection of client requests. */
   public static final String CLIENT_SIDE_METRICS_ENABLED_KEY = "hbase.client.metrics.enable";
 
+  private static final String CNT_BASE = "rpcCount_";
   private static final String DRTN_BASE = "rpcCallDurationMs_";
   private static final String REQ_BASE = "rpcCallRequestSizeBytes_";
   private static final String RESP_BASE = "rpcCallResponseSizeBytes_";
@@ -303,6 +304,8 @@ public class MetricsConnection implements StatisticTrackable {
           LOAD_FACTOR, CONCURRENCY_LEVEL);
   private final ConcurrentMap<String, Counter> cacheDroppingExceptions =
     new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
+  @VisibleForTesting protected final ConcurrentMap<String, Counter>  rpcCounters =
+      new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
 
   MetricsConnection(String scope, Supplier<ThreadPoolExecutor> batchPool,
       Supplier<ThreadPoolExecutor> metaPool) {
@@ -434,8 +437,7 @@ public class MetricsConnection implements StatisticTrackable {
   }
 
   /** Update call stats for non-critical-path methods */
-  private void updateRpcGeneric(MethodDescriptor method, CallStats stats) {
-    final String methodName = method.getService().getName() + "_" + method.getName();
+  private void updateRpcGeneric(String methodName, CallStats stats) {
     getMetric(DRTN_BASE + methodName, rpcTimers, timerFactory)
         .update(stats.getCallTimeMs(), TimeUnit.MILLISECONDS);
     getMetric(REQ_BASE + methodName, rpcHistograms, histogramFactory)
@@ -450,6 +452,9 @@ public class MetricsConnection implements StatisticTrackable {
     if (callsPerServer > 0) {
       concurrentCallsPerServerHist.update(callsPerServer);
     }
+    // Update the counter that tracks RPCs by type.
+    final String methodName = method.getService().getName() + "_" + method.getName();
+    getMetric(CNT_BASE + methodName, rpcCounters, counterFactory).inc();
     // this implementation is tied directly to protobuf implementation details. would be better
     // if we could dispatch based on something static, ie, request Message type.
     if (method.getService() == ClientService.getDescriptor()) {
@@ -511,7 +516,7 @@ public class MetricsConnection implements StatisticTrackable {
       }
     }
     // Fallback to dynamic registry lookup for DDL methods.
-    updateRpcGeneric(method, stats);
+    updateRpcGeneric(methodName, stats);
   }
 
   public void incrCacheDroppingExceptions(Object exception) {

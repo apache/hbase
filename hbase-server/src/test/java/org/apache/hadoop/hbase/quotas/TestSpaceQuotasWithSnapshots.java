@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -88,9 +87,9 @@ public class TestSpaceQuotasWithSnapshots {
     TEST_UTIL.startMiniCluster(1);
     // Wait till quota table onlined.
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
-        return MetaTableAccessor.tableExists(TEST_UTIL.getConnection(),
-          QuotaTableUtil.QUOTA_TABLE_NAME);
+      @Override
+      public boolean evaluate() throws Exception {
+        return TEST_UTIL.getAdmin().tableExists(QuotaTableUtil.QUOTA_TABLE_NAME);
       }
     });
   }

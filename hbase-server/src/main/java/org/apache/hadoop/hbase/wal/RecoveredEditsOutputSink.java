@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,20 +26,23 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Class that manages the output streams from the log splitting process.
- * Every region only has one recovered edits.
+ * Every region only has one recovered edits file PER split WAL (if we split
+ * multiple WALs during a log-splitting session, on open, a Region may
+ * have multiple recovered.edits files to replay -- one per split WAL).
+ * @see BoundedRecoveredEditsOutputSink which is like this class but imposes upper bound on
+ *   the number of writers active at one time (makes for better throughput).
  */
 @InterfaceAudience.Private
 class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
@@ -52,7 +55,8 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public void append(EntryBuffers.RegionEntryBuffer buffer) throws IOException {
+  public void append(EntryBuffers.RegionEntryBuffer buffer)
+      throws IOException {
     List<WAL.Entry> entries = buffer.entryBuffer;
     if (entries.isEmpty()) {
       LOG.warn("got an empty buffer, skipping");
@@ -72,7 +76,7 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
    * @return null if this region shouldn't output any logs
    */
   private RecoveredEditsWriter getRecoveredEditsWriter(TableName tableName, byte[] region,
-    long seqId) throws IOException {
+      long seqId) throws IOException {
     RecoveredEditsWriter ret = writers.get(Bytes.toString(region));
     if (ret != null) {
       return ret;
@@ -81,6 +85,7 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
     if (ret == null) {
       return null;
     }
+    LOG.trace("Created {}", ret.path);
     writers.put(Bytes.toString(region), ret);
     return ret;
   }
@@ -89,7 +94,7 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   public List<Path> close() throws IOException {
     boolean isSuccessful = true;
     try {
-      isSuccessful &= finishWriterThreads();
+      isSuccessful = finishWriterThreads();
     } finally {
       isSuccessful &= closeWriters();
     }
@@ -106,6 +111,7 @@ class RecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
     for (RecoveredEditsWriter writer : writers.values()) {
       closeCompletionService.submit(() -> {
         Path dst = closeRecoveredEditsWriter(writer, thrown);
+        LOG.trace("Closed {}", dst);
         splits.add(dst);
         return null;
       });

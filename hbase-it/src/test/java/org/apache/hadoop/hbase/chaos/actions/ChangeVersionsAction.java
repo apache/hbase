@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 import java.util.Random;
-
 import org.apache.hadoop.hbase.TableName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,24 +30,28 @@ import org.slf4j.LoggerFactory;
  * Always keeps at least 1 as the number of versions.
  */
 public class ChangeVersionsAction extends Action {
-  private final TableName tableName;
   private static final Logger LOG = LoggerFactory.getLogger(ChangeVersionsAction.class);
+  private final TableName tableName;
 
-  private Random random;
+  private final Random random;
 
   public ChangeVersionsAction(TableName tableName) {
     this.tableName = tableName;
     this.random = new Random();
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws IOException {
     final int versions =  random.nextInt(3) + 1;
 
-    LOG.debug("Performing action: Changing versions on " + tableName + " to " + versions);
+    getLogger().debug("Performing action: Changing versions on " + tableName + " to " + versions);
     modifyAllTableColumns(tableName, columnBuilder -> {
       columnBuilder.setMinVersions(versions).setMaxVersions(versions);
     });
-    LOG.debug("Performing action: Just changed versions on " + tableName);
+    getLogger().debug("Performing action: Just changed versions on " + tableName);
   }
 }

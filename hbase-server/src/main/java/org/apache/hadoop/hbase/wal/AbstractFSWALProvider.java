@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,18 +35,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
+import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -87,6 +91,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   protected AtomicBoolean initialized = new AtomicBoolean(false);
   // for default wal provider, logPrefix won't change
   protected String logPrefix;
+  protected Abortable abortable;
 
   /**
    * We use walCreateLock to prevent wal recreation in different threads, and also prevent getWALs
@@ -101,7 +106,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    *          null
    */
   @Override
-  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+  public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
+      throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -118,6 +124,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       }
     }
     logPrefix = sb.toString();
+    this.abortable = abortable;
     doInit(conf);
   }
 
@@ -251,31 +258,36 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   public static final String SPLITTING_EXT = "-splitting";
 
   /**
-   * It returns the file create timestamp from the file name. For name format see
+   * Pattern used to validate a WAL file name see {@link #validateWALFilename(String)} for
+   * description.
+   */
+  private static final Pattern WAL_FILE_NAME_PATTERN =
+    Pattern.compile("(.+)\\.(\\d+)(\\.[0-9A-Za-z]+)?");
+
+  /**
+   * Define for when no timestamp found.
+   */
+  private static final long NO_TIMESTAMP = -1L;
+
+  /**
+   * It returns the file create timestamp (the 'FileNum') from the file name. For name format see
    * {@link #validateWALFilename(String)} public until remaining tests move to o.a.h.h.wal
    * @param wal must not be null
    * @return the file number that is part of the WAL file name
    */
   @VisibleForTesting
   public static long extractFileNumFromWAL(final WAL wal) {
-    final Path walName = ((AbstractFSWAL<?>) wal).getCurrentFileName();
-    if (walName == null) {
+    final Path walPath = ((AbstractFSWAL<?>) wal).getCurrentFileName();
+    if (walPath == null) {
       throw new IllegalArgumentException("The WAL path couldn't be null");
     }
-    Matcher matcher = WAL_FILE_NAME_PATTERN.matcher(walName.getName());
-    if (matcher.matches()) {
-      return Long.parseLong(matcher.group(2));
-    } else {
-      throw new IllegalArgumentException(walName.getName() + " is not a valid wal file name");
+    String name = walPath.getName();
+    long timestamp = getTimestamp(name);
+    if (timestamp == NO_TIMESTAMP) {
+      throw new IllegalArgumentException(name + " is not a valid wal file name");
     }
+    return timestamp;
   }
-
-  /**
-   * Pattern used to validate a WAL file name see {@link #validateWALFilename(String)} for
-   * description.
-   */
-  private static final Pattern WAL_FILE_NAME_PATTERN =
-    Pattern.compile("(.+)\\.(\\d+)(\\.[0-9A-Za-z]+)?");
 
   /**
    * A WAL file name is of the format: &lt;wal-name&gt;{@link #WAL_FILE_NAME_DELIMITER}
@@ -286,6 +298,23 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    */
   public static boolean validateWALFilename(String filename) {
     return WAL_FILE_NAME_PATTERN.matcher(filename).matches();
+  }
+
+  /**
+   * Split a WAL filename to get a start time. WALs usually have the time we start writing to them
+   * with as part of their name, usually the suffix. Sometimes there will be an extra suffix as when
+   * it is a WAL for the meta table. For example, WALs might look like this
+   * <code>10.20.20.171%3A60020.1277499063250</code> where <code>1277499063250</code> is the
+   * timestamp. Could also be a meta WAL which adds a '.meta' suffix or a
+   * synchronous replication WAL which adds a '.syncrep' suffix. Check for these. File also may have
+   * no timestamp on it. For example the recovered.edits files are WALs but are named in ascending
+   * order. Here is an example: 0000000000000016310. Allow for this.
+   * @param name Name of the WAL file.
+   * @return Timestamp or {@link #NO_TIMESTAMP}.
+   */
+  public static long getTimestamp(String name) {
+    Matcher matcher = WAL_FILE_NAME_PATTERN.matcher(name);
+    return matcher.matches() ? Long.parseLong(matcher.group(2)): NO_TIMESTAMP;
   }
 
   /**
@@ -306,7 +335,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * Construct the directory name for all old WALs on a given server. The default old WALs dir looks
    * like: <code>hbase/oldWALs</code>. If you config hbase.separate.oldlogdir.by.regionserver to
    * true, it looks like <code>hbase//oldWALs/kalashnikov.att.net,61634,1486865297088</code>.
-   * @param conf
    * @param serverName Server name formatted as described in {@link ServerName}
    * @return the relative WAL directory name
    */
@@ -412,12 +440,37 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return isMetaFile(p.getName());
   }
 
+  /**
+   * @return True if String ends in {@link #META_WAL_PROVIDER_ID}
+   */
   public static boolean isMetaFile(String p) {
-    if (p != null && p.endsWith(META_WAL_PROVIDER_ID)) {
-      return true;
-    }
-    return false;
+    return p != null && p.endsWith(META_WAL_PROVIDER_ID);
   }
+
+  /**
+   * Comparator used to compare WAL files together based on their start time.
+   * Just compares start times and nothing else.
+   */
+  public static class WALStartTimeComparator implements Comparator<Path> {
+    @Override
+    public int compare(Path o1, Path o2) {
+      return Long.compare(getTS(o1), getTS(o2));
+    }
+
+    /**
+     * Split a path to get the start time
+     * For example: 10.20.20.171%3A60020.1277499063250
+     * Could also be a meta WAL which adds a '.meta' suffix or a synchronous replication WAL
+     * which adds a '.syncrep' suffix. Check.
+     * @param p path to split
+     * @return start time
+     */
+    private static long getTS(Path p) {
+      return getTimestamp(p.getName());
+    }
+  }
+
+
 
   public static boolean isArchivedLogFile(Path p) {
     String oldLog = Path.SEPARATOR + HConstants.HREGION_OLDLOGDIR_NAME + Path.SEPARATOR;
@@ -432,7 +485,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @throws IOException exception
    */
   public static Path getArchivedLogPath(Path path, Configuration conf) throws IOException {
-    Path rootDir = FSUtils.getWALRootDir(conf);
+    Path rootDir = CommonFSUtils.getWALRootDir(conf);
     Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     if (conf.getBoolean(SEPARATE_OLDLOGDIR, DEFAULT_SEPARATE_OLDLOGDIR)) {
       ServerName serverName = getServerNameFromWALDirectoryName(path);
@@ -443,7 +496,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       oldLogDir = new Path(oldLogDir, serverName.getServerName());
     }
     Path archivedLogLocation = new Path(oldLogDir, path.getName());
-    final FileSystem fs = FSUtils.getWALFileSystem(conf);
+    final FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
 
     if (fs.exists(archivedLogLocation)) {
       LOG.info("Log " + path + " was moved to " + archivedLogLocation);
@@ -459,12 +512,9 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @param path path to WAL file
    * @param conf configuration
    * @return WAL Reader instance
-   * @throws IOException
    */
   public static org.apache.hadoop.hbase.wal.WAL.Reader openReader(Path path, Configuration conf)
-      throws IOException
-
-  {
+      throws IOException {
     long retryInterval = 2000; // 2 sec
     int maxAttempts = 30;
     int attempt = 0;
@@ -512,9 +562,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   // For HBASE-15019
   private static void recoverLease(final Configuration conf, final Path path) {
     try {
-      final FileSystem dfs = FSUtils.getCurrentFileSystem(conf);
-      FSUtils fsUtils = FSUtils.getInstance(dfs, conf);
-      fsUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
+      final FileSystem dfs = CommonFSUtils.getCurrentFileSystem(conf);
+      RecoverLeaseFSUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
         @Override
         public boolean progress() {
           LOG.debug("Still trying to recover WAL lease: " + path);
@@ -549,9 +598,5 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    */
   public static String getWALPrefixFromWALName(String name) {
     return getWALNameGroupFromWALName(name, 1);
-  }
-
-  public static long getWALStartTimeFromWALName(String name) {
-    return Long.parseLong(getWALNameGroupFromWALName(name, 2));
   }
 }

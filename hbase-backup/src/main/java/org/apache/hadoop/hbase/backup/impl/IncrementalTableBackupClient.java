@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,7 +44,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -127,7 +126,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     } catch (URISyntaxException use) {
       throw new IOException("Unable to get FileSystem", use);
     }
-    Path rootdir = FSUtils.getRootDir(conf);
+    Path rootdir = CommonFSUtils.getRootDir(conf);
     Path tgtRoot = new Path(new Path(backupInfo.getBackupRootDir()), backupId);
 
     for (Map.Entry<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> tblEntry :
@@ -142,7 +141,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       if (mapForSrc[srcIdx] == null) {
         mapForSrc[srcIdx] = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       }
-      Path tblDir = FSUtils.getTableDir(rootdir, srcTable);
+      Path tblDir = CommonFSUtils.getTableDir(rootdir, srcTable);
       Path tgtTable = new Path(new Path(tgtRoot, srcTable.getNamespaceAsString()),
           srcTable.getQualifierAsString());
       for (Map.Entry<String,Map<String,List<Pair<String, Boolean>>>> regionEntry :

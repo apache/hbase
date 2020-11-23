@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.Before;
@@ -139,7 +139,7 @@ public abstract class TestAssignmentManagerBase {
   }
 
   protected void setupConfiguration(Configuration conf) throws Exception {
-    FSUtils.setRootDir(conf, util.getDataTestDir());
+    CommonFSUtils.setRootDir(conf, util.getDataTestDir());
     conf.setBoolean(WALProcedureStore.USE_HSYNC_CONF_KEY, false);
     conf.setInt(WALProcedureStore.SYNC_WAIT_MSEC_CONF_KEY, 10);
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, PROC_NTHREADS);

@@ -20,6 +20,10 @@ package org.apache.hadoop.hbase.zookeeper;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -277,5 +281,59 @@ public class MasterAddressTracker extends ZKNodeTracker {
     }
 
     return false;
+  }
+
+  public List<ServerName> getBackupMasters() throws InterruptedIOException {
+    return getBackupMastersAndRenewWatch(watcher);
+  }
+
+  /**
+   * Retrieves the list of registered backup masters and renews a watch on the znode for children
+   * updates.
+   * @param zkw Zookeeper watcher to use
+   * @return List of backup masters.
+   * @throws InterruptedIOException if there is any issue fetching the required data from Zookeeper.
+   */
+  public static List<ServerName> getBackupMastersAndRenewWatch(
+      ZKWatcher zkw) throws InterruptedIOException {
+    // Build Set of backup masters from ZK nodes
+    List<String> backupMasterStrings = Collections.emptyList();
+    try {
+      backupMasterStrings = ZKUtil.listChildrenAndWatchForNewChildren(zkw,
+          zkw.getZNodePaths().backupMasterAddressesZNode);
+    } catch (KeeperException e) {
+      LOG.warn(zkw.prefix("Unable to list backup servers"), e);
+    }
+
+    List<ServerName> backupMasters = Collections.emptyList();
+    if (backupMasterStrings != null && !backupMasterStrings.isEmpty()) {
+      backupMasters = new ArrayList<>(backupMasterStrings.size());
+      for (String s: backupMasterStrings) {
+        try {
+          byte [] bytes;
+          try {
+            bytes = ZKUtil.getData(zkw, ZNodePaths.joinZNode(
+                zkw.getZNodePaths().backupMasterAddressesZNode, s));
+          } catch (InterruptedException e) {
+            throw new InterruptedIOException();
+          }
+          if (bytes != null) {
+            ServerName sn;
+            try {
+              sn = ProtobufUtil.parseServerNameFrom(bytes);
+            } catch (DeserializationException e) {
+              LOG.warn("Failed parse, skipping registering backup server", e);
+              continue;
+            }
+            backupMasters.add(sn);
+          }
+        } catch (KeeperException e) {
+          LOG.warn(zkw.prefix("Unable to get information about " +
+              "backup servers"), e);
+        }
+      }
+      backupMasters.sort(Comparator.comparing(ServerName::getServerName));
+    }
+    return backupMasters;
   }
 }

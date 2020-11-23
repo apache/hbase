@@ -191,7 +191,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     HRegion hr = (HRegion)r;
     try {
       if (shouldSplitRegion() && hr.getCompactPriority() >= PRIORITY_USER) {
-        byte[] midKey = hr.checkSplit();
+        byte[] midKey = hr.checkSplit().orElse(null);
         if (midKey != null) {
           requestSplit(r, midKey);
           return true;
@@ -216,9 +216,6 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     if (midKey == null) {
       LOG.debug("Region " + r.getRegionInfo().getRegionNameAsString() +
         " not splittable because midkey=null");
-      if (((HRegion)r).shouldForceSplit()) {
-        ((HRegion)r).clearSplit();
-      }
       return;
     }
     try {

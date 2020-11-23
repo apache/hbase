@@ -34,6 +34,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -450,7 +452,7 @@ public class TestRegionPlacement {
 
             assertNotNull(addrFromRS);
             assertNotNull(addrFromPlan);
-            assertTrue("Region server " + rs.getServerName().getHostAndPort()
+            assertTrue("Region server " + rs.getServerName().getAddress()
                 + " has the " + positions[j] +
                 " for region " + region.getRegionInfo().getRegionNameAsString() + " is " +
                 addrFromRS + " which is inconsistent with the plan "
@@ -473,12 +475,12 @@ public class TestRegionPlacement {
     final AtomicInteger regionOnPrimaryNum = new AtomicInteger(0);
     final AtomicInteger totalRegionNum = new AtomicInteger(0);
     LOG.info("The start of region placement verification");
-    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+    ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
       @Override
       public boolean visit(Result result) throws IOException {
         try {
           @SuppressWarnings("deprecation")
-          RegionInfo info = MetaTableAccessor.getRegionInfo(result);
+          RegionInfo info = CatalogFamilyFormat.getRegionInfo(result);
           if(info.getTable().getNamespaceAsString()
               .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
             return true;
@@ -549,12 +551,8 @@ public class TestRegionPlacement {
       splitKeys[i - 1] = new byte[] { splitKey, splitKey, splitKey };
     }
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(
-        HConstants.CATALOG_FAMILY));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     admin.createTable(tableDescriptor, splitKeys);
 
     try (RegionLocator r = CONNECTION.getRegionLocator(tableName)) {

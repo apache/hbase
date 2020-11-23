@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -44,7 +46,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -188,6 +189,9 @@ public class TestAccessController3 extends SecureTestUtil {
     USER_GROUP_WRITE =
         User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
 
+    // Grant table creation permission to USER_OWNER
+    grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Permission.Action.CREATE);
+
     systemUserConnection = TEST_UTIL.getConnection();
     setUpTableAndUserPermissions();
   }
@@ -204,14 +208,10 @@ public class TestAccessController3 extends SecureTestUtil {
   }
 
   private static void setUpTableAndUserPermissions() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TEST_TABLE);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
-    familyDescriptor.setMaxVersions(100);
-    tableDescriptor.setColumnFamily(familyDescriptor);
-    tableDescriptor.setOwner(USER_OWNER);
-    createTable(TEST_UTIL, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TABLE)
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build()).build();
+    createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
@@ -281,11 +281,9 @@ public class TestAccessController3 extends SecureTestUtil {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-          new TableDescriptorBuilder.ModifyableTableDescriptor(
-            TableName.valueOf(name.getMethodName()));
-        tableDescriptor.setColumnFamily(
-          new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+        TableDescriptor tableDescriptor =
+          TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
         ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
           tableDescriptor, null);
         return null;
@@ -293,11 +291,11 @@ public class TestAccessController3 extends SecureTestUtil {
     };
 
     // verify that superuser can create tables
-    verifyAllowed(createTable, SUPERUSER, USER_ADMIN, USER_GROUP_CREATE);
+    verifyAllowed(createTable, SUPERUSER, USER_ADMIN, USER_GROUP_CREATE, USER_GROUP_ADMIN);
 
     // all others should be denied
-    verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_ADMIN,
-      USER_GROUP_READ, USER_GROUP_WRITE);
+    verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE);
   }
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,6 +46,10 @@ public class CompactMobAction extends Action {
     this.sleepTime = sleepTime;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
@@ -57,7 +61,7 @@ public class CompactMobAction extends Action {
       return;
     }
 
-    LOG.info("Performing action: Compact mob of table " + tableName + ", major=" + major);
+    getLogger().info("Performing action: Compact mob of table " + tableName + ", major=" + major);
     try {
       if (major) {
         admin.majorCompact(tableName, CompactType.MOB);
@@ -65,7 +69,7 @@ public class CompactMobAction extends Action {
         admin.compact(tableName, CompactType.MOB);
       }
     } catch (Exception ex) {
-      LOG.warn("Mob Compaction failed, might be caused by other chaos: " + ex.getMessage());
+      getLogger().warn("Mob Compaction failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

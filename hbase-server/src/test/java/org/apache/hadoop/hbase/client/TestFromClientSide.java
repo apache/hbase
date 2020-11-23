@@ -24,10 +24,12 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,10 +39,8 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -113,13 +113,18 @@ public class TestFromClientSide extends FromClientSideBase {
    */
   @Test
   public void testDuplicateAppend() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL
-      .createTableDescriptor(name.getTableName(), HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3,
-        HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
+    TableDescriptorBuilder builder = TEST_UTIL
+      .createModifyableTableDescriptor(name.getTableName(),
+        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     Map<String, String> kvs = new HashMap<>();
     kvs.put(SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
-    hdt.addCoprocessor(SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
-    TEST_UTIL.createTable(hdt, new byte[][] { ROW }).close();
+    builder.setCoprocessor(CoprocessorDescriptorBuilder
+      .newBuilder(SleepAtFirstRpcCall.class.getName())
+      .setPriority(1)
+      .setProperties(kvs)
+      .build());
+    TEST_UTIL.createTable(builder.build(), new byte[][] { ROW }).close();
 
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     c.setInt(HConstants.HBASE_CLIENT_PAUSE, 50);
@@ -147,9 +152,56 @@ public class TestFromClientSide extends FromClientSideBase {
   }
 
   /**
+   * Test batch append result when there are duplicate rpc request.
+   */
+  @Test
+  public void testDuplicateBatchAppend() throws Exception {
+    TableDescriptorBuilder builder = TEST_UTIL
+      .createModifyableTableDescriptor(name.getTableName(),
+        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+    Map<String, String> kvs = new HashMap<>();
+    kvs.put(SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
+    builder.setCoprocessor(CoprocessorDescriptorBuilder
+      .newBuilder(SleepAtFirstRpcCall.class.getName())
+      .setPriority(1)
+      .setProperties(kvs)
+      .build());
+    TEST_UTIL.createTable(builder.build(), new byte[][] { ROW }).close();
+
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+    c.setInt(HConstants.HBASE_CLIENT_PAUSE, 50);
+    // Client will retry because rpc timeout is small than the sleep time of first rpc call
+    c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
+
+    try (Connection connection = ConnectionFactory.createConnection(c);
+      Table table = connection.getTableBuilder(name.getTableName(), null).
+        setOperationTimeout(3 * 1000).build()) {
+      Append append = new Append(ROW);
+      append.addColumn(HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+
+      // Batch append
+      Object[] results = new Object[1];
+      table.batch(Collections.singletonList(append), results);
+
+      // Verify expected result
+      Cell[] cells = ((Result) results[0]).rawCells();
+      assertEquals(1, cells.length);
+      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+
+      // Verify expected result again
+      Result readResult = table.get(new Get(ROW));
+      cells = readResult.rawCells();
+      assertEquals(1, cells.length);
+      assertKey(cells[0], ROW, HBaseTestingUtility.fam1, QUALIFIER, VALUE);
+    }
+  }
+
+  /**
    * Basic client side validation of HBASE-4536
    */
-  @Test public void testKeepDeletedCells() throws Exception {
+  @Test
+  public void testKeepDeletedCells() throws Exception {
     final TableName tableName = name.getTableName();
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] C0 = Bytes.toBytes("c0");
@@ -157,13 +209,11 @@ public class TestFromClientSide extends FromClientSideBase {
     final byte[] T1 = Bytes.toBytes("T1");
     final byte[] T2 = Bytes.toBytes("T2");
     final byte[] T3 = Bytes.toBytes("T3");
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY)
-        .setKeepDeletedCells(KeepDeletedCells.TRUE).setMaxVersions(3);
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY)
+        .setKeepDeletedCells(KeepDeletedCells.TRUE).setMaxVersions(3).build())
+      .build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
     try (Table h = TEST_UTIL.getConnection().getTable(tableName)) {
       long ts = System.currentTimeMillis();

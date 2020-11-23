@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTransitionContext;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,19 +86,18 @@ public class UnassignRegionHandler extends EventHandler {
         // reportRegionStateTransition, so the HMaster will think the region is online, before we
         // actually open the region, as reportRegionStateTransition is part of the opening process.
         long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
-        LOG.warn("Received CLOSE for the region: {}, which we are already " +
-          "trying to OPEN. try again after {}ms", encodedName, backoff);
+        LOG.warn("Received CLOSE for {} which we are already " +
+          "trying to OPEN; try again after {}ms", encodedName, backoff);
         rs.getExecutorService().delayedSubmit(this, backoff, TimeUnit.MILLISECONDS);
       } else {
-        LOG.info("Received CLOSE for the region: {}, which we are already trying to CLOSE," +
+        LOG.info("Received CLOSE for {} which we are already trying to CLOSE," +
           " but not completed yet", encodedName);
       }
       return;
     }
     HRegion region = rs.getRegion(encodedName);
     if (region == null) {
-      LOG.debug(
-        "Received CLOSE for a region {} which is not online, and we're not opening/closing.",
+      LOG.debug("Received CLOSE for {} which is not ONLINE and we're not opening/closing.",
         encodedName);
       rs.getRegionsInTransitionInRS().remove(encodedNameBytes, Boolean.FALSE);
       return;
@@ -114,11 +115,21 @@ public class UnassignRegionHandler extends EventHandler {
     if (region.close(abort) == null) {
       // XXX: Is this still possible? The old comment says about split, but now split is done at
       // master side, so...
-      LOG.warn("Can't close region {}, was already closed during close()", regionName);
+      LOG.warn("Can't close {}, already closed during close()", regionName);
       rs.getRegionsInTransitionInRS().remove(encodedNameBytes, Boolean.FALSE);
       return;
     }
+
     rs.removeRegion(region, destination);
+    if (ServerRegionReplicaUtil.isMetaRegionReplicaReplicationEnabled(rs.getConfiguration(),
+        region.getTableDescriptor().getTableName())) {
+      if (RegionReplicaUtil.isDefaultReplica(region.getRegionInfo().getReplicaId())) {
+        // If hbase:meta read replicas enabled, remove replication source for hbase:meta Regions.
+        // See assign region handler where we add the replication source on open.
+        rs.getReplicationSourceService().getReplicationManager().
+          removeCatalogReplicationSource(region.getRegionInfo());
+      }
+    }
     if (!rs.reportRegionStateTransition(
       new RegionStateTransitionContext(TransitionCode.CLOSED, HConstants.NO_SEQNUM, closeProcId,
         -1, region.getRegionInfo()))) {

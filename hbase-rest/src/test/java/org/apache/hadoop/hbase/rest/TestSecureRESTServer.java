@@ -56,8 +56,8 @@ import org.apache.hadoop.hbase.security.access.AccessControlConstants;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.security.token.TokenProvider;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -101,7 +101,7 @@ import org.slf4j.LoggerFactory;
  * Test class for SPNEGO authentication on the HttpServer. Uses Kerby's MiniKDC and Apache
  * HttpComponents to verify that a simple Servlet is reachable via SPNEGO and unreachable w/o.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({MiscTests.class, MediumTests.class})
 public class TestSecureRESTServer {
 
   @ClassRule
@@ -168,7 +168,7 @@ public class TestSecureRESTServer {
     HBaseKerberosUtils.setKeytabFileForTesting(serviceKeytab.getAbsolutePath());
     // Why doesn't `setKeytabFileForTesting` do this?
     conf.set("hbase.master.keytab.file", serviceKeytab.getAbsolutePath());
-    conf.set("hbase.regionserver.hostname", "localhost");
+    conf.set("hbase.unsafe.regionserver.hostname", "localhost");
     conf.set("hbase.master.hostname", "localhost");
     HBaseKerberosUtils.setSecuredConfiguration(conf,
         SERVICE_PRINCIPAL+ "@" + KDC.getRealm(), SPNEGO_SERVICE_PRINCIPAL+ "@" + KDC.getRealm());

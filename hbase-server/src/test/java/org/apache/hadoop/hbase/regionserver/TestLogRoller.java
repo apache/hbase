@@ -19,22 +19,28 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestLogRoller {
@@ -43,53 +49,104 @@ public class TestLogRoller {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestLogRoller.class);
 
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static final int logRollPeriod = 20 * 1000;
+  private static final int LOG_ROLL_PERIOD = 20 * 1000;
+  private static final String LOG_DIR = "WALs";
+  private static final String ARCHIVE_DIR = "archiveWALs";
+  private static final String WAL_PREFIX = "test-log-roller";
+  private static Configuration CONF;
+  private static LogRoller ROLLER;
+  private static Path ROOT_DIR;
+  private static FileSystem FS;
 
   @Before
   public void setup() throws Exception {
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.logroll.period", logRollPeriod);
-    TEST_UTIL.startMiniCluster(1);
-    TableName name = TableName.valueOf("Test");
-    TEST_UTIL.createTable(name, Bytes.toBytes("cf"));
-    TEST_UTIL.waitTableAvailable(name);
+    CONF = TEST_UTIL.getConfiguration();
+    CONF.setInt("hbase.regionserver.logroll.period", LOG_ROLL_PERIOD);
+    CONF.setInt(HConstants.THREAD_WAKE_FREQUENCY, 300);
+    ROOT_DIR = TEST_UTIL.getRandomDir();
+    FS = FileSystem.get(CONF);
+    RegionServerServices services = Mockito.mock(RegionServerServices.class);
+    Mockito.when(services.getConfiguration()).thenReturn(CONF);
+    ROLLER = new LogRoller(services);
+    ROLLER.start();
   }
 
   @After
   public void tearDown() throws Exception {
+    ROLLER.close();
+    FS.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testRemoveClosedWAL() throws Exception {
-    HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
-    Configuration conf = rs.getConfiguration();
-    LogRoller logRoller = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getWalRoller();
-    int originalSize = logRoller.getWalNeedsRoll().size();
-    FSHLog wal1 = new FSHLog(rs.getWALFileSystem(), rs.getWALRootDir(),
-        AbstractFSWALProvider.getWALDirectoryName(rs.getServerName().getServerName()), conf);
-    logRoller.addWAL(wal1);
-    FSHLog wal2 = new FSHLog(rs.getWALFileSystem(), rs.getWALRootDir(),
-      AbstractFSWALProvider.getWALDirectoryName(rs.getServerName().getServerName()), conf);
-    logRoller.addWAL(wal2);
-    FSHLog wal3 = new FSHLog(rs.getWALFileSystem(), rs.getWALRootDir(),
-      AbstractFSWALProvider.getWALDirectoryName(rs.getServerName().getServerName()), conf);
-    logRoller.addWAL(wal3);
+    assertEquals(0, ROLLER.getWalNeedsRoll().size());
+    for (int i = 1; i <= 3; i++) {
+      FSHLog wal = new FSHLog(FS, ROOT_DIR, LOG_DIR, ARCHIVE_DIR, CONF, null,
+        true, WAL_PREFIX, getWALSuffix(i));
+      ROLLER.addWAL(wal);
+    }
 
-    assertEquals(originalSize + 3, logRoller.getWalNeedsRoll().size());
-    assertTrue(logRoller.getWalNeedsRoll().containsKey(wal1));
+    assertEquals(3, ROLLER.getWalNeedsRoll().size());
+    Iterator<WAL> it = ROLLER.getWalNeedsRoll().keySet().iterator();
+    WAL wal = it.next();
+    assertTrue(ROLLER.getWalNeedsRoll().containsKey(wal));
 
-    wal1.close();
-    Thread.sleep(2 * logRollPeriod);
+    wal.close();
+    Thread.sleep(LOG_ROLL_PERIOD + 5000);
 
-    assertEquals(originalSize + 2, logRoller.getWalNeedsRoll().size());
-    assertFalse(logRoller.getWalNeedsRoll().containsKey(wal1));
+    assertEquals(2, ROLLER.getWalNeedsRoll().size());
+    assertFalse(ROLLER.getWalNeedsRoll().containsKey(wal));
 
-    wal2.close();
-    wal3.close();
-    Thread.sleep(2 * logRollPeriod);
+    wal = it.next();
+    wal.close();
+    wal = it.next();
+    wal.close();
+    Thread.sleep(LOG_ROLL_PERIOD + 5000);
 
-    assertEquals(originalSize, logRoller.getWalNeedsRoll().size());
+    assertEquals(0, ROLLER.getWalNeedsRoll().size());
+  }
+
+  /**
+   * verify that each wal roll separately
+   */
+  @Test
+  public void testRequestRollWithMultiWal() throws Exception {
+    // add multiple wal
+    Map<FSHLog, Path> wals = new HashMap<>();
+    for (int i = 1; i <= 3; i++) {
+      FSHLog wal = new FSHLog(FS, ROOT_DIR, LOG_DIR, ARCHIVE_DIR, CONF, null,
+        true, WAL_PREFIX, getWALSuffix(i));
+      wal.init();
+      wals.put(wal, wal.getCurrentFileName());
+      ROLLER.addWAL(wal);
+      Thread.sleep(1000);
+    }
+
+    // request roll
+    Iterator<Map.Entry<FSHLog, Path>> it = wals.entrySet().iterator();
+    Map.Entry<FSHLog, Path> walEntry = it.next();
+    walEntry.getKey().requestLogRoll();
+    Thread.sleep(5000);
+
+    assertNotEquals(walEntry.getValue(), walEntry.getKey().getCurrentFileName());
+    walEntry.setValue(walEntry.getKey().getCurrentFileName());
+    while (it.hasNext()) {
+      walEntry = it.next();
+      assertEquals(walEntry.getValue(), walEntry.getKey().getCurrentFileName());
+    }
+
+    // period roll
+    Thread.sleep(LOG_ROLL_PERIOD + 5000);
+    for (Map.Entry<FSHLog, Path> entry : wals.entrySet()) {
+      assertNotEquals(entry.getValue(), entry.getKey().getCurrentFileName());
+      entry.getKey().close();
+    }
+  }
+
+  private static String getWALSuffix(int id) {
+    return "." + id;
   }
 }

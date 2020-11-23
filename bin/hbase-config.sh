@@ -94,6 +94,10 @@ do
     shift
     # shellcheck disable=SC2034
     DEBUG="true"
+  elif [ "--help" = "$1" ] || [ "-h" = "$1" ]
+  then
+    echo "Error usage! You should use it like 'hbase --help' or 'hbase -h'";
+    exit 1
   else
     # Presume we are at end of options and break
     break
@@ -133,6 +137,10 @@ if [ -z "$HBASE_ENV_INIT" ] && [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
   . "${HBASE_CONF_DIR}/hbase-env.sh"
   export HBASE_ENV_INIT="true"
 fi
+
+# These variables can be specified in hbase-env.sh, so these defines follow sourcing of that script.
+export GREP="${GREP-grep}"
+export SED="${SED-sed}"
 
 # Verify if hbase has the mlock agent
 if [ "$HBASE_REGIONSERVER_MLOCK" = "true" ]; then

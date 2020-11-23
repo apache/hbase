@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,17 +16,14 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
-
-import java.io.IOException;
 import java.util.concurrent.locks.Lock;
-
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
@@ -65,7 +61,7 @@ public class SplitWALCallable implements RSProcedureCallable {
           MasterProcedureProtos.SplitWALParameter.parseFrom(parameter);
       this.walPath = param.getWalPath();
     } catch (InvalidProtocolBufferException e) {
-      LOG.error("parse proto buffer of split WAL request failed ", e);
+      LOG.error("Parse proto buffer of split WAL request failed ", e);
       initError = e;
     }
   }
@@ -75,6 +71,24 @@ public class SplitWALCallable implements RSProcedureCallable {
     return EventType.RS_LOG_REPLAY;
   }
 
+  public static class PreemptedWALSplitException extends HBaseIOException {
+    PreemptedWALSplitException(String wal) {
+      super(wal);
+    }
+  }
+
+  public static class ResignedWALSplitException extends HBaseIOException {
+    ResignedWALSplitException(String wal) {
+      super(wal);
+    }
+  }
+
+  public static class ErrorWALSplitException extends HBaseIOException {
+    ErrorWALSplitException(String wal) {
+      super(wal);
+    }
+  }
+
   @Override
   public Void call() throws Exception {
     if (initError != null) {
@@ -82,14 +96,18 @@ public class SplitWALCallable implements RSProcedureCallable {
     }
     //grab a lock
     splitWALLock = splitWALLocks.acquireLock(walPath);
-    try{
-      splitWal();
-      LOG.info("split WAL {} succeed.", walPath);
-    } catch (IOException e){
-      LOG.warn("failed to split WAL {}.", walPath, e);
-      throw e;
-    }
-    finally {
+    try {
+      switch (SplitLogWorker.splitLog(walPath, null, rs.getConfiguration(), rs, rs, rs.getWalFactory())) {
+        case DONE:
+          break;
+        case PREEMPTED:
+          throw new PreemptedWALSplitException(this.walPath);
+        case RESIGNED:
+          throw new ResignedWALSplitException(this.walPath);
+        default:
+          throw new ErrorWALSplitException(this.walPath);
+      }
+    } finally {
       splitWALLock.unlock();
     }
     return null;
@@ -97,13 +115,5 @@ public class SplitWALCallable implements RSProcedureCallable {
 
   public String getWalPath() {
     return this.walPath;
-  }
-
-  private void splitWal() throws IOException {
-    SplitLogWorker.TaskExecutor.Status status =
-        SplitLogWorker.splitLog(walPath, null, rs.getConfiguration(), rs, rs, rs.getWalFactory());
-    if (status != SplitLogWorker.TaskExecutor.Status.DONE) {
-      throw new IOException("Split WAL " + walPath + " failed at server ");
-    }
   }
 }

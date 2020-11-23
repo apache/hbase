@@ -53,6 +53,10 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
   String COPROCESSOR_EXECUTION_STATISTICS_DESC = "Statistics for coprocessor execution times";
   String REPLICA_ID = "replicaid";
   String REPLICA_ID_DESC = "The replica ID of a region. 0 is primary, otherwise is secondary";
+  String ROW_READS_ONLY_ON_MEMSTORE = "memstoreOnlyRowReadsCount";
+  String ROW_READS_ONLY_ON_MEMSTORE_DESC = "Row reads happening completely out of memstore";
+  String MIXED_ROW_READS = "mixedRowReadsCount";
+  String MIXED_ROW_READS_ON_STORE_DESC = "Row reads happening out of files and memstore on store";
 
   /**
    * Close the region's metrics as this region is closing.

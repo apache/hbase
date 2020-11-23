@@ -18,7 +18,7 @@
 #
 
 require 'hbase_constants'
-require 'shell'
+require 'hbase_shell'
 
 class ShellTest < Test::Unit::TestCase
   include Hbase::TestHelpers
@@ -61,6 +61,46 @@ class ShellTest < Test::Unit::TestCase
 
   #-------------------------------------------------------------------------------
 
+  define_test 'Shell::Shell#export_all export commands, constants, and variables' do
+    module FooM; end
+    class FooC; end
+    foo = FooC.new
+
+    # export_all should reject classes and modules as targets
+    assert_raise(ArgumentError) do
+      @shell.export_all(FooM)
+    end
+    assert_raise(ArgumentError) do
+      @shell.export_all(FooC)
+    end
+
+    # For potency, verify that none of the commands, variables or constants exist before export
+    assert(!foo.respond_to?(:version))
+    assert(foo.instance_variable_get(:'@shell').nil?)
+    assert(foo.instance_variable_get(:'@hbase').nil?)
+    assert(!foo.class.const_defined?(:IN_MEMORY_COMPACTION)) # From HBaseConstants
+    assert(!foo.class.const_defined?(:QUOTA_TABLE_NAME)) # From HBaseQuotasConstants
+
+    @shell.export_all(foo)
+
+    # Now verify that all the commands, variables, and constants are installed
+    assert(foo.respond_to?(:version))
+    assert(foo.instance_variable_get(:'@shell') == @shell)
+    assert(foo.instance_variable_get(:'@hbase') == @hbase)
+    assert(foo.class.const_defined?(:IN_MEMORY_COMPACTION)) # From HBaseConstants
+    assert(foo.class.const_defined?(:QUOTA_TABLE_NAME)) # From HBaseQuotasConstants
+
+    # commands should not exist on the class of target
+    assert_raise(NameError) do
+      FooC.method :version
+    end
+    assert_raise(NameError) do
+      FooC.instance_method :version
+    end
+  end
+
+  #-------------------------------------------------------------------------------
+
   define_test "Shell::Shell#command_instance should return a command class" do
     assert_kind_of(Shell::Commands::Command, @shell.command_instance('version'))
   end
@@ -69,6 +109,44 @@ class ShellTest < Test::Unit::TestCase
 
   define_test "Shell::Shell#command should execute a command" do
     @shell.command('version')
+  end
+
+  #-----------------------------------------------------------------------------
+
+  define_test 'Shell::Shell#eval_io should evaluate IO' do
+    StringIO.include HBaseIOExtensions
+    # check that at least one of the commands is present while evaluating
+    io = StringIO.new <<~EOF
+      puts (respond_to? :list)
+    EOF
+    output = capture_stdout { @shell.eval_io(io) }
+    assert_match(/true/, output)
+
+    # check that at least one of the HBase constants is present while evaluating
+    io = StringIO.new <<~EOF
+      ROWPREFIXFILTER.dump
+    EOF
+    output = capture_stdout { @shell.eval_io(io) }
+    assert_match(/"ROWPREFIXFILTER"/, output)
+  end
+
+  #-----------------------------------------------------------------------------
+
+  define_test 'Shell::Shell#exception_handler should hide traceback' do
+    class TestException < RuntimeError; end
+    # When hide_traceback is true, exception_handler should replace exceptions
+    # with SystemExit so that the traceback is not printed.
+    assert_raises(SystemExit) do
+      ::Shell::Shell.exception_handler(true) { raise TestException, 'Custom Exception' }
+    end
+  end
+
+  define_test 'Shell::Shell#exception_handler should show traceback' do
+    class TestException < RuntimeError; end
+    # When hide_traceback is false, exception_handler should re-raise Exceptions
+    assert_raises(TestException) do
+      ::Shell::Shell.exception_handler(false) { raise TestException, 'Custom Exception' }
+    end
   end
 
   #-----------------------------------------------------------------------------
@@ -83,7 +161,7 @@ class ShellTest < Test::Unit::TestCase
 
   #-----------------------------------------------------------------------------
 
-  define_test "Shell::Shell interactive mode should not throw" do
+  define_test 'Shell::Shell interactive mode should not throw' do
     # incorrect number of arguments
     @shell.command('create', 'nothrow_table')
     @shell.command('create', 'nothrow_table', 'family_1')

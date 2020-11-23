@@ -52,10 +52,12 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -317,5 +319,34 @@ public class TestHBaseSaslRpcClient {
   @SuppressWarnings("unchecked")
   private Token<? extends TokenIdentifier> createTokenMock() {
     return mock(Token.class);
+  }
+
+  @Test(expected = IOException.class)
+   public void testFailedEvaluateResponse() throws IOException {
+    //prep mockin the SaslClient
+    SimpleSaslClientAuthenticationProvider mockProvider =
+      Mockito.mock(SimpleSaslClientAuthenticationProvider.class);
+    SaslClient mockClient = Mockito.mock(SaslClient.class);
+    Assert.assertNotNull(mockProvider);
+    Assert.assertNotNull(mockClient);
+    Mockito.when(mockProvider.createClient(Mockito.any(), Mockito.any(), Mockito.any(),
+      Mockito.any(), Mockito.anyBoolean(), Mockito.any())).thenReturn(mockClient);
+    HBaseSaslRpcClient rpcClient = new HBaseSaslRpcClient(HBaseConfiguration.create(),
+      mockProvider, createTokenMock(),
+      Mockito.mock(InetAddress.class), Mockito.mock(SecurityInfo.class), false);
+
+    //simulate getting an error from a failed saslServer.evaluateResponse
+    DataOutputBuffer errorBuffer = new DataOutputBuffer();
+    errorBuffer.writeInt(SaslStatus.ERROR.state);
+    WritableUtils.writeString(errorBuffer, IOException.class.getName());
+    WritableUtils.writeString(errorBuffer, "Invalid Token");
+
+    DataInputBuffer in = new DataInputBuffer();
+    in.reset(errorBuffer.getData(), 0, errorBuffer.getLength());
+    DataOutputBuffer out = new DataOutputBuffer();
+
+    //simulate that authentication exchange has completed quickly after sending the token
+    Mockito.when(mockClient.isComplete()).thenReturn(true);
+    rpcClient.saslConnect(in, out);
   }
 }

@@ -26,32 +26,26 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.Objects;
 import java.util.regex.Pattern;
-
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import org.apache.commons.logging.impl.Jdk14Logger;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.http.HttpServer;
+import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
-import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.impl.Log4jLoggerAdapter;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
@@ -358,16 +352,7 @@ public final class LogLevel {
         if (level != null) {
           out.println(MARKER + "Submitted Level: <b>" + level + "</b><br />");
         }
-
-        if (log instanceof Log4JLogger) {
-          process(((Log4JLogger)log).getLogger(), level, out);
-        } else if (log instanceof Jdk14Logger) {
-          process(((Jdk14Logger)log).getLogger(), level, out);
-        } else if (log instanceof Log4jLoggerAdapter) {
-          process(LogManager.getLogger(logName), level, out);
-        } else {
-          out.println("Sorry, " + log.getClass() + " not supported.<br />");
-        }
+        process(log, level, out);
       }
 
       try {
@@ -401,35 +386,19 @@ public final class LogLevel {
         + "Set the specified log level for the specified log name." + "</td>\n" + "</form>\n"
         + "</tr>\n" + "</table>\n" + "</center>\n" + "</p>\n" + "<hr/>\n";
 
-    private static void process(org.apache.log4j.Logger log, String level, PrintWriter out) {
-      if (level != null) {
-        if (!level.equals(org.apache.log4j.Level.toLevel(level).toString())) {
-          out.println(MARKER + "<div class='text-danger'>" + "Bad level : <strong>" + level
-              + "</strong><br />" + "</div>");
-        } else {
-          log.setLevel(org.apache.log4j.Level.toLevel(level));
-          out.println(MARKER + "<div class='text-success'>" + "Setting Level to <strong>" + level
-              + "</strong> ...<br />" + "</div>");
+    private static void process(Logger logger, String levelName, PrintWriter out) {
+      if (levelName != null) {
+        try {
+          Log4jUtils.setLogLevel(logger.getName(), levelName);
+          out.println(MARKER + "<div class='text-success'>" + "Setting Level to <strong>" +
+            levelName + "</strong> ...<br />" + "</div>");
+        } catch (IllegalArgumentException e) {
+          out.println(MARKER + "<div class='text-danger'>" + "Bad level : <strong>" + levelName +
+            "</strong><br />" + "</div>");
         }
       }
-      out.println(MARKER
-          + "Effective level: <b>" + log.getEffectiveLevel() + "</b><br />");
-    }
-
-    private static void process(java.util.logging.Logger log, String level,
-        PrintWriter out) {
-      if (level != null) {
-        log.setLevel(java.util.logging.Level.parse(level));
-        out.println(MARKER + "Setting Level to " + level + " ...<br />");
-      }
-
-      java.util.logging.Level lev;
-
-      while ((lev = log.getLevel()) == null) {
-        log = log.getParent();
-      }
-
-      out.println(MARKER + "Effective level: <b>" + lev + "</b><br />");
+      out.println(MARKER + "Effective level: <b>" + Log4jUtils.getEffectiveLevel(logger.getName()) +
+        "</b><br />");
     }
   }
 

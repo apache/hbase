@@ -64,6 +64,11 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
 
   @Override
   public boolean dispatch(CallRunner callTask) throws InterruptedException {
+    //FastPathHandlers don't check queue limits, so if we're completely shut down
+    //we have to prevent ourselves from using the handler in the first place
+    if (currentQueueLimit == 0){
+      return false;
+    }
     FastPathHandler handler = popReadyHandler();
     return handler != null? handler.loadCallRunner(callTask): super.dispatch(callTask);
   }

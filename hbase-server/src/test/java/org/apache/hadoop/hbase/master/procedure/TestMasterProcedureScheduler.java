@@ -850,30 +850,30 @@ public class TestMasterProcedureScheduler {
   }
 
   public static class TestRegionProcedure extends TestTableProcedure {
-    private final RegionInfo[] regionInfo;
+    private final RegionInfo[] regionInfos;
 
     public TestRegionProcedure() {
       throw new UnsupportedOperationException("recovery should not be triggered here");
     }
 
     public TestRegionProcedure(long procId, TableName tableName, TableOperationType opType,
-        RegionInfo... regionInfo) {
-      this(-1, procId, tableName, opType, regionInfo);
+        RegionInfo... regionInfos) {
+      this(-1, procId, tableName, opType, regionInfos);
     }
 
     public TestRegionProcedure(long parentProcId, long procId, TableName tableName,
-        TableOperationType opType, RegionInfo... regionInfo) {
-      this(-1, parentProcId, procId, tableName, opType, regionInfo);
+        TableOperationType opType, RegionInfo... regionInfos) {
+      this(-1, parentProcId, procId, tableName, opType, regionInfos);
     }
 
     public TestRegionProcedure(long rootProcId, long parentProcId, long procId, TableName tableName,
-        TableOperationType opType, RegionInfo... regionInfo) {
+        TableOperationType opType, RegionInfo... regionInfos) {
       super(rootProcId, parentProcId, procId, tableName, opType);
-      this.regionInfo = regionInfo;
+      this.regionInfos = regionInfos;
     }
 
     public RegionInfo[] getRegionInfo() {
-      return regionInfo;
+      return regionInfos;
     }
 
     @Override

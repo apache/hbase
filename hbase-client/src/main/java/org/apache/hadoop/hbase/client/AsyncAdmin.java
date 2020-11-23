@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +31,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -303,10 +305,26 @@ public interface AsyncAdmin {
   CompletableFuture<Void> flush(TableName tableName);
 
   /**
+   * Flush the specified column family stores on all regions of the passed table.
+   * This runs as a synchronous operation.
+   * @param tableName table to flush
+   * @param columnFamily column family within a table
+   */
+  CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily);
+
+  /**
    * Flush an individual region.
    * @param regionName region to flush
    */
   CompletableFuture<Void> flushRegion(byte[] regionName);
+
+  /**
+   * Flush a column family within a region.
+   * @param regionName region to flush
+   * @param columnFamily column family within a region. If not present, flush the region's all
+   *          column families.
+   */
+  CompletableFuture<Void> flushRegion(byte[] regionName, byte[] columnFamily);
 
   /**
    * Flush all region on the region server.
@@ -567,6 +585,11 @@ public interface AsyncAdmin {
   CompletableFuture<Void> assign(byte[] regionName);
 
   /**
+   * @param regionName Encoded or full name of region to unassign.
+   */
+  CompletableFuture<Void> unassign(byte[] regionName);
+
+  /**
    * Unassign a region from current hosting regionserver. Region will then be assigned to a
    * regionserver chosen at random. Region could be reassigned back to the same server. Use
    * {@link #move(byte[], ServerName)} if you want to control the region movement.
@@ -575,8 +598,14 @@ public interface AsyncAdmin {
    * @param forcible If true, force unassign (Will remove region from regions-in-transition too if
    *          present. If results in double assignment use hbck -fix to resolve. To be used by
    *          experts).
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link #unassign(byte[])}
+   *   instead.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-24875">HBASE-24875</a>
    */
-  CompletableFuture<Void> unassign(byte[] regionName, boolean forcible);
+  @Deprecated
+  default CompletableFuture<Void> unassign(byte[] regionName, boolean forcible) {
+    return unassign(regionName);
+  }
 
   /**
    * Offline specified region from master's in-memory state. It will not attempt to reassign the
@@ -1263,7 +1292,17 @@ public interface AsyncAdmin {
    * @return true if region normalizer ran, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> normalize();
+  default CompletableFuture<Boolean> normalize() {
+    return normalize(new NormalizeTableFilterParams.Builder().build());
+  }
+
+  /**
+   * Invoke region normalizer. Can NOT run for various reasons. Check logs.
+   * @param ntfp limit to tables matching the specified filter.
+   * @return true if region normalizer ran, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<Boolean> normalize(NormalizeTableFilterParams ntfp);
 
   /**
    * Turn the cleaner chore on/off.
@@ -1517,9 +1556,31 @@ public interface AsyncAdmin {
    * @param serverNames Server names to get slowlog responses from
    * @param logQueryFilter filter to be used if provided
    * @return Online slowlog response list. The return value wrapped by a {@link CompletableFuture}
+   * @deprecated since 2.4.0 and will be removed in 4.0.0.
+   *   Use {@link #getLogEntries(Set, String, ServerType, int, Map)} instead.
    */
-  CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(final Set<ServerName> serverNames,
-      final LogQueryFilter logQueryFilter);
+  @Deprecated
+  default CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
+      final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
+    String logType;
+    if (LogQueryFilter.Type.LARGE_LOG.equals(logQueryFilter.getType())) {
+      logType = "LARGE_LOG";
+    } else {
+      logType = "SLOW_LOG";
+    }
+    Map<String, Object> filterParams = new HashMap<>();
+    filterParams.put("regionName", logQueryFilter.getRegionName());
+    filterParams.put("clientAddress", logQueryFilter.getClientAddress());
+    filterParams.put("tableName", logQueryFilter.getTableName());
+    filterParams.put("userName", logQueryFilter.getUserName());
+    filterParams.put("filterByOperator", logQueryFilter.getFilterByOperator().toString());
+    CompletableFuture<List<LogEntry>> logEntries =
+      getLogEntries(serverNames, logType, ServerType.REGION_SERVER, logQueryFilter.getLimit(),
+        filterParams);
+    return logEntries.thenApply(
+      logEntryList -> logEntryList.stream().map(logEntry -> (OnlineLogRecord) logEntry)
+        .collect(Collectors.toList()));
+  }
 
   /**
    * Clears online slow RPC logs from the provided list of
@@ -1639,4 +1700,28 @@ public interface AsyncAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<Void> renameRSGroup(String oldName, String newName);
+
+  /**
+   * Update RSGroup configuration
+   * @param groupName the group name
+   * @param configuration new configuration of the group name to be set
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompletableFuture<Void> updateRSGroupConfig(String groupName, Map<String, String> configuration);
+
+  /**
+   * Retrieve recent online records from HMaster / RegionServers.
+   * Examples include slow/large RPC logs, balancer decisions by master.
+   *
+   * @param serverNames servers to retrieve records from, useful in case of records maintained
+   *   by RegionServer as we can select specific server. In case of servertype=MASTER, logs will
+   *   only come from the currently active master.
+   * @param logType string representing type of log records
+   * @param serverType enum for server type: HMaster or RegionServer
+   * @param limit put a limit to list of records that server should send in response
+   * @param filterParams additional filter params
+   * @return Log entries representing online records from servers
+   */
+  CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames, String logType,
+    ServerType serverType, int limit, Map<String, Object> filterParams);
 }

@@ -24,16 +24,17 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +54,7 @@ public class HFileContentValidator extends AbstractHBaseTool {
    * @throws IOException if a remote or network exception occurs
    */
   private boolean validateHFileContent(Configuration conf) throws IOException {
-    FileSystem fileSystem = FSUtils.getCurrentFileSystem(conf);
+    FileSystem fileSystem = CommonFSUtils.getCurrentFileSystem(conf);
 
     ExecutorService threadPool = createThreadPool(conf);
     HFileCorruptionChecker checker;
@@ -61,7 +62,7 @@ public class HFileContentValidator extends AbstractHBaseTool {
     try {
       checker = new HFileCorruptionChecker(conf, threadPool, false);
 
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
       LOG.info("Validating HFile contents under {}", rootDir);
 
       Collection<Path> tableDirs = FSUtils.getTableDirs(fileSystem, rootDir);
@@ -108,7 +109,8 @@ public class HFileContentValidator extends AbstractHBaseTool {
     int availableProcessors = Runtime.getRuntime().availableProcessors();
     int numThreads = conf.getInt("hfilevalidator.numthreads", availableProcessors);
     return Executors.newFixedThreadPool(numThreads,
-        Threads.newDaemonThreadFactory("hfile-validator"));
+      new ThreadFactoryBuilder().setNameFormat("hfile-validator-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   @Override

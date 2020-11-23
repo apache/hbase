@@ -307,14 +307,22 @@ public interface Table extends Closeable {
    * table.checkAndMutate(row, family).qualifier(qualifier).ifNotExists().thenPut(put);
    * </code>
    * </pre>
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   default CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
     throw new NotImplementedException("Add an implementation!");
   }
 
   /**
    * A helper class for sending checkAndMutate request.
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   interface CheckAndMutateBuilder {
 
     /**
@@ -377,14 +385,22 @@ public interface Table extends Closeable {
    * table.checkAndMutate(row, filter).thenPut(put);
    * </code>
    * </pre>
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   default CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     throw new NotImplementedException("Add an implementation!");
   }
 
   /**
    * A helper class for sending checkAndMutate request with a filter.
+   *
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
+   *   any more.
    */
+  @Deprecated
   interface CheckAndMutateWithFilterBuilder {
 
     /**
@@ -409,6 +425,33 @@ public interface Table extends Closeable {
      * @return true if the new mutation was executed, false otherwise.
      */
     boolean thenMutate(RowMutations mutation) throws IOException;
+  }
+
+  /**
+   * checkAndMutate that atomically checks if a row matches the specified condition. If it does,
+   * it performs the specified action.
+   *
+   * @param checkAndMutate The CheckAndMutate object.
+   * @return A CheckAndMutateResult object that represents the result for the CheckAndMutate.
+   * @throws IOException if a remote or network exception occurs.
+   */
+  default CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException {
+    return checkAndMutate(Collections.singletonList(checkAndMutate)).get(0);
+  }
+
+  /**
+   * Batch version of checkAndMutate. The specified CheckAndMutates are batched only in the sense
+   * that they are sent to a RS in one RPC, but each CheckAndMutate operation is still executed
+   * atomically (and thus, each may fail independently of others).
+   *
+   * @param checkAndMutates The list of CheckAndMutate.
+   * @return A list of CheckAndMutateResult objects that represents the result for each
+   *   CheckAndMutate.
+   * @throws IOException if a remote or network exception occurs.
+   */
+  default List<CheckAndMutateResult> checkAndMutate(List<CheckAndMutate> checkAndMutates)
+    throws IOException {
+    throw new NotImplementedException("Add an implementation!");
   }
 
   /**

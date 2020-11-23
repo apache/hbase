@@ -30,7 +30,9 @@ EOF
       end
 
       def command
-        formatter.row([admin.normalizer_enabled?.to_s])
+        current_state = admin.normalizer_enabled?
+        formatter.row([current_state.to_s])
+        current_state
       end
     end
   end

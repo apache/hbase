@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -26,17 +27,17 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.replication.regionserver.TestRegionReplicaReplicationEndpoint;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -77,9 +78,10 @@ public class TestRegionReplicaFailover {
   protected final byte[] row = Bytes.toBytes("rowA");
   protected final byte[] row2 = Bytes.toBytes("rowB");
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
-  private HTableDescriptor htd;
+  private TableDescriptor htd;
 
   @Before
   public void before() throws Exception {
@@ -92,11 +94,10 @@ public class TestRegionReplicaFailover {
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
 
     HTU.startMiniCluster(NB_SERVERS);
-    htd = HTU.createTableDescriptor(
-      TableName.valueOf(name.getMethodName().substring(0, name.getMethodName().length()-3)),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
-    htd.setRegionReplication(3);
+    htd = HTU.createModifyableTableDescriptor(
+      TableName.valueOf(name.getMethodName().substring(0, name.getMethodName().length() - 3)),
+      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED).setRegionReplication(3).build();
     HTU.getAdmin().createTable(htd);
   }
 
@@ -330,10 +331,11 @@ public class TestRegionReplicaFailover {
     int numRegions = NB_SERVERS * 20;
     int regionReplication = 10;
     String tableName = htd.getTableName().getNameAsString() + "2";
-    htd = HTU.createTableDescriptor(TableName.valueOf(tableName),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
-    htd.setRegionReplication(regionReplication);
+    htd = HTU
+      .createModifyableTableDescriptor(TableName.valueOf(tableName),
+        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED)
+      .setRegionReplication(regionReplication).build();
 
     // dont care about splits themselves too much
     byte[] startKey = Bytes.toBytes("aaa");

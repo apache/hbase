@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -45,7 +46,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -56,6 +57,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -282,14 +284,14 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     runSmallBatchTest();
 
     // Take source and target tables snapshot
-    Path rootDir = FSUtils.getRootDir(CONF1);
+    Path rootDir = CommonFSUtils.getRootDir(CONF1);
     FileSystem fs = rootDir.getFileSystem(CONF1);
     String sourceSnapshotName = "sourceSnapshot-" + System.currentTimeMillis();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL1.getAdmin(), tableName,
       Bytes.toString(famName), sourceSnapshotName, rootDir, fs, true);
 
     // Take target snapshot
-    Path peerRootDir = FSUtils.getRootDir(CONF2);
+    Path peerRootDir = CommonFSUtils.getRootDir(CONF2);
     FileSystem peerFs = peerRootDir.getFileSystem(CONF2);
     String peerSnapshotName = "peerSnapshot-" + System.currentTimeMillis();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL2.getAdmin(), tableName,
@@ -302,7 +304,8 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     String[] args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
       "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + FSUtils.getRootDir(CONF2), "2", tableName.getNameAsString() };
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), "2",
+      tableName.getNameAsString() };
     TestVerifyReplication.runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
     TestVerifyReplication.checkRestoreTmpDir(CONF1, temPath1, 1);
     TestVerifyReplication.checkRestoreTmpDir(CONF2, temPath2, 1);
@@ -331,7 +334,8 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     args = new String[] { "--sourceSnapshotName=" + sourceSnapshotName,
       "--sourceSnapshotTmpDir=" + temPath1, "--peerSnapshotName=" + peerSnapshotName,
       "--peerSnapshotTmpDir=" + temPath2, "--peerFSAddress=" + peerFSAddress,
-      "--peerHBaseRootAddress=" + FSUtils.getRootDir(CONF2), "2", tableName.getNameAsString() };
+      "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), "2",
+      tableName.getNameAsString() };
     TestVerifyReplication.runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
     TestVerifyReplication.checkRestoreTmpDir(CONF1, temPath1, 2);
     TestVerifyReplication.checkRestoreTmpDir(CONF2, temPath2, 2);

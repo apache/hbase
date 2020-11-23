@@ -32,7 +32,6 @@ import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListSet;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -70,7 +69,7 @@ import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.Assert;
 import org.junit.Before;
@@ -153,16 +152,17 @@ public class TestHMobStore {
 
     //Setting up tje Region and Store
     Path basedir = new Path(DIR + methodName);
-    Path tableDir = FSUtils.getTableDir(basedir, td.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(basedir, td.getTableName());
     String logName = "logs";
     Path logdir = new Path(basedir, logName);
     FileSystem fs = FileSystem.get(conf);
     fs.delete(logdir, true);
 
     RegionInfo info = RegionInfoBuilder.newBuilder(td.getTableName()).build();
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, basedir);
+    CommonFSUtils.setRootDir(walConf, basedir);
     final WALFactory wals = new WALFactory(walConf, methodName);
     region = new HRegion(tableDir, wals.getWAL(info), fs, conf, info, td, null);
     region.setMobFileCache(new MobFileCache(conf));
@@ -174,7 +174,7 @@ public class TestHMobStore {
 
   private void init(Configuration conf, ColumnFamilyDescriptor cfd)
       throws IOException {
-    Path basedir = FSUtils.getRootDir(conf);
+    Path basedir = CommonFSUtils.getRootDir(conf);
     fs = FileSystem.get(conf);
     Path homePath = new Path(basedir, Bytes.toString(family) + Path.SEPARATOR
         + Bytes.toString(family));

@@ -35,7 +35,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -67,13 +66,12 @@ import org.apache.hadoop.hbase.security.token.TokenProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -84,6 +82,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 @Category({MediumTests.class, SecurityTests.class})
 public class TestShadeSaslAuthenticationProvider {
@@ -119,7 +119,7 @@ public class TestShadeSaslAuthenticationProvider {
         USER_DATABASE_FILE.toString());
 
     Path rootdir = new Path(testDir, "hbase-root");
-    FSUtils.setRootDir(CONF, rootdir);
+    CommonFSUtils.setRootDir(CONF, rootdir);
     LocalHBaseCluster cluster = new LocalHBaseCluster(CONF, 1);
     return cluster;
   }

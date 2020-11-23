@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -106,14 +109,14 @@ public class TestMaster {
       byte[] rowKey) throws IOException {
     final AtomicReference<Pair<RegionInfo, ServerName>> result = new AtomicReference<>(null);
 
-    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+    ClientMetaTableAccessor.Visitor visitor = new ClientMetaTableAccessor.Visitor() {
       @Override
       public boolean visit(Result data) throws IOException {
         if (data == null || data.size() <= 0) {
           return true;
         }
-        Pair<RegionInfo, ServerName> pair = new Pair<>(MetaTableAccessor.getRegionInfo(data),
-          MetaTableAccessor.getServerName(data, 0));
+        Pair<RegionInfo, ServerName> pair = new Pair<>(CatalogFamilyFormat.getRegionInfo(data),
+          CatalogFamilyFormat.getServerName(data, 0));
         if (!pair.getFirst().getTable().equals(tableName)) {
           return false;
         }
@@ -239,11 +242,8 @@ public class TestMaster {
     int msgInterval = conf.getInt("hbase.regionserver.msginterval", 100);
     // insert some data into META
     TableName tableName = TableName.valueOf("testFlushSeqId");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(Bytes.toBytes("cf")));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes("cf"))).build();
     Table table = TEST_UTIL.createTable(tableDescriptor, null);
     // flush META region
     TEST_UTIL.flush(TableName.META_TABLE_NAME);

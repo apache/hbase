@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -27,17 +28,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -100,7 +101,7 @@ public class TestDeleteColumnFamilyProcedureFromClient {
   @Test
   public void deleteColumnFamilyWithMultipleRegions() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor beforehtd = new HTableDescriptor(admin.getDescriptor(TABLENAME));
+    TableDescriptor beforehtd = admin.getDescriptor(TABLENAME);
 
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
 
@@ -109,13 +110,13 @@ public class TestDeleteColumnFamilyProcedureFromClient {
 
     // 2 - Check if all three families exist in descriptor
     assertEquals(3, beforehtd.getColumnFamilyCount());
-    HColumnDescriptor[] families = beforehtd.getColumnFamilies();
+    ColumnFamilyDescriptor[] families = beforehtd.getColumnFamilies();
     for (int i = 0; i < families.length; i++) {
       assertTrue(families[i].getNameAsString().equals("cf" + (i + 1)));
     }
 
     // 3 - Check if table exists in FS
-    Path tableDir = FSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), TABLENAME);
+    Path tableDir = CommonFSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), TABLENAME);
     assertTrue(fs.exists(tableDir));
 
     // 4 - Check if all the 3 column families exist in FS
@@ -147,9 +148,9 @@ public class TestDeleteColumnFamilyProcedureFromClient {
     admin.deleteColumnFamily(TABLENAME, Bytes.toBytes("cf2"));
 
     // 5 - Check if only 2 column families exist in the descriptor
-    HTableDescriptor afterhtd = new HTableDescriptor(admin.getDescriptor(TABLENAME));
+    TableDescriptor afterhtd = admin.getDescriptor(TABLENAME);
     assertEquals(2, afterhtd.getColumnFamilyCount());
-    HColumnDescriptor[] newFamilies = afterhtd.getColumnFamilies();
+    ColumnFamilyDescriptor[] newFamilies = afterhtd.getColumnFamilies();
     assertTrue(newFamilies[0].getNameAsString().equals("cf1"));
     assertTrue(newFamilies[1].getNameAsString().equals("cf3"));
 
@@ -178,7 +179,7 @@ public class TestDeleteColumnFamilyProcedureFromClient {
   @Test
   public void deleteColumnFamilyTwice() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor beforehtd = new HTableDescriptor(admin.getDescriptor(TABLENAME));
+    TableDescriptor beforehtd = admin.getDescriptor(TABLENAME);
     String cfToDelete = "cf1";
 
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
@@ -187,7 +188,7 @@ public class TestDeleteColumnFamilyProcedureFromClient {
     assertTrue(admin.isTableAvailable(TABLENAME));
 
     // 2 - Check if all the target column family exist in descriptor
-    HColumnDescriptor[] families = beforehtd.getColumnFamilies();
+    ColumnFamilyDescriptor[] families = beforehtd.getColumnFamilies();
     Boolean foundCF = false;
     for (int i = 0; i < families.length; i++) {
       if (families[i].getNameAsString().equals(cfToDelete)) {
@@ -198,7 +199,7 @@ public class TestDeleteColumnFamilyProcedureFromClient {
     assertTrue(foundCF);
 
     // 3 - Check if table exists in FS
-    Path tableDir = FSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), TABLENAME);
+    Path tableDir = CommonFSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), TABLENAME);
     assertTrue(fs.exists(tableDir));
 
     // 4 - Check if all the target column family exist in FS

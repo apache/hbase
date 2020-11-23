@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -40,15 +39,19 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -96,7 +99,8 @@ public class DeleteTableProcedure
 
           // TODO: Move out... in the acquireLock()
           LOG.debug("Waiting for RIT for {}", this);
-          regions = env.getAssignmentManager().getRegionStates().getRegionsOfTable(getTableName());
+          regions = env.getAssignmentManager().getRegionStates()
+            .getRegionsOfTableForDeleting(getTableName());
           assert regions != null && !regions.isEmpty() : "unexpected 0 regions";
           ProcedureSyncWait.waitRegionInTransition(env, regions);
 
@@ -275,8 +279,8 @@ public class DeleteTableProcedure
     final FileSystem fs = mfs.getFileSystem();
     final Path tempdir = mfs.getTempDir();
 
-    final Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
-    final Path tempTableDir = FSUtils.getTableDir(tempdir, tableName);
+    final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), tableName);
+    final Path tempTableDir = CommonFSUtils.getTableDir(tempdir, tableName);
 
     if (fs.exists(tableDir)) {
       // Ensure temp exists
@@ -324,8 +328,8 @@ public class DeleteTableProcedure
     }
 
     // Archive mob data
-    Path mobTableDir = FSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME),
-            tableName);
+    Path mobTableDir =
+      CommonFSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME), tableName);
     Path regionDir =
             new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
     if (fs.exists(regionDir)) {
@@ -346,7 +350,7 @@ public class DeleteTableProcedure
 
     // Delete the directory on wal filesystem
     FileSystem walFs = mfs.getWALFileSystem();
-    Path tableWALDir = FSUtils.getWALTableDir(env.getMasterConfiguration(), tableName);
+    Path tableWALDir = CommonFSUtils.getWALTableDir(env.getMasterConfiguration(), tableName);
     if (walFs.exists(tableWALDir) && !walFs.delete(tableWALDir, true)) {
       throw new IOException("Couldn't delete table dir on wal filesystem" + tableWALDir);
     }
@@ -355,22 +359,29 @@ public class DeleteTableProcedure
   /**
    * There may be items for this table still up in hbase:meta in the case where the info:regioninfo
    * column was empty because of some write error. Remove ALL rows from hbase:meta that have to do
-   * with this table. See HBASE-12980.
+   * with this table.
+   * <p/>
+   * See HBASE-12980.
    */
   private static void cleanRegionsInMeta(final MasterProcedureEnv env, final TableName tableName)
-      throws IOException {
-    Connection connection = env.getMasterServices().getConnection();
-    Scan tableScan = MetaTableAccessor.getScanForTableName(connection, tableName);
-    try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
-      List<Delete> deletes = new ArrayList<>();
-      try (ResultScanner resScanner = metaTable.getScanner(tableScan)) {
-        for (Result result : resScanner) {
-          deletes.add(new Delete(result.getRow()));
+    throws IOException {
+    Scan tableScan = MetaTableAccessor.getScanForTableName(env.getMasterConfiguration(), tableName)
+      .setFilter(new KeyOnlyFilter());
+    long now = EnvironmentEdgeManager.currentTime();
+    List<Delete> deletes = new ArrayList<>();
+    try (
+      Table metaTable = env.getMasterServices().getConnection().getTable(TableName.META_TABLE_NAME);
+      ResultScanner scanner = metaTable.getScanner(tableScan)) {
+      for (;;) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
         }
+        deletes.add(new Delete(result.getRow(), now));
       }
       if (!deletes.isEmpty()) {
-        LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName + " from "
-            + TableName.META_TABLE_NAME);
+        LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName + " from " +
+          TableName.META_TABLE_NAME);
         metaTable.delete(deletes);
       }
     }

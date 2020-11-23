@@ -24,7 +24,6 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -49,8 +48,8 @@ import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
@@ -61,7 +60,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -267,7 +265,7 @@ public class MobRefReporter extends Configured implements Tool {
 
         Path backRefDir = HFileLink.getBackReferencesDir(archive, file);
         try {
-          FileStatus[] backRefs = FSUtils.listStatus(archive.getFileSystem(conf), backRefDir);
+          FileStatus[] backRefs = CommonFSUtils.listStatus(archive.getFileSystem(conf), backRefDir);
           if (backRefs != null) {
             boolean found = false;
             for (FileStatus backRef : backRefs) {

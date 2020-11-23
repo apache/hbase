@@ -69,6 +69,7 @@ In addition to the usual API versioning considerations HBase has other compatibi
 * Allow changing or removing existing client APIs.
 * An API needs to be deprecated for a whole major version before we will change/remove it.
 ** An example: An API was deprecated in 2.0.1 and will be marked for deletion in 4.0.0. On the other hand, an API deprecated in 2.0.0 can be removed in 3.0.0.
+** Occasionally mistakes are made and internal classes are marked with a higher access level than they should. In these rare circumstances, we will accelerate the deprecation schedule to the next major version (i.e., deprecated in 2.2.x, marked `IA.Private` 3.0.0). Such changes are communicated and explained via release note in Jira.
 * APIs available in a patch version will be available in all later patch versions. However, new APIs may be added which will not be available in earlier patch versions.
 * New APIs introduced in a patch version will only be added in a source compatible way footnote:[See 'Source Compatibility' https://blogs.oracle.com/darcy/entry/kinds_of_compatibility]: i.e. code that implements public APIs will continue to compile.
 ** Example: A user using a newly deprecated API does not need to modify application code with HBase API calls until the next major version.
@@ -130,14 +131,14 @@ Previously, we tried to maintain dependency compatibility for the underly Hadoop
 [[hbase.client.api.surface]]
 ==== HBase API Surface
 
-HBase has a lot of API points, but for the compatibility matrix above, we differentiate between Client API, Limited Private API, and Private API. HBase uses link:https://yetus.apache.org/documentation/0.5.0/interface-classification/[Apache Yetus Audience Annotations] to guide downstream expectations for stability.
+HBase has a lot of API points, but for the compatibility matrix above, we differentiate between Client API, Limited Private API, and Private API. HBase uses link:https://yetus.apache.org/documentation/in-progress/interface-classification/[Apache Yetus Audience Annotations] to guide downstream expectations for stability.
 
-* InterfaceAudience (link:https://yetus.apache.org/documentation/0.5.0/audience-annotations-apidocs/org/apache/yetus/audience/InterfaceAudience.html[javadocs]): captures the intended audience, possible values include:
+* InterfaceAudience (link:https://yetus.apache.org/documentation/in-progress/javadocs/org/apache/yetus/audience/InterfaceAudience.html[javadocs]): captures the intended audience, possible values include:
   - Public: safe for end users and external projects
   - LimitedPrivate: used for internals we expect to be pluggable, such as coprocessors
   - Private: strictly for use within HBase itself
 Classes which are defined as `IA.Private` may be used as parameters or return values for interfaces which are declared `IA.LimitedPrivate`. Treat the `IA.Private` object as opaque; do not try to access its methods or fields directly.
-* InterfaceStability (link:https://yetus.apache.org/documentation/0.5.0/audience-annotations-apidocs/org/apache/yetus/audience/InterfaceStability.html[javadocs]): describes what types of interface changes are permitted. Possible values include:
+* InterfaceStability (link:https://yetus.apache.org/documentation/in-progress/javadocs/org/apache/yetus/audience/InterfaceStability.html[javadocs]): describes what types of interface changes are permitted. Possible values include:
   - Stable: the interface is fixed and is not expected to change
   - Evolving: the interface may change in future minor verisons
   - Unstable: the interface may change at any time
@@ -324,11 +325,21 @@ The RegionServer Grouping feature has been reimplemented. See section
 There is no special consideration upgrading to hbase-2.3.x from earlier versions. From 2.2.x, it should be
 rolling upgradeable. From 2.1.x or 2.0.x, you will need to clear the <<upgrade2.2>> hurdle first.
 
-[[in-master-procedure-store-region]]
+[[upgrade2.3_zookeeper]]
+==== Upgraded ZooKeeper Dependency Version
+
+Our dependency on Apache ZooKeeper has been upgraded to 3.5.7
+(https://issues.apache.org/jira/browse/HBASE-24132[HBASE-24132]), as 3.4.x is EOL. The newer 3.5.x
+client is compatible with the older 3.4.x server. However, if you're using HBase in stand-alone
+mode and perform an in-place upgrade, there are some upgrade steps
+https://cwiki.apache.org/confluence/display/ZOOKEEPER/Upgrade+FAQ[documented by the ZooKeeper community].
+This doesn't impact a production deployment, but would impact a developer's local environment.
+
+[[upgrade2.3_in-master-procedure-store-region]]
 ==== New In-Master Procedure Store
 
 Of note, HBase 2.3.0 changes the in-Master Procedure Store implementation. It was a dedicated custom store
-(see <<master.wal>>) to instead use a standard HBase Region (link:https://issues.apache.org/jira/browse/HBASE-23326).
+(see <<master.wal>>) to instead use a standard HBase Region (https://issues.apache.org/jira/browse/HBASE-23326[HBASE-23326]).
 The migration from the old to new format is automatic run by the new 2.3.0 Master on startup. The old _MasterProcWALs_
 dir which hosted the old custom implementation files in _${hbase.rootdir}_ is deleted on successful
 migration. A new _MasterProc_ sub-directory replaces it to host the Store files and WALs for the new
@@ -594,7 +605,7 @@ HBase has simplified our internal HFile handling. As a result, we can no longer 
 [[upgrade2.0.pb.wal.only]]
 .HBase 2.0+ can no longer read Sequence File based WAL file.
 
-HBase can no longer read the deprecated WAL files written in the Apache Hadoop Sequence File format. The hbase.regionserver.hlog.reader.impl and hbase.regionserver.hlog.reader.impl configuration entries should be set to use the Protobuf based WAL reader / writer classes. This implementation has been the default since HBase 0.96, so legacy WAL files should not be a concern for most downstream users.
+HBase can no longer read the deprecated WAL files written in the Apache Hadoop Sequence File format. The hbase.regionserver.hlog.reader.impl and hbase.regionserver.hlog.writer.impl configuration entries should be set to use the Protobuf based WAL reader / writer classes. This implementation has been the default since HBase 0.96, so legacy WAL files should not be a concern for most downstream users.
 
 A clean cluster shutdown should ensure there are no WAL files. If you are unsure of a given WAL file's format you can use the `hbase wal` command to parse files while the HBase cluster is offline. In HBase 2.0+, this command will not be able to read a Sequence File based WAL. For more information on the tool see the section <<hlog_tool.prettyprint>>.
 

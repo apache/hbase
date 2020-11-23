@@ -72,6 +72,8 @@ enum ModifyTableState {
   MODIFY_TABLE_DELETE_FS_LAYOUT = 5;
   MODIFY_TABLE_POST_OPERATION = 6;
   MODIFY_TABLE_REOPEN_ALL_REGIONS = 7;
+  MODIFY_TABLE_CLOSE_EXCESS_REPLICAS = 8;
+  MODIFY_TABLE_ASSIGN_NEW_REPLICAS = 9;
 }
 
 message ModifyTableStateData {
@@ -346,6 +348,7 @@ message UnassignRegionStateData {
   // This is the server currently hosting the Region, the
   // server we will send the unassign rpc too.
   optional ServerName hosting_server = 5;
+  // This parameter is ignored
   optional bool force = 4 [default = false];
   optional bool remove_after_unassigning = 6 [default = false];
   // Current attempt index used for expotential backoff when stuck
@@ -486,11 +489,13 @@ enum ReopenTableRegionsState {
 message ReopenTableRegionsStateData {
   required TableName table_name = 1;
   repeated RegionLocation region = 2;
+  repeated bytes region_names = 3;
 }
 
 enum InitMetaState {
-  INIT_META_ASSIGN_META = 1;
-  INIT_META_CREATE_NAMESPACES = 2;
+  INIT_META_WRITE_FS_LAYOUT = 1;
+  INIT_META_ASSIGN_META = 2;
+  INIT_META_CREATE_NAMESPACES = 3;
 }
 
 message InitMetaStateData {
@@ -568,7 +573,9 @@ enum RegionRemoteProcedureBaseState {
 message RegionRemoteProcedureBaseStateData {
   required RegionInfo region = 1;
   required ServerName target_server = 2;
-  required RegionRemoteProcedureBaseState state = 3;
+  // state is actually 'required' but we can't set it as 'required' here else it breaks old
+  // Messages; see HBASE-22074.
+  optional RegionRemoteProcedureBaseState state = 3;
   optional RegionStateTransition.TransitionCode transition_code = 4;
   optional int64 seq_id = 5;
 }

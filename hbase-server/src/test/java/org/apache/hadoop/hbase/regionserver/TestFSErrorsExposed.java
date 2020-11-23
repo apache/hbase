@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -201,13 +202,9 @@ public class TestFSErrorsExposed {
       byte[] fam = Bytes.toBytes("fam");
 
       Admin admin = util.getAdmin();
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(fam)
-          .setMaxVersions(1)
-          .setBlockCacheEnabled(false)
-      );
+      TableDescriptor tableDescriptor =
+        TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+          .newBuilder(fam).setMaxVersions(1).setBlockCacheEnabled(false).build()).build();
       admin.createTable(tableDescriptor);
 
       // Make a new Configuration so it makes a new connection that has the

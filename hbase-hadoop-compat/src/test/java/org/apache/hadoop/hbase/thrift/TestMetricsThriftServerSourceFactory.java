@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
+
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
@@ -28,18 +31,16 @@ import org.junit.experimental.categories.Category;
 /**
  * Test for the interface of MetricsThriftServerSourceFactory
  */
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsThriftServerSourceFactory {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsThriftServerSourceFactory.class);
+    HBaseClassTestRule.forClass(TestMetricsThriftServerSourceFactory.class);
 
-
-  @Test(expected=RuntimeException.class)
-  public void testGetInstanceNoHadoopCompat() throws RuntimeException {
-    //This should throw an exception because there is no compat lib on the class path.
-    CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class);
+  @Test
+  public void testGetInstance() {
+    assertThat(CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class),
+      instanceOf(MetricsThriftServerSourceFactoryImpl.class));
   }
-
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -64,8 +64,8 @@ public class RecoveredReplicationSource extends ReplicationSource {
 
   public void locateRecoveredPaths(PriorityBlockingQueue<Path> queue) throws IOException {
     boolean hasPathChanged = false;
-    PriorityBlockingQueue<Path> newPaths =
-        new PriorityBlockingQueue<Path>(queueSizePerGroup, new LogsComparator());
+    PriorityBlockingQueue<Path> newPaths = new PriorityBlockingQueue<Path>(queueSizePerGroup,
+      new AbstractFSWALProvider.WALStartTimeComparator());
     pathsLoop: for (Path path : queue) {
       if (fs.exists(path)) { // still in same location, don't need to do anything
         newPaths.add(path);
@@ -84,7 +84,7 @@ public class RecoveredReplicationSource extends ReplicationSource {
         // to look at)
         List<ServerName> deadRegionServers = this.replicationQueueInfo.getDeadRegionServers();
         LOG.info("NB dead servers : " + deadRegionServers.size());
-        final Path walDir = FSUtils.getWALRootDir(conf);
+        final Path walDir = CommonFSUtils.getWALRootDir(conf);
         for (ServerName curDeadServerName : deadRegionServers) {
           final Path deadRsDirectory =
               new Path(walDir, AbstractFSWALProvider.getWALDirectoryName(curDeadServerName

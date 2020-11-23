@@ -36,13 +36,18 @@ public class TestAlwaysStandByHMaster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAlwaysStandByHMaster.class);
+    HBaseClassTestRule.forClass(TestAlwaysStandByHMaster.class);
 
-  private static final StartMiniClusterOption OPTION = StartMiniClusterOption.builder().
-      numAlwaysStandByMasters(1).numMasters(1).numRegionServers(1).build();
+  private static final StartMiniClusterOption OPTION = StartMiniClusterOption.builder()
+    .numAlwaysStandByMasters(1)
+    .numMasters(1)
+    .numRegionServers(1)
+    .build();
 
   @ClassRule
-  public static final MiniClusterRule miniClusterRule = new MiniClusterRule(OPTION);
+  public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder()
+    .setMiniClusterOption(OPTION)
+    .build();
 
   /**
    * Tests that the AlwaysStandByHMaster does not transition to active state even if no active

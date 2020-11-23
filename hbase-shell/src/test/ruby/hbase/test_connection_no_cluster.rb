@@ -17,17 +17,16 @@
 # limitations under the License.
 #
 
-require 'shell'
+require 'hbase_shell'
 require 'stringio'
 require 'hbase_constants'
 require 'hbase/hbase'
 require 'hbase/table'
 
-include HBaseConstants
-
 module Hbase
   class NoClusterConnectionTest < Test::Unit::TestCase
     include TestHelpers
+    include HBaseConstants
 
     def setup
       puts "starting shell"

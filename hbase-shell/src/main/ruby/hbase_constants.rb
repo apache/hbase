@@ -32,72 +32,85 @@ java_import('java.lang.Long') { |_package, name| "J#{name}" }
 java_import('java.lang.Boolean') { |_package, name| "J#{name}" }
 
 module HBaseConstants
+  ALLOW_PARTIAL_RESULTS = 'ALLOW_PARTIAL_RESULTS'.freeze
+  ALL_METRICS = 'ALL_METRICS'.freeze
+  ATTRIBUTES = 'ATTRIBUTES'.freeze
+  AUTHORIZATIONS = 'AUTHORIZATIONS'.freeze
+  BATCH = 'BATCH'.freeze
+  CACHE = 'CACHE'.freeze
+  CACHE_BLOCKS = 'CACHE_BLOCKS'.freeze
+  CLASSNAME = 'CLASSNAME'.freeze
+  CLUSTER_KEY = 'CLUSTER_KEY'.freeze
   COLUMN = 'COLUMN'.freeze
   COLUMNS = 'COLUMNS'.freeze
-  TIMESTAMP = 'TIMESTAMP'.freeze
-  TIMERANGE = 'TIMERANGE'.freeze
-  NAME = org.apache.hadoop.hbase.HConstants::NAME
-  VERSIONS = org.apache.hadoop.hbase.HConstants::VERSIONS
-  IN_MEMORY = org.apache.hadoop.hbase.HConstants::IN_MEMORY
-  IN_MEMORY_COMPACTION = org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY_COMPACTION
-  METADATA = org.apache.hadoop.hbase.HConstants::METADATA
-  STOPROW = 'STOPROW'.freeze
-  STARTROW = 'STARTROW'.freeze
-  STARTKEY = STARTROW
-  ROWPREFIXFILTER = 'ROWPREFIXFILTER'.freeze
-  ENDROW = STOPROW
-  ENDKEY = STOPROW
-  RAW = 'RAW'.freeze
-  LIMIT = 'LIMIT'.freeze
-  METHOD = 'METHOD'.freeze
-  MAXLENGTH = 'MAXLENGTH'.freeze
-  CACHE_BLOCKS = 'CACHE_BLOCKS'.freeze
-  ALL_METRICS = 'ALL_METRICS'.freeze
-  METRICS = 'METRICS'.freeze
-  REVERSED = 'REVERSED'.freeze
-  REPLICATION_SCOPE = 'REPLICATION_SCOPE'.freeze
-  INTERVAL = 'INTERVAL'.freeze
-  CACHE = 'CACHE'.freeze
-  FILTER = 'FILTER'.freeze
-  SPLITS = 'SPLITS'.freeze
-  SPLITS_FILE = 'SPLITS_FILE'.freeze
-  SPLITALGO = 'SPLITALGO'.freeze
-  NUMREGIONS = 'NUMREGIONS'.freeze
-  REGION_REPLICATION = 'REGION_REPLICATION'.freeze
-  REGION_REPLICA_ID = 'REGION_REPLICA_ID'.freeze
-  ISOLATION_LEVEL = 'ISOLATION_LEVEL'.freeze
-  READ_TYPE = 'READ_TYPE'.freeze
-  ALLOW_PARTIAL_RESULTS = 'ALLOW_PARTIAL_RESULTS'.freeze
-  BATCH = 'BATCH'.freeze
-  MAX_RESULT_SIZE = 'MAX_RESULT_SIZE'.freeze
-  CONFIGURATION = org.apache.hadoop.hbase.HConstants::CONFIGURATION
-  ATTRIBUTES = 'ATTRIBUTES'.freeze
-  VISIBILITY = 'VISIBILITY'.freeze
-  AUTHORIZATIONS = 'AUTHORIZATIONS'.freeze
-  SKIP_FLUSH = 'SKIP_FLUSH'.freeze
-  CONSISTENCY = 'CONSISTENCY'.freeze
-  USER = 'USER'.freeze
-  TABLE = 'TABLE'.freeze
-  NAMESPACE = 'NAMESPACE'.freeze
-  TYPE = 'TYPE'.freeze
-  NONE = 'NONE'.freeze
-  VALUE = 'VALUE'.freeze
-  ENDPOINT_CLASSNAME = 'ENDPOINT_CLASSNAME'.freeze
-  CLUSTER_KEY = 'CLUSTER_KEY'.freeze
-  REMOTE_WAL_DIR = 'REMOTE_WAL_DIR'.freeze
-  SERIAL = 'SERIAL'.freeze
-  TABLE_CFS = 'TABLE_CFS'.freeze
-  NAMESPACES = 'NAMESPACES'.freeze
-  STATE = 'STATE'.freeze
   CONFIG = 'CONFIG'.freeze
+  CONFIGURATION = org.apache.hadoop.hbase.HConstants::CONFIGURATION
+  CONSISTENCY = 'CONSISTENCY'.freeze
+  COPROCESSOR = 'COPROCESSOR'.freeze
   DATA = 'DATA'.freeze
-  SERVER_NAME = 'SERVER_NAME'.freeze
-  LOCALITY_THRESHOLD = 'LOCALITY_THRESHOLD'.freeze
-  RESTORE_ACL = 'RESTORE_ACL'.freeze
+  ENDPOINT_CLASSNAME = 'ENDPOINT_CLASSNAME'.freeze
+  FILTER = 'FILTER'.freeze
+  FOREVER = org.apache.hadoop.hbase.HConstants::FOREVER
   FORMATTER = 'FORMATTER'.freeze
   FORMATTER_CLASS = 'FORMATTER_CLASS'.freeze
+  INTERVAL = 'INTERVAL'.freeze
+  IN_MEMORY = org.apache.hadoop.hbase.HConstants::IN_MEMORY
+  IN_MEMORY_COMPACTION = org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder::IN_MEMORY_COMPACTION
+  ISOLATION_LEVEL = 'ISOLATION_LEVEL'.freeze
+  IS_ROOT = 'IS_ROOT'.freeze
+  JAR_PATH = 'JAR_PATH'.freeze
+  LIMIT = 'LIMIT'.freeze
+  LOCALITY_THRESHOLD = 'LOCALITY_THRESHOLD'.freeze
+  MAXLENGTH = 'MAXLENGTH'.freeze
+  MAX_RESULT_SIZE = 'MAX_RESULT_SIZE'.freeze
+  METADATA = org.apache.hadoop.hbase.HConstants::METADATA
+  METHOD = 'METHOD'.freeze
+  METRICS = 'METRICS'.freeze
+  NAME = org.apache.hadoop.hbase.HConstants::NAME
+  NAMESPACE = 'NAMESPACE'.freeze
+  NAMESPACES = 'NAMESPACES'.freeze
+  NONE = 'NONE'.freeze
+  NUMREGIONS = 'NUMREGIONS'.freeze
   POLICY = 'POLICY'.freeze
+  PRIORITY = 'PRIORITY'.freeze
+  PROPERTIES = 'PROPERTIES'.freeze
+  RAW = 'RAW'.freeze
+  READ_TYPE = 'READ_TYPE'.freeze
+  REGEX = 'REGEX'.freeze
   REGIONSERVER = 'REGIONSERVER'.freeze
+  REGION_REPLICATION = 'REGION_REPLICATION'.freeze
+  REGION_REPLICA_ID = 'REGION_REPLICA_ID'.freeze
+  REMOTE_WAL_DIR = 'REMOTE_WAL_DIR'.freeze
+  REPLICATION_SCOPE = 'REPLICATION_SCOPE'.freeze
+  REPLICATION_SCOPE_BYTES = org.apache.hadoop.hbase.client.ColumnFamilyDescriptor::REPLICATION_SCOPE_BYTES
+  RESTORE_ACL = 'RESTORE_ACL'.freeze
+  REVERSED = 'REVERSED'.freeze
+  ROWPREFIXFILTER = 'ROWPREFIXFILTER'.freeze
+  SERIAL = 'SERIAL'.freeze
+  SERVER_NAME = 'SERVER_NAME'.freeze
+  SKIP_FLUSH = 'SKIP_FLUSH'.freeze
+  SPLITALGO = 'SPLITALGO'.freeze
+  SPLITS = 'SPLITS'.freeze
+  SPLITS_FILE = 'SPLITS_FILE'.freeze
+  STARTROW = 'STARTROW'.freeze
+  STATE = 'STATE'.freeze
+  STOPROW = 'STOPROW'.freeze
+  TABLE = 'TABLE'.freeze
+  TABLE_CFS = 'TABLE_CFS'.freeze
+  TABLE_NAME = 'TABLE_NAME'.freeze
+  TABLE_NAMES = 'TABLE_NAMES'.freeze
+  TIMERANGE = 'TIMERANGE'.freeze
+  TIMESTAMP = 'TIMESTAMP'.freeze
+  TYPE = 'TYPE'.freeze
+  USER = 'USER'.freeze
+  VALUE = 'VALUE'.freeze
+  VERSIONS = org.apache.hadoop.hbase.HConstants::VERSIONS
+  VISIBILITY = 'VISIBILITY'.freeze
+
+  # aliases
+  ENDKEY = STOPROW
+  ENDROW = STOPROW
+  STARTKEY = STARTROW
 
   # Load constants from hbase java API
   def self.promote_constants(constants)
@@ -109,11 +122,11 @@ module HBaseConstants
     end
   end
 
-  promote_constants(org.apache.hadoop.hbase.HColumnDescriptor.constants)
-  promote_constants(org.apache.hadoop.hbase.HTableDescriptor.constants)
+  promote_constants(org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.constants)
+  promote_constants(org.apache.hadoop.hbase.client.TableDescriptorBuilder.constants)
 end
 
-# Include classes definition
+# Ensure that hbase class definitions are imported
 require 'hbase/hbase'
 require 'hbase/admin'
 require 'hbase/taskmonitor'
@@ -123,5 +136,3 @@ require 'hbase/replication_admin'
 require 'hbase/security'
 require 'hbase/visibility_labels'
 require 'hbase/rsgroup_admin'
-
-include HBaseQuotasConstants

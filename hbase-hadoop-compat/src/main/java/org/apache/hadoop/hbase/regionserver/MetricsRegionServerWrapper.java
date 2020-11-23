@@ -453,6 +453,11 @@ public interface MetricsRegionServerWrapper {
   long getHedgedReadWins();
 
   /**
+   * @return Count of times a hedged read executes in current thread
+   */
+  long getHedgedReadOpsInCurThread();
+
+  /**
    * @return Number of total bytes read from HDFS.
    */
   long getTotalBytesRead();
@@ -486,6 +491,11 @@ public interface MetricsRegionServerWrapper {
    * Get the number of rpc scan requests to this region server.
    */
   long getRpcScanRequestsCount();
+
+  /**
+   * Get the number of full region rpc scan requests to this region server.
+   */
+  long getRpcFullScanRequestsCount();
 
   /**
    * Get the number of rpc multi requests to this region server.

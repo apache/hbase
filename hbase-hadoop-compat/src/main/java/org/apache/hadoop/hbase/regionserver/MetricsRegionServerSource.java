@@ -87,6 +87,12 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   void updateCheckAndPut(long t);
 
   /**
+   * Update checkAndMutate histogram
+   * @param t time it took
+   */
+  void updateCheckAndMutate(long t);
+
+  /**
    * Update the Get time histogram .
    *
    * @param t time it took
@@ -399,6 +405,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String DELETE_KEY = "delete";
   String CHECK_AND_DELETE_KEY = "checkAndDelete";
   String CHECK_AND_PUT_KEY = "checkAndPut";
+  String CHECK_AND_MUTATE_KEY = "checkAndMutate";
   String DELETE_BATCH_KEY = "deleteBatch";
   String GET_SIZE_KEY = "getSize";
   String GET_KEY = "get";
@@ -479,6 +486,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String HEDGED_READ_WINS = "hedgedReadWins";
   String HEDGED_READ_WINS_DESC =
       "The number of times we started a hedged read and a hedged read won";
+  String HEDGED_READ_IN_CUR_THREAD = "hedgedReadOpsInCurThread";
+  String HEDGED_READ_IN_CUR_THREAD_DESC =
+    "The number of times we execute a hedged read in current thread as a fallback for task rejection";
 
   String TOTAL_BYTES_READ = "totalBytesRead";
   String TOTAL_BYTES_READ_DESC = "The total number of bytes read from HDFS";
@@ -561,6 +571,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String RPC_SCAN_REQUEST_COUNT = "rpcScanRequestCount";
   String RPC_SCAN_REQUEST_COUNT_DESC =
       "Number of rpc scan requests this RegionServer has answered.";
+  String RPC_FULL_SCAN_REQUEST_COUNT = "rpcFullScanRequestCount";
+  String RPC_FULL_SCAN_REQUEST_COUNT_DESC =
+      "Number of rpc scan requests that were possible full region scans.";
   String RPC_MULTI_REQUEST_COUNT = "rpcMultiRequestCount";
   String RPC_MULTI_REQUEST_COUNT_DESC =
       "Number of rpc multi requests this RegionServer has answered.";

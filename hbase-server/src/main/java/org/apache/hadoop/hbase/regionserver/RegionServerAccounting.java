@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.lang.management.MemoryType;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +49,11 @@ public class RegionServerAccounting {
   private long globalOnHeapMemstoreLimit;
   private long globalOnHeapMemstoreLimitLowMark;
 
+  // encoded region name -> Pair -> read count as first, write count as second.
+  // when region close and target rs is the current server, we will put an entry,
+  // and will remove it when reigon open after recover them.
+  private ConcurrentMap<String, Pair<Long, Long>> retainedRegionRWRequestsCnt;
+
   public RegionServerAccounting(Configuration conf) {
     Pair<Long, MemoryType> globalMemstoreSizePair = MemorySizeUtil.getGlobalMemStoreSize(conf);
     this.globalMemStoreLimit = globalMemstoreSizePair.getFirst();
@@ -67,6 +74,7 @@ public class RegionServerAccounting {
     this.globalOnHeapMemstoreLimit = MemorySizeUtil.getOnheapGlobalMemStoreSize(conf);
     this.globalOnHeapMemstoreLimitLowMark =
         (long) (this.globalOnHeapMemstoreLimit * this.globalMemStoreLimitLowMarkPercent);
+    this.retainedRegionRWRequestsCnt = new ConcurrentHashMap<>();
   }
 
   long getGlobalMemStoreLimit() {
@@ -121,6 +129,13 @@ public class RegionServerAccounting {
    */
   public long getGlobalMemStoreOffHeapSize() {
     return this.globalMemStoreOffHeapSize.sum();
+  }
+
+  /**
+   * @return the retained metrics of region's read and write requests count
+   */
+  protected ConcurrentMap<String, Pair<Long, Long>> getRetainedRegionRWRequestsCnt() {
+    return this.retainedRegionRWRequestsCnt;
   }
 
   void incGlobalMemStoreSize(MemStoreSize mss) {

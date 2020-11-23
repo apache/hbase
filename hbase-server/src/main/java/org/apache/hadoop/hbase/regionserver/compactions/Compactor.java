@@ -268,7 +268,15 @@ public abstract class Compactor<T extends CellSink> {
     // See HBASE-8166, HBASE-12600, and HBASE-13389.
     return store
       .createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true, fd.maxMVCCReadpoint > 0,
-        fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize);
+        fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize,
+        HConstants.EMPTY_STRING);
+  }
+
+  protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind,
+      String fileStoragePolicy) throws IOException {
+    return store
+      .createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true, fd.maxMVCCReadpoint > 0,
+        fd.maxTagsLength > 0, shouldDropBehind, fd.totalCompactedFilesSize, fileStoragePolicy);
   }
 
   private ScanInfo preCompactScannerOpen(CompactionRequestImpl request, ScanType scanType,
@@ -368,17 +376,17 @@ public abstract class Compactor<T extends CellSink> {
       long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
       boolean major, int numofFilesToCompact) throws IOException {
     assert writer instanceof ShipperListener;
-    long bytesWrittenProgressForCloseCheck = 0;
     long bytesWrittenProgressForLog = 0;
     long bytesWrittenProgressForShippedCall = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
     List<Cell> cells = new ArrayList<>();
-    long closeCheckSizeLimit = HStore.getCloseCheckInterval();
+    long currentTime = EnvironmentEdgeManager.currentTime();
     long lastMillis = 0;
     if (LOG.isDebugEnabled()) {
-      lastMillis = EnvironmentEdgeManager.currentTime();
+      lastMillis = currentTime;
     }
+    CloseChecker closeChecker = new CloseChecker(conf, currentTime);
     String compactionName = ThroughputControlUtil.getNameForThrottling(store, "compaction");
     long now = 0;
     boolean hasMore;
@@ -392,8 +400,13 @@ public abstract class Compactor<T extends CellSink> {
     try {
       do {
         hasMore = scanner.next(cells, scannerContext);
+        currentTime = EnvironmentEdgeManager.currentTime();
         if (LOG.isDebugEnabled()) {
-          now = EnvironmentEdgeManager.currentTime();
+          now = currentTime;
+        }
+        if (closeChecker.isTimeLimit(store, currentTime)) {
+          progress.cancel();
+          return false;
         }
         // output to writer:
         Cell lastCleanCell = null;
@@ -416,16 +429,9 @@ public abstract class Compactor<T extends CellSink> {
             bytesWrittenProgressForLog += len;
           }
           throughputController.control(compactionName, len);
-          // check periodically to see if a system stop is requested
-          if (closeCheckSizeLimit > 0) {
-            bytesWrittenProgressForCloseCheck += len;
-            if (bytesWrittenProgressForCloseCheck > closeCheckSizeLimit) {
-              bytesWrittenProgressForCloseCheck = 0;
-              if (!store.areWritesEnabled()) {
-                progress.cancel();
-                return false;
-              }
-            }
+          if (closeChecker.isSizeLimit(store, len)) {
+            progress.cancel();
+            return false;
           }
           if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
             if (lastCleanCell != null) {

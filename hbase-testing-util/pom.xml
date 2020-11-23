@@ -31,6 +31,13 @@
     <description>HBase Testing Utilities.</description>
     <dependencies>
         <!-- Intra-project dependencies -->
+        <!-- we do not want to introduce this to downstream users so still set the scope to test -->
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-logging</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-common</artifactId>
@@ -87,31 +94,41 @@
         </dependency>
         <dependency>
             <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-hadoop-compat</artifactId>
-            <type>jar</type>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-hadoop-compat</artifactId>
+            <artifactId>hbase-asyncfs</artifactId>
             <type>test-jar</type>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.hbase</groupId>
-            <artifactId>${compat.module}</artifactId>
+            <artifactId>hbase-hadoop-compat</artifactId>
             <type>jar</type>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.hbase</groupId>
-            <artifactId>${compat.module}</artifactId>
+            <artifactId>hbase-hadoop-compat</artifactId>
             <type>test-jar</type>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -129,11 +146,31 @@
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-common</artifactId>
+                    <exclusions>
+                      <exclusion>
+                         <groupId>javax.xml.bind</groupId>
+                         <artifactId>jaxb-api</artifactId>
+                      </exclusion>
+                      <exclusion>
+                       <groupId>javax.ws.rs</groupId>
+                       <artifactId>jsr311-api</artifactId>
+                      </exclusion>
+                    </exclusions>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-minicluster</artifactId>
                     <scope>compile</scope>
+                    <exclusions>
+                      <exclusion>
+                        <groupId>com.google.guava</groupId>
+                        <artifactId>guava</artifactId>
+                      </exclusion>
+                      <exclusion>
+                       <groupId>javax.ws.rs</groupId>
+                       <artifactId>jsr311-api</artifactId>
+                      </exclusion>
+                    </exclusions>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>

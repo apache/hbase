@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_LOCALITY_ENABLED_KEY;
+import static org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl.SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -44,7 +45,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -53,7 +54,6 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -92,9 +92,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     return yyy;
   }
 
-  @After
-  public void tearDown() throws Exception {
-  }
 
   @Test
   public void testGetBestLocations() throws IOException {
@@ -174,7 +171,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Test
   public void testInitTableSnapshotMapperJobConfig() throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     String snapshotName = "foo";
 
@@ -199,7 +195,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
@@ -216,7 +211,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
       int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo)
       throws Exception {
-    setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       createTableAndSnapshot(
@@ -244,13 +238,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       util.getAdmin().deleteSnapshot(snapshotName);
       util.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
   @Test
   public void testWithMockedMapReduceWithSplitsPerRegion() throws Exception {
-    setupCluster();
     String snapshotName = "testWithMockedMapReduceMultiRegion";
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
@@ -271,13 +263,11 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 
   @Test
   public void testWithMockedMapReduceWithNoStartRowStopRow() throws Exception {
-    setupCluster();
     String snapshotName = "testWithMockedMapReduceMultiRegion";
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
@@ -300,13 +290,59 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
+    }
+  }
+
+  @Test
+  public void testScanLimit() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final String snapshotName = tableName + "Snapshot";
+    Table table = null;
+    try {
+      UTIL.getConfiguration().setInt(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT, 10);
+      if (UTIL.getAdmin().tableExists(tableName)) {
+        UTIL.deleteTable(tableName);
+      }
+
+      UTIL.createTable(tableName, FAMILIES, new byte[][] { bbb, yyy });
+
+      Admin admin = UTIL.getAdmin();
+
+      int regionNum = admin.getRegions(tableName).size();
+      // put some stuff in the table
+      table = UTIL.getConnection().getTable(tableName);
+      UTIL.loadTable(table, FAMILIES);
+
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
+      FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());
+
+      SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName, Arrays.asList(FAMILIES),
+        null, snapshotName, rootDir, fs, true);
+
+      Job job = new Job(UTIL.getConfiguration());
+      Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Scan scan = new Scan();
+      TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
+        TestTableSnapshotInputFormat.class);
+
+      TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan,
+        RowCounter.RowCounterMapper.class, NullWritable.class, NullWritable.class, job, true,
+        tmpTableDir);
+      Assert.assertTrue(job.waitForCompletion(true));
+      Assert.assertEquals(10 * regionNum,
+        job.getCounters().findCounter(RowCounter.RowCounterMapper.Counters.ROWS).getValue());
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+      UTIL.getConfiguration().unset(SNAPSHOT_INPUTFORMAT_ROW_LIMIT_PER_INPUTSPLIT);
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
     }
   }
 
   @Test
   public void testNoDuplicateResultsWhenSplitting() throws Exception {
-    setupCluster();
     TableName tableName = TableName.valueOf("testNoDuplicateResultsWhenSplitting");
     String snapshotName = "testSnapshotBug";
     try {
@@ -325,7 +361,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       admin.split(tableName, Bytes.toBytes("eee"));
       TestTableSnapshotScanner.blockUntilSplitFinished(UTIL, tableName, 2);
 
-      Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+      Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
       FileSystem fs = rootDir.getFileSystem(UTIL.getConfiguration());
 
       SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName, Arrays.asList(FAMILIES),
@@ -352,7 +388,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
-      tearDownCluster();
     }
   }
 

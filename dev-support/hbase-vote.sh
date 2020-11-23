@@ -29,7 +29,7 @@ hbase-vote. A script for standard vote which verifies the following items
 4. Built from source
 5. Unit tests
 
-Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>] [-P runSmallTests]
+Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-url <url>] [-o | --output-dir </path/to/use>] [-P runSmallTests] [-D property[=value]]
        ${SCRIPT} -h | --help
 
   -h | --help                   Show this screen.
@@ -37,27 +37,30 @@ Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-
                                 e.g. https://dist.apache.org/repos/dist/dev/hbase/hbase-<version>RC0/
   -k | --key '<signature>'      A signature of the public key, e.g. 9AD2AE49
   -f | --keys-file-url '<url>'   the URL of the key file, default is
-                                http://www.apache.org/dist/hbase/KEYS
+                                https://downloads.apache.org/hbase/KEYS
   -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
   -P |                          list of maven profiles to activate for test UT/IT, i.e. <-P runSmallTests> Defaults to runAllTests
+  -D |                          list of maven properties to set for the mvn invocations, i.e. <-D hadoop.profile=3.0> Defaults to unset
 __EOF
 }
 
 while ((${#})); do
   case "${1}" in
     -h | --help )
-      usage; exit 0                 ;;
-    -s | --source  )
-      SOURCE_URL="${2}"; shift 2    ;;
-    -k | --key  )
-      SIGNING_KEY="${2}"; shift 2   ;;
+      usage; exit 0 ;;
+    -s | --source )
+      SOURCE_URL="${2}"; shift 2 ;;
+    -k | --key )
+      SIGNING_KEY="${2}"; shift 2 ;;
     -f | --keys-file-url )
-      KEY_FILE_URL="${2}"; shift 2  ;;
+      KEY_FILE_URL="${2}"; shift 2 ;;
     -o | --output-dir )
-      OUTPUT_DIR="${2}"; shift 2    ;;
+      OUTPUT_DIR="${2}"; shift 2 ;;
     -P )
-      MVN_ARGS="-P ${2}"; shift 2   ;;
-    *           )
+      MVN_PROFILES="-P ${2}"; shift 2 ;;
+    -D )
+      MVN_PROPERTIES="-D ${2}"; shift 2 ;;
+    * )
       usage >&2; exit 1             ;;
   esac
 done
@@ -89,8 +92,8 @@ if [ ! -d "${OUTPUT_DIR}" ]; then
 fi
 
 # Maven profile must be provided
-if [ -z "${MVN_ARGS}" ]; then
-    MVN_ARGS="-P runAllTests"
+if [ -z "${MVN_PROFILES}" ]; then
+    MVN_PROFILES="-P runAllTests"
 fi
 
 OUTPUT_PATH_PREFIX="${OUTPUT_DIR}"/"${HBASE_RC_VERSION}"
@@ -103,7 +106,7 @@ BUILD_FROM_SOURCE_PASSED=0
 UNIT_TEST_PASSED=0
 
 function download_and_import_keys() {
-    KEY_FILE_URL="${KEY_FILE_URL:-https://www.apache.org/dist/hbase/KEYS}"
+    KEY_FILE_URL="${KEY_FILE_URL:-https://downloads.apache.org/hbase/KEYS}"
     echo "Obtain and import the publisher key(s) from ${KEY_FILE_URL}"
     # download the keys file into file KEYS
     wget -O KEYS "${KEY_FILE_URL}"
@@ -142,17 +145,17 @@ function unzip_from_source() {
 
 function rat_test() {
     rm -f "${OUTPUT_PATH_PREFIX}"_rat_test
-    mvn clean apache-rat:check 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_rat_test && RAT_CHECK_PASSED=1
+    mvn clean apache-rat:check "${MVN_PROPERTIES}" 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_rat_test && RAT_CHECK_PASSED=1
 }
 
 function build_from_source() {
     rm -f "${OUTPUT_PATH_PREFIX}"_build_from_source
-    mvn clean install -DskipTests 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_build_from_source && BUILD_FROM_SOURCE_PASSED=1
+    mvn clean install "${MVN_PROPERTIES}" -DskipTests 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_build_from_source && BUILD_FROM_SOURCE_PASSED=1
 }
 
 function run_tests() {
     rm -f "${OUTPUT_PATH_PREFIX}"_run_tests
-    mvn package "${MVN_ARGS}" -Dsurefire.rerunFailingTestsCount=3 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_run_tests && UNIT_TEST_PASSED=1
+    mvn package "${MVN_PROFILES}" "${MVN_PROPERTIES}" -Dsurefire.rerunFailingTestsCount=3 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_run_tests && UNIT_TEST_PASSED=1
 }
 
 function execute() {
@@ -164,11 +167,11 @@ function print_when_exit() {
         * Signature: $( ((SIGNATURE_PASSED)) && echo "ok" || echo "failed" )
         * Checksum : $( ((CHECKSUM_PASSED)) && echo "ok" || echo "failed" )
         * Rat check (${JAVA_VERSION}): $( ((RAT_CHECK_PASSED)) && echo "ok" || echo "failed" )
-         - mvn clean apache-rat:check
+         - mvn clean apache-rat:check "${MVN_PROPERTIES}"
         * Built from source (${JAVA_VERSION}): $( ((BUILD_FROM_SOURCE_PASSED)) && echo "ok" || echo "failed" )
-         - mvn clean install -DskipTests
+         - mvn clean install -DskipTests "${MVN_PROPERTIES}"
         * Unit tests pass (${JAVA_VERSION}): $( ((UNIT_TEST_PASSED)) && echo "ok" || echo "failed" )
-         - mvn package ${MVN_ARGS}
+         - mvn package ${MVN_PROFILES} "${MVN_PROPERTIES}" -Dsurefire.rerunFailingTestsCount=3
 __EOF
   if ((CHECKSUM_PASSED)) && ((SIGNATURE_PASSED)) && ((RAT_CHECK_PASSED)) && ((BUILD_FROM_SOURCE_PASSED)) && ((UNIT_TEST_PASSED)) ; then
     exit 0

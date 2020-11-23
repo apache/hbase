@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.procedure;
-
 import java.io.IOException;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.SplitWALManager;
@@ -33,7 +30,6 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -189,9 +185,36 @@ public class SplitWALProcedure
 
   @Override
   protected void afterReplay(MasterProcedureEnv env){
-    if(worker != null){
-      env.getMasterServices().getSplitWALManager().addUsedSplitWALWorker(worker);
+    if (worker != null) {
+      if (env != null && env.getMasterServices() != null &&
+          env.getMasterServices().getSplitWALManager() != null) {
+        env.getMasterServices().getSplitWALManager().addUsedSplitWALWorker(worker);
+      }
     }
+  }
 
+  @Override protected void toStringClassDetails(StringBuilder builder) {
+    builder.append(getProcName());
+    if (this.worker != null) {
+      builder.append(", worker=");
+      builder.append(this.worker);
+    }
+    if (this.retryCounter != null) {
+      builder.append(", retry=");
+      builder.append(this.retryCounter);
+    }
+  }
+
+  @Override public String getProcName() {
+    return getClass().getSimpleName() + " " + getWALNameFromStrPath(getWAL());
+  }
+
+  /**
+   * @return Return the WAL filename when given a Path-as-a-string; i.e. return the last path
+   *   component only.
+   */
+  static String getWALNameFromStrPath(String path) {
+    int slashIndex = path.lastIndexOf('/');
+    return slashIndex != -1? path.substring(slashIndex + 1): path;
   }
 }

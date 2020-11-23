@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,9 +21,11 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
@@ -35,7 +37,6 @@ import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -66,7 +67,7 @@ public class WALFactory {
   /**
    * Maps between configuration names for providers and implementation classes.
    */
-  static enum Providers {
+  enum Providers {
     defaultProvider(AsyncFSWALProvider.class),
     filesystem(FSHLogProvider.class),
     multiwal(RegionGroupingProvider.class),
@@ -86,6 +87,7 @@ public class WALFactory {
   public static final String WAL_ENABLED = "hbase.regionserver.hlog.enabled";
 
   final String factoryId;
+  final Abortable abortable;
   private final WALProvider provider;
   // The meta updates are written to a different wal. If this
   // regionserver holds meta regions, then this ref will be non-null.
@@ -119,6 +121,7 @@ public class WALFactory {
     // this instance can't create wals, just reader/writers.
     provider = null;
     factoryId = SINGLETON_ID;
+    this.abortable = null;
   }
 
   @VisibleForTesting
@@ -175,7 +178,7 @@ public class WALFactory {
   public WALFactory(Configuration conf, String factoryId) throws IOException {
     // default enableSyncReplicationWALProvider is true, only disable SyncReplicationWALProvider
     // for HMaster or HRegionServer which take system table only. See HBASE-19999
-    this(conf, factoryId, true);
+    this(conf, factoryId, null, true);
   }
 
   /**
@@ -183,11 +186,12 @@ public class WALFactory {
    *          instances.
    * @param factoryId a unique identifier for this factory. used i.e. by filesystem implementations
    *          to make a directory
+   * @param abortable the server associated with this WAL file
    * @param enableSyncReplicationWALProvider whether wrap the wal provider to a
    *          {@link SyncReplicationWALProvider}
    */
-  public WALFactory(Configuration conf, String factoryId, boolean enableSyncReplicationWALProvider)
-      throws IOException {
+  public WALFactory(Configuration conf, String factoryId, Abortable abortable,
+      boolean enableSyncReplicationWALProvider) throws IOException {
     // until we've moved reader/writer construction down into providers, this initialization must
     // happen prior to provider initialization, in case they need to instantiate a reader/writer.
     timeoutMillis = conf.getInt("hbase.hlog.open.timeout", 300000);
@@ -196,20 +200,21 @@ public class WALFactory {
       AbstractFSWALProvider.Reader.class);
     this.conf = conf;
     this.factoryId = factoryId;
+    this.abortable = abortable;
     // end required early initialization
     if (conf.getBoolean(WAL_ENABLED, true)) {
       WALProvider provider = createProvider(getProviderClass(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
       if (enableSyncReplicationWALProvider) {
         provider = new SyncReplicationWALProvider(provider);
       }
-      provider.init(this, conf, null);
+      provider.init(this, conf, null, this.abortable);
       provider.addWALActionsListener(new MetricsWAL());
       this.provider = provider;
     } else {
       // special handling of existing configuration behavior.
       LOG.warn("Running with WAL disabled.");
       provider = new DisabledWALProvider();
-      provider.init(this, conf, factoryId);
+      provider.init(this, conf, factoryId, null);
     }
   }
 
@@ -255,8 +260,12 @@ public class WALFactory {
     return provider.getWALs();
   }
 
-  @VisibleForTesting
-  WALProvider getMetaProvider() throws IOException {
+  /**
+   * Called when we lazily create a hbase:meta WAL OR from ReplicationSourceManager ahead of
+   * creating the first hbase:meta WAL so we can register a listener.
+   * @see #getMetaWALProvider()
+   */
+  public WALProvider getMetaProvider() throws IOException {
     for (;;) {
       WALProvider provider = this.metaProvider.get();
       if (provider != null) {
@@ -274,7 +283,7 @@ public class WALFactory {
         clz = getProviderClass(META_WAL_PROVIDER, conf.get(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
       }
       provider = createProvider(clz);
-      provider.init(this, conf, AbstractFSWALProvider.META_WAL_PROVIDER_ID);
+      provider.init(this, conf, AbstractFSWALProvider.META_WAL_PROVIDER_ID, this.abortable);
       provider.addWALActionsListener(new MetricsWAL());
       if (metaProvider.compareAndSet(null, provider)) {
         return provider;
@@ -286,10 +295,10 @@ public class WALFactory {
   }
 
   /**
-   * @param region the region which we want to get a WAL for it. Could be null.
+   * @param region the region which we want to get a WAL for. Could be null.
    */
   public WAL getWAL(RegionInfo region) throws IOException {
-    // use different WAL for hbase:meta
+    // Use different WAL for hbase:meta. Instantiates the meta WALProvider if not already up.
     if (region != null && region.isMetaRegion() &&
       region.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
       return getMetaProvider().getWAL(region);
@@ -307,7 +316,6 @@ public class WALFactory {
    * to reopen it multiple times, use {@link WAL.Reader#reset()} instead of this method
    * then just seek back to the last known good position.
    * @return A WAL reader.  Close when done with it.
-   * @throws IOException
    */
   public Reader createReader(final FileSystem fs, final Path path,
       CancelableProgressable reporter) throws IOException {
@@ -486,6 +494,10 @@ public class WALFactory {
     return this.provider;
   }
 
+  /**
+   * @return Current metaProvider... may be null if not yet initialized.
+   * @see #getMetaProvider()
+   */
   public final WALProvider getMetaWALProvider() {
     return this.metaProvider.get();
   }

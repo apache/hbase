@@ -59,6 +59,15 @@ if "%HBASE_BIN_PATH:~-1%" == "\" (
   set HBASE_BIN_PATH=%HBASE_BIN_PATH:~0,-1%
 )
 
+if "%1" == "--help" (
+  goto :print_usage
+  exit /B 0
+)
+if "%1" == "-h" (
+  goto :print_usage
+  exit /B 0
+)
+
 rem This will set HBASE_HOME, etc.
 set hbase-config-script=%HBASE_BIN_PATH%\hbase-config.cmd
 call "%hbase-config-script%" %*
@@ -448,6 +457,7 @@ goto :eof
   echo where ^<command^> an option from one of these categories::
   echo Options:
   echo   --config DIR    Configuration direction to use. Default: ./conf
+  echo   --help or -h    Print this help message
   echo.
   echo Commands:
   echo Some commands take arguments. Pass no args or -h for usage."

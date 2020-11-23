@@ -39,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
@@ -46,8 +47,8 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
-import org.apache.hadoop.hbase.regionserver.slowlog.RpcLogDetails;
-import org.apache.hadoop.hbase.regionserver.slowlog.SlowLogRecorder;
+import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
+import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
@@ -94,10 +95,9 @@ public abstract class RpcServer implements RpcServerInterface,
   private static final String MULTI_GETS = "multi.gets";
   private static final String MULTI_MUTATIONS = "multi.mutations";
   private static final String MULTI_SERVICE_CALLS = "multi.service_calls";
-  private static final String GET_SLOW_LOG_RESPONSES = "GetSlowLogResponses";
-  private static final String CLEAR_SLOW_LOGS_RESPONSES = "ClearSlowLogsResponses";
 
   private final boolean authorize;
+  private final boolean isOnlineLogProviderEnabled;
   protected boolean isSecurityEnabled;
 
   public static final byte CURRENT_VERSION = 0;
@@ -200,7 +200,7 @@ public abstract class RpcServer implements RpcServerInterface,
   protected static final String TRACE_LOG_MAX_LENGTH = "hbase.ipc.trace.log.max.length";
   protected static final String KEY_WORD_TRUNCATED = " <TRUNCATED>";
 
-  protected static final Gson GSON = GsonUtil.createGson().create();
+  protected static final Gson GSON = GsonUtil.createGsonWithDisableHtmlEscaping().create();
 
   protected final int maxRequestSize;
   protected final int warnResponseTime;
@@ -229,7 +229,7 @@ public abstract class RpcServer implements RpcServerInterface,
   /**
    * Use to add online slowlog responses
    */
-  private SlowLogRecorder slowLogRecorder;
+  private NamedQueueRecorder namedQueueRecorder;
 
   @FunctionalInterface
   protected interface CallCleanup {
@@ -304,6 +304,8 @@ public abstract class RpcServer implements RpcServerInterface,
       saslProps = Collections.emptyMap();
     }
 
+    this.isOnlineLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
+      HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
     this.scheduler = scheduler;
   }
 
@@ -432,12 +434,12 @@ public abstract class RpcServer implements RpcServerInterface,
           tooLarge, tooSlow,
           status.getClient(), startTime, processingTime, qTime,
           responseSize, userName);
-        if (this.slowLogRecorder != null) {
+        if (this.namedQueueRecorder != null && this.isOnlineLogProviderEnabled) {
           // send logs to ring buffer owned by slowLogRecorder
-          final String className = server == null ? StringUtils.EMPTY :
-            server.getClass().getSimpleName();
-          this.slowLogRecorder.addSlowLogPayload(
-            new RpcLogDetails(call, status.getClient(), responseSize, className, tooSlow,
+          final String className =
+            server == null ? StringUtils.EMPTY : server.getClass().getSimpleName();
+          this.namedQueueRecorder.addRecord(
+            new RpcLogDetails(call, param, status.getClient(), responseSize, className, tooSlow,
               tooLarge));
         }
       }
@@ -504,12 +506,15 @@ public abstract class RpcServer implements RpcServerInterface,
     responseInfo.put("param", stringifiedParam);
     if (param instanceof ClientProtos.ScanRequest && rsRpcServices != null) {
       ClientProtos.ScanRequest request = ((ClientProtos.ScanRequest) param);
+      String scanDetails;
       if (request.hasScannerId()) {
         long scannerId = request.getScannerId();
-        String scanDetails = rsRpcServices.getScanDetailsWithId(scannerId);
-        if (scanDetails != null) {
-          responseInfo.put("scandetails", scanDetails);
-        }
+        scanDetails = rsRpcServices.getScanDetailsWithId(scannerId);
+      } else {
+        scanDetails = rsRpcServices.getScanDetailsWithRequest(request);
+      }
+      if (scanDetails != null) {
+        responseInfo.put("scandetails", scanDetails);
       }
     }
     if (param instanceof ClientProtos.MultiRequest) {
@@ -816,12 +821,8 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   @Override
-  public void setSlowLogRecorder(SlowLogRecorder slowLogRecorder) {
-    this.slowLogRecorder = slowLogRecorder;
+  public void setNamedQueueRecorder(NamedQueueRecorder namedQueueRecorder) {
+    this.namedQueueRecorder = namedQueueRecorder;
   }
 
-  @Override
-  public SlowLogRecorder getSlowLogRecorder() {
-    return slowLogRecorder;
-  }
 }

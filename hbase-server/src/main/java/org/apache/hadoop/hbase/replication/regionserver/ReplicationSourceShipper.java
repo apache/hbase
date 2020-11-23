@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTimeout;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetries;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -28,7 +27,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -36,7 +34,6 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
@@ -156,7 +153,7 @@ public class ReplicationSourceShipper extends Thread {
   private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
     int totalSize = 0;
     for(Entry entry : entryBatch.getWalEntries()) {
-      totalSize += entryReader.getEntrySizeExcludeBulkLoad(entry);
+      totalSize += ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(entry);
     }
     return  totalSize;
   }
@@ -208,16 +205,13 @@ public class ReplicationSourceShipper extends Thread {
         for (Entry entry : entries) {
           cleanUpHFileRefs(entry.getEdit());
           LOG.trace("shipped entry {}: ", entry);
-          TableName tableName = entry.getKey().getTableName();
-          source.getSourceMetrics().setAgeOfLastShippedOpByTable(entry.getKey().getWriteTime(),
-              tableName.getNameAsString());
         }
         // Log and clean up WAL logs
         updateLogPosition(entryBatch);
 
         //offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
         //this sizeExcludeBulkLoad has to use same calculation that when calling
-        //acquireBufferQuota() in ReplicatinoSourceWALReader because they maintain
+        //acquireBufferQuota() in ReplicationSourceWALReader because they maintain
         //same variable: totalBufferUsed
         source.postShipEdits(entries, sizeExcludeBulkLoad);
         // FIXME check relationship between wal group and overall
@@ -225,6 +219,8 @@ public class ReplicationSourceShipper extends Thread {
           entryBatch.getNbHFiles());
         source.getSourceMetrics().setAgeOfLastShippedOp(
           entries.get(entries.size() - 1).getKey().getWriteTime(), walGroupId);
+        source.getSourceMetrics().updateTableLevelMetrics(entryBatch.getWalEntriesWithSize());
+
         if (LOG.isTraceEnabled()) {
           LOG.debug("Replicated {} entries or {} operations in {} ms",
               entries.size(), entryBatch.getNbOperations(), (endTimeNs - startTimeNs) / 1000000);
@@ -273,7 +269,7 @@ public class ReplicationSourceShipper extends Thread {
     // position and the file will be removed soon in cleanOldLogs.
     if (batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath) ||
       batch.getLastWalPosition() != currentPosition) {
-      source.getSourceManager().logPositionAndCleanOldLogs(source, batch);
+      source.logPositionAndCleanOldLogs(batch);
       updated = true;
     }
     // if end of file is true, then we can just skip to the next file in queue.
@@ -292,7 +288,8 @@ public class ReplicationSourceShipper extends Thread {
   public void startup(UncaughtExceptionHandler handler) {
     String name = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this,
-      name + ".replicationSource.shipper" + walGroupId + "," + source.getQueueId(), handler);
+      name + ".replicationSource.shipper" + walGroupId + "," + source.getQueueId(),
+      handler::uncaughtException);
   }
 
   Path getCurrentPath() {

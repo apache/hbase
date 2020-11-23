@@ -57,7 +57,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
    * @return a writer that wraps a {@link WALProvider.Writer} and its Path. Caller should close.
    */
   protected RecoveredEditsWriter createRecoveredEditsWriter(TableName tableName, byte[] region,
-    long seqId) throws IOException {
+      long seqId) throws IOException {
     Path regionEditsPath = getRegionSplitEditsPath(tableName, region, seqId,
       walSplitter.getFileBeingSplit().getPath().getName(), walSplitter.getTmpDirName(),
       walSplitter.conf);
@@ -70,27 +70,35 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       }
     }
     WALProvider.Writer w = walSplitter.createWriter(regionEditsPath);
-    LOG.info("Creating recovered edits writer path={}", regionEditsPath);
+    final String msg = "Creating recovered edits writer path=" + regionEditsPath;
+    LOG.info(msg);
+    updateStatusWithMsg(msg);
     return new RecoveredEditsWriter(region, regionEditsPath, w, seqId);
   }
 
   protected Path closeRecoveredEditsWriter(RecoveredEditsWriter editsWriter,
-    List<IOException> thrown) throws IOException {
+      List<IOException> thrown) throws IOException {
     try {
       editsWriter.writer.close();
     } catch (IOException ioe) {
-      LOG.error("Could not close recovered edits at {}", editsWriter.path, ioe);
+      final String errorMsg = "Could not close recovered edits at " + editsWriter.path;
+      LOG.error(errorMsg, ioe);
+      updateStatusWithMsg(errorMsg);
       thrown.add(ioe);
       return null;
     }
-    LOG.info("Closed recovered edits writer path={} (wrote {} edits, skipped {} edits in {} ms",
-      editsWriter.path, editsWriter.editsWritten, editsWriter.editsSkipped,
-      editsWriter.nanosSpent / 1000 / 1000);
+    final String msg = "Closed recovered edits writer path=" + editsWriter.path + " (wrote "
+      + editsWriter.editsWritten + " edits, skipped " + editsWriter.editsSkipped + " edits in " + (
+      editsWriter.nanosSpent / 1000 / 1000) + " ms)";
+    LOG.info(msg);
+    updateStatusWithMsg(msg);
     if (editsWriter.editsWritten == 0) {
       // just remove the empty recovered.edits file
-      if (walSplitter.walFS.exists(editsWriter.path) &&
-        !walSplitter.walFS.delete(editsWriter.path, false)) {
-        LOG.warn("Failed deleting empty {}", editsWriter.path);
+      if (walSplitter.walFS.exists(editsWriter.path)
+          && !walSplitter.walFS.delete(editsWriter.path, false)) {
+        final String errorMsg = "Failed deleting empty " + editsWriter.path;
+        LOG.warn(errorMsg);
+        updateStatusWithMsg(errorMsg);
         throw new IOException("Failed deleting empty  " + editsWriter.path);
       }
       return null;
@@ -107,13 +115,20 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       // TestHLogSplit#testThreading is an example.
       if (walSplitter.walFS.exists(editsWriter.path)) {
         if (!walSplitter.walFS.rename(editsWriter.path, dst)) {
-          throw new IOException(
-            "Failed renaming recovered edits " + editsWriter.path + " to " + dst);
+          final String errorMsg =
+            "Failed renaming recovered edits " + editsWriter.path + " to " + dst;
+          updateStatusWithMsg(errorMsg);
+          throw new IOException(errorMsg);
         }
-        LOG.info("Rename recovered edits {} to {}", editsWriter.path, dst);
+        final String renameEditMsg = "Rename recovered edits " + editsWriter.path + " to " + dst;
+        LOG.info(renameEditMsg);
+        updateStatusWithMsg(renameEditMsg);
       }
     } catch (IOException ioe) {
-      LOG.error("Could not rename recovered edits {} to {}", editsWriter.path, dst, ioe);
+      final String errorMsg = "Could not rename recovered edits " + editsWriter.path
+        + " to " + dst;
+      LOG.error(errorMsg, ioe);
+      updateStatusWithMsg(errorMsg);
       thrown.add(ioe);
       return null;
     }
@@ -216,26 +231,33 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
 
     void writeRegionEntries(List<WAL.Entry> entries) throws IOException {
       long startTime = System.nanoTime();
-      try {
-        int editsCount = 0;
-        for (WAL.Entry logEntry : entries) {
-          filterCellByStore(logEntry);
-          if (!logEntry.getEdit().isEmpty()) {
+      int editsCount = 0;
+      for (WAL.Entry logEntry : entries) {
+        filterCellByStore(logEntry);
+        if (!logEntry.getEdit().isEmpty()) {
+          try {
             writer.append(logEntry);
-            updateRegionMaximumEditLogSeqNum(logEntry);
-            editsCount++;
-          } else {
-            incrementSkippedEdits(1);
+          } catch (IOException e) {
+            logAndThrowWriterAppendFailure(logEntry, e);
           }
+          updateRegionMaximumEditLogSeqNum(logEntry);
+          editsCount++;
+        } else {
+          incrementSkippedEdits(1);
         }
-        // Pass along summary statistics
-        incrementEdits(editsCount);
-        incrementNanoTime(System.nanoTime() - startTime);
-      } catch (IOException e) {
-        e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
-        LOG.error(HBaseMarkers.FATAL, "Got while writing log entry to log", e);
-        throw e;
       }
+      // Pass along summary statistics
+      incrementEdits(editsCount);
+      incrementNanoTime(System.nanoTime() - startTime);
+    }
+
+    private void logAndThrowWriterAppendFailure(WAL.Entry logEntry, IOException e)
+        throws IOException {
+      e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
+      final String errorMsg = "Failed to write log entry " + logEntry.toString() + " to log";
+      LOG.error(HBaseMarkers.FATAL, errorMsg, e);
+      updateStatusWithMsg(errorMsg);
+      throw e;
     }
 
     private void filterCellByStore(WAL.Entry logEntry) {

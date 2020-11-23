@@ -41,17 +41,21 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -68,7 +72,6 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -84,8 +87,12 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+
+
+
 
 /**
  * Implementation of {@link WAL} to go against {@link FileSystem}; i.e. keep WALs in HDFS. Only one
@@ -184,6 +191,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * conf object
    */
   protected final Configuration conf;
+
+  protected final Abortable abortable;
 
   /** Listeners that are called on WAL events. */
   protected final List<WALActionsListener> listeners = new CopyOnWriteArrayList<>();
@@ -329,6 +338,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected final AtomicBoolean rollRequested = new AtomicBoolean(false);
 
+  private final ExecutorService logArchiveExecutor = Executors.newSingleThreadExecutor(
+    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("WAL-Archiver-%d").build());
+
+  private final int archiveRetries;
+
   public long getFilenum() {
     return this.filenum.get();
   }
@@ -380,10 +394,19 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
       final boolean failIfWALExists, final String prefix, final String suffix)
       throws FailedLogCloseException, IOException {
+    this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
+  }
+
+  protected AbstractFSWAL(final FileSystem fs, final Abortable abortable, final Path rootDir,
+      final String logDir, final String archiveDir, final Configuration conf,
+      final List<WALActionsListener> listeners, final boolean failIfWALExists, final String prefix,
+      final String suffix)
+      throws FailedLogCloseException, IOException {
     this.fs = fs;
     this.walDir = new Path(rootDir, logDir);
     this.walArchiveDir = new Path(rootDir, archiveDir);
     this.conf = conf;
+    this.abortable = abortable;
 
     if (!fs.exists(walDir) && !fs.mkdirs(walDir)) {
       throw new IOException("Unable to mkdir " + walDir);
@@ -460,7 +483,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize=" +
       StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix=" +
-      walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir);
+      walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir +
+      ", maxLogs=" + this.maxLogs);
     this.slowSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(SLOW_SYNC_TIME_MS,
       DEFAULT_SLOW_SYNC_TIME_MS));
     this.rollOnSyncNs = TimeUnit.MILLISECONDS.toNanos(conf.getInt(ROLL_ON_SYNC_TIME_MS,
@@ -481,6 +505,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this.walTooOldNs = TimeUnit.SECONDS.toNanos(conf.getInt(
             SURVIVED_TOO_LONG_SEC_KEY, SURVIVED_TOO_LONG_SEC_DEFAULT));
     this.useHsync = conf.getBoolean(HRegion.WAL_HSYNC_CONF_KEY, HRegion.DEFAULT_WAL_HSYNC);
+    archiveRetries = this.conf.getInt("hbase.regionserver.walroll.archive.retries", 0);
+
   }
 
   /**
@@ -516,8 +542,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public void completeCacheFlush(byte[] encodedRegionName) {
-    this.sequenceIdAccounting.completeCacheFlush(encodedRegionName);
+  public void completeCacheFlush(byte[] encodedRegionName, long maxFlushedSeqId) {
+    this.sequenceIdAccounting.completeCacheFlush(encodedRegionName, maxFlushedSeqId);
   }
 
   @Override
@@ -545,7 +571,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public byte[][] rollWriter() throws FailedLogCloseException, IOException {
+  public Map<byte[], List<byte[]>> rollWriter() throws FailedLogCloseException, IOException {
     return rollWriter(false);
   }
 
@@ -640,10 +666,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * If the number of un-archived WAL files ('live' WALs) is greater than maximum allowed,
    * check the first (oldest) WAL, and return those regions which should be flushed so that
    * it can be let-go/'archived'.
-   * @return regions (encodedRegionNames) to flush in order to archive oldest WAL file.
+   * @return stores of regions (encodedRegionNames) to flush in order to archive oldest WAL file.
    */
-  byte[][] findRegionsToForceFlush() throws IOException {
-    byte[][] regions = null;
+  Map<byte[], List<byte[]>> findRegionsToForceFlush() throws IOException {
+    Map<byte[], List<byte[]>> regions = null;
     int logCount = getNumRolledLogFiles();
     if (logCount > this.maxLogs && logCount > 0) {
       Map.Entry<Path, WalProps> firstWALEntry = this.walFile2Props.firstEntry();
@@ -651,15 +677,20 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         this.sequenceIdAccounting.findLower(firstWALEntry.getValue().encodedName2HighestSequenceId);
     }
     if (regions != null) {
-      StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < regions.length; i++) {
-        if (i > 0) {
-          sb.append(", ");
+      List<String> listForPrint = new ArrayList();
+      for (Map.Entry<byte[], List<byte[]>> r : regions.entrySet()) {
+        StringBuilder families = new StringBuilder();
+        for (int i = 0; i < r.getValue().size(); i++) {
+          if (i > 0) {
+            families.append(",");
+          }
+          families.append(Bytes.toString(r.getValue().get(i)));
         }
-        sb.append(Bytes.toStringBinary(regions[i]));
+        listForPrint.add(Bytes.toStringBinary(r.getKey()) + "[" + families.toString() + "]");
       }
       LOG.info("Too many WALs; count=" + logCount + ", max=" + this.maxLogs +
-        "; forcing flush of " + regions.length + " regions(s): " + sb.toString());
+        "; forcing (partial) flush of " + regions.size() + " region(s): " +
+        StringUtils.join(",", listForPrint));
     }
     return regions;
   }
@@ -709,11 +740,39 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         regionsBlockingThisWal.clear();
       }
     }
+
     if (logsToArchive != null) {
-      for (Pair<Path, Long> logAndSize : logsToArchive) {
-        this.totalLogSize.addAndGet(-logAndSize.getSecond());
-        archiveLogFile(logAndSize.getFirst());
-        this.walFile2Props.remove(logAndSize.getFirst());
+      final List<Pair<Path, Long>> localLogsToArchive = logsToArchive;
+      // make it async
+      for (Pair<Path, Long> log : localLogsToArchive) {
+        logArchiveExecutor.execute(() -> {
+          archive(log);
+        });
+        this.walFile2Props.remove(log.getFirst());
+      }
+    }
+  }
+
+  protected void archive(final Pair<Path, Long> log) {
+    int retry = 1;
+    while (true) {
+      try {
+        archiveLogFile(log.getFirst());
+        totalLogSize.addAndGet(-log.getSecond());
+        // successful
+        break;
+      } catch (Throwable e) {
+        if (retry > archiveRetries) {
+          LOG.error("Failed log archiving for the log {},", log.getFirst(), e);
+          if (this.abortable != null) {
+            this.abortable.abort("Failed log archiving", e);
+            break;
+          }
+        } else {
+          LOG.error("Log archiving failed for the log {} - attempt {}", log.getFirst(), retry,
+            e);
+        }
+        retry++;
       }
     }
   }
@@ -726,7 +785,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return new Path(archiveDir, p.getName());
   }
 
-  private void archiveLogFile(final Path p) throws IOException {
+  @VisibleForTesting
+  protected void archiveLogFile(final Path p) throws IOException {
     Path newPath = getWALArchivePath(this.walArchiveDir, p);
     // Tell our listeners that a log is going to be archived.
     if (!this.listeners.isEmpty()) {
@@ -821,7 +881,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException {
+  public Map<byte[], List<byte[]>> rollWriter(boolean force) throws IOException {
     rollWriterLock.lock();
     try {
       if (this.closed) {
@@ -831,7 +891,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       if (!force && this.writer != null && this.numEntries.get() <= 0) {
         return null;
       }
-      byte[][] regionsToFlush = null;
+      Map<byte[], List<byte[]>> regionsToFlush = null;
       try (TraceScope scope = TraceUtil.createTrace("FSHLog.rollWriter")) {
         Path oldPath = getOldPath();
         Path newPath = getNewPath();
@@ -901,6 +961,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     rollWriterLock.lock();
     try {
       doShutdown();
+      if (logArchiveExecutor != null) {
+        logArchiveExecutor.shutdownNow();
+      }
     } finally {
       rollWriterLock.unlock();
     }
@@ -1103,7 +1166,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       Path currentPath = getOldPath();
       if (path.equals(currentPath)) {
         W writer = this.writer;
-        return writer != null ? OptionalLong.of(writer.getLength()) : OptionalLong.empty();
+        return writer != null ? OptionalLong.of(writer.getSyncedLength()) : OptionalLong.empty();
       } else {
         return OptionalLong.empty();
       }
@@ -1242,7 +1305,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   abstract int getLogReplication();
 
   private static void split(final Configuration conf, final Path p) throws IOException {
-    FileSystem fs = FSUtils.getWALFileSystem(conf);
+    FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
     if (!fs.exists(p)) {
       throw new FileNotFoundException(p.toString());
     }
@@ -1250,7 +1313,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       throw new IOException(p + " is not a directory");
     }
 
-    final Path baseDir = FSUtils.getWALRootDir(conf);
+    final Path baseDir = CommonFSUtils.getWALRootDir(conf);
     Path archiveDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     if (conf.getBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR,
       AbstractFSWALProvider.DEFAULT_SEPARATE_OLDLOGDIR)) {
@@ -1292,7 +1355,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       for (int i = 1; i < args.length; i++) {
         try {
           Path logPath = new Path(args[i]);
-          FSUtils.setFsDefault(conf, logPath);
+          CommonFSUtils.setFsDefault(conf, logPath);
           split(conf, logPath);
         } catch (IOException t) {
           t.printStackTrace(System.err);

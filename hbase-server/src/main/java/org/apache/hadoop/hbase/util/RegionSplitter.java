@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -413,11 +412,13 @@ public class RegionSplitter {
       if (!conf.getBoolean("split.verify", true)) {
         // NOTE: createTable is synchronous on the table, but not on the regions
         int onlineRegions = 0;
-        while (onlineRegions < splitCount) {
-          onlineRegions = MetaTableAccessor.getRegionCount(connection, tableName);
-          LOG.debug(onlineRegions + " of " + splitCount + " regions online...");
-          if (onlineRegions < splitCount) {
-            Thread.sleep(10 * 1000); // sleep
+        try (RegionLocator locator = connection.getRegionLocator(tableName)) {
+          while (onlineRegions < splitCount) {
+            onlineRegions = locator.getAllRegionLocations().size();
+            LOG.debug(onlineRegions + " of " + splitCount + " regions online...");
+            if (onlineRegions < splitCount) {
+              Thread.sleep(10 * 1000); // sleep
+            }
           }
         }
       }
@@ -456,8 +457,8 @@ public class RegionSplitter {
       // Max outstanding splits. default == 50% of servers
       final int MAX_OUTSTANDING = Math.max(getRegionServerCount(connection) / 2, minOS);
 
-      Path hbDir = FSUtils.getRootDir(conf);
-      Path tableDir = FSUtils.getTableDir(hbDir, tableName);
+      Path hbDir = CommonFSUtils.getRootDir(conf);
+      Path tableDir = CommonFSUtils.getTableDir(hbDir, tableName);
       Path splitFile = new Path(tableDir, "_balancedSplit");
       FileSystem fs = FileSystem.get(conf);
 
@@ -781,10 +782,9 @@ public class RegionSplitter {
    * @throws IOException if a remote or network exception occurs
    */
   private static Pair<Path, Path> getTableDirAndSplitFile(final Configuration conf,
-      final TableName tableName)
-  throws IOException {
-    Path hbDir = FSUtils.getRootDir(conf);
-    Path tableDir = FSUtils.getTableDir(hbDir, tableName);
+    final TableName tableName) throws IOException {
+    Path hbDir = CommonFSUtils.getRootDir(conf);
+    Path tableDir = CommonFSUtils.getTableDir(hbDir, tableName);
     Path splitFile = new Path(tableDir, "_balancedSplit");
     return new Pair<>(tableDir, splitFile);
   }
@@ -844,8 +844,7 @@ public class RegionSplitter {
       fs.rename(tmpFile, splitFile);
     } else {
       LOG.debug("_balancedSplit file found. Replay log to restore state...");
-      FSUtils.getInstance(fs, connection.getConfiguration())
-        .recoverFileLease(fs, splitFile, connection.getConfiguration(), null);
+      RecoverLeaseFSUtils.recoverFileLease(fs, splitFile, connection.getConfiguration(), null);
 
       // parse split file and process remaining splits
       FSDataInputStream tmpIn = fs.open(splitFile);

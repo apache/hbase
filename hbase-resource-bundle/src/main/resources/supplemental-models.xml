@@ -1175,6 +1175,60 @@ Copyright (c) 2000-2005 INRIA, France Telecom
   </supplement>
   <supplement>
     <project>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm-analysis</artifactId>
+      <name>ASM: a very small and fast Java bytecode manipulation framework</name>
+
+      <licenses>
+        <license>
+          <name>BSD 3-Clause License</name>
+          <url>https://github.com/llbit/ow2-asm/blob/master/LICENSE.txt</url>
+          <distribution>repo</distribution>
+          <comments>
+            Copyright (c) 2000-2011 INRIA, France Telecom
+          </comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm-commons</artifactId>
+      <name>ASM: a very small and fast Java bytecode manipulation framework</name>
+
+      <licenses>
+        <license>
+          <name>BSD 3-Clause License</name>
+          <url>https://github.com/llbit/ow2-asm/blob/master/LICENSE.txt</url>
+          <distribution>repo</distribution>
+          <comments>
+            Copyright (c) 2000-2011 INRIA, France Telecom
+          </comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm-tree</artifactId>
+      <name>ASM: a very small and fast Java bytecode manipulation framework</name>
+
+      <licenses>
+        <license>
+          <name>BSD 3-Clause License</name>
+          <url>https://github.com/llbit/ow2-asm/blob/master/LICENSE.txt</url>
+          <distribution>repo</distribution>
+          <comments>
+            Copyright (c) 2000-2011 INRIA, France Telecom
+          </comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
       <groupId>org.fusesource.leveldbjni</groupId>
       <artifactId>leveldbjni-all</artifactId>
 
@@ -2120,6 +2174,63 @@ Copyright (c) 2007-2017 The JRuby project
         <license>
           <name>BSD License</name>
           <url>http://www.opensource.org/licenses/bsd-license.php</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
+      <name>Jakarta Bean Validation API</name>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>jakarta.ws.rs</groupId>
+      <artifactId>jakarta.ws.rs-api</artifactId>
+      <name>Jakarta RESTful Web Services</name>
+      <licenses>
+        <license>
+          <name>Eclipse Public License 2.0</name>
+          <url>https://www.eclipse.org/legal/epl-v20.html</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>org.glassfish.hk2.external</groupId>
+      <artifactId>jakarta.inject</artifactId>
+      <name>Injection API (JSR 330) repackaged as OSGi bundle</name>
+      <licenses>
+        <license>
+          <name>Eclipse Public License 2.0</name>
+          <url>https://www.eclipse.org/legal/epl-v20.html</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+      <version>2.1.1</version>
+      <name>Java API for RESTful Web Services</name>
+      <licenses>
+        <license>
+          <name>Eclipse Public License 2.0</name>
+          <url>https://www.eclipse.org/legal/epl-v20.html</url>
           <distribution>repo</distribution>
         </license>
       </licenses>

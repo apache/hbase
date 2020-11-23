@@ -70,12 +70,18 @@ image::https://hbase.apache.org/hbtop-images/scrolling_metric_records.gif[Scroll
 | Argument | Description
 | -d,--delay &lt;arg&gt; | The refresh delay (in seconds); default is 3 seconds
 | -h,--help | Print usage; for help while the tool is running press `h` key
-| -m,--mode &lt;arg&gt; | The mode; `n` (Namespace)&#124;`t` (Table)&#124;r (Region)&#124;`s` (RegionServer), default is `r` (Region)
+| -m,--mode &lt;arg&gt; | The mode; `n` (Namespace)&#124; `t` (Table)&#124; `r` (Region)&#124; `s` (RegionServer), default is `r`
+| -n,--numberOfIterations &lt;arg&gt; | The number of iterations
+| -O,--outputFieldNames | Print each of the available field names on a separate line, then quit
+| -f,--fields &lt;arg&gt; | Show only the given fields. Specify comma separated fields to show multiple fields
+| -s,--sortField &lt;arg&gt; | The initial sort field. You can prepend a `&plus;' or `-' to the field name to also override the sort direction. A leading `&plus;' will force sorting high to low, whereas a `-' will ensure a low to high ordering
+| -i,--filters &lt;arg&gt; | The initial filters. Specify comma separated filters to set multiple filters
+| -b,--batchMode | Starts hbtop in Batch mode, which could be useful for sending output from hbtop to other programs or to a file. In this mode, hbtop will not accept input and runs until the iterations limit you've set with the `-n' command-line option or until killed
 |=================================
 
 === Modes
 
-There are the following 4 modes in hbtop:
+There are the following modes in hbtop:
 
 [options="header"]
 |=================================
@@ -84,6 +90,8 @@ There are the following 4 modes in hbtop:
 | Namespace | Showing metric records per namespace
 | Table | Showing metric records per table
 | RegionServer | Showing metric records per region server
+| User | Showing metric records per user
+| Client | Showing metric records per client
 |=================================
 
 ==== Region mode
@@ -184,6 +192,40 @@ The fields in this mode are as follows:
 | MEMSTORE | MemStore Size | true
 | UHEAP | Used Heap Size | true
 | MHEAP | Max Heap Size | true
+|=================================
+
+==== User mode
+
+In User mode, the default sort field is `#REQ/S`.
+
+The fields in this mode are as follows:
+
+[options="header"]
+|=================================
+| Field | Description | Displayed by default
+| USER | user Name | true
+| #CLIENT | Client Count | true
+| #REQ/S | Request Count per second | true
+| #READ/S | Read Request Count per second | true
+| #WRITE/S | Write Request Count per second | true
+| #FREAD/S | Filtered Read Request Count per second | true
+|=================================
+
+==== Client mode
+
+In Client mode, the default sort field is `#REQ/S`.
+
+The fields in this mode are as follows:
+
+[options="header"]
+|=================================
+| Field | Description | Displayed by default
+| CLIENT | Client Hostname | true
+| #USER | User Count | true
+| #REQ/S | Request Count per second | true
+| #READ/S | Read Request Count per second | true
+| #WRITE/S | Write Request Count per second | true
+| #FREAD/S | Filtered Read Request Count per second | true
 |=================================
 
 === Changing mode

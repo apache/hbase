@@ -218,10 +218,10 @@ public class TestSeekOptimizations {
     scan.withStartRow(rowBytes(startRow));
 
     // Adjust for the fact that for multi-row queries the end row is exclusive.
-    {
-      final byte[] scannerStopRow =
-          rowBytes(endRow + (startRow != endRow ? 1 : 0));
-      scan.withStopRow(scannerStopRow);
+    if (startRow != endRow) {
+      scan.withStopRow(rowBytes(endRow + 1));
+    } else {
+      scan.withStopRow(rowBytes(endRow), true);
     }
 
     final long initialSeekCount = StoreFileScanner.getSeekCount();

@@ -142,6 +142,12 @@
     <!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-logging</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-common</artifactId>
       <type>jar</type>
     </dependency>
@@ -166,12 +172,13 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-hadoop-compat</artifactId>
+      <artifactId>hbase-asyncfs</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>${compat.module}</artifactId>
-      <version>${project.version}</version>
+      <artifactId>hbase-hadoop-compat</artifactId>
     </dependency>
     <!--Below MR wanted by PE-->
     <dependency>
@@ -197,26 +204,10 @@
       <exclusions>
         <!--This dependency pulls in hadoop-minicluster
              which pulls in the below. It messes up
-             this build at assembly time. See HBASE-22029-->
+        this build at assembly time. See HBASE-22029 -->
         <exclusion>
          <groupId>com.sun.jersey</groupId>
          <artifactId>jersey-core</artifactId>
-        </exclusion>
-        <exclusion>
-         <groupId>com.sun.jersey</groupId>
-         <artifactId>jersey-client</artifactId>
-        </exclusion>
-        <exclusion>
-         <groupId>com.sun.jersey</groupId>
-         <artifactId>jersey-server</artifactId>
-        </exclusion>
-        <exclusion>
-         <groupId>com.sun.jersey</groupId>
-         <artifactId>jersey-json</artifactId>
-        </exclusion>
-        <exclusion>
-         <groupId>com.sun.jersey.contribs</groupId>
-         <artifactId>jersey-guice</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -268,30 +259,6 @@
     <dependency>
       <groupId>com.sun.activation</groupId>
       <artifactId>javax.activation</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-server</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-servlet</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-util</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-http</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-jmx</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.glassfish.jersey.containers</groupId>
-      <artifactId>jersey-container-servlet-core</artifactId>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.jaxrs</groupId>
@@ -376,6 +343,26 @@
       <artifactId>bcprov-jdk15on</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jul-to-slf4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->
@@ -448,24 +435,8 @@
           <scope>test</scope>
           <exclusions>
             <exclusion>
-              <groupId>com.sun.jersey</groupId>
-              <artifactId>jersey-client</artifactId>
-            </exclusion>
-            <!--
-            Can't exclude this one; dependency on com.sun.xml package
-              included from here.
-            <exclusion>
-              <groupId>com.sun.jersey</groupId>
-              <artifactId>jersey-json</artifactId>
-            </exclusion>
-            -->
-            <exclusion>
-              <groupId>com.sun.jersey.contribs</groupId>
-              <artifactId>jersey-guice</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>com.sun.jersey</groupId>
-              <artifactId>jersey-server</artifactId>
+             <groupId>com.google.guava</groupId>
+             <artifactId>guava</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
@@ -480,6 +451,15 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
+        </dependency>
+        <!--Needed when jdk11/hadoop3 else complaint about
+          NoSuchMethodError: 'java.util.Map javax.ws.rs.core.Application.getProperties()'
+          when REST server is started.
+          -->
+        <dependency>
+          <groupId>org.glassfish.jaxb</groupId>
+          <artifactId>jaxb-runtime</artifactId>
+          <version>2.3.2</version>
         </dependency>
       </dependencies>
     </profile>

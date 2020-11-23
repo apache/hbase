@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -65,7 +66,8 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
     TEST_UTIL.startMiniCluster(1);
 
     tableExecutorService = new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS,
-        new SynchronousQueue<>(), Threads.newDaemonThreadFactory("testhbck"));
+      new SynchronousQueue<>(), new ThreadFactoryBuilder().setNameFormat("testhbck-pool-%d")
+        .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 
@@ -115,7 +117,7 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
       Path corrupt = new Path(mobFile.getParent(), corruptMobFile);
       TestHFile.truncateFile(fs, mobFile, corrupt);
       LOG.info("Created corrupted mob file " + corrupt);
-      HBaseFsck.debugLsr(conf, FSUtils.getRootDir(conf));
+      HBaseFsck.debugLsr(conf, CommonFSUtils.getRootDir(conf));
       HBaseFsck.debugLsr(conf, MobUtils.getMobHome(conf));
 
       // A corrupt mob file doesn't abort the start of regions, so we can enable the table.

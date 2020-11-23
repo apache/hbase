@@ -23,8 +23,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -46,6 +47,10 @@ public class TestMasterQuotaManager {
     assertNotNull(manager.snapshotRegionSizes());
   }
 
+  private RegionInfo createRegionInfo(TableName tableName, byte[] startKey, byte[] endKey) {
+    return RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(endKey).build();
+  }
+
   @Test
   public void testOldEntriesRemoved() {
     MasterServices masterServices = mock(MasterServices.class);
@@ -53,11 +58,11 @@ public class TestMasterQuotaManager {
     manager.initializeRegionSizes();
     // Mock out some regions
     TableName tableName = TableName.valueOf("foo");
-    HRegionInfo region1 = new HRegionInfo(tableName, null, toBytes("a"));
-    HRegionInfo region2 = new HRegionInfo(tableName, toBytes("a"), toBytes("b"));
-    HRegionInfo region3 = new HRegionInfo(tableName, toBytes("b"), toBytes("c"));
-    HRegionInfo region4 = new HRegionInfo(tableName, toBytes("c"), toBytes("d"));
-    HRegionInfo region5 = new HRegionInfo(tableName, toBytes("d"), null);
+    RegionInfo region1 = createRegionInfo(tableName, null, toBytes("a"));
+    RegionInfo region2 = createRegionInfo(tableName, toBytes("a"), toBytes("b"));
+    RegionInfo region3 = createRegionInfo(tableName, toBytes("b"), toBytes("c"));
+    RegionInfo region4 = createRegionInfo(tableName, toBytes("c"), toBytes("d"));
+    RegionInfo region5 = createRegionInfo(tableName, toBytes("d"), null);
 
     final long size = 0;
     long time1 = 10;

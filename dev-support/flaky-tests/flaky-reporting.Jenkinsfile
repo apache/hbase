@@ -17,7 +17,7 @@
 pipeline {
   agent {
     node {
-      label 'Hadoop'
+      label 'hbase'
     }
   }
   triggers {
@@ -40,10 +40,11 @@ pipeline {
             set -x
           fi
           declare -a flaky_args
-          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase%20Nightly/job/${BRANCH_NAME}" --is-yetus True --max-builds 10)
-          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase-Flaky-Tests/job/${BRANCH_NAME}" --is-yetus False --max-builds 30)
+          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase/job/HBase%20Nightly/job/${BRANCH_NAME}" --is-yetus True --max-builds 10)
+          flaky_args=("${flaky_args[@]}" --urls "${JENKINS_URL}/job/HBase/job/HBase-Flaky-Tests/job/${BRANCH_NAME}" --is-yetus False --max-builds 30)
           docker build -t hbase-dev-support dev-support
-          docker run --ulimit nproc=12500 -v "${WORKSPACE}":/hbase --workdir=/hbase hbase-dev-support python dev-support/flaky-tests/report-flakies.py --mvn -v "${flaky_args[@]}"
+          docker run --ulimit nproc=12500 -v "${WORKSPACE}":/hbase -u `id -u`:`id -g` --workdir=/hbase hbase-dev-support \
+            python dev-support/flaky-tests/report-flakies.py --mvn -v -o output "${flaky_args[@]}"
 '''
       }
     }
@@ -51,13 +52,13 @@ pipeline {
   post {
     always {
       // Has to be relative to WORKSPACE.
-      archiveArtifacts artifacts: "includes,excludes,dashboard.html"
+      archiveArtifacts artifacts: "output/*"
       publishHTML target: [
         allowMissing: true,
         keepAll: true,
         alwaysLinkToLastBuild: true,
         // Has to be relative to WORKSPACE
-        reportDir: ".",
+        reportDir: "output",
         reportFiles: 'dashboard.html',
         reportName: 'Flaky Test Report'
       ]

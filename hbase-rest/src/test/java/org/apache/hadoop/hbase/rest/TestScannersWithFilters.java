@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -140,12 +141,9 @@ public class TestScannersWithFilters {
       REST_TEST_UTIL.getServletPort()));
     Admin admin = TEST_UTIL.getAdmin();
     if (!admin.tableExists(TABLE)) {
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(TABLE);
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES[0]));
-      tableDescriptor.setColumnFamily(
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILIES[1]));
+      TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TABLE)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILIES[0]))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILIES[1])).build();
       admin.createTable(tableDescriptor);
       Table table = TEST_UTIL.getConnection().getTable(TABLE);
       // Insert first half

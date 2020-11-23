@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -89,11 +88,9 @@ public class TestMasterCoprocessorExceptionWithAbort {
     public void run() {
       // create a table : master coprocessor will throw an exception and not
       // catch it.
-      TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-        new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TEST_TABLE));
-      ColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      TableDescriptor tableDescriptor =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(TEST_TABLE))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
       try {
         Admin admin = UTIL.getAdmin();
         admin.createTable(tableDescriptor);

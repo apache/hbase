@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
@@ -46,15 +45,19 @@ public class SplitRandomRegionOfTableAction extends Action {
     this.tableName = tableName;
   }
 
+  @Override protected Logger getLogger() {
+    return LOG;
+  }
+
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getAdmin();
 
-    LOG.info("Performing action: Split random region of table " + tableName);
+    getLogger().info("Performing action: Split random region of table " + tableName);
     List<RegionInfo> regions = admin.getRegions(tableName);
     if (regions == null || regions.isEmpty()) {
-      LOG.info("Table " + tableName + " doesn't have regions to split");
+      getLogger().info("Table " + tableName + " doesn't have regions to split");
       return;
     }
     // Don't try the split if we're stopping
@@ -63,12 +66,12 @@ public class SplitRandomRegionOfTableAction extends Action {
     }
 
     RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-        regions.toArray(new RegionInfo[regions.size()]));
-    LOG.debug("Splitting region " + region.getRegionNameAsString());
+        regions.toArray(new RegionInfo[0]));
+    getLogger().debug("Splitting region " + region.getRegionNameAsString());
     try {
       admin.splitRegionAsync(region.getRegionName()).get();
     } catch (Exception ex) {
-      LOG.warn("Split failed, might be caused by other chaos: " + ex.getMessage());
+      getLogger().warn("Split failed, might be caused by other chaos: " + ex.getMessage());
     }
     if (sleepTime > 0) {
       Thread.sleep(sleepTime);

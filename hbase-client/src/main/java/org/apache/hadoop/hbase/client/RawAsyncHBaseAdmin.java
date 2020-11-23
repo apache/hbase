@@ -46,16 +46,15 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsAggregator;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
+import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -145,6 +144,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
@@ -311,6 +311,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.Remo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.RenameRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.UpdateRSGroupConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
@@ -504,7 +506,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     if (TableName.isMetaTableName(tableName)) {
       return CompletableFuture.completedFuture(true);
     }
-    return AsyncMetaTableAccessor.tableExists(metaTable, tableName);
+    return ClientMetaTableAccessor.tableExists(metaTable, tableName);
   }
 
   @Override
@@ -719,10 +721,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return CompletableFuture.completedFuture(true);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
-      completeCheckTableState(future, tableState.isPresent()? tableState.get(): null, error,
-        TableState.State.ENABLED, tableName);
-    });
+    addListener(ClientMetaTableAccessor.getTableState(metaTable, tableName),
+      (tableState, error) -> {
+        completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
+          TableState.State.ENABLED, tableName);
+      });
     return future;
   }
 
@@ -732,10 +735,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return CompletableFuture.completedFuture(false);
     }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    addListener(AsyncMetaTableAccessor.getTableState(metaTable, tableName), (tableState, error) -> {
-      completeCheckTableState(future, tableState.isPresent()? tableState.get(): null, error,
-        TableState.State.DISABLED, tableName);
-    });
+    addListener(ClientMetaTableAccessor.getTableState(metaTable, tableName),
+      (tableState, error) -> {
+        completeCheckTableState(future, tableState.isPresent() ? tableState.get() : null, error,
+          TableState.State.DISABLED, tableName);
+      });
     return future;
   }
 
@@ -759,7 +763,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.complete(false);
       } else {
         addListener(
-          AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName),
+          ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName),
           (locations, error1) -> {
             if (error1 != null) {
               future.completeExceptionally(error1);
@@ -884,14 +888,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .thenApply(locs -> Stream.of(locs.getRegionLocations()).map(HRegionLocation::getRegion)
           .collect(Collectors.toList()));
     } else {
-      return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName)
+      return ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName)
         .thenApply(
           locs -> locs.stream().map(HRegionLocation::getRegion).collect(Collectors.toList()));
     }
   }
-
   @Override
   public CompletableFuture<Void> flush(TableName tableName) {
+    return flush(tableName, null);
+  }
+
+  @Override
+  public CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(tableExists(tableName), (exists, err) -> {
       if (err != null) {
@@ -905,8 +913,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           } else if (!tableEnabled) {
             future.completeExceptionally(new TableNotEnabledException(tableName));
           } else {
+            Map<String, String> props = new HashMap<>();
+            if (columnFamily != null) {
+              props.put(HConstants.FAMILY_KEY_STR, Bytes.toString(columnFamily));
+            }
             addListener(execProcedure(FLUSH_TABLE_PROCEDURE_SIGNATURE, tableName.getNameAsString(),
-              new HashMap<>()), (ret, err3) -> {
+              props), (ret, err3) -> {
                 if (err3 != null) {
                   future.completeExceptionally(err3);
                 } else {
@@ -922,8 +934,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> flushRegion(byte[] regionName) {
-    return flushRegionInternal(regionName, false).thenAccept(r -> {
+    return flushRegionInternal(regionName, null, false).thenAccept(r -> {
     });
+  }
+
+  @Override
+  public CompletableFuture<Void> flushRegion(byte[] regionName, byte[] columnFamily) {
+    Preconditions.checkNotNull(columnFamily, "columnFamily is null."
+      + "If you don't specify a columnFamily, use flushRegion(regionName) instead");
+    return flushRegionInternal(regionName, columnFamily, false)
+      .thenAccept(r -> {});
   }
 
   /**
@@ -933,7 +953,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
    * API.
    */
   CompletableFuture<FlushRegionResponse> flushRegionInternal(byte[] regionName,
-      boolean writeFlushWALMarker) {
+    byte[] columnFamily, boolean writeFlushWALMarker) {
     CompletableFuture<FlushRegionResponse> future = new CompletableFuture<>();
     addListener(getRegionLocation(regionName), (location, err) -> {
       if (err != null) {
@@ -946,23 +966,25 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           .completeExceptionally(new NoServerForRegionException(Bytes.toStringBinary(regionName)));
         return;
       }
-      addListener(flush(serverName, location.getRegion(), writeFlushWALMarker), (ret, err2) -> {
-        if (err2 != null) {
-          future.completeExceptionally(err2);
-        } else {
-          future.complete(ret);
-        }
-      });
+      addListener(
+        flush(serverName, location.getRegion(), columnFamily, writeFlushWALMarker),
+        (ret, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          } else {
+            future.complete(ret);
+          }});
     });
     return future;
   }
 
   private CompletableFuture<FlushRegionResponse> flush(ServerName serverName, RegionInfo regionInfo,
-      boolean writeFlushWALMarker) {
+    byte[] columnFamily, boolean writeFlushWALMarker) {
     return this.<FlushRegionResponse> newAdminCaller().serverName(serverName)
       .action((controller, stub) -> this
         .<FlushRegionRequest, FlushRegionResponse, FlushRegionResponse> adminCall(controller, stub,
-          RequestConverter.buildFlushRegionRequest(regionInfo.getRegionName(), writeFlushWALMarker),
+          RequestConverter.buildFlushRegionRequest(regionInfo.getRegionName(),
+            columnFamily, writeFlushWALMarker),
           (s, c, req, done) -> s.flushRegion(c, req, done), resp -> resp))
       .call();
   }
@@ -977,8 +999,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
       List<CompletableFuture<Void>> compactFutures = new ArrayList<>();
       if (hRegionInfos != null) {
-        hRegionInfos.forEach(region -> compactFutures.add(flush(sn, region, false).thenAccept(r -> {
-        })));
+        hRegionInfos.forEach(
+          region -> compactFutures.add(
+            flush(sn, region, null, false).thenAccept(r -> {})
+          )
+        );
       }
       addListener(CompletableFuture.allOf(
         compactFutures.toArray(new CompletableFuture<?>[compactFutures.size()])), (ret, err2) -> {
@@ -1120,7 +1145,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       return future;
     } else {
       // For non-meta table, we fetch all locations by scanning hbase:meta table
-      return AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName);
+      return ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName);
     }
   }
 
@@ -1294,7 +1319,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
 
-      MergeTableRegionsRequest request = null;
+      final MergeTableRegionsRequest request;
       try {
         request = RequestConverter.buildMergeTableRegionsRequest(encodedNameOfRegionsToMerge,
           forcible, ng.getNonceGroup(), ng.newNonce());
@@ -1304,8 +1329,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
 
       addListener(
-        this.<MergeTableRegionsRequest, MergeTableRegionsResponse> procedureCall(tableName, request,
-          (s, c, req, done) -> s.mergeTableRegions(c, req, done), (resp) -> resp.getProcId(),
+        this.procedureCall(tableName, request,
+          MasterService.Interface::mergeTableRegions, MergeTableRegionsResponse::getProcId,
           new MergeTableRegionProcedureBiConsumer(tableName)),
         (ret, err2) -> {
           if (err2 != null) {
@@ -1330,11 +1355,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(new TableNotFoundException(tableName));
         return;
       }
-      addListener(
-        metaTable
-          .scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY)
-            .withStartRow(MetaTableAccessor.getTableStartRowForMeta(tableName, QueryType.REGION))
-            .withStopRow(MetaTableAccessor.getTableStopRowForMeta(tableName, QueryType.REGION))),
+      addListener(metaTable
+        .scanAll(new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY)
+          .withStartRow(ClientMetaTableAccessor.getTableStartRowForMeta(tableName,
+            ClientMetaTableAccessor.QueryType.REGION))
+          .withStopRow(ClientMetaTableAccessor.getTableStopRowForMeta(tableName,
+            ClientMetaTableAccessor.QueryType.REGION))),
         (results, err2) -> {
           if (err2 != null) {
             future.completeExceptionally(err2);
@@ -1343,10 +1369,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           if (results != null && !results.isEmpty()) {
             List<CompletableFuture<Void>> splitFutures = new ArrayList<>();
             for (Result r : results) {
-              if (r.isEmpty() || MetaTableAccessor.getRegionInfo(r) == null) {
+              if (r.isEmpty() || CatalogFamilyFormat.getRegionInfo(r) == null) {
                 continue;
               }
-              RegionLocations rl = MetaTableAccessor.getRegionLocations(r);
+              RegionLocations rl = CatalogFamilyFormat.getRegionLocations(r);
               if (rl != null) {
                 for (HRegionLocation h : rl.getRegionLocations()) {
                   if (h != null && h.getServerName() != null) {
@@ -1480,7 +1506,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private CompletableFuture<Void> split(final RegionInfo hri, byte[] splitPoint) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     TableName tableName = hri.getTable();
-    SplitTableRegionRequest request = null;
+    final SplitTableRegionRequest request;
     try {
       request = RequestConverter.buildSplitTableRegionRequest(hri, splitPoint, ng.getNonceGroup(),
         ng.newNonce());
@@ -1490,8 +1516,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
 
     addListener(
-      this.<SplitTableRegionRequest, SplitTableRegionResponse> procedureCall(tableName,
-        request, (s, c, req, done) -> s.splitRegion(c, req, done), (resp) -> resp.getProcId(),
+      this.procedureCall(tableName,
+        request, MasterService.Interface::splitRegion, SplitTableRegionResponse::getProcId,
         new SplitTableRegionProcedureBiConsumer(tableName)),
       (ret, err2) -> {
         if (err2 != null) {
@@ -1527,7 +1553,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> unassign(byte[] regionName, boolean forcible) {
+  public CompletableFuture<Void> unassign(byte[] regionName) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(getRegionInfo(regionName), (regionInfo, err) -> {
       if (err != null) {
@@ -1538,7 +1564,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         this.<Void> newMasterCaller().priority(regionInfo.getTable())
           .action(((controller, stub) -> this
             .<UnassignRegionRequest, UnassignRegionResponse, Void> call(controller, stub,
-              RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName(), forcible),
+              RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName()),
               (s, c, req, done) -> s.unassignRegion(c, req, done), resp -> null)))
           .call(),
         (ret, err2) -> {
@@ -2374,12 +2400,12 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             .thenApply(locs -> Stream.of(locs.getRegionLocations())
               .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
         } else {
-          future = AsyncMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
+          future = ClientMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
             regionNameOrEncodedRegionName);
         }
       } else {
         RegionInfo regionInfo =
-          MetaTableAccessor.parseRegionInfoFromRegionName(regionNameOrEncodedRegionName);
+          CatalogFamilyFormat.parseRegionInfoFromRegionName(regionNameOrEncodedRegionName);
         if (regionInfo.isMetaRegion()) {
           future = connection.registry.getMetaRegionLocations()
             .thenApply(locs -> Stream.of(locs.getRegionLocations())
@@ -2387,7 +2413,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               .findFirst());
         } else {
           future =
-            AsyncMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
+            ClientMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
         }
       }
 
@@ -3260,14 +3286,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> normalize() {
+  public CompletableFuture<Boolean> normalize(NormalizeTableFilterParams ntfp) {
+    return normalize(RequestConverter.buildNormalizeRequest(ntfp));
+  }
+
+  private CompletableFuture<Boolean> normalize(NormalizeRequest request) {
     return this
-        .<Boolean> newMasterCaller()
-        .action(
-          (controller, stub) -> this.<NormalizeRequest, NormalizeResponse, Boolean> call(
-            controller, stub, RequestConverter.buildNormalizeRequest(),
-            (s, c, req, done) -> s.normalize(c, req, done), (resp) -> resp.getNormalizerRan()))
-        .call();
+      .<Boolean> newMasterCaller()
+      .action(
+        (controller, stub) -> this.call(
+          controller, stub, request, MasterService.Interface::normalize,
+          NormalizeResponse::getNormalizerRan))
+      .call();
   }
 
   @Override
@@ -3952,50 +3982,26 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .call();
   }
 
-  @Override
-  public CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
-      @Nullable final Set<ServerName> serverNames,
-    final LogQueryFilter logQueryFilter) {
+  private CompletableFuture<List<LogEntry>> getSlowLogResponses(
+      final Map<String, Object> filterParams, final Set<ServerName> serverNames, final int limit,
+      final String logType) {
     if (CollectionUtils.isEmpty(serverNames)) {
       return CompletableFuture.completedFuture(Collections.emptyList());
     }
-    if (logQueryFilter.getType() == null
-        || logQueryFilter.getType() == LogQueryFilter.Type.SLOW_LOG) {
-      return CompletableFuture.supplyAsync(() -> serverNames.stream()
-        .map((ServerName serverName) ->
-          getSlowLogResponseFromServer(serverName, logQueryFilter))
-        .map(CompletableFuture::join)
-        .flatMap(List::stream)
-        .collect(Collectors.toList()));
-    } else {
-      return CompletableFuture.supplyAsync(() -> serverNames.stream()
-        .map((ServerName serverName) ->
-          getLargeLogResponseFromServer(serverName, logQueryFilter))
-        .map(CompletableFuture::join)
-        .flatMap(List::stream)
-        .collect(Collectors.toList()));
-    }
+    return CompletableFuture.supplyAsync(() -> serverNames.stream()
+      .map((ServerName serverName) ->
+        getSlowLogResponseFromServer(serverName, filterParams, limit, logType))
+      .map(CompletableFuture::join)
+      .flatMap(List::stream)
+      .collect(Collectors.toList()));
   }
 
-  private CompletableFuture<List<OnlineLogRecord>> getSlowLogResponseFromServer(
-    final ServerName serverName, final LogQueryFilter logQueryFilter) {
-    return this.<List<OnlineLogRecord>>newAdminCaller()
-      .action((controller, stub) -> this
-        .adminCall(
-          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
-          AdminService.Interface::getSlowLogResponses,
-          ProtobufUtil::toSlowLogPayloads))
-      .serverName(serverName).call();
-  }
-
-  private CompletableFuture<List<OnlineLogRecord>> getLargeLogResponseFromServer(
-    final ServerName serverName, final LogQueryFilter logQueryFilter) {
-    return this.<List<OnlineLogRecord>>newAdminCaller()
-      .action((controller, stub) -> this
-        .adminCall(
-          controller, stub, RequestConverter.buildSlowLogResponseRequest(logQueryFilter),
-          AdminService.Interface::getLargeLogResponses,
-          ProtobufUtil::toSlowLogPayloads))
+  private CompletableFuture<List<LogEntry>> getSlowLogResponseFromServer(ServerName serverName,
+      Map<String, Object> filterParams, int limit, String logType) {
+    return this.<List<LogEntry>>newAdminCaller().action((controller, stub) -> this
+      .adminCall(controller, stub,
+        RequestConverter.buildSlowLogResponseRequest(filterParams, limit, logType),
+        AdminService.Interface::getLogEntries, ProtobufUtil::toSlowLogPayloads))
       .serverName(serverName).call();
   }
 
@@ -4165,4 +4171,54 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         )
       ).call();
   }
+
+  @Override
+  public CompletableFuture<Void>
+    updateRSGroupConfig(String groupName, Map<String, String> configuration) {
+    UpdateRSGroupConfigRequest.Builder request = UpdateRSGroupConfigRequest.newBuilder()
+        .setGroupName(groupName);
+    if (configuration != null) {
+      configuration.entrySet().forEach(e ->
+          request.addConfiguration(NameStringPair.newBuilder().setName(e.getKey())
+              .setValue(e.getValue()).build()));
+    }
+    return this.<Void> newMasterCaller()
+        .action(((controller, stub) ->
+            this.<UpdateRSGroupConfigRequest, UpdateRSGroupConfigResponse, Void> call(
+                controller, stub, request.build(),
+              (s, c, req, done) -> s.updateRSGroupConfig(c, req, done), resp -> null))
+        ).call();
+  }
+
+  private CompletableFuture<List<LogEntry>> getBalancerDecisions(final int limit) {
+    return this.<List<LogEntry>>newMasterCaller()
+      .action((controller, stub) ->
+        this.call(controller, stub,
+          ProtobufUtil.toBalancerDecisionRequest(limit),
+          MasterService.Interface::getLogEntries, ProtobufUtil::toBalancerDecisionResponse))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames,
+      String logType, ServerType serverType, int limit,
+      Map<String, Object> filterParams) {
+    if (logType == null || serverType == null) {
+      throw new IllegalArgumentException("logType and/or serverType cannot be empty");
+    }
+    if (logType.equals("SLOW_LOG") || logType.equals("LARGE_LOG")) {
+      if (ServerType.MASTER.equals(serverType)) {
+        throw new IllegalArgumentException("Slow/Large logs are not maintained by HMaster");
+      }
+      return getSlowLogResponses(filterParams, serverNames, limit, logType);
+    } else if (logType.equals("BALANCER_DECISION")) {
+      if (ServerType.REGION_SERVER.equals(serverType)) {
+        throw new IllegalArgumentException(
+          "Balancer Decision logs are not maintained by HRegionServer");
+      }
+      return getBalancerDecisions(limit);
+    }
+    return CompletableFuture.completedFuture(Collections.emptyList());
+  }
+
 }

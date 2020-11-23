@@ -22,7 +22,7 @@ module Shell
   module Commands
     class SetPeerExcludeTableCFs < Command
       def help
-        <<-EOF
+        <<~EOF
   Set the table-cfs which not replicated for the specified peer.
 
   Note:

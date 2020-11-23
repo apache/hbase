@@ -51,16 +51,17 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -72,7 +73,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.FlushedRegionSequenceId;
@@ -362,7 +362,7 @@ public class ServerManager {
    */
   private void checkClockSkew(final ServerName serverName, final long serverCurrentTime)
       throws ClockOutOfSyncException {
-    long skew = Math.abs(System.currentTimeMillis() - serverCurrentTime);
+    long skew = Math.abs(EnvironmentEdgeManager.currentTime() - serverCurrentTime);
     if (skew > maxSkew) {
       String message = "Server " + serverName + " has been " +
         "rejected; Reported time is too far out of sync with master.  " +
@@ -589,6 +589,18 @@ public class ServerManager {
     }
     moveFromOnlineToDeadServers(serverName);
 
+    // If server is in draining mode, remove corresponding znode
+    // In some tests, the mocked HM may not have ZK Instance, hence null check
+    if (master.getZooKeeper() != null) {
+      String drainingZnode = ZNodePaths
+        .joinZNode(master.getZooKeeper().getZNodePaths().drainingZNode, serverName.getServerName());
+      try {
+        ZKUtil.deleteNodeFailSilent(master.getZooKeeper(), drainingZnode);
+      } catch (KeeperException e) {
+        LOG.warn("Error deleting the draining znode for stopping server " + serverName.getServerName(), e);
+      }
+    }
+    
     // If cluster is going down, yes, servers are going to be expiring; don't
     // process as a dead server
     if (isClusterShutdown()) {
@@ -704,7 +716,10 @@ public class ServerManager {
           return;
         }
       } catch (IOException ioe) {
-        if (ioe instanceof NotServingRegionException) {
+        if (ioe instanceof NotServingRegionException ||
+          (ioe instanceof RemoteWithExtrasException &&
+            ((RemoteWithExtrasException)ioe).unwrapRemoteException()
+              instanceof NotServingRegionException)) {
           // no need to retry again
           return;
         }
@@ -1028,7 +1043,7 @@ public class ServerManager {
     isFlushSeqIdPersistInProgress = true;
     try {
       Configuration conf = master.getConfiguration();
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
       Path lastFlushedSeqIdPath = new Path(rootDir, LAST_FLUSHED_SEQ_ID_FILE);
       FileSystem fs = FileSystem.get(conf);
       if (fs.exists(lastFlushedSeqIdPath)) {
@@ -1083,7 +1098,7 @@ public class ServerManager {
       return;
     }
     Configuration conf = master.getConfiguration();
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     Path lastFlushedSeqIdPath = new Path(rootDir, LAST_FLUSHED_SEQ_ID_FILE);
     FileSystem fs = FileSystem.get(conf);
     if (!fs.exists(lastFlushedSeqIdPath)) {

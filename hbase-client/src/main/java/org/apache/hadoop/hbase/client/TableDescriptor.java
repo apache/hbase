@@ -178,13 +178,6 @@ public interface TableDescriptor {
   TableName getTableName();
 
   /**
-   * @deprecated since 2.0.0 and will be removed in 3.0.0.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
-   */
-  @Deprecated
-  String getOwnerString();
-
-  /**
    * Get the region server group this table belongs to. The regions of this table will be placed
    * only on the region servers within this group. If not present, will be placed on
    * {@link org.apache.hadoop.hbase.rsgroup.RSGroupInfo#DEFAULT_GROUP}.

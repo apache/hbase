@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -177,6 +178,28 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
       fail("Expected a constraint exception");
     } catch (IOException ex) {
     }
+  }
+
+  @Test
+  public void testNamespaceConstraint2() throws Exception {
+    String nsName = TABLE_PREFIX + name.getMethodName();
+    String groupName = TABLE_PREFIX + name.getMethodName();
+    TableName tableName = TableName.valueOf(nsName, name.getMethodName());
+    addGroup(groupName, 1);
+
+    ADMIN.createNamespace(NamespaceDescriptor.create(nsName)
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName).build());
+
+    TEST_UTIL.createTable(tableName, "C");
+    TEST_UTIL.waitTableAvailable(tableName);
+    RSGroupInfo rsGroup = ADMIN.getRSGroup(tableName);
+    assertEquals(groupName, rsGroup.getName());
+
+    TEST_UTIL.deleteTable(tableName);
+    ADMIN.deleteNamespace(nsName);
+
+    ADMIN.moveServersToRSGroup(rsGroup.getServers(), RSGroupInfo.DEFAULT_GROUP);
+    ADMIN.removeRSGroup(groupName);
   }
 
   @Test
@@ -511,5 +534,91 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     assertEquals(servers.size(), match);
     assertEquals(newgroup.getName(), ADMIN.getRSGroup(tb1).getName());
     assertEquals(normal.getName(), ADMIN.getRSGroup(tb2).getName());
+  }
+
+  @Test
+  public void testRenameRSGroupConstraints() throws Exception {
+    // Add RSGroup, and assign 2 servers and a table to it.
+    String oldGroupName = "oldGroup";
+    RSGroupInfo oldGroup = addGroup(oldGroupName, 2);
+    oldGroup = ADMIN.getRSGroup(oldGroup.getName());
+    assertNotNull(oldGroup);
+    assertEquals(2, oldGroup.getServers().size());
+
+    //Add another RSGroup
+    String anotherRSGroupName = "anotherRSGroup";
+    RSGroupInfo anotherGroup = addGroup(anotherRSGroupName, 1);
+    anotherGroup = ADMIN.getRSGroup(anotherGroup.getName());
+    assertNotNull(anotherGroup);
+    assertEquals(1, anotherGroup.getServers().size());
+
+
+    //Rename a non existing RSGroup
+    try {
+      ADMIN.renameRSGroup("nonExistingRSGroup", "newRSGroup1");
+      fail("ConstraintException was expected.");
+    } catch (ConstraintException e){
+      assertTrue(e.getMessage().contains("does not exist"));
+    }
+
+    //Rename to existing group
+    try {
+      ADMIN.renameRSGroup(oldGroup.getName(), anotherRSGroupName);
+      fail("ConstraintException was expected.");
+    } catch (ConstraintException e){
+      assertTrue(e.getMessage().contains("Group already exists"));
+    }
+
+    //Rename default RSGroup
+    try {
+      ADMIN.renameRSGroup(RSGroupInfo.DEFAULT_GROUP, "newRSGroup2");
+      fail("ConstraintException was expected.");
+    } catch (ConstraintException e){
+      //Do nothing
+    }
+
+    //Rename to default RSGroup
+    try {
+      ADMIN.renameRSGroup(oldGroup.getName(), RSGroupInfo.DEFAULT_GROUP);
+      fail("ConstraintException was expected.");
+    } catch (ConstraintException e){
+      assertTrue(e.getMessage().contains("Group already exists"));
+    }
+
+  }
+
+  @Test
+  public void testTableConstraint() throws Exception {
+    String prefix = name.getMethodName();
+    String ns = prefix + "_ns";
+    TableName tableName = TableName.valueOf(ns + ":" + "t");
+    String nsGroup = prefix + "_nsg";
+    String tableGroup = prefix + "_tg";
+    addGroup(nsGroup, 1);
+    addGroup(tableGroup, 1);
+    ADMIN.createNamespace(NamespaceDescriptor.create(ns).build());
+    TEST_UTIL.createTable(tableName, "C");
+    TEST_UTIL.waitTableAvailable(tableName);
+    assertEquals(ADMIN.getRSGroup(tableName).getName(), RSGroupInfo.DEFAULT_GROUP);
+    // set table's rsgroup
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName))
+        .setRegionServerGroup(tableGroup).build();
+    ADMIN.modifyTable(td);
+    TEST_UTIL.waitUntilNoRegionsInTransition();
+    assertEquals(ADMIN.getRSGroup(tableName).getName(), tableGroup);
+    // set namespace's rsgroup
+    NamespaceDescriptor nd = NamespaceDescriptor.create(ADMIN.getNamespaceDescriptor(ns))
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, nsGroup).build();
+    ADMIN.modifyNamespace(nd);
+    assertEquals(ADMIN.getRSGroup(tableName).getName(), tableGroup);
+    // clear table's rsgroup
+    td = TableDescriptorBuilder.newBuilder(ADMIN.getDescriptor(tableName))
+        .setRegionServerGroup(null).build();
+    ADMIN.modifyTable(td);
+    TEST_UTIL.waitUntilNoRegionsInTransition();
+    assertEquals(ADMIN.getRSGroup(tableName).getName(), nsGroup);
+
+    TEST_UTIL.deleteTable(tableName);
+    ADMIN.deleteNamespace(ns);
   }
 }

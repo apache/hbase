@@ -57,7 +57,8 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   }
 
   @Override
-  public void append(EntryBuffers.RegionEntryBuffer buffer) throws IOException {
+  public void append(EntryBuffers.RegionEntryBuffer buffer)
+      throws IOException {
     List<WAL.Entry> entries = buffer.entryBuffer;
     if (entries.isEmpty()) {
       LOG.warn("got an empty buffer, skipping");
@@ -86,7 +87,7 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   public List<Path> close() throws IOException {
     boolean isSuccessful = true;
     try {
-      isSuccessful &= finishWriterThreads();
+      isSuccessful = finishWriterThreads();
     } finally {
       isSuccessful &= writeRemainingEntryBuffers();
     }

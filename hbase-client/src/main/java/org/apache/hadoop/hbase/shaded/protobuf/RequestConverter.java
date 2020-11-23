@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,19 +38,20 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionCoprocessorServiceExec;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
@@ -70,6 +71,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
@@ -135,6 +137,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
@@ -193,40 +196,17 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer MutateRequest for a conditioned put
+   * Create a protocol buffer MutateRequest for a conditioned put/delete/increment/append
    *
    * @return a mutate request
    * @throws IOException
    */
-  public static MutateRequest buildMutateRequest(
-    final byte[] regionName, final byte[] row, final byte[] family,
-    final byte [] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
-    final TimeRange timeRange, final Put put) throws IOException {
-    return buildMutateRequest(regionName, row, family, qualifier, op, value, filter, timeRange,
-      put, MutationType.PUT);
-  }
-
-  /**
-   * Create a protocol buffer MutateRequest for a conditioned delete
-   *
-   * @return a mutate request
-   * @throws IOException
-   */
-  public static MutateRequest buildMutateRequest(
-    final byte[] regionName, final byte[] row, final byte[] family,
-    final byte [] qualifier, final CompareOperator op, final byte[] value, final Filter filter,
-    final TimeRange timeRange, final Delete delete) throws IOException {
-    return buildMutateRequest(regionName, row, family, qualifier, op, value, filter, timeRange,
-      delete, MutationType.DELETE);
-  }
-
   public static MutateRequest buildMutateRequest(final byte[] regionName, final byte[] row,
     final byte[] family, final byte[] qualifier, final CompareOperator op, final byte[] value,
-    final Filter filter, final TimeRange timeRange, final Mutation mutation,
-    final MutationType type) throws IOException {
+    final Filter filter, final TimeRange timeRange, final Mutation mutation) throws IOException {
     return MutateRequest.newBuilder()
       .setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName))
-      .setMutation(ProtobufUtil.toMutation(type, mutation))
+      .setMutation(ProtobufUtil.toMutation(getMutationType(mutation), mutation))
       .setCondition(buildCondition(row, family, qualifier, op, value, filter, timeRange))
       .build();
   }
@@ -262,9 +242,8 @@ public final class RequestConverter {
       actionBuilder.setMutation(mp);
       builder.addAction(actionBuilder.build());
     }
-    return ClientProtos.MultiRequest.newBuilder().addRegionAction(builder.build())
-        .setCondition(buildCondition(row, family, qualifier, op, value, filter, timeRange))
-        .build();
+    return ClientProtos.MultiRequest.newBuilder().addRegionAction(builder.setCondition(
+      buildCondition(row, family, qualifier, op, value, filter, timeRange)).build()).build();
   }
 
   /**
@@ -380,42 +359,6 @@ public final class RequestConverter {
       builder.addAction(actionBuilder.build());
     }
     return builder;
-  }
-
-  /**
-   * Create a protocol buffer MultiRequest for row mutations that does not hold data.  Data/Cells
-   * are carried outside of protobuf.  Return references to the Cells in <code>cells</code> param.
-    * Does not propagate Action absolute position.  Does not set atomic action on the created
-   * RegionAtomic.  Caller should do that if wanted.
-   * @param regionName
-   * @param rowMutations
-   * @param cells Return in here a list of Cells as CellIterable.
-   * @return a region mutation minus data
-   * @throws IOException
-   */
-  public static RegionAction.Builder buildNoDataRegionAction(final byte[] regionName,
-      final RowMutations rowMutations, final List<CellScannable> cells,
-      final RegionAction.Builder regionActionBuilder,
-      final ClientProtos.Action.Builder actionBuilder,
-      final MutationProto.Builder mutationBuilder)
-  throws IOException {
-    for (Mutation mutation: rowMutations.getMutations()) {
-      MutationType type = null;
-      if (mutation instanceof Put) {
-        type = MutationType.PUT;
-      } else if (mutation instanceof Delete) {
-        type = MutationType.DELETE;
-      } else {
-        throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
-          mutation.getClass().getName());
-      }
-      mutationBuilder.clear();
-      MutationProto mp = ProtobufUtil.toMutationNoData(type, mutation, mutationBuilder);
-      cells.add(mutation);
-      actionBuilder.clear();
-      regionActionBuilder.addAction(actionBuilder.setMutation(mp).build());
-    }
-    return regionActionBuilder;
   }
 
   public static RegionAction.Builder getRegionActionBuilderWithRegion(
@@ -572,8 +515,8 @@ public final class RequestConverter {
    * @param actionBuilder actionBuilder to be used to build action.
    * @param mutationBuilder mutationBuilder to be used to build mutation.
    * @param nonceGroup nonceGroup to be applied.
-   * @param rowMutationsIndexMap Map of created RegionAction to the original index for a
-   *          RowMutations within the original list of actions
+   * @param indexMap Map of created RegionAction to the original index for a
+   *   RowMutations/CheckAndMutate within the original list of actions
    * @throws IOException
    */
   public static void buildNoDataRegionActions(final byte[] regionName,
@@ -582,14 +525,14 @@ public final class RequestConverter {
       final RegionAction.Builder regionActionBuilder,
       final ClientProtos.Action.Builder actionBuilder,
       final MutationProto.Builder mutationBuilder,
-      long nonceGroup, final Map<Integer, Integer> rowMutationsIndexMap) throws IOException {
+      long nonceGroup, final Map<Integer, Integer> indexMap) throws IOException {
     regionActionBuilder.clear();
     RegionAction.Builder builder = getRegionActionBuilderWithRegion(
       regionActionBuilder, regionName);
     ClientProtos.CoprocessorServiceCall.Builder cpBuilder = null;
-    RegionAction.Builder rowMutationsRegionActionBuilder = null;
     boolean hasNonce = false;
     List<Action> rowMutationsList = new ArrayList<>();
+    List<Action> checkAndMutates = new ArrayList<>();
 
     for (Action action: actions) {
       Row row = action.getAction();
@@ -600,37 +543,16 @@ public final class RequestConverter {
         Get g = (Get)row;
         builder.addAction(actionBuilder.setGet(ProtobufUtil.toGet(g)));
       } else if (row instanceof Put) {
-        Put p = (Put)row;
-        cells.add(p);
-        builder.addAction(actionBuilder.
-          setMutation(ProtobufUtil.toMutationNoData(MutationType.PUT, p, mutationBuilder)));
+        buildNoDataRegionAction((Put) row, cells, builder, actionBuilder, mutationBuilder);
       } else if (row instanceof Delete) {
-        Delete d = (Delete)row;
-        int size = d.size();
-        // Note that a legitimate Delete may have a size of zero; i.e. a Delete that has nothing
-        // in it but the row to delete.  In this case, the current implementation does not make
-        // a KeyValue to represent a delete-of-all-the-row until we serialize... For such cases
-        // where the size returned is zero, we will send the Delete fully pb'd rather than have
-        // metadata only in the pb and then send the kv along the side in cells.
-        if (size > 0) {
-          cells.add(d);
-          builder.addAction(actionBuilder.
-            setMutation(ProtobufUtil.toMutationNoData(MutationType.DELETE, d, mutationBuilder)));
-        } else {
-          builder.addAction(actionBuilder.
-            setMutation(ProtobufUtil.toMutation(MutationType.DELETE, d, mutationBuilder)));
-        }
+        buildNoDataRegionAction((Delete) row, cells, builder, actionBuilder, mutationBuilder);
       } else if (row instanceof Append) {
-        Append a = (Append)row;
-        cells.add(a);
-        builder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutationNoData(
-          MutationType.APPEND, a, mutationBuilder, action.getNonce())));
+        buildNoDataRegionAction((Append) row, cells, action.getNonce(), builder, actionBuilder,
+          mutationBuilder);
         hasNonce = true;
       } else if (row instanceof Increment) {
-        Increment i = (Increment)row;
-        cells.add(i);
-        builder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutationNoData(
-          MutationType.INCREMENT, i, mutationBuilder, action.getNonce())));
+        buildNoDataRegionAction((Increment) row, cells, action.getNonce(), builder, actionBuilder,
+          mutationBuilder);
         hasNonce = true;
       } else if (row instanceof RegionCoprocessorServiceExec) {
         RegionCoprocessorServiceExec exec = (RegionCoprocessorServiceExec) row;
@@ -650,6 +572,8 @@ public final class RequestConverter {
               .setRequest(value)));
       } else if (row instanceof RowMutations) {
         rowMutationsList.add(action);
+      } else if (row instanceof CheckAndMutate) {
+        checkAndMutates.add(action);
       } else {
         throw new DoNotRetryIOException("Multi doesn't support " + row.getClass().getName());
       }
@@ -657,7 +581,9 @@ public final class RequestConverter {
     if (!multiRequestBuilder.hasNonceGroup() && hasNonce) {
       multiRequestBuilder.setNonceGroup(nonceGroup);
     }
-    multiRequestBuilder.addRegionAction(builder.build());
+    if (builder.getActionCount() > 0) {
+      multiRequestBuilder.addRegionAction(builder.build());
+    }
 
     // Process RowMutations here. We can not process it in the big loop above because
     // it will corrupt the sequence order maintained in cells.
@@ -665,23 +591,147 @@ public final class RequestConverter {
     // on the one row. We do separate RegionAction for each RowMutations.
     // We maintain a map to keep track of this RegionAction and the original Action index.
     for (Action action : rowMutationsList) {
-      RowMutations rms = (RowMutations) action.getAction();
-      if (rowMutationsRegionActionBuilder == null) {
-        rowMutationsRegionActionBuilder = ClientProtos.RegionAction.newBuilder();
-      } else {
-        rowMutationsRegionActionBuilder.clear();
-      }
-      rowMutationsRegionActionBuilder.setRegion(
-        RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName));
-      rowMutationsRegionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, rms,
-        cells, rowMutationsRegionActionBuilder, actionBuilder, mutationBuilder);
-      rowMutationsRegionActionBuilder.setAtomic(true);
-      // Put it in the multiRequestBuilder
-      multiRequestBuilder.addRegionAction(rowMutationsRegionActionBuilder.build());
+      builder.clear();
+      getRegionActionBuilderWithRegion(builder, regionName);
+
+      buildNoDataRegionAction((RowMutations) action.getAction(), cells, builder, actionBuilder,
+        mutationBuilder);
+      builder.setAtomic(true);
+
+      multiRequestBuilder.addRegionAction(builder.build());
+
       // This rowMutations region action is at (multiRequestBuilder.getRegionActionCount() - 1)
       // in the overall multiRequest.
-      rowMutationsIndexMap.put(multiRequestBuilder.getRegionActionCount() - 1,
-        action.getOriginalIndex());
+      indexMap.put(multiRequestBuilder.getRegionActionCount() - 1, action.getOriginalIndex());
+    }
+
+    // Process CheckAndMutate here. Similar to RowMutations, we do separate RegionAction for each
+    // CheckAndMutate and maintain a map to keep track of this RegionAction and the original
+    // Action index.
+    for (Action action : checkAndMutates) {
+      builder.clear();
+      getRegionActionBuilderWithRegion(builder, regionName);
+
+      CheckAndMutate cam = (CheckAndMutate) action.getAction();
+      builder.setCondition(buildCondition(cam.getRow(), cam.getFamily(), cam.getQualifier(),
+        cam.getCompareOp(), cam.getValue(), cam.getFilter(), cam.getTimeRange()));
+
+      if (cam.getAction() instanceof Put) {
+        actionBuilder.clear();
+        mutationBuilder.clear();
+        buildNoDataRegionAction((Put) cam.getAction(), cells, builder, actionBuilder,
+          mutationBuilder);
+      } else if (cam.getAction() instanceof Delete) {
+        actionBuilder.clear();
+        mutationBuilder.clear();
+        buildNoDataRegionAction((Delete) cam.getAction(), cells, builder, actionBuilder,
+          mutationBuilder);
+      } else if (cam.getAction() instanceof Increment) {
+        actionBuilder.clear();
+        mutationBuilder.clear();
+        buildNoDataRegionAction((Increment) cam.getAction(), cells, HConstants.NO_NONCE, builder,
+          actionBuilder, mutationBuilder);
+      } else if (cam.getAction() instanceof Append) {
+        actionBuilder.clear();
+        mutationBuilder.clear();
+        buildNoDataRegionAction((Append) cam.getAction(), cells, HConstants.NO_NONCE, builder,
+          actionBuilder, mutationBuilder);
+      } else if (cam.getAction() instanceof RowMutations) {
+        buildNoDataRegionAction((RowMutations) cam.getAction(), cells, builder, actionBuilder,
+          mutationBuilder);
+        builder.setAtomic(true);
+      } else {
+        throw new DoNotRetryIOException("CheckAndMutate doesn't support " +
+          cam.getAction().getClass().getName());
+      }
+
+      multiRequestBuilder.addRegionAction(builder.build());
+
+      // This CheckAndMutate region action is at (multiRequestBuilder.getRegionActionCount() - 1)
+      // in the overall multiRequest.
+      indexMap.put(multiRequestBuilder.getRegionActionCount() - 1, action.getOriginalIndex());
+    }
+  }
+
+  private static void buildNoDataRegionAction(final Put put, final List<CellScannable> cells,
+    final RegionAction.Builder regionActionBuilder,
+    final ClientProtos.Action.Builder actionBuilder,
+    final MutationProto.Builder mutationBuilder) throws IOException {
+    cells.add(put);
+    regionActionBuilder.addAction(actionBuilder.
+      setMutation(ProtobufUtil.toMutationNoData(MutationType.PUT, put, mutationBuilder)));
+  }
+
+  private static void buildNoDataRegionAction(final Delete delete,
+    final List<CellScannable> cells, final RegionAction.Builder regionActionBuilder,
+    final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)
+    throws IOException {
+    int size = delete.size();
+    // Note that a legitimate Delete may have a size of zero; i.e. a Delete that has nothing
+    // in it but the row to delete.  In this case, the current implementation does not make
+    // a KeyValue to represent a delete-of-all-the-row until we serialize... For such cases
+    // where the size returned is zero, we will send the Delete fully pb'd rather than have
+    // metadata only in the pb and then send the kv along the side in cells.
+    if (size > 0) {
+      cells.add(delete);
+      regionActionBuilder.addAction(actionBuilder.
+        setMutation(ProtobufUtil.toMutationNoData(MutationType.DELETE, delete, mutationBuilder)));
+    } else {
+      regionActionBuilder.addAction(actionBuilder.
+        setMutation(ProtobufUtil.toMutation(MutationType.DELETE, delete, mutationBuilder)));
+    }
+  }
+
+  private static void buildNoDataRegionAction(final Increment increment,
+    final List<CellScannable> cells, long nonce, final RegionAction.Builder regionActionBuilder,
+    final ClientProtos.Action.Builder actionBuilder,
+    final MutationProto.Builder mutationBuilder) throws IOException {
+    cells.add(increment);
+    regionActionBuilder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutationNoData(
+      MutationType.INCREMENT, increment, mutationBuilder, nonce)));
+  }
+
+  private static void buildNoDataRegionAction(final Append append,
+    final List<CellScannable> cells, long nonce, final RegionAction.Builder regionActionBuilder,
+    final ClientProtos.Action.Builder actionBuilder,
+    final MutationProto.Builder mutationBuilder) throws IOException {
+    cells.add(append);
+    regionActionBuilder.addAction(actionBuilder.setMutation(ProtobufUtil.toMutationNoData(
+      MutationType.APPEND, append, mutationBuilder, nonce)));
+  }
+
+  private static void buildNoDataRegionAction(final RowMutations rowMutations,
+    final List<CellScannable> cells, final RegionAction.Builder regionActionBuilder,
+    final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)
+    throws IOException {
+    for (Mutation mutation: rowMutations.getMutations()) {
+      MutationType type;
+      if (mutation instanceof Put) {
+        type = MutationType.PUT;
+      } else if (mutation instanceof Delete) {
+        type = MutationType.DELETE;
+      } else {
+        throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
+          mutation.getClass().getName());
+      }
+      mutationBuilder.clear();
+      MutationProto mp = ProtobufUtil.toMutationNoData(type, mutation, mutationBuilder);
+      cells.add(mutation);
+      actionBuilder.clear();
+      regionActionBuilder.addAction(actionBuilder.setMutation(mp).build());
+    }
+  }
+
+  private static MutationType getMutationType(Mutation mutation) {
+    assert !(mutation instanceof CheckAndMutate);
+    if (mutation instanceof Put) {
+      return MutationType.PUT;
+    } else if (mutation instanceof Delete) {
+      return MutationType.DELETE;
+    } else if (mutation instanceof Increment) {
+      return MutationType.INCREMENT;
+    } else {
+      return MutationType.APPEND;
     }
   }
 
@@ -761,20 +811,24 @@ public final class RequestConverter {
    * @return a protocol buffer FlushRegionRequest
    */
   public static FlushRegionRequest buildFlushRegionRequest(final byte[] regionName) {
-    return buildFlushRegionRequest(regionName, false);
+    return buildFlushRegionRequest(regionName, null, false);
   }
 
   /**
    * Create a protocol buffer FlushRegionRequest for a given region name
    * @param regionName the name of the region to get info
+   * @param columnFamily column family within a region
    * @return a protocol buffer FlushRegionRequest
    */
   public static FlushRegionRequest buildFlushRegionRequest(final byte[] regionName,
-      boolean writeFlushWALMarker) {
+    byte[] columnFamily, boolean writeFlushWALMarker) {
     FlushRegionRequest.Builder builder = FlushRegionRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
     builder.setWriteFlushWalMarker(writeFlushWALMarker);
+    if (columnFamily != null) {
+      builder.setFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+    }
     return builder.build();
   }
 
@@ -1050,14 +1104,12 @@ public final class RequestConverter {
    * Creates a protocol buffer UnassignRegionRequest
    *
    * @param regionName
-   * @param force
    * @return an UnassignRegionRequest
    */
   public static UnassignRegionRequest buildUnassignRegionRequest(
-      final byte [] regionName, final boolean force) {
+      final byte [] regionName) {
     UnassignRegionRequest.Builder builder = UnassignRegionRequest.newBuilder();
     builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME,regionName));
-    builder.setForce(force);
     return builder.build();
   }
 
@@ -1251,13 +1303,23 @@ public final class RequestConverter {
 
   /**
    * Creates a protocol buffer SetRegionStateInMetaRequest
-   * @param states list of regions states to update in Meta
+   * @param nameOrEncodedName2State list of regions states to update in Meta
    * @return a SetRegionStateInMetaRequest
    */
-  public static SetRegionStateInMetaRequest buildSetRegionStateInMetaRequest(
-      final List<RegionState> states) {
-    final SetRegionStateInMetaRequest.Builder builder = SetRegionStateInMetaRequest.newBuilder();
-    states.forEach(s -> builder.addStates(s.convert()));
+  public static SetRegionStateInMetaRequest
+    buildSetRegionStateInMetaRequest(Map<String, RegionState.State> nameOrEncodedName2State) {
+    SetRegionStateInMetaRequest.Builder builder = SetRegionStateInMetaRequest.newBuilder();
+    nameOrEncodedName2State.forEach((name, state) -> {
+      byte[] bytes = Bytes.toBytes(name);
+      RegionSpecifier spec;
+      if (RegionInfo.isEncodedRegionName(bytes)) {
+        spec = buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, bytes);
+      } else {
+        spec = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, bytes);
+      }
+      builder.addStates(RegionSpecifierAndState.newBuilder().setRegionSpecifier(spec)
+        .setState(state.convert()).build());
+    });
     return builder.build();
   }
 
@@ -1444,8 +1506,18 @@ public final class RequestConverter {
    *
    * @return a NormalizeRequest
    */
-  public static NormalizeRequest buildNormalizeRequest() {
-    return NormalizeRequest.newBuilder().build();
+  public static NormalizeRequest buildNormalizeRequest(NormalizeTableFilterParams ntfp) {
+    final NormalizeRequest.Builder builder = NormalizeRequest.newBuilder();
+    if (ntfp.getTableNames() != null) {
+      builder.addAllTableNames(ProtobufUtil.toProtoTableNameList(ntfp.getTableNames()));
+    }
+    if (ntfp.getRegex() != null) {
+      builder.setRegex(ntfp.getRegex());
+    }
+    if (ntfp.getNamespace() != null) {
+      builder.setNamespace(ntfp.getNamespace());
+    }
+    return builder.build();
   }
 
   /**
@@ -1752,34 +1824,67 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer {@link SlowLogResponseRequest}
+   * Build RPC request payload for getLogEntries
    *
-   * @param logQueryFilter filter to use if provided
-   * @return a protocol buffer SlowLogResponseRequest
+   * @param filterParams map of filter params
+   * @param limit limit for no of records that server returns
+   * @param logType type of the log records
+   * @return request payload {@link HBaseProtos.LogRequest}
    */
-  public static SlowLogResponseRequest buildSlowLogResponseRequest(
-      final LogQueryFilter logQueryFilter) {
+  public static HBaseProtos.LogRequest buildSlowLogResponseRequest(
+      final Map<String, Object> filterParams, final int limit, final String logType) {
     SlowLogResponseRequest.Builder builder = SlowLogResponseRequest.newBuilder();
-    if (logQueryFilter == null) {
-      return builder.build();
+    builder.setLimit(limit);
+    if (logType.equals("SLOW_LOG")) {
+      builder.setLogType(SlowLogResponseRequest.LogType.SLOW_LOG);
+    } else if (logType.equals("LARGE_LOG")) {
+      builder.setLogType(SlowLogResponseRequest.LogType.LARGE_LOG);
     }
-    final String clientAddress = logQueryFilter.getClientAddress();
-    if (StringUtils.isNotEmpty(clientAddress)) {
-      builder.setClientAddress(clientAddress);
+    boolean filterByAnd = false;
+    if (MapUtils.isNotEmpty(filterParams)) {
+      if (filterParams.containsKey("clientAddress")) {
+        final String clientAddress = (String) filterParams.get("clientAddress");
+        if (StringUtils.isNotEmpty(clientAddress)) {
+          builder.setClientAddress(clientAddress);
+        }
+      }
+      if (filterParams.containsKey("regionName")) {
+        final String regionName = (String) filterParams.get("regionName");
+        if (StringUtils.isNotEmpty(regionName)) {
+          builder.setRegionName(regionName);
+        }
+      }
+      if (filterParams.containsKey("tableName")) {
+        final String tableName = (String) filterParams.get("tableName");
+        if (StringUtils.isNotEmpty(tableName)) {
+          builder.setTableName(tableName);
+        }
+      }
+      if (filterParams.containsKey("userName")) {
+        final String userName = (String) filterParams.get("userName");
+        if (StringUtils.isNotEmpty(userName)) {
+          builder.setUserName(userName);
+        }
+      }
+      if (filterParams.containsKey("filterByOperator")) {
+        final String filterByOperator = (String) filterParams.get("filterByOperator");
+        if (StringUtils.isNotEmpty(filterByOperator)) {
+          if (filterByOperator.toUpperCase().equals("AND")) {
+            filterByAnd = true;
+          }
+        }
+      }
     }
-    final String regionName = logQueryFilter.getRegionName();
-    if (StringUtils.isNotEmpty(regionName)) {
-      builder.setRegionName(regionName);
+    if (filterByAnd) {
+      builder.setFilterByOperator(SlowLogResponseRequest.FilterByOperator.AND);
+    } else {
+      builder.setFilterByOperator(SlowLogResponseRequest.FilterByOperator.OR);
     }
-    final String tableName = logQueryFilter.getTableName();
-    if (StringUtils.isNotEmpty(tableName)) {
-      builder.setTableName(tableName);
-    }
-    final String userName = logQueryFilter.getUserName();
-    if (StringUtils.isNotEmpty(userName)) {
-      builder.setUserName(userName);
-    }
-    return builder.setLimit(logQueryFilter.getLimit()).build();
+    SlowLogResponseRequest slowLogResponseRequest = builder.build();
+    return HBaseProtos.LogRequest.newBuilder()
+      .setLogClassName(slowLogResponseRequest.getClass().getName())
+      .setLogMessage(slowLogResponseRequest.toByteString())
+      .build();
   }
 
   /**

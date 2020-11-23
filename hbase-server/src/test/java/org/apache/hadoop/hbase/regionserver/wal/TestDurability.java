@@ -40,11 +40,11 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -103,7 +103,7 @@ public class TestDurability {
     CLUSTER = TEST_UTIL.getDFSCluster();
     FS = CLUSTER.getFileSystem();
     DIR = TEST_UTIL.getDataTestDirOnTestFS("TestDurability");
-    FSUtils.setRootDir(CONF, DIR);
+    CommonFSUtils.setRootDir(CONF, DIR);
   }
 
   @AfterClass
@@ -298,7 +298,8 @@ public class TestDurability {
         throw new IOException("Failed delete of " + path);
       }
     }
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     return HRegion.createHRegion(info, path, CONF, htd, wals.getWAL(info));
   }
 
@@ -310,7 +311,8 @@ public class TestDurability {
         throw new IOException("Failed delete of " + path);
       }
     }
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     return HRegion.createHRegion(info, path, CONF, td, wal);
   }
 }

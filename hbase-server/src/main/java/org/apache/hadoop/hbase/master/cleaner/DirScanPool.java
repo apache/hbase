@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,9 @@ public class DirScanPool implements ConfigurationObserver {
   }
 
   private static ThreadPoolExecutor initializePool(int size) {
-    return Threads.getBoundedCachedThreadPool(size, 1, TimeUnit.MINUTES, "dir-scan");
+    return Threads.getBoundedCachedThreadPool(size, 1, TimeUnit.MINUTES,
+      new ThreadFactoryBuilder().setNameFormat("dir-scan-pool-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
   /**

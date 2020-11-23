@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -55,10 +54,10 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -78,7 +77,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.UUID;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
 
-@Category({ReplicationTests.class, MediumTests.class})
+@Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationSink {
 
   @ClassRule
@@ -127,12 +126,11 @@ public class TestReplicationSink {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set("hbase.replication.source.fs.conf.provider",
       TestSourceFSConfigurationProvider.class.getCanonicalName());
-
     TEST_UTIL.startMiniCluster(3);
-    SINK = new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()), STOPPABLE);
+    SINK = new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()));
     table1 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAME1);
     table2 = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAME2);
-    Path rootDir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
+    Path rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration());
     baseNamespaceDir = new Path(rootDir, new Path(HConstants.BASE_NAMESPACE_DIR)).toString();
     hfileArchiveDir = new Path(rootDir, new Path(HConstants.HFILE_ARCHIVE_DIRECTORY)).toString();
     replicationClusterId = "12345";
@@ -202,6 +200,40 @@ public class TestReplicationSink {
     assertEquals(BATCH_SIZE/2, scanRes.next(BATCH_SIZE).length);
   }
 
+  @Test
+  public void testLargeEditsPutDelete() throws Exception {
+    List<WALEntry> entries = new ArrayList<>();
+    List<Cell> cells = new ArrayList<>();
+    for (int i = 0; i < 5510; i++) {
+      entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
+    }
+    SINK.replicateEntries(entries, CellUtil.createCellScanner(cells), replicationClusterId,
+      baseNamespaceDir, hfileArchiveDir);
+
+    ResultScanner resultScanner = table1.getScanner(new Scan());
+    int totalRows = 0;
+    while (resultScanner.next() != null) {
+      totalRows++;
+    }
+    assertEquals(5510, totalRows);
+
+    entries = new ArrayList<>();
+    cells = new ArrayList<>();
+    for (int i = 0; i < 11000; i++) {
+      entries.add(
+        createEntry(TABLE_NAME1, i, i % 2 != 0 ? KeyValue.Type.Put : KeyValue.Type.DeleteColumn,
+          cells));
+    }
+    SINK.replicateEntries(entries, CellUtil.createCellScanner(cells), replicationClusterId,
+      baseNamespaceDir, hfileArchiveDir);
+    resultScanner = table1.getScanner(new Scan());
+    totalRows = 0;
+    while (resultScanner.next() != null) {
+      totalRows++;
+    }
+    assertEquals(5500, totalRows);
+  }
+
   /**
    * Insert to 2 different tables
    * @throws Exception
@@ -220,7 +252,11 @@ public class TestReplicationSink {
     Scan scan = new Scan();
     ResultScanner scanRes = table2.getScanner(scan);
     for(Result res : scanRes) {
-      assertTrue(Bytes.toInt(res.getRow()) % 2 == 0);
+      assertEquals(0, Bytes.toInt(res.getRow()) % 2);
+    }
+    scanRes = table1.getScanner(scan);
+    for(Result res : scanRes) {
+      assertEquals(1, Bytes.toInt(res.getRow()) % 2);
     }
   }
 

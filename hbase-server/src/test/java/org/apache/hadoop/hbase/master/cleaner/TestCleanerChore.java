@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -282,7 +282,7 @@ public class TestCleanerChore {
       @Override
       public Boolean answer(InvocationOnMock invocation) throws Throwable {
         fs.create(addedFile).close();
-        FSUtils.logFileSystemState(fs, testDir, LOG);
+        CommonFSUtils.logFileSystemState(fs, testDir, LOG);
         return (Boolean) invocation.callRealMethod();
       }
     }).when(spy).isFileDeletable(Mockito.any());
@@ -342,7 +342,7 @@ public class TestCleanerChore {
       @Override
       public Boolean answer(InvocationOnMock invocation) throws Throwable {
         fs.create(racyFile).close();
-        FSUtils.logFileSystemState(fs, testDir, LOG);
+        CommonFSUtils.logFileSystemState(fs, testDir, LOG);
         return (Boolean) invocation.callRealMethod();
       }
     }).when(spy).isFileDeletable(Mockito.any());

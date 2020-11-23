@@ -22,7 +22,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -48,8 +47,6 @@ public class TestIntraRowPagination {
 
   /**
    * Test from client side for scan with maxResultPerCF set
-   *
-   * @throws Exception
    */
   @Test
   public void testScanLimitAndOffset() throws Exception {
@@ -58,18 +55,15 @@ public class TestIntraRowPagination {
     byte [][] FAMILIES = HTestConst.makeNAscii(HTestConst.DEFAULT_CF_BYTES, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(HTestConst.DEFAULT_QUALIFIER_BYTES, 10);
 
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(
-        TableName.valueOf(HTestConst.DEFAULT_TABLE_BYTES));
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(HTestConst.DEFAULT_TABLE_BYTES));
 
-    HRegionInfo info = new HRegionInfo(HTestConst.DEFAULT_TABLE, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(HTestConst.DEFAULT_TABLE).build();
     for (byte[] family : FAMILIES) {
-      ColumnFamilyDescriptor familyDescriptor =
-        new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
-      tableDescriptor.setColumnFamily(familyDescriptor);
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), tableDescriptor);
+        TEST_UTIL.getConfiguration(), builder.build());
     try {
       Put put;
       Scan scan;

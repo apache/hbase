@@ -775,6 +775,18 @@ public class SecureTestUtil {
     testUtil.waitUntilAllRegionsAssigned(htd.getTableName());
   }
 
+  public static void createTable(HBaseTestingUtility testUtil, User user, TableDescriptor htd)
+    throws Exception {
+    createTable(testUtil, user, htd, null);
+  }
+
+  public static void createTable(HBaseTestingUtility testUtil, User user, TableDescriptor htd,
+    byte[][] splitKeys) throws Exception {
+    try (Connection con = testUtil.getConnection(user); Admin admin = con.getAdmin()) {
+      createTable(testUtil, admin, htd, splitKeys);
+    }
+  }
+
   public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)
       throws Exception {
     deleteTable(testUtil, testUtil.getAdmin(), tableName);

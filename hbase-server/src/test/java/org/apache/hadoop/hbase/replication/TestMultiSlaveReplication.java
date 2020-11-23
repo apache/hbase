@@ -35,12 +35,14 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -84,7 +86,7 @@ public class TestMultiSlaveReplication {
   private static final byte[] row3 = Bytes.toBytes("row3");
   private static final byte[] noRepfamName = Bytes.toBytes("norep");
 
-  private static TableDescriptorBuilder.ModifyableTableDescriptor table;
+  private static TableDescriptor table;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -122,14 +124,10 @@ public class TestMultiSlaveReplication {
     utility3.setZkCluster(miniZK);
     new ZKWatcher(conf3, "cluster3", null, true);
 
-    table = new TableDescriptorBuilder.ModifyableTableDescriptor(tableName);
-    ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(famName);
-    familyDescriptor.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.setColumnFamily(familyDescriptor);
-    familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(noRepfamName);
-    table.setColumnFamily(familyDescriptor);
+    table = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
   }
 
   @Test
@@ -138,73 +136,74 @@ public class TestMultiSlaveReplication {
     MiniHBaseCluster master = utility1.startMiniCluster();
     utility2.startMiniCluster();
     utility3.startMiniCluster();
-    Admin admin1 = ConnectionFactory.createConnection(conf1).getAdmin();
+    try (Connection conn = ConnectionFactory.createConnection(conf1);
+      Admin admin1 = conn.getAdmin()) {
+      utility1.getAdmin().createTable(table);
+      utility2.getAdmin().createTable(table);
+      utility3.getAdmin().createTable(table);
+      Table htable1 = utility1.getConnection().getTable(tableName);
+      Table htable2 = utility2.getConnection().getTable(tableName);
+      Table htable3 = utility3.getConnection().getTable(tableName);
 
-    utility1.getAdmin().createTable(table);
-    utility2.getAdmin().createTable(table);
-    utility3.getAdmin().createTable(table);
-    Table htable1 = utility1.getConnection().getTable(tableName);
-    Table htable2 = utility2.getConnection().getTable(tableName);
-    Table htable3 = utility3.getConnection().getTable(tableName);
+      ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+      rpc.setClusterKey(utility2.getClusterKey());
+      admin1.addReplicationPeer("1", rpc);
 
-    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(utility2.getClusterKey());
-    admin1.addReplicationPeer("1", rpc);
+      // put "row" and wait 'til it got around, then delete
+      putAndWait(row, famName, htable1, htable2);
+      deleteAndWait(row, htable1, htable2);
+      // check it wasn't replication to cluster 3
+      checkRow(row, 0, htable3);
 
-    // put "row" and wait 'til it got around, then delete
-    putAndWait(row, famName, htable1, htable2);
-    deleteAndWait(row, htable1, htable2);
-    // check it wasn't replication to cluster 3
-    checkRow(row,0,htable3);
+      putAndWait(row2, famName, htable1, htable2);
 
-    putAndWait(row2, famName, htable1, htable2);
+      // now roll the region server's logs
+      rollWALAndWait(utility1, htable1.getName(), row2);
 
-    // now roll the region server's logs
-    rollWALAndWait(utility1, htable1.getName(), row2);
+      // after the log was rolled put a new row
+      putAndWait(row3, famName, htable1, htable2);
 
-    // after the log was rolled put a new row
-    putAndWait(row3, famName, htable1, htable2);
+      rpc = new ReplicationPeerConfig();
+      rpc.setClusterKey(utility3.getClusterKey());
+      admin1.addReplicationPeer("2", rpc);
 
-    rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(utility3.getClusterKey());
-    admin1.addReplicationPeer("2", rpc);
+      // put a row, check it was replicated to all clusters
+      putAndWait(row1, famName, htable1, htable2, htable3);
+      // delete and verify
+      deleteAndWait(row1, htable1, htable2, htable3);
 
-    // put a row, check it was replicated to all clusters
-    putAndWait(row1, famName, htable1, htable2, htable3);
-    // delete and verify
-    deleteAndWait(row1, htable1, htable2, htable3);
+      // make sure row2 did not get replicated after
+      // cluster 3 was added
+      checkRow(row2, 0, htable3);
 
-    // make sure row2 did not get replicated after
-    // cluster 3 was added
-    checkRow(row2,0,htable3);
+      // row3 will get replicated, because it was in the
+      // latest log
+      checkRow(row3, 1, htable3);
 
-    // row3 will get replicated, because it was in the
-    // latest log
-    checkRow(row3,1,htable3);
+      Put p = new Put(row);
+      p.addColumn(famName, row, row);
+      htable1.put(p);
+      // now roll the logs again
+      rollWALAndWait(utility1, htable1.getName(), row);
 
-    Put p = new Put(row);
-    p.addColumn(famName, row, row);
-    htable1.put(p);
-    // now roll the logs again
-    rollWALAndWait(utility1, htable1.getName(), row);
+      // cleanup "row2", also conveniently use this to wait replication
+      // to finish
+      deleteAndWait(row2, htable1, htable2, htable3);
+      // Even if the log was rolled in the middle of the replication
+      // "row" is still replication.
+      checkRow(row, 1, htable2);
+      // Replication thread of cluster 2 may be sleeping, and since row2 is not there in it,
+      // we should wait before checking.
+      checkWithWait(row, 1, htable3);
 
-    // cleanup "row2", also conveniently use this to wait replication
-    // to finish
-    deleteAndWait(row2, htable1, htable2, htable3);
-    // Even if the log was rolled in the middle of the replication
-    // "row" is still replication.
-    checkRow(row, 1, htable2);
-    // Replication thread of cluster 2 may be sleeping, and since row2 is not there in it,
-    // we should wait before checking.
-    checkWithWait(row, 1, htable3);
+      // cleanup the rest
+      deleteAndWait(row, htable1, htable2, htable3);
+      deleteAndWait(row3, htable1, htable2, htable3);
 
-    // cleanup the rest
-    deleteAndWait(row, htable1, htable2, htable3);
-    deleteAndWait(row3, htable1, htable2, htable3);
-
-    utility3.shutdownMiniCluster();
-    utility2.shutdownMiniCluster();
-    utility1.shutdownMiniCluster();
+      utility3.shutdownMiniCluster();
+      utility2.shutdownMiniCluster();
+      utility1.shutdownMiniCluster();
+    }
   }
 
   private void rollWALAndWait(final HBaseTestingUtility utility, final TableName table,

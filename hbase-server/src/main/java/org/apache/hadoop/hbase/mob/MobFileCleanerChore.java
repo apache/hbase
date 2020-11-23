@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -168,8 +168,8 @@ public class MobFileCleanerChore extends ScheduledChore {
           maxCreationTimeToArchive, table);
       }
 
-      Path rootDir = FSUtils.getRootDir(conf);
-      Path tableDir = FSUtils.getTableDir(rootDir, table);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
+      Path tableDir = CommonFSUtils.getTableDir(rootDir, table);
       // How safe is this call?
       List<Path> regionDirs = FSUtils.getRegionDirs(FileSystem.get(conf), tableDir);
 
@@ -310,7 +310,7 @@ public class MobFileCleanerChore extends ScheduledChore {
         tableName, Bytes.toString(family));
       return;
     }
-    Path mobTableDir = FSUtils.getTableDir(MobUtils.getMobHome(conf), tableName);
+    Path mobTableDir = CommonFSUtils.getTableDir(MobUtils.getMobHome(conf), tableName);
     FileSystem fs = storeFiles.get(0).getFileSystem(conf);
 
     for (Path p : storeFiles) {

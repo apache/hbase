@@ -95,7 +95,8 @@ public class TestTopScreenPresenter {
     when(topScreenModel.getRecords()).thenReturn(TEST_RECORDS);
     when(topScreenModel.getSummary()).thenReturn(TEST_SUMMARY);
 
-    topScreenPresenter = new TopScreenPresenter(topScreenView, 3000, topScreenModel);
+    topScreenPresenter = new TopScreenPresenter(topScreenView, 3000, topScreenModel,
+      null, Long.MAX_VALUE);
   }
 
   @Test

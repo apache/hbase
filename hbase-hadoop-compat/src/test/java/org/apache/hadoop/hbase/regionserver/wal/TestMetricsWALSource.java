@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
+
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
@@ -25,17 +28,17 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsWALSource {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsWALSource.class);
+    HBaseClassTestRule.forClass(TestMetricsWALSource.class);
 
-  @Test(expected=RuntimeException.class)
-  public void testGetInstanceNoHadoopCompat() throws Exception {
-    //This should throw an exception because there is no compat lib on the class path.
-    CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
-
+  @Test
+  public void testGetInstance() throws Exception {
+    // This should throw an exception because there is no compat lib on the class path.
+    assertThat(CompatibilitySingletonFactory.getInstance(MetricsWALSource.class),
+      instanceOf(MetricsWALSourceImpl.class));
   }
 }

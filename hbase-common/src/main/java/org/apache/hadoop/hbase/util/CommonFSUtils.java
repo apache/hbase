@@ -28,12 +28,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -41,9 +41,11 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -55,7 +57,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * <a href="https://issues.apache.org/jira/browse/HBASE-20838">HBASE-20838</a> for more details.
  */
 @InterfaceAudience.Private
-public abstract class CommonFSUtils {
+public final class CommonFSUtils {
   private static final Logger LOG = LoggerFactory.getLogger(CommonFSUtils.class);
 
   /** Parameter name for HBase WAL directory */
@@ -68,8 +70,7 @@ public abstract class CommonFSUtils {
   /** Full access permissions (starting point for a umask) */
   public static final String FULL_RWX_PERMISSIONS = "777";
 
-  protected CommonFSUtils() {
-    super();
+  private CommonFSUtils() {
   }
 
   /**
@@ -353,14 +354,6 @@ public abstract class CommonFSUtils {
     if (enforceStreamCapability != null) {
       fs.getConf().set(UNSAFE_STREAM_CAPABILITY_ENFORCE, enforceStreamCapability);
     }
-    if (fs instanceof LocalFileSystem) {
-      // running on LocalFileSystem, which does not support the required capabilities `HSYNC`
-      // and `HFLUSH`. disable enforcement.
-      final boolean value = false;
-      LOG.warn("Cannot enforce durability guarantees while running on {}. Setting {}={} for"
-        + " this FileSystem.", fs.getUri(), UNSAFE_STREAM_CAPABILITY_ENFORCE, value);
-      fs.getConf().setBoolean(UNSAFE_STREAM_CAPABILITY_ENFORCE, value);
-    }
     return fs;
   }
 
@@ -371,7 +364,8 @@ public abstract class CommonFSUtils {
     if (!qualifiedWalDir.equals(rootDir)) {
       if (qualifiedWalDir.toString().startsWith(rootDir.toString() + "/")) {
         throw new IllegalStateException("Illegal WAL directory specified. " +
-            "WAL directories are not permitted to be under the root directory if set.");
+          "WAL directories are not permitted to be under root directory: rootDir=" +
+          rootDir.toString() + ", qualifiedWALDir=" + qualifiedWalDir);
       }
     }
     return true;
@@ -428,6 +422,19 @@ public abstract class CommonFSUtils {
   public static Path getTableDir(Path rootdir, final TableName tableName) {
     return new Path(getNamespaceDir(rootdir, tableName.getNamespaceAsString()),
         tableName.getQualifierAsString());
+  }
+
+  /**
+   * Returns the {@link org.apache.hadoop.fs.Path} object representing the region directory under
+   * path rootdir
+   *
+   * @param rootdir qualified path of HBase root directory
+   * @param tableName name of table
+   * @param regionName The encoded region name
+   * @return {@link org.apache.hadoop.fs.Path} for region
+   */
+  public static Path getRegionDir(Path rootdir, TableName tableName, String regionName) {
+    return new Path(getTableDir(rootdir, tableName), regionName);
   }
 
   /**

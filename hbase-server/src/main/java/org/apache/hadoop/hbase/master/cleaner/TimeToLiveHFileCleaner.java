@@ -17,48 +17,33 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HFile cleaner that uses the timestamp of the hfile to determine if it should be deleted. By
  * default they are allowed to live for {@value #DEFAULT_TTL}
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class TimeToLiveHFileCleaner extends BaseHFileCleanerDelegate {
+public class TimeToLiveHFileCleaner extends BaseTimeToLiveFileCleaner {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TimeToLiveHFileCleaner.class.getName());
   public static final String TTL_CONF_KEY = "hbase.master.hfilecleaner.ttl";
+
   // default ttl = 5 minutes
   public static final long DEFAULT_TTL = 60000 * 5;
-  // Configured time a hfile can be kept after it was moved to the archive
-  private long ttl;
 
   @Override
-  public void setConf(Configuration conf) {
-    this.ttl = conf.getLong(TTL_CONF_KEY, DEFAULT_TTL);
-    super.setConf(conf);
+  protected long getTtlMs(Configuration conf) {
+    return conf.getLong(TTL_CONF_KEY, DEFAULT_TTL);
   }
 
   @Override
-  public boolean isFileDeletable(FileStatus fStat) {
-    long currentTime = EnvironmentEdgeManager.currentTime();
-    long time = fStat.getModificationTime();
-    long life = currentTime - time;
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("HFile life:" + life + ", ttl:" + ttl + ", current:" + currentTime + ", from: "
-          + time);
-    }
-    if (life < 0) {
-      LOG.warn("Found a hfile (" + fStat.getPath() + ") newer than current time (" + currentTime
-          + " < " + time + "), probably a clock skew");
-      return false;
-    }
-    return life > ttl;
+  protected boolean valiateFilename(Path file) {
+    return HFileLink.isBackReferencesDir(file) || HFileLink.isBackReferencesDir(file.getParent()) ||
+      StoreFileInfo.validateStoreFileName(file.getName());
   }
 }

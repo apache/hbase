@@ -22,8 +22,6 @@ include Java
 
 module Hbase
   class SecurityAdmin
-    include HBaseConstants
-
     def initialize(admin)
       @admin = admin
       @connection = @admin.getConnection
@@ -66,10 +64,10 @@ module Hbase
             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
             tableName = org.apache.hadoop.hbase.TableName.valueOf(table_name)
-            htd = org.apache.hadoop.hbase.HTableDescriptor.new(@admin.getDescriptor(tableName))
+            td = @admin.getDescriptor(tableName)
 
             unless family.nil?
-              raise(ArgumentError, "Can't find a family: #{family}") unless htd.hasFamily(family.to_java_bytes)
+              raise(ArgumentError, "Can't find a family: #{family}") unless td.hasColumnFamily(family.to_java_bytes)
             end
 
             fambytes = family.to_java_bytes unless family.nil?
@@ -111,10 +109,10 @@ module Hbase
             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
             tableName = org.apache.hadoop.hbase.TableName.valueOf(table_name)
-            htd = org.apache.hadoop.hbase.HTableDescriptor.new(@admin.getDescriptor(tableName))
+            td = @admin.getDescriptor(tableName)
 
             unless family.nil?
-              raise(ArgumentError, "Can't find a family: #{family}") unless htd.hasFamily(family.to_java_bytes)
+              raise(ArgumentError, "Can't find a family: #{family}") unless td.hasColumnFamily(family.to_java_bytes)
             end
 
             fambytes = family.to_java_bytes unless family.nil?

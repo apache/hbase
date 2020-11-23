@@ -123,7 +123,7 @@ public class TransitRegionStateProcedure
   public TransitRegionStateProcedure() {
   }
 
-  private void setInitalAndLastState() {
+  private void setInitialAndLastState() {
     switch (type) {
       case ASSIGN:
         initialState = RegionStateTransitionState.REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE;
@@ -150,7 +150,12 @@ public class TransitRegionStateProcedure
     this.assignCandidate = assignCandidate;
     this.forceNewPlan = forceNewPlan;
     this.type = type;
-    setInitalAndLastState();
+    setInitialAndLastState();
+
+    // when do reopen TRSP, let the rs know the targetServer so it can keep some info on close
+    if (type == TransitionType.REOPEN) {
+      this.assignCandidate = getRegionStateNode(env).getRegionLocation();
+    }
   }
 
   @Override
@@ -333,6 +338,20 @@ public class TransitRegionStateProcedure
     try {
       switch (state) {
         case REGION_STATE_TRANSITION_GET_ASSIGN_CANDIDATE:
+          // Need to do some sanity check for replica region, if the region does not exist at
+          // master, do not try to assign the replica region, log error and return.
+          if (!RegionReplicaUtil.isDefaultReplica(regionNode.getRegionInfo())) {
+            RegionInfo defaultRI =
+              RegionReplicaUtil.getRegionInfoForDefaultReplica(regionNode.getRegionInfo());
+            if (env.getMasterServices().getAssignmentManager().getRegionStates().
+              getRegionStateNode(defaultRI) == null) {
+              LOG.error(
+                "Cannot assign replica region {} because its primary region {} does not exist.",
+                regionNode.getRegionInfo(), defaultRI);
+              regionNode.unsetProcedure(this);
+              return Flow.NO_MORE_STATE;
+            }
+          }
           queueAssign(env, regionNode);
           return Flow.HAS_MORE_STATE;
         case REGION_STATE_TRANSITION_OPEN:
@@ -501,7 +520,7 @@ public class TransitRegionStateProcedure
     RegionStateTransitionStateData data =
       serializer.deserialize(RegionStateTransitionStateData.class);
     type = convert(data.getType());
-    setInitalAndLastState();
+    setInitialAndLastState();
     forceNewPlan = data.getForceNewPlan();
     if (data.hasAssignCandidate()) {
       assignCandidate = ProtobufUtil.toServerName(data.getAssignCandidate());

@@ -182,7 +182,16 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   private void replicate(CompletableFuture<Long> future, RegionLocations locs,
       TableDescriptor tableDesc, byte[] encodedRegionName, byte[] row, List<Entry> entries) {
     if (locs.size() == 1) {
-      // Could this happen?
+      LOG.info("Only one location for {}.{}, refresh the location cache only for meta now",
+        tableDesc.getTableName(), Bytes.toString(encodedRegionName));
+
+      // This could happen to meta table. In case of meta table comes with no replica and
+      // later it is changed to multiple replicas. The cached location for meta may only has
+      // the primary region. In this case, it needs to clean up and refresh the cached meta
+      // locations.
+      if (tableDesc.isMetaTable()) {
+        connection.getRegionLocator(tableDesc.getTableName()).clearRegionLocationCache();
+      }
       future.complete(Long.valueOf(entries.size()));
       return;
     }
@@ -368,7 +377,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         ctx.getMetrics().incrLogEditsFiltered(skippedEdits);
         return true;
       } else {
-        LOG.warn("Failed to replicate all entris, retry={}", retryCounter.getAttemptTimes());
+        LOG.warn("Failed to replicate all entries, retry={}", retryCounter.getAttemptTimes());
         if (!retryCounter.shouldRetry()) {
           return false;
         }

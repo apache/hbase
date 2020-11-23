@@ -533,11 +533,9 @@ public void cleanUpCluster() throws Exception {
 
   @Test
   public void testLoadAndVerify() throws Exception {
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(TableName.valueOf(TEST_NAME));
-
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(TEST_NAME))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
 
     Admin admin = getTestingUtil(getConf()).getAdmin();
     admin.createTable(tableDescriptor, Bytes.toBytes(0L), Bytes.toBytes(-1L), 40);
@@ -617,10 +615,8 @@ public void cleanUpCluster() throws Exception {
 
     // create HTableDescriptor for specified table
     TableName table = getTablename();
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(table);
-    tableDescriptor.setColumnFamily(
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(TEST_FAMILY));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(table)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
 
     if (doLoad) {
       try (Connection conn = ConnectionFactory.createConnection(getConf());

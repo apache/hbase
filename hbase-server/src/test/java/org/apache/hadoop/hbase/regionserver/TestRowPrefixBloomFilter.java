@@ -25,7 +25,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -48,7 +47,7 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -112,7 +111,7 @@ public class TestRowPrefixBloomFilter {
           fs.delete(testDir, true);
         }
       } else {
-        testDir = FSUtils.getRootDir(conf);
+        testDir = CommonFSUtils.getRootDir(conf);
       }
     } catch (Exception e) {
       LOG.error(HBaseMarkers.FATAL, "error during setup", e);

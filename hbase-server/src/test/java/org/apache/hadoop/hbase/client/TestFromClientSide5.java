@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
@@ -2238,14 +2239,10 @@ public class TestFromClientSide5 extends FromClientSideBase {
 
   @Test
   public void testCellSizeLimit() throws IOException {
-    final TableName tableName = TableName.valueOf("testCellSizeLimit");
-    TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor =
-      new TableDescriptorBuilder.ModifyableTableDescriptor(tableName)
-        .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(10 * 1024));
-    ColumnFamilyDescriptor familyDescriptor =
-      new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(FAMILY);
-
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    final TableName tableName = name.getTableName();
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(10 * 1024))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     try (Admin admin = TEST_UTIL.getAdmin()) {
       admin.createTable(tableDescriptor);
     }
@@ -2272,6 +2269,25 @@ public class TestFromClientSide5 extends FromClientSideBase {
       } catch (IOException e) {
         // expected
       }
+    }
+  }
+
+  @Test
+  public void testCellSizeNoLimit() throws IOException {
+    final TableName tableName = name.getTableName();
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setValue(HRegion.HBASE_MAX_CELL_SIZE_KEY, Integer.toString(0))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      admin.createTable(tableDescriptor);
+    }
+
+    // Will succeed
+    try (Table ht = TEST_UTIL.getConnection().getTable(tableName)) {
+      ht.put(new Put(ROW).addColumn(FAMILY, QUALIFIER,  new byte[HRegion.DEFAULT_MAX_CELL_SIZE -
+        1024]));
+      ht.append(new Append(ROW).addColumn(FAMILY, QUALIFIER, new byte[1024 + 1]));
     }
   }
 
@@ -2577,7 +2593,7 @@ public class TestFromClientSide5 extends FromClientSideBase {
     t.put(new Put(ROW).addColumn(cf1, QUALIFIER, Bytes.toBytes("val1")));
     t.put(new Put(ROW).addColumn(cf2, QUALIFIER, Bytes.toBytes("val2")));
     admin.flush(tableName);
-    Path tableDir = FSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), tableName);
+    Path tableDir = CommonFSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), tableName);
     List<Path> regionDirs = FSUtils.getRegionDirs(TEST_UTIL.getTestFileSystem(), tableDir);
     assertEquals(1, regionDirs.size());
     List<Path> familyDirs = FSUtils.getFamilyDirs(TEST_UTIL.getTestFileSystem(), regionDirs.get(0));

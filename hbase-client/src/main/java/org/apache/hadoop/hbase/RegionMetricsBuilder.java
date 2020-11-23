@@ -24,12 +24,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -51,6 +53,15 @@ public final class RegionMetricsBuilder {
         .setCompactingCellCount(regionLoadPB.getTotalCompactingKVs())
         .setCompletedSequenceId(regionLoadPB.getCompleteSequenceId())
         .setDataLocality(regionLoadPB.hasDataLocality() ? regionLoadPB.getDataLocality() : 0.0f)
+        .setDataLocalityForSsd(regionLoadPB.hasDataLocalityForSsd() ?
+          regionLoadPB.getDataLocalityForSsd() : 0.0f)
+        .setBlocksLocalWeight(regionLoadPB.hasBlocksLocalWeight() ?
+          regionLoadPB.getBlocksLocalWeight() : 0)
+        .setBlocksLocalWithSsdWeight(regionLoadPB.hasBlocksLocalWithSsdWeight() ?
+          regionLoadPB.getBlocksLocalWithSsdWeight() : 0)
+        .setBlocksTotalWeight(regionLoadPB.getBlocksTotalWeight())
+        .setCompactionState(ProtobufUtil.createCompactionStateForRegionLoad(
+          regionLoadPB.getCompactionState()))
         .setFilteredReadRequestCount(regionLoadPB.getFilteredReadRequestsCount())
         .setStoreFileUncompressedDataIndexSize(new Size(regionLoadPB.getTotalStaticIndexSizeKB(),
           Size.Unit.KILOBYTE))
@@ -148,6 +159,11 @@ public final class RegionMetricsBuilder {
   private Map<byte[], Long> storeSequenceIds = Collections.emptyMap();
   private float dataLocality;
   private long lastMajorCompactionTimestamp;
+  private float dataLocalityForSsd;
+  private long blocksLocalWeight;
+  private long blocksLocalWithSsdWeight;
+  private long blocksTotalWeight;
+  private CompactionState compactionState;
   private RegionMetricsBuilder(byte[] name) {
     this.name = name;
   }
@@ -236,6 +252,26 @@ public final class RegionMetricsBuilder {
     this.lastMajorCompactionTimestamp = value;
     return this;
   }
+  public RegionMetricsBuilder setDataLocalityForSsd(float value) {
+    this.dataLocalityForSsd = value;
+    return this;
+  }
+  public RegionMetricsBuilder setBlocksLocalWeight(long value) {
+    this.blocksLocalWeight = value;
+    return this;
+  }
+  public RegionMetricsBuilder setBlocksLocalWithSsdWeight(long value) {
+    this.blocksLocalWithSsdWeight = value;
+    return this;
+  }
+  public RegionMetricsBuilder setBlocksTotalWeight(long value) {
+    this.blocksTotalWeight = value;
+    return this;
+  }
+  public RegionMetricsBuilder setCompactionState(CompactionState compactionState) {
+    this.compactionState = compactionState;
+    return this;
+  }
 
   public RegionMetrics build() {
     return new RegionMetricsImpl(name,
@@ -259,7 +295,12 @@ public final class RegionMetricsBuilder {
         completedSequenceId,
         storeSequenceIds,
         dataLocality,
-        lastMajorCompactionTimestamp);
+        lastMajorCompactionTimestamp,
+        dataLocalityForSsd,
+        blocksLocalWeight,
+        blocksLocalWithSsdWeight,
+        blocksTotalWeight,
+        compactionState);
   }
 
   private static class RegionMetricsImpl implements RegionMetrics {
@@ -285,6 +326,11 @@ public final class RegionMetricsBuilder {
     private final Map<byte[], Long> storeSequenceIds;
     private final float dataLocality;
     private final long lastMajorCompactionTimestamp;
+    private final float dataLocalityForSsd;
+    private final long blocksLocalWeight;
+    private final long blocksLocalWithSsdWeight;
+    private final long blocksTotalWeight;
+    private final CompactionState compactionState;
     RegionMetricsImpl(byte[] name,
         int storeCount,
         int storeFileCount,
@@ -306,7 +352,12 @@ public final class RegionMetricsBuilder {
         long completedSequenceId,
         Map<byte[], Long> storeSequenceIds,
         float dataLocality,
-        long lastMajorCompactionTimestamp) {
+        long lastMajorCompactionTimestamp,
+        float dataLocalityForSsd,
+        long blocksLocalWeight,
+        long blocksLocalWithSsdWeight,
+        long blocksTotalWeight,
+        CompactionState compactionState) {
       this.name = Preconditions.checkNotNull(name);
       this.storeCount = storeCount;
       this.storeFileCount = storeFileCount;
@@ -329,6 +380,11 @@ public final class RegionMetricsBuilder {
       this.storeSequenceIds = Preconditions.checkNotNull(storeSequenceIds);
       this.dataLocality = dataLocality;
       this.lastMajorCompactionTimestamp = lastMajorCompactionTimestamp;
+      this.dataLocalityForSsd = dataLocalityForSsd;
+      this.blocksLocalWeight = blocksLocalWeight;
+      this.blocksLocalWithSsdWeight = blocksLocalWithSsdWeight;
+      this.blocksTotalWeight = blocksTotalWeight;
+      this.compactionState = compactionState;
     }
 
     @Override
@@ -442,6 +498,31 @@ public final class RegionMetricsBuilder {
     }
 
     @Override
+    public float getDataLocalityForSsd() {
+      return dataLocalityForSsd;
+    }
+
+    @Override
+    public long getBlocksLocalWeight() {
+      return blocksLocalWeight;
+    }
+
+    @Override
+    public long getBlocksLocalWithSsdWeight() {
+      return blocksLocalWithSsdWeight;
+    }
+
+    @Override
+    public long getBlocksTotalWeight() {
+      return blocksTotalWeight;
+    }
+
+    @Override
+    public CompactionState getCompactionState() {
+      return compactionState;
+    }
+
+    @Override
     public String toString() {
       StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "storeCount",
           this.getStoreCount());
@@ -492,6 +573,16 @@ public final class RegionMetricsBuilder {
           this.getCompletedSequenceId());
       Strings.appendKeyValue(sb, "dataLocality",
           this.getDataLocality());
+      Strings.appendKeyValue(sb, "dataLocalityForSsd",
+          this.getDataLocalityForSsd());
+      Strings.appendKeyValue(sb, "blocksLocalWeight",
+        blocksLocalWeight);
+      Strings.appendKeyValue(sb, "blocksLocalWithSsdWeight",
+        blocksLocalWithSsdWeight);
+      Strings.appendKeyValue(sb, "blocksTotalWeight",
+        blocksTotalWeight);
+      Strings.appendKeyValue(sb, "compactionState",
+        compactionState);
       return sb.toString();
     }
   }

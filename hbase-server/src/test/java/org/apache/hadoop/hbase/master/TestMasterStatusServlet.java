@@ -27,12 +27,13 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
@@ -68,11 +69,11 @@ public class TestMasterStatusServlet {
 
   static final ServerName FAKE_HOST =
       ServerName.valueOf("fakehost", 12345, 1234567890);
-  static final HTableDescriptor FAKE_TABLE =
-    new HTableDescriptor(TableName.valueOf("mytable"));
-  static final HRegionInfo FAKE_HRI =
-      new HRegionInfo(FAKE_TABLE.getTableName(),
-          Bytes.toBytes("a"), Bytes.toBytes("b"));
+  static final TableDescriptor FAKE_TABLE =
+    TableDescriptorBuilder.newBuilder(TableName.valueOf("mytable")).build();
+
+  static final RegionInfo FAKE_HRI = RegionInfoBuilder.newBuilder(FAKE_TABLE.getTableName())
+    .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
 
   @Before
   public void setupBasicMocks() {
@@ -120,8 +121,9 @@ public class TestMasterStatusServlet {
   }
 
   private void setupMockTables() throws IOException {
-    List<TableDescriptor> tables = Arrays.asList(new HTableDescriptor(TableName.valueOf("foo")),
-      new HTableDescriptor(TableName.valueOf("bar")));
+    List<TableDescriptor> tables =
+      Arrays.asList(TableDescriptorBuilder.newBuilder(TableName.valueOf("foo")).build(),
+        TableDescriptorBuilder.newBuilder(TableName.valueOf("bar")).build());
     Mockito.doReturn(tables).when(admin).listTableDescriptors();
   }
 

@@ -33,10 +33,10 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl.MetaCellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -47,11 +47,13 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -291,7 +293,7 @@ public class HFileWriterImpl implements HFile.Writer {
   /** A helper method to create HFile output streams in constructors */
   protected static FSDataOutputStream createOutputStream(Configuration conf,
       FileSystem fs, Path path, InetSocketAddress[] favoredNodes) throws IOException {
-    FsPermission perms = FSUtils.getFilePermissions(fs, conf,
+    FsPermission perms = CommonFSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
     return FSUtils.create(conf, fs, path, perms, favoredNodes);
   }

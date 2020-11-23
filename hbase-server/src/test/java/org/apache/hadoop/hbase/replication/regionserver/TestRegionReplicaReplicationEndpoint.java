@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,23 +37,23 @@ import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -122,100 +122,101 @@ public class TestRegionReplicaReplicationEndpoint {
   }
 
   @Test
-  public void testRegionReplicaReplicationPeerIsCreated() throws IOException, ReplicationException {
+  public void testRegionReplicaReplicationPeerIsCreated() throws IOException {
     // create a table with region replicas. Check whether the replication peer is created
     // and replication started.
-    Admin admin = ConnectionFactory.createConnection(HTU.getConfiguration()).getAdmin();
-    String peerId = "region_replica_replication";
+    try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+      Admin admin = connection.getAdmin()) {
+      String peerId = ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER;
 
-    ReplicationPeerConfig peerConfig = null;
-    try {
-      peerConfig = admin.getReplicationPeerConfig(peerId);
-    } catch (ReplicationPeerNotFoundException e) {
-      LOG.warn("Region replica replication peer id=" + peerId + " not exist", e);
-    }
+      ReplicationPeerConfig peerConfig = null;
+      try {
+        peerConfig = admin.getReplicationPeerConfig(peerId);
+      } catch (ReplicationPeerNotFoundException e) {
+        LOG.warn("Region replica replication peer id=" + peerId + " not exist", e);
+      }
 
-    if (peerConfig != null) {
-      admin.removeReplicationPeer(peerId);
-      peerConfig = null;
-    }
+      if (peerConfig != null) {
+        admin.removeReplicationPeer(peerId);
+        peerConfig = null;
+      }
 
-    HTableDescriptor htd = HTU.createTableDescriptor(
-      TableName.valueOf("testReplicationPeerIsCreated_no_region_replicas"),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
-    HTU.getAdmin().createTable(htd);
-    try {
-      peerConfig = admin.getReplicationPeerConfig(peerId);
-      fail("Should throw ReplicationException, because replication peer id=" + peerId
+      TableDescriptor htd = HTU
+        .createTableDescriptor(TableName.valueOf("testReplicationPeerIsCreated_no_region_replicas"),
+          ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+          ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+      HTU.getAdmin().createTable(htd);
+      try {
+        peerConfig = admin.getReplicationPeerConfig(peerId);
+        fail("Should throw ReplicationException, because replication peer id=" + peerId
           + " not exist");
-    } catch (ReplicationPeerNotFoundException e) {
-    }
-    assertNull(peerConfig);
+      } catch (ReplicationPeerNotFoundException e) {
+      }
+      assertNull(peerConfig);
 
-    htd = HTU.createTableDescriptor(TableName.valueOf("testReplicationPeerIsCreated"),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
-    htd.setRegionReplication(2);
-    HTU.getAdmin().createTable(htd);
+      htd = HTU.createModifyableTableDescriptor(TableName.valueOf("testReplicationPeerIsCreated"),
+        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED).setRegionReplication(2).build();
+      HTU.getAdmin().createTable(htd);
 
-    // assert peer configuration is correct
-    peerConfig = admin.getReplicationPeerConfig(peerId);
-    assertNotNull(peerConfig);
-    assertEquals(peerConfig.getClusterKey(), ZKConfig.getZooKeeperClusterKey(
-        HTU.getConfiguration()));
-    assertEquals(RegionReplicaReplicationEndpoint.class.getName(),
+      // assert peer configuration is correct
+      peerConfig = admin.getReplicationPeerConfig(peerId);
+      assertNotNull(peerConfig);
+      assertEquals(peerConfig.getClusterKey(),
+        ZKConfig.getZooKeeperClusterKey(HTU.getConfiguration()));
+      assertEquals(RegionReplicaReplicationEndpoint.class.getName(),
         peerConfig.getReplicationEndpointImpl());
-    admin.close();
+    }
   }
 
   @Test
   public void testRegionReplicaReplicationPeerIsCreatedForModifyTable() throws Exception {
     // modify a table by adding region replicas. Check whether the replication peer is created
     // and replication started.
-    Admin admin = ConnectionFactory.createConnection(HTU.getConfiguration()).getAdmin();
-    String peerId = "region_replica_replication";
+    try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+      Admin admin = connection.getAdmin()) {
+      String peerId = "region_replica_replication";
 
-    ReplicationPeerConfig peerConfig = null;
-    try {
-      peerConfig = admin.getReplicationPeerConfig(peerId);
-    } catch (ReplicationPeerNotFoundException e) {
-      LOG.warn("Region replica replication peer id=" + peerId + " not exist", e);
-    }
+      ReplicationPeerConfig peerConfig = null;
+      try {
+        peerConfig = admin.getReplicationPeerConfig(peerId);
+      } catch (ReplicationPeerNotFoundException e) {
+        LOG.warn("Region replica replication peer id=" + peerId + " not exist", e);
+      }
 
-    if (peerConfig != null) {
-      admin.removeReplicationPeer(peerId);
-      peerConfig = null;
-    }
+      if (peerConfig != null) {
+        admin.removeReplicationPeer(peerId);
+        peerConfig = null;
+      }
 
-    HTableDescriptor htd = HTU.createTableDescriptor(
-      TableName.valueOf("testRegionReplicaReplicationPeerIsCreatedForModifyTable"),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
-    HTU.getAdmin().createTable(htd);
+      TableDescriptor htd = HTU.createTableDescriptor(
+        TableName.valueOf("testRegionReplicaReplicationPeerIsCreatedForModifyTable"),
+        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+      HTU.getAdmin().createTable(htd);
 
-    // assert that replication peer is not created yet
-    try {
-      peerConfig = admin.getReplicationPeerConfig(peerId);
-      fail("Should throw ReplicationException, because replication peer id=" + peerId
+      // assert that replication peer is not created yet
+      try {
+        peerConfig = admin.getReplicationPeerConfig(peerId);
+        fail("Should throw ReplicationException, because replication peer id=" + peerId
           + " not exist");
-    } catch (ReplicationPeerNotFoundException e) {
-    }
-    assertNull(peerConfig);
+      } catch (ReplicationPeerNotFoundException e) {
+      }
+      assertNull(peerConfig);
 
-    HTU.getAdmin().disableTable(htd.getTableName());
-    htd.setRegionReplication(2);
-    HTU.getAdmin().modifyTable(htd);
-    HTU.getAdmin().enableTable(htd.getTableName());
+      HTU.getAdmin().disableTable(htd.getTableName());
+      htd = TableDescriptorBuilder.newBuilder(htd).setRegionReplication(2).build();
+      HTU.getAdmin().modifyTable(htd);
+      HTU.getAdmin().enableTable(htd.getTableName());
 
-    // assert peer configuration is correct
-    peerConfig = admin.getReplicationPeerConfig(peerId);
-    assertNotNull(peerConfig);
-    assertEquals(peerConfig.getClusterKey(), ZKConfig.getZooKeeperClusterKey(
-        HTU.getConfiguration()));
-    assertEquals(RegionReplicaReplicationEndpoint.class.getName(),
+      // assert peer configuration is correct
+      peerConfig = admin.getReplicationPeerConfig(peerId);
+      assertNotNull(peerConfig);
+      assertEquals(peerConfig.getClusterKey(),
+        ZKConfig.getZooKeeperClusterKey(HTU.getConfiguration()));
+      assertEquals(RegionReplicaReplicationEndpoint.class.getName(),
         peerConfig.getReplicationEndpointImpl());
-    admin.close();
+    }
   }
 
   public void testRegionReplicaReplication(int regionReplication) throws Exception {
@@ -223,10 +224,11 @@ public class TestRegionReplicaReplicationEndpoint {
     // ensure that data is replicated to the secondary region
     TableName tableName = TableName.valueOf("testRegionReplicaReplicationWithReplicas_"
         + regionReplication);
-    HTableDescriptor htd = HTU.createTableDescriptor(TableName.valueOf(tableName.toString()),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
-    htd.setRegionReplication(regionReplication);
+    TableDescriptor htd = HTU
+      .createModifyableTableDescriptor(TableName.valueOf(tableName.toString()),
+        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED)
+      .setRegionReplication(regionReplication).build();
     HTU.getAdmin().createTable(htd);
     TableName tableNameNoReplicas =
         TableName.valueOf("testRegionReplicaReplicationWithReplicas_NO_REPLICAS");
@@ -314,12 +316,10 @@ public class TestRegionReplicaReplicationEndpoint {
   @Test
   public void testRegionReplicaWithoutMemstoreReplication() throws Exception {
     int regionReplication = 3;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor htd = HTU.createTableDescriptor(tableName);
-    htd.setRegionReplication(regionReplication);
-    htd.setRegionMemstoreReplication(false);
+    TableDescriptor htd = HTU.createModifyableTableDescriptor(name.getMethodName())
+      .setRegionReplication(regionReplication).setRegionMemStoreReplication(false).build();
     HTU.getAdmin().createTable(htd);
-
+    final TableName tableName = htd.getTableName();
     Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
     Table table = connection.getTable(tableName);
     try {
@@ -350,11 +350,10 @@ public class TestRegionReplicaReplicationEndpoint {
     // does not test whether the replicas actually pick up flushed files and apply compaction
     // to their stores
     int regionReplication = 3;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor htd = HTU.createTableDescriptor(tableName);
-    htd.setRegionReplication(regionReplication);
+    TableDescriptor htd = HTU.createModifyableTableDescriptor(name.getMethodName())
+      .setRegionReplication(regionReplication).build();
     HTU.getAdmin().createTable(htd);
-
+    final TableName tableName = htd.getTableName();
 
     Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
     Table table = connection.getTable(tableName);
@@ -397,25 +396,27 @@ public class TestRegionReplicaReplicationEndpoint {
     // tests having edits from a disabled or dropped table is handled correctly by skipping those
     // entries and further edits after the edits from dropped/disabled table can be replicated
     // without problems.
-    final TableName tableName = TableName.valueOf(
-      name.getMethodName() + "_drop_" + dropTable + "_disabledReplication_" + disableReplication);
-    HTableDescriptor htd = HTU.createTableDescriptor(tableName);
     int regionReplication = 3;
-    htd.setRegionReplication(regionReplication);
+    TableDescriptor htd = HTU
+      .createModifyableTableDescriptor(
+        name.getMethodName() + "_drop_" + dropTable + "_disabledReplication_" + disableReplication)
+      .setRegionReplication(regionReplication).build();
+    final TableName tableName = htd.getTableName();
     HTU.deleteTableIfAny(tableName);
 
     HTU.getAdmin().createTable(htd);
     TableName toBeDisabledTable = TableName.valueOf(
       dropTable ? "droppedTable" : (disableReplication ? "disableReplication" : "disabledTable"));
     HTU.deleteTableIfAny(toBeDisabledTable);
-    htd = HTU.createTableDescriptor(TableName.valueOf(toBeDisabledTable.toString()),
-      HColumnDescriptor.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      HColumnDescriptor.DEFAULT_KEEP_DELETED);
-    htd.setRegionReplication(regionReplication);
+    htd = HTU
+      .createModifyableTableDescriptor(toBeDisabledTable,
+        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED)
+      .setRegionReplication(regionReplication).build();
     HTU.getAdmin().createTable(htd);
 
     // both tables are created, now pause replication
-    HTU.getAdmin().disableReplicationPeer(ServerRegionReplicaUtil.getReplicationPeerId());
+    HTU.getAdmin().disableReplicationPeer(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
 
     // now that the replication is disabled, write to the table to be dropped, then drop the table.
 
@@ -439,7 +440,8 @@ public class TestRegionReplicaReplicationEndpoint {
     if (dropTable) {
       HTU.getAdmin().deleteTable(toBeDisabledTable);
     } else if (disableReplication) {
-      htd.setRegionReplication(regionReplication - 2);
+      htd =
+        TableDescriptorBuilder.newBuilder(htd).setRegionReplication(regionReplication - 2).build();
       HTU.getAdmin().modifyTable(htd);
       HTU.getAdmin().enableTable(toBeDisabledTable);
     }
@@ -448,9 +450,9 @@ public class TestRegionReplicaReplicationEndpoint {
     MetricsSource metrics = mock(MetricsSource.class);
     ReplicationEndpoint.Context ctx =
       new ReplicationEndpoint.Context(rs, HTU.getConfiguration(), HTU.getConfiguration(),
-        HTU.getTestFileSystem(), ServerRegionReplicaUtil.getReplicationPeerId(),
+        HTU.getTestFileSystem(), ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER,
         UUID.fromString(rs.getClusterId()), rs.getReplicationSourceService().getReplicationPeers()
-          .getPeer(ServerRegionReplicaUtil.getReplicationPeerId()),
+          .getPeer(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER),
         metrics, rs.getTableDescriptors(), rs);
     RegionReplicaReplicationEndpoint rrpe = new RegionReplicaReplicationEndpoint();
     rrpe.init(ctx);
@@ -463,7 +465,7 @@ public class TestRegionReplicaReplicationEndpoint {
     if (disableReplication) {
       // enable replication again so that we can verify replication
       HTU.getAdmin().disableTable(toBeDisabledTable); // disable the table
-      htd.setRegionReplication(regionReplication);
+      htd = TableDescriptorBuilder.newBuilder(htd).setRegionReplication(regionReplication).build();
       HTU.getAdmin().modifyTable(htd);
       HTU.getAdmin().enableTable(toBeDisabledTable);
     }
@@ -474,7 +476,7 @@ public class TestRegionReplicaReplicationEndpoint {
       HTU.loadNumericRows(table, HBaseTestingUtility.fam1, 0, 1000);
 
       // now enable the replication
-      HTU.getAdmin().enableReplicationPeer(ServerRegionReplicaUtil.getReplicationPeerId());
+      HTU.getAdmin().enableReplicationPeer(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
 
       verifyReplication(tableName, regionReplication, 0, 1000);
     } finally {

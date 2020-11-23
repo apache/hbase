@@ -63,8 +63,9 @@ public class TestFlushFromClient {
     Bytes.toBytes("1"),
     Bytes.toBytes("4"),
     Bytes.toBytes("8"));
-  private static final byte[] FAMILY = Bytes.toBytes("f1");
-
+  private static final byte[] FAMILY_1 = Bytes.toBytes("f1");
+  private static final byte[] FAMILY_2 = Bytes.toBytes("f2");
+  public static final byte[][] FAMILIES = {FAMILY_1, FAMILY_2};
   @Rule
   public TestName name = new TestName();
 
@@ -85,11 +86,14 @@ public class TestFlushFromClient {
   @Before
   public void setUp() throws Exception {
     tableName = TableName.valueOf(name.getMethodName());
-    try (Table t = TEST_UTIL.createTable(tableName, FAMILY, SPLITS)) {
+    try (Table t = TEST_UTIL.createTable(tableName, FAMILIES, SPLITS)) {
       List<Put> puts = ROWS.stream().map(r -> new Put(r)).collect(Collectors.toList());
       for (int i = 0; i != 20; ++i) {
         byte[] value = Bytes.toBytes(i);
-        puts.forEach(p -> p.addColumn(FAMILY, value, value));
+        puts.forEach(p -> {
+          p.addColumn(FAMILY_1, value, value);
+          p.addColumn(FAMILY_2, value, value);
+        });
       }
       t.put(puts);
     }
@@ -114,10 +118,29 @@ public class TestFlushFromClient {
   }
 
   @Test
+  public void testFlushTableFamily() throws Exception {
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      long sizeBeforeFlush = getRegionInfo().get(0).getMemStoreDataSize();
+      admin.flush(tableName, FAMILY_1);
+      assertFalse(getRegionInfo().stream().
+        anyMatch(r -> r.getMemStoreDataSize() != sizeBeforeFlush / 2));
+    }
+  }
+
+  @Test
   public void testAsyncFlushTable() throws Exception {
     AsyncAdmin admin = asyncConn.getAdmin();
     admin.flush(tableName).get();
     assertFalse(getRegionInfo().stream().anyMatch(r -> r.getMemStoreDataSize() != 0));
+  }
+
+  @Test
+  public void testAsyncFlushTableFamily() throws Exception {
+    AsyncAdmin admin = asyncConn.getAdmin();
+    long sizeBeforeFlush = getRegionInfo().get(0).getMemStoreDataSize();
+    admin.flush(tableName, FAMILY_1).get();
+    assertFalse(getRegionInfo().stream().
+      anyMatch(r -> r.getMemStoreDataSize() != sizeBeforeFlush / 2));
   }
 
   @Test
@@ -132,12 +155,35 @@ public class TestFlushFromClient {
   }
 
   @Test
+  public void testFlushRegionFamily() throws Exception {
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      for (HRegion r : getRegionInfo()) {
+        long sizeBeforeFlush = r.getMemStoreDataSize();
+        admin.flushRegion(r.getRegionInfo().getRegionName(), FAMILY_1);
+        TimeUnit.SECONDS.sleep(1);
+        assertEquals(sizeBeforeFlush / 2, r.getMemStoreDataSize());
+      }
+    }
+  }
+
+  @Test
   public void testAsyncFlushRegion() throws Exception {
     AsyncAdmin admin = asyncConn.getAdmin();
     for (HRegion r : getRegionInfo()) {
       admin.flushRegion(r.getRegionInfo().getRegionName()).get();
       TimeUnit.SECONDS.sleep(1);
       assertEquals(0, r.getMemStoreDataSize());
+    }
+  }
+
+  @Test
+  public void testAsyncFlushRegionFamily() throws Exception {
+    AsyncAdmin admin = asyncConn.getAdmin();
+    for (HRegion r : getRegionInfo()) {
+      long sizeBeforeFlush = r.getMemStoreDataSize();
+      admin.flushRegion(r.getRegionInfo().getRegionName(), FAMILY_1).get();
+      TimeUnit.SECONDS.sleep(1);
+      assertEquals(sizeBeforeFlush / 2, r.getMemStoreDataSize());
     }
   }
 
@@ -167,11 +213,7 @@ public class TestFlushFromClient {
   }
 
   private List<HRegion> getRegionInfo() {
-    return TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
-      .map(JVMClusterUtil.RegionServerThread::getRegionServer)
-      .flatMap(r -> r.getRegions().stream())
-      .filter(r -> r.getTableDescriptor().getTableName().equals(tableName))
-      .collect(Collectors.toList());
+    return TEST_UTIL.getHBaseCluster().getRegions(tableName);
   }
 
   private List<HRegion> getRegionInfo(HRegionServer rs) {

@@ -139,19 +139,23 @@ public final class FutureUtils {
     error.setStackTrace(newStackTrace);
   }
 
-  private static IOException rethrow(ExecutionException error) throws IOException {
-    Throwable cause = error.getCause();
-    if (cause instanceof IOException) {
-      setStackTrace(cause);
-      throw (IOException) cause;
-    } else if (cause instanceof RuntimeException) {
-      setStackTrace(cause);
-      throw (RuntimeException) cause;
-    } else if (cause instanceof Error) {
-      setStackTrace(cause);
-      throw (Error) cause;
+  /**
+   * If we could propagate the given {@code error} directly, we will fill the stack trace with the
+   * current thread's stack trace so it is easier to trace where is the exception thrown. If not, we
+   * will just create a new IOException and then throw it.
+   */
+  public static IOException rethrow(Throwable error) throws IOException {
+    if (error instanceof IOException) {
+      setStackTrace(error);
+      throw (IOException) error;
+    } else if (error instanceof RuntimeException) {
+      setStackTrace(error);
+      throw (RuntimeException) error;
+    } else if (error instanceof Error) {
+      setStackTrace(error);
+      throw (Error) error;
     } else {
-      throw new IOException(cause);
+      throw new IOException(error);
     }
   }
 
@@ -165,7 +169,7 @@ public final class FutureUtils {
     } catch (InterruptedException e) {
       throw (IOException) new InterruptedIOException().initCause(e);
     } catch (ExecutionException e) {
-      throw rethrow(e);
+      throw rethrow(e.getCause());
     }
   }
 
@@ -179,7 +183,7 @@ public final class FutureUtils {
     } catch (InterruptedException e) {
       throw (IOException) new InterruptedIOException().initCause(e);
     } catch (ExecutionException e) {
-      throw rethrow(e);
+      throw rethrow(e.getCause());
     } catch (TimeoutException e) {
       throw new TimeoutIOException(e);
     }

@@ -55,9 +55,9 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -126,8 +126,8 @@ public class TestWALObserver {
     Path hbaseWALRootDir = TEST_UTIL.getDFSCluster().getFileSystem()
             .makeQualified(new Path("/hbaseLogRoot"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
-    FSUtils.setRootDir(conf, hbaseRootDir);
-    FSUtils.setWALRootDir(conf, hbaseWALRootDir);
+    CommonFSUtils.setRootDir(conf, hbaseRootDir);
+    CommonFSUtils.setWALRootDir(conf, hbaseWALRootDir);
   }
 
   @AfterClass
@@ -140,8 +140,8 @@ public class TestWALObserver {
     this.conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     // this.cluster = TEST_UTIL.getDFSCluster();
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    this.hbaseRootDir = FSUtils.getRootDir(conf);
-    this.hbaseWALRootDir = FSUtils.getWALRootDir(conf);
+    this.hbaseRootDir = CommonFSUtils.getRootDir(conf);
+    this.hbaseWALRootDir = CommonFSUtils.getWALRootDir(conf);
     this.oldLogDir = new Path(this.hbaseWALRootDir,
         HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName = ServerName.valueOf(currentTest.getMethodName(), 16010,
@@ -318,8 +318,7 @@ public class TestWALObserver {
     // createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
 
-    final Path basedir =
-        FSUtils.getTableDir(this.hbaseRootDir, tableName);
+    final Path basedir = CommonFSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
     fs.mkdirs(new Path(basedir, hri.getEncodedName()));
 

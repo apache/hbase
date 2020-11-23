@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -137,7 +136,7 @@ public class BaseTestHBaseFsck {
    * @param metaRow  if true remove region's row from META
    * @param hdfs if true remove region's dir in HDFS
    */
-  protected void deleteRegion(Configuration conf, final HTableDescriptor htd,
+  protected void deleteRegion(Configuration conf, final TableDescriptor htd,
       byte[] startKey, byte[] endKey, boolean unassign, boolean metaRow,
       boolean hdfs) throws IOException, InterruptedException {
     deleteRegion(conf, htd, startKey, endKey, unassign, metaRow, hdfs, false,
@@ -152,7 +151,7 @@ public class BaseTestHBaseFsck {
    * @param regionInfoOnly if true remove a region dir's .regioninfo file
    * @param replicaId replica id
    */
-  protected void deleteRegion(Configuration conf, final HTableDescriptor htd,
+  protected void deleteRegion(Configuration conf, final TableDescriptor htd,
       byte[] startKey, byte[] endKey, boolean unassign, boolean metaRow,
       boolean hdfs, boolean regionInfoOnly, int replicaId)
           throws IOException, InterruptedException {
@@ -181,9 +180,9 @@ public class BaseTestHBaseFsck {
 
         if (regionInfoOnly) {
           LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
-          Path rootDir = FSUtils.getRootDir(conf);
+          Path rootDir = CommonFSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(FSUtils.getTableDir(rootDir, htd.getTableName()),
+          Path p = new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()),
               hri.getEncodedName());
           Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
           fs.delete(hriPath, true);
@@ -191,9 +190,9 @@ public class BaseTestHBaseFsck {
 
         if (hdfs) {
           LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
-          Path rootDir = FSUtils.getRootDir(conf);
+          Path rootDir = CommonFSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(FSUtils.getTableDir(rootDir, htd.getTableName()),
+          Path p = new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()),
               hri.getEncodedName());
           HBaseFsck.debugLsr(conf, p);
           boolean success = fs.delete(p, true);
@@ -342,9 +341,9 @@ public class BaseTestHBaseFsck {
   }
 
   public void deleteTableDir(TableName table) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
+    Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
-    Path p = FSUtils.getTableDir(rootDir, table);
+    Path p = CommonFSUtils.getTableDir(rootDir, table);
     HBaseFsck.debugLsr(conf, p);
     boolean success = fs.delete(p, true);
     LOG.info("Deleted " + p + " sucessfully? " + success);
@@ -359,7 +358,7 @@ public class BaseTestHBaseFsck {
    * @throws IOException
    */
   Path getFlushedHFile(FileSystem fs, TableName table) throws IOException {
-    Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+    Path tableDir= CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), table);
     Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
     Path famDir = new Path(regionDir, FAM_STR);
 
@@ -552,7 +551,7 @@ public class BaseTestHBaseFsck {
 
     if (regionInfoOnly) {
       LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
           hri.getEncodedName());
@@ -562,7 +561,7 @@ public class BaseTestHBaseFsck {
 
     if (hdfs) {
       LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
           hri.getEncodedName());

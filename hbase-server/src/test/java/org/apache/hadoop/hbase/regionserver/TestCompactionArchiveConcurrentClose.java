@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -43,7 +44,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.After;
 import org.junit.Before;
@@ -77,7 +78,7 @@ public class TestCompactionArchiveConcurrentClose {
   public void setup() throws Exception {
     testUtil = new HBaseTestingUtility();
     testDir = testUtil.getDataTestDir("TestStoreFileRefresherChore");
-    FSUtils.setRootDir(testUtil.getConfiguration(), testDir);
+    CommonFSUtils.setRootDir(testUtil.getConfiguration(), testDir);
   }
 
   @After
@@ -167,13 +168,14 @@ public class TestCompactionArchiveConcurrentClose {
 
   private HRegion initHRegion(TableDescriptor htd, RegionInfo info) throws IOException {
     Configuration conf = testUtil.getConfiguration();
-    Path tableDir = FSUtils.getTableDir(testDir, htd.getTableName());
+    Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
 
     HRegionFileSystem fs =
         new WaitingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
-    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
+      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, tableDir);
+    CommonFSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, "log_" + info.getEncodedName());
     HRegion region = new HRegion(fs, wals.getWAL(info), conf, htd, null);
 

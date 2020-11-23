@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,17 +27,20 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
-import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -53,7 +56,6 @@ import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
@@ -121,9 +123,9 @@ public interface MasterServices extends Server {
   MasterQuotaManager getMasterQuotaManager();
 
   /**
-   * @return Master's instance of {@link RegionNormalizer}
+   * @return Master's instance of {@link RegionNormalizerManager}
    */
-  RegionNormalizer getRegionNormalizer();
+  RegionNormalizerManager getRegionNormalizerManager();
 
   /**
    * @return Master's instance of {@link CatalogJanitor}
@@ -326,16 +328,14 @@ public interface MasterServices extends Server {
 
   /**
    * Registers a new protocol buffer {@link Service} subclass as a master coprocessor endpoint.
-   *
-   * <p>
-   * Only a single instance may be registered for a given {@link Service} subclass (the
-   * instances are keyed on {@link com.google.protobuf.Descriptors.ServiceDescriptor#getFullName()}.
-   * After the first registration, subsequent calls with the same service name will fail with
-   * a return value of {@code false}.
-   * </p>
+   * <p/>
+   * Only a single instance may be registered for a given {@link Service} subclass (the instances
+   * are keyed on
+   * {@link org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor#getFullName()}.
+   * After the first registration, subsequent calls with the same service name will fail with a
+   * return value of {@code false}.
    * @param instance the {@code Service} subclass instance to expose as a coprocessor endpoint
-   * @return {@code true} if the registration was successful, {@code false}
-   * otherwise
+   * @return {@code true} if the registration was successful, {@code false} otherwise
    */
   boolean registerService(Service instance);
 
@@ -354,6 +354,13 @@ public interface MasterServices extends Server {
    * @throws IOException if the inquiry failed due to an IO problem
    */
   boolean isInMaintenanceMode();
+
+  /**
+   * Checks master state before initiating action over region topology.
+   * @param action the name of the action under consideration, for logging.
+   * @return {@code true} when the caller should exit early, {@code false} otherwise.
+   */
+  boolean skipRegionManagementAction(final String action);
 
   /**
    * Abort a procedure.
@@ -554,4 +561,21 @@ public interface MasterServices extends Server {
    * @return The state of the load balancer, or false if the load balancer isn't defined.
    */
   boolean isBalancerOn();
+
+  /**
+   * Perform normalization of cluster.
+   * @param ntfp Selection criteria for identifying which tables to normalize.
+   * @param isHighPriority {@code true} when these requested tables should skip to the front of
+   *   the queue.
+   * @return {@code true} when the request was submitted, {@code false} otherwise.
+   */
+  boolean normalizeRegions(
+    final NormalizeTableFilterParams ntfp, final boolean isHighPriority) throws IOException;
+
+  /**
+   * Get the meta location syncer.
+   * <p/>
+   * We need to get this in MTP to tell the syncer the new meta replica count.
+   */
+  MetaLocationSyncer getMetaLocationSyncer();
 }

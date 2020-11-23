@@ -141,7 +141,7 @@ public class TestSplitWalDataLoss {
     long oldestSeqIdOfStore = region.getOldestSeqIdOfStore(family);
     LOG.info("CHANGE OLDEST " + oldestSeqIdOfStore);
     assertTrue(oldestSeqIdOfStore > HConstants.NO_SEQNUM);
-    rs.getMemStoreFlusher().requestFlush(spiedRegion, false, FlushLifeCycleTracker.DUMMY);
+    rs.getMemStoreFlusher().requestFlush(spiedRegion, FlushLifeCycleTracker.DUMMY);
     synchronized (flushed) {
       while (!flushed.booleanValue()) {
         flushed.wait();

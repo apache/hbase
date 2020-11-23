@@ -238,10 +238,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>${compat.module}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-shell</artifactId>
     </dependency>
     <dependency>
@@ -321,6 +317,27 @@
       <groupId>com.sun.xml.ws</groupId>
       <artifactId>jaxws-ri</artifactId>
       <type>pom</type>
+    </dependency>
+    <!--
+      Include the log framework here.
+      For other sub modules, we only declare slf4j-api as a compile dependency,
+      so here we must pull in the real logging framework to actually log to log4j.
+    -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jul-to-slf4j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
     </dependency>
   </dependencies>
 </project>

@@ -23,12 +23,16 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Slow/Large Log Query Filter with all filter and limit parameters
- * Used by Admin API: getSlowLogResponses
+ * Extends generic LogRequest used by Admin API getLogEntries
+ * @deprecated as of 2.4.0. Will be removed in 4.0.0.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+@Deprecated
 public class LogQueryFilter {
 
   private String regionName;
@@ -37,10 +41,16 @@ public class LogQueryFilter {
   private String userName;
   private int limit = 10;
   private Type type = Type.SLOW_LOG;
+  private FilterByOperator filterByOperator = FilterByOperator.OR;
 
   public enum Type {
     SLOW_LOG,
     LARGE_LOG
+  }
+
+  public enum FilterByOperator {
+    AND,
+    OR
   }
 
   public String getRegionName() {
@@ -91,6 +101,14 @@ public class LogQueryFilter {
     this.type = type;
   }
 
+  public FilterByOperator getFilterByOperator() {
+    return filterByOperator;
+  }
+
+  public void setFilterByOperator(FilterByOperator filterByOperator) {
+    this.filterByOperator = filterByOperator;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -110,6 +128,7 @@ public class LogQueryFilter {
       .append(tableName, that.tableName)
       .append(userName, that.userName)
       .append(type, that.type)
+      .append(filterByOperator, that.filterByOperator)
       .isEquals();
   }
 
@@ -122,6 +141,7 @@ public class LogQueryFilter {
       .append(userName)
       .append(limit)
       .append(type)
+      .append(filterByOperator)
       .toHashCode();
   }
 
@@ -134,6 +154,8 @@ public class LogQueryFilter {
       .append("userName", userName)
       .append("limit", limit)
       .append("type", type)
+      .append("filterByOperator", filterByOperator)
       .toString();
   }
+
 }

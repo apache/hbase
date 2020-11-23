@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -175,14 +174,9 @@ public class TestSerialReplicationEndpoint {
     }
 
     @Override
-    public synchronized List<ServerName> getRegionServers() {
+    public synchronized int getNumSinks() {
       // Return multiple server names for endpoint parallel replication.
-      return new ArrayList<>(
-          ImmutableList.of(ServerName.valueOf("www.example.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example2.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example3.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example4.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example4.com", 12016, 1525245876026L)));
+      return 10;
     }
   }
 }

@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -45,6 +44,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
@@ -109,7 +109,7 @@ public class TestSerialReplicationChecker {
   public void setUp() throws IOException {
     ReplicationSource source = mock(ReplicationSource.class);
     when(source.getPeerId()).thenReturn(PEER_ID);
-    when(source.getQueueStorage()).thenReturn(QUEUE_STORAGE);
+    when(source.getReplicationQueueStorage()).thenReturn(QUEUE_STORAGE);
     conn = mock(Connection.class);
     when(conn.isClosed()).thenReturn(false);
     doAnswer(new Answer<Table>() {
@@ -181,7 +181,8 @@ public class TestSerialReplicationChecker {
   private void addParents(RegionInfo region, List<RegionInfo> parents) throws IOException {
     Put put = new Put(region.getRegionName(), EnvironmentEdgeManager.currentTime());
     put.addColumn(HConstants.REPLICATION_BARRIER_FAMILY,
-      MetaTableAccessor.REPLICATION_PARENT_QUALIFIER, MetaTableAccessor.getParentsBytes(parents));
+      ReplicationBarrierFamilyFormat.REPLICATION_PARENT_QUALIFIER,
+      ReplicationBarrierFamilyFormat.getParentsBytes(parents));
     try (Table table = UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       table.put(put);
     }

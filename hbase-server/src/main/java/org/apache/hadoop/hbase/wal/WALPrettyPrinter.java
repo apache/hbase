@@ -21,11 +21,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,16 +37,16 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
@@ -78,9 +81,17 @@ public class WALPrettyPrinter {
   private boolean outputJSON;
   // The following enable filtering by sequence, region, and row, respectively
   private long sequence;
-  private String table;
+
+  // List of tables for filter
+  private final Set<String> tableSet;
   private String region;
+
+  // exact row which needs to be filtered
   private String row;
+  // prefix of rows which needs to be filtered
+  private String rowPrefix;
+
+  private boolean outputOnlyRowKey;
   // enable in order to output a single list of transactions from several files
   private boolean persistentOutput;
   private boolean firstTxn;
@@ -98,9 +109,11 @@ public class WALPrettyPrinter {
     outputValues = false;
     outputJSON = false;
     sequence = -1;
-    table = null;
+    tableSet = new HashSet<>();
     region = null;
     row = null;
+    rowPrefix = null;
+    outputOnlyRowKey = false;
     persistentOutput = false;
     firstTxn = true;
     out = System.out;
@@ -146,11 +159,11 @@ public class WALPrettyPrinter {
   }
 
   /**
-   * Sets the table filter. Only log entries for this table are printed.
-   * @param table table name to set.
+   * Sets the tables filter. Only log entries for these tables are printed.
+   * @param tablesWithDelimiter table names separated with comma.
    */
-  public void setTableFilter(String table) {
-    this.table = table;
+  public void setTableFilter(String tablesWithDelimiter) {
+    Collections.addAll(tableSet, tablesWithDelimiter.split(","));
   }
   /**
    * sets the region by which output will be filtered
@@ -164,7 +177,7 @@ public class WALPrettyPrinter {
   }
 
   /**
-   * sets the region by which output will be filtered
+   * sets the row key by which output will be filtered
    *
    * @param row
    *          when not null, serves as a filter; only log entries from this row
@@ -172,6 +185,24 @@ public class WALPrettyPrinter {
    */
   public void setRowFilter(String row) {
     this.row = row;
+  }
+
+  /**
+   * sets the rowPrefix key prefix by which output will be filtered
+   *
+   * @param rowPrefix
+   *          when not null, serves as a filter; only log entries with rows
+   *          having this prefix will be printed
+   */
+  public void setRowPrefixFilter(String rowPrefix) {
+    this.rowPrefix = rowPrefix;
+  }
+
+  /**
+   * Option to print the row key only in case you just need the row keys from the WAL
+   */
+  public void setOutputOnlyRowKey() {
+    this.outputOnlyRowKey = true;
   }
 
   /**
@@ -273,7 +304,8 @@ public class WALPrettyPrinter {
         Map<String, Object> txn = key.toStringMap();
         long writeTime = key.getWriteTime();
         // check output filters
-        if (table != null && !((TableName) txn.get("table")).toString().equals(table)) {
+        if (!tableSet.isEmpty() &&
+          !tableSet.contains(txn.get("table").toString())) {
           continue;
         }
         if (sequence >= 0 && ((Long) txn.get("sequence")) != sequence) {
@@ -286,15 +318,12 @@ public class WALPrettyPrinter {
         List<Map<String, Object>> actions = new ArrayList<>();
         for (Cell cell : edit.getCells()) {
           // add atomic operation to txn
-          Map<String, Object> op = new HashMap<>(toStringMap(cell));
-          if (outputValues) {
-            op.put("value", Bytes.toStringBinary(CellUtil.cloneValue(cell)));
+          Map<String, Object> op =
+            new HashMap<>(toStringMap(cell, outputOnlyRowKey, rowPrefix, row, outputValues));
+          if (op.isEmpty()) {
+            continue;
           }
-          // check row output filter
-          if (row == null || ((String) op.get("row")).equals(row)) {
-            actions.add(op);
-          }
-          op.put("total_size_sum", cell.heapSize());
+          actions.add(op);
         }
         if (actions.isEmpty()) {
           continue;
@@ -311,15 +340,19 @@ public class WALPrettyPrinter {
           out.print(GSON.toJson(txn));
         } else {
           // Pretty output, complete with indentation by atomic action
-          out.println(String.format(outputTmpl,
+          if (!outputOnlyRowKey) {
+            out.println(String.format(outputTmpl,
               txn.get("sequence"), txn.get("table"), txn.get("region"), new Date(writeTime)));
+          }
           for (int i = 0; i < actions.size(); i++) {
             Map<String, Object> op = actions.get(i);
-            printCell(out, op, outputValues);
+            printCell(out, op, outputValues, outputOnlyRowKey);
           }
         }
-        out.println("edit heap size: " + entry.getEdit().heapSize());
-        out.println("position: " + log.getPosition());
+        if (!outputOnlyRowKey) {
+          out.println("edit heap size: " + entry.getEdit().heapSize());
+          out.println("position: " + log.getPosition());
+        }
       }
     } finally {
       log.close();
@@ -329,9 +362,17 @@ public class WALPrettyPrinter {
     }
   }
 
-  public static void printCell(PrintStream out, Map<String, Object> op, boolean outputValues) {
-    out.println("row=" + op.get("row") + ", type=" + op.get("type") + ", column=" +
-      op.get("family") + ":" + op.get("qualifier"));
+  public static void printCell(PrintStream out, Map<String, Object> op,
+    boolean outputValues, boolean outputOnlyRowKey) {
+    String rowDetails = "row=" + op.get("row");
+    if (outputOnlyRowKey) {
+      out.println(rowDetails);
+      return;
+    }
+
+    rowDetails += ", column=" + op.get("family") + ":" + op.get("qualifier");
+    rowDetails += ", type=" + op.get("type");
+    out.println(rowDetails);
     if (op.get("tag") != null) {
       out.println("    tag: " + op.get("tag"));
     }
@@ -341,29 +382,50 @@ public class WALPrettyPrinter {
     out.println("cell total size sum: " + op.get("total_size_sum"));
   }
 
-  public static Map<String, Object> toStringMap(Cell cell) {
+  public static Map<String, Object> toStringMap(Cell cell,
+    boolean printRowKeyOnly, String rowPrefix, String row, boolean outputValues) {
     Map<String, Object> stringMap = new HashMap<>();
-    stringMap.put("row",
-        Bytes.toStringBinary(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+    String rowKey = Bytes.toStringBinary(cell.getRowArray(),
+      cell.getRowOffset(), cell.getRowLength());
+    // Row and row prefix are mutually options so both cannot be true at the
+    // same time. We can include checks in the same condition
+    // Check if any of the filters are satisfied by the row, if not return empty map
+    if ((!Strings.isNullOrEmpty(rowPrefix) && !rowKey.startsWith(rowPrefix)) ||
+      (!Strings.isNullOrEmpty(row) && !rowKey.equals(row))) {
+      return stringMap;
+    }
+
+    stringMap.put("row", rowKey);
+    if (printRowKeyOnly) {
+      return stringMap;
+    }
     stringMap.put("type", cell.getType());
     stringMap.put("family", Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(),
-                cell.getFamilyLength()));
+      cell.getFamilyLength()));
     stringMap.put("qualifier",
-        Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
-            cell.getQualifierLength()));
+      Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength()));
     stringMap.put("timestamp", cell.getTimestamp());
     stringMap.put("vlen", cell.getValueLength());
+    stringMap.put("total_size_sum", cell.heapSize());
     if (cell.getTagsLength() > 0) {
       List<String> tagsString = new ArrayList<>();
       Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
       while (tagsIterator.hasNext()) {
         Tag tag = tagsIterator.next();
         tagsString
-            .add((tag.getType()) + ":" + Bytes.toStringBinary(Tag.cloneValue(tag)));
+          .add((tag.getType()) + ":" + Bytes.toStringBinary(Tag.cloneValue(tag)));
       }
       stringMap.put("tag", tagsString);
     }
+    if (outputValues) {
+      stringMap.put("value", Bytes.toStringBinary(CellUtil.cloneValue(cell)));
+    }
     return stringMap;
+  }
+
+  public static Map<String, Object> toStringMap(Cell cell) {
+    return toStringMap(cell, false, null, null, false);
   }
 
   public static void main(String[] args) throws IOException {
@@ -385,12 +447,16 @@ public class WALPrettyPrinter {
     options.addOption("h", "help", false, "Output help message");
     options.addOption("j", "json", false, "Output JSON");
     options.addOption("p", "printvals", false, "Print values");
-    options.addOption("t", "table", true, "Table name to filter by.");
+    options.addOption("t", "tables", true,
+      "Table names (comma separated) to filter by; eg: test1,test2,test3 ");
     options.addOption("r", "region", true,
         "Region to filter by. Pass encoded region name; e.g. '9192caead6a5a20acb4454ffbc79fa14'");
     options.addOption("s", "sequence", true,
         "Sequence to filter by. Pass sequence number.");
+    options.addOption("k", "outputOnlyRowKey", false,
+      "Print only row keys");
     options.addOption("w", "row", true, "Row to filter by. Pass row name.");
+    options.addOption("f", "rowPrefix", true, "Row prefix to filter by.");
     options.addOption("g", "goto", true, "Position to seek to in the file");
 
     WALPrettyPrinter printer = new WALPrettyPrinter();
@@ -411,6 +477,9 @@ public class WALPrettyPrinter {
       if (cmd.hasOption("j")) {
         printer.enableJSON();
       }
+      if (cmd.hasOption("k")) {
+        printer.setOutputOnlyRowKey();
+      }
       if (cmd.hasOption("t")) {
         printer.setTableFilter(cmd.getOptionValue("t"));
       }
@@ -421,7 +490,16 @@ public class WALPrettyPrinter {
         printer.setSequenceFilter(Long.parseLong(cmd.getOptionValue("s")));
       }
       if (cmd.hasOption("w")) {
+        if (cmd.hasOption("f")) {
+          throw new ParseException("Row and Row-prefix cannot be supplied together");
+        }
         printer.setRowFilter(cmd.getOptionValue("w"));
+      }
+      if (cmd.hasOption("f")) {
+        if (cmd.hasOption("w")) {
+          throw new ParseException("Row and Row-prefix cannot be supplied together");
+        }
+        printer.setRowPrefixFilter(cmd.getOptionValue("f"));
       }
       if (cmd.hasOption("g")) {
         printer.setPosition(Long.parseLong(cmd.getOptionValue("g")));
@@ -434,7 +512,7 @@ public class WALPrettyPrinter {
     }
     // get configuration, file system, and process the given files
     Configuration conf = HBaseConfiguration.create();
-    FSUtils.setFsDefault(conf, FSUtils.getRootDir(conf));
+    CommonFSUtils.setFsDefault(conf, CommonFSUtils.getRootDir(conf));
 
     // begin output
     printer.beginPersistentOutput();

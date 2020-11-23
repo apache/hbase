@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ConnectionConfiguration;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -40,13 +41,14 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -73,8 +75,8 @@ public class TestMobStoreScanner {
   protected final byte[] qf3 = Bytes.toBytes("qualifier3");
   private static Table table;
   private static Admin admin;
-  private static ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor familyDescriptor;
-  private static TableDescriptorBuilder.ModifyableTableDescriptor tableDescriptor;
+  private static ColumnFamilyDescriptor familyDescriptor;
+  private static TableDescriptor tableDescriptor;
   private static Random random = new Random();
   private static long defaultThreshold = 10;
   private FileSystem fs;
@@ -99,16 +101,13 @@ public class TestMobStoreScanner {
   public void setUp(long threshold, TableName tn) throws Exception {
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
-    tableDescriptor = new TableDescriptorBuilder.ModifyableTableDescriptor(tn);
-    familyDescriptor = new ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor(family);
-    familyDescriptor.setMobEnabled(true);
-    familyDescriptor.setMobThreshold(threshold);
-    familyDescriptor.setMaxVersions(4);
-    tableDescriptor.setColumnFamily(familyDescriptor);
+    familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true)
+      .setMobThreshold(threshold).setMaxVersions(4).build();
+    tableDescriptor =
+      TableDescriptorBuilder.newBuilder(tn).setColumnFamily(familyDescriptor).build();
     admin = TEST_UTIL.getAdmin();
     admin.createTable(tableDescriptor);
-    table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
-            .getTable(tn);
+    table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration()).getTable(tn);
   }
 
   /**
@@ -406,8 +405,8 @@ public class TestMobStoreScanner {
     FileStatus[] files = fs.listStatus(mobFamilyPath);
 
     // Get the archive path
-    Path rootDir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
-    Path tableDir = FSUtils.getTableDir(rootDir, tn);
+    Path rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration());
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, tn);
     RegionInfo regionInfo = MobUtils.getMobRegionInfo(tn);
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(TEST_UTIL.getConfiguration(),
         regionInfo, tableDir, family);

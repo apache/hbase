@@ -38,7 +38,10 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CheckAndMutate;
+import org.apache.hadoop.hbase.client.CheckAndMutateResult;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -58,6 +61,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.ScanOptions;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -111,6 +115,9 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   final AtomicInteger ctPreCheckAndDeleteWithFilterAfterRowLock = new AtomicInteger(0);
   final AtomicInteger ctPostCheckAndDelete = new AtomicInteger(0);
   final AtomicInteger ctPostCheckAndDeleteWithFilter = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndMutate = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndMutateAfterRowLock = new AtomicInteger(0);
+  final AtomicInteger ctPostCheckAndMutate = new AtomicInteger(0);
   final AtomicInteger ctPreScannerNext = new AtomicInteger(0);
   final AtomicInteger ctPostScannerNext = new AtomicInteger(0);
   final AtomicInteger ctPostScannerFilterRow = new AtomicInteger(0);
@@ -582,6 +589,28 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
+  public CheckAndMutateResult preCheckAndMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    CheckAndMutate checkAndMutate, CheckAndMutateResult result) throws IOException {
+    ctPreCheckAndMutate.incrementAndGet();
+    return RegionObserver.super.preCheckAndMutate(c, checkAndMutate, result);
+  }
+
+  @Override
+  public CheckAndMutateResult preCheckAndMutateAfterRowLock(
+    ObserverContext<RegionCoprocessorEnvironment> c, CheckAndMutate checkAndMutate,
+    CheckAndMutateResult result) throws IOException {
+    ctPreCheckAndMutateAfterRowLock.incrementAndGet();
+    return RegionObserver.super.preCheckAndMutateAfterRowLock(c, checkAndMutate, result);
+  }
+
+  @Override
+  public CheckAndMutateResult postCheckAndMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+    CheckAndMutate checkAndMutate, CheckAndMutateResult result) throws IOException {
+    ctPostCheckAndMutate.incrementAndGet();
+    return RegionObserver.super.postCheckAndMutate(c, checkAndMutate, result);
+  }
+
+  @Override
   public Result preAppendAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
       Append append) throws IOException {
     ctPreAppendAfterRowLock.incrementAndGet();
@@ -686,6 +715,40 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
+  public void preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
+    Store store, ScanOptions options) throws IOException {
+    if (options.getScan().getTimeRange().isAllTime()) {
+      setScanOptions(options);
+    }
+  }
+
+  @Override
+  public void preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+    ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
+    CompactionRequest request) throws IOException {
+    setScanOptions(options);
+  }
+
+  public void preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+    ScanOptions options,FlushLifeCycleTracker tracker) throws IOException {
+    setScanOptions(options);
+  }
+
+  public void preMemStoreCompactionCompactScannerOpen(
+    ObserverContext<RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
+    throws IOException {
+    setScanOptions(options);
+  }
+
+  private void setScanOptions(ScanOptions options) {
+    options.setMaxVersions(TestRegionCoprocessorHost.MAX_VERSIONS);
+    options.setMinVersions(TestRegionCoprocessorHost.MIN_VERSIONS);
+    options.setKeepDeletedCells(KeepDeletedCells.TRUE);
+    options.setTTL(TestRegionCoprocessorHost.TTL);
+  }
+
+
+  @Override
   public void preWALAppend(ObserverContext<RegionCoprocessorEnvironment> ctx,
                                  WALKey key, WALEdit edit) throws IOException {
     ctPreWALAppend.incrementAndGet();
@@ -788,6 +851,18 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
 
   public int getPostCheckAndDeleteWithFilter() {
     return ctPostCheckAndDeleteWithFilter.get();
+  }
+
+  public int getPreCheckAndMutate() {
+    return ctPreCheckAndMutate.get();
+  }
+
+  public int getPreCheckAndMutateAfterRowLock() {
+    return ctPreCheckAndMutateAfterRowLock.get();
+  }
+
+  public int getPostCheckAndMutate() {
+    return ctPostCheckAndMutate.get();
   }
 
   public boolean hadPreIncrement() {

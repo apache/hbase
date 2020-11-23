@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_wait_for_zk_delete;
-import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_final_transition_failed;
-import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_preempt_task;
-import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_acquired;
-import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_done;
-import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_err;
-import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_resigned;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import java.io.IOException;
@@ -42,18 +34,14 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -66,22 +54,19 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -169,85 +154,9 @@ public abstract class AbstractTestDLS {
   @After
   public void after() throws Exception {
     TEST_UTIL.shutdownMiniHBaseCluster();
-    TEST_UTIL.getTestFileSystem().delete(FSUtils.getRootDir(TEST_UTIL.getConfiguration()), true);
+    TEST_UTIL.getTestFileSystem().delete(CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration()),
+      true);
     ZKUtil.deleteNodeRecursively(TEST_UTIL.getZooKeeperWatcher(), "/hbase");
-  }
-
-  @Test
-  public void testRecoveredEdits() throws Exception {
-    conf.setLong("hbase.regionserver.hlog.blocksize", 30 * 1024); // create more than one wal
-    startCluster(NUM_RS);
-
-    int numLogLines = 10000;
-    SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
-    // turn off load balancing to prevent regions from moving around otherwise
-    // they will consume recovered.edits
-    master.balanceSwitch(false);
-    FileSystem fs = master.getMasterFileSystem().getFileSystem();
-
-    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
-
-    Path rootdir = FSUtils.getRootDir(conf);
-
-    int numRegions = 50;
-    try (Table t = installTable(numRegions)) {
-      List<RegionInfo> regions = null;
-      HRegionServer hrs = null;
-      for (int i = 0; i < NUM_RS; i++) {
-        hrs = rsts.get(i).getRegionServer();
-        regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
-        // At least one RS will have >= to average number of regions.
-        if (regions.size() >= numRegions / NUM_RS) {
-          break;
-        }
-      }
-      Path logDir = new Path(rootdir,
-          AbstractFSWALProvider.getWALDirectoryName(hrs.getServerName().toString()));
-
-      LOG.info("#regions = " + regions.size());
-      Iterator<RegionInfo> it = regions.iterator();
-      while (it.hasNext()) {
-        RegionInfo region = it.next();
-        if (region.getTable().getNamespaceAsString()
-            .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
-          it.remove();
-        }
-      }
-
-      makeWAL(hrs, regions, numLogLines, 100);
-
-      slm.splitLogDistributed(logDir);
-
-      int count = 0;
-      for (RegionInfo hri : regions) {
-        @SuppressWarnings("deprecation")
-        Path editsdir = WALSplitUtil
-            .getRegionDirRecoveredEditsDir(FSUtils.getWALRegionDir(conf,
-                tableName, hri.getEncodedName()));
-        LOG.debug("Checking edits dir " + editsdir);
-        FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
-          @Override
-          public boolean accept(Path p) {
-            if (WALSplitUtil.isSequenceIdFile(p)) {
-              return false;
-            }
-            return true;
-          }
-        });
-        LOG.info("Files {}", Arrays.stream(files).map(f -> f.getPath().toString()).
-          collect(Collectors.joining(",")));
-        assertTrue("Edits dir should have more than a one file", files.length > 1);
-        for (int i = 0; i < files.length; i++) {
-          int c = countWAL(files[i].getPath(), fs, conf);
-          count += c;
-        }
-        LOG.info(count + " edits in " + files.length + " recovered edits files.");
-      }
-
-      // check that the log file is moved
-      assertFalse(fs.exists(logDir));
-      assertEquals(numLogLines, count);
-    }
   }
 
   @Test
@@ -300,71 +209,6 @@ public abstract class AbstractTestDLS {
     }
   }
 
-  /**
-   * The original intention of this test was to force an abort of a region server and to make sure
-   * that the failure path in the region servers is properly evaluated. But it is difficult to
-   * ensure that the region server doesn't finish the log splitting before it aborts. Also now,
-   * there is this code path where the master will preempt the region server when master detects
-   * that the region server has aborted.
-   * @throws Exception
-   */
-  // Was marked flaky before Distributed Log Replay cleanup.
-  @Test
-  public void testWorkerAbort() throws Exception {
-    LOG.info("testWorkerAbort");
-    startCluster(3);
-    int numLogLines = 10000;
-    SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
-    FileSystem fs = master.getMasterFileSystem().getFileSystem();
-
-    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
-    HRegionServer hrs = findRSToKill(false);
-    Path rootdir = FSUtils.getRootDir(conf);
-    final Path logDir = new Path(rootdir,
-        AbstractFSWALProvider.getWALDirectoryName(hrs.getServerName().toString()));
-
-    try (Table t = installTable(40)) {
-      makeWAL(hrs, ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices()), numLogLines, 100);
-
-      new Thread() {
-        @Override
-        public void run() {
-          try {
-            waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
-          } catch (InterruptedException e) {
-          }
-          for (RegionServerThread rst : rsts) {
-            rst.getRegionServer().abort("testing");
-            break;
-          }
-        }
-      }.start();
-      FileStatus[] logfiles = fs.listStatus(logDir);
-      TaskBatch batch = new TaskBatch();
-      slm.enqueueSplitTask(logfiles[0].getPath().toString(), batch);
-      // waitForCounter but for one of the 2 counters
-      long curt = System.currentTimeMillis();
-      long waitTime = 80000;
-      long endt = curt + waitTime;
-      while (curt < endt) {
-        if ((tot_wkr_task_resigned.sum() + tot_wkr_task_err.sum() +
-            tot_wkr_final_transition_failed.sum() + tot_wkr_task_done.sum() +
-            tot_wkr_preempt_task.sum()) == 0) {
-          Thread.sleep(100);
-          curt = System.currentTimeMillis();
-        } else {
-          assertTrue(1 <= (tot_wkr_task_resigned.sum() + tot_wkr_task_err.sum() +
-              tot_wkr_final_transition_failed.sum() + tot_wkr_task_done.sum() +
-              tot_wkr_preempt_task.sum()));
-          return;
-        }
-      }
-      fail("none of the following counters went up in " + waitTime + " milliseconds - " +
-          "tot_wkr_task_resigned, tot_wkr_task_err, " +
-          "tot_wkr_final_transition_failed, tot_wkr_task_done, " + "tot_wkr_preempt_task");
-    }
-  }
-
   @Test
   public void testThreeRSAbort() throws Exception {
     LOG.info("testThreeRSAbort");
@@ -408,11 +252,17 @@ public abstract class AbstractTestDLS {
 
   @Test
   public void testDelayedDeleteOnFailure() throws Exception {
+    if (!this.conf.getBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
+        HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+      // This test depends on zk coordination....
+     return;
+    }
     LOG.info("testDelayedDeleteOnFailure");
     startCluster(1);
     final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path rootLogDir = new Path(FSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
+    final Path rootLogDir =
+      new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
     final Path logDir = new Path(rootLogDir, ServerName.valueOf("x", 1, 1).toString());
     fs.mkdirs(logDir);
     ExecutorService executor = null;
@@ -500,8 +350,9 @@ public abstract class AbstractTestDLS {
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     LOG.debug("Verifying only catalog region is assigned\n");
     if (regions.size() != 1) {
-      for (String oregion : regions)
+      for (String oregion : regions) {
         LOG.debug("Region still online: " + oregion);
+      }
     }
     assertEquals(1 + existingRegions, regions.size());
     LOG.debug("Enabling table\n");
