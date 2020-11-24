@@ -183,8 +183,6 @@ public class SplitLogManager {
         Collections.addAll(fileStatus, logfiles);
       }
     }
-    //FileStatus[] a = new FileStatus[fileStatus.size()];
-    //return fileStatus.toArray(a);
 
     return fileStatus;
   }
