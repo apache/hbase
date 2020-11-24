@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.hbase;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Class represents table state on HDFS.

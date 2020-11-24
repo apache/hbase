@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.util.compaction;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import com.google.common.base.Optional;
-import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
