@@ -2444,7 +2444,7 @@ public class MasterRpcServices extends RSRpcServices implements
           final boolean deadInProcess = master.getProcedures().stream().anyMatch(
             p -> (p instanceof ServerCrashProcedure)
               && ((ServerCrashProcedure) p).getServerName().equals(server));
-          if (!deadInProcess) {
+          if (deadInProcess) {
             throw new ServiceException(String.format("Dead server '%s' is not 'dead' in fact...", server));
           }
 
