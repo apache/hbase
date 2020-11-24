@@ -99,8 +99,7 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
 
     assertEquals(POOL_SIZE, poolMap.values().size());
 
-    // pool is filled, get() should return elements round robin order
-    // starting from 1, because the first get was called by runThread()
+    /* pool is filled, get() should return elements round robin order */
     for (int i = 0; i < 2 * POOL_SIZE; i++) {
       String expected = Integer.toString(i % POOL_SIZE);
       assertEquals(expected, poolMap.getOrCreate(key, () -> {
