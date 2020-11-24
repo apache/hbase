@@ -82,8 +82,7 @@ public interface ClusterSchema {
    * @param nonceKey A unique identifier for this operation from the client or process.
    * @param latch A latch to block on for precondition validation
    * @return procedure id
-   * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
-   *    as well as {@link IOException}
+   * @throws IOException
    */
   long createNamespace(NamespaceDescriptor namespaceDescriptor, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
@@ -93,8 +92,7 @@ public interface ClusterSchema {
    * @param nonceKey A unique identifier for this operation from the client or process.
    * @param latch A latch to block on for precondition validation
    * @return procedure id
-   * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
-   *    as well as {@link IOException}
+   * @throws IOException
    */
   long modifyNamespace(NamespaceDescriptor descriptor, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
@@ -105,8 +103,7 @@ public interface ClusterSchema {
    * @param nonceKey A unique identifier for this operation from the client or process.
    * @param latch A latch to block on for precondition validation
    * @return procedure id
-   * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
-   *    as well as {@link IOException}
+   * @throws IOException
    */
   long deleteNamespace(String name, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
@@ -115,8 +112,7 @@ public interface ClusterSchema {
    * Get a Namespace
    * @param name Name of the Namespace
    * @return Namespace descriptor for <code>name</code>
-   * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
-   *    as well as {@link IOException}
+   * @throws IOException
    */
   // No Future here because presumption is that the request will go against cached metadata so
   // return immediately -- no need of running a Procedure.
