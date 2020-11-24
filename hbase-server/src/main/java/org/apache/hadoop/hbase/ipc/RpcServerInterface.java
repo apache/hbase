@@ -79,6 +79,16 @@ public interface RpcServerInterface {
   void addCallSize(long diff);
 
   /**
+   * It was removed in HBASE-24174 and added back in HBASE-25285 for compactibility concern.
+   * NOTICE: implementations should call {@link #refreshAuthManager(Configuration, PolicyProvider)}
+   * for correctness.
+   * @param pp PolicyProvider
+   */
+  @VisibleForTesting
+  @Deprecated
+  void refreshAuthManager(PolicyProvider pp);
+
+  /**
    * Refresh authentication manager policy.
    * @param conf configuration for refresh
    * @param pp

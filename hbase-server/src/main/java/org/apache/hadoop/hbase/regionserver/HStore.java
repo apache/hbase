@@ -1088,6 +1088,14 @@ public class HStore implements Store {
         includesTag, false, -1);
   }
 
+  @Override
+  public StoreFile.Writer createWriterInTmp(long maxKeyCount, Compression.Algorithm compression,
+      boolean isCompaction, boolean includeMVCCReadpoint, boolean includesTags,
+      boolean shouldDropBehind) throws IOException {
+    return createWriterInTmp(maxKeyCount, compression, isCompaction, includeMVCCReadpoint,
+      includesTags, shouldDropBehind, -1);
+  }
+
   /*
    * @param maxKeyCount
    * @param compression Compression algorithm to use
@@ -1102,6 +1110,14 @@ public class HStore implements Store {
       boolean shouldDropBehind, long totalCompactedFilesSize) throws IOException {
     return createWriterInTmp(maxKeyCount, compression, isCompaction, includeMVCCReadpoint,
         includesTag, shouldDropBehind, null, totalCompactedFilesSize);
+  }
+
+  @Override
+  public StoreFile.Writer createWriterInTmp(long maxKeyCount, Compression.Algorithm compression,
+      boolean isCompaction, boolean includeMVCCReadpoint, boolean includesTags,
+      boolean shouldDropBehind, TimeRangeTracker trt) throws IOException {
+    return createWriterInTmp(maxKeyCount, compression, isCompaction, includeMVCCReadpoint,
+      includesTags, shouldDropBehind, trt, -1);
   }
 
   /**

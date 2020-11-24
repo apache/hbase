@@ -2358,6 +2358,14 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   }
 
   @Override
+  public void refreshAuthManager(PolicyProvider pp) {
+    if (authorize) {
+      // It doesn't take effect, because conf is old.
+      refreshAuthManager(conf, pp);
+    }
+  }
+
+  @Override
   public synchronized void refreshAuthManager(Configuration conf, PolicyProvider pp) {
     // Ignore warnings that this should be accessed in a static way instead of via an instance;
     // it'll break if you go via static route.
