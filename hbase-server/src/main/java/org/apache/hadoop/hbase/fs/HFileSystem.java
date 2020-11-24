@@ -85,6 +85,9 @@ public class HFileSystem extends FilterFileSystem {
     // This FS#get(URI, conf) clearly indicates in the javadoc that if the FS is
     // not created it will initialize the FS and return that created FS. If it is
     // already created it will just return the FS that was already created.
+    // We take pains to funnel all of our FileSystem instantiation through this call to ensure
+    // we never need to call FS.initialize ourself so that we do not have to track any state to
+    // avoid calling initialize more than once.
     this.fs = FileSystem.get(getDefaultUri(conf), conf);
     this.useHBaseChecksum = useHBaseChecksum;
 
