@@ -61,12 +61,10 @@ import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.htrace.core.TraceScope;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 
 /**
  * The default implementation of FSWAL.
@@ -204,13 +202,11 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * @param logDir dir where wals are stored
    * @param conf configuration to use
    */
-  @VisibleForTesting
   public FSHLog(final FileSystem fs, final Path root, final String logDir, final Configuration conf)
       throws IOException {
     this(fs, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null);
   }
 
-  @VisibleForTesting
   public FSHLog(final FileSystem fs, Abortable abortable, final Path root, final String logDir,
       final Configuration conf) throws IOException {
     this(fs, abortable, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null,
@@ -282,7 +278,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * removed.
    * @return null if underlying stream is not ready.
    */
-  @VisibleForTesting
   OutputStream getOutputStream() {
     FSDataOutputStream fsdos = this.hdfs_out;
     return fsdos != null ? fsdos.getWrappedStream() : null;
@@ -320,14 +315,12 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * Used to manufacture race condition reliably. For testing only.
    * @see #beforeWaitOnSafePoint()
    */
-  @VisibleForTesting
   protected void afterCreatingZigZagLatch() {
   }
 
   /**
    * @see #afterCreatingZigZagLatch()
    */
-  @VisibleForTesting
   protected void beforeWaitOnSafePoint() {
   };
 
@@ -772,7 +765,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return logRollNeeded;
   }
 
-  @VisibleForTesting
   protected long getSequenceOnRingBuffer() {
     return this.disruptor.getRingBuffer().next();
   }
@@ -782,7 +774,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return publishSyncOnRingBuffer(sequence, forceSync);
   }
 
-  @VisibleForTesting
   protected SyncFuture publishSyncOnRingBuffer(long sequence, boolean forceSync) {
     // here we use ring buffer sequence as transaction id
     SyncFuture syncFuture = getSyncFuture(sequence, forceSync);
@@ -809,7 +800,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * patch.
    */
   @Override
-  @VisibleForTesting
   int getLogReplication() {
     try {
       // in standalone mode, it will return 0
@@ -850,7 +840,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
   }
 
-  @VisibleForTesting
   boolean isLowReplicationRollEnabled() {
     return lowReplicationRollEnabled;
   }
@@ -1206,12 +1195,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return new DatanodeInfo[0];
   }
 
-  @VisibleForTesting
   Writer getWriter() {
     return this.writer;
   }
 
-  @VisibleForTesting
   void setWriter(Writer writer) {
     this.writer = writer;
   }

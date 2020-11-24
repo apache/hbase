@@ -29,12 +29,11 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
  * Region Server Quota Manager.
@@ -83,7 +82,6 @@ public class RegionServerRpcQuotaManager {
     }
   }
 
-  @VisibleForTesting
   protected boolean isRpcThrottleEnabled() {
     return rpcThrottleEnabled;
   }
@@ -108,7 +106,6 @@ public class RegionServerRpcQuotaManager {
     }
   }
 
-  @VisibleForTesting
   QuotaCache getQuotaCache() {
     return quotaCache;
   }

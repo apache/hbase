@@ -34,17 +34,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.monitoring.ThreadMonitoring;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a generic executor service. This component abstracts a
@@ -85,7 +83,6 @@ public class ExecutorService {
    * started with the same name, this throws a RuntimeException.
    * @param name Name of the service to start.
    */
-  @VisibleForTesting
   public void startExecutorService(String name, int maxThreads) {
     if (this.executorMap.get(name) != null) {
       throw new RuntimeException("An executor service with the name " + name +
@@ -126,7 +123,6 @@ public class ExecutorService {
     return executor;
   }
 
-  @VisibleForTesting
   public ThreadPoolExecutor getExecutorThreadPool(final ExecutorType type) {
     return getExecutor(type).getThreadPoolExecutor();
   }

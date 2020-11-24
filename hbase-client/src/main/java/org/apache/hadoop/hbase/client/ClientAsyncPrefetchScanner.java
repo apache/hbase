@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * ClientAsyncPrefetchScanner implements async scanner behaviour.
@@ -70,7 +69,6 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
     Threads.setDaemonThreadRunning(new Thread(new PrefetchRunnable()), name + ".asyncPrefetcher");
   }
 
-  @VisibleForTesting
   void setPrefetchListener(Consumer<Boolean> prefetchListener) {
     this.prefetchListener = prefetchListener;
   }

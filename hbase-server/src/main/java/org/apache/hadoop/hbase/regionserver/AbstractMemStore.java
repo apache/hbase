@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
@@ -377,12 +376,10 @@ public abstract class AbstractMemStore implements MemStore {
     return comparator;
   }
 
-  @VisibleForTesting
   MutableSegment getActive() {
     return active;
   }
 
-  @VisibleForTesting
   ImmutableSegment getSnapshot() {
     return snapshot;
   }

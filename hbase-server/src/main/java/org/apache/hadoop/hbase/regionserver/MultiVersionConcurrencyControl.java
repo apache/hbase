@@ -18,19 +18,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
-import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects.ToStringHelper;
-
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects.ToStringHelper;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
-
 
 /**
  * Manages the read/write consistency. This provides an interface for readers to determine what
@@ -251,7 +248,6 @@ public class MultiVersionConcurrencyControl {
     }
   }
 
-  @VisibleForTesting
   @Override
   public String toString() {
     ToStringHelper helper = MoreObjects.toStringHelper(this).add("readPoint", readPoint)
@@ -266,7 +262,6 @@ public class MultiVersionConcurrencyControl {
     return readPoint.get();
   }
 
-  @VisibleForTesting
   public long getWritePoint() {
     return writePoint.get();
   }

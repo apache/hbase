@@ -27,8 +27,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Used to receive new wals.
  */
@@ -65,7 +63,6 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
    * @param logKey Key that may get scoped according to its edits
    * @param logEdit Edits used to lookup the scopes
    */
-  @VisibleForTesting
   static void scopeWALEdits(WALKey logKey, WALEdit logEdit, Configuration conf) {
     // For bulk load replication we need meta family to know the file we want to replicate.
     if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {

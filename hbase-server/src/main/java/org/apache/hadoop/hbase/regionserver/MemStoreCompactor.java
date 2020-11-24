@@ -32,8 +32,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * The ongoing MemStore Compaction manager, dispatches a solo running compaction and interrupts
  * the compaction if requested. The compaction is interrupted and stopped by CompactingMemStore,
@@ -242,7 +240,6 @@ public class MemStoreCompactor {
     return result;
   }
 
-  @VisibleForTesting
   void initiateCompactionStrategy(MemoryCompactionPolicy compType,
       Configuration configuration, String cfName) throws IllegalArgumentIOException {
 

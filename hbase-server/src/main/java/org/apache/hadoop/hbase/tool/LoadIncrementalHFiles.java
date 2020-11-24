@@ -97,17 +97,15 @@ import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimaps;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tool to load the output of HFileOutputFormat into an existing table.
@@ -485,7 +483,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * <p>
    * protected for testing.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void bulkLoadPhase(Table table, Connection conn, ExecutorService pool,
       Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
       boolean copyFile, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
@@ -538,7 +536,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected ClientServiceCallable<byte[]> buildClientServiceCallable(Connection conn,
       TableName tableName, byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile) {
     List<Pair<byte[], String>> famPaths =
@@ -730,7 +728,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * protected for testing
    * @throws IOException if an IO failure is encountered
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected Pair<List<LoadQueueItem>, String> groupOrSplit(
       Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item, final Table table,
       final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
@@ -810,7 +808,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * @deprecated as of release 2.3.0. Use {@link BulkLoadHFiles} instead.
    */
   @Deprecated
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected List<LoadQueueItem> tryAtomicRegionLoad(final Connection conn,
     final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis,
     boolean copyFile) throws IOException {
@@ -831,7 +829,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * @deprecated as of release 2.3.0. Use {@link BulkLoadHFiles} instead.
    */
   @Deprecated
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected List<LoadQueueItem> tryAtomicRegionLoad(ClientServiceCallable<byte[]> serviceCallable,
     final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis)
     throws IOException {
@@ -1113,7 +1111,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * Split a storefile into a top and bottom half, maintaining the metadata, recreating bloom
    * filters, etc.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void splitStoreFile(Configuration conf, Path inFile, ColumnFamilyDescriptor familyDesc,
       byte[] splitKey, Path bottomOut, Path topOut) throws IOException {
     // Open reader with no block cache, and not in-memory

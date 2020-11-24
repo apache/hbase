@@ -37,12 +37,10 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * <p>
@@ -388,7 +386,7 @@ public class ReplicationAdmin implements Closeable {
   /**
    * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#listReplicationPeers()} instead
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   @Deprecated
   List<ReplicationPeerDescription> listReplicationPeers() throws IOException {
     return admin.listReplicationPeers();

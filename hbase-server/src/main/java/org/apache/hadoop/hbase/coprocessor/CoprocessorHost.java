@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.SortedList;
 
@@ -253,7 +252,6 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
   }
 
-  @VisibleForTesting
   public void load(Class<? extends C> implClass, int priority, Configuration conf)
       throws IOException {
     E env = checkAndLoadInstance(implClass, priority, conf);
@@ -325,7 +323,6 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     return null;
   }
 
-  @VisibleForTesting
   public <T extends C> T findCoprocessor(Class<T> cls) {
     for (E env: coprocEnvironments) {
       if (cls.isAssignableFrom(env.getInstance().getClass())) {
@@ -360,7 +357,6 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
    * @param className the class name
    * @return the coprocessor, or null if not found
    */
-  @VisibleForTesting
   public E findCoprocessorEnvironment(String className) {
     for (E env: coprocEnvironments) {
       if (env.getInstance().getClass().getName().equals(className) ||

@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A curated subset of services provided by {@link HMaster}.
@@ -138,7 +137,6 @@ public interface MasterServices extends Server {
   /**
    * @return Tripped when Master has finished initialization.
    */
-  @VisibleForTesting
   public ProcedureEvent<?> getInitializedEvent();
 
   /**

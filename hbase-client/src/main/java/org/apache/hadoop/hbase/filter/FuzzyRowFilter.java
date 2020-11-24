@@ -37,8 +37,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * This is optimized version of a standard FuzzyRowFilter Filters data based on fuzzy row key.
  * Performs fast-forwards during scanning. It takes pairs (row key, fuzzy info) to match row keys.
@@ -99,7 +97,6 @@ public class FuzzyRowFilter extends FilterBase {
     this.fuzzyKeysData = fuzzyKeyDataCopy;
     this.tracker = new RowTracker();
   }
-
 
   private void preprocessSearchKey(Pair<byte[], byte[]> p) {
     if (!UNSAFE_UNALIGNED) {
@@ -323,12 +320,12 @@ public class FuzzyRowFilter extends FilterBase {
     NO_NEXT
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static SatisfiesCode satisfies(byte[] row, byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     return satisfies(false, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static SatisfiesCode satisfies(boolean reverse, byte[] row, byte[] fuzzyKeyBytes,
       byte[] fuzzyKeyMeta) {
     return satisfies(reverse, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
@@ -444,12 +441,12 @@ public class FuzzyRowFilter extends FilterBase {
     return SatisfiesCode.YES;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static byte[] getNextForFuzzyRule(byte[] row, byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     return getNextForFuzzyRule(false, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, byte[] fuzzyKeyBytes,
       byte[] fuzzyKeyMeta) {
     return getNextForFuzzyRule(reverse, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
@@ -536,7 +533,7 @@ public class FuzzyRowFilter extends FilterBase {
    * @return greater byte array than given (row) which satisfies the fuzzy rule if it exists, null
    *         otherwise
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, int offset, int length,
       byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     // To find out the next "smallest" byte array that satisfies fuzzy rule and "greater" than

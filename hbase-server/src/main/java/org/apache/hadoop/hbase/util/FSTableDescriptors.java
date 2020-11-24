@@ -46,12 +46,10 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
 
 /**
  * Implementation of {@link TableDescriptors} that reads descriptors from the
@@ -80,9 +78,7 @@ public class FSTableDescriptors implements TableDescriptors {
   private final boolean usecache;
   private volatile boolean fsvisited;
 
-  @VisibleForTesting
   long cachehits = 0;
-  @VisibleForTesting
   long invocations = 0;
 
   /**
@@ -117,7 +113,6 @@ public class FSTableDescriptors implements TableDescriptors {
     this.usecache = usecache;
   }
 
-  @VisibleForTesting
   public static void tryUpdateMetaTableDescriptor(Configuration conf) throws IOException {
     tryUpdateAndGetMetaTableDescriptor(conf, CommonFSUtils.getCurrentFileSystem(conf),
       CommonFSUtils.getRootDir(conf));
@@ -143,7 +138,6 @@ public class FSTableDescriptors implements TableDescriptors {
     }
   }
 
-  @VisibleForTesting
   public static TableDescriptorBuilder createMetaTableDescriptorBuilder(final Configuration conf)
     throws IOException {
     // TODO We used to set CacheDataInL1 for META table. When we have BucketCache in file mode, now
@@ -183,7 +177,6 @@ public class FSTableDescriptors implements TableDescriptors {
         .build());
   }
 
-  @VisibleForTesting
   protected boolean isUsecache() {
     return this.usecache;
   }
@@ -290,7 +283,6 @@ public class FSTableDescriptors implements TableDescriptors {
     }
   }
 
-  @VisibleForTesting
   Path updateTableDescriptor(TableDescriptor td) throws IOException {
     TableName tableName = td.getTableName();
     Path tableDir = getTableDir(tableName);
@@ -401,7 +393,6 @@ public class FSTableDescriptors implements TableDescriptors {
   /**
    * Compare {@link FileStatus} instances by {@link Path#getName()}. Returns in reverse order.
    */
-  @VisibleForTesting
   static final Comparator<FileStatus> TABLEINFO_FILESTATUS_COMPARATOR =
     new Comparator<FileStatus>() {
       @Override
@@ -413,7 +404,6 @@ public class FSTableDescriptors implements TableDescriptors {
   /**
    * Return the table directory in HDFS
    */
-  @VisibleForTesting
   Path getTableDir(final TableName tableName) {
     return CommonFSUtils.getTableDir(rootdir, tableName);
   }
@@ -428,7 +418,6 @@ public class FSTableDescriptors implements TableDescriptors {
   /**
    * Width of the sequenceid that is a suffix on a tableinfo file.
    */
-  @VisibleForTesting
   static final int WIDTH_OF_SEQUENCE_ID = 10;
 
   /**
@@ -458,7 +447,6 @@ public class FSTableDescriptors implements TableDescriptors {
    * @param p Path to a <code>.tableinfo</code> file.
    * @return The current editid or 0 if none found.
    */
-  @VisibleForTesting
   static int getTableInfoSequenceId(final Path p) {
     if (p == null) {
       return 0;
@@ -478,7 +466,6 @@ public class FSTableDescriptors implements TableDescriptors {
    * @param sequenceid
    * @return Name of tableinfo file.
    */
-  @VisibleForTesting
   static String getTableInfoFileName(final int sequenceid) {
     return TABLEINFO_FILE_PREFIX + "." + formatTableInfoSequenceId(sequenceid);
   }

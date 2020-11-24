@@ -33,8 +33,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * StoreHotnessProtector is designed to help limit the concurrency of puts with dense columns, it
  * does best-effort to avoid exhausting all RS's handlers. When a lot of clients write requests with
@@ -189,7 +187,6 @@ public class StoreHotnessProtector {
     return this.parallelPutToStoreThreadLimit > 0;
   }
 
-  @VisibleForTesting
   Map<byte[], AtomicInteger> getPreparePutToStoreMap() {
     return preparePutToStoreMap;
   }

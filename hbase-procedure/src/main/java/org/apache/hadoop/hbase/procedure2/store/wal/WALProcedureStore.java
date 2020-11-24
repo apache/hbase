@@ -52,17 +52,14 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreBase;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.queue.CircularFifoQueue;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
 
 /**
  * WAL implementation of the ProcedureStore.
@@ -240,7 +237,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
       leaseRecovery);
   }
 
-  @VisibleForTesting
   public WALProcedureStore(final Configuration conf, final Path walDir, final Path walArchiveDir,
       final LeaseRecovery leaseRecovery) throws IOException {
     this.conf = conf;
@@ -984,7 +980,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return (System.currentTimeMillis() - lastRollTs.get());
   }
 
-  @VisibleForTesting
   void periodicRollForTesting() throws IOException {
     lock.lock();
     try {
@@ -994,7 +989,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
-  @VisibleForTesting
   public boolean rollWriterForTesting() throws IOException {
     lock.lock();
     try {
@@ -1004,7 +998,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
-  @VisibleForTesting
   void removeInactiveLogsForTesting() throws Exception {
     lock.lock();
     try {
@@ -1058,7 +1051,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return true;
   }
 
-  @VisibleForTesting
   boolean rollWriter(long logId) throws IOException {
     assert logId > flushLogId : "logId=" + logId + " flushLogId=" + flushLogId;
     assert lock.isHeldByCurrentThread() : "expected to be the lock owner. " + lock.isLocked();
@@ -1257,7 +1249,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return this.walDir;
   }
 
-  @VisibleForTesting
   Path getWalArchiveDir() {
     return this.walArchiveDir;
   }

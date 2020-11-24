@@ -39,13 +39,12 @@ import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * FavoredNodesManager is responsible for maintaining favored nodes info in internal cache and
@@ -95,7 +94,6 @@ public class FavoredNodesManager {
     datanodeDataTransferPort= getDataNodePort();
   }
 
-  @VisibleForTesting
   public int getDataNodePort() {
     HdfsConfiguration.init();
 
@@ -282,7 +280,6 @@ public class FavoredNodesManager {
     }
   }
 
-  @VisibleForTesting
   public synchronized Set<RegionInfo> getRegionsOfFavoredNode(ServerName serverName) {
     Set<RegionInfo> regionInfos = Sets.newHashSet();
 

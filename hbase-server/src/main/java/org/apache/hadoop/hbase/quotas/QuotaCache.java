@@ -20,11 +20,6 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
-import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -34,10 +29,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -179,32 +177,26 @@ public class QuotaCache implements Stoppable {
     return computeIfAbsent(quotasMap, key, QuotaState::new, this::triggerCacheRefresh);
   }
 
-  @VisibleForTesting
   void triggerCacheRefresh() {
     refreshChore.triggerNow();
   }
 
-  @VisibleForTesting
   long getLastUpdate() {
     return refreshChore.lastUpdate;
   }
 
-  @VisibleForTesting
   Map<String, QuotaState> getNamespaceQuotaCache() {
     return namespaceQuotaCache;
   }
 
-  @VisibleForTesting
   Map<String, QuotaState> getRegionServerQuotaCache() {
     return regionServerQuotaCache;
   }
 
-  @VisibleForTesting
   Map<TableName, QuotaState> getTableQuotaCache() {
     return tableQuotaCache;
   }
 
-  @VisibleForTesting
   Map<String, UserQuotaState> getUserQuotaCache() {
     return userQuotaCache;
   }

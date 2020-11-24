@@ -90,8 +90,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Writes HFiles. Passed Cells must arrive in order.
  * Writes current time as the sequence id for the file. Sets the major compacted
@@ -681,7 +679,7 @@ public class HFileOutputFormat2
    * @param conf to read the serialized values from
    * @return a map from column family to the configured compression algorithm
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], Algorithm> createFamilyCompressionMap(Configuration
       conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
@@ -701,7 +699,7 @@ public class HFileOutputFormat2
    * @param conf to read the serialized values from
    * @return a map from column family to the the configured bloom filter type
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], BloomType> createFamilyBloomTypeMap(Configuration conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
         BLOOM_TYPE_FAMILIES_CONF_KEY);
@@ -720,7 +718,7 @@ public class HFileOutputFormat2
    * @param conf to read the serialized values from
    * @return a map from column family to the the configured bloom filter param
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], String> createFamilyBloomParamMap(Configuration conf) {
     return createFamilyConfValueMap(conf, BLOOM_PARAM_FAMILIES_CONF_KEY);
   }
@@ -733,7 +731,7 @@ public class HFileOutputFormat2
    * @param conf to read the serialized values from
    * @return a map from column family to the configured block size
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], Integer> createFamilyBlockSizeMap(Configuration conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
         BLOCK_SIZE_FAMILIES_CONF_KEY);
@@ -753,7 +751,7 @@ public class HFileOutputFormat2
    * @return a map from column family to HFileDataBlockEncoder for the
    *         configured data block type for the family
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], DataBlockEncoding> createFamilyDataBlockEncodingMap(
       Configuration conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
@@ -818,7 +816,7 @@ public class HFileOutputFormat2
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value =
     "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static String serializeColumnFamilyAttribute(Function<ColumnFamilyDescriptor, String> fn,
         List<TableDescriptor> allTables)
       throws UnsupportedEncodingException {
@@ -849,7 +847,7 @@ public class HFileOutputFormat2
    * Serialize column family to compression algorithm map to configuration.
    * Invoked while configuring the MR job for incremental load.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Function<ColumnFamilyDescriptor, String> compressionDetails = familyDescriptor ->
           familyDescriptor.getCompressionType().getName();
 
@@ -857,7 +855,7 @@ public class HFileOutputFormat2
    * Serialize column family to block size map to configuration. Invoked while
    * configuring the MR job for incremental load.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Function<ColumnFamilyDescriptor, String> blockSizeDetails = familyDescriptor -> String
           .valueOf(familyDescriptor.getBlocksize());
 
@@ -865,7 +863,7 @@ public class HFileOutputFormat2
    * Serialize column family to bloom type map to configuration. Invoked while
    * configuring the MR job for incremental load.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Function<ColumnFamilyDescriptor, String> bloomTypeDetails = familyDescriptor -> {
     String bloomType = familyDescriptor.getBloomFilterType().toString();
     if (bloomType == null) {
@@ -878,7 +876,7 @@ public class HFileOutputFormat2
    * Serialize column family to bloom param map to configuration. Invoked while
    * configuring the MR job for incremental load.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Function<ColumnFamilyDescriptor, String> bloomParamDetails = familyDescriptor -> {
     BloomType bloomType = familyDescriptor.getBloomFilterType();
     String bloomParam = "";
@@ -892,7 +890,7 @@ public class HFileOutputFormat2
    * Serialize column family to data block encoding map to configuration.
    * Invoked while configuring the MR job for incremental load.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Function<ColumnFamilyDescriptor, String> dataBlockEncodingDetails = familyDescriptor -> {
     DataBlockEncoding encoding = familyDescriptor.getDataBlockEncoding();
     if (encoding == null) {

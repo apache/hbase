@@ -39,8 +39,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Callable that handles the <code>multi</code> method call going against a single
  * regionserver; i.e. A RegionServerCallable for the multi call (It is NOT a
@@ -150,7 +148,6 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
     setStub(getConnection().getClient(this.location.getServerName()));
   }
 
-  @VisibleForTesting
   ServerName getServerName() {
     return location.getServerName();
   }

@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.procedure2;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Basic ProcedureEvent that contains an "object", which can be a description or a reference to the
@@ -126,7 +125,6 @@ public class ProcedureEvent<T> {
    * Access to suspendedProcedures is 'synchronized' on this object, but it's fine to return it
    * here for tests.
    */
-  @VisibleForTesting
   public ProcedureDeque getSuspendedProcedures() {
     return suspendedProcedures;
   }

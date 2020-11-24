@@ -24,8 +24,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * ScheduledChore is a task performed on a period in hbase. ScheduledChores become active once
  * scheduled with a {@link ChoreService} via {@link ChoreService#scheduleChore(ScheduledChore)}. The
@@ -116,7 +114,6 @@ public abstract class ScheduledChore implements Runnable {
    * This constructor is for test only. It allows us to create an object and to call chore() on it.
    */
   @InterfaceAudience.Private
-  @VisibleForTesting
   protected ScheduledChore() {
     this("TestChore", null, 0, DEFAULT_INITIAL_DELAY, DEFAULT_TIME_UNIT);
   }
@@ -313,17 +310,17 @@ public abstract class ScheduledChore implements Runnable {
     return initialChoreComplete;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   synchronized ChoreServicer getChoreServicer() {
     return choreServicer;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   synchronized long getTimeOfLastRun() {
     return timeOfLastRun;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   synchronized long getTimeOfThisRun() {
     return timeOfThisRun;
   }
@@ -336,7 +333,6 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   @InterfaceAudience.Private
-  @VisibleForTesting
   public synchronized void choreForTesting() {
     chore();
   }

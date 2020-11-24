@@ -61,12 +61,10 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclHelper.PathHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Set HDFS ACLs to hFiles to make HBase granted users have permission to scan snapshot
@@ -543,7 +541,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
     return isSet;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   boolean checkInitialized(String operation) {
     if (initialized) {
       if (aclTableInitialized) {

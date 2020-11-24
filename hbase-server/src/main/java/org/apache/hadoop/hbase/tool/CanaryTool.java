@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -99,8 +100,6 @@ import org.apache.zookeeper.client.ConnectStringParser;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * HBase Canary Tool for "canary monitoring" of a running HBase cluster.
@@ -791,7 +790,7 @@ public class CanaryTool implements Tool, Canary {
     this(executor, null);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   CanaryTool(ExecutorService executor, Sink sink) {
     this.executor = executor;
     this.sink = sink;

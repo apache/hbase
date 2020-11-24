@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.mob.MobConstants;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -42,8 +41,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class abstracts a bunch of operations the HMaster needs to interact with
@@ -297,7 +294,6 @@ public class MasterFileSystem {
    * Make sure the hbase temp directory exists and is empty.
    * NOTE that this method is only executed once just after the master becomes the active one.
    */
-  @VisibleForTesting
   void checkTempDir(final Path tmpdir, final Configuration c, final FileSystem fs)
       throws IOException {
     // If the temp directory exists, clear the content (left over, from the previous run)

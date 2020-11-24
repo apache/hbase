@@ -27,8 +27,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * This provides an class for maintaining a set of peer clusters. These peers are remote slave
  * clusters that data is replicated to.
@@ -59,7 +57,6 @@ public class ReplicationPeers {
     }
   }
 
-  @VisibleForTesting
   public ReplicationPeerStorage getPeerStorage() {
     return this.peerStorage;
   }

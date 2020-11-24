@@ -44,12 +44,11 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Base class of a WAL Provider that returns a single thread safe WAL that writes to Hadoop FS. By
@@ -221,7 +220,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   /**
    * returns the number of rolled WAL files.
    */
-  @VisibleForTesting
   public static int getNumRolledLogFiles(WAL wal) {
     return ((AbstractFSWAL<?>) wal).getNumRolledLogFiles();
   }
@@ -229,7 +227,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   /**
    * returns the size of rolled WAL files.
    */
-  @VisibleForTesting
   public static long getLogFileSize(WAL wal) {
     return ((AbstractFSWAL<?>) wal).getLogFileSize();
   }
@@ -237,7 +234,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   /**
    * return the current filename from the current wal.
    */
-  @VisibleForTesting
   public static Path getCurrentFileName(final WAL wal) {
     return ((AbstractFSWAL<?>) wal).getCurrentFileName();
   }
@@ -245,7 +241,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   /**
    * request a log roll, but don't actually do it.
    */
-  @VisibleForTesting
   static void requestLogRoll(final WAL wal) {
     ((AbstractFSWAL<?>) wal).requestLogRoll();
   }
@@ -253,7 +248,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   // should be package private; more visible for use in AbstractFSWAL
   public static final String WAL_FILE_NAME_DELIMITER = ".";
   /** The hbase:meta region's WAL filename extension */
-  @VisibleForTesting
   public static final String META_WAL_PROVIDER_ID = ".meta";
   static final String DEFAULT_PROVIDER_ID = "default";
 
@@ -267,7 +261,6 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @param wal must not be null
    * @return the file number that is part of the WAL file name
    */
-  @VisibleForTesting
   public static long extractFileNumFromWAL(final WAL wal) {
     final Path walName = ((AbstractFSWAL<?>) wal).getCurrentFileName();
     if (walName == null) {

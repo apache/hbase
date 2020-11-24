@@ -28,12 +28,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Stores minimum and maximum timestamp values, it is [minimumTimestamp, maximumTimestamp] in
@@ -243,7 +241,6 @@ public abstract class TimeRangeTracker {
     return new TimeRange(min, max);
   }
 
-  @VisibleForTesting
   //In order to estimate the heap size, this inner class need to be accessible to TestHeapSize.
   public static class NonSyncTimeRangeTracker extends TimeRangeTracker {
     private long minimumTimestamp = INITIAL_MIN_TIMESTAMP;
@@ -301,7 +298,6 @@ public abstract class TimeRangeTracker {
     }
   }
 
-  @VisibleForTesting
   //In order to estimate the heap size, this inner class need to be accessible to TestHeapSize.
   public static class SyncTimeRangeTracker extends TimeRangeTracker {
     private final AtomicLong minimumTimestamp = new AtomicLong(INITIAL_MIN_TIMESTAMP);

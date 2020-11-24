@@ -42,13 +42,11 @@ import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
+import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
 
 /**
  * Change log level in runtime.
@@ -89,7 +87,6 @@ public final class LogLevel {
         protocol.equals(PROTOCOL_HTTPS)));
   }
 
-  @VisibleForTesting
   static class CLI extends Configured implements Tool {
     private Operations operation = Operations.UNKNOWN;
     private String protocol;

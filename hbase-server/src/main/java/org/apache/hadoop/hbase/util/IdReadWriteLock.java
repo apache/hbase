@@ -23,8 +23,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Allows multiple concurrent clients to lock on a numeric id with ReentrantReadWriteLock. The
  * intended usage for read lock is as follows:
@@ -99,7 +97,6 @@ public class IdReadWriteLock<T> {
   }
 
   /** For testing */
-  @VisibleForTesting
   int purgeAndGetEntryPoolSize() {
     gc();
     Threads.sleep(200);
@@ -112,7 +109,6 @@ public class IdReadWriteLock<T> {
     System.gc();
   }
 
-  @VisibleForTesting
   public void waitForWaiters(T id, int numWaiters) throws InterruptedException {
     for (ReentrantReadWriteLock readWriteLock;;) {
       readWriteLock = lockPool.get(id);
@@ -127,7 +123,6 @@ public class IdReadWriteLock<T> {
     }
   }
 
-  @VisibleForTesting
   public ReferenceType getReferenceType() {
     return this.refType;
   }

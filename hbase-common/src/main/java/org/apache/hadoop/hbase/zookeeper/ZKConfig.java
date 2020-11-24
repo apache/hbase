@@ -27,8 +27,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Utility methods for reading, and building the ZooKeeper configuration.
  *
@@ -274,7 +272,6 @@ public final class ZKConfig {
    * @param clientPort the default client port
    * @return the string for a list of "server:port" separated by ","
    */
-  @VisibleForTesting
   public static String standardizeZKQuorumServerString(String quorumStringInput,
       String clientPort) {
     String[] serverHosts = quorumStringInput.split(",");
@@ -287,7 +284,6 @@ public final class ZKConfig {
   //      in this case, the clientPort would be ignored)
   // (3). s1:p1,s2,s3:p3 (mix of (1) and (2) - if port is not specified in a server, it would use
   //      the clientPort; otherwise, it would use the specified port)
-  @VisibleForTesting
   public static class ZKClusterKey {
     private String quorumString;
     private int clientPort;

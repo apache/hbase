@@ -29,8 +29,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * The {@link ResultScanner} implementation for {@link AsyncTable}. It will fetch data automatically
  * in background and cache it in memory. Typically the {@link #maxCacheSize} will be
@@ -177,7 +175,6 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
   }
 
   // used in tests to test whether the scanner has been suspended
-  @VisibleForTesting
   synchronized boolean isSuspended() {
     return resumer != null;
   }

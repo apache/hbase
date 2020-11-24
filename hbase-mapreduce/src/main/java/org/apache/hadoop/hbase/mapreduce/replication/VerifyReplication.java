@@ -69,8 +69,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * This map-only job compares the data from a local table with a remote one.
  * Every cell is compared and must have exactly the same keys (even timestamp)
@@ -517,7 +515,6 @@ public class VerifyReplication extends Configured implements Tool {
     scan.setStopRow(stopRow);
   }
 
-  @VisibleForTesting
   public boolean doCommandLine(final String[] args) {
     if (args.length < 2) {
       printUsage(null);

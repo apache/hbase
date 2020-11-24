@@ -36,8 +36,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Accounting of sequence ids per region and then by column family. So we can keep our accounting
  * current, call startCacheFlush and then finishedCacheFlush or abortCacheFlush so this instance can
@@ -239,7 +237,6 @@ class SequenceIdAccounting {
     }
   }
 
-  @VisibleForTesting
   ConcurrentMap<ImmutableByteArray, Long> getOrCreateLowestSequenceIds(byte[] encodedRegionName) {
     // Intentionally, this access is done outside of this.regionSequenceIdLock. Done per append.
     return computeIfAbsent(this.lowestUnflushedSequenceIds, encodedRegionName,

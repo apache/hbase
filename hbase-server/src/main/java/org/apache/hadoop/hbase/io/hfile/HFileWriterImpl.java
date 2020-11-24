@@ -54,8 +54,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Common functionality needed by all versions of {@link HFile} writers.
  */
@@ -780,7 +778,6 @@ public class HFileWriterImpl implements HFile.Writer {
     }
   }
 
-  @VisibleForTesting
   public Cell getLastCell() {
     return lastCell;
   }

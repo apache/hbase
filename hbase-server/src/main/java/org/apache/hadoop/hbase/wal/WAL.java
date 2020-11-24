@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import static org.apache.commons.lang3.StringUtils.isNumeric;
 
 /**
@@ -223,7 +222,6 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * @deprecated Since version 1.2.0. Removing because not used and exposes subtle internal
    * workings. Use {@link #getEarliestMemStoreSeqNum(byte[], byte[])}
    */
-  @VisibleForTesting
   @Deprecated
   long getEarliestMemStoreSeqNum(byte[] encodedRegionName);
 

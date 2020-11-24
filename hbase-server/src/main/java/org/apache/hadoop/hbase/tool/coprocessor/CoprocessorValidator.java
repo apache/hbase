@@ -49,12 +49,10 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.tool.PreUpgradeValidator;
 import org.apache.hadoop.hbase.tool.coprocessor.CoprocessorViolation.Severity;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class CoprocessorValidator extends AbstractHBaseTool {
@@ -166,7 +164,7 @@ public class CoprocessorValidator extends AbstractHBaseTool {
     validateClasses(classLoader, Arrays.asList(classNames), violations);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void validateTables(ClassLoader classLoader, Admin admin,
       Pattern pattern, List<CoprocessorViolation> violations) throws IOException {
     List<TableDescriptor> tableDescriptors = admin.listTableDescriptors(pattern);
