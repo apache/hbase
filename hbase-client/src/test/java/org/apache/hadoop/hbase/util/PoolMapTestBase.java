@@ -41,34 +41,4 @@ public abstract class PoolMapTestBase {
   }
 
   protected abstract PoolType getPoolType();
-
-  protected void runThread(final String key, PoolMap.PoolResourceSupplier<String> supplier,
-      final String expectedValue) throws InterruptedException {
-    final AtomicReference<AssertionError> error = new AtomicReference<>();
-    Thread thread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        String actualValue = null;
-        try {
-          actualValue = poolMap.getOrCreate(key, supplier);
-        } catch (IOException e) {
-          error.set(new AssertionError("Unexpected throwable.", e));
-        }
-
-        try {
-          assertEquals(expectedValue, actualValue);
-        } catch (AssertionError e) {
-          error.set(e);
-        }
-      }
-    });
-    thread.start();
-    thread.join();
-
-    AssertionError e = error.get();
-
-    if (e != null) {
-      throw e;
-    }
-  }
 }

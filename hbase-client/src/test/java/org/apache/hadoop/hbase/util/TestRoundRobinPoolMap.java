@@ -18,13 +18,19 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -46,44 +52,49 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
   }
 
   @Test
-  public void testSingleThreadedClient() throws InterruptedException {
+  public void testGetOrCreate() throws IOException {
     String key = "key";
     String value = "value";
-    // As long as the pool is not full, get calls the supplier
-    runThread(key, () -> value, value);
+    String result = poolMap.getOrCreate(key, () -> value);
+
+    assertEquals(value, result);
     assertEquals(1, poolMap.values().size());
   }
 
   @Test
-  public void testMultiThreadedClients() throws InterruptedException {
+  public void testMultipleKeys() throws IOException {
     for (int i = 0; i < KEY_COUNT; i++) {
       String key = Integer.toString(i);
       String value = Integer.toString(2 * i);
-      // As long as the pool is not full, we'll get the supplied value back
-      runThread(key, () -> value, value);
+      String result = poolMap.getOrCreate(key, () -> value);
+
+      assertEquals(value, result);
     }
 
     assertEquals(KEY_COUNT, poolMap.values().size());
-    poolMap.clear();
+  }
 
+  @Test
+  public void testMultipleValues() throws IOException {
     String key = "key";
+
     for (int i = 0; i < POOL_SIZE; i++) {
       String value = Integer.toString(i);
-      // As long as the pool is not full, we'll get the supplied value back
-      runThread(key, () -> value, value);
+      String result = poolMap.getOrCreate(key, () -> value);
+
+      assertEquals(value, result);
     }
 
-    // at the end of the day, there should be as many values as we put
     assertEquals(POOL_SIZE, poolMap.values().size());
   }
 
   @Test
-  public void testPoolCap() throws InterruptedException, IOException {
+  public void testRoundRobin() throws IOException {
     String key = "key";
-    // filling pool
+
     for (int i = 0; i < POOL_SIZE; i++) {
       String value = Integer.toString(i);
-      runThread(key, () -> value, value);
+      poolMap.getOrCreate(key, () -> value);
     }
 
     assertEquals(POOL_SIZE, poolMap.values().size());
@@ -92,7 +103,53 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
     // starting from 1, because the first get was called by runThread()
     for (int i = 0; i < 2 * POOL_SIZE; i++) {
       String expected = Integer.toString(i % POOL_SIZE);
-      assertEquals(expected, poolMap.getOrCreate(key, () -> null));
+      assertEquals(expected, poolMap.getOrCreate(key, () -> {
+        throw new IOException("must not call me");
+      }));
     }
+
+    assertEquals(POOL_SIZE, poolMap.values().size());
+  }
+
+  @Test
+  public void testMultiThreadedRoundRobin() throws ExecutionException, InterruptedException {
+    String key = "key";
+    AtomicInteger id = new AtomicInteger();
+    List<String> results = Collections.synchronizedList(new ArrayList<>());
+
+    Runnable runnable = () -> {
+      try {
+        for (int i = 0; i < POOL_SIZE; i++) {
+          String value = Integer.toString(id.getAndIncrement());
+          String result = poolMap.getOrCreate(key, () -> value);
+          results.add(result);
+
+          Thread.yield();
+        }
+      } catch (IOException e) {
+        throw new CompletionException(e);
+      }
+    };
+
+    CompletableFuture<Void> future1 = CompletableFuture.runAsync(runnable);
+    CompletableFuture<Void> future2 = CompletableFuture.runAsync(runnable);
+
+    /* test for successful completion */
+    future1.get();
+    future2.get();
+
+    assertEquals(POOL_SIZE, poolMap.values().size());
+
+    /* check every elements occur twice */
+    Collections.sort(results);
+    Iterator<String> iterator = results.iterator();
+
+    for (int i = 0; i < POOL_SIZE; i++) {
+      String next1 = iterator.next();
+      String next2 = iterator.next();
+      assertEquals(next1, next2);
+    }
+
+    assertFalse(iterator.hasNext());
   }
 }
