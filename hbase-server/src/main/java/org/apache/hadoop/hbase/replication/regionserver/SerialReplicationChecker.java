@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
@@ -140,7 +139,7 @@ class SerialReplicationChecker {
 
   public SerialReplicationChecker(Configuration conf, ReplicationSource source) {
     this.peerId = source.getPeerId();
-    this.storage = source.getQueueStorage();
+    this.storage = source.getReplicationQueueStorage();
     this.conn = source.getServer().getConnection();
     this.waitTimeMs =
       conf.getLong(REPLICATION_SERIALLY_WAITING_KEY, REPLICATION_SERIALLY_WAITING_DEFAULT);
