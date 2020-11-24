@@ -32,6 +32,10 @@ import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -49,9 +53,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioServerSocketCh
 import org.apache.hbase.thirdparty.io.netty.handler.codec.FixedLengthFrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * An RPC server with Netty4 implementation.

@@ -18,12 +18,12 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.net.SocketAddress;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Factory to create a {@link org.apache.hadoop.hbase.ipc.RpcClient}

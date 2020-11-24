@@ -23,13 +23,14 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.BaseConfigurable;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
@@ -37,7 +38,6 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ListenableF
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Provide an instance of a user. Allows custom {@link User} creation.

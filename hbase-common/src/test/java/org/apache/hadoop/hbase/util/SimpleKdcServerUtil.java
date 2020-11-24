@@ -16,17 +16,19 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.net.BoundSocketMaker;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.kerby.kerberos.kerb.KrbException;
 import org.apache.kerby.kerberos.kerb.server.SimpleKdcServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Utility for running {@link SimpleKdcServer}. Kerby KDC server is favored over Hadoop

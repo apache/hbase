@@ -21,7 +21,6 @@ import com.google.protobuf.Service;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;

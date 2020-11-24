@@ -35,6 +35,8 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+
 /**
  * Region Server Quota Manager.
  * It is responsible to provide access to the quota information of each user/table.
