@@ -22,6 +22,7 @@ require 'hbase_shell'
 
 module Hbase
   class RSGroupShellTest < Test::Unit::TestCase
+    include HBaseConstants
     def setup
       @hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
       @shell = Shell::Shell.new(@hbase)
@@ -189,6 +190,23 @@ module Hbase
       @shell.command(:alter_rsgroup_config, group_name, { 'METHOD' => 'unset', 'NAME' => 'a' })
       assert_equal(0, @admin.getRSGroup(group_name).getConfiguration.size)
 
+      remove_rsgroup(group_name)
+    end
+
+    define_test 'Test set/unset rsgroup of table' do
+      group_name = 'test_group'
+      table_name = 'test_table'
+      add_rsgroup_and_move_one_server(group_name)
+      @shell.command('create', table_name, 'f')
+
+      @shell.command(:alter, table_name, CONFIGURATION => { 'hbase.rsgroup.name' => group_name })
+      assert_equal(1, @admin.listTablesInRSGroup(group_name).count)
+
+      @shell.command(:alter, table_name, METHOD => 'table_conf_unset', NAME => 'hbase.rsgroup.name')
+      assert_equal(0, @admin.listTablesInRSGroup(group_name).count)
+
+      @shell.command(:disable, table_name)
+      @shell.command(:drop, table_name)
       remove_rsgroup(group_name)
     end
   end
