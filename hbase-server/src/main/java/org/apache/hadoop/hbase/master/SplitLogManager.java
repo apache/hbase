@@ -150,7 +150,7 @@ public class SplitLogManager {
     return server.getCoordinatedStateManager().getSplitLogManagerCoordination();
   }
 
-  private FileStatus[] getFileList(List<Path> logDirs, PathFilter filter) throws IOException {
+  private List<FileStatus> getFileList(List<Path> logDirs, PathFilter filter) throws IOException {
     return getFileList(conf, logDirs, filter);
   }
 
@@ -166,7 +166,7 @@ public class SplitLogManager {
    *     Configuration, org.apache.hadoop.hbase.wal.WALFactory)} for tests.
    */
   @VisibleForTesting
-  public static FileStatus[] getFileList(final Configuration conf, final List<Path> logDirs,
+  public static List<FileStatus> getFileList(final Configuration conf, final List<Path> logDirs,
       final PathFilter filter)
       throws IOException {
     List<FileStatus> fileStatus = new ArrayList<>();
@@ -183,8 +183,10 @@ public class SplitLogManager {
         Collections.addAll(fileStatus, logfiles);
       }
     }
-    FileStatus[] a = new FileStatus[fileStatus.size()];
-    return fileStatus.toArray(a);
+    //FileStatus[] a = new FileStatus[fileStatus.size()];
+    //return fileStatus.toArray(a);
+
+    return fileStatus;
   }
 
   /**
@@ -242,11 +244,11 @@ public class SplitLogManager {
     long totalSize = 0;
     TaskBatch batch = null;
     long startTime = 0;
-    FileStatus[] logfiles = getFileList(logDirs, filter);
-    if (logfiles.length != 0) {
+    List<FileStatus> logfiles = getFileList(logDirs, filter);
+    if (logfiles.size() != 0) {
       status.setStatus("Checking directory contents...");
       SplitLogCounters.tot_mgr_log_split_batch_start.increment();
-      LOG.info("Started splitting " + logfiles.length + " logs in " + logDirs +
+      LOG.info("Started splitting " + logfiles.size() + " logs in " + logDirs +
           " for " + serverNames);
       startTime = EnvironmentEdgeManager.currentTime();
       batch = new TaskBatch();

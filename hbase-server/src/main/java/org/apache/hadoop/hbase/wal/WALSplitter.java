@@ -29,8 +29,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-import edu.umd.cs.findbugs.annotations.Nullable;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,6 +52,7 @@ import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +61,6 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
-import javax.validation.constraints.Null;
 
 /**
  * Split RegionServer WAL files. Splits the WAL into new files,
@@ -220,17 +218,16 @@ public class WALSplitter {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem rootFS = rootDir.getFileSystem(conf);
     WALSplitter splitter = new WALSplitter(factory, conf, walRootDir, walFS, rootDir, rootFS);
-    final FileStatus[] wals =
+    final List<FileStatus> wals =
       SplitLogManager.getFileList(conf, Collections.singletonList(walsDir), null);
     List<Path> splits = new ArrayList<>();
-    if (ArrayUtils.isNotEmpty(wals)) {
+    if (CollectionUtils.isNotEmpty(wals)) {
       for (FileStatus wal: wals) {
         SplitWALResult splitWALResult = splitter.splitWAL(wal, null);
         if (splitWALResult.isFinished()) {
           WALSplitUtil.archive(wal.getPath(), splitWALResult.isCorrupt(), archiveDir, walFS, conf);
-          if (splitter.outputSink.splits != null) {
-            splits.addAll(splitter.outputSink.splits);
-          }
+          //splitter.outputSink.splits is mark as final, do not need null check
+          splits.addAll(splitter.outputSink.splits);
         }
       }
     }
