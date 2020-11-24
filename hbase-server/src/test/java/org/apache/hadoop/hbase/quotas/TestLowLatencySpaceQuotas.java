@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -29,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
@@ -213,6 +215,8 @@ public class TestLowLatencySpaceQuotas {
     QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
         tn, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
+    admin.compactionSwitch(false,
+      admin.getRegionServers().stream().map(ServerName::toString).collect(Collectors.toList()));
 
     ClientServiceCallable<Void> callable = helper.generateFileToLoad(tn, 3, 550);
     // Make sure the files are about as long as we expect
@@ -233,11 +237,17 @@ public class TestLowLatencySpaceQuotas {
     caller.callWithRetries(callable, Integer.MAX_VALUE);
 
     final long finalTotalSize = totalSize;
-    TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
-        return snapshot.getUsage() >= finalTotalSize;
-      }
-    });
+    try {
+      TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
+        @Override
+        boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+          return snapshot.getUsage() >= finalTotalSize;
+        }
+      });
+    } finally {
+      admin.compactionSwitch(true,
+        admin.getRegionServers().stream().map(ServerName::toString).collect(Collectors.toList()));
+    }
   }
 
   @Test
