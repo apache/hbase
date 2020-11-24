@@ -321,6 +321,10 @@ public final class CommonFSUtils {
     c.set("fs.defaultFS", root.toString());    // for hadoop 0.21+
   }
 
+  public static void setFsDefault(final Configuration c, final String uri) {
+    c.set("fs.defaultFS", uri); // for hadoop 0.21+
+  }
+
   public static FileSystem getRootDirFileSystem(final Configuration c) throws IOException {
     Path p = getRootDir(c);
     return p.getFileSystem(c);
@@ -340,6 +344,20 @@ public final class CommonFSUtils {
     }
     FileSystem fs = p.getFileSystem(c);
     return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
+  }
+
+  /**
+   * Returns the URI in the strig format
+   * @param c configuration
+   * @param p path
+   * @return - the URI's to string format
+   * @throws IOException
+   */
+  public static String getDirUri(final Configuration c, Path p) throws IOException {
+    if (p.toUri().getScheme() != null) {
+      return p.toUri().toString();
+    }
+    return null;
   }
 
   @VisibleForTesting

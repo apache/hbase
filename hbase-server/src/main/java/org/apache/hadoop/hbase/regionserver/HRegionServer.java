@@ -753,17 +753,28 @@ public class HRegionServer extends Thread implements
     // Get fs instance used by this RS. Do we use checksum verification in the hbase? If hbase
     // checksum verification enabled, then automatically switch off hdfs checksum verification.
     boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
-    CommonFSUtils.setFsDefault(this.conf, CommonFSUtils.getWALRootDir(this.conf));
+    String walDirUri = CommonFSUtils.getDirUri(this.conf,
+      new Path(conf.get(CommonFSUtils.HBASE_WAL_DIR, conf.get(HConstants.HBASE_DIR))));
+    // set WAL's uri
+    if (walDirUri != null) {
+      CommonFSUtils.setFsDefault(this.conf, walDirUri);
+    }
+    // init the WALFs
     this.walFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.walRootDir = CommonFSUtils.getWALRootDir(this.conf);
     // Set 'fs.defaultFS' to match the filesystem on hbase.rootdir else
     // underlying hadoop hdfs accessors will be going against wrong filesystem
     // (unless all is set to defaults).
-    CommonFSUtils.setFsDefault(this.conf, CommonFSUtils.getRootDir(this.conf));
+    String rootDirUri =
+        CommonFSUtils.getDirUri(this.conf, new Path(conf.get(HConstants.HBASE_DIR)));
+    if (rootDirUri != null) {
+      CommonFSUtils.setFsDefault(this.conf, rootDirUri);
+    }
+    // init the filesystem
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
     this.tableDescriptors = new FSTableDescriptors(this.dataFs, this.dataRootDir,
-      !canUpdateTableDescriptor(), cacheTableDescriptor());
+        !canUpdateTableDescriptor(), cacheTableDescriptor());
   }
 
   protected void login(UserProvider user, String host) throws IOException {
