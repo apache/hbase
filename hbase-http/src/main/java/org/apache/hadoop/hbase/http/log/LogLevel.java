@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import javax.net.ssl.HttpsURLConnection;
@@ -42,7 +43,6 @@ import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.Tool;
-import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -286,7 +286,7 @@ public final class LogLevel {
       // read from the servlet
 
       try (InputStreamReader streamReader =
-            new InputStreamReader(connection.getInputStream(), Charsets.UTF_8);
+            new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8);
            BufferedReader bufferedReader = new BufferedReader(streamReader)) {
         bufferedReader.lines().filter(Objects::nonNull).filter(line -> line.startsWith(MARKER))
             .forEach(line -> System.out.println(TAG.matcher(line).replaceAll("")));

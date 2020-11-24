@@ -37,7 +37,6 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
@@ -49,10 +48,11 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.tool.PreUpgradeValidator;
 import org.apache.hadoop.hbase.tool.coprocessor.CoprocessorViolation.Severity;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class CoprocessorValidator extends AbstractHBaseTool {

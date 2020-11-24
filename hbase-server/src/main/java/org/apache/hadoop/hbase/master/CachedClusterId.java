@@ -28,10 +28,11 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Caches the cluster ID of the cluster. For standby masters, this is used to serve the client

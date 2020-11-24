@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
-import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects.ToStringHelper;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects.ToStringHelper;
 
 /**
  * Manages the read/write consistency. This provides an interface for readers to determine what

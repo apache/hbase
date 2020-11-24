@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.security.token;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.util.Writables;
