@@ -77,6 +77,8 @@ EOF
             params['CACHE_BLOCKS'] = true
           elsif params['CACHE_BLOCKS'].downcase == 'false'
             params['CACHE_BLOCKS'] = false
+          else
+            raise(ArgumentError, "Expected CACHE_BLOCKS value to be a boolean or the string 'true' or 'false'")
           end
         end
 
