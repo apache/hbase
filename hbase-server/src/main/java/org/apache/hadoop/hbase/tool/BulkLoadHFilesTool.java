@@ -616,6 +616,45 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   }
 
   /**
+   * @param startEndKeys the start/end keys of regions belong to this table, the list in ascending
+   *          order by start key
+   * @param key the key need to find which region belong to
+   * @return region index
+   */
+  private int getRegionIndex(List<Pair<byte[], byte[]>> startEndKeys, byte[] key) {
+    int idx = Collections.binarySearch(startEndKeys, Pair.newPair(key, HConstants.EMPTY_END_ROW),
+      (p1, p2) -> Bytes.compareTo(p1.getFirst(), p2.getFirst()));
+    if (idx < 0) {
+      // not on boundary, returns -(insertion index). Calculate region it
+      // would be in.
+      idx = -(idx + 1) - 1;
+    }
+    return idx;
+  }
+
+  /**
+   * we can consider there is a region hole or overlap in following conditions. 1) if idx < 0,then
+   * first region info is lost. 2) if the endkey of a region is not equal to the startkey of the
+   * next region. 3) if the endkey of the last region is not empty.
+   */
+  private void checkRegionIndexValid(int idx, List<Pair<byte[], byte[]>> startEndKeys,
+      TableName tableName) throws IOException {
+    if (idx < 0) {
+      throw new IOException("The first region info for table " + tableName
+          + " can't be found in hbase:meta.Please use hbck tool to fix it first.");
+    } else if ((idx == startEndKeys.size() - 1)
+        && !Bytes.equals(startEndKeys.get(idx).getSecond(), HConstants.EMPTY_BYTE_ARRAY)) {
+      throw new IOException("The last region info for table " + tableName
+              + " can't be found in hbase:meta.Please use hbck tool to fix it first.");
+    } else if (idx + 1 < startEndKeys.size() && !(Bytes.compareTo(startEndKeys.get(idx).getSecond(),
+        startEndKeys.get(idx + 1).getFirst()) == 0)) {
+      throw new IOException("The endkey of one region for table " + tableName
+              + " is not equal to the startkey of the next region in hbase:meta."
+              + "Please use hbck tool to fix it first.");
+    }
+  }
+
+  /**
    * Attempt to assign the given load queue item into its target region group. If the hfile boundary
    * no longer fits into a region, physically splits the hfile such that the new bottom half will
    * fit and returns the list of LQI's corresponding to the resultant hfiles.
@@ -647,51 +686,30 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       return null;
     }
     if (Bytes.compareTo(first.get(), last.get()) > 0) {
-      throw new IllegalArgumentException("Invalid range: " + Bytes.toStringBinary(first.get()) +
-        " > " + Bytes.toStringBinary(last.get()));
+      throw new IllegalArgumentException("Invalid range: " + Bytes.toStringBinary(first.get())
+          + " > " + Bytes.toStringBinary(last.get()));
     }
-    int idx =
-      Collections.binarySearch(startEndKeys, Pair.newPair(first.get(), HConstants.EMPTY_END_ROW),
-        (p1, p2) -> Bytes.compareTo(p1.getFirst(), p2.getFirst()));
-    if (idx < 0) {
-      // not on boundary, returns -(insertion index). Calculate region it
-      // would be in.
-      idx = -(idx + 1) - 1;
-    }
-    int indexForCallable = idx;
-
-    /*
-     * we can consider there is a region hole in following conditions. 1) if idx < 0,then first
-     * region info is lost. 2) if the endkey of a region is not equal to the startkey of the next
-     * region. 3) if the endkey of the last region is not empty.
-     */
-    if (indexForCallable < 0) {
-      throw new IOException("The first region info for table " + tableName +
-        " can't be found in hbase:meta.Please use hbck tool to fix it first.");
-    } else if ((indexForCallable == startEndKeys.size() - 1) &&
-      !Bytes.equals(startEndKeys.get(indexForCallable).getSecond(), HConstants.EMPTY_BYTE_ARRAY)) {
-      throw new IOException("The last region info for table " + tableName +
-        " can't be found in hbase:meta.Please use hbck tool to fix it first.");
-    } else if (indexForCallable + 1 < startEndKeys.size() &&
-      !(Bytes.compareTo(startEndKeys.get(indexForCallable).getSecond(),
-        startEndKeys.get(indexForCallable + 1).getFirst()) == 0)) {
-      throw new IOException("The endkey of one region for table " + tableName +
-        " is not equal to the startkey of the next region in hbase:meta." +
-        "Please use hbck tool to fix it first.");
-    }
-
-    boolean lastKeyInRange = Bytes.compareTo(last.get(), startEndKeys.get(idx).getSecond()) < 0 ||
-      Bytes.equals(startEndKeys.get(idx).getSecond(), HConstants.EMPTY_BYTE_ARRAY);
+    int firstKeyRegionIdx = getRegionIndex(startEndKeys, first.get());
+    checkRegionIndexValid(firstKeyRegionIdx, startEndKeys, tableName);
+    boolean lastKeyInRange =
+        Bytes.compareTo(last.get(), startEndKeys.get(firstKeyRegionIdx).getSecond()) < 0 || Bytes
+            .equals(startEndKeys.get(firstKeyRegionIdx).getSecond(), HConstants.EMPTY_BYTE_ARRAY);
     if (!lastKeyInRange) {
-      Pair<byte[], byte[]> startEndKey = startEndKeys.get(indexForCallable);
-      List<LoadQueueItem> lqis =
-        splitStoreFile(item, FutureUtils.get(conn.getAdmin().getDescriptor(tableName)),
-            startEndKey.getSecond());
+      int lastKeyRegionIdx = getRegionIndex(startEndKeys, last.get());
+      int splitIdx = (firstKeyRegionIdx + lastKeyRegionIdx) / 2;
+      // make sure the splitPoint is valid in case region overlap occur, maybe the splitPoint bigger
+      // than hfile.endkey w/o this check
+      if (splitIdx != firstKeyRegionIdx) {
+        checkRegionIndexValid(splitIdx, startEndKeys, tableName);
+      }
+      byte[] splitPoint = startEndKeys.get(splitIdx).getSecond();
+      List<LoadQueueItem> lqis = splitStoreFile(item,
+        FutureUtils.get(conn.getAdmin().getDescriptor(tableName)), splitPoint);
       return new Pair<>(lqis, null);
     }
 
     // group regions.
-    regionGroups.put(ByteBuffer.wrap(startEndKeys.get(idx).getFirst()), item);
+    regionGroups.put(ByteBuffer.wrap(startEndKeys.get(firstKeyRegionIdx).getFirst()), item);
     return null;
   }
 
