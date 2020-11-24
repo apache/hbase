@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -126,7 +128,8 @@ public class TestRegionSplit {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    assertTrue("not able to split table", UTIL.getHBaseCluster().getRegions(tableName).size() == 2);
+    assertTrue("not able to split table",
+      UTIL.getHBaseCluster().getRegions(tableName).size() == 2);
 
     //disable table
     UTIL.getAdmin().disableTable(tableName);
@@ -148,6 +151,47 @@ public class TestRegionSplit {
 
     assertEquals("Table region not correct.", 2,
         UTIL.getHBaseCluster().getRegions(tableName).size());
+  }
+
+  @Test
+  public void testSplitStoreFiles() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName,
+      null, ColumnFamilyName);
+    // flush the memstore
+    insertData(tableName);
+
+    // assert the hfile count of the table
+    int storeFilesCountSum = 0;
+    for(HRegion region : UTIL.getHBaseCluster().getRegions(tableName)){
+      storeFilesCountSum += region.getStore(Bytes.toBytes(ColumnFamilyName)).getStorefiles().size();
+    }
+    assertEquals(1, storeFilesCountSum);
+
+    // split at the start row
+    byte[] splitKey = Bytes.toBytes("" + startRowNum);
+
+    assertNotNull("Not able to find a splittable region", regions);
+    assertEquals("Not able to find a splittable region", 1, regions.length);
+
+    // Split region of the table
+    long procId = procExec.submitProcedure(
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
+    // Wait the completion
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+
+    assertEquals("Not able to split table",
+      2, UTIL.getHBaseCluster().getRegions(tableName).size());
+
+    // assert sum of the hfiles of all regions
+    int childStoreFilesSum = 0;
+    for(HRegion region : UTIL.getHBaseCluster().getRegions(tableName)){
+      childStoreFilesSum += region.getStore(Bytes.toBytes(ColumnFamilyName)).getStorefiles().size();
+    }
+    assertEquals(1, childStoreFilesSum);
   }
 
   private void insertData(final TableName tableName) throws IOException {

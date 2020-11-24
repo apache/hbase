@@ -682,9 +682,9 @@ public class HRegionFileSystem {
       // If it is outside the range, return directly.
       f.initReader();
       try {
+        Cell splitKey = PrivateCellUtil.createFirstOnRow(splitRow);
         if (top) {
           //check if larger than last key.
-          Cell splitKey = PrivateCellUtil.createFirstOnRow(splitRow);
           Optional<Cell> lastKey = f.getLastKey();
           // If lastKey is null means storefile is empty.
           if (!lastKey.isPresent()) {
@@ -695,7 +695,6 @@ public class HRegionFileSystem {
           }
         } else {
           //check if smaller than first key
-          Cell splitKey = PrivateCellUtil.createLastOnRow(splitRow);
           Optional<Cell> firstKey = f.getFirstKey();
           // If firstKey is null means storefile is empty.
           if (!firstKey.isPresent()) {
