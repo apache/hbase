@@ -2044,16 +2044,15 @@ public final class ProtobufUtil {
   }
 
   public static Cell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell) {
-      ExtendedCellBuilder builder = cellBuilder.clear()
+    ExtendedCellBuilder builder = cellBuilder.clear()
         .setRow(cell.getRow().toByteArray())
         .setFamily(cell.getFamily().toByteArray())
         .setQualifier(cell.getQualifier().toByteArray())
         .setTimestamp(cell.getTimestamp())
         .setType((byte) cell.getCellType().getNumber())
         .setValue(cell.getValue().toByteArray());
-
-        if (cell.hasTags()) {
-          builder.setTags(cell.getTags().toByteArray());
+    if (cell.hasTags()) {
+      builder.setTags(cell.getTags().toByteArray());
     }
     return builder.build();
   }

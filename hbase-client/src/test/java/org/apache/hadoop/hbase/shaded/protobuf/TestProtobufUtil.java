@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -493,10 +492,9 @@ public class TestProtobufUtil {
    * Test @{@link ProtobufUtil#toCell(Cell)} and
    * @{@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell)} conversion
    * methods when it contains tags.
-   * @throws Exception
    */
   @Test
-  public void testCellConversionWithTags() throws  Exception {
+  public void testCellConversionWithTags() {
     String tagStr = "tag-1";
     byte tagType = (byte)10;
     Tag tag = new ArrayBackedTag(tagType, tagStr);
