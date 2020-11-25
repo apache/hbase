@@ -20,16 +20,15 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.Sets;
-
 import java.util.Collection;
 import java.util.NavigableSet;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.net.Address;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Stores the group information of region server groups.

@@ -21,10 +21,7 @@ package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.Assert.assertFalse;
 
-import com.google.common.collect.Sets;
-
 import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -44,6 +41,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({MediumTests.class})
 public class TestRSGroupsKillRS extends TestRSGroupsBase {

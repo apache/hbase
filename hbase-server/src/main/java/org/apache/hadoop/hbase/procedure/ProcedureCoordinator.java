@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.procedure;
 
-import com.google.common.collect.MapMaker;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
@@ -35,6 +34,8 @@ import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 
 /**
  * This is the master side of a distributed complex procedure execution.

@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.security.access;
 import static org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint.Consumer;
 import static org.junit.Assert.assertEquals;
 
-import com.google.common.collect.Multimap;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -30,7 +29,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -68,6 +66,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
 /**
  * Tests the SecureBulkLoadEndpoint code.

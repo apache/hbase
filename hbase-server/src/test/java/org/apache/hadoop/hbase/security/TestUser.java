@@ -18,10 +18,11 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
-
 import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,9 +34,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.ImmutableSet;
-
-import static org.junit.Assert.*;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 @Category(SmallTests.class)
 public class TestUser {

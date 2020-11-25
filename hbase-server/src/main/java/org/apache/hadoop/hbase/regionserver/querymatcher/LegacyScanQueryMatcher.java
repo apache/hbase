@@ -17,12 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
-import com.google.common.base.Preconditions;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.NavigableSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,6 +36,8 @@ import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * The old query matcher implementation. Used to keep compatibility for coprocessor that could

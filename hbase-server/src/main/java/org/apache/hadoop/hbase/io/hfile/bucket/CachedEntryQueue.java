@@ -18,16 +18,14 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
 
-import com.google.common.collect.MinMaxPriorityQueue;
+import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
 
 /**
  * A memory-bound queue that will grow until an element brings total size larger

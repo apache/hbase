@@ -27,8 +27,6 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.locks.Lock;
-
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.PathFilter;
@@ -42,6 +40,8 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Intelligently keep track of all the files for all the snapshots.

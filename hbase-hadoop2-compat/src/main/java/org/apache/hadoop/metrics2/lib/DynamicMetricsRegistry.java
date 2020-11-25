@@ -20,7 +20,6 @@ package org.apache.hadoop.metrics2.lib;
 
 import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -31,8 +30,8 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.MsInfo;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * An optional metrics registry class for creating and maintaining a
@@ -394,7 +393,7 @@ public class DynamicMetricsRegistry {
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("info", metricsInfo).add("tags", tags()).add("metrics", metrics())
         .toString();
   }

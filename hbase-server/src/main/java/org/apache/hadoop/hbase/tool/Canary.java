@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.tool;
 
-
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;

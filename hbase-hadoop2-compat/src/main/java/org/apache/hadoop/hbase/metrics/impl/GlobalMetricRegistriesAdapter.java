@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.metrics.impl;
 
-import com.google.common.base.Optional;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collection;
@@ -42,6 +41,8 @@ import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystemHelper;
 import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Optional;
 
 /**
  * This class acts as an adapter to export the MetricRegistry's in the global registry. Each

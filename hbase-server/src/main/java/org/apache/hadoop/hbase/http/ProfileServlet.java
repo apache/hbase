@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import com.google.common.base.Joiner;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -28,14 +26,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.util.ProcessUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
  * Servlet that runs async-profiler as web-endpoint.

@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.GsonUtil;
+
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 @InterfaceAudience.Private

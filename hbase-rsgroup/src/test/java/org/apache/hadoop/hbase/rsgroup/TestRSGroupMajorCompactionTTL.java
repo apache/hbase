@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.rsgroup;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.Lists;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -34,6 +33,8 @@ import org.apache.hadoop.hbase.util.compaction.TestMajorCompactorTTL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
 

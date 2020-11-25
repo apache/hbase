@@ -20,14 +20,13 @@ package org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Data structure used in the first stage of PrefixTree encoding:

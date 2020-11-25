@@ -62,8 +62,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Pair;
 
-import com.google.common.collect.ImmutableList;
-
 /**
  * An abstract class that implements RegionObserver.
  * By extending it, you can create your own region observer without
@@ -180,11 +178,11 @@ public class BaseRegionObserver implements RegionObserver {
 
   @Override
   public void postCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final ImmutableList<StoreFile> selected) { }
+      final Store store, final List<StoreFile> selected) { }
 
   @Override
   public void postCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final ImmutableList<StoreFile> selected, CompactionRequest request) {
+      final Store store, final List<StoreFile> selected, CompactionRequest request) {
     postCompactSelection(c, store, selected);
   }
 

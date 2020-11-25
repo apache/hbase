@@ -31,8 +31,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -67,7 +65,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests {@link HFile} cache-on-write functionality for the following block

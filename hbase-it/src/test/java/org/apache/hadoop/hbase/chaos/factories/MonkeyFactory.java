@@ -21,15 +21,14 @@ package org.apache.hadoop.hbase.chaos.factories;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
-
-import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Base class of the factory that will create a ChaosMonkey.

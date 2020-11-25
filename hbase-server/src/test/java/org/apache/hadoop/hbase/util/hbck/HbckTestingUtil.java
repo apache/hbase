@@ -24,12 +24,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-
-import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class HbckTestingUtil {
   private static ExecutorService exec = new ScheduledThreadPoolExecutor(10);

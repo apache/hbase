@@ -18,10 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Ordering;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -71,6 +67,11 @@ import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.WritableUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Function;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.Ordering;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They

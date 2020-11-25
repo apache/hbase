@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.lang.ref.WeakReference;
 import java.util.EnumMap;
 import java.util.Iterator;
@@ -33,11 +32,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-import com.google.common.base.Objects;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -45,6 +43,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.base.Objects;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A block cache implementation that is memory-aware using {@link HeapSize},
@@ -711,7 +713,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
       .add("blockCount", getBlockCount())
       .add("currentSize", getCurrentSize())
       .add("freeSize", getFreeSize())
@@ -797,7 +799,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
     @Override
     public String toString() {
-      return Objects.toStringHelper(this)
+      return MoreObjects.toStringHelper(this)
         .add("name", name)
         .add("totalSize", StringUtils.byteDesc(totalSize))
         .add("bucketSize", StringUtils.byteDesc(bucketSize))

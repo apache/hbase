@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -57,7 +56,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
-import com.google.common.base.Optional;
+import org.apache.hbase.thirdparty.com.google.common.base.Optional;
 
 /**
  * <p>This is a best effort load balancer. Given a Cost function F(C) =&gt; x It will

@@ -18,9 +18,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
+import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.ImmutableList;
+import java.io.IOException;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -34,7 +34,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertTrue;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestTimestampFilterSeekHint {

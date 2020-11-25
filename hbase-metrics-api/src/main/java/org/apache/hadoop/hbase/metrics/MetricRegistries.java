@@ -21,12 +21,11 @@ package org.apache.hadoop.hbase.metrics;
 
 import java.util.Collection;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-import com.google.common.base.Optional;
+import org.apache.hbase.thirdparty.com.google.common.base.Optional;
 
 /**
  * MetricRegistries is collection of MetricRegistry's. MetricsRegistries implementations should do

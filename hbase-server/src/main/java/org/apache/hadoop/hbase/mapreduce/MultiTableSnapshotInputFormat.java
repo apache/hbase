@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -27,10 +30,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * MultiTableSnapshotInputFormat generalizes

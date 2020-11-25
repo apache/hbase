@@ -21,9 +21,10 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestGsonUtil {

@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.hbase.test;
 
-import com.google.common.base.Joiner;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,12 +43,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
  * This is an integration test for replication. It is derived off

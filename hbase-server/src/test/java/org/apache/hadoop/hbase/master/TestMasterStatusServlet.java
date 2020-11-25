@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -30,7 +29,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -47,7 +45,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests for the master status page and its template.

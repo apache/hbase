@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.hbase;
 
-import com.google.common.collect.Sets;
+import java.io.IOException;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
+import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -30,12 +34,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.NavigableSet;
-import java.util.concurrent.ConcurrentSkipListMap;
-
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Class servers two purposes:

@@ -18,14 +18,10 @@
 
 package org.apache.hadoop.hbase.util.compaction;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Sets;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.Executors;
-
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -46,6 +42,9 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Optional;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * This tool compacts a table's regions that are beyond it's TTL. It helps to save disk space and

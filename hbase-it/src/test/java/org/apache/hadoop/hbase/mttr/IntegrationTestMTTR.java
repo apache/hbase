@@ -27,7 +27,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -74,7 +73,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.base.Objects;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 
 /**
  * Integration test that should benchmark how fast HBase can recover from failures. This test starts
@@ -340,7 +339,7 @@ public class IntegrationTestMTTR {
 
     long runtimeMs = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
 
-    Objects.ToStringHelper helper = Objects.toStringHelper("MTTRResults")
+    MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper("MTTRResults")
         .add("putResults", resultPuts)
         .add("scanResults", resultScan)
         .add("adminResults", resultAdmin)
@@ -374,7 +373,7 @@ public class IntegrationTestMTTR {
 
     @Override
     public String toString() {
-      Objects.ToStringHelper helper = Objects.toStringHelper(this)
+      MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this)
           .add("numResults", stats.getN())
           .add("minTime", stats.getMin())
           .add("meanTime", stats.getMean())

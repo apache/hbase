@@ -19,7 +19,9 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.Sets;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -41,10 +43,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 //This tests that GroupBasedBalancer will use data in zk
 //to do balancing during master startup

@@ -17,10 +17,10 @@
  */
 
 package org.apache.hadoop.hbase.regionserver.wal;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -29,13 +29,12 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.WritableUtils;
-
-import com.google.common.base.Preconditions;
-
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.io.WritableUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * A set of static functions for running our custom WAL compression/decompression.

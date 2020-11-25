@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -31,7 +30,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 
-import com.google.common.util.concurrent.Service;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Service;
 
 /**
  * ReplicationEndpoint is a plugin which implements replication

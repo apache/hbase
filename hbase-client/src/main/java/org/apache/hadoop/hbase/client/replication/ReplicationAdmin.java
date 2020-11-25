@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.client.replication;
 
-import com.google.common.collect.Lists;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -51,6 +50,8 @@ import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * <p>

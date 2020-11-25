@@ -20,12 +20,11 @@ package org.apache.hadoop.hbase.codec.prefixtree.column;
 
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.hbase.codec.prefixtree.column.data.TestColumnDataRandom;
 import org.apache.hadoop.hbase.codec.prefixtree.column.data.TestColumnDataSimple;
 import org.apache.hadoop.hbase.util.ByteRange;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public interface TestColumnData {
 

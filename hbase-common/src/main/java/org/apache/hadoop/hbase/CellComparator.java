@@ -20,13 +20,12 @@ package org.apache.hadoop.hbase;
 
 import java.io.Serializable;
 import java.util.Comparator;
-
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.primitives.Longs;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 
 /**
  * Compare two HBase cells.  Do not use this method comparing <code>-ROOT-</code> or

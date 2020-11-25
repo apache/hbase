@@ -19,13 +19,14 @@
 
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.base.Joiner;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 @InterfaceAudience.Private
 public class PrettyPrinter {

@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,6 +31,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * LossyCounting utility, bounded data structure that maintains approximate high frequency

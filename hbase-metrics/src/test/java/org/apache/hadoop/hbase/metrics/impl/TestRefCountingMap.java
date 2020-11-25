@@ -27,14 +27,13 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Collection;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.base.Supplier;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(SmallTests.class)
 public class TestRefCountingMap {

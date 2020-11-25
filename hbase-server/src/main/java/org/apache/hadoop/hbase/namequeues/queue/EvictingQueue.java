@@ -19,11 +19,12 @@
 
 package org.apache.hadoop.hbase.namequeues.queue;
 
-import com.google.common.base.Preconditions;
 import java.io.Serializable;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 public final class EvictingQueue<E> implements Serializable {

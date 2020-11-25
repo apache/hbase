@@ -22,7 +22,7 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_META_REPLICA_NUM;
 import static org.apache.hadoop.hbase.HConstants.META_REPLICAS_NUM;
 import static org.apache.hadoop.hbase.HRegionInfo.DEFAULT_REPLICA_ID;
 import static org.apache.hadoop.hbase.zookeeper.ZKUtil.joinZNode;
-import com.google.common.collect.ImmutableMap;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,7 +36,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -59,6 +58,8 @@ import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Acts as the single ZooKeeper Watcher.  One instance of this is instantiated

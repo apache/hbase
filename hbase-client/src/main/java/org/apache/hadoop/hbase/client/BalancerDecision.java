@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.lang.reflect.Type;
 import java.util.List;
-
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;

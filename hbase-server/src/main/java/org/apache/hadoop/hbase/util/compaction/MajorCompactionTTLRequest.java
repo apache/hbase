@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.util.compaction;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
@@ -34,6 +32,9 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Optional;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * This request helps determine if a region has to be compacted based on table's TTL.

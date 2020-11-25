@@ -21,12 +21,9 @@ import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
 import static org.mockito.Mockito.mock;
 
-import com.google.common.collect.Lists;
 import com.google.protobuf.BlockingService;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -37,6 +34,8 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({ RPCTests.class, SmallTests.class })
 public class TestRpcHandlerException {

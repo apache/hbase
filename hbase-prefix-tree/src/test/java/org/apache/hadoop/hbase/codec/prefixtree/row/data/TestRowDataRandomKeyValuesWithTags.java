@@ -18,12 +18,11 @@
 package org.apache.hadoop.hbase.codec.prefixtree.row.data;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.prefixtree.row.BaseTestRowData;
 import org.apache.hadoop.hbase.util.RedundantKVGenerator;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Generated KVs with tags 
  */

@@ -19,11 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.DNS.getMasterHostname;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.net.HostAndPort;
+
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import java.io.IOException;
@@ -50,8 +46,6 @@ import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.security.User;
-
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ClientMetaService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterIdResponse;
@@ -62,6 +56,13 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLoca
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNumLiveRSResponse;
+import org.apache.hadoop.hbase.security.User;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 
 /**
  * Master based registry implementation. Makes RPCs to the configured master addresses from config

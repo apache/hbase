@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.hbtop;
 
-import com.google.common.collect.ImmutableMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.AbstractMap;
 import java.util.Collection;
@@ -28,6 +27,7 @@ import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.field.FieldValue;
 import org.apache.hadoop.hbase.hbtop.field.FieldValueType;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Represents a record of the metrics in the top screen.

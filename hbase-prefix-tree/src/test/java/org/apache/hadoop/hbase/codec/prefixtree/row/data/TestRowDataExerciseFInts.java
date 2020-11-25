@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.codec.prefixtree.row.data;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeTestConstants;
@@ -31,7 +30,7 @@ import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeTreeSet;
 import org.junit.Assert;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /*
  * test different timestamps

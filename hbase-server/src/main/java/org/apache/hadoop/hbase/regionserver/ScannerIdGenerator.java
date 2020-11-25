@@ -18,14 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.hash.Hashing;
-
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Bytes;
+
+import org.apache.hbase.thirdparty.com.google.common.hash.Hashing;
 
 /**
  * Generate a new style scanner id to prevent collision with previous started server or other RSs.
@@ -41,7 +39,8 @@ public class ScannerIdGenerator {
   private final AtomicInteger scannerIdGen = new AtomicInteger(0);
 
   public ScannerIdGenerator(ServerName serverName) {
-    this.serverNameHash = (long)Hashing.murmur3_32().hashString(serverName.toString()).asInt() << 32;
+    this.serverNameHash = (long)Hashing.murmur3_32()
+        .hashString(serverName.toString(), StandardCharsets.UTF_8).asInt() << 32;
   }
 
   public long generateNewScannerId() {

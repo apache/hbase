@@ -16,14 +16,6 @@
 
 package org.apache.hadoop.hbase.util.compaction;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -63,6 +55,15 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Optional;
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class MajorCompactor extends Configured implements Tool {
@@ -137,6 +138,9 @@ public class MajorCompactor extends Configured implements Tool {
     Iterables.removeIf(futures, new Predicate<Future<?>>() {
       @Override public boolean apply(Future<?> input) {
         return input.isDone();
+      }
+      public boolean test(Future<?> input) {
+        return apply(input);
       }
     });
     return futures.isEmpty();

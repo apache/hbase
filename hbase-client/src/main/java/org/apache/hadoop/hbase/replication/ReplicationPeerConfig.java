@@ -18,19 +18,18 @@
 
 package org.apache.hadoop.hbase.replication;
 
-import com.google.common.base.Splitter;
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 
 /**
  * A configuration for the replication peer cluster.

@@ -19,13 +19,12 @@
 package org.apache.hadoop.hbase.codec.prefixtree.column.data;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.codec.prefixtree.column.TestColumnData;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.ByteRangeUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class TestColumnDataSimple implements TestColumnData {
 

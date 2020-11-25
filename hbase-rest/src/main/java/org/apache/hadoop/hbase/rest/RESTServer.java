@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import com.sun.jersey.api.json.JSONConfiguration;
+import com.sun.jersey.spi.container.servlet.ServletContainer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
@@ -55,9 +56,7 @@ import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.mortbay.thread.QueuedThreadPool;
 
-import com.google.common.base.Preconditions;
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Main class for launching REST gateway as a servlet hosted by Jetty.

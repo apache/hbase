@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
-
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,7 +47,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 
-import com.google.common.base.Throwables;
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 /**
  * Basic test for the SyncTable M/R tool

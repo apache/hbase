@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.test;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.FileNotFoundException;
@@ -121,6 +119,9 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * <p>

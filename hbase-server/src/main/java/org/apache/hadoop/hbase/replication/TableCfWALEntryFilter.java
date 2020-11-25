@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
@@ -30,7 +29,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.base.Predicate;
+import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
 
 public class TableCfWALEntryFilter implements WALEntryFilter, WALCellFilter {
 
@@ -76,6 +75,9 @@ public class TableCfWALEntryFilter implements WALEntryFilter, WALCellFilter {
             }
           }
           return false;
+        }
+        public boolean test(byte[] fam) {
+          return apply(fam);
         }
       });
     } else {

@@ -208,7 +208,8 @@ public class TestReplicationSource {
         // completes
       }
     };
-    replicationEndpoint.start();
+    replicationEndpoint.startAsync();
+    replicationEndpoint.awaitRunning();
     ReplicationPeers mockPeers = Mockito.mock(ReplicationPeers.class);
     ReplicationPeer mockPeer = Mockito.mock(ReplicationPeer.class);
     Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);

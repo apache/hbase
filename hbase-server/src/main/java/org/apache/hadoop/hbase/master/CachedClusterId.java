@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.master;
 
-import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,6 +29,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Caches the cluster ID of the cluster. For standby masters, this is used to serve the client

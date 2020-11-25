@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.lang.management.MemoryUsage;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -33,6 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemStoreLAB.Chunk;
 import org.apache.hadoop.util.StringUtils;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A pool of {@link HeapMemStoreLAB.Chunk} instances.

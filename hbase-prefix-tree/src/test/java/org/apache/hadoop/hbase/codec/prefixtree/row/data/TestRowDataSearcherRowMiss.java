@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.codec.prefixtree.row.data;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
@@ -30,7 +29,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 
-import com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class TestRowDataSearcherRowMiss extends BaseTestRowData{
 

@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.zookeeper.ZKUtil.joinZNode;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A cache of meta region location metadata. Registers a listener on ZK to track changes to the

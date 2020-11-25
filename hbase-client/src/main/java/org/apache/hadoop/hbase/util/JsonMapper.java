@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 /**

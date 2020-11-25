@@ -71,8 +71,6 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
-import com.google.common.collect.ImmutableList;
-
 /**
  * A sample region observer that tests the RegionObserver interface.
  * It works with TestRegionObserverInterface to provide the test case.
@@ -248,7 +246,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, ImmutableList<StoreFile> selected) {
+      Store store, List<StoreFile> selected) {
     ctPostCompactSelect.incrementAndGet();
   }
 

@@ -18,9 +18,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.net.InetAddresses;
 import com.google.protobuf.InvalidProtocolBufferException;
-
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -30,11 +33,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.regex.Pattern;
+import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 
 /**
  * Instance of an HBase ServerName.

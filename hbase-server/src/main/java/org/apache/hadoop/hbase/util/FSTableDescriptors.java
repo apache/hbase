@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.primitives.Ints;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Comparator;
@@ -47,6 +46,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+
+import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
 
 /**
  * Implementation of {@link TableDescriptors} that reads descriptors from the

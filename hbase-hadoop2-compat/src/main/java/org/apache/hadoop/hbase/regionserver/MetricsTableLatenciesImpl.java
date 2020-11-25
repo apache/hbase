@@ -17,7 +17,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.HashMap;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
