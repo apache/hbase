@@ -228,8 +228,8 @@ public class TestRollingRestart {
         && ((ServerCrashProcedure) p).getServerName().equals(serverName));
   }
 
-  private void waitForRSShutdownToStartAndFinish(MasterThread activeMaster, ServerName serverName)
-    throws InterruptedException, IOException {
+  private void waitForRSShutdownToStartAndFinish(MasterThread activeMaster,
+      ServerName serverName) throws InterruptedException, IOException {
     ServerManager sm = activeMaster.getMaster().getServerManager();
     // First wait for it to be in dead list
     while (!sm.getDeadServers().isDeadServer(serverName)) {

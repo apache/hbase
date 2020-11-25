@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.ipc.DecommissionedHostRejectedException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -547,8 +549,8 @@ public class ServerManager implements ConfigurationObserver {
    * Checks if any dead servers are currently in progress.
    * @return true if any RS are being processed as dead, false if not
    */
-  public boolean areDeadServersInProgress() {
-    return this.deadservers.areDeadServersInProgress();
+  public boolean areDeadServersInProgress() throws IOException {
+    return master.getProcedures().stream().anyMatch(p -> p instanceof ServerCrashProcedure);
   }
 
   void letRegionServersShutdown() {
