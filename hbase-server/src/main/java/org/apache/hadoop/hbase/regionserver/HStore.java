@@ -566,13 +566,12 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     if (CollectionUtils.isEmpty(files)) {
       return Collections.emptyList();
     }
-    // initialize the thread pool for opening store files in parallel..
+    // initialize the thread pool by all the store files in this region with upper bound.
     ThreadPoolExecutor storeFileOpenerThreadPool =
-      this.region.getStoreFileOpenAndCloseThreadPool("StoreFileOpener-"
-        + this.region.getRegionInfo().getEncodedName() + "-" + this.getColumnFamilyName());
+      this.region.getStoreFileOpenAndCloseThreadPool();
+    region.increaseStoreFileOpenAndCloseThreadCount(files.size());
     CompletionService<HStoreFile> completionService =
       new ExecutorCompletionService<>(storeFileOpenerThreadPool);
-
     int totalValidStoreFile = 0;
     for (StoreFileInfo storeFileInfo : files) {
       // open each store file in parallel
@@ -583,28 +582,25 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     Set<String> compactedStoreFiles = new HashSet<>();
     ArrayList<HStoreFile> results = new ArrayList<>(files.size());
     IOException ioe = null;
-    try {
-      for (int i = 0; i < totalValidStoreFile; i++) {
-        try {
-          HStoreFile storeFile = completionService.take().get();
-          if (storeFile != null) {
-            LOG.debug("loaded {}", storeFile);
-            results.add(storeFile);
-            compactedStoreFiles.addAll(storeFile.getCompactedStoreFiles());
-          }
-        } catch (InterruptedException e) {
-          if (ioe == null) {
-            ioe = new InterruptedIOException(e.getMessage());
-          }
-        } catch (ExecutionException e) {
-          if (ioe == null) {
-            ioe = new IOException(e.getCause());
-          }
+    for (int i = 0; i < totalValidStoreFile; i++) {
+      try {
+        HStoreFile storeFile = completionService.take().get();
+        if (storeFile != null) {
+          LOG.debug("loaded {}", storeFile);
+          results.add(storeFile);
+          compactedStoreFiles.addAll(storeFile.getCompactedStoreFiles());
+        }
+      } catch (InterruptedException e) {
+        if (ioe == null) {
+          ioe = new InterruptedIOException(e.getMessage());
+        }
+      } catch (ExecutionException e) {
+        if (ioe == null) {
+          ioe = new IOException(e.getCause());
         }
       }
-    } finally {
-      storeFileOpenerThreadPool.shutdownNow();
     }
+
     if (ioe != null) {
       // close StoreFile readers
       boolean evictOnClose =
@@ -969,9 +965,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       if (!result.isEmpty()) {
         // initialize the thread pool for closing store files in parallel.
         ThreadPoolExecutor storeFileCloserThreadPool = this.region
-            .getStoreFileOpenAndCloseThreadPool("StoreFileCloser-"
-              + this.region.getRegionInfo().getEncodedName() + "-" + this.getColumnFamilyName());
-
+            .getStoreFileOpenAndCloseThreadPool();
         // close each store file in parallel
         CompletionService<Void> completionService =
           new ExecutorCompletionService<>(storeFileCloserThreadPool);
@@ -988,25 +982,22 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         }
 
         IOException ioe = null;
-        try {
-          for (int i = 0; i < result.size(); i++) {
-            try {
-              Future<Void> future = completionService.take();
-              future.get();
-            } catch (InterruptedException e) {
-              if (ioe == null) {
-                ioe = new InterruptedIOException();
-                ioe.initCause(e);
-              }
-            } catch (ExecutionException e) {
-              if (ioe == null) {
-                ioe = new IOException(e.getCause());
-              }
+        for (int i = 0; i < result.size(); i++) {
+          try {
+            Future<Void> future = completionService.take();
+            future.get();
+          } catch (InterruptedException e) {
+            if (ioe == null) {
+              ioe = new InterruptedIOException();
+              ioe.initCause(e);
+            }
+          } catch (ExecutionException e) {
+            if (ioe == null) {
+              ioe = new IOException(e.getCause());
             }
           }
-        } finally {
-          storeFileCloserThreadPool.shutdownNow();
         }
+
         if (ioe != null) {
           throw ioe;
         }

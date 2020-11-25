@@ -313,6 +313,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   protected final Map<byte[], HStore> stores =
       new ConcurrentSkipListMap<>(Bytes.BYTES_RAWCOMPARATOR);
+  private int storeFileCountOpeningRegion = 0;
 
   // TODO: account for each registered handler in HeapSize computation
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
@@ -710,6 +711,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private RegionCoprocessorHost coprocessorHost;
 
   private TableDescriptor htableDescriptor = null;
+  private ThreadPoolExecutor storeFileOpenAndCloseThreadPool;
   private RegionSplitPolicy splitPolicy;
   private FlushPolicy flushPolicy;
 
@@ -1137,6 +1139,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // initialize the thread pool for opening stores in parallel.
       ThreadPoolExecutor storeOpenerThreadPool =
         getStoreOpenAndCloseThreadPool("StoreOpener-" + this.getRegionInfo().getShortNameToLog());
+      storeFileOpenAndCloseThreadPool = newStoreFileOpenAndCloseThreadPool(
+          "StoreFileOpenAndClose-" + getRegionInfo().getEncodedName());
+
       CompletionService<HStore> completionService = new ExecutorCompletionService<>(storeOpenerThreadPool);
 
       // initialize each store in parallel
@@ -1228,6 +1233,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       allStoreFiles.put(store.getColumnFamilyDescriptor().getName(), storeFileNames);
     }
     return allStoreFiles;
+  }
+
+  public synchronized void increaseStoreFileOpenAndCloseThreadCount(int delta) {
+    storeFileCountOpeningRegion += delta;
+    int threadCount = getStoreOpenAndCloseThreadCount(storeFileCountOpeningRegion);
+    storeFileOpenAndCloseThreadPool.setMaximumPoolSize(threadCount);
+    storeFileOpenAndCloseThreadPool.setCorePoolSize(threadCount);
+  }
+
+  private int getStoreOpenAndCloseThreadCount(int numStoreFiles) {
+    int maxThreads = Math.min(numStoreFiles,
+      conf.getInt(HConstants.HSTORE_OPEN_AND_CLOSE_THREADS_MAX,
+        HConstants.DEFAULT_HSTORE_OPEN_AND_CLOSE_THREADS_MAX));
+    maxThreads = Math.max(1, maxThreads);
+    return maxThreads;
   }
 
   @VisibleForTesting
@@ -1886,7 +1906,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           storeCloserThreadPool.shutdownNow();
         }
       }
-
+      storeFileOpenAndCloseThreadPool.shutdownNow();
       status.setStatus("Writing region close event to WAL");
       // Always write close marker to wal even for read only table. This is not a big problem as we
       // do not write any data into the region; it is just a meta edit in the WAL file.
@@ -2005,14 +2025,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return getOpenAndCloseThreadPool(maxThreads, threadNamePrefix);
   }
 
-  protected ThreadPoolExecutor getStoreFileOpenAndCloseThreadPool(
+  public ThreadPoolExecutor getStoreFileOpenAndCloseThreadPool() {
+    return storeFileOpenAndCloseThreadPool;
+  }
+
+  private ThreadPoolExecutor newStoreFileOpenAndCloseThreadPool(
       final String threadNamePrefix) {
-    int numStores = Math.max(1, this.htableDescriptor.getColumnFamilyCount());
-    int maxThreads = Math.max(1,
-        conf.getInt(HConstants.HSTORE_OPEN_AND_CLOSE_THREADS_MAX,
-            HConstants.DEFAULT_HSTORE_OPEN_AND_CLOSE_THREADS_MAX)
-            / numStores);
-    return getOpenAndCloseThreadPool(maxThreads, threadNamePrefix);
+    return getOpenAndCloseThreadPool(1, threadNamePrefix);
   }
 
   static ThreadPoolExecutor getOpenAndCloseThreadPool(int maxThreads,
