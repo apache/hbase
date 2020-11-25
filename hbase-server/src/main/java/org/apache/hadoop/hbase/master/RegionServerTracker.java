@@ -168,7 +168,7 @@ public class RegionServerTracker extends ZKListener {
       server.abort("Unexpected zk exception getting RS nodes", e);
       return;
     }
-    Set<ServerName> servers = CollectionUtils.isEmpty(names) ? Collections.EMPTY_SET :
+    Set<ServerName> servers = CollectionUtils.isEmpty(names) ? Collections.emptySet() :
       names.stream().map(ServerName::parseServerName).collect(Collectors.toSet());
 
     for (Iterator<ServerName> iter = regionServers.iterator(); iter.hasNext();) {
