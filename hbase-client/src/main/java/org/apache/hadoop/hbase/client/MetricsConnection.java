@@ -26,7 +26,6 @@ import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.Timer;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -126,12 +125,11 @@ public class MetricsConnection implements StatisticTrackable {
     }
   }
 
-  @VisibleForTesting
   protected static final class CallTracker {
     private final String name;
-    @VisibleForTesting final Timer callTimer;
-    @VisibleForTesting final Histogram reqHist;
-    @VisibleForTesting final Histogram respHist;
+    final Timer callTimer;
+    final Histogram reqHist;
+    final Histogram respHist;
 
     private CallTracker(MetricRegistry registry, String name, String subName, String scope) {
       StringBuilder sb = new StringBuilder(CLIENT_SVC).append("_").append(name);
@@ -182,7 +180,6 @@ public class MetricsConnection implements StatisticTrackable {
     }
   }
 
-  @VisibleForTesting
   protected static class RunnerStats {
     final Counter normalRunners;
     final Counter delayRunners;
@@ -210,7 +207,6 @@ public class MetricsConnection implements StatisticTrackable {
     }
   }
 
-  @VisibleForTesting
   protected ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>> serverStats
           = new ConcurrentHashMap<>();
 
@@ -275,36 +271,36 @@ public class MetricsConnection implements StatisticTrackable {
 
   // static metrics
 
-  @VisibleForTesting protected final Counter metaCacheHits;
-  @VisibleForTesting protected final Counter metaCacheMisses;
-  @VisibleForTesting protected final CallTracker getTracker;
-  @VisibleForTesting protected final CallTracker scanTracker;
-  @VisibleForTesting protected final CallTracker appendTracker;
-  @VisibleForTesting protected final CallTracker deleteTracker;
-  @VisibleForTesting protected final CallTracker incrementTracker;
-  @VisibleForTesting protected final CallTracker putTracker;
-  @VisibleForTesting protected final CallTracker multiTracker;
-  @VisibleForTesting protected final RunnerStats runnerStats;
-  @VisibleForTesting protected final Counter metaCacheNumClearServer;
-  @VisibleForTesting protected final Counter metaCacheNumClearRegion;
-  @VisibleForTesting protected final Counter hedgedReadOps;
-  @VisibleForTesting protected final Counter hedgedReadWin;
-  @VisibleForTesting protected final Histogram concurrentCallsPerServerHist;
-  @VisibleForTesting protected final Histogram numActionsPerServerHist;
+  protected final Counter metaCacheHits;
+  protected final Counter metaCacheMisses;
+  protected final CallTracker getTracker;
+  protected final CallTracker scanTracker;
+  protected final CallTracker appendTracker;
+  protected final CallTracker deleteTracker;
+  protected final CallTracker incrementTracker;
+  protected final CallTracker putTracker;
+  protected final CallTracker multiTracker;
+  protected final RunnerStats runnerStats;
+  protected final Counter metaCacheNumClearServer;
+  protected final Counter metaCacheNumClearRegion;
+  protected final Counter hedgedReadOps;
+  protected final Counter hedgedReadWin;
+  protected final Histogram concurrentCallsPerServerHist;
+  protected final Histogram numActionsPerServerHist;
 
   // dynamic metrics
 
   // These maps are used to cache references to the metric instances that are managed by the
   // registry. I don't think their use perfectly removes redundant allocations, but it's
   // a big improvement over calling registry.newMetric each time.
-  @VisibleForTesting protected final ConcurrentMap<String, Timer> rpcTimers =
+  protected final ConcurrentMap<String, Timer> rpcTimers =
       new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
-  @VisibleForTesting protected final ConcurrentMap<String, Histogram> rpcHistograms =
+  protected final ConcurrentMap<String, Histogram> rpcHistograms =
       new ConcurrentHashMap<>(CAPACITY * 2 /* tracking both request and response sizes */,
           LOAD_FACTOR, CONCURRENCY_LEVEL);
   private final ConcurrentMap<String, Counter> cacheDroppingExceptions =
     new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
-  @VisibleForTesting protected final ConcurrentMap<String, Counter>  rpcCounters =
+  protected final ConcurrentMap<String, Counter>  rpcCounters =
       new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
 
   MetricsConnection(String scope, Supplier<ThreadPoolExecutor> batchPool,
@@ -358,17 +354,14 @@ public class MetricsConnection implements StatisticTrackable {
     this.reporter.start();
   }
 
-  @VisibleForTesting
   final String getExecutorPoolName() {
     return name(getClass(), "executorPoolActiveThreads", scope);
   }
 
-  @VisibleForTesting
   final String getMetaPoolName() {
     return name(getClass(), "metaPoolActiveThreads", scope);
   }
 
-  @VisibleForTesting
   MetricRegistry getMetricRegistry() {
     return registry;
   }

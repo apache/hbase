@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -248,7 +247,6 @@ class IPCUtil {
     }
   };
 
-  @VisibleForTesting
   static final int MAX_DEPTH = 4;
 
   static void execute(EventLoop eventLoop, Runnable action) {

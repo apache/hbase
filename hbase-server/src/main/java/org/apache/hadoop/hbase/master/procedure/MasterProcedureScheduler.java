@@ -42,8 +42,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * ProcedureScheduler for the Master Procedures.
  * This ProcedureScheduler tries to provide to the ProcedureExecutor procedures
@@ -659,7 +657,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
    * @return true if deletion succeeded, false otherwise meaning that there are
    *     other new operations pending for that table (e.g. a new create).
    */
-  @VisibleForTesting
   boolean markTableAsDeleted(final TableName table, final Procedure<?> procedure) {
     schedLock();
     try {
@@ -1015,7 +1012,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   /**
    * For debugging. Expensive.
    */
-  @VisibleForTesting
   public String dumpLocks() throws IOException {
     schedLock();
     try {

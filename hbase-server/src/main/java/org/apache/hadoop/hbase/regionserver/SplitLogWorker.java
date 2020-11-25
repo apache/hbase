@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This worker is spawned in every regionserver, including master. The Worker waits for log
@@ -289,7 +288,6 @@ public class SplitLogWorker implements Runnable {
    * Returns the number of tasks processed by coordination.
    * This method is used by tests only
    */
-  @VisibleForTesting
   public int getTaskReadySeq() {
     return coordination.getTaskReadySeq();
   }

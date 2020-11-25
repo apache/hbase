@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Coordinated operations for {@link SplitLogWorker} and
@@ -94,7 +93,6 @@ public interface SplitLogWorkerCoordination {
    * Used by unit tests to check how many tasks were processed
    * @return number of tasks
    */
-  @VisibleForTesting
   int getTaskReadySeq();
 
   /**

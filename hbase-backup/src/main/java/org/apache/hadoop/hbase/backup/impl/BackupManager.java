@@ -52,8 +52,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Handles backup requests, creates backup info records in backup system table to keep track of
  * backup sessions, dispatches backup request.
@@ -101,7 +99,6 @@ public class BackupManager implements Closeable {
    * (TESTs only)
    * @param conf configuration
    */
-  @VisibleForTesting
   public static void decorateMasterConfiguration(Configuration conf) {
     if (!isBackupEnabled(conf)) {
       return;
@@ -137,7 +134,6 @@ public class BackupManager implements Closeable {
    * TESTs only.
    * @param conf configuration
    */
-  @VisibleForTesting
   public static void decorateRegionServerConfiguration(Configuration conf) {
     if (!isBackupEnabled(conf)) {
       return;

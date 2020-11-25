@@ -50,7 +50,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.math.IntMath;
 
 /**
@@ -96,10 +95,8 @@ public final class MasterRegion {
 
   private final WALFactory walFactory;
 
-  @VisibleForTesting
   final HRegion region;
 
-  @VisibleForTesting
   final MasterRegionFlusherAndCompactor flusherAndCompactor;
 
   private MasterRegionWALRoller walRoller;
@@ -141,17 +138,14 @@ public final class MasterRegion {
     return region.getScanner(scan);
   }
 
-  @VisibleForTesting
   public FlushResult flush(boolean force) throws IOException {
     return region.flush(force);
   }
 
-  @VisibleForTesting
   public void requestRollAll() {
     walRoller.requestRollAll();
   }
 
-  @VisibleForTesting
   public void waitUntilWalRollFinished() throws InterruptedException {
     walRoller.waitUntilWalRollFinished();
   }

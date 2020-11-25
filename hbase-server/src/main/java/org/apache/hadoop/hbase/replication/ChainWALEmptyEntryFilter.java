@@ -21,7 +21,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A {@link ChainWALEntryFilter} for providing more flexible options
@@ -55,7 +54,7 @@ public class ChainWALEmptyEntryFilter extends ChainWALEntryFilter {
    *
    * @param filterEmptyEntry flag
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public void setFilterEmptyEntry(final boolean filterEmptyEntry) {
     this.filterEmptyEntry = filterEmptyEntry;
   }

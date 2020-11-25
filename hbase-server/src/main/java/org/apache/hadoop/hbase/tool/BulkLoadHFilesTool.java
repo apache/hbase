@@ -94,16 +94,15 @@ import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimaps;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The implementation for {@link BulkLoadHFiles}, and also can be executed from command line as a
@@ -386,7 +385,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    * @param lqis hfiles should be loaded
    * @return empty list if success, list of items to retry on recoverable failure
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected CompletableFuture<Collection<LoadQueueItem>> tryAtomicRegionLoad(
       final AsyncClusterConnection conn, final TableName tableName, boolean copyFiles,
       final byte[] first, Collection<LoadQueueItem> lqis) {
@@ -434,7 +433,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    * <p/>
    * protected for testing.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void bulkLoadPhase(AsyncClusterConnection conn, TableName tableName,
       Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
       boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
@@ -662,7 +661,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    * protected for testing
    * @throws IOException if an IO failure is encountered
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected Pair<List<LoadQueueItem>, String> groupOrSplit(AsyncClusterConnection conn,
       TableName tableName, Multimap<ByteBuffer, LoadQueueItem> regionGroups, LoadQueueItem item,
       List<Pair<byte[], byte[]>> startEndKeys) throws IOException {
@@ -717,7 +716,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    * Split a storefile into a top and bottom half, maintaining the metadata, recreating bloom
    * filters, etc.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void splitStoreFile(Configuration conf, Path inFile, ColumnFamilyDescriptor familyDesc,
       byte[] splitKey, Path bottomOut, Path topOut) throws IOException {
     // Open reader with no block cache, and not in-memory

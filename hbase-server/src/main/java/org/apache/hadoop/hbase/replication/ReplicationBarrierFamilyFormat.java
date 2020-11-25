@@ -49,8 +49,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Helper class for storing replication barriers in family 'rep_barrier' of meta table.
  * <p/>
@@ -59,7 +57,6 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 @InterfaceAudience.Private
 public final class ReplicationBarrierFamilyFormat {
 
-  @VisibleForTesting
   public static final byte[] REPLICATION_PARENT_QUALIFIER = Bytes.toBytes("parent");
 
   private static final byte ESCAPE_BYTE = (byte) 0xFF;
@@ -85,7 +82,6 @@ public final class ReplicationBarrierFamilyFormat {
     }
   }
 
-  @VisibleForTesting
   public static byte[] getParentsBytes(List<RegionInfo> parents) {
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     Iterator<RegionInfo> iter = parents.iterator();

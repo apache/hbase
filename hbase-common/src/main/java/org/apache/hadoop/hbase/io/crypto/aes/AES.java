@@ -23,9 +23,7 @@ import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.SecureRandom;
-
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.CipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Context;
@@ -36,7 +34,6 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -149,7 +146,6 @@ public class AES extends Cipher {
     return d.createDecryptionStream(in);
   }
 
-  @VisibleForTesting
   SecureRandom getRNG() {
     return rng;
   }

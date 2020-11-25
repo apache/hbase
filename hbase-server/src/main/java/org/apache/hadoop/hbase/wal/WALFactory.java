@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Entry point for users of the Write Ahead Log.
@@ -124,12 +123,10 @@ public class WALFactory {
     this.abortable = null;
   }
 
-  @VisibleForTesting
   Providers getDefaultProvider() {
     return Providers.defaultProvider;
   }
 
-  @VisibleForTesting
   public Class<? extends WALProvider> getProviderClass(String key, String defaultValue) {
     try {
       Providers provider = Providers.valueOf(conf.get(key, defaultValue));
@@ -403,7 +400,6 @@ public class WALFactory {
    * Uses defaults.
    * @return an overwritable writer for recovered edits. caller should close.
    */
-  @VisibleForTesting
   public Writer createRecoveredEditsWriter(final FileSystem fs, final Path path)
       throws IOException {
     return FSHLogProvider.createWriter(conf, fs, path, true);
@@ -483,7 +479,6 @@ public class WALFactory {
    * Uses defaults.
    * @return a writer that won't overwrite files. Caller must close.
    */
-  @VisibleForTesting
   public static Writer createWALWriter(final FileSystem fs, final Path path,
       final Configuration configuration)
       throws IOException {

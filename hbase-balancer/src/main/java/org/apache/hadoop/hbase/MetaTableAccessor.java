@@ -56,8 +56,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Read/write operations on <code>hbase:meta</code> region as well as assignment information stored
  * to <code>hbase:meta</code>.
@@ -262,7 +260,6 @@ public final class MetaTableAccessor {
    *          true and we'll leave out offlined regions from returned list
    * @return List of all user-space regions.
    */
-  @VisibleForTesting
   public static List<RegionInfo> getAllRegions(Connection connection,
     boolean excludeOfflinedSplitParents) throws IOException {
     List<Pair<RegionInfo, ServerName>> result;
@@ -861,7 +858,6 @@ public final class MetaTableAccessor {
    * @param sn Server name
    * @param masterSystemTime wall clock time from master if passed in the open region RPC
    */
-  @VisibleForTesting
   public static void updateRegionLocation(Connection connection, RegionInfo regionInfo,
     ServerName sn, long openSeqNum, long masterSystemTime) throws IOException {
     updateLocation(connection, regionInfo, sn, openSeqNum, masterSystemTime);
