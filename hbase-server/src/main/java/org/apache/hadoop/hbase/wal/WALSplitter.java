@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -221,7 +220,7 @@ public class WALSplitter {
     final List<FileStatus> wals =
       SplitLogManager.getFileList(conf, Collections.singletonList(walsDir), null);
     List<Path> splits = new ArrayList<>();
-    if (CollectionUtils.isNotEmpty(wals)) {
+    if (!wals.isEmpty()) {
       for (FileStatus wal: wals) {
         SplitWALResult splitWALResult = splitter.splitWAL(wal, null);
         if (splitWALResult.isFinished()) {
