@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -503,8 +504,8 @@ public class ServerManager {
    * Checks if any dead servers are currently in progress.
    * @return true if any RS are being processed as dead, false if not
    */
-  public boolean areDeadServersInProgress() {
-    return this.deadservers.areDeadServersInProgress();
+  public boolean areDeadServersInProgress() throws IOException {
+    return master.getProcedures().stream().anyMatch(p -> p instanceof ServerCrashProcedure);
   }
 
   void letRegionServersShutdown() {
