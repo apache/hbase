@@ -281,9 +281,8 @@ public class RegionCoprocessorHost
       if (env.getInstance() instanceof RegionObserver) {
         Class<?> clazz = env.getInstance().getClass();
         for(;;) {
-          if (clazz == null) {
-            // we must have directly implemented RegionObserver
-            hasCustomPostScannerFilterRow = true;
+          if (clazz == Object.class) {
+            // we dont need to look postScannerFilterRow in Object class
             break out;
           }
           try {
@@ -304,11 +303,6 @@ public class RegionCoprocessorHost
           } catch (NoSuchMethodException ignore) {
           }
           clazz = clazz.getSuperclass();
-
-          // we dont need to look postScannerFilterRow in Object class
-          if (clazz == Object.class) {
-            break out;
-          }
         }
       }
     }
