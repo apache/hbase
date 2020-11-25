@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServiceNotRunningException;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.NonceKey;
@@ -82,7 +82,7 @@ public interface ClusterSchema {
    * @param nonceKey A unique identifier for this operation from the client or process.
    * @param latch A latch to block on for precondition validation
    * @return procedure id
-   * @throws IOException
+   * @throws IOException if service is not running see {@link ServiceNotRunningException}
    */
   long createNamespace(NamespaceDescriptor namespaceDescriptor, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
@@ -92,7 +92,7 @@ public interface ClusterSchema {
    * @param nonceKey A unique identifier for this operation from the client or process.
    * @param latch A latch to block on for precondition validation
    * @return procedure id
-   * @throws IOException
+   * @throws IOException if service is not running see {@link ServiceNotRunningException}
    */
   long modifyNamespace(NamespaceDescriptor descriptor, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
@@ -103,7 +103,7 @@ public interface ClusterSchema {
    * @param nonceKey A unique identifier for this operation from the client or process.
    * @param latch A latch to block on for precondition validation
    * @return procedure id
-   * @throws IOException
+   * @throws IOException if service is not running see {@link ServiceNotRunningException}
    */
   long deleteNamespace(String name, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
@@ -112,7 +112,7 @@ public interface ClusterSchema {
    * Get a Namespace
    * @param name Name of the Namespace
    * @return Namespace descriptor for <code>name</code>
-   * @throws IOException
+   * @throws IOException if namespace does not exist
    */
   // No Future here because presumption is that the request will go against cached metadata so
   // return immediately -- no need of running a Procedure.
