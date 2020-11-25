@@ -541,7 +541,7 @@ public class TableDescriptorBuilder {
   }
 
   public TableDescriptorBuilder setRegionServerGroup(String group) {
-    desc.setValue(RSGROUP_KEY, new Bytes(Bytes.toBytes(group)));
+    desc.setValue(RSGROUP_KEY, group);
     return this;
   }
 

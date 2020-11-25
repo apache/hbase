@@ -297,7 +297,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
   public static List<ServerName> getBackupMastersAndRenewWatch(
       ZKWatcher zkw) throws InterruptedIOException {
     // Build Set of backup masters from ZK nodes
-    List<String> backupMasterStrings = Collections.emptyList();
+    List<String> backupMasterStrings = null;
     try {
       backupMasterStrings = ZKUtil.listChildrenAndWatchForNewChildren(zkw,
           zkw.getZNodePaths().backupMasterAddressesZNode);

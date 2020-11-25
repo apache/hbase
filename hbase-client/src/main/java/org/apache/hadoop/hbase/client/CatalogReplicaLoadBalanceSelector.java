@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
-@SuppressWarnings("serial")
+/**
+ * A Catalog replica selector decides which catalog replica to go for read requests when it is
+ * configured as CatalogReplicaMode.LoadBalance.
+ */
 @InterfaceAudience.Private
-public class ClusterSchemaException extends HBaseIOException {
-  public ClusterSchemaException(String message) {
-    super(message);
-  }
+interface CatalogReplicaLoadBalanceSelector {
 
-  public ClusterSchemaException(String message, Throwable cause) {
-    super(message, cause);
-  }
+  /**
+   * This method is called when input location is stale, i.e, when clients run into
+   * org.apache.hadoop.hbase.NotServingRegionException.
+   * @param loc stale location
+   */
+  void onError(HRegionLocation loc);
 
-  public ClusterSchemaException(Throwable cause) {
-    super(cause);
-  }
+  /**
+   * Select a catalog replica region where client go to loop up the input row key.
+   *
+   * @param tablename table name
+   * @param row  key to look up
+   * @param locateType  locate type
+   * @return replica id
+   */
+  int select(TableName tablename, byte[] row, RegionLocateType locateType);
 }

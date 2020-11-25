@@ -37,6 +37,18 @@ import org.apache.hadoop.hbase.util.Pair;
  */
 @InterfaceAudience.Public
 public interface RegionLocator extends Closeable {
+
+  /** Configuration for Region Locator's mode when meta replica is configured.
+   * Valid values are: HedgedRead, LoadBalance, None
+   */
+  String LOCATOR_META_REPLICAS_MODE = "hbase.locator.meta.replicas.mode";
+
+  /** Configuration for meta replica selector when Region Locator's LoadBalance mode is configured.
+   * The default value is org.apache.hadoop.hbase.client.CatalogReplicaLoadBalanceSimpleSelector.
+   */
+  String LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR =
+    "hbase.locator.meta.replicas.mode.loadbalance.selector";
+
   /**
    * Finds the region on which the given row is being served. Does not reload the cache.
    * @param row Row to find.

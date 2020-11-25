@@ -750,17 +750,28 @@ public class HRegionServer extends Thread implements
     // Get fs instance used by this RS. Do we use checksum verification in the hbase? If hbase
     // checksum verification enabled, then automatically switch off hdfs checksum verification.
     boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
-    CommonFSUtils.setFsDefault(this.conf, CommonFSUtils.getWALRootDir(this.conf));
+    String walDirUri = CommonFSUtils.getDirUri(this.conf,
+      new Path(conf.get(CommonFSUtils.HBASE_WAL_DIR, conf.get(HConstants.HBASE_DIR))));
+    // set WAL's uri
+    if (walDirUri != null) {
+      CommonFSUtils.setFsDefault(this.conf, walDirUri);
+    }
+    // init the WALFs
     this.walFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.walRootDir = CommonFSUtils.getWALRootDir(this.conf);
     // Set 'fs.defaultFS' to match the filesystem on hbase.rootdir else
     // underlying hadoop hdfs accessors will be going against wrong filesystem
     // (unless all is set to defaults).
-    CommonFSUtils.setFsDefault(this.conf, CommonFSUtils.getRootDir(this.conf));
+    String rootDirUri =
+        CommonFSUtils.getDirUri(this.conf, new Path(conf.get(HConstants.HBASE_DIR)));
+    if (rootDirUri != null) {
+      CommonFSUtils.setFsDefault(this.conf, rootDirUri);
+    }
+    // init the filesystem
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
     this.tableDescriptors = new FSTableDescriptors(this.dataFs, this.dataRootDir,
-      !canUpdateTableDescriptor(), cacheTableDescriptor());
+        !canUpdateTableDescriptor(), cacheTableDescriptor());
   }
 
   protected void login(UserProvider user, String host) throws IOException {
@@ -1943,8 +1954,7 @@ public class HRegionServer extends Thread implements
         throw new IOException("Can not create wal directory " + logDir);
       }
       // Instantiate replication if replication enabled. Pass it the log directories.
-      createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir,
-        factory.getWALProvider());
+      createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir, factory);
     }
     this.walFactory = factory;
   }
@@ -2487,9 +2497,9 @@ public class HRegionServer extends Thread implements
     if (ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
       return;
     }
-    if (!ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(region.conf) ||
-        !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(
-          region.conf)) {
+    TableName tn = region.getTableDescriptor().getTableName();
+    if (!ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(region.conf, tn) ||
+        !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(region.conf)) {
       region.setReadsEnabled(true);
       return;
     }
@@ -3096,7 +3106,7 @@ public class HRegionServer extends Thread implements
    * Load the replication executorService objects, if any
    */
   private static void createNewReplicationInstance(Configuration conf, HRegionServer server,
-      FileSystem walFs, Path walDir, Path oldWALDir, WALProvider walProvider) throws IOException {
+      FileSystem walFs, Path walDir, Path oldWALDir, WALFactory walFactory) throws IOException {
     // read in the name of the source replication class from the config file.
     String sourceClassname = conf.get(HConstants.REPLICATION_SOURCE_SERVICE_CLASSNAME,
       HConstants.REPLICATION_SERVICE_CLASSNAME_DEFAULT);
@@ -3109,21 +3119,21 @@ public class HRegionServer extends Thread implements
     // only one object.
     if (sourceClassname.equals(sinkClassname)) {
       server.replicationSourceHandler = newReplicationInstance(sourceClassname,
-        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
+        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walFactory);
       server.replicationSinkHandler = (ReplicationSinkService) server.replicationSourceHandler;
       server.sameReplicationSourceAndSink = true;
     } else {
       server.replicationSourceHandler = newReplicationInstance(sourceClassname,
-        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
+        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walFactory);
       server.replicationSinkHandler = newReplicationInstance(sinkClassname,
-        ReplicationSinkService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
+        ReplicationSinkService.class, conf, server, walFs, walDir, oldWALDir, walFactory);
       server.sameReplicationSourceAndSink = false;
     }
   }
 
   private static <T extends ReplicationService> T newReplicationInstance(String classname,
       Class<T> xface, Configuration conf, HRegionServer server, FileSystem walFs, Path logDir,
-      Path oldLogDir, WALProvider walProvider) throws IOException {
+      Path oldLogDir, WALFactory walFactory) throws IOException {
     final Class<? extends T> clazz;
     try {
       ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -3132,7 +3142,7 @@ public class HRegionServer extends Thread implements
       throw new IOException("Could not find class for " + classname);
     }
     T service = ReflectionUtils.newInstance(clazz, conf);
-    service.initialize(server, walFs, logDir, oldLogDir, walProvider);
+    service.initialize(server, walFs, logDir, oldLogDir, walFactory);
     return service;
   }
 

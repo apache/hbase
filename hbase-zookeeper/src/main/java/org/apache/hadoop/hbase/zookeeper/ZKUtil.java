@@ -445,16 +445,15 @@ public final class ZKUtil {
     } catch(KeeperException.NoNodeException ke) {
       LOG.debug(zkw.prefix("Unable to list children of znode " + znode + " " +
           "because node does not exist (not an error)"));
-      return null;
     } catch (KeeperException e) {
       LOG.warn(zkw.prefix("Unable to list children of znode " + znode + " "), e);
       zkw.keeperException(e);
-      return null;
     } catch (InterruptedException e) {
       LOG.warn(zkw.prefix("Unable to list children of znode " + znode + " "), e);
       zkw.interruptedException(e);
-      return null;
     }
+
+    return null;
   }
 
   /**
