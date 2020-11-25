@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
 /**
@@ -78,22 +76,18 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
     this.peersZNode = ZNodePaths.joinZNode(replicationZNode, peersZNodeName);
   }
 
-  @VisibleForTesting
   public String getPeerStateNode(String peerId) {
     return ZNodePaths.joinZNode(getPeerNode(peerId), peerStateNodeName);
   }
 
-  @VisibleForTesting
   public String getPeerNode(String peerId) {
     return ZNodePaths.joinZNode(peersZNode, peerId);
   }
 
-  @VisibleForTesting
   public String getSyncReplicationStateNode(String peerId) {
     return ZNodePaths.joinZNode(getPeerNode(peerId), SYNC_REPLICATION_STATE_ZNODE);
   }
 
-  @VisibleForTesting
   public String getNewSyncReplicationStateNode(String peerId) {
     return ZNodePaths.joinZNode(getPeerNode(peerId), NEW_SYNC_REPLICATION_STATE_ZNODE);
   }

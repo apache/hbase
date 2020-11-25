@@ -23,8 +23,6 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * This is the only implementation of {@link ObserverContext}, which serves as the interface for
  * third-party Coprocessor developers.
@@ -98,7 +96,6 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
    * @return An instance of <code>ObserverContext</code> with the environment set
    */
   @Deprecated
-  @VisibleForTesting
   // TODO: Remove this method, ObserverContext should not depend on RpcServer
   public static <E extends CoprocessorEnvironment> ObserverContext<E> createAndPrepare(E env) {
     ObserverContextImpl<E> ctx = new ObserverContextImpl<>(RpcServer.getRequestUser().orElse(null));

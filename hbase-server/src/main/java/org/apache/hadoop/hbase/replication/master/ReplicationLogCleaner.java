@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication.master;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -34,7 +33,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
@@ -105,7 +103,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public void setConf(Configuration conf, ZKWatcher zk) {
     super.setConf(conf);
     try {
@@ -115,7 +113,8 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
   }
-  @VisibleForTesting
+
+  @InterfaceAudience.Private
   public void setConf(Configuration conf, ZKWatcher zk,
       ReplicationQueueStorage replicationQueueStorage) {
     super.setConf(conf);

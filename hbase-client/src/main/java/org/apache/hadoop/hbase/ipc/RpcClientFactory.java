@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
-
 import java.net.SocketAddress;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Factory to create a {@link org.apache.hadoop.hbase.ipc.RpcClient}
@@ -46,7 +44,6 @@ public final class RpcClientFactory {
   }
 
   /** Helper method for tests only. Creates an {@code RpcClient} without metrics. */
-  @VisibleForTesting
   public static RpcClient createClient(Configuration conf, String clusterId) {
     return createClient(conf, clusterId, null);
   }

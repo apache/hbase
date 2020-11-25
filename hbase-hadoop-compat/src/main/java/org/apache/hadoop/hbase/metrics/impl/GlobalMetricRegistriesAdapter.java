@@ -38,8 +38,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * This class acts as an adapter to export the MetricRegistry's in the global registry. Each
  * MetricRegistry will be registered or unregistered from the metric2 system. The collection will
@@ -102,7 +100,6 @@ public final class GlobalMetricRegistriesAdapter {
     return new GlobalMetricRegistriesAdapter();
   }
 
-  @VisibleForTesting
   public void stop() {
     stopped.set(true);
   }

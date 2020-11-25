@@ -29,7 +29,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * The Class ExecutorStatusChore for collect Executor status info periodically
@@ -77,7 +76,6 @@ public class ExecutorStatusChore extends ScheduledChore {
     }
   }
 
-  @VisibleForTesting
   public Pair<Long, Long> getExecutorStatus(String poolName) {
     MutableGaugeLong running = metricsRegistry.getGauge(poolName + "_running", 0L);
     MutableGaugeLong queued = metricsRegistry.getGauge(poolName + "_queued", 0L);

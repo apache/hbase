@@ -29,8 +29,6 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Base class for all the Namespace procedures that want to use a StateMachineProcedure. It provide
  * some basic helpers like basic locking and basic toStringClassDetails().
@@ -114,7 +112,6 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
     createDirectory(env.getMasterServices().getMasterFileSystem(), nsDescriptor);
   }
 
-  @VisibleForTesting
   public static void createDirectory(MasterFileSystem mfs, NamespaceDescriptor nsDescriptor)
     throws IOException {
     mfs.getFileSystem()

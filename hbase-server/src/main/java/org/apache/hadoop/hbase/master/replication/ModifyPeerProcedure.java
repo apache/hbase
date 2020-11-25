@@ -34,8 +34,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerModificationState;
 
 /**
@@ -133,7 +131,6 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   }
 
   // will be override in test to simulate error
-  @VisibleForTesting
   protected void reopenRegions(MasterProcedureEnv env) throws IOException {
     ReplicationPeerConfig peerConfig = getNewPeerConfig();
     ReplicationPeerConfig oldPeerConfig = getOldPeerConfig();

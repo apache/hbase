@@ -48,7 +48,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -87,12 +86,8 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-
-
-
 
 /**
  * Implementation of {@link WAL} to go against {@link FileSystem}; i.e. keep WALs in HDFS. Only one
@@ -610,7 +605,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return newPath;
   }
 
-  @VisibleForTesting
   Path getOldPath() {
     long currentFilenum = this.filenum.get();
     Path oldPath = null;
@@ -785,7 +779,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return new Path(archiveDir, p.getName());
   }
 
-  @VisibleForTesting
   protected void archiveLogFile(final Path p) throws IOException {
     Path newPath = getWALArchivePath(this.walArchiveDir, p);
     // Tell our listeners that a log is going to be archived.
@@ -837,7 +830,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * @return the passed in <code>newPath</code>
    * @throws IOException if there is a problem flushing or closing the underlying FS
    */
-  @VisibleForTesting
   Path replaceWriter(Path oldPath, Path newPath, W nextWriter) throws IOException {
     try (TraceScope scope = TraceUtil.createTrace("FSHFile.replaceWriter")) {
       doReplaceWriter(oldPath, newPath, nextWriter);
@@ -941,7 +933,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * Get the backing files associated with this WAL.
    * @return may be null if there are no files.
    */
-  @VisibleForTesting
   FileStatus[] getFiles() throws IOException {
     return CommonFSUtils.listStatus(fs, walDir, ourFiles);
   }
@@ -1040,7 +1031,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   /**
    * Exposed for testing only. Use to tricks like halt the ring buffer appending.
    */
-  @VisibleForTesting
   protected void atHeadOfRingBufferEventHandlerAppend() {
     // Noop
   }
@@ -1295,13 +1285,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   /**
    * This method gets the pipeline for the current WAL.
    */
-  @VisibleForTesting
   abstract DatanodeInfo[] getPipeline();
 
   /**
    * This method gets the datanode replication count for the current WAL.
    */
-  @VisibleForTesting
   abstract int getLogReplication();
 
   private static void split(final Configuration conf, final Path p) throws IOException {

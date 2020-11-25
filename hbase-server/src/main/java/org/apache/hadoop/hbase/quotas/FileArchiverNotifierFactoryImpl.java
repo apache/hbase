@@ -27,8 +27,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * A factory for getting instances of {@link FileArchiverNotifier}.
  */
@@ -47,12 +45,10 @@ public final class FileArchiverNotifierFactoryImpl implements FileArchiverNotifi
     return CURRENT_INSTANCE;
   }
 
-  @VisibleForTesting
   static void setInstance(FileArchiverNotifierFactory inst) {
     CURRENT_INSTANCE = Objects.requireNonNull(inst);
   }
 
-  @VisibleForTesting
   static void reset() {
     CURRENT_INSTANCE = DEFAULT_INSTANCE;
   }

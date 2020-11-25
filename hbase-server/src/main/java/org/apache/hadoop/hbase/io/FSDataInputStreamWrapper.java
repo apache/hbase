@@ -28,13 +28,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Wrapper for input stream(s) that takes care of the interaction of FS and HBase checksums,
@@ -173,13 +170,11 @@ public class FSDataInputStreamWrapper implements Closeable {
   }
 
   /** For use in tests. */
-  @VisibleForTesting
   public FSDataInputStreamWrapper(FSDataInputStream fsdis) {
     this(fsdis, fsdis);
   }
 
   /** For use in tests. */
-  @VisibleForTesting
   public FSDataInputStreamWrapper(FSDataInputStream fsdis, FSDataInputStream noChecksum) {
     doCloseStreams = false;
     stream = fsdis;

@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
@@ -91,7 +90,6 @@ class FSWALEntry extends Entry {
     }
   }
 
-  @VisibleForTesting
   static Set<byte[]> collectFamilies(List<Cell> cells) {
     if (CollectionUtils.isEmpty(cells)) {
       return Collections.emptySet();

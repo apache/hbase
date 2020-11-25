@@ -34,8 +34,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * This class manages an array of ByteBuffers with a default size 4MB. These buffers are sequential
  * and could be considered as a large buffer.It supports reading/writing data from this large buffer
@@ -61,7 +59,6 @@ public class ByteBufferArray {
         Runtime.getRuntime().availableProcessors(), capacity, allocator);
   }
 
-  @VisibleForTesting
   ByteBufferArray(int bufferSize, int bufferCount, int threadCount, long capacity,
       ByteBufferAllocator alloc) throws IOException {
     this.bufferSize = bufferSize;
@@ -107,7 +104,6 @@ public class ByteBufferArray {
     }
   }
 
-  @VisibleForTesting
   static int getBufferSize(long capacity) {
     int bufferSize = DEFAULT_BUFFER_SIZE;
     if (bufferSize > (capacity / 16)) {

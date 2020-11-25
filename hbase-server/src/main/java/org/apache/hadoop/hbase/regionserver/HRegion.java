@@ -189,7 +189,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -319,7 +318,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   // Track data size in all memstores
   private final MemStoreSizing memStoreSizing = new ThreadSafeMemStoreSizing();
-  @VisibleForTesting
   RegionServicesForStores regionServicesForStores;
 
   // Debug possible data loss due to WAL off
@@ -581,7 +579,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /** A result object from prepare flush cache stage */
-  @VisibleForTesting
   static class PrepareFlushResult {
     final FlushResultImpl result; // indicating a failure result from prepare
     final TreeMap<byte[], StoreFlushContext> storeFlushCtxs;
@@ -746,7 +743,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @deprecated Use other constructors.
    */
   @Deprecated
-  @VisibleForTesting
   public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
       final Configuration confParam, final RegionInfo regionInfo,
       final TableDescriptor htd, final RegionServerServices rsServices) {
@@ -951,7 +947,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return What the next sequence (edit) id should be.
    * @throws IOException e
    */
-  @VisibleForTesting
   long initialize(final CancelableProgressable reporter) throws IOException {
 
     //Refuse to open the region if there is no column family in the table
@@ -1230,7 +1225,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return allStoreFiles;
   }
 
-  @VisibleForTesting
   protected void writeRegionOpenMarker(WAL wal, long openSeqId) throws IOException {
     Map<byte[], List<Path>> storeFiles = getStoreFiles();
     RegionEventDescriptor regionOpenDesc = ProtobufUtil.toRegionEventDescriptor(
@@ -1514,7 +1508,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @VisibleForTesting
   public MultiVersionConcurrencyControl getMVCC() {
     return mvcc;
   }
@@ -1637,7 +1630,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Exposed for some very specific unit tests.
    */
-  @VisibleForTesting
   public void setClosing(boolean closing) {
     this.closing.set(closing);
   }
@@ -1647,7 +1639,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Instead of blocking, the {@link HRegion#doClose} will throw exception if you set the timeout.
    * @param timeoutForWriteLock the second time to wait for the write lock in {@link HRegion#doClose}
    */
-  @VisibleForTesting
   public void setTimeoutForWriteLock(long timeoutForWriteLock) {
     assert timeoutForWriteLock >= 0;
     this.timeoutForWriteLock = timeoutForWriteLock;
@@ -2045,7 +2036,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this.htableDescriptor;
   }
 
-  @VisibleForTesting
   public void setTableDescriptor(TableDescriptor desc) {
     htableDescriptor = desc;
   }
@@ -2062,7 +2052,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Only used for unit test which doesn't start region server.
    */
-  @VisibleForTesting
   public void setBlockCache(BlockCache blockCache) {
     this.blockCache = blockCache;
   }
@@ -2074,7 +2063,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Only used for unit test which doesn't start region server.
    */
-  @VisibleForTesting
   public void setMobFileCache(MobFileCache mobFileCache) {
     this.mobFileCache = mobFileCache;
   }
@@ -2082,7 +2070,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * @return split policy for this region.
    */
-  @VisibleForTesting
   RegionSplitPolicy getSplitPolicy() {
     return this.splitPolicy;
   }
@@ -2126,7 +2113,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return the Region directory under WALRootDirectory
    * @throws IOException if there is an error getting WALRootDir
    */
-  @VisibleForTesting
   public Path getWALRegionDir() throws IOException {
     if (regionDir == null) {
       regionDir = CommonFSUtils.getWALRegionDir(conf, getRegionInfo().getTable(),
@@ -2235,7 +2221,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * <p>
    * It is used by utilities and testing
    */
-  @VisibleForTesting
   public void compactStores() throws IOException {
     for (HStore s : stores.values()) {
       Optional<CompactionContext> compaction = s.requestCompaction();
@@ -2250,7 +2235,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * <p>
    * It is used by utilities and testing
    */
-  @VisibleForTesting
   void compactStore(byte[] family, ThroughputController throughputController) throws IOException {
     HStore s = getStore(family);
     Optional<CompactionContext> compaction = s.requestCompaction();
@@ -3131,7 +3115,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return Next sequence number unassociated with any actual edit.
    * @throws IOException
    */
-  @VisibleForTesting
   protected long getNextSequenceId(final WAL wal) throws IOException {
     WriteEntry we = mvcc.begin();
     mvcc.completeAndWait(we);
@@ -5306,7 +5289,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return the sequence id of the last edit added to this region out of the
    * recovered edits log or <code>minSeqId</code> if nothing added from editlogs.
    */
-  @VisibleForTesting
   long replayRecoveredEditsIfAny(Map<byte[], Long> maxSeqIdInStores,
     final CancelableProgressable reporter, final MonitoredTask status) throws IOException {
     long minSeqIdForTheRegion = -1;
@@ -5772,7 +5754,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * the store memstores, only if the memstores do not have a higher seqId from an earlier wal
    * edit (because the events may be coming out of order).
    */
-  @VisibleForTesting
   PrepareFlushResult replayWALFlushStartMarker(FlushDescriptor flush) throws IOException {
     long flushSeqId = flush.getFlushSequenceNumber();
 
@@ -5883,7 +5864,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return null;
   }
 
-  @VisibleForTesting
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
     justification="Intentional; post memstore flush")
   void replayWALFlushCommitMarker(FlushDescriptor flush) throws IOException {
@@ -6171,7 +6151,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @VisibleForTesting
   PrepareFlushResult getPrepareFlushResult() {
     return prepareFlushResult;
   }
@@ -6535,7 +6514,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param s Store to add edit too.
    * @param cell Cell to add.
    */
-  @VisibleForTesting
   protected void restoreEdit(HStore s, Cell cell, MemStoreSizing memstoreAccounting) {
     s.add(cell, memstoreAccounting);
   }
@@ -6738,7 +6716,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @VisibleForTesting
   public int getReadLockCount() {
     return lock.getReadLockCount();
   }
@@ -6747,7 +6724,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return lockedRows;
   }
 
-  @VisibleForTesting
   class RowLockContext {
     private final HashedBytes row;
     final ReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
@@ -6824,7 +6800,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return lock;
     }
 
-    @VisibleForTesting
     public RowLockContext getContext() {
       return context;
     }
@@ -8114,7 +8089,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return r.openHRegion(reporter);
   }
 
-  @VisibleForTesting
   public NavigableMap<byte[], Integer> getReplicationScope() {
     return this.replicationScope;
   }
@@ -8890,7 +8864,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /** @param coprocessorHost the new coprocessor host */
-  @VisibleForTesting
   public void setCoprocessorHost(final RegionCoprocessorHost coprocessorHost) {
     this.coprocessorHost = coprocessorHost;
   }
@@ -9190,7 +9163,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     flushesQueued.increment();
   }
 
-  @VisibleForTesting
   public long getReadPoint() {
     return getReadPoint(IsolationLevel.READ_COMMITTED);
   }
@@ -9390,12 +9362,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @VisibleForTesting
   public void setReadRequestsCount(long readRequestsCount) {
     this.readRequestsCount.add(readRequestsCount);
   }
 
-  @VisibleForTesting
   public void setWriteRequestsCount(long writeRequestsCount) {
     this.writeRequestsCount.add(writeRequestsCount);
   }
