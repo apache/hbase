@@ -81,7 +81,7 @@ public interface RpcServerInterface {
    * for correctness.
    * @param pp PolicyProvider
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   @Deprecated
   void refreshAuthManager(PolicyProvider pp);
 

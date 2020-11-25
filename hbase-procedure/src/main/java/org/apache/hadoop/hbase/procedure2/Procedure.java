@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
+import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,7 +28,6 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -38,9 +39,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
-
-import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
 
 /**
  * Base Procedure class responsible to handle the Procedure Metadata
