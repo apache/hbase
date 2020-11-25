@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -243,7 +244,7 @@ public class SplitLogManager {
     TaskBatch batch = null;
     long startTime = 0;
     List<FileStatus> logfiles = getFileList(logDirs, filter);
-    if (logfiles.size() != 0) {
+    if (CollectionUtils.isNotEmpty(logfiles)) {
       status.setStatus("Checking directory contents...");
       SplitLogCounters.tot_mgr_log_split_batch_start.increment();
       LOG.info("Started splitting " + logfiles.size() + " logs in " + logDirs +
