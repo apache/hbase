@@ -119,6 +119,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -145,14 +146,11 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -505,7 +503,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @deprecated Since 2.3.0. No one should be using this internal. Used in testing only.
    */
   @Deprecated
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public TableDescriptorBuilder getMetaTableDescriptorBuilder() {
     try {
       return FSTableDescriptors.createMetaTableDescriptorBuilder(conf);

@@ -46,17 +46,6 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.DNS.ServerType;
-import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.base.Strings;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdRequest;
@@ -66,6 +55,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMasters
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
+import org.apache.hadoop.hbase.util.DNS.ServerType;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Master based registry implementation. Makes RPCs to the configured master addresses from config
@@ -151,7 +148,6 @@ public class MasterRegistry implements ConnectionRegistry {
    * <p/>
    * Will be called in {@code HBaseTestingUtility}.
    */
-  @VisibleForTesting
   public static String getMasterAddr(Configuration conf) throws UnknownHostException {
     String masterAddrFromConf = conf.get(MASTER_ADDRS_KEY);
     if (!Strings.isNullOrEmpty(masterAddrFromConf)) {
@@ -331,7 +327,6 @@ public class MasterRegistry implements ConnectionRegistry {
             "getMasters()").thenApply(MasterRegistry::transformServerNames);
   }
 
-  @VisibleForTesting
   Set<ServerName> getParsedMasterServers() {
     return masterAddr2Stub.keySet();
   }

@@ -204,7 +204,6 @@ public class FixedFileTrailer {
     baos.writeTo(outputStream);
   }
 
-  @org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting
   HFileProtos.FileTrailerProto toProtobuf() {
     HFileProtos.FileTrailerProto.Builder builder = HFileProtos.FileTrailerProto.newBuilder()
       .setFileInfoOffset(fileInfoOffset)

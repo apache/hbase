@@ -52,7 +52,6 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation that can handle all hfile versions of {@link HFile.Reader}.
@@ -233,7 +232,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     return this.hfileContext.getCellComparator();
   }
 
-  @VisibleForTesting
   public Compression.Algorithm getCompressionAlgorithm() {
     return trailer.getCompressionCodec();
   }
@@ -1626,7 +1624,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * not completed, true otherwise
    */
   @Override
-  @VisibleForTesting
   public boolean prefetchComplete() {
     return PrefetchExecutor.isCompleted(path);
   }
@@ -1644,7 +1641,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * @return Scanner on this file.
    */
   @Override
-  @VisibleForTesting
   public HFileScanner getScanner(boolean cacheBlocks, final boolean pread) {
     return getScanner(cacheBlocks, pread, false);
   }

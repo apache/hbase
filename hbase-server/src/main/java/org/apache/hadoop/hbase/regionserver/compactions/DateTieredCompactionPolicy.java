@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -40,7 +39,7 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.PeekingIterator;
@@ -97,8 +96,8 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   /**
    * Heuristics for guessing whether we need minor compaction.
    */
+  @InterfaceAudience.Private
   @Override
-  @VisibleForTesting
   public boolean needsCompaction(Collection<HStoreFile> storeFiles,
       List<HStoreFile> filesCompacting) {
     ArrayList<HStoreFile> candidates = new ArrayList<>(storeFiles);

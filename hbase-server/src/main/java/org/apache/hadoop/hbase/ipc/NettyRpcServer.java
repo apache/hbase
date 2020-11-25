@@ -35,7 +35,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
@@ -124,7 +124,7 @@ public class NettyRpcServer extends RpcServer {
     this.scheduler.init(new RpcSchedulerContext(this));
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected NettyRpcServerPreambleHandler createNettyRpcServerPreambleHandler() {
     return new NettyRpcServerPreambleHandler(NettyRpcServer.this);
   }

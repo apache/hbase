@@ -54,8 +54,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * The context, and return value, for a single submit/submitAll call.
  * Note on how this class (one AP submit) works. Initially, all requests are split into groups
@@ -178,13 +176,11 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * Runnable (that can be submitted to thread pool) that submits MultiAction to a
    * single server. The server call is synchronous, therefore we do it on a thread pool.
    */
-  @VisibleForTesting
   final class SingleServerRequestRunnable implements Runnable {
     private final MultiAction multiAction;
     private final int numAttempt;
     private final ServerName server;
     private final Set<CancellableRegionServerCallable> callsInProgress;
-    @VisibleForTesting
     SingleServerRequestRunnable(
         MultiAction multiAction, int numAttempt, ServerName server,
         Set<CancellableRegionServerCallable> callsInProgress) {
@@ -394,12 +390,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     }
   }
 
-  @VisibleForTesting
   protected Set<CancellableRegionServerCallable> getCallsInProgress() {
     return callsInProgress;
   }
 
-  @VisibleForTesting
   SingleServerRequestRunnable createSingleServerRequest(MultiAction multiAction, int numAttempt, ServerName server,
         Set<CancellableRegionServerCallable> callsInProgress) {
     return new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress);
@@ -920,12 +914,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     }
   }
 
-  @VisibleForTesting
   protected void updateStats(ServerName server, MultiResponse resp) {
     ConnectionUtils.updateStats(Optional.ofNullable(asyncProcess.connection.getStatisticsTracker()),
       Optional.ofNullable(asyncProcess.connection.getConnectionMetrics()), server, resp);
   }
-
 
   private String createLog(int numAttempt, int failureCount, int replaySize, ServerName sn,
                            Throwable error, long backOffTime, boolean willRetry, String startTime,
@@ -1242,7 +1234,6 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     results[index] = result;
   }
 
-  @VisibleForTesting
   long getNumberOfActionsInProgress() {
     return actionsInProgress.get();
   }

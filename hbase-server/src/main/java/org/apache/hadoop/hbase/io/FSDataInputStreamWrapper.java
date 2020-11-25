@@ -34,8 +34,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Wrapper for input stream(s) that takes care of the interaction of FS and HBase checksums,
  * as well as closing streams. Initialization is not thread-safe, but normal operation is;
@@ -173,13 +171,11 @@ public class FSDataInputStreamWrapper implements Closeable {
   }
 
   /** For use in tests. */
-  @VisibleForTesting
   public FSDataInputStreamWrapper(FSDataInputStream fsdis) {
     this(fsdis, fsdis);
   }
 
   /** For use in tests. */
-  @VisibleForTesting
   public FSDataInputStreamWrapper(FSDataInputStream fsdis, FSDataInputStream noChecksum) {
     doCloseStreams = false;
     stream = fsdis;

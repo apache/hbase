@@ -43,7 +43,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -641,12 +640,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
     }
   }
 
-  @VisibleForTesting
   boolean isEvictionInProgress() {
     return evictionInProgress;
   }
 
-  @VisibleForTesting
   long getOverhead() {
     return overhead;
   }
@@ -1178,7 +1175,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   /** Clears the cache. Used in tests. */
-  @VisibleForTesting
   public void clearCache() {
     this.map.clear();
     this.elements.set(0);
@@ -1189,7 +1185,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
    *
    * @return the set of cached file names
    */
-  @VisibleForTesting
   SortedSet<String> getCachedFileNamesForTest() {
     SortedSet<String> fileNames = new TreeSet<>();
     for (BlockCacheKey cacheKey : map.keySet()) {
@@ -1198,7 +1193,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
     return fileNames;
   }
 
-  @VisibleForTesting
   public Map<DataBlockEncoding, Integer> getEncodingCountsForTest() {
     Map<DataBlockEncoding, Integer> counts = new EnumMap<>(DataBlockEncoding.class);
     for (LruCachedBlock block : map.values()) {
@@ -1209,7 +1203,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
     return counts;
   }
 
-  @VisibleForTesting
   Map<BlockCacheKey, LruCachedBlock> getMapForTests() {
     return map;
   }

@@ -92,7 +92,6 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -196,7 +195,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @param coordinator procedure coordinator instance.  exposed for testing.
    * @param pool HBase ExecutorServcie instance, exposed for testing.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   SnapshotManager(final MasterServices master, ProcedureCoordinator coordinator,
       ExecutorService pool, int sentinelCleanInterval)
       throws IOException, UnsupportedOperationException {

@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -57,12 +56,12 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
-import javax.validation.constraints.Null;
 
 /**
  * Split RegionServer WAL files. Splits the WAL into new files,
@@ -144,7 +143,6 @@ public class WALSplitter {
     this(factory, conf, walRootDir, walFS, rootDir, rootFS, null, null, null);
   }
 
-  @VisibleForTesting
   WALSplitter(final WALFactory factory, Configuration conf, Path walRootDir,
       FileSystem walFS, Path rootDir, FileSystem rootFS, LastSequenceId idChecker,
       SplitLogWorkerCoordination splitLogWorkerCoordination, RegionServerServices rsServices) {
@@ -214,7 +212,6 @@ public class WALSplitter {
    * which uses this method to do log splitting.
    * @return List of output files created by the split.
    */
-  @VisibleForTesting
   public static List<Path> split(Path walRootDir, Path walsDir, Path archiveDir, FileSystem walFS,
       Configuration conf, final WALFactory factory) throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
@@ -287,7 +284,6 @@ public class WALSplitter {
    * WAL splitting implementation, splits one WAL file.
    * @param walStatus should be for an actual WAL file.
    */
-  @VisibleForTesting
   SplitWALResult splitWAL(FileStatus walStatus, CancelableProgressable cancel) throws IOException {
     Path wal = walStatus.getPath();
     Preconditions.checkArgument(walStatus.isFile(), "Not a regular file " + wal.toString());

@@ -174,7 +174,6 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -190,7 +189,7 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
@@ -201,6 +200,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
@@ -246,7 +246,7 @@ public class HRegionServer extends Thread implements
   /**
    * For testing only!  Set to true to skip notifying region assignment to master .
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MS_SHOULD_BE_FINAL")
   public static boolean TEST_SKIP_REPORTING_TRANSITION = false;
 
@@ -542,7 +542,7 @@ public class HRegionServer extends Thread implements
    */
   protected final ConfigurationManager configurationManager;
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   CompactedHFilesDischarger compactedFileDischarger;
 
   private volatile ThroughputController flushThroughputController;
@@ -1254,7 +1254,7 @@ public class HRegionServer extends Thread implements
     return writeCount;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
       throws IOException {
     RegionServerStatusService.BlockingInterface rss = rssStub;
@@ -2509,7 +2509,7 @@ public class HRegionServer extends Thread implements
     return rpcServices.rpcServer;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public RSRpcServices getRSRpcServices() {
     return rpcServices;
   }
@@ -2599,7 +2599,7 @@ public class HRegionServer extends Thread implements
    * logs but it does close socket in case want to bring up server on old
    * hostname+port immediately.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void kill() {
     this.killed = true;
     abort("Simulated kill");
@@ -2674,7 +2674,7 @@ public class HRegionServer extends Thread implements
    * @return Return the object that implements the replication
    * source executorService.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public ReplicationSourceService getReplicationSourceService() {
     return replicationSourceHandler;
   }
@@ -2707,7 +2707,7 @@ public class HRegionServer extends Thread implements
    * @param refresh If true then master address will be read from ZK, otherwise use cached data
    * @return master + port, or null if server has been stopped
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected synchronized ServerName createRegionServerStatusStub(boolean refresh) {
     if (rssStub != null) {
       return masterAddressTracker.getMasterAddress();
@@ -3540,12 +3540,12 @@ public class HRegionServer extends Thread implements
     movedRegionInfoCache.invalidate(encodedName);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public MovedRegionInfo getMovedRegion(String encodedRegionName) {
     return movedRegionInfoCache.getIfPresent(encodedRegionName);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public int movedRegionCacheExpiredTime() {
         return TIMEOUT_REGION_MOVED;
   }
@@ -3641,7 +3641,7 @@ public class HRegionServer extends Thread implements
   /**
    * @return : Returns the ConfigurationManager object for testing purposes.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   ConfigurationManager getConfigurationManager() {
     return configurationManager;
   }
@@ -3705,7 +3705,7 @@ public class HRegionServer extends Thread implements
    * For testing
    * @return whether all wal roll request finished for this regionserver
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public boolean walRollRequestFinished() {
     return this.walRoller.walRollFinished();
   }
@@ -3905,7 +3905,7 @@ public class HRegionServer extends Thread implements
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public CompactedHFilesDischarger getCompactedHFilesDischarger() {
     return compactedFileDischarger;
   }

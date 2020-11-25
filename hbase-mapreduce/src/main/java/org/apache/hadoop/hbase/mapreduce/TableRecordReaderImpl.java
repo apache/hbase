@@ -36,7 +36,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Iterate over an HBase table data, return (ImmutableBytesWritable, Result)
@@ -50,8 +49,9 @@ public class TableRecordReaderImpl {
   private static final Logger LOG = LoggerFactory.getLogger(TableRecordReaderImpl.class);
 
   // HBASE_COUNTER_GROUP_NAME is the name of mapreduce counter group for HBase
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static final String HBASE_COUNTER_GROUP_NAME = "HBaseCounters";
+
   private ResultScanner scanner = null;
   private Scan scan = null;
   private Scan currentScan = null;

@@ -29,8 +29,6 @@ import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Coordination for SplitLogManager. It creates and works with tasks for split log operations<BR>
  * Manager prepares task by calling {@link #prepareTask} and submit it by
@@ -147,6 +145,5 @@ public interface SplitLogManagerCoordination {
    * Support method to init constants such as timeout. Mostly required for UTs.
    * @throws IOException
    */
-  @VisibleForTesting
   void init() throws IOException;
 }

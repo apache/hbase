@@ -28,15 +28,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.HeapMemoryTuneObserver;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -75,15 +73,12 @@ public class ChunkCreator {
   private Map<Integer, Chunk> chunkIdMap = new ConcurrentHashMap<Integer, Chunk>();
 
   private final boolean offheap;
-  @VisibleForTesting
   static ChunkCreator instance;
-  @VisibleForTesting
   static boolean chunkPoolDisabled = false;
   private MemStoreChunkPool dataChunksPool;
   private final int chunkSize;
   private MemStoreChunkPool indexChunksPool;
 
-  @VisibleForTesting
   ChunkCreator(int chunkSize, boolean offheap, long globalMemStoreSize, float poolSizePercentage,
                float initialCountPercentage, HeapMemoryManager heapMemoryManager,
                float indexChunkSizePercentage) {
@@ -93,7 +88,6 @@ public class ChunkCreator {
             initialCountPercentage, heapMemoryManager);
   }
 
-  @VisibleForTesting
   private void initializePools(int chunkSize, long globalMemStoreSize,
                                float poolSizePercentage, float indexChunkSizePercentage,
                                float initialCountPercentage,
@@ -122,7 +116,6 @@ public class ChunkCreator {
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "LI_LAZY_INIT_STATIC",
           justification = "Method is called by single thread at the starting of RS")
-  @VisibleForTesting
   public static ChunkCreator initialize(int chunkSize, boolean offheap, long globalMemStoreSize,
                                         float poolSizePercentage, float initialCountPercentage,
                                         HeapMemoryManager heapMemoryManager,
@@ -135,7 +128,6 @@ public class ChunkCreator {
     return instance;
   }
 
-  @VisibleForTesting
   public static ChunkCreator getInstance() {
     return instance;
   }
@@ -280,8 +272,7 @@ public class ChunkCreator {
     return createChunk(true, chunkIndexType, chunkSize);
   }
 
-  @VisibleForTesting
-    // Used to translate the ChunkID into a chunk ref
+  // Used to translate the ChunkID into a chunk ref
   Chunk getChunk(int id) {
     // can return null if chunk was never mapped
     return chunkIdMap.get(id);
@@ -299,14 +290,12 @@ public class ChunkCreator {
     return this.chunkIdMap.remove(chunkId);
   }
 
-  @VisibleForTesting
-    // the chunks in the chunkIdMap may already be released so we shouldn't relay
-    // on this counting for strong correctness. This method is used only in testing.
+  // the chunks in the chunkIdMap may already be released so we shouldn't relay
+  // on this counting for strong correctness. This method is used only in testing.
   int numberOfMappedChunks() {
     return this.chunkIdMap.size();
   }
 
-  @VisibleForTesting
   void clearChunkIds() {
     this.chunkIdMap.clear();
   }
@@ -471,7 +460,6 @@ public class ChunkCreator {
     }
   }
 
-  @VisibleForTesting
   static void clearDisableFlag() {
     chunkPoolDisabled = false;
   }
@@ -507,12 +495,10 @@ public class ChunkCreator {
     return memStoreChunkPool;
   }
 
-  @VisibleForTesting
   int getMaxCount() {
     return getMaxCount(ChunkType.DATA_CHUNK);
   }
 
-  @VisibleForTesting
   int getMaxCount(ChunkType chunkType) {
     switch (chunkType) {
       case INDEX_CHUNK:
@@ -533,12 +519,10 @@ public class ChunkCreator {
     return 0;
   }
 
-  @VisibleForTesting
   int getPoolSize() {
     return getPoolSize(ChunkType.DATA_CHUNK);
   }
 
-  @VisibleForTesting
   int getPoolSize(ChunkType chunkType) {
     switch (chunkType) {
       case INDEX_CHUNK:
@@ -558,7 +542,6 @@ public class ChunkCreator {
     return 0;
   }
 
-  @VisibleForTesting
   boolean isChunkInPool(int chunkId) {
     Chunk c = getChunk(chunkId);
     if (c==null) {
@@ -577,7 +560,6 @@ public class ChunkCreator {
   /*
    * Only used in testing
    */
-  @VisibleForTesting
   void clearChunksInPool() {
     if (dataChunksPool != null) {
       dataChunksPool.reclaimedChunks.clear();

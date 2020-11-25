@@ -62,7 +62,7 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -250,7 +250,6 @@ public class ServerManager {
     }
   }
 
-  @VisibleForTesting
   public void regionServerReport(ServerName sn,
     ServerMetrics sl) throws YouAreDeadException {
     checkIsDead(sn, "REPORT");
@@ -402,7 +401,6 @@ public class ServerManager {
    * Adds the onlineServers list. onlineServers should be locked.
    * @param serverName The remote servers name.
    */
-  @VisibleForTesting
   void recordNewServerWithLock(final ServerName serverName, final ServerMetrics sl) {
     LOG.info("Registering regionserver=" + serverName);
     this.onlineServers.put(serverName, sl);
@@ -540,7 +538,7 @@ public class ServerManager {
    *         going down or we already have queued an SCP for this server or SCP processing is
    *         currently disabled because we are in startup phase).
    */
-  @VisibleForTesting // Redo test so we can make this protected.
+  // Redo test so we can make this protected.
   public synchronized long expireServer(final ServerName serverName) {
     return expireServer(serverName, false);
 
@@ -595,7 +593,6 @@ public class ServerManager {
    * Called when server has expired.
    */
   // Locking in this class needs cleanup.
-  @VisibleForTesting
   public synchronized void moveFromOnlineToDeadServers(final ServerName sn) {
     synchronized (this.onlineServers) {
       boolean online = this.onlineServers.containsKey(sn);
@@ -985,7 +982,6 @@ public class ServerManager {
     flushedSequenceIdByRegion.remove(encodedName);
   }
 
-  @VisibleForTesting
   public boolean isRegionInServerManagerStates(final RegionInfo hri) {
     final byte[] encodedName = hri.getEncodedNameAsBytes();
     return (storeFlushedSequenceIdsByRegion.containsKey(encodedName)

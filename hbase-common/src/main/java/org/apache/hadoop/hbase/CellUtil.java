@@ -43,8 +43,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience.Private;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Utility methods helpful for slinging {@link Cell} instances. Some methods below are for internal
  * use only and are marked InterfaceAudience.Private at the method level. Note that all such methods
@@ -1672,7 +1670,7 @@ public final class CellUtil {
    *         than right equal to 0 if left is equal to right
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   @Deprecated
   public static final int compare(CellComparator comparator, Cell left, byte[] key, int offset,
       int length) {

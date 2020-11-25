@@ -37,7 +37,6 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
@@ -53,7 +52,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
@@ -166,7 +164,7 @@ public class CoprocessorValidator extends AbstractHBaseTool {
     validateClasses(classLoader, Arrays.asList(classNames), violations);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void validateTables(ClassLoader classLoader, Admin admin,
       Pattern pattern, List<CoprocessorViolation> violations) throws IOException {
     List<TableDescriptor> tableDescriptors = admin.listTableDescriptors(pattern);

@@ -40,8 +40,6 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * <p>
  * Used to communicate with a single HBase table similar to {@link Table}
@@ -94,7 +92,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
   private volatile boolean closed = false;
   private final AsyncProcess ap;
 
-  @VisibleForTesting
   BufferedMutatorImpl(ClusterConnection conn, BufferedMutatorParams params, AsyncProcess ap) {
     if (conn == null || conn.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
@@ -153,12 +150,10 @@ public class BufferedMutatorImpl implements BufferedMutator {
     }
   }
 
-  @VisibleForTesting
   ExecutorService getPool() {
     return pool;
   }
 
-  @VisibleForTesting
   AsyncProcess getAsyncProcess() {
     return ap;
   }
@@ -203,7 +198,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
     doFlush(false);
   }
 
-  @VisibleForTesting
   protected long getExecutedWriteBufferPeriodicFlushes() {
     return executedWriteBufferPeriodicFlushes.get();
   }
@@ -401,7 +395,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
     this.operationTimeout.set(operationTimeout);
   }
 
-  @VisibleForTesting
   long getCurrentWriteBufferSize() {
     return currentWriteBufferSize.get();
   }
@@ -410,7 +403,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
    * Count the mutations which haven't been processed.
    * @return count of undealt mutation
    */
-  @VisibleForTesting
   int size() {
     return undealtMutationCount.get();
   }
@@ -419,17 +411,14 @@ public class BufferedMutatorImpl implements BufferedMutator {
    * Count the mutations which haven't been flushed
    * @return count of unflushed mutation
    */
-  @VisibleForTesting
   int getUnflushedSize() {
     return writeAsyncBuffer.size();
   }
 
-  @VisibleForTesting
   QueueRowAccess createQueueRowAccess() {
     return new QueueRowAccess();
   }
 
-  @VisibleForTesting
   class QueueRowAccess implements RowAccess<Row>, Closeable {
     private int remainder = undealtMutationCount.getAndSet(0);
     private Mutation last = null;

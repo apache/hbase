@@ -57,7 +57,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
@@ -165,11 +165,9 @@ public class SecureBulkLoadManager {
 
   private Consumer<HRegion> fsCreatedListener;
 
-  @VisibleForTesting
   void setFsCreatedListener(Consumer<HRegion> fsCreatedListener) {
     this.fsCreatedListener = fsCreatedListener;
   }
-
 
   private void incrementUgiReference(UserGroupInformation ugi) {
     // if we haven't seen this ugi before, make a new counter

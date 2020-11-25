@@ -19,9 +19,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -40,14 +37,14 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.AsyncProcessTask.SubmittedRows;
 import org.apache.hadoop.hbase.client.RequestController.ReturnCode;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class  allows a continuous flow of requests. It's written to be compatible with a
@@ -146,7 +143,6 @@ class AsyncProcess {
   final long pause;
   final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
   final int numTries;
-  @VisibleForTesting
   long serverTrackerTimeout;
   final long primaryCallTimeoutMicroseconds;
   /** Whether to log details for batch errors */
@@ -156,7 +152,6 @@ class AsyncProcess {
   /**
    * The traffic control for requests.
    */
-  @VisibleForTesting
   final RequestController requestController;
   public static final String LOG_DETAILS_PERIOD = "hbase.client.log.detail.period.ms";
   private static final int DEFAULT_LOG_DETAILS_PERIOD = 10000;
@@ -422,7 +417,6 @@ class AsyncProcess {
     return checkTimeout("rpc timeout", rpcTimeout);
   }
 
-  @VisibleForTesting
   <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
       AsyncProcessTask task, List<Action> actions, long nonceGroup) {
     return new AsyncRequestFutureImpl<>(task, actions, nonceGroup, this);
@@ -456,12 +450,10 @@ class AsyncProcess {
   /**
    * Create a caller. Isolated to be easily overridden in the tests.
    */
-  @VisibleForTesting
   protected RpcRetryingCaller<AbstractResponse> createCaller(
       CancellableRegionServerCallable callable, int rpcTimeout) {
     return rpcCallerFactory.<AbstractResponse> newCaller(checkRpcTimeout(rpcTimeout));
   }
-
 
   /**
    * Creates the server error tracker to use inside process.

@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A builder that helps in building up the ReaderContext
@@ -82,7 +81,6 @@ public class ReaderContextBuilder {
     return this;
   }
 
-  @VisibleForTesting
   public ReaderContextBuilder withFileSystemAndPath(FileSystem fs, Path filePath)
       throws IOException {
     this.withFileSystem(fs)

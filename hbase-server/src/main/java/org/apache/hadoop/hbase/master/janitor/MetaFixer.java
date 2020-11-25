@@ -48,10 +48,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
-
 
 /**
  * Server-side fixing of bad or inconsistent state in hbase:meta.
@@ -261,7 +259,6 @@ public class MetaFixer {
    * @param maxMergeCount Maximum regions to merge at a time (avoid merging
    *   100k regions in one go!)
    */
-  @VisibleForTesting
   static List<SortedSet<RegionInfo>> calculateMerges(int maxMergeCount,
       List<Pair<RegionInfo, RegionInfo>> overlaps) {
     if (overlaps.isEmpty()) {
@@ -333,7 +330,6 @@ public class MetaFixer {
    * @return Either <code>a</code> or <code>b</code>, whichever has the
    *   endkey that is furthest along in the Table.
    */
-  @VisibleForTesting
   static RegionInfo getRegionInfoWithLargestEndKey(RegionInfo a, RegionInfo b) {
     if (a == null) {
       // b may be null.
@@ -361,7 +357,6 @@ public class MetaFixer {
    * @return True if an overlap found between passed in <code>ri</code> and
    *   the <code>pair</code>. Does NOT check the pairs themselves overlap.
    */
-  @VisibleForTesting
   static boolean isOverlap(RegionInfo ri, Pair<RegionInfo, RegionInfo> pair) {
     if (ri == null || pair == null) {
       // Can't be an overlap in either of these cases.

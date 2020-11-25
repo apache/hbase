@@ -31,7 +31,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
@@ -48,7 +48,7 @@ public class RSGroupMajorCompactionTTL extends MajorCompactorTTL {
 
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupMajorCompactionTTL.class);
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   RSGroupMajorCompactionTTL() {
     super();
   }

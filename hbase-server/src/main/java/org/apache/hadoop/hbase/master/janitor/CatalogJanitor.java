@@ -59,8 +59,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * A janitor for the catalog tables. Scans the <code>hbase:meta</code> catalog table on a period.
  * Makes a lastReport on state of hbase:meta. Looks for unused regions to garbage collect. Scan of
@@ -217,7 +215,6 @@ public class CatalogJanitor extends ScheduledChore {
    * @return Return generated {@link Report}
    */
   // will be override in tests.
-  @VisibleForTesting
   protected Report scanForReport() throws IOException {
     ReportMakingVisitor visitor = new ReportMakingVisitor(this.services);
     // Null tablename means scan all of meta.
@@ -303,7 +300,6 @@ public class CatalogJanitor extends ScheduledChore {
     }
   }
 
-  @VisibleForTesting
   static boolean cleanParent(MasterServices services, RegionInfo parent, Result rowContent)
     throws IOException {
     // Check whether it is a merged region and if it is clean of references.

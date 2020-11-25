@@ -28,8 +28,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 
 /**
  * Class for determining the "size" of a class, an attempt to calculate the
@@ -236,7 +234,6 @@ public class ClassSize {
   private static final MemoryLayout memoryLayout = getMemoryLayout();
   private static final boolean USE_UNSAFE_LAYOUT = (memoryLayout instanceof UnsafeLayout);
 
-  @VisibleForTesting
   public static boolean useUnsafeLayout() {
     return USE_UNSAFE_LAYOUT;
   }

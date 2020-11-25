@@ -25,8 +25,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * This Cell is an implementation of {@link ByteBufferExtendedCell} where the data resides in
  * off heap/ on heap ByteBuffer
@@ -55,12 +53,10 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
     this.length = length;
   }
 
-  @VisibleForTesting
   public ByteBuffer getBuffer() {
     return this.buf;
   }
 
-  @VisibleForTesting
   public int getOffset() {
     return this.offset;
   }

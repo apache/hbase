@@ -15,8 +15,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Configuration parameters for the connection.
  * Configuration is a heavy weight registry that does a lot of string operations and regex matching.
@@ -124,7 +122,6 @@ public class ConnectionConfiguration {
    * This is for internal testing purpose (using the default value).
    * In real usage, we should read the configuration from the Configuration object.
    */
-  @VisibleForTesting
   protected ConnectionConfiguration() {
     this.writeBufferSize = WRITE_BUFFER_SIZE_DEFAULT;
     this.writeBufferPeriodicFlushTimeoutMs = WRITE_BUFFER_PERIODIC_FLUSH_TIMEOUT_MS_DEFAULT;

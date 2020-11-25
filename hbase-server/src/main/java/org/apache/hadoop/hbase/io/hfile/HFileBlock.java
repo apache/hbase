@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -312,7 +312,6 @@ public class HFileBlock implements Cacheable {
    * @param onDiskDataSizeWithHeader see {@link #onDiskDataSizeWithHeader}
    * @param fileContext HFile meta data
    */
-  @VisibleForTesting
   public HFileBlock(BlockType blockType, int onDiskSizeWithoutHeader,
       int uncompressedSizeWithoutHeader, long prevBlockOffset, ByteBuff buf, boolean fillHeader,
       long offset, int nextBlockOnDiskSize, int onDiskDataSizeWithHeader, HFileContext fileContext,
@@ -525,7 +524,6 @@ public class HFileBlock implements Cacheable {
     return this.allocator;
   }
 
-  @VisibleForTesting
   private void sanityCheckAssertion(long valueFromBuf, long valueFromField,
       String fieldName) throws IOException {
     if (valueFromBuf != valueFromField) {
@@ -534,7 +532,6 @@ public class HFileBlock implements Cacheable {
     }
   }
 
-  @VisibleForTesting
   private void sanityCheckAssertion(BlockType valueFromBuf, BlockType valueFromField)
       throws IOException {
     if (valueFromBuf != valueFromField) {
@@ -551,7 +548,6 @@ public class HFileBlock implements Cacheable {
    * thread-safe, because it alters the internal buffer pointer.
    * Used by tests only.
    */
-  @VisibleForTesting
   void sanityCheck() throws IOException {
     // Duplicate so no side-effects
     ByteBuff dup = this.buf.duplicate().rewind();
@@ -840,7 +836,6 @@ public class HFileBlock implements Cacheable {
     /**
      * @param dataBlockEncoder data block encoding algorithm to use
      */
-    @VisibleForTesting
     public Writer(HFileDataBlockEncoder dataBlockEncoder, HFileContext fileContext) {
       this(dataBlockEncoder, fileContext, ByteBuffAllocator.HEAP);
     }
@@ -1403,7 +1398,6 @@ public class HFileBlock implements Cacheable {
     private long fileSize;
 
     /** The size of the header */
-    @VisibleForTesting
     protected final int hdrSize;
 
     /** The filesystem used to access data */
@@ -1694,7 +1688,6 @@ public class HFileBlock implements Cacheable {
      * @param intoHeap allocate the ByteBuff of block from heap or off-heap.
      * @return the HFileBlock or null if there is a HBase checksum mismatch
      */
-    @VisibleForTesting
     protected HFileBlock readBlockDataInternal(FSDataInputStream is, long offset,
         long onDiskSizeWithHeaderL, boolean pread, boolean verifyChecksum, boolean updateMetrics,
         boolean intoHeap) throws IOException {
@@ -1852,7 +1845,6 @@ public class HFileBlock implements Cacheable {
   }
 
   /** An additional sanity-check in case no compression or encryption is being used. */
-  @VisibleForTesting
   void sanityCheckUncompressed() throws IOException {
     if (onDiskSizeWithoutHeader != uncompressedSizeWithoutHeader +
         totalChecksumBytes()) {
@@ -1974,7 +1966,6 @@ public class HFileBlock implements Cacheable {
     return DataBlockEncoding.NONE;
   }
 
-  @VisibleForTesting
   byte getChecksumType() {
     return this.fileContext.getChecksumType().getCode();
   }
@@ -1984,7 +1975,6 @@ public class HFileBlock implements Cacheable {
   }
 
   /** @return the size of data on disk + header. Excludes checksum. */
-  @VisibleForTesting
   int getOnDiskDataSizeWithHeader() {
     return this.onDiskDataSizeWithHeader;
   }
@@ -2023,7 +2013,6 @@ public class HFileBlock implements Cacheable {
   /**
    * Return the appropriate DUMMY_HEADER for the minor version
    */
-  @VisibleForTesting
   // TODO: Why is this in here?
   byte[] getDummyHeaderForVersion() {
     return getDummyHeaderForVersion(this.fileContext.isUseHBaseChecksum());
@@ -2049,7 +2038,6 @@ public class HFileBlock implements Cacheable {
    * This is mostly helpful for debugging. This assumes that the block
    * has minor version > 0.
    */
-  @VisibleForTesting
   static String toStringHeader(ByteBuff buf) throws IOException {
     byte[] magicBuf = new byte[Math.min(buf.limit() - buf.position(), BlockType.MAGIC_LENGTH)];
     buf.get(magicBuf);

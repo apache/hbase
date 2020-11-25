@@ -59,7 +59,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.queue.CircularFifoQueue;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
@@ -240,7 +239,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
       leaseRecovery);
   }
 
-  @VisibleForTesting
   public WALProcedureStore(final Configuration conf, final Path walDir, final Path walArchiveDir,
       final LeaseRecovery leaseRecovery) throws IOException {
     this.conf = conf;
@@ -984,7 +982,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return (System.currentTimeMillis() - lastRollTs.get());
   }
 
-  @VisibleForTesting
   void periodicRollForTesting() throws IOException {
     lock.lock();
     try {
@@ -994,7 +991,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
-  @VisibleForTesting
   public boolean rollWriterForTesting() throws IOException {
     lock.lock();
     try {
@@ -1004,7 +1000,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
-  @VisibleForTesting
   void removeInactiveLogsForTesting() throws Exception {
     lock.lock();
     try {
@@ -1058,7 +1053,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return true;
   }
 
-  @VisibleForTesting
   boolean rollWriter(long logId) throws IOException {
     assert logId > flushLogId : "logId=" + logId + " flushLogId=" + flushLogId;
     assert lock.isHeldByCurrentThread() : "expected to be the lock owner. " + lock.isLocked();
@@ -1257,7 +1251,6 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return this.walDir;
   }
 
-  @VisibleForTesting
   Path getWalArchiveDir() {
     return this.walArchiveDir;
   }

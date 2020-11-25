@@ -75,15 +75,13 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.util.Shell;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * This is an implementation of {@link RSGroupInfoManager} which makes use of an HBase table as the
@@ -140,7 +138,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     new ServerEventsListenerThread();
 
   /** Get rsgroup table mapping script */
-  @VisibleForTesting
   RSGroupMappingScript script;
 
   // Package visibility for testing

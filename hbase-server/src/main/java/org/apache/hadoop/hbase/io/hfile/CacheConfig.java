@@ -27,8 +27,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Stores all of the cache objects and configuration for a single HFile.
  */
@@ -282,7 +280,6 @@ public class CacheConfig {
    * @param cacheDataOnWrite whether data blocks should be written to the cache
    *                         when an HFile is written
    */
-  @VisibleForTesting
   public void setCacheDataOnWrite(boolean cacheDataOnWrite) {
     this.cacheDataOnWrite = cacheDataOnWrite;
   }
@@ -328,7 +325,6 @@ public class CacheConfig {
    * @param evictOnClose whether blocks should be evicted from the cache when an
    *                     HFile reader is closed
    */
-  @VisibleForTesting
   public void setEvictOnClose(boolean evictOnClose) {
     this.evictOnClose = evictOnClose;
   }

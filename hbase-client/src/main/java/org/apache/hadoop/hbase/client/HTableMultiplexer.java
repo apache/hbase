@@ -42,12 +42,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables. Each put
@@ -239,7 +237,7 @@ public class HTableMultiplexer {
     return new HTableMultiplexerStatus(serverToFlushWorkerMap);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   LinkedBlockingQueue<PutStatus> getQueue(HRegionLocation addr) {
     FlushWorker worker = serverToFlushWorkerMap.get(addr);
     if (worker == null) {
@@ -257,7 +255,7 @@ public class HTableMultiplexer {
     return worker.getQueue();
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   ClusterConnection getConnection() {
     return this.conn;
   }
@@ -372,7 +370,7 @@ public class HTableMultiplexer {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class PutStatus {
     final RegionInfo regionInfo;
     final Put put;
@@ -425,7 +423,7 @@ public class HTableMultiplexer {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class FlushWorker implements Runnable {
     private final HRegionLocation addr;
     private final LinkedBlockingQueue<PutStatus> queue;
@@ -528,33 +526,33 @@ public class HTableMultiplexer {
       return true;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     long getNextDelay(int retryCount) {
       return ConnectionUtils.getPauseTime(multiplexer.flushPeriod,
           multiplexer.maxAttempts - retryCount - 1);
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     AtomicInteger getRetryInQueue() {
       return this.retryInQueue;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     int getMaxRetryInQueue() {
       return this.maxRetryInQueue;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     AtomicLong getTotalFailedPutCount() {
       return this.totalFailedPutCount;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     HTableMultiplexer getMultiplexer() {
       return this.multiplexer;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     ScheduledExecutorService getExecutor() {
       return this.executor;
     }

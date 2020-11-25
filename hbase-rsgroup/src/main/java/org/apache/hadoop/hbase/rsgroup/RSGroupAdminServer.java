@@ -45,12 +45,10 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Service to support Region Server Grouping (HBase-6721).
@@ -643,7 +641,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    * parent region cases. This method is invoked by {@link #balanceRSGroup}
    * @return A clone of current assignments for this group.
    */
-  @VisibleForTesting
   Map<TableName, Map<ServerName, List<RegionInfo>>> getRSGroupAssignmentsByTable(
       TableStateManager tableStateManager, String groupName) throws IOException {
     Map<TableName, Map<ServerName, List<RegionInfo>>> result = Maps.newHashMap();

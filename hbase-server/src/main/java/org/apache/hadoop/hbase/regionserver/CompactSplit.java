@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.Store.NO_PRIORITY;
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -53,7 +54,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -779,12 +780,10 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     // No children to register
   }
 
-  @VisibleForTesting
   public ThroughputController getCompactionThroughputController() {
     return compactionThroughputController;
   }
 
-  @VisibleForTesting
   /**
    * Shutdown the long compaction thread pool.
    * Should only be used in unit test to prevent long compaction thread pool from stealing job

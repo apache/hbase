@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
@@ -41,12 +40,10 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -347,7 +344,7 @@ public final class CommonFSUtils {
   }
 
   /**
-   * Returns the URI in the strig format
+   * Returns the URI in the string format
    * @param c configuration
    * @param p path
    * @return - the URI's to string format
@@ -360,7 +357,6 @@ public final class CommonFSUtils {
     return null;
   }
 
-  @VisibleForTesting
   public static void setWALRootDir(final Configuration c, final Path root) {
     c.set(HBASE_WAL_DIR, root.toString());
   }

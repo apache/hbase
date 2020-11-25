@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -34,7 +33,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
@@ -55,7 +54,6 @@ public class MajorCompactionTTLRequest extends MajorCompactionRequest {
     return request.createRequest(conf, htd);
   }
 
-  @VisibleForTesting
   private Optional<MajorCompactionRequest> createRequest(Configuration conf, TableDescriptor htd)
       throws IOException {
     Map<String, Long> familiesToCompact = getStoresRequiringCompaction(htd);

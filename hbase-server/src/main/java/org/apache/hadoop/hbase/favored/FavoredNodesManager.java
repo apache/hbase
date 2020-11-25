@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.FAVORE
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.PRIMARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.SECONDARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.TERTIARY;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,7 +43,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
@@ -95,7 +96,6 @@ public class FavoredNodesManager {
     datanodeDataTransferPort= getDataNodePort();
   }
 
-  @VisibleForTesting
   public int getDataNodePort() {
     HdfsConfiguration.init();
 
@@ -282,7 +282,6 @@ public class FavoredNodesManager {
     }
   }
 
-  @VisibleForTesting
   public synchronized Set<RegionInfo> getRegionsOfFavoredNode(ServerName serverName) {
     Set<RegionInfo> regionInfos = Sets.newHashSet();
 

@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -130,7 +128,7 @@ public class WALKeyImpl implements WALKey {
         new ArrayList<>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, replicationScope, null);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename,
                 long logSeqNum,
       final long now, UUID clusterId) {

@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,7 +38,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -48,7 +46,6 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * This is used only in testing.
  */
 @InterfaceAudience.Private
-@VisibleForTesting
 public class EncodedDataBlock {
   private byte[] rawKVs;
   private ByteBuffer rawBuffer;

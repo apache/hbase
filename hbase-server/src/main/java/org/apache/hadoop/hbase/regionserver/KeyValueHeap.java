@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -29,10 +27,10 @@ import java.util.PriorityQueue;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 
 /**
  * Implements a heap merge across any number of KeyValueScanners.
@@ -419,8 +417,6 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     return this.heap;
   }
 
-
-  @VisibleForTesting
   KeyValueScanner getCurrentForTesting() {
     return current;
   }

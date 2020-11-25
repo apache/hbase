@@ -27,8 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * <p>
  * This class is for maintaining the various regionserver statistics
@@ -95,12 +93,10 @@ public class MetricsRegionServer {
     return null;
   }
 
-  @VisibleForTesting
   public MetricsRegionServerSource getMetricsSource() {
     return serverSource;
   }
 
-  @VisibleForTesting
   public MetricsUserAggregate getMetricsUserAggregate() {
     return userAggregate;
   }

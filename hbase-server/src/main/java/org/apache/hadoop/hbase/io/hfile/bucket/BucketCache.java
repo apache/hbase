@@ -49,7 +49,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -77,7 +76,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -113,7 +111,6 @@ public class BucketCache implements BlockCache, HeapSize {
   static final String MIN_FACTOR_CONFIG_NAME = "hbase.bucketcache.minfactor";
 
   /** Priority buckets */
-  @VisibleForTesting
   static final float DEFAULT_SINGLE_FACTOR = 0.25f;
   static final float DEFAULT_MULTI_FACTOR = 0.50f;
   static final float DEFAULT_MEMORY_FACTOR = 0.25f;
@@ -135,10 +132,8 @@ public class BucketCache implements BlockCache, HeapSize {
   transient final IOEngine ioEngine;
 
   // Store the block in this map before writing it to cache
-  @VisibleForTesting
   transient final RAMCache ramCache;
   // In this map, store the block's meta data like offset, length
-  @VisibleForTesting
   transient ConcurrentHashMap<BlockCacheKey, BucketEntry> backingMap;
 
   /**
@@ -155,9 +150,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * WriterThread when it runs takes whatever has been recently added and 'drains' the entries
    * to the BucketCache.  It then updates the ramCache and backingMap accordingly.
    */
-  @VisibleForTesting
   transient final ArrayList<BlockingQueue<RAMQueueEntry>> writerQueues = new ArrayList<>();
-  @VisibleForTesting
   transient final WriterThread[] writerThreads;
 
   /** Volatile boolean to track if free space is in process or not */
@@ -179,7 +172,6 @@ public class BucketCache implements BlockCache, HeapSize {
    * bucket cache will skip some blocks when caching. If the flag is true, we
    * will wait until blocks are flushed to IOEngine.
    */
-  @VisibleForTesting
   boolean wait_when_cache = false;
 
   private final BucketCacheStats cacheStats = new BucketCacheStats();
@@ -204,7 +196,6 @@ public class BucketCache implements BlockCache, HeapSize {
    * <p>
    * Key set of offsets in BucketCache is limited so soft reference is the best choice here.
    */
-  @VisibleForTesting
   transient final IdReadWriteLock<Long> offsetLock = new IdReadWriteLock<>(ReferenceType.SOFT);
 
   private final NavigableSet<BlockCacheKey> blocksByHFile = new ConcurrentSkipListSet<>((a, b) -> {
@@ -341,14 +332,12 @@ public class BucketCache implements BlockCache, HeapSize {
    * Called by the constructor to start the writer threads. Used by tests that need to override
    * starting the threads.
    */
-  @VisibleForTesting
   protected void startWriterThreads() {
     for (WriterThread thread : writerThreads) {
       thread.start();
     }
   }
 
-  @VisibleForTesting
   boolean isCacheEnabled() {
     return this.cacheEnabled;
   }
@@ -545,7 +534,6 @@ public class BucketCache implements BlockCache, HeapSize {
     return null;
   }
 
-  @VisibleForTesting
   void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry, boolean decrementBlockNumber) {
     bucketAllocator.freeBlock(bucketEntry.offset());
     realCacheSize.add(-1 * bucketEntry.getLength());
@@ -670,7 +658,6 @@ public class BucketCache implements BlockCache, HeapSize {
     return (long) Math.floor(bucketAllocator.getTotalSize() * acceptableFactor);
   }
 
-  @VisibleForTesting
   long getPartitionSize(float partitionFactor) {
     return (long) Math.floor(bucketAllocator.getTotalSize() * partitionFactor * minFactor);
   }
@@ -865,7 +852,6 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   // This handles flushing the RAM cache to IOEngine.
-  @VisibleForTesting
   class WriterThread extends Thread {
     private final BlockingQueue<RAMQueueEntry> inputQueue;
     private volatile boolean writerEnabled = true;
@@ -876,7 +862,6 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     // Used for test
-    @VisibleForTesting
     void disableWriter() {
       this.writerEnabled = false;
     }
@@ -936,7 +921,6 @@ public class BucketCache implements BlockCache, HeapSize {
      *   interference expected.
      * @throws InterruptedException
      */
-    @VisibleForTesting
     void doDrain(final List<RAMQueueEntry> entries) throws InterruptedException {
       if (entries.isEmpty()) {
         return;
@@ -1044,7 +1028,6 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param q The queue to take from.
    * @return {@code receptacle} laden with elements taken from the queue or empty if none found.
    */
-  @VisibleForTesting
   static List<RAMQueueEntry> getRAMQueueEntries(BlockingQueue<RAMQueueEntry> q,
       List<RAMQueueEntry> receptacle) throws InterruptedException {
     // Clear sets all entries to null and sets size to 0. We retain allocations. Presume it
@@ -1338,7 +1321,6 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * Block Entry stored in the memory with key,data and so on
    */
-  @VisibleForTesting
   static class RAMQueueEntry {
     private final BlockCacheKey key;
     private final Cacheable data;
@@ -1520,7 +1502,6 @@ public class BucketCache implements BlockCache, HeapSize {
     return null;
   }
 
-  @VisibleForTesting
   public int getRpcRefCount(BlockCacheKey cacheKey) {
     BucketEntry bucketEntry = backingMap.get(cacheKey);
     if (bucketEntry != null) {

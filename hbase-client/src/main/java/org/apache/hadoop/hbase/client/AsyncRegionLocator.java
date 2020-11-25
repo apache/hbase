@@ -30,13 +30,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
-import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
 /**
  * The asynchronous region locator.
@@ -175,7 +173,6 @@ class AsyncRegionLocator {
     nonMetaRegionLocator.clearCache();
   }
 
-  @VisibleForTesting
   AsyncNonMetaRegionLocator getNonMetaRegionLocator() {
     return nonMetaRegionLocator;
   }

@@ -72,12 +72,10 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 /**
  * <p>
@@ -148,7 +146,6 @@ public class MetaTableAccessor {
   private static final Logger LOG = LoggerFactory.getLogger(MetaTableAccessor.class);
   private static final Logger METALOG = LoggerFactory.getLogger("org.apache.hadoop.hbase.META");
 
-  @VisibleForTesting
   public static final byte[] REPLICATION_PARENT_QUALIFIER = Bytes.toBytes("parent");
 
   private static final byte ESCAPE_BYTE = (byte) 0xFF;
@@ -451,7 +448,6 @@ public class MetaTableAccessor {
    *                                    true and we'll leave out offlined regions from returned list
    * @return List of all user-space regions.
    */
-  @VisibleForTesting
   public static List<RegionInfo> getAllRegions(Connection connection,
       boolean excludeOfflinedSplitParents)
       throws IOException {
@@ -908,7 +904,6 @@ public class MetaTableAccessor {
    * @param replicaId the replicaId of the region
    * @return a byte[] for server column qualifier
    */
-  @VisibleForTesting
   public static byte[] getServerColumn(int replicaId) {
     return replicaId == 0
       ? HConstants.SERVER_QUALIFIER
@@ -921,7 +916,6 @@ public class MetaTableAccessor {
    * @param replicaId the replicaId of the region
    * @return a byte[] for server start code column qualifier
    */
-  @VisibleForTesting
   public static byte[] getStartCodeColumn(int replicaId) {
     return replicaId == 0
       ? HConstants.STARTCODE_QUALIFIER
@@ -934,7 +928,6 @@ public class MetaTableAccessor {
    * @param replicaId the replicaId of the region
    * @return a byte[] for seqNum column qualifier
    */
-  @VisibleForTesting
   public static byte[] getSeqNumColumn(int replicaId) {
     return replicaId == 0
       ? HConstants.SEQNUM_QUALIFIER
@@ -948,7 +941,6 @@ public class MetaTableAccessor {
    * @param serverColumn the column qualifier
    * @return an int for the replicaId
    */
-  @VisibleForTesting
   static int parseReplicaIdFromServerColumn(byte[] serverColumn) {
     String serverStr = Bytes.toString(serverColumn);
 
@@ -1472,7 +1464,6 @@ public class MetaTableAccessor {
    * @param regionInfo region information
    * @throws IOException if problem connecting or updating meta
    */
-  @VisibleForTesting
   public static void addRegionToMeta(Connection connection, RegionInfo regionInfo)
       throws IOException {
     addRegionsToMeta(connection, Collections.singletonList(regionInfo), 1);
@@ -1699,7 +1690,6 @@ public class MetaTableAccessor {
    * merge and split as these want to make atomic mutations across multiple rows.
    * @throws IOException even if we encounter a RuntimeException, we'll still wrap it in an IOE.
    */
-  @VisibleForTesting
   static void multiMutate(final Table table, byte[] row, final List<Mutation> mutations)
       throws IOException {
     debugLogMutations(mutations);
@@ -1752,7 +1742,6 @@ public class MetaTableAccessor {
    * @param sn Server name
    * @param masterSystemTime wall clock time from master if passed in the open region RPC
    */
-  @VisibleForTesting
   public static void updateRegionLocation(Connection connection, RegionInfo regionInfo,
       ServerName sn, long openSeqNum, long masterSystemTime) throws IOException {
     updateLocation(connection, regionInfo, sn, openSeqNum, masterSystemTime);
@@ -1937,7 +1926,6 @@ public class MetaTableAccessor {
     }
   }
 
-  @VisibleForTesting
   public static byte[] getParentsBytes(List<RegionInfo> parents) {
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     Iterator<RegionInfo> iter = parents.iterator();

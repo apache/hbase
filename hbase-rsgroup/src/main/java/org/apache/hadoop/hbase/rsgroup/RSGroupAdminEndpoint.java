@@ -88,13 +88,11 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 // TODO: Encapsulate MasterObserver functions into separate subclass.
 @CoreCoprocessor
@@ -151,7 +149,6 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
     return groupInfoManager;
   }
 
-  @VisibleForTesting
   RSGroupAdminServer getGroupAdminServer() {
     return groupAdminServer;
   }

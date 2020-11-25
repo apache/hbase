@@ -25,7 +25,6 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -33,11 +32,9 @@ import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
-
 import sun.nio.ch.DirectBuffer;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * ByteBuffAllocator is used for allocating/freeing the ByteBuffers from/to NIO ByteBuffer pool, and
@@ -212,7 +209,6 @@ public class ByteBuffAllocator {
     return new ByteBuffAllocator(false, 0, DEFAULT_BUFFER_SIZE, Integer.MAX_VALUE);
   }
 
-  @VisibleForTesting
   ByteBuffAllocator(boolean reservoirEnabled, int maxBufCount, int bufSize,
       int minSizeForReservoirUse) {
     this.reservoirEnabled = reservoirEnabled;
@@ -245,7 +241,6 @@ public class ByteBuffAllocator {
    * The {@link ConcurrentLinkedQueue#size()} is O(N) complexity and time-consuming, so DO NOT use
    * the method except in UT.
    */
-  @VisibleForTesting
   public int getFreeBufferCount() {
     return this.buffers.size();
   }
@@ -352,7 +347,6 @@ public class ByteBuffAllocator {
   /**
    * Free all direct buffers if allocated, mainly used for testing.
    */
-  @VisibleForTesting
   public void clean() {
     while (!buffers.isEmpty()) {
       ByteBuffer b = buffers.poll();

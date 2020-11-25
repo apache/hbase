@@ -40,14 +40,11 @@ import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.LeaseException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Implements the scanner interface for the HBase client. If there are multiple regions in a table,
@@ -186,7 +183,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return lastNext;
   }
 
-  @VisibleForTesting
   protected long getMaxResultSize() {
     return maxScannerResultSize;
   }
@@ -219,7 +215,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
    * Marked as protected only because TestClientScanner need to override this method.
    * @return false if we should terminate the scan. Otherwise
    */
-  @VisibleForTesting
   protected boolean moveToNextRegion() {
     // Close the previous scanner if it's open
     try {
@@ -256,7 +251,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return true;
   }
 
-  @VisibleForTesting
   boolean isAnyRPCcancelled() {
     return callable.isAnyRPCcancelled();
   }
@@ -323,7 +317,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return result;
   }
 
-  @VisibleForTesting
   public int getCacheSize() {
     return cache != null ? cache.size() : 0;
   }
@@ -546,7 +539,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return;
   }
 
-  @VisibleForTesting
   public int getCacheCount() {
     return cache != null ? cache.size() : 0;
   }
