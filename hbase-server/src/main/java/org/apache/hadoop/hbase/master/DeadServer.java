@@ -33,9 +33,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-
-
 /**
  * Class to hold dead servers list and utility querying dead server list.
  * Servers are added when they expire or when we find them in filesystem on startup.
