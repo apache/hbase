@@ -81,23 +81,27 @@ public class TestRegionCoprocessorHost {
 
   @Before
   public void setup() throws IOException {
-    init(false);
+    init(null);
   }
 
-  public void init(boolean flag) throws IOException {
+  public void init(Boolean flag) throws IOException {
     conf = HBaseConfiguration.create();
     conf.setBoolean(COPROCESSORS_ENABLED_CONF_KEY, true);
     conf.setBoolean(USER_COPROCESSORS_ENABLED_CONF_KEY, true);
     TableName tableName = TableName.valueOf(name.getMethodName());
     regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     TableDescriptor tableDesc = null;
-    if (flag) {
-      // configure TempRegionObserver which doesn't override postScannerFilterRow
-      conf.set(REGION_COPROCESSOR_CONF_KEY, TempRegionObserver.class.getName());
+    if (flag == null) {
+      // configure a coprocessor which override postScannerFilterRow
+      tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+          .setCoprocessor(SimpleRegionObserver.class.getName()).build();
+    } else if (flag) {
+      // configure a coprocessor which don't override postScannerFilterRow
       tableDesc = TableDescriptorBuilder.newBuilder(tableName)
           .setCoprocessor(TempRegionObserver.class.getName()).build();
     } else {
-      // config a same coprocessor with system coprocessor
+      // configure two coprocessors, one don't override postScannerFilterRow but another one does
+      conf.set(REGION_COPROCESSOR_CONF_KEY, TempRegionObserver.class.getName());
       tableDesc = TableDescriptorBuilder.newBuilder(tableName)
           .setCoprocessor(SimpleRegionObserver.class.getName()).build();
     }
@@ -181,10 +185,16 @@ public class TestRegionCoprocessorHost {
     assertTrue("Region coprocessor implement postScannerFilterRow",
       host.hasCustomPostScannerFilterRow());
 
-    // Initialize again to set TempRegionObserver which doesn't implement postScannerFilterRow
+    // Set a region CP which doesn't implement postScannerFilterRow
     init(true);
     host = new RegionCoprocessorHost(region, rsServices, conf);
     assertFalse("Region coprocessor implement postScannerFilterRow",
+      host.hasCustomPostScannerFilterRow());
+
+    // Set multiple region CPs, in which one implements postScannerFilterRow
+    init(false);
+    host = new RegionCoprocessorHost(region, rsServices, conf);
+    assertTrue("Region coprocessor doesn't implement postScannerFilterRow",
       host.hasCustomPostScannerFilterRow());
   }
 
