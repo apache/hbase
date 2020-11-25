@@ -81,9 +81,9 @@ public class TestRegionServerFlushTableProcedureManager {
     throws IllegalAccessException, NoSuchFieldException {
     Field f = null;
     try {
-      f = object.getClass().getField(field);
+      f = object.getClass().getDeclaredField(field);
     } catch (NoSuchFieldException e) {
-      f = object.getClass().getSuperclass().getField(field);
+      f = object.getClass().getSuperclass().getDeclaredField(field);
     }
     f.setAccessible(true);
     if (value != null) {
