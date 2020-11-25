@@ -19,7 +19,13 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
