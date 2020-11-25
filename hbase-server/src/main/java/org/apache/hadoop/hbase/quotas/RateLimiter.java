@@ -16,8 +16,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Simple rate limiter.
  *
@@ -222,9 +220,8 @@ public abstract class RateLimiter {
   }
 
   // These two method are for strictly testing purpose only
-  @VisibleForTesting
+
   public abstract void setNextRefillTime(long nextRefillTime);
 
-  @VisibleForTesting
   public abstract long getNextRefillTime();
 }

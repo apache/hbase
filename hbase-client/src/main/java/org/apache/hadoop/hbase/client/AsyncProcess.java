@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -30,7 +29,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -436,7 +434,6 @@ class AsyncProcess {
    * @return pool if non null, otherwise returns this.pool if non null, otherwise throws
    *         RuntimeException
    */
-  @VisibleForTesting
   ExecutorService getPool(ExecutorService pool) {
     if (pool != null) {
       return pool;
@@ -803,13 +800,11 @@ class AsyncProcess {
      * Runnable (that can be submitted to thread pool) that submits MultiAction to a
      * single server. The server call is synchronous, therefore we do it on a thread pool.
      */
-    @VisibleForTesting
     class SingleServerRequestRunnable implements Runnable {
       private final MultiAction<Row> multiAction;
       private final int numAttempt;
       private final ServerName server;
       private final Set<PayloadCarryingServerCallable> callsInProgress;
-      @VisibleForTesting
       SingleServerRequestRunnable(
           MultiAction<Row> multiAction, int numAttempt, ServerName server,
           Set<PayloadCarryingServerCallable> callsInProgress) {
@@ -988,7 +983,6 @@ class AsyncProcess {
       return callsInProgress;
     }
 
-    @VisibleForTesting
     SingleServerRequestRunnable createSingleServerRequest(MultiAction<Row> multiAction, int numAttempt, ServerName server,
       Set<PayloadCarryingServerCallable> callsInProgress) {
       return new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress);
@@ -1387,7 +1381,6 @@ class AsyncProcess {
       }
     }
 
-    @VisibleForTesting
     long getActionsInProgress() {
       return actionsInProgress.get();
     }
@@ -1798,7 +1791,6 @@ class AsyncProcess {
     /**
      * Create a callable. Isolated to be easily overridden in the tests.
      */
-    @VisibleForTesting
     protected MultiServerCallable<Row> createCallable(final ServerName server,
         TableName tableName, final MultiAction<Row> multi) {
       return new MultiServerCallable<Row>(connection, tableName, server,
@@ -1806,7 +1798,6 @@ class AsyncProcess {
     }
   }
 
-  @VisibleForTesting
   protected void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
     boolean metrics = AsyncProcess.this.connection.getConnectionMetrics() != null;
     boolean stats = AsyncProcess.this.connection.getStatisticsTracker() != null;
@@ -1823,7 +1814,6 @@ class AsyncProcess {
     }
   }
 
-  @VisibleForTesting
   <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
       TableName tableName, List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
       Batch.Callback<CResult> callback, Object[] results, boolean needResults,
@@ -1836,13 +1826,11 @@ class AsyncProcess {
   /**
    * Create a caller. Isolated to be easily overridden in the tests.
    */
-  @VisibleForTesting
   protected RpcRetryingCaller<MultiResponse> createCaller(PayloadCarryingServerCallable callable,
       int rpcTimeout) {
     return rpcCallerFactory.<MultiResponse> newCaller(rpcTimeout);
   }
 
-  @VisibleForTesting
   /** Waits until all outstanding tasks are done. Used in tests. */
   void waitUntilDone() throws InterruptedIOException {
     waitForMaximumCurrentTasks(0, null);
@@ -1855,7 +1843,6 @@ class AsyncProcess {
   }
 
   // Break out this method so testable
-  @VisibleForTesting
   void waitForMaximumCurrentTasks(int max, final AtomicLong tasksInProgress, final long id,
       String tableName) throws InterruptedIOException {
     long lastLog = EnvironmentEdgeManager.currentTime();
@@ -2011,7 +1998,6 @@ class AsyncProcess {
   /**
    * Collect all advices from checkers and make the final decision.
    */
-  @VisibleForTesting
   static class RowCheckerHost {
     private final List<RowChecker> checkers;
     private boolean isEnd = false;
@@ -2064,7 +2050,6 @@ class AsyncProcess {
   /**
    * Provide a way to control the flow of rows iteration.
    */
-  @VisibleForTesting
   interface RowChecker {
     enum ReturnCode {
       /**
@@ -2098,7 +2083,6 @@ class AsyncProcess {
    * Reduce the limit of heapsize for submitting quickly
    * if there is no running task.
    */
-  @VisibleForTesting
   static class SubmittedSizeChecker implements RowChecker {
     private final long maxHeapSizeSubmit;
     private long heapSize = 0;
@@ -2128,7 +2112,6 @@ class AsyncProcess {
   /**
    * limit the max number of tasks in an AsyncProcess.
    */
-  @VisibleForTesting
   static class TaskCountChecker implements RowChecker {
     private static final long MAX_WAITING_TIME = 1000; //ms
     private final Set<HRegionInfo> regionsIncluded = new HashSet<>();
@@ -2233,7 +2216,6 @@ class AsyncProcess {
   /**
    * limit the request size for each regionserver.
    */
-  @VisibleForTesting
   static class RequestSizeChecker implements RowChecker {
     private final long maxHeapSizePerRequest;
     private final Map<ServerName, Long> serverRequestSizes = new HashMap<>();

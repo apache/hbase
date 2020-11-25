@@ -10,7 +10,6 @@
  */
 package org.apache.hadoop.hbase.replication.master;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -136,7 +135,7 @@ public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public void setConf(Configuration conf, ZooKeeperWatcher zk) {
     super.setConf(conf);
     try {

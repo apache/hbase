@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.CodedInputStream;
@@ -2612,7 +2611,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    * @param strParam stringifiedParam to be truncated
    * @return truncated trace log string
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   String truncateTraceLog(String strParam) {
     if (LOG.isTraceEnabled()) {
       int traceLogMaxLength = getConf().getInt(TRACE_LOG_MAX_LENGTH, DEFAULT_TRACE_LOG_MAX_LENGTH);

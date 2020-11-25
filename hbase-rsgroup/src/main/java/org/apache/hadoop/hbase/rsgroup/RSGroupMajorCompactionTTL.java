@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.util.Arrays;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
@@ -47,7 +46,7 @@ public class RSGroupMajorCompactionTTL extends MajorCompactorTTL {
 
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupMajorCompactionTTL.class);
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   RSGroupMajorCompactionTTL() {
     super();
   }

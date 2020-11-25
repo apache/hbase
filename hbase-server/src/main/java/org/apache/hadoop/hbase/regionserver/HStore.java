@@ -18,6 +18,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
@@ -43,7 +48,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -96,13 +100,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 /**
  * A Store holds a column family in a Region.  Its a memstore and a set of zero
@@ -1539,7 +1536,6 @@ public class HStore implements Store {
         this.region.getRegionInfo(), compactionDescriptor, region.getMVCC());
   }
 
-  @VisibleForTesting
   void replaceStoreFiles(final Collection<StoreFile> compactedFiles,
       final Collection<StoreFile> result) throws IOException {
     this.lock.writeLock().lock();
@@ -1960,7 +1956,6 @@ public class HStore implements Store {
    *
    * @param compactedFiles list of files that were compacted
    */
-  @VisibleForTesting
   protected void completeCompaction(final Collection<StoreFile> compactedFiles)
     throws IOException {
     completeCompaction(compactedFiles, true);
@@ -1981,7 +1976,6 @@ public class HStore implements Store {
    *
    * @param compactedFiles list of files that were compacted
    */
-  @VisibleForTesting
   protected void completeCompaction(final Collection<StoreFile> compactedFiles, boolean removeFiles)
       throws IOException {
     LOG.debug("Completing compaction...");
@@ -2751,7 +2745,6 @@ public class HStore implements Store {
    * Returns the StoreEngine that is backing this concrete implementation of Store.
    * @return Returns the {@link StoreEngine} object used internally inside this HStore object.
    */
-  @VisibleForTesting
   public StoreEngine<?, ?, ?, ?> getStoreEngine() {
     return this.storeEngine;
   }

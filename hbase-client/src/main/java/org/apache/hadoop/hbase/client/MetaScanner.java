@@ -41,8 +41,6 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Scanner class that contains the <code>hbase:meta</code> table scanning logic.
  * Provided visitors will be called for each row.
@@ -68,7 +66,7 @@ public class MetaScanner {
    * @param visitor A custom visitor
    * @throws IOException e
    */
-  @VisibleForTesting // Do not use. Used by tests only and hbck.
+  // Do not use. Used by tests only and hbck.
   public static void metaScan(Connection connection,
       MetaScannerVisitor visitor) throws IOException {
     metaScan(connection, visitor, null, null, Integer.MAX_VALUE);
@@ -108,7 +106,7 @@ public class MetaScanner {
    * will be set to default value <code>Integer.MAX_VALUE</code>.
    * @throws IOException e
    */
-  @VisibleForTesting // Do not use. Used by Master but by a method that is used testing.
+  // Do not use. Used by Master but by a method that is used testing.
   public static void metaScan(Connection connection,
       MetaScannerVisitor visitor, TableName userTableName, byte[] row,
       int rowLimit)
@@ -252,7 +250,7 @@ public class MetaScanner {
    * @return List of all user-space regions.
    * @throws IOException
    */
-  @VisibleForTesting // And for hbck.
+  // And for hbck.
   public static List<HRegionInfo> listAllRegions(Configuration conf, Connection connection,
       final boolean offlined)
   throws IOException {

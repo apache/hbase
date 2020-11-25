@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.FileNotFoundException;
@@ -196,7 +195,6 @@ public final class SnapshotManifest {
     addRegion(region, visitor);
   }
 
-  @VisibleForTesting
   protected void addRegion(final HRegion region, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
     LOG.debug("Storing '" + region + "' region-info for snapshot.");
@@ -242,7 +240,6 @@ public final class SnapshotManifest {
     addRegion(tableDir, regionInfo, visitor);
   }
 
-  @VisibleForTesting
   protected void addRegion(final Path tableDir, final HRegionInfo regionInfo, RegionVisitor visitor)
       throws IOException {
 

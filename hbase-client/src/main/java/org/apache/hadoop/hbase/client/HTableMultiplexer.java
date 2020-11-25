@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.IOException;
@@ -242,7 +241,7 @@ public class HTableMultiplexer {
     return new HTableMultiplexerStatus(serverToFlushWorkerMap);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   LinkedBlockingQueue<PutStatus> getQueue(HRegionLocation addr) {
     FlushWorker worker = serverToFlushWorkerMap.get(addr);
     if (worker == null) {
@@ -260,7 +259,7 @@ public class HTableMultiplexer {
     return worker.getQueue();
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   ClusterConnection getConnection() {
     return this.conn;
   }
@@ -373,7 +372,7 @@ public class HTableMultiplexer {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class PutStatus {
     public final HRegionInfo regionInfo;
     public final Put put;
@@ -426,7 +425,7 @@ public class HTableMultiplexer {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class FlushWorker implements Runnable {
     private final HRegionLocation addr;
     private final LinkedBlockingQueue<PutStatus> queue;
@@ -525,33 +524,33 @@ public class HTableMultiplexer {
       return true;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     long getNextDelay(int retryCount) {
       return ConnectionUtils.getPauseTime(multiplexer.flushPeriod,
           multiplexer.retryNum - retryCount - 1);
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     AtomicInteger getRetryInQueue() {
       return this.retryInQueue;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     int getMaxRetryInQueue() {
       return this.maxRetryInQueue;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     AtomicLong getTotalFailedPutCount() {
       return this.totalFailedPutCount;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     HTableMultiplexer getMultiplexer() {
       return this.multiplexer;
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     ScheduledExecutorService getExecutor() {
       return this.executor;
     }

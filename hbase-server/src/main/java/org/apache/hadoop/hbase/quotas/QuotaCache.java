@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Cache that keeps track of the quota settings for the users and tables that are interacting with
  * it. To avoid blocking the operations if the requested quota is not in cache an "empty quota" will
@@ -151,27 +149,22 @@ public class QuotaCache implements Stoppable {
     return quotaInfo;
   }
 
-  @VisibleForTesting
   void triggerCacheRefresh() {
     refreshChore.triggerNow();
   }
 
-  @VisibleForTesting
   long getLastUpdate() {
     return refreshChore.lastUpdate;
   }
 
-  @VisibleForTesting
   Map<String, QuotaState> getNamespaceQuotaCache() {
     return namespaceQuotaCache;
   }
 
-  @VisibleForTesting
   Map<TableName, QuotaState> getTableQuotaCache() {
     return tableQuotaCache;
   }
 
-  @VisibleForTesting
   Map<String, UserQuotaState> getUserQuotaCache() {
     return userQuotaCache;
   }

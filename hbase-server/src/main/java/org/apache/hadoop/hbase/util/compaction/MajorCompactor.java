@@ -16,6 +16,14 @@
 
 package org.apache.hadoop.hbase.util.compaction;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,15 +35,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -160,7 +159,7 @@ public class MajorCompactor extends Configured implements Tool {
     LOG.info("All regions major compacted successfully");
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   void initializeWorkQueues() throws IOException {
     if (storesToCompact.isEmpty()) {
       for (HColumnDescriptor a : connection.getTable(tableName).getTableDescriptor()

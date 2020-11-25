@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -37,7 +36,6 @@ public class CurrentHourProvider {
     }
   }
 
-  @VisibleForTesting
   static Tick nextTick() {
     Calendar calendar = new GregorianCalendar();
     calendar.setTimeInMillis(EnvironmentEdgeManager.currentTime());
@@ -53,7 +51,6 @@ public class CurrentHourProvider {
     calendar.set(Calendar.MILLISECOND, 0);
   }
 
-  @VisibleForTesting
   static volatile Tick tick = nextTick();
 
   public static int getCurrentHour() {

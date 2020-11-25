@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.ipc;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.wrapException;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -222,7 +221,6 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     }
   }
 
-  @VisibleForTesting
   public static String getDefaultCodec(final Configuration c) {
     // If "hbase.client.default.rpc.codec" is empty string -- you can't set it to null because
     // Configuration will complain -- then no default codec (and we'll pb everything). Else
@@ -254,7 +252,6 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   }
 
   // for writing tests that want to throw exception when connecting.
-  @VisibleForTesting
   boolean isTcpNoDelay() {
     return tcpNoDelay;
   }
@@ -556,7 +553,6 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   /**
    * Blocking rpc channel that goes via hbase rpc.
    */
-  @VisibleForTesting
   public static class BlockingRpcChannelImplementation extends AbstractRpcChannel
       implements BlockingRpcChannel {
 

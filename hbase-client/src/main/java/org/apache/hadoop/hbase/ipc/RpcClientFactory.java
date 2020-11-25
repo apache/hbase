@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 
 import java.net.SocketAddress;
@@ -46,7 +45,6 @@ public final class RpcClientFactory {
   }
 
   /** Helper method for tests only. Creates an {@code RpcClient} without metrics. */
-  @VisibleForTesting
   public static RpcClient createClient(Configuration conf, String clusterId) {
     return createClient(conf, clusterId, null);
   }

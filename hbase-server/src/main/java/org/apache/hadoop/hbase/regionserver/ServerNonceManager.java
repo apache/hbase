@@ -33,8 +33,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Implementation of nonce manager that stores nonces in a hash map and cleans them up after
  * some time; if nonce group/client ID is supplied, nonces are stored by client ID.
@@ -135,7 +133,6 @@ public class ServerNonceManager {
     }
   }
 
-  @VisibleForTesting
   public void setConflictWaitIterationMs(int conflictWaitIterationMs) {
     this.conflictWaitIterationMs = conflictWaitIterationMs;
   }

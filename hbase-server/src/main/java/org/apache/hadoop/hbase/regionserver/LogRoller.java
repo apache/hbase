@@ -38,8 +38,6 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HasThread;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Runs periodically to determine if the WAL should be rolled.
  *
@@ -50,7 +48,6 @@ import com.google.common.annotations.VisibleForTesting;
  * TODO: change to a pool of threads
  */
 @InterfaceAudience.Private
-@VisibleForTesting
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
   justification="Use of an atomic type both as monitor and condition variable is intended")
 public class LogRoller extends HasThread {
@@ -238,7 +235,6 @@ public class LogRoller extends HasThread {
    * For testing only
    * @return true if all WAL roll finished
    */
-  @VisibleForTesting
   public boolean walRollFinished() {
     long now = EnvironmentEdgeManager.currentTime();
     for (RollController controller : wals.values()) {
@@ -248,7 +244,6 @@ public class LogRoller extends HasThread {
     }
     return true;
   }
-
 
   /**
    * Independently control the roll of each wal. When use multiwal,

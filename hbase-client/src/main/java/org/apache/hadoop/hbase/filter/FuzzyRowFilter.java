@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.PriorityQueue;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -35,9 +35,6 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This is optimized version of a standard FuzzyRowFilter Filters data based on fuzzy row key.
@@ -318,12 +315,12 @@ public class FuzzyRowFilter extends FilterBase {
     NO_NEXT
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static SatisfiesCode satisfies(byte[] row, byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     return satisfies(false, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static SatisfiesCode satisfies(boolean reverse, byte[] row, byte[] fuzzyKeyBytes,
       byte[] fuzzyKeyMeta) {
     return satisfies(reverse, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
@@ -439,12 +436,12 @@ public class FuzzyRowFilter extends FilterBase {
     return SatisfiesCode.YES;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static byte[] getNextForFuzzyRule(byte[] row, byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     return getNextForFuzzyRule(false, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, byte[] fuzzyKeyBytes,
       byte[] fuzzyKeyMeta) {
     return getNextForFuzzyRule(reverse, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
@@ -531,7 +528,7 @@ public class FuzzyRowFilter extends FilterBase {
    * @return greater byte array than given (row) which satisfies the fuzzy rule if it exists, null
    *         otherwise
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, int offset, int length,
       byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     // To find out the next "smallest" byte array that satisfies fuzzy rule and "greater" than

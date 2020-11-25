@@ -51,8 +51,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.htrace.Trace;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * The MemStore holds in-memory modifications to the Store.  Modifications
  * are {@link Cell}s.  When asked to flush, current memstore is moved
@@ -72,14 +70,12 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public class DefaultMemStore implements MemStore {
   private static final Log LOG = LogFactory.getLog(DefaultMemStore.class);
-  @VisibleForTesting
   static final String USEMSLAB_KEY = "hbase.hregion.memstore.mslab.enabled";
   private static final boolean USEMSLAB_DEFAULT = true;
   private static final String MSLAB_CLASS_NAME = "hbase.regionserver.mslab.class";
 
   private Configuration conf;
 
-  @VisibleForTesting
   final KeyValue.KVComparator comparator;
 
   // Used to track when to flush
@@ -88,9 +84,7 @@ public class DefaultMemStore implements MemStore {
   private volatile long snapshotId;
   private volatile boolean tagsPresent;
 
-  @VisibleForTesting
   volatile Section activeSection;
-  @VisibleForTesting
   volatile Section snapshotSection;
 
   /**
@@ -254,7 +248,6 @@ public class DefaultMemStore implements MemStore {
   /**
    * Get cell length after serialized in {@link KeyValue}
    */
-  @VisibleForTesting
   int getCellLength(Cell cell) {
     return KeyValueUtil.length(cell);
   }
@@ -1122,7 +1115,6 @@ public class DefaultMemStore implements MemStore {
    * Contains the fields which are useful to MemStoreScanner.
    */
   @InterfaceAudience.Private
-  @VisibleForTesting
   static class Section {
     /**
      * MemStore.  Use a CellSkipListSet rather than SkipListSet because of the

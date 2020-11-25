@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -188,7 +186,6 @@ public class CellSkipListSet implements NavigableSet<Cell> {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  @VisibleForTesting
   int sizeForTests() {
     return this.delegatee.size();
   }

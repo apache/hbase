@@ -25,8 +25,6 @@ import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Utility class for tracking metrics for various types of coprocessors. Each coprocessor instance
  * creates its own MetricRegistry which is exported as an individual MetricSource. MetricRegistries
@@ -75,7 +73,6 @@ public class MetricsCoprocessor {
         .toString();
   }
 
-  @VisibleForTesting
   static MetricRegistryInfo createRegistryInfoForMasterCoprocessor(String clazz) {
     return new MetricRegistryInfo(
         suffix(MASTER_COPROC_METRICS_NAME, clazz),
@@ -88,7 +85,6 @@ public class MetricsCoprocessor {
     return MetricRegistries.global().create(createRegistryInfoForMasterCoprocessor(clazz));
   }
 
-  @VisibleForTesting
   static MetricRegistryInfo createRegistryInfoForRSCoprocessor(String clazz) {
     return new MetricRegistryInfo(
         suffix(RS_COPROC_METRICS_NAME, clazz),
@@ -101,7 +97,6 @@ public class MetricsCoprocessor {
     return MetricRegistries.global().create(createRegistryInfoForRSCoprocessor(clazz));
   }
 
-  @VisibleForTesting
   public static MetricRegistryInfo createRegistryInfoForRegionCoprocessor(String clazz) {
     return new MetricRegistryInfo(
         suffix(REGION_COPROC_METRICS_NAME, clazz),
@@ -114,7 +109,6 @@ public class MetricsCoprocessor {
     return MetricRegistries.global().create(createRegistryInfoForRegionCoprocessor(clazz));
   }
 
-  @VisibleForTesting
   public static MetricRegistryInfo createRegistryInfoForWALCoprocessor(String clazz) {
     return new MetricRegistryInfo(
         suffix(WAL_COPROC_METRICS_NAME, clazz),

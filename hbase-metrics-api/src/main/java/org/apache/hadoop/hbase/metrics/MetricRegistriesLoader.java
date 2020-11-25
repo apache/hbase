@@ -30,8 +30,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-
 @InterfaceAudience.Private
 public class MetricRegistriesLoader {
   private static final Log LOG = LogFactory.getLog(MetricRegistries.class);
@@ -56,7 +54,6 @@ public class MetricRegistriesLoader {
    * implementation will be loaded.
    * @return A {@link MetricRegistries} implementation.
    */
-  @VisibleForTesting
   static MetricRegistries load(List<MetricRegistries> availableImplementations) {
 
     if (availableImplementations.size() == 1) {

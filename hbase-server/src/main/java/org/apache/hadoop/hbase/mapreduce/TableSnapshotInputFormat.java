@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -131,7 +130,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class TableSnapshotRegionRecordReader extends
       RecordReader<ImmutableBytesWritable, Result> {
     private TableSnapshotInputFormatImpl.RecordReader delegate =

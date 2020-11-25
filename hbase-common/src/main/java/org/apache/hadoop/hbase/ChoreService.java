@@ -27,7 +27,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore.ChoreServicer;
@@ -96,7 +95,6 @@ public class ChoreService implements ChoreServicer {
    *          spawned by this service
    */
   @InterfaceAudience.Private
-  @VisibleForTesting
   public ChoreService(final String coreThreadPoolPrefix) {
     this(coreThreadPoolPrefix, MIN_CORE_POOL_SIZE, false);
   }

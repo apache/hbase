@@ -20,6 +20,9 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
 
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -45,7 +48,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -202,16 +204,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
 
 /**
  * An internal, non-instantiable class that manages creation of {@link HConnection}s.
@@ -282,7 +278,6 @@ class ConnectionManager {
    * @param cnm Replaces the nonce generator used, for testing.
    * @return old nonce generator.
    */
-  @VisibleForTesting
   static NonceGenerator injectNonceGeneratorForTesting(
       ClusterConnection conn, NonceGenerator cnm) {
     HConnectionImplementation connImpl = (HConnectionImplementation)conn;
@@ -752,7 +747,6 @@ class ConnectionManager {
     /**
      * @param useMetaReplicas
      */
-    @VisibleForTesting
     void setUseMetaReplicas(final boolean useMetaReplicas) {
       this.useMetaReplicas = useMetaReplicas;
     }
@@ -933,7 +927,6 @@ class ConnectionManager {
     /**
      * For tests only.
      */
-    @VisibleForTesting
     RpcClient getRpcClient() {
       return rpcClient;
     }
@@ -2503,7 +2496,6 @@ class ConnectionManager {
      * Return the number of cached region for a table. It will only be called
      * from a unit test.
      */
-    @VisibleForTesting
     int getNumberOfCachedRegionLocations(final TableName tableName) {
       return metaCache.getNumberOfCachedRegionLocations(tableName);
     }

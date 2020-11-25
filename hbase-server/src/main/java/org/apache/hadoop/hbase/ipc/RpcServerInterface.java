@@ -19,9 +19,12 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.protobuf.BlockingService;
+import com.google.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.Message;
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -32,12 +35,6 @@ import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.authorize.PolicyProvider;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.ServiceException;
 
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
@@ -84,7 +81,7 @@ public interface RpcServerInterface {
    * for correctness.
    * @param pp PolicyProvider
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   @Deprecated
   void refreshAuthManager(PolicyProvider pp);
 
@@ -93,7 +90,7 @@ public interface RpcServerInterface {
    * @param conf configuration for refresh
    * @param pp
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   void refreshAuthManager(Configuration conf, PolicyProvider pp);
 
   RpcScheduler getScheduler();

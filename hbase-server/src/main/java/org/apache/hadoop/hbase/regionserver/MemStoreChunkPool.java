@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.lang.management.MemoryUsage;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -25,7 +26,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -33,9 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemStoreLAB.Chunk;
 import org.apache.hadoop.util.StringUtils;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A pool of {@link HeapMemStoreLAB.Chunk} instances.
@@ -236,7 +233,6 @@ public class MemStoreChunkPool {
     return this.maxCount;
   }
 
-  @VisibleForTesting
   static void clearDisableFlag() {
     chunkPoolDisabled = false;
   }

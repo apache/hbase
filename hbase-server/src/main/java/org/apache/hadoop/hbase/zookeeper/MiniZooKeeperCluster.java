@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -102,7 +100,7 @@ public class MiniZooKeeperCluster {
    * Get the list of client ports.
    * @return clientPortList the client port list
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public List<Integer> getClientPortList() {
     return clientPortList;
   }

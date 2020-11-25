@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
+import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,7 +28,6 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -38,10 +39,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
 
 /**
  * Base Procedure class responsible to handle the Procedure Metadata
@@ -414,7 +411,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return Math.max(0, timeout - (EnvironmentEdgeManager.currentTime() - startTime));
   }
 
-  @VisibleForTesting
   @InterfaceAudience.Private
   public void setOwner(final String owner) {
     this.owner = StringUtils.isEmpty(owner) ? null : owner;
@@ -428,7 +424,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return owner != null;
   }
 
-  @VisibleForTesting
   @InterfaceAudience.Private
   protected synchronized void setState(final ProcedureState state) {
     this.state = state;
@@ -469,7 +464,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   /**
    * Called by the ProcedureExecutor to assign the ID to the newly created procedure.
    */
-  @VisibleForTesting
   @InterfaceAudience.Private
   protected void setProcId(final long procId) {
     this.procId = procId;
@@ -488,7 +482,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   /**
    * Called by the ProcedureExecutor to set the value to the newly created procedure.
    */
-  @VisibleForTesting
   @InterfaceAudience.Private
   protected void setNonceKey(final NonceKey nonceKey) {
     this.nonceKey = nonceKey;

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.util.compaction;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 
@@ -59,7 +58,7 @@ public class MajorCompactorTTL extends MajorCompactor {
 
   private HTableDescriptor htd;
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public MajorCompactorTTL(Configuration conf, HTableDescriptor htd, int concurrency,
       long sleepForMs) throws IOException {
     this.connection = ConnectionFactory.createConnection(conf);

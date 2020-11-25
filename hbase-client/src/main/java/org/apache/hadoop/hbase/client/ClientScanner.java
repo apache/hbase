@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createScanResultCache;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.LinkedList;
@@ -186,7 +184,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return lastNext;
   }
 
-  @VisibleForTesting
   protected long getMaxResultSize() {
     return maxScannerResultSize;
   }
@@ -219,7 +216,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
    * Marked as protected only because TestClientScanner need to override this method.
    * @return false if we should terminate the scan. Otherwise
    */
-  @VisibleForTesting
   protected boolean moveToNextRegion() {
     // Close the previous scanner if it's open
     try {
@@ -258,7 +254,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return true;
   }
 
-  @VisibleForTesting
   boolean isAnyRPCcancelled() {
     return callable.isAnyRPCcancelled();
   }
@@ -317,7 +312,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return null;
   }
 
-  @VisibleForTesting
   public int getCacheSize() {
     return cache != null ? cache.size() : 0;
   }

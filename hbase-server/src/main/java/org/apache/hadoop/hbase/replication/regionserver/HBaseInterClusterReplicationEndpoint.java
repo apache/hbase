@@ -51,10 +51,8 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
@@ -65,8 +63,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.ipc.RemoteException;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint} 
@@ -457,12 +453,10 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return super.stopAndWait();
   }
 
-  @VisibleForTesting
   protected Replicator createReplicator(List<Entry> entries, int ordinal) {
     return new Replicator(entries, ordinal);
   }
 
-  @VisibleForTesting
   protected class Replicator implements Callable<Integer> {
     private List<Entry> entries;
     private int ordinal;

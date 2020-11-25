@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -466,7 +465,6 @@ public final class ZKConfig {
    * @param clientPort the default client port
    * @return the string for a list of "server:port" separated by ","
    */
-  @VisibleForTesting
   public static String standardizeZKQuorumServerString(String quorumStringInput,
       String clientPort) {
     String[] serverHosts = quorumStringInput.split(",");
@@ -479,7 +477,6 @@ public final class ZKConfig {
   //      in this case, the clientPort would be ignored)
   // (3). s1:p1,s2,s3:p3 (mix of (1) and (2) - if port is not specified in a server, it would use
   //      the clientPort; otherwise, it would use the specified port)
-  @VisibleForTesting
   public static class ZKClusterKey {
     private String quorumString;
     private int clientPort;

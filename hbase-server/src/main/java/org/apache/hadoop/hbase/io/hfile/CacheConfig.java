@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Stores all of the cache objects and configuration for a single HFile.
  */
@@ -440,7 +438,6 @@ public class CacheConfig {
    * @param cacheDataOnWrite whether data blocks should be written to the cache
    *                         when an HFile is written
    */
-  @VisibleForTesting
   public void setCacheDataOnWrite(boolean cacheDataOnWrite) {
     this.cacheDataOnWrite = cacheDataOnWrite;
   }
@@ -450,7 +447,6 @@ public class CacheConfig {
    * @param cacheDataInL1 Whether to cache data blocks up in l1 (if a multi-tier cache
    * implementation).
    */
-  @VisibleForTesting
   public void setCacheDataInL1(boolean cacheDataInL1) {
     this.cacheDataInL1 = cacheDataInL1;
   }
@@ -612,13 +608,11 @@ public class CacheConfig {
    * at all.
    */
   // Clear this if in tests you'd make more than one block cache instance.
-  @VisibleForTesting
   static BlockCache GLOBAL_BLOCK_CACHE_INSTANCE;
   private static LruBlockCache GLOBAL_L1_CACHE_INSTANCE = null;
   private static BlockCache GLOBAL_L2_CACHE_INSTANCE = null;
 
   /** Boolean whether we have disabled the block cache entirely. */
-  @VisibleForTesting
   static boolean blockCacheDisabled = false;
 
   /**
@@ -644,7 +638,6 @@ public class CacheConfig {
    * @return Returns L2 block cache instance (for now it is BucketCache BlockCache all the time)
    * or null if not supposed to be a L2.
    */
-  @VisibleForTesting
   static BlockCache getL2(final Configuration c) {
     final boolean useExternal = c.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT);
     if (LOG.isDebugEnabled()) {
@@ -797,7 +790,6 @@ public class CacheConfig {
     return GLOBAL_BLOCK_CACHE_INSTANCE;
   }
   
-  @VisibleForTesting
   static synchronized void clearGlobalInstances() {
     GLOBAL_L1_CACHE_INSTANCE = null;
     GLOBAL_L2_CACHE_INSTANCE = null;

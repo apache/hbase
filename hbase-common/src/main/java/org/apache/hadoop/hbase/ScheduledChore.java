@@ -26,8 +26,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * ScheduledChore is a task performed on a period in hbase. ScheduledChores become active once
  * scheduled with a {@link ChoreService} via {@link ChoreService#scheduleChore(ScheduledChore)}. The
@@ -119,7 +117,6 @@ public abstract class ScheduledChore implements Runnable {
    * This constructor is for test only. It allows us to create an object and to call chore() on it.
    */
   @InterfaceAudience.Private
-  @VisibleForTesting
   protected ScheduledChore() {
     this.name = null;
     this.stopper = null;
@@ -309,17 +306,17 @@ public abstract class ScheduledChore implements Runnable {
     return initialChoreComplete;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   synchronized ChoreServicer getChoreServicer() {
     return choreServicer;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   synchronized long getTimeOfLastRun() {
     return timeOfLastRun;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   synchronized long getTimeOfThisRun() {
     return timeOfThisRun;
   }
@@ -332,7 +329,6 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   @InterfaceAudience.Private
-  @VisibleForTesting
   public synchronized void choreForTesting() {
     chore();
   }

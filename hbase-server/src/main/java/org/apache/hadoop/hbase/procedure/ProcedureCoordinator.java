@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.procedure;
 
+import com.google.common.collect.MapMaker;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
@@ -28,15 +29,12 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
-
-import com.google.common.collect.MapMaker;
 
 /**
  * This is the master side of a distributed complex procedure execution.

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.google.common.primitives.Ints;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Comparator;
@@ -26,7 +27,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,10 +47,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.primitives.Ints;
-
 
 /**
  * Implementation of {@link TableDescriptors} that reads descriptors from the
@@ -79,8 +75,8 @@ public class FSTableDescriptors implements TableDescriptors {
   private volatile boolean usecache;
   private volatile boolean fsvisited;
 
-  @VisibleForTesting long cachehits = 0;
-  @VisibleForTesting long invocations = 0;
+  long cachehits = 0;
+  long invocations = 0;
 
   /** The file name prefix used to store HTD in HDFS  */
   static final String TABLEINFO_FILE_PREFIX = ".tableinfo";
@@ -132,7 +128,6 @@ public class FSTableDescriptors implements TableDescriptors {
     this.cache.clear();
   }
 
-  @VisibleForTesting
   public boolean isUsecache() {
     return this.usecache;
   }
@@ -451,7 +446,6 @@ public class FSTableDescriptors implements TableDescriptors {
    * Compare {@link FileStatus} instances by {@link Path#getName()}. Returns in
    * reverse order.
    */
-  @VisibleForTesting
   static final Comparator<FileStatus> TABLEINFO_FILESTATUS_COMPARATOR =
   new Comparator<FileStatus>() {
     @Override
@@ -462,7 +456,7 @@ public class FSTableDescriptors implements TableDescriptors {
   /**
    * Return the table directory in HDFS
    */
-  @VisibleForTesting Path getTableDir(final TableName tableName) {
+  Path getTableDir(final TableName tableName) {
     return FSUtils.getTableDir(rootdir, tableName);
   }
 
@@ -476,7 +470,7 @@ public class FSTableDescriptors implements TableDescriptors {
   /**
    * Width of the sequenceid that is a suffix on a tableinfo file.
    */
-  @VisibleForTesting static final int WIDTH_OF_SEQUENCE_ID = 10;
+  static final int WIDTH_OF_SEQUENCE_ID = 10;
 
   /*
    * @param number Number to use as suffix.
@@ -505,7 +499,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * @param p Path to a <code>.tableinfo</code> file.
    * @return The current editid or 0 if none found.
    */
-  @VisibleForTesting static int getTableInfoSequenceId(final Path p) {
+  static int getTableInfoSequenceId(final Path p) {
     if (p == null) return 0;
     Matcher m = TABLEINFO_FILE_REGEX.matcher(p.getName());
     if (!m.matches()) throw new IllegalArgumentException(p.toString());
@@ -518,7 +512,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * @param sequenceid
    * @return Name of tableinfo file.
    */
-  @VisibleForTesting static String getTableInfoFileName(final int sequenceid) {
+  static String getTableInfoFileName(final int sequenceid) {
     return TABLEINFO_FILE_PREFIX + "." + formatTableInfoSequenceId(sequenceid);
   }
 
@@ -594,7 +588,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * @throws IOException Thrown if failed update.
    * @throws NotImplementedException if in read only mode
    */
-  @VisibleForTesting Path updateTableDescriptor(TableDescriptor td)
+  Path updateTableDescriptor(TableDescriptor td)
   throws IOException {
     if (fsreadonly) {
       throw new NotImplementedException("Cannot update a table descriptor - in read only mode");

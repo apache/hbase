@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -177,7 +175,6 @@ class SequenceIdAccounting {
     }
   }
 
-  @VisibleForTesting
   ConcurrentMap<ImmutableByteArray, Long> getOrCreateLowestSequenceIds(byte[] encodedRegionName) {
     // Intentionally, this access is done outside of this.regionSequenceIdLock. Done per append.
     ConcurrentMap<ImmutableByteArray, Long> m = this.lowestUnflushedSequenceIds

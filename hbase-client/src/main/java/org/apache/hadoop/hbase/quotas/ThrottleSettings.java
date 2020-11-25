@@ -10,8 +10,6 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.TableName;
@@ -56,7 +54,6 @@ class ThrottleSettings extends QuotaSettings {
     builder.setThrottle(proto);
   }
 
-  @VisibleForTesting
   ThrottleRequest getProto() {
     return proto;
   }

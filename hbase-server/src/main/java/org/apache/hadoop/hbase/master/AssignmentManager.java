@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import com.google.common.collect.LinkedHashMultimap;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,7 +44,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -117,9 +117,6 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.LinkedHashMultimap;
 
 /**
  * Manages and performs region assignment.
@@ -403,7 +400,6 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Used in some tests to mock up region state in meta
    */
-  @VisibleForTesting
   RegionStateStore getRegionStateStore() {
     return regionStateStore;
   }
@@ -1708,7 +1704,6 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Use care with forceNewPlan. It could cause double assignment.
    */
-  @VisibleForTesting
   public void assign(HRegionInfo region,
       boolean setOfflineInZK, boolean forceNewPlan) {
     if (isDisabledorDisablingRegionInRIT(region)) {
@@ -4798,7 +4793,6 @@ public class AssignmentManager extends ZooKeeperListener {
   /*
    * This is only used for unit-testing split failures.
    */
-  @VisibleForTesting
   public static void setTestSkipSplitHandling(boolean skipSplitHandling) {
     TEST_SKIP_SPLIT_HANDLING = skipSplitHandling;
   }
@@ -4806,7 +4800,6 @@ public class AssignmentManager extends ZooKeeperListener {
   /*
    * This is only used for unit-testing merge failures.
    */
-  @VisibleForTesting
   public static void setTestSkipMergeHandling(boolean skipMergeHandling) {
     TEST_SKIP_MERGE_HANDLING = skipMergeHandling;
   }

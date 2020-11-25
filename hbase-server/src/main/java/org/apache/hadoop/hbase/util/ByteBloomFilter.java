@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
 import java.text.NumberFormat;
 import java.util.Random;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
@@ -607,7 +606,6 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
    * This gets used in {@link #contains(byte[], int, int, ByteBuffer, int, int, Hash, int)}
    * @param random The random number source to use, or null to compute actual hashes
    */
-  @VisibleForTesting
   public static void setRandomGeneratorForTest(Random random) {
     randomGeneratorForTest = random;
   }

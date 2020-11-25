@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.IOException;
@@ -378,7 +377,6 @@ public class ReplicationSourceManager implements ReplicationListener {
     return null;
   }
 
-  @VisibleForTesting
   List<String> getAllQueues() {
     return replicationQueues.getAllQueues();
   }
@@ -457,7 +455,6 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
   }
 
-  @VisibleForTesting
   public AtomicLong getTotalBufferUsed() {
     return totalBufferUsed;
   }

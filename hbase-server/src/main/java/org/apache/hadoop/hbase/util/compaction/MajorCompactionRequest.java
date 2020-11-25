@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.util.compaction;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
-import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,7 +52,6 @@ class MajorCompactionRequest {
     this.region = region;
   }
 
-  @VisibleForTesting
   MajorCompactionRequest(Configuration configuration, HRegionInfo region,
       Set<String> stores) {
     this(configuration, region);
@@ -79,7 +77,6 @@ class MajorCompactionRequest {
     this.stores = stores;
   }
 
-  @VisibleForTesting
   Optional<MajorCompactionRequest> createRequest(Configuration configuration,
       Set<String> stores, long timestamp) throws IOException {
     Set<String> familiesToCompact = getStoresRequiringCompaction(stores, timestamp);
@@ -143,7 +140,6 @@ class MajorCompactionRequest {
     return false;
   }
 
-  @VisibleForTesting
   Connection getConnection(Configuration configuration) throws IOException {
     return ConnectionFactory.createConnection(configuration);
   }
@@ -164,13 +160,11 @@ class MajorCompactionRequest {
 
   }
 
-  @VisibleForTesting
   List<Path> getReferenceFilePaths(FileSystem fileSystem, Path familyDir)
       throws IOException {
     return FSUtils.getReferenceFilePaths(fileSystem, familyDir);
   }
 
-  @VisibleForTesting
   HRegionFileSystem getFileSystem(Connection connection) throws IOException {
     Admin admin = connection.getAdmin();
     return HRegionFileSystem.openRegionFromFileSystem(admin.getConfiguration(),

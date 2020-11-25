@@ -29,8 +29,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import sun.nio.ch.DirectBuffer;
 
 /**
@@ -47,7 +45,7 @@ public final class ByteBufferUtils {
   public final static int VALUE_MASK = 0x7f;
   public final static int NEXT_BIT_SHIFT = 7;
   public final static int NEXT_BIT_MASK = 1 << 7;
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static final boolean UNSAFE_AVAIL = UnsafeAvailChecker.isAvailable();
   public static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
 

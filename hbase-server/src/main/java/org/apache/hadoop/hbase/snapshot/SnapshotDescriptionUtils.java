@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -432,7 +431,6 @@ public final class SnapshotDescriptionUtils {
     }
   }
 
-  @VisibleForTesting
   static boolean shouldSkipRenameSnapshotDirectories(URI workingURI, URI rootURI) {
     // check scheme, e.g. file, hdfs
     if (workingURI.getScheme() == null &&

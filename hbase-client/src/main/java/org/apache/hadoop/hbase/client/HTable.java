@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
@@ -333,7 +332,6 @@ public class HTable implements HTableInterface, RegionLocator {
    * For internal testing. Uses Connection provided in {@code params}.
    * @throws IOException
    */
-  @VisibleForTesting
   protected HTable(ClusterConnection conn, BufferedMutatorParams params) throws IOException {
     connection = conn;
     tableName = params.getTableName();
@@ -536,7 +534,6 @@ public class HTable implements HTableInterface, RegionLocator {
    */
   // TODO(tsuna): Remove this.  Unit tests shouldn't require public helpers.
   @Deprecated
-  @VisibleForTesting
   public HConnection getConnection() {
     return this.connection;
   }
@@ -1971,7 +1968,6 @@ public class HTable implements HTableInterface, RegionLocator {
     return this.locator;
   }
 
-  @VisibleForTesting
   BufferedMutator getBufferedMutator() throws IOException {
     if (mutator == null) {
       this.mutator = (BufferedMutatorImpl) connection.getBufferedMutator(

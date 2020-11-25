@@ -29,8 +29,6 @@ import java.nio.charset.Charset;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Utility class that handles ordered byte arrays. That is, unlike
  * {@link Bytes}, these methods produce byte arrays which maintain the sort
@@ -370,7 +368,7 @@ public class OrderedBytes {
    * @param comp Compliment the encoded value when {@code comp} is true.
    * @return number of bytes written.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static int putVaruint64(PositionedByteRange dst, long val, boolean comp) {
     int w, y, len = 0;
     final int offset = dst.getOffset(), start = dst.getPosition();
@@ -459,7 +457,7 @@ public class OrderedBytes {
    * @param comp if true, parse the compliment of the value.
    * @return the number of bytes consumed by this value.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static int lengthVaruint64(PositionedByteRange src, boolean comp) {
     int a0 = (comp ? DESCENDING : ASCENDING).apply(src.peek()) & 0xff;
     if (a0 <= 240) return 1;
@@ -480,7 +478,7 @@ public class OrderedBytes {
    * @param cmp if true, parse the compliment of the value.
    * @return the number of bytes skipped.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static int skipVaruint64(PositionedByteRange src, boolean cmp) {
     final int len = lengthVaruint64(src, cmp);
     src.setPosition(src.getPosition() + len);
@@ -492,7 +490,7 @@ public class OrderedBytes {
    * encoded value when {@code comp} is true.
    * @return the decoded value.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static long getVaruint64(PositionedByteRange src, boolean comp) {
     assert src.getRemaining() >= lengthVaruint64(src, comp);
     final long ret;
@@ -549,7 +547,7 @@ public class OrderedBytes {
    * From Phoenix's {@code NumberUtil}.
    * @return new {@link BigDecimal} instance
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static BigDecimal normalize(BigDecimal val) {
     return null == val ? null : val.stripTrailingZeros().round(DEFAULT_MATH_CONTEXT);
   }
@@ -1015,7 +1013,7 @@ public class OrderedBytes {
   /**
    * Calculate the expected BlobVar decoded length based on encoded length.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static int blobVarDecodedLength(int len) {
     return
         ((len

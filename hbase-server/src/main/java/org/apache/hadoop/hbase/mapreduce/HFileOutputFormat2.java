@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
@@ -583,7 +581,7 @@ public class HFileOutputFormat2
    * @param conf to read the serialized values from
    * @return a map from column family to the configured compression algorithm
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], Algorithm> createFamilyCompressionMap(Configuration
       conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
@@ -605,7 +603,7 @@ public class HFileOutputFormat2
    * @param conf to read the serialized values from
    * @return a map from column family to the the configured bloom filter type
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], BloomType> createFamilyBloomTypeMap(Configuration conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
         BLOOM_TYPE_FAMILIES_CONF_KEY);
@@ -625,7 +623,7 @@ public class HFileOutputFormat2
    * @param conf to read the serialized values from
    * @return a map from column family to the configured block size
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], Integer> createFamilyBlockSizeMap(Configuration conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
         BLOCK_SIZE_FAMILIES_CONF_KEY);
@@ -646,7 +644,7 @@ public class HFileOutputFormat2
    * @return a map from column family to HFileDataBlockEncoder for the
    *         configured data block type for the family
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Map<byte[], DataBlockEncoding> createFamilyDataBlockEncodingMap(
       Configuration conf) {
     Map<byte[], String> stringMap = createFamilyConfValueMap(conf,
@@ -720,7 +718,7 @@ public class HFileOutputFormat2
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void configureCompression(Configuration conf, HTableDescriptor tableDescriptor)
       throws UnsupportedEncodingException {
     StringBuilder compressionConfigValue = new StringBuilder();
@@ -753,7 +751,7 @@ public class HFileOutputFormat2
    * @throws IOException
    *           on failure to read column family descriptors
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void configureBlockSize(HTableDescriptor tableDescriptor, Configuration conf)
       throws UnsupportedEncodingException {
     StringBuilder blockSizeConfigValue = new StringBuilder();
@@ -786,7 +784,7 @@ public class HFileOutputFormat2
    * @throws IOException
    *           on failure to read column family descriptors
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void configureBloomType(HTableDescriptor tableDescriptor, Configuration conf)
       throws UnsupportedEncodingException {
     if (tableDescriptor == null) {
@@ -821,7 +819,7 @@ public class HFileOutputFormat2
    * @throws IOException
    *           on failure to read column family descriptors
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void configureDataBlockEncoding(HTableDescriptor tableDescriptor,
       Configuration conf) throws UnsupportedEncodingException {
     if (tableDescriptor == null) {

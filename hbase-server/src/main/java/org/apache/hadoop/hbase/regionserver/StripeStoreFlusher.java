@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -131,7 +129,6 @@ public class StripeStoreFlusher extends StoreFlusher {
       this.comparator = comparator;
     }
 
-    @VisibleForTesting
     public StripeMultiFileWriter createWriter() throws IOException {
       StripeMultiFileWriter writer = new StripeMultiFileWriter.SizeMultiWriter(comparator, 1,
           Long.MAX_VALUE, OPEN_KEY, OPEN_KEY);

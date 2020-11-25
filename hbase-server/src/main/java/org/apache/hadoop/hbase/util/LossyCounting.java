@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.Map;
 import java.util.Set;
@@ -117,7 +116,6 @@ public class LossyCounting<T> {
   /**
    * sweep low frequency data
    */
-  @VisibleForTesting
   public void sweep() {
     for(Map.Entry<T, Integer> entry : data.entrySet()) {
       if(entry.getValue() < currentTerm) {
@@ -170,7 +168,7 @@ public class LossyCounting<T> {
     }
   }
 
-  @VisibleForTesting public Future<?> getSweepFuture() {
+  public Future<?> getSweepFuture() {
     return fut.get();
   }
 }

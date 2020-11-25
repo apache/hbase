@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -386,7 +385,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     return balanceCluster(clusterState);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   Cluster.Action nextAction(Cluster cluster) {
     return candidateGenerators[(RANDOM.nextInt(candidateGenerators.length))]
             .generate(cluster);

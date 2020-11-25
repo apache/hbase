@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingRpcChannel;
@@ -209,6 +208,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
+
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
@@ -792,7 +792,7 @@ public class HRegionServer extends HasThread implements
    * Create this instance in a method can be intercepted and mocked in tests.
    * @throws IOException
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected ClusterConnection createClusterConnection() throws IOException {
     // Create a cluster connection that when appropriate, can short-circuit and go directly to the
     // local server if the request is to the local server bypassing RPC. Can be used for both local
@@ -1277,7 +1277,7 @@ public class HRegionServer extends HasThread implements
     return writeCount;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
   throws IOException {
     RegionServerStatusService.BlockingInterface rss = rssStub;
@@ -2278,7 +2278,7 @@ public class HRegionServer extends HasThread implements
     return rpcServices.rpcServer;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public RSRpcServices getRSRpcServices() {
     return rpcServices;
   }
@@ -2380,7 +2380,7 @@ public class HRegionServer extends HasThread implements
    * logs but it does close socket in case want to bring up server on old
    * hostname+port immediately.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void kill() {
     this.killed = true;
     abort("Simulated kill");
@@ -2446,7 +2446,7 @@ public class HRegionServer extends HasThread implements
    * @return Return the object that implements the replication
    * source service.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public ReplicationSourceService getReplicationSourceService() {
     return replicationSourceHandler;
   }
@@ -2467,7 +2467,7 @@ public class HRegionServer extends HasThread implements
    *
    * @return master + port, or null if server has been stopped
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected synchronized ServerName createRegionServerStatusStub() {
     // Create RS stub without refreshing the master node from ZK, use cached data
     return createRegionServerStatusStub(false);
@@ -2480,7 +2480,7 @@ public class HRegionServer extends HasThread implements
    * @param refresh If true then master address will be read from ZK, otherwise use cached data
    * @return master + port, or null if server has been stopped
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected synchronized ServerName createRegionServerStatusStub(boolean refresh) {
     if (rssStub != null) {
       return masterAddressTracker.getMasterAddress();
@@ -3653,7 +3653,7 @@ public class HRegionServer extends HasThread implements
    * For testing
    * @return whether all wal roll request finished for this regionserver
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public boolean walRollRequestFinished() {
     return this.walRoller.walRollFinished();
   }

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashSet;
@@ -363,7 +361,6 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     callable.getScan().withStartRow(this.lastResult.getRow(), this.lastResult.mayHaveMoreCellsInRow());
   }
 
-  @VisibleForTesting
   boolean isAnyRPCcancelled() {
     return someRPCcancelled;
   }

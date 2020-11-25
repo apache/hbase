@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Callable;
@@ -44,10 +43,8 @@ public class ByteBufferArray {
   private static final Log LOG = LogFactory.getLog(ByteBufferArray.class);
 
   static final int DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
-  @VisibleForTesting
   ByteBuffer[] buffers;
   private int bufferSize;
-  @VisibleForTesting
   int bufferCount;
 
   /**
@@ -70,7 +67,6 @@ public class ByteBufferArray {
     createBuffers(directByteBuffer, allocator);
   }
 
-  @VisibleForTesting
   void createBuffers(boolean directByteBuffer, ByteBufferAllocator allocator)
       throws IOException {
     int threadCount = getThreadCount();
@@ -105,7 +101,6 @@ public class ByteBufferArray {
     this.buffers[bufferCount] = ByteBuffer.allocate(0);
   }
 
-  @VisibleForTesting
   int getThreadCount() {
     return Runtime.getRuntime().availableProcessors();
   }

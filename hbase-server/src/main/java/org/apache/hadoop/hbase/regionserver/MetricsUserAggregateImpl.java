@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -65,7 +64,6 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
     return user != null ? user.getShortName() : null;
   }
 
-  @VisibleForTesting
   MetricsUserAggregateSource getSource() {
     return source;
   }

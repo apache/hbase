@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -32,7 +33,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -49,9 +49,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.StealJobQueue;
 import org.apache.hadoop.util.StringUtils;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 
 /**
  * Compact region on request and then run split if appropriate
@@ -775,12 +772,10 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
     // No children to register
   }
 
-  @VisibleForTesting
   public ThroughputController getCompactionThroughputController() {
     return compactionThroughputController;
   }
 
-  @VisibleForTesting
   /**
    * Shutdown the long compaction thread pool.
    * Should only be used in unit test to prevent long compaction thread pool from stealing job

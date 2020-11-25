@@ -42,8 +42,6 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * This worker is spawned in every regionserver, including master. The Worker waits for log
  * splitting tasks to be put up by the {@link org.apache.hadoop.hbase.master.SplitLogManager} 
@@ -209,7 +207,6 @@ public class SplitLogWorker implements Runnable {
    * Returns the number of tasks processed by coordination.
    * This method is used by tests only
    */
-  @VisibleForTesting
   public int getTaskReadySeq() {
     return coordination.getTaskReadySeq();
   }

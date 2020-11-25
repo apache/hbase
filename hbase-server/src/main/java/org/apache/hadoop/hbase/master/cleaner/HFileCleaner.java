@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,12 +79,10 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
 
   public static final String HFILE_DELETE_THREAD_TIMEOUT_MSEC =
       "hbase.regionserver.hfilecleaner.thread.timeout.msec";
-  @VisibleForTesting
   static final long DEFAULT_HFILE_DELETE_THREAD_TIMEOUT_MSEC = 60 * 1000L;
 
   public static final String HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC =
       "hbase.regionserver.hfilecleaner.thread.check.interval.msec";
-  @VisibleForTesting
   static final long DEFAULT_HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC = 1000L;
 
   private static final Log LOG = LogFactory.getLog(HFileCleaner.class);
@@ -387,42 +384,34 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
     }
   }
 
-  @VisibleForTesting
   public List<Thread> getCleanerThreads() {
     return threads;
   }
 
-  @VisibleForTesting
   public long getNumOfDeletedLargeFiles() {
     return deletedLargeFiles.get();
   }
 
-  @VisibleForTesting
   public long getNumOfDeletedSmallFiles() {
     return deletedSmallFiles.get();
   }
 
-  @VisibleForTesting
   public long getLargeQueueInitSize() {
     return largeQueueInitSize;
   }
 
-  @VisibleForTesting
   public long getSmallQueueInitSize() {
     return smallQueueInitSize;
   }
 
-  @VisibleForTesting
   public long getThrottlePoint() {
     return throttlePoint;
   }
 
-  @VisibleForTesting
   long getCleanerThreadTimeoutMsec() {
     return cleanerThreadTimeoutMsec;
   }
 
-  @VisibleForTesting
   long getCleanerThreadCheckIntervalMsec() {
     return cleanerThreadCheckIntervalMsec;
   }

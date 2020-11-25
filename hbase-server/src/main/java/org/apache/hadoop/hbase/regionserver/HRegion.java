@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
@@ -545,7 +544,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /** A result object from prepare flush cache stage */
-  @VisibleForTesting
   static class PrepareFlushResult {
     final FlushResult result; // indicating a failure result from prepare
     final TreeMap<byte[], StoreFlushContext> storeFlushCtxs;
@@ -711,7 +709,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @deprecated Use other constructors.
    */
   @Deprecated
-  @VisibleForTesting
   public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
       final Configuration confParam, final HRegionInfo regionInfo,
       final HTableDescriptor htd, final RegionServerServices rsServices) {
@@ -1534,7 +1531,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Exposed for some very specific unit tests.
    */
-  @VisibleForTesting
   public void setClosing(boolean closing) {
     this.closing.set(closing);
   }
@@ -1940,7 +1936,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return the Region Directory under the WALRootDir
    * @throws IOException if there is an error getting WALRootDir
    */
-  @VisibleForTesting
   public Path getWALRegionDir() throws IOException {
     if (regionDir == null) {
       regionDir = FSUtils.getWALRegionDir(conf, fs.getRegionInfo());
@@ -2071,7 +2066,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *
    * @throws IOException e
    */
-  @VisibleForTesting
   void compactStore(byte[] family, ThroughputController throughputController)
       throws IOException {
     Store s = getStore(family);
@@ -2872,7 +2866,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return Next sequence number unassociated with any actual edit.
    * @throws IOException
    */
-  @VisibleForTesting
   protected long getNextSequenceId(final WAL wal) throws IOException {
     // TODO: For review. Putting an empty edit in to get a sequenceid out will not work if the
     // WAL is banjaxed... if it has gotten an exception and the WAL has not yet been rolled or
@@ -4883,7 +4876,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * the store memstores, only if the memstores do not have a higher seqId from an earlier wal
    * edit (because the events may be coming out of order).
    */
-  @VisibleForTesting
   PrepareFlushResult replayWALFlushStartMarker(FlushDescriptor flush) throws IOException {
     long flushSeqId = flush.getFlushSequenceNumber();
 
@@ -4994,7 +4986,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return null;
   }
 
-  @VisibleForTesting
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
     justification="Intentional; post memstore flush")
   void replayWALFlushCommitMarker(FlushDescriptor flush) throws IOException {
@@ -5228,7 +5219,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @VisibleForTesting
   PrepareFlushResult getPrepareFlushResult() {
     return prepareFlushResult;
   }
@@ -5862,7 +5852,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return lockedRows;
   }
 
-  @VisibleForTesting
   class RowLockContext {
     private final HashedBytes row;
     final ReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
@@ -5939,7 +5928,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return lock;
     }
 
-    @VisibleForTesting
     public RowLockContext getContext() {
       return context;
     }
@@ -9261,11 +9249,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Do not change this sequence id.
    * @return sequenceId
    */
-  @VisibleForTesting
   public long getSequenceId() {
     return this.mvcc.getReadPoint();
   }
-
 
   /**
    * Append a faked WALEdit in order to get a long sequence number and wal syncer will just ignore

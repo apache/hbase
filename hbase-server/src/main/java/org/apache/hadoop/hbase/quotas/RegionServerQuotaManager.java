@@ -28,8 +28,6 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Region Server Quota Manager. It is responsible to provide access to the quota information of each
  * user/table. The direct user of this class is the RegionServer that will get and check the
@@ -77,7 +75,6 @@ public class RegionServerQuotaManager {
     return quotaCache != null;
   }
 
-  @VisibleForTesting
   QuotaCache getQuotaCache() {
     return quotaCache;
   }

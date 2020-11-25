@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.master.cleaner;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -54,14 +52,11 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
 
   public static final String OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC =
       "hbase.oldwals.cleaner.thread.timeout.msec";
-  @VisibleForTesting
   static final long DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC = 60 * 1000L;
 
   public static final String OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC =
       "hbase.oldwals.cleaner.thread.check.interval.msec";
-  @VisibleForTesting
   static final long DEFAULT_OLD_WALS_CLEANER_THREAD_CHECK_INTERVAL_MSEC = 500L;
-
 
   private final LinkedBlockingQueue<CleanerContext> pendingDelete;
   private List<Thread> oldWALsCleaner;
@@ -135,17 +130,14 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
     interruptOldWALsCleaner();
   }
 
-  @VisibleForTesting
   int getSizeOfCleaners() {
     return oldWALsCleaner.size();
   }
 
-  @VisibleForTesting
   long getCleanerThreadTimeoutMsec() {
     return cleanerThreadTimeoutMsec;
   }
 
-  @VisibleForTesting
   long getCleanerThreadCheckIntervalMsec() {
     return cleanerThreadCheckIntervalMsec;
   }

@@ -23,6 +23,14 @@ import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRe
 import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.SLOW_SYNC;
 import static org.apache.hadoop.hbase.wal.DefaultWALProvider.WAL_FILE_NAME_DELIMITER;
 
+import com.lmax.disruptor.BlockingWaitStrategy;
+import com.lmax.disruptor.EventHandler;
+import com.lmax.disruptor.ExceptionHandler;
+import com.lmax.disruptor.LifecycleAware;
+import com.lmax.disruptor.RingBuffer;
+import com.lmax.disruptor.TimeoutException;
+import com.lmax.disruptor.dsl.Disruptor;
+import com.lmax.disruptor.dsl.ProducerType;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -50,8 +58,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-
-import com.lmax.disruptor.*;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -94,10 +100,6 @@ import org.apache.htrace.NullScope;
 import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.lmax.disruptor.dsl.Disruptor;
-import com.lmax.disruptor.dsl.ProducerType;
 
 /**
  * Implementation of {@link WAL} to go against {@link FileSystem}; i.e. keep WALs in HDFS.
@@ -631,7 +633,6 @@ public class FSHLog implements WAL {
    * NOTE: This could be removed once Hadoop1 support is removed.
    * @return null if underlying stream is not ready.
    */
-  @VisibleForTesting
   OutputStream getOutputStream() {
     FSDataOutputStream fsdos = this.hdfs_out;
     if (fsdos == null) return null;
@@ -833,13 +834,11 @@ public class FSHLog implements WAL {
    * Used to manufacture race condition reliably. For testing only.
    * @see #beforeWaitOnSafePoint()
    */
-  @VisibleForTesting
   protected void afterCreatingZigZagLatch() {}
 
   /**
    * @see #afterCreatingZigZagLatch()
    */
-  @VisibleForTesting
   protected void beforeWaitOnSafePoint() {};
 
   /**
@@ -1588,7 +1587,6 @@ public class FSHLog implements WAL {
    *
    * @throws Exception
    */
-  @VisibleForTesting
   int getLogReplication() {
     try {
       //in standalone mode, it will return 0
@@ -1699,7 +1697,6 @@ public class FSHLog implements WAL {
     closeBarrier.endOp();
   }
 
-  @VisibleForTesting
   boolean isLowReplicationRollEnabled() {
       return lowReplicationRollEnabled;
   }
@@ -2111,7 +2108,6 @@ public class FSHLog implements WAL {
   /**
    * Exposed for testing only.  Use to tricks like halt the ring buffer appending.
    */
-  @VisibleForTesting
   void atHeadOfRingBufferEventHandlerAppend() {
     // Noop
   }
@@ -2172,7 +2168,6 @@ public class FSHLog implements WAL {
   /**
    * This method gets the pipeline for the current WAL.
    */
-  @VisibleForTesting
   DatanodeInfo[] getPipeLine() {
     if (this.hdfs_out != null) {
       if (this.hdfs_out.getWrappedStream() instanceof DFSOutputStream) {
@@ -2190,12 +2185,10 @@ public class FSHLog implements WAL {
     return this.lastTimeCheckLowReplication;
   }
 
-  @VisibleForTesting
   Writer getWriter() {
     return this.writer;
   }
 
-  @VisibleForTesting
   void setWriter(Writer writer) {
     this.writer = writer;
   }

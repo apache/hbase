@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
@@ -2810,7 +2809,6 @@ public class HBaseAdmin implements Admin {
     }
   }
 
-  @VisibleForTesting
   public void split(final ServerName sn, final HRegionInfo hri,
       byte[] splitPoint) throws IOException {
     if (hri.getStartKey() != null && splitPoint != null &&

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import com.google.common.base.Preconditions;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
@@ -26,7 +27,6 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -49,9 +49,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.IOUtils;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 
 /**
  * Reads {@link HFile} version 2 blocks to HFiles and via {@link Cacheable} Interface to caches.
@@ -320,7 +317,6 @@ public class HFileBlock implements Cacheable {
    * @param onDiskDataSizeWithHeader see {@link #onDiskDataSizeWithHeader}
    * @param fileContext HFile meta data
    */
-  @VisibleForTesting
   public HFileBlock(BlockType blockType, int onDiskSizeWithoutHeader,
       int uncompressedSizeWithoutHeader, long prevBlockOffset, ByteBuffer b, boolean fillHeader,
       long offset, final int nextBlockOnDiskSize, int onDiskDataSizeWithHeader,
@@ -526,7 +522,6 @@ public class HFileBlock implements Cacheable {
    * thread-safe, because it alters the internal buffer pointer.
    * Used by tests only.
    */
-  @VisibleForTesting
   void sanityCheck() throws IOException {
     // Duplicate so no side-effects
     ByteBuffer dup = this.buf.duplicate();
@@ -771,7 +766,6 @@ public class HFileBlock implements Cacheable {
    *     was successful
    * @throws IOException if failed to read the necessary bytes
    */
-  @VisibleForTesting
   static boolean positionalReadWithExtra(FSDataInputStream in,
       long position, byte[] buf, int bufOffset, int necessaryLen, int extraLen)
       throws IOException {
@@ -1219,7 +1213,6 @@ public class HFileBlock implements Cacheable {
      *
      * @return Returns a copy of uncompressed block bytes for caching on write
      */
-    @VisibleForTesting
     ByteBuffer cloneUncompressedBufferWithHeader() {
       expectState(State.BLOCK_READY);
       byte[] uncompressedBlockBytesWithHeader = baosInMemory.toByteArray();
@@ -2071,7 +2064,6 @@ public class HFileBlock implements Cacheable {
    * This is mostly helpful for debugging. This assumes that the block
    * has minor version > 0.
    */
-  @VisibleForTesting
   static String toStringHeader(ByteBuffer buf) throws IOException {
     byte[] magicBuf = new byte[Math.min(buf.limit() - buf.position(), BlockType.MAGIC_LENGTH)];
     buf.get(magicBuf);

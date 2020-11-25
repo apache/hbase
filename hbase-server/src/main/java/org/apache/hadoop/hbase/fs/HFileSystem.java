@@ -31,7 +31,6 @@ import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -55,8 +54,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Progressable;
-
-import static org.apache.hadoop.hbase.HConstants.HBASE_DIR;
 
 /**
  * An encapsulation for the FileSystem object that hbase uses to access

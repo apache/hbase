@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import java.io.IOException;
@@ -1384,7 +1383,6 @@ public class ProcedureExecutor<TEnvironment> {
     return procId;
   }
 
-  @VisibleForTesting
   protected long getLastProcId() {
     return lastProcId.get();
   }

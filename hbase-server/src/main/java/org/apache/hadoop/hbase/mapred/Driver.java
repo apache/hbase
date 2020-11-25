@@ -23,8 +23,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.util.ProgramDriver;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Driver for hbase mapreduce jobs. Select which to run by passing name of job
  * to this main.
@@ -35,7 +33,7 @@ public class Driver {
 
   private static ProgramDriver pgd = new ProgramDriver();
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static void setProgramDriver(ProgramDriver pgd0) {
     pgd = pgd0;
   }

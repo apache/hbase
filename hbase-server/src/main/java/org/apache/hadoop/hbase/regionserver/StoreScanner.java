@@ -19,12 +19,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.CountDownLatch;
@@ -304,7 +301,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     resetKVHeap(scanners, store.getComparator());
   }
 
-  @VisibleForTesting
   StoreScanner(final Scan scan, ScanInfo scanInfo,
       ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners) throws IOException {
@@ -314,7 +310,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         0);
   }
 
-  @VisibleForTesting
   StoreScanner(final Scan scan, ScanInfo scanInfo,
     ScanType scanType, final NavigableSet<byte[]> columns,
     final List<KeyValueScanner> scanners, long earliestPutTs)
@@ -798,7 +793,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param cell current cell
    * @return true means skip to next row, false means not
    */
-  @VisibleForTesting
   protected boolean trySkipToNextRow(Cell cell) throws IOException {
     Cell nextCell = null;
     // used to guard against a changed next indexed key by doing a identity comparison
@@ -824,7 +818,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @param cell current cell
    * @return true means skip to next column, false means not
    */
-  @VisibleForTesting
   protected boolean trySkipToNextColumn(Cell cell) throws IOException {
     Cell nextCell = null;
     // used to guard against a changed next indexed key by doing a identity comparison

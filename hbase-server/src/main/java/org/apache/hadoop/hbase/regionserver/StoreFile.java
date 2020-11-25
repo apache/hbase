@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Ordering;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -35,7 +39,6 @@ import java.util.SortedSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -68,12 +71,6 @@ import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.WritableUtils;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Ordering;
 
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
@@ -412,7 +409,7 @@ public class StoreFile {
     return bulkLoadedHFile || (metadataMap != null && metadataMap.containsKey(BULKLOAD_TIME_KEY));
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public boolean isCompactedAway() {
     if (this.reader != null) {
       return this.reader.isCompactedAway();
@@ -420,7 +417,7 @@ public class StoreFile {
     return true;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public int getRefCount() {
     return this.reader.refCount.get();
   }

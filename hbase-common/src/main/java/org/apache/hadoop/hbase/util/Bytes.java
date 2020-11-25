@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkPositionIndex;
 
+import com.google.common.collect.Lists;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -35,23 +36,17 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.util.Bytes.LexicographicalComparerHolder.UnsafeComparer;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
-
 import sun.misc.Unsafe;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
-
-import org.apache.hadoop.hbase.util.Bytes.LexicographicalComparerHolder.UnsafeComparer;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -129,7 +124,7 @@ public class Bytes implements Comparable<Bytes> {
   // SizeOf which uses java.lang.instrument says 24 bytes. (3 longs?)
   public static final int ESTIMATED_HEAP_TAX = 16;
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
 
   /**
@@ -1368,7 +1363,7 @@ public class Bytes implements Comparable<Bytes> {
 
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Comparer<byte[]> lexicographicalComparerJavaImpl() {
     return LexicographicalComparerHolder.PureJavaComparer.INSTANCE;
   }
@@ -1518,7 +1513,7 @@ public class Bytes implements Comparable<Bytes> {
    * <p>Uses reflection to gracefully fall back to the Java implementation if
    * {@code Unsafe} isn't available.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static class LexicographicalComparerHolder {
     static final String UNSAFE_COMPARER_NAME =
         LexicographicalComparerHolder.class.getName() + "$UnsafeComparer";
@@ -1568,7 +1563,7 @@ public class Bytes implements Comparable<Bytes> {
       }
     }
 
-    @VisibleForTesting
+    @InterfaceAudience.Private
     enum UnsafeComparer implements Comparer<byte[]> {
       INSTANCE;
 
