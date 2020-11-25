@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -129,21 +131,24 @@ public class RegionServerTracker extends ZKListener {
     splittingServersFromWALDir.stream().filter(s -> !deadServersFromPE.contains(s)).
       forEach(s -> LOG.error("{} has no matching ServerCrashProcedure", s));
     //create ServerNode for all possible live servers from wal directory
-    liveServersFromWALDir.stream()
+    liveServersFromWALDir
         .forEach(sn -> server.getAssignmentManager().getRegionStates().getOrCreateServer(sn));
     watcher.registerListener(this);
     synchronized (this) {
       List<String> servers =
         ZKUtil.listChildrenAndWatchForNewChildren(watcher, watcher.getZNodePaths().rsZNode);
-      for (String n : servers) {
-        Pair<ServerName, RegionServerInfo> pair = getServerInfo(n);
-        ServerName serverName = pair.getFirst();
-        RegionServerInfo info = pair.getSecond();
-        regionServers.add(serverName);
-        ServerMetrics serverMetrics = info != null ? ServerMetricsBuilder.of(serverName,
-          VersionInfoUtil.getVersionNumber(info.getVersionInfo()),
-          info.getVersionInfo().getVersion()) : ServerMetricsBuilder.of(serverName);
-        serverManager.checkAndRecordNewServer(serverName, serverMetrics);
+      if (null != servers) {
+        for (String n : servers) {
+          Pair<ServerName, RegionServerInfo> pair = getServerInfo(n);
+          ServerName serverName = pair.getFirst();
+          RegionServerInfo info = pair.getSecond();
+          regionServers.add(serverName);
+          ServerMetrics serverMetrics = info != null ?
+            ServerMetricsBuilder.of(serverName, VersionInfoUtil.getVersionNumber(info.getVersionInfo()),
+              info.getVersionInfo().getVersion()) :
+            ServerMetricsBuilder.of(serverName);
+          serverManager.checkAndRecordNewServer(serverName, serverMetrics);
+        }
       }
       serverManager.findDeadServersAndProcess(deadServersFromPE, liveServersFromWALDir);
     }
@@ -163,8 +168,9 @@ public class RegionServerTracker extends ZKListener {
       server.abort("Unexpected zk exception getting RS nodes", e);
       return;
     }
-    Set<ServerName> servers =
+    Set<ServerName> servers = CollectionUtils.isEmpty(names) ? Collections.emptySet() :
       names.stream().map(ServerName::parseServerName).collect(Collectors.toSet());
+
     for (Iterator<ServerName> iter = regionServers.iterator(); iter.hasNext();) {
       ServerName sn = iter.next();
       if (!servers.contains(sn)) {
