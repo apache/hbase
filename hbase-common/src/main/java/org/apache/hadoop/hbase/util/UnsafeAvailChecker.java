@@ -42,9 +42,16 @@ public class UnsafeAvailChecker {
       @Override
       public Boolean run() {
         try {
-          final Configuration conf = HBaseConfiguration.create();
-          if (!conf.getBoolean(HConstants.HBASE_UNSAFE_USAGE_ENABLED, true)) {
-            return false;
+          String unsafeUsageStr = System.getProperty(HConstants.HBASE_UNSAFE_USAGE_ENABLED);
+          if (unsafeUsageStr != null) {
+            if (!Boolean.parseBoolean(unsafeUsageStr)) {
+              return false;
+            }
+          } else {
+            final Configuration conf = HBaseConfiguration.create();
+            if (!conf.getBoolean(HConstants.HBASE_UNSAFE_USAGE_ENABLED, true)) {
+              return false;
+            }
           }
           Class<?> clazz = Class.forName(CLASS_NAME);
           Field f = clazz.getDeclaredField("theUnsafe");
