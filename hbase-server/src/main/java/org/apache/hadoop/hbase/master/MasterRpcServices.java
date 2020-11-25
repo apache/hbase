@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
@@ -2527,11 +2528,18 @@ public class MasterRpcServices extends RSRpcServices
         LOG.debug("Some dead server is still under processing, won't clear the dead server list");
         response.addAllServerName(request.getServerNameList());
       } else {
+        DeadServer deadServer = master.getServerManager().getDeadServers();
         for (HBaseProtos.ServerName pbServer : request.getServerNameList()) {
-          if (
-            !master.getServerManager().getDeadServers()
-              .removeDeadServer(ProtobufUtil.toServerName(pbServer))
-          ) {
+          ServerName server = ProtobufUtil.toServerName(pbServer);
+          final boolean deadInProcess = master.getProcedures().stream().anyMatch(
+            p -> (p instanceof ServerCrashProcedure)
+              && ((ServerCrashProcedure) p).getServerName().equals(server));
+          if (deadInProcess) {
+            throw new ServiceException(
+              String.format("Dead server '%s' is not 'dead' in fact...", server));
+          }
+
+          if (!deadServer.removeDeadServer(server)) {
             response.addServerName(pbServer);
           }
         }
