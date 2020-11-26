@@ -124,7 +124,7 @@ public class DummyAsyncTable<C extends ScanResultConsumerBase> implements AsyncT
   }
 
   @Override
-  public CompletableFuture<Void> mutateRow(RowMutations mutation) {
+  public CompletableFuture<Result> mutateRow(RowMutations mutation) {
     return null;
   }
 

@@ -218,7 +218,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   }
 
   @Override
-  public CompletableFuture<Void> mutateRow(RowMutations mutation) {
+  public CompletableFuture<Result> mutateRow(RowMutations mutation) {
     return wrap(rawTable.mutateRow(mutation));
   }
 
