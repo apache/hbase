@@ -3655,9 +3655,13 @@ public final class ProtobufUtil {
           return builder.build((Put) m);
         } else if (m instanceof Delete) {
           return builder.build((Delete) m);
+        } else if (m instanceof Increment) {
+          return builder.build((Increment) m);
+        } else if (m instanceof Append) {
+          return builder.build((Append) m);
         } else {
-          throw new DoNotRetryIOException("Unsupported mutate type: " + mutations.get(0)
-            .getClass().getSimpleName().toUpperCase());
+          throw new DoNotRetryIOException("Unsupported mutate type: " + m.getClass()
+            .getSimpleName().toUpperCase());
         }
       } else {
         return builder.build(new RowMutations(mutations.get(0).getRow()).add(mutations));

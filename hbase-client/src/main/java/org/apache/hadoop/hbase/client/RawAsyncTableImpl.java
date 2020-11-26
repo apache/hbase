@@ -513,17 +513,17 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   }
 
   @Override
-  public CompletableFuture<Void> mutateRow(RowMutations mutation) {
-    return this.<Void> newCaller(mutation.getRow(), mutation.getMaxPriority(), writeRpcTimeoutNs)
-      .action((controller, loc, stub) ->
-        this.<Result, Void> mutateRow(controller, loc, stub, mutation,
+  public CompletableFuture<Result> mutateRow(RowMutations mutations) {
+    return this.<Result> newCaller(mutations.getRow(), mutations.getMaxPriority(),
+      writeRpcTimeoutNs).action((controller, loc, stub) ->
+        this.<Result, Result> mutateRow(controller, loc, stub, mutations,
           (rn, rm) -> {
             RegionAction.Builder regionMutationBuilder = RequestConverter
               .buildRegionAction(rn, rm);
             regionMutationBuilder.setAtomic(true);
             return MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build())
               .build();
-          }, resp -> null))
+          }, resp -> resp))
       .call();
   }
 

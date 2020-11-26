@@ -311,8 +311,8 @@ class TableOverAsyncTable implements Table {
   }
 
   @Override
-  public void mutateRow(RowMutations rm) throws IOException {
-    FutureUtils.get(table.mutateRow(rm));
+  public Result mutateRow(RowMutations rm) throws IOException {
+    return FutureUtils.get(table.mutateRow(rm));
   }
 
   @Override
