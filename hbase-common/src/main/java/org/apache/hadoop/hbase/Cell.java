@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 
 /**
  * The unit of storage in HBase consisting of the following fields:
@@ -76,6 +78,7 @@ public interface Cell extends HeapSize {
    */
   int getRowOffset();
 
+  @VisibleForTesting
   /**
    * @return Number of row bytes. Must be &lt; rowArray.length - offset.
    */

@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 /**
  * This is a {@link Tag} implementation in which value is backed by an on heap byte array.
  */
@@ -46,6 +48,7 @@ public class ArrayBackedTag implements Tag {
     this(tagType, Bytes.toBytes(tag));
   }
 
+  @VisibleForTesting
   /**
    * Format for a tag :
    * {@code <length of tag - 2 bytes><type code - 1 byte><tag>} tag length is serialized
