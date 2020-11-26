@@ -67,7 +67,7 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -140,7 +140,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private long defaultBandwidth;
   private long currentBandwidth;
   private WALFileLengthProvider walFileLengthProvider;
-  @VisibleForTesting
   protected final ConcurrentHashMap<String, ReplicationSourceShipper> workerThreads =
       new ConcurrentHashMap<>();
 
@@ -455,7 +454,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
    * Call after {@link #initializeWALEntryFilter(UUID)} else it will be null.
    * @return WAL Entry Filter Chain to use on WAL files filtering *out* WALEntry edits.
    */
-  @VisibleForTesting
   WALEntryFilter getWalEntryFilter() {
     return walEntryFilter;
   }

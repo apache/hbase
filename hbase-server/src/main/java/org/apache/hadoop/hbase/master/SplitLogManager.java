@@ -104,7 +104,6 @@ public class SplitLogManager {
   private long unassignedTimeout;
   private long lastTaskCreateTime = Long.MAX_VALUE;
 
-  @VisibleForTesting
   final ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<>();
   private TimeoutMonitor timeoutMonitor;
 
@@ -375,7 +374,6 @@ public class SplitLogManager {
     }
   }
 
-  @VisibleForTesting
   ConcurrentMap<String, Task> getTasks() {
     return tasks;
   }

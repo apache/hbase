@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Create {@link SplitWALProcedure} for each WAL which need to split. Manage the workers for each
@@ -144,7 +143,6 @@ public class SplitWALManager {
     return !fs.exists(new Path(rootDir, walPath));
   }
 
-  @VisibleForTesting
   List<Procedure> createSplitWALProcedures(List<FileStatus> splittingWALs,
       ServerName crashedServer) {
     return splittingWALs.stream()

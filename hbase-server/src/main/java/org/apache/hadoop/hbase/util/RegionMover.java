@@ -66,7 +66,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
@@ -141,7 +140,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     private String excludeFile = null;
     private String designatedFile = null;
     private String defaultDir = System.getProperty("java.io.tmpdir");
-    @VisibleForTesting
+    @InterfaceAudience.Private
     final int port;
     private final Configuration conf;
 
@@ -385,8 +384,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     return waitTaskToFinish(unloadPool, unloadTask, "unloading");
   }
 
-  @VisibleForTesting
-   Collection<ServerName> filterRSGroupServers(RSGroupInfo rsgroup,
+  @InterfaceAudience.Private
+  Collection<ServerName> filterRSGroupServers(RSGroupInfo rsgroup,
       Collection<ServerName> onlineServers) {
     if (rsgroup.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
       return onlineServers;

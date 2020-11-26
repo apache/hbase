@@ -45,8 +45,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * RegionStates contains a set of Maps that describes the in-memory state of the AM, with
  * the regions available in the system, the region in transition, the offline regions and
@@ -115,7 +113,6 @@ public class RegionStates {
     serverMap.clear();
   }
 
-  @VisibleForTesting
   public boolean isRegionInRegionStates(final RegionInfo hri) {
     return (regionsMap.containsKey(hri.getRegionName()) || regionInTransition.containsKey(hri)
         || regionOffline.containsKey(hri));
@@ -124,7 +121,6 @@ public class RegionStates {
   // ==========================================================================
   //  RegionStateNode helpers
   // ==========================================================================
-  @VisibleForTesting
   RegionStateNode createRegionStateNode(RegionInfo regionInfo) {
     synchronized (regionsMapLock) {
       RegionStateNode node = regionsMap.computeIfAbsent(regionInfo.getRegionName(),
@@ -764,7 +760,6 @@ public class RegionStates {
   /**
    * @return Pertinent ServerStateNode or NULL if none found (Do not make modifications).
    */
-  @VisibleForTesting
   public ServerStateNode getServerNode(final ServerName serverName) {
     return serverMap.get(serverName);
   }
