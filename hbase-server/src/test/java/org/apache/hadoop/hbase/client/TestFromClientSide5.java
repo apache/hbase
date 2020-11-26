@@ -293,21 +293,27 @@ public class TestFromClientSide5 extends FromClientSideBase {
   }
 
   @Test
-  public void testRowMutation() throws Exception {
-    LOG.info("Starting testRowMutation");
+  public void testRowMutations() throws Exception {
+    LOG.info("Starting testRowMutations");
     final TableName tableName = name.getTableName();
     try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
-      byte[][] QUALIFIERS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b") };
+      byte[][] QUALIFIERS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
+        Bytes.toBytes("c"), Bytes.toBytes("d") };
+
+      // Test for Put operations
       RowMutations arm = new RowMutations(ROW);
       Put p = new Put(ROW);
       p.addColumn(FAMILY, QUALIFIERS[0], VALUE);
       arm.add(p);
-      t.mutateRow(arm);
+      Result r = t.mutateRow(arm);
+      assertTrue(r.getExists());
+      assertTrue(r.isEmpty());
 
       Get g = new Get(ROW);
-      Result r = t.get(g);
+      r = t.get(g);
       assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
 
+      // Test for Put and Delete operations
       arm = new RowMutations(ROW);
       p = new Put(ROW);
       p.addColumn(FAMILY, QUALIFIERS[1], VALUE);
@@ -316,10 +322,33 @@ public class TestFromClientSide5 extends FromClientSideBase {
       d.addColumns(FAMILY, QUALIFIERS[0]);
       arm.add(d);
       // TODO: Trying mutateRow again. The batch was failing with a one try only.
-      t.mutateRow(arm);
+      r = t.mutateRow(arm);
+      assertTrue(r.getExists());
+      assertTrue(r.isEmpty());
+
       r = t.get(g);
       assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[1])));
       assertNull(r.getValue(FAMILY, QUALIFIERS[0]));
+
+      // Test for Increment and Append operations
+      arm = new RowMutations(ROW);
+      arm.add(Arrays.asList(
+        new Put(ROW).addColumn(FAMILY, QUALIFIERS[0], VALUE),
+        new Delete(ROW).addColumns(FAMILY, QUALIFIERS[1]),
+        new Increment(ROW).addColumn(FAMILY, QUALIFIERS[2], 5L),
+        new Append(ROW).addColumn(FAMILY, QUALIFIERS[3], Bytes.toBytes("abc"))
+      ));
+      r = t.mutateRow(arm);
+      assertTrue(r.getExists());
+      assertEquals(5L, Bytes.toLong(r.getValue(FAMILY, QUALIFIERS[2])));
+      assertEquals("abc", Bytes.toString(r.getValue(FAMILY, QUALIFIERS[3])));
+
+      g = new Get(ROW);
+      r = t.get(g);
+      assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
+      assertNull(r.getValue(FAMILY, QUALIFIERS[1]));
+      assertEquals(5L, Bytes.toLong(r.getValue(FAMILY, QUALIFIERS[2])));
+      assertEquals("abc", Bytes.toString(r.getValue(FAMILY, QUALIFIERS[3])));
 
       // Test that we get a region level exception
       try {

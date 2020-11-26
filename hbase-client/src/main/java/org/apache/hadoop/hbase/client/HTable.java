@@ -554,7 +554,7 @@ public class HTable implements Table {
   }
 
   @Override
-  public void mutateRow(final RowMutations rm) throws IOException {
+  public Result mutateRow(final RowMutations rm) throws IOException {
     CancellableRegionServerCallable<MultiResponse> callable =
       new CancellableRegionServerCallable<MultiResponse>(this.connection, getName(), rm.getRow(),
           rpcControllerFactory.newController(), writeRpcTimeoutMs,
@@ -578,20 +578,23 @@ public class HTable implements Table {
         return ResponseConverter.getResults(request, response, getRpcControllerCellScanner());
       }
     };
+    Object[] results = new Object[rm.getMutations().size()];
     AsyncProcessTask task = AsyncProcessTask.newBuilder()
-            .setPool(pool)
-            .setTableName(tableName)
-            .setRowAccess(rm.getMutations())
-            .setCallable(callable)
-            .setRpcTimeout(writeRpcTimeoutMs)
-            .setOperationTimeout(operationTimeoutMs)
-            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
-            .build();
+      .setPool(pool)
+      .setTableName(tableName)
+      .setRowAccess(rm.getMutations())
+      .setCallable(callable)
+      .setRpcTimeout(writeRpcTimeoutMs)
+      .setOperationTimeout(operationTimeoutMs)
+      .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+      .setResults(results)
+      .build();
     AsyncRequestFuture ars = multiAp.submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
     }
+    return (Result) results[0];
   }
 
   @Override

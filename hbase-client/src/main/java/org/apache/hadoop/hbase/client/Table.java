@@ -644,9 +644,10 @@ public interface Table extends Closeable {
    * {@link Put} and {@link Delete} are supported.
    *
    * @param rm object that specifies the set of mutations to perform atomically
-   * @throws IOException
+   * @return results of Increment/Append operations
+   * @throws IOException if a remote or network exception occurs.
    */
-  default void mutateRow(final RowMutations rm) throws IOException {
+  default Result mutateRow(final RowMutations rm) throws IOException {
     throw new NotImplementedException("Add an implementation!");
   }
 
