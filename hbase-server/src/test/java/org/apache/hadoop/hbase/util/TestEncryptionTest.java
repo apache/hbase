@@ -69,7 +69,7 @@ public class TestEncryptionTest {
   @Test(expected = IOException.class)
   public void testBadCipherProvider() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-      conf.set(HConstants.CRYPTO_CIPHERPROVIDER_CONF_KEY, FailingCipherProvider.class.getName());
+    conf.set(HConstants.CRYPTO_CIPHERPROVIDER_CONF_KEY, FailingCipherProvider.class.getName());
     EncryptionTest.testCipherProvider(conf);
     fail("Instantiation of bad test cipher provider should have failed check");
   }
