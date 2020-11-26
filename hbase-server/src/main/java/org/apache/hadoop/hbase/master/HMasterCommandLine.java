@@ -155,7 +155,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         "To shutdown the master run " +
         "hbase-daemon.sh stop master or send a kill signal to " +
         "the HMaster pid, " +
-        "and to stop HBase Cluster run stop-hbase.sh or add --shutDownCluster with current command");
+        "and to stop HBase Cluster run \"stop-hbase.sh\" or \"hbase master stop --shutDownCluster\"");
       return 1;
     } else if ("clear".equals(command)) {
       return (ZNodeClearer.clear(getConf()) ? 0 : 1);
