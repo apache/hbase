@@ -271,17 +271,9 @@ public final class RequestConverter {
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
     for (Mutation mutation: rowMutations.getMutations()) {
-      MutationType mutateType;
-      if (mutation instanceof Put) {
-        mutateType = MutationType.PUT;
-      } else if (mutation instanceof Delete) {
-        mutateType = MutationType.DELETE;
-      } else {
-        throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
-            mutation.getClass().getName());
-      }
       mutationBuilder.clear();
-      MutationProto mp = ProtobufUtil.toMutation(mutateType, mutation, mutationBuilder);
+      MutationProto mp = ProtobufUtil.toMutation(getMutationType(mutation), mutation,
+        mutationBuilder);
       actionBuilder.clear();
       actionBuilder.setMutation(mp);
       builder.addAction(actionBuilder.build());
@@ -387,17 +379,9 @@ public final class RequestConverter {
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
     for (Mutation mutation: rowMutations.getMutations()) {
-      MutationType mutateType = null;
-      if (mutation instanceof Put) {
-        mutateType = MutationType.PUT;
-      } else if (mutation instanceof Delete) {
-        mutateType = MutationType.DELETE;
-      } else {
-        throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
-          mutation.getClass().getName());
-      }
       mutationBuilder.clear();
-      MutationProto mp = ProtobufUtil.toMutation(mutateType, mutation, mutationBuilder);
+      MutationProto mp = ProtobufUtil.toMutation(getMutationType(mutation), mutation,
+        mutationBuilder);
       actionBuilder.clear();
       actionBuilder.setMutation(mp);
       builder.addAction(actionBuilder.build());
@@ -928,17 +912,9 @@ public final class RequestConverter {
     final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)
     throws IOException {
     for (Mutation mutation: rowMutations.getMutations()) {
-      MutationType type;
-      if (mutation instanceof Put) {
-        type = MutationType.PUT;
-      } else if (mutation instanceof Delete) {
-        type = MutationType.DELETE;
-      } else {
-        throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
-          mutation.getClass().getName());
-      }
       mutationBuilder.clear();
-      MutationProto mp = ProtobufUtil.toMutationNoData(type, mutation, mutationBuilder);
+      MutationProto mp = ProtobufUtil.toMutationNoData(getMutationType(mutation), mutation,
+        mutationBuilder);
       cells.add(mutation);
       actionBuilder.clear();
       regionActionBuilder.addAction(actionBuilder.setMutation(mp).build());
@@ -946,7 +922,6 @@ public final class RequestConverter {
   }
 
   private static MutationType getMutationType(Mutation mutation) {
-    assert !(mutation instanceof CheckAndMutate);
     if (mutation instanceof Put) {
       return MutationType.PUT;
     } else if (mutation instanceof Delete) {

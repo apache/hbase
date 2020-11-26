@@ -919,7 +919,7 @@ public interface RegionObserver {
   /**
    * Called after checkAndMutate
    * <p>
-   * Note: Do not retain references to any Cells in 'delete' beyond the life of this invocation.
+   * Note: Do not retain references to any Cells in actions beyond the life of this invocation.
    * If need a Cell reference for later use, copy the cell and use that.
    * @param c the environment provided by the region server
    * @param checkAndMutate the CheckAndMutate object

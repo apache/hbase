@@ -280,7 +280,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
-  public void mutateRow(RowMutations rm) throws IOException {
+  public Result mutateRow(RowMutations rm) throws IOException {
     throw new UnsupportedOperationException();
   }
 

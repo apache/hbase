@@ -875,7 +875,7 @@ public class RemoteHTable implements Table {
   }
 
   @Override
-  public void mutateRow(RowMutations rm) throws IOException {
+  public Result mutateRow(RowMutations rm) throws IOException {
     throw new IOException("atomicMutation not supported");
   }
 

@@ -396,9 +396,9 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * Performs multiple mutations atomically on a single row. Currently {@link Put} and
    * {@link Delete} are supported.
    * @param mutation object that specifies the set of mutations to perform atomically
-   * @return A {@link CompletableFuture} that always returns null when complete normally.
+   * @return A {@link CompletableFuture} that returns results of Increment/Append operations
    */
-  CompletableFuture<Void> mutateRow(RowMutations mutation);
+  CompletableFuture<Result> mutateRow(RowMutations mutation);
 
   /**
    * The scan API uses the observer pattern.

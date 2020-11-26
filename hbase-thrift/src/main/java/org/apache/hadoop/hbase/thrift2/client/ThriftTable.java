@@ -447,10 +447,11 @@ public class ThriftTable implements Table {
   }
 
   @Override
-  public void mutateRow(RowMutations rm) throws IOException {
+  public Result mutateRow(RowMutations rm) throws IOException {
     TRowMutations tRowMutations = ThriftUtilities.rowMutationsFromHBase(rm);
     try {
       client.mutateRow(tableNameInBytes, tRowMutations);
+      return Result.EMPTY_RESULT;
     }  catch (TException e) {
       throw new IOException(e);
     }

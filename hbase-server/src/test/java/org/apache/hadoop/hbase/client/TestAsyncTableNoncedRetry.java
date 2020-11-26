@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -135,6 +136,19 @@ public class TestAsyncTableNoncedRetry {
   }
 
   @Test
+  public void testAppendWhenReturnResultsEqualsFalse() throws InterruptedException,
+    ExecutionException {
+    assertEquals(0, CALLED.get());
+    AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
+      .setRpcTimeout(SLEEP_TIME / 2, TimeUnit.MILLISECONDS).build();
+    Result result = table.append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)
+      .setReturnResults(false)).get();
+    // make sure we called twice and the result is still correct
+    assertEquals(2, CALLED.get());
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
   public void testIncrement() throws InterruptedException, ExecutionException {
     assertEquals(0, CALLED.get());
     AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
@@ -142,5 +156,18 @@ public class TestAsyncTableNoncedRetry {
     assertEquals(1L, table.incrementColumnValue(row, FAMILY, QUALIFIER, 1L).get().longValue());
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
+  }
+
+  @Test
+  public void testIncrementWhenReturnResultsEqualsFalse() throws InterruptedException,
+    ExecutionException {
+    assertEquals(0, CALLED.get());
+    AsyncTable<?> table = ASYNC_CONN.getTableBuilder(TABLE_NAME)
+      .setRpcTimeout(SLEEP_TIME / 2, TimeUnit.MILLISECONDS).build();
+    Result result = table.increment(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L)
+      .setReturnResults(false)).get();
+    // make sure we called twice and the result is still correct
+    assertEquals(2, CALLED.get());
+    assertTrue(result.isEmpty());
   }
 }
