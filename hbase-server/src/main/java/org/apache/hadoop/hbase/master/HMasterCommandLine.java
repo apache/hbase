@@ -62,8 +62,8 @@ public class HMasterCommandLine extends ServerCommandLine {
     "   --localRegionServers=<servers> " +
       "RegionServers to start in master process when in standalone mode.\n" +
     "   --masters=<servers>            Masters to start in this process.\n" +
-    "   --backup                       Master should start in backup mode" +
-    "   --forceStop                    " +
+    "   --backup                       Master should start in backup mode\n" +
+    "   --shutDownCluster                    " +
       "Start Cluster shutdown; Master signals RegionServer shutdown";
 
   private final Class<? extends HMaster> masterClass;
@@ -86,7 +86,7 @@ public class HMasterCommandLine extends ServerCommandLine {
     opt.addOption("masters", true, "Masters to start in this process");
     opt.addOption("minRegionServers", true, "Minimum RegionServers needed to host user tables");
     opt.addOption("backup", false, "Do not try to become HMaster until the primary fails");
-    opt.addOption("forceStop", false, "`hbase master stop --forceStop` shuts down cluster");
+    opt.addOption("shutDownCluster", false, "`hbase master stop --shutDownCluster` shuts down cluster");
 
     CommandLine cmd;
     try {
@@ -132,7 +132,7 @@ public class HMasterCommandLine extends ServerCommandLine {
     }
 
     // Checking whether to shut down cluster or not
-    if (cmd.hasOption("forceStop")) {
+    if (cmd.hasOption("shutDownCluster")) {
       shutDownCluster = true;
     }
 
@@ -155,7 +155,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         "To shutdown the master run " +
         "hbase-daemon.sh stop master or send a kill signal to " +
         "the HMaster pid, " +
-        "and to stop HBase Cluster run stop-hbase.sh or add --forceStop with current command");
+        "and to stop HBase Cluster run stop-hbase.sh or add --shutDownCluster with current command");
       return 1;
     } else if ("clear".equals(command)) {
       return (ZNodeClearer.clear(getConf()) ? 0 : 1);
