@@ -816,6 +816,69 @@ function hbaseanti_patchfile
   return 0
 }
 
+######################################
+
+add_test_type visible-for-testing
+
+## @description  visible-for-testing file filter
+## @audience     private
+## @stability    evolving
+## @param        filename
+function visible-for-testing_filefilter
+{
+  local filename=$1
+
+  if [[ ${filename} =~ \.java$ ]]; then
+    add_test visible-for-testing
+  fi
+}
+
+## @description  visible-for-testing patch file check
+## @audience     private
+## @stability    evolving
+## @param        repostatus
+function visible-for-testing_precompile
+{
+  local repostatus=$1
+  local logfile="${PATCH_DIR}/patch-visible-for-testing.txt"
+  local errors
+
+  if [[ "${repostatus}" = branch ]]; then
+    return 0
+  fi
+
+  if ! verify_needed_test visible-for-testing; then
+    return 0
+  fi
+
+  big_console_header "VisibleForTesting plugin: ${BUILDMODE}"
+  if [[ "${BUILDMODE}" == "full" ]]; then
+    yetus_debug "going to check the whole repo"
+    find -type f -name *.java | grep -v generated | xargs grep -l "@InterfaceAudience.Public\|@InterfaceAudience.LimitedPrivate" | xargs grep -l @VisibleForTesting >> ${logfile}
+  else
+    yetus_debug "going to check patched files ${CHANGED_FILES[@]}"
+    for f in "${CHANGED_FILES[@]}"
+    do
+      if [[ "${f}" =~ \.java$ ]]; then
+        grep -l "@InterfaceAudience.Public\|@InterfaceAudience.LimitedPrivate" "${f}" | xargs grep -l @VisibleForTesting >> ${logfile}
+      fi
+    done
+  fi
+
+  touch ${logfile}
+  errors=`wc -l ${logfile} | cut -d\  -f1`
+  if [[ "${errors}" == "0" ]]; then
+    add_vote_table +1 visible-for-testing "${BUILDMODEMSG} does not introduce VisibleForTesting annotation on IA.Public or IA.LimitedPrivate classes."
+    return 0
+  else
+    add_vote_table -1 visible-for-testing "${BUILDMODEMSG} introduces VisibleForTesting annotation on ${errors} IA.Public or IA.LimitedPrivate classes."
+    add_footer_table visible-for-testing "@@BASE@@/patch-visible-for-testing.txt"
+    return 1
+  fi
+}
+
+######################################
+
 ## @description  process the javac output for generating WARNING/ERROR
 ## @audience     private
 ## @stability    evolving
