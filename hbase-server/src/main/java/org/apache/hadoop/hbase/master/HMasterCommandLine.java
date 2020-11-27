@@ -62,7 +62,9 @@ public class HMasterCommandLine extends ServerCommandLine {
     "   --localRegionServers=<servers> " +
       "RegionServers to start in master process when in standalone mode.\n" +
     "   --masters=<servers>            Masters to start in this process.\n" +
-    "   --backup                       Master should start in backup mode";
+    "   --backup                       Master should start in backup mode\n" +
+    "   --shutDownCluster                    " +
+      "Start Cluster shutdown; Master signals RegionServer shutdown";
 
   private final Class<? extends HMaster> masterClass;
 
@@ -77,12 +79,14 @@ public class HMasterCommandLine extends ServerCommandLine {
 
   @Override
   public int run(String args[]) throws Exception {
+    boolean shutDownCluster = false;
     Options opt = new Options();
     opt.addOption("localRegionServers", true,
       "RegionServers to start in master process when running standalone");
     opt.addOption("masters", true, "Masters to start in this process");
     opt.addOption("minRegionServers", true, "Minimum RegionServers needed to host user tables");
     opt.addOption("backup", false, "Do not try to become HMaster until the primary fails");
+    opt.addOption("shutDownCluster", false, "`hbase master stop --shutDownCluster` shuts down cluster");
 
     CommandLine cmd;
     try {
@@ -127,6 +131,11 @@ public class HMasterCommandLine extends ServerCommandLine {
       LOG.debug("masters set to " + val);
     }
 
+    // Checking whether to shut down cluster or not
+    if (cmd.hasOption("shutDownCluster")) {
+      shutDownCluster = true;
+    }
+
     @SuppressWarnings("unchecked")
     List<String> remainingArgs = cmd.getArgList();
     if (remainingArgs.size() != 1) {
@@ -139,7 +148,15 @@ public class HMasterCommandLine extends ServerCommandLine {
     if ("start".equals(command)) {
       return startMaster();
     } else if ("stop".equals(command)) {
-      return stopMaster();
+      if (shutDownCluster) {
+        return stopMaster();
+      }
+      System.err.println(
+        "To shutdown the master run " +
+        "hbase-daemon.sh stop master or send a kill signal to " +
+        "the HMaster pid, " +
+        "and to stop HBase Cluster run \"stop-hbase.sh\" or \"hbase master stop --shutDownCluster\"");
+      return 1;
     } else if ("clear".equals(command)) {
       return (ZNodeClearer.clear(getConf()) ? 0 : 1);
     } else {
