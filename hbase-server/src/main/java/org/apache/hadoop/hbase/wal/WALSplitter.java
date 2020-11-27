@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -217,17 +216,16 @@ public class WALSplitter {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem rootFS = rootDir.getFileSystem(conf);
     WALSplitter splitter = new WALSplitter(factory, conf, walRootDir, walFS, rootDir, rootFS);
-    final FileStatus[] wals =
+    final List<FileStatus> wals =
       SplitLogManager.getFileList(conf, Collections.singletonList(walsDir), null);
     List<Path> splits = new ArrayList<>();
-    if (ArrayUtils.isNotEmpty(wals)) {
+    if (!wals.isEmpty()) {
       for (FileStatus wal: wals) {
         SplitWALResult splitWALResult = splitter.splitWAL(wal, null);
         if (splitWALResult.isFinished()) {
           WALSplitUtil.archive(wal.getPath(), splitWALResult.isCorrupt(), archiveDir, walFS, conf);
-          if (splitter.outputSink.splits != null) {
-            splits.addAll(splitter.outputSink.splits);
-          }
+          //splitter.outputSink.splits is mark as final, do not need null check
+          splits.addAll(splitter.outputSink.splits);
         }
       }
     }

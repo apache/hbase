@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,10 +106,10 @@ public class SplitWALManager {
   public List<FileStatus> getWALsToSplit(ServerName serverName, boolean splitMeta)
       throws IOException {
     List<Path> logDirs = master.getMasterWalManager().getLogDirs(Collections.singleton(serverName));
-    FileStatus[] fileStatuses =
-        SplitLogManager.getFileList(this.conf, logDirs, splitMeta ? META_FILTER : NON_META_FILTER);
-    LOG.info("{} WAL count={}, meta={}", serverName, fileStatuses.length, splitMeta);
-    return Lists.newArrayList(fileStatuses);
+    List<FileStatus> fileStatuses =
+      SplitLogManager.getFileList(this.conf, logDirs, splitMeta ? META_FILTER : NON_META_FILTER);
+    LOG.info("{} WAL count={}, meta={}", serverName, fileStatuses.size(), splitMeta);
+    return fileStatuses;
   }
 
   private Path getWALSplitDir(ServerName serverName) {
