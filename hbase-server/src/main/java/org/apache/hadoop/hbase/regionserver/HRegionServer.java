@@ -36,6 +36,7 @@ import java.lang.reflect.Constructor;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -126,6 +127,7 @@ import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -283,15 +285,17 @@ public class HRegionServer extends HasThread implements
 
   /**
    * Map of encoded region names to the DataNode locations they should be hosted on
-   * We store the value as InetSocketAddress since this is used only in HDFS
+   * We store the value as Address since InetSocketAddress is required by the HDFS
    * API (create() that takes favored nodes as hints for placing file blocks).
    * We could have used ServerName here as the value class, but we'd need to
    * convert it to InetSocketAddress at some point before the HDFS API call, and
    * it seems a bit weird to store ServerName since ServerName refers to RegionServers
-   * and here we really mean DataNode locations.
+   * and here we really mean DataNode locations. We don't store it as InetSocketAddress
+   * here because the conversion on demand from Address to InetSocketAddress will
+   * guarantee the resolution results will be fresh when we need it.
    */
-  protected final Map<String, InetSocketAddress[]> regionFavoredNodesMap =
-      new ConcurrentHashMap<String, InetSocketAddress[]>();
+  protected final Map<String, Address[]> regionFavoredNodesMap =
+      new ConcurrentHashMap<String, Address[]>();
 
   /**
    * Set of regions currently being in recovering state which means it can accept writes(edits from
@@ -3169,15 +3173,23 @@ public class HRegionServer extends HasThread implements
     return this.onlineRegions.get(encodedRegionName);
   }
 
-  public InetSocketAddress[] getRegionBlockLocations(final String encodedRegionName) {
-    return this.regionFavoredNodesMap.get(encodedRegionName);
+  /**
+   * Return the favored nodes for a region given its encoded name. Look at the
+   * comment around {@link #regionFavoredNodesMap} on why we convert to InetSocketAddress[]
+   * here.
+   * @param encodedRegionName
+   * @return array of favored locations
+   * @throws UnknownHostException if a favored node location cannot be resolved
+   */
+  public InetSocketAddress[] getRegionBlockLocations(final String encodedRegionName)
+      throws UnknownHostException {
+    return Address.toSocketAddress(regionFavoredNodesMap.get(encodedRegionName));
   }
 
   @Override
   public Region getFromOnlineRegions(final String encodedRegionName) {
     return this.onlineRegions.get(encodedRegionName);
   }
-
 
   @Override
   public boolean removeFromOnlineRegions(final Region r, ServerName destination) {
@@ -3296,11 +3308,11 @@ public class HRegionServer extends HasThread implements
   @Override
   public void updateRegionFavoredNodesMapping(String encodedRegionName,
       List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> favoredNodes) {
-    InetSocketAddress[] addr = new InetSocketAddress[favoredNodes.size()];
+    Address[] addr = new Address[favoredNodes.size()];
     // Refer to the comment on the declaration of regionFavoredNodesMap on why
-    // it is a map of region name to InetSocketAddress[]
+    // it is a map of region name to Address[]
     for (int i = 0; i < favoredNodes.size(); i++) {
-      addr[i] = InetSocketAddress.createUnresolved(favoredNodes.get(i).getHostName(),
+      addr[i] = Address.fromParts(favoredNodes.get(i).getHostName(),
           favoredNodes.get(i).getPort());
     }
     regionFavoredNodesMap.put(encodedRegionName, addr);
@@ -3308,13 +3320,14 @@ public class HRegionServer extends HasThread implements
 
   /**
    * Return the favored nodes for a region given its encoded name. Look at the
-   * comment around {@link #regionFavoredNodesMap} on why it is InetSocketAddress[]
+   * comment around {@link #regionFavoredNodesMap} on why we convert to InetSocketAddress[]
+   * here.
    * @param encodedRegionName
    * @return array of favored locations
    */
   @Override
   public InetSocketAddress[] getFavoredNodesForRegion(String encodedRegionName) {
-    return regionFavoredNodesMap.get(encodedRegionName);
+    return Address.toSocketAddress(regionFavoredNodesMap.get(encodedRegionName));
   }
 
   @Override

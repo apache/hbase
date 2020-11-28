@@ -26,6 +26,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -2090,28 +2091,30 @@ public class ZKUtil {
     int port = sp.length > 1 ? Integer.parseInt(sp[1])
         : HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT;
 
-    Socket socket = new Socket();
-    InetSocketAddress sockAddr = new InetSocketAddress(host, port);
-    socket.connect(sockAddr, timeout);
-
-    socket.setSoTimeout(timeout);
-    PrintWriter out = new PrintWriter(new BufferedWriter(
-        new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)),
-      true);
-    BufferedReader in = new BufferedReader(
-      new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-    out.println("stat");
-    out.flush();
     ArrayList<String> res = new ArrayList<String>();
-    while (true) {
-      String line = in.readLine();
-      if (line != null) {
-        res.add(line);
-      } else {
-        break;
+    try (Socket socket = new Socket()) {
+      InetSocketAddress sockAddr = new InetSocketAddress(host, port);
+      if (sockAddr.isUnresolved()) {
+        throw new UnknownHostException(host + " cannot be resolved");
+      }
+      socket.connect(sockAddr, timeout);
+      socket.setSoTimeout(timeout);
+      PrintWriter out = new PrintWriter(new BufferedWriter(
+          new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)),
+        true);
+      BufferedReader in = new BufferedReader(
+        new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+      out.println("stat");
+      out.flush();
+      while (true) {
+        String line = in.readLine();
+        if (line != null) {
+          res.add(line);
+        } else {
+          break;
+        }
       }
     }
-    socket.close();
     return res.toArray(new String[res.size()]);
   }
 

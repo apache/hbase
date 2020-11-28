@@ -189,6 +189,13 @@ public class ConnectionUtils {
     }
   }
 
+  /**
+   * Get a unique key for the rpc stub to the given server.
+   */
+  static String getStubKey(String serviceName, ServerName serverName) {
+    return String.format("%s@%s", serviceName, serverName);
+  }
+
   // A byte array in which all elements are the max byte, and it is used to
   // construct closest front row
   static final byte[] MAX_BYTE_ARRAY = Bytes.createMaxByteArray(9);

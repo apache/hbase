@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.net.Address;
 
 /**
  * Throw this in rpc call if there are too many pending requests for one region server
@@ -31,6 +32,13 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class ServerTooBusyException extends DoNotRetryIOException {
 
+  private static final long serialVersionUID = 1L;
+
+  public ServerTooBusyException(Address address, long count){
+    super("There are "+count+" concurrent rpc requests for "+address);
+  }
+
+  @Deprecated
   public ServerTooBusyException(InetSocketAddress address, long count){
     super("There are "+count+" concurrent rpc requests for "+address);
   }

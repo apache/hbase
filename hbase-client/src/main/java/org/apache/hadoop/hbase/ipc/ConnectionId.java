@@ -18,9 +18,8 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
-
-import java.net.InetSocketAddress;
 
 /**
  * This class holds the address and the user ticket, etc. The client connections
@@ -31,9 +30,9 @@ public class ConnectionId {
   private static final int PRIME = 16777619;
   final User ticket;
   final String serviceName;
-  final InetSocketAddress address;
+  final Address address;
 
-  public ConnectionId(User ticket, String serviceName, InetSocketAddress address) {
+  public ConnectionId(User ticket, String serviceName, Address address) {
     this.address = address;
     this.ticket = ticket;
     this.serviceName = serviceName;
@@ -43,7 +42,7 @@ public class ConnectionId {
     return this.serviceName;
   }
 
-  public InetSocketAddress getAddress() {
+  public Address getAddress() {
     return address;
   }
 
@@ -53,7 +52,7 @@ public class ConnectionId {
 
   @Override
   public String toString() {
-    return this.address.toString() + "/" + this.serviceName + "/" + this.ticket;
+    return this.address + "/" + this.serviceName + "/" + this.ticket;
   }
 
   @Override
@@ -102,7 +101,7 @@ public class ConnectionId {
     return true;
   }
 
-  public static int hashCode(User ticket, String serviceName, InetSocketAddress address){
+  public static int hashCode(User ticket, String serviceName, Address address){
     return (address.hashCode() +
         PRIME * (PRIME * serviceName.hashCode() ^
             (ticket == null ? 0 : ticket.hashCode())));

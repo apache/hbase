@@ -24,7 +24,6 @@ import com.google.protobuf.Message;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.ConnectException;
-import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 
@@ -32,6 +31,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
@@ -159,7 +159,7 @@ class IPCUtil {
    * @param exception the relevant exception
    * @return an exception to throw
    */
-  static IOException wrapException(InetSocketAddress addr, Exception exception) {
+  static IOException wrapException(Address addr, Exception exception) {
     if (exception instanceof ConnectException) {
       // connection refused; include the host:port in the error
       return (ConnectException) new ConnectException(

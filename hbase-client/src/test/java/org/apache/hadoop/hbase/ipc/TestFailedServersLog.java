@@ -15,9 +15,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
-import java.net.InetSocketAddress;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.log4j.Appender;
@@ -39,7 +38,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 @Category({ ClientTests.class, SmallTests.class })
 public class TestFailedServersLog {
   static final int TEST_PORT = 9999;
-  private InetSocketAddress addr;
+  private Address addr;
 
   @Mock
   private Appender mockAppender;
@@ -62,14 +61,14 @@ public class TestFailedServersLog {
     Throwable nullException = new NullPointerException();
 
     FailedServers fs = new FailedServers(new Configuration());
-    addr = new InetSocketAddress(TEST_PORT);
+    addr = Address.fromParts("localhost", TEST_PORT);
 
     fs.addToFailedServers(addr, nullException);
 
     Mockito.verify(mockAppender).doAppend((LoggingEvent) captorLoggingEvent.capture());
     LoggingEvent loggingEvent = (LoggingEvent) captorLoggingEvent.getValue();
     assertThat(loggingEvent.getLevel(), is(Level.DEBUG));
-    assertEquals("Added failed server with address " + addr.toString() + " to list caused by "
+    assertEquals("Added failed server with address " + addr + " to list caused by "
         + nullException.toString(),
       loggingEvent.getRenderedMessage());
   }

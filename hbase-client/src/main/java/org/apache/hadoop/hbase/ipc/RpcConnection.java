@@ -24,6 +24,7 @@ import io.netty.util.TimerTask;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
 
@@ -32,7 +33,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -73,6 +76,8 @@ abstract class RpcConnection {
 
   protected final CompressionCodec compressor;
 
+  protected final MetricsConnection metrics;
+
   protected final HashedWheelTimer timeoutTimer;
 
   // the last time we were picked up from connection pool.
@@ -87,15 +92,12 @@ abstract class RpcConnection {
   private long lastForceReloginAttempt = -1;
 
   protected RpcConnection(Configuration conf, HashedWheelTimer timeoutTimer, ConnectionId remoteId,
-      String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor)
-      throws IOException {
-    if (remoteId.getAddress().isUnresolved()) {
-      throw new UnknownHostException("unknown host: " + remoteId.getAddress().getHostName());
-    }
+      String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor,
+      MetricsConnection metrics) throws IOException {
     this.timeoutTimer = timeoutTimer;
     this.codec = codec;
     this.compressor = compressor;
-
+    this.metrics = metrics;
     UserGroupInformation ticket = remoteId.getTicket().getUGI();
     SecurityInfo securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
     this.useSasl = isSecurityEnabled;
@@ -116,8 +118,18 @@ abstract class RpcConnection {
       if (serverKey == null) {
         throw new IOException("Can't obtain server Kerberos config key from SecurityInfo");
       }
+      if (metrics != null) {
+        metrics.incrNsLookups();
+      }
+      InetSocketAddress remoteAddr = Address.toSocketAddress(remoteId.getAddress());
+      if (remoteAddr.isUnresolved()) {
+        if (metrics != null) {
+          metrics.incrNsLookupsFailed();
+        }
+        throw new UnknownHostException(remoteId.getAddress() + " could not be resolved");
+      }
       serverPrincipal = SecurityUtil.getServerPrincipal(conf.get(serverKey),
-        remoteId.address.getAddress().getCanonicalHostName().toLowerCase());
+        remoteAddr.getAddress().getCanonicalHostName().toLowerCase());
       if (LOG.isDebugEnabled()) {
         LOG.debug("RPC Server Kerberos principal name for service=" + remoteId.getServiceName()
             + " is " + serverPrincipal);
