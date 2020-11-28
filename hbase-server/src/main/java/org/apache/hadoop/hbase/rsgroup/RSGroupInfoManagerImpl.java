@@ -465,7 +465,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         }
         for (String znode : children) {
           byte[] data = ZKUtil.getData(watcher, ZNodePaths.joinZNode(groupBasePath, znode));
-          if (data.length > 0) {
+          if (data != null && data.length > 0) {
             ProtobufUtil.expectPBMagicPrefix(data);
             ByteArrayInputStream bis =
               new ByteArrayInputStream(data, ProtobufUtil.lengthOfPBMagic(), data.length);
