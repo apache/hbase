@@ -66,6 +66,8 @@ public class MetricsConnection implements StatisticTrackable {
   private static final String HEAP_BASE = "heapOccupancy_";
   private static final String CACHE_BASE = "cacheDroppingExceptions_";
   private static final String UNKNOWN_EXCEPTION = "UnknownException";
+  private static final String NS_LOOKUPS = "nsLookups";
+  private static final String NS_LOOKUPS_FAILED = "nsLookupsFailed";
   private static final String CLIENT_SVC = ClientService.getDescriptor().getName();
 
   /** A container class for collecting details about the RPC call as it percolates. */
@@ -288,6 +290,8 @@ public class MetricsConnection implements StatisticTrackable {
   protected final Counter hedgedReadWin;
   protected final Histogram concurrentCallsPerServerHist;
   protected final Histogram numActionsPerServerHist;
+  protected final Counter nsLookups;
+  protected final Counter nsLookupsFailed;
 
   // dynamic metrics
 
@@ -350,6 +354,8 @@ public class MetricsConnection implements StatisticTrackable {
       "concurrentCallsPerServer", scope));
     this.numActionsPerServerHist = registry.histogram(name(MetricsConnection.class,
       "numActionsPerServer", scope));
+    this.nsLookups = registry.counter(name(this.getClass(), NS_LOOKUPS, scope));
+    this.nsLookupsFailed = registry.counter(name(this.getClass(), NS_LOOKUPS_FAILED, scope));
 
     this.reporter = JmxReporter.forRegistry(this.registry).build();
     this.reporter.start();
@@ -517,5 +523,13 @@ public class MetricsConnection implements StatisticTrackable {
     getMetric(CACHE_BASE +
       (exception == null? UNKNOWN_EXCEPTION : exception.getClass().getSimpleName()),
       cacheDroppingExceptions, counterFactory).inc();
+  }
+
+  public void incrNsLookups() {
+    this.nsLookups.inc();
+  }
+
+  public void incrNsLookupsFailed() {
+    this.nsLookupsFailed.inc();
   }
 }
