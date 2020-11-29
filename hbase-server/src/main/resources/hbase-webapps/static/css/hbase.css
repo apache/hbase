@@ -48,15 +48,15 @@ table.table-striped td {
 }
 
 /* sortable tables styling */
-table.tablesorter thead tr .header {
+table.tablesorter thead tr .tablesorter-header {
     background-image: url(bg.gif);
     background-repeat: no-repeat;
     background-position: center right;
     cursor: pointer;
 }
-table.tablesorter thead tr .headerSortUp {
+table.tablesorter thead tr .tablesorter-headerAsc {
     background-image: url(asc.gif);
 }
-table.tablesorter thead tr .headerSortDown {
+table.tablesorter thead tr .tablesorter-headerDesc {
     background-image: url(desc.gif);
 }
