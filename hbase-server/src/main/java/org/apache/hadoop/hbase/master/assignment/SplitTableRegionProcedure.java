@@ -109,7 +109,7 @@ public class SplitTableRegionProcedure
     // we fail-fast on construction. There it skips the split with just a warning.
     checkOnline(env, regionToSplit);
     this.bestSplitRow = splitRow;
-    checkSplittable(env, regionToSplit, bestSplitRow);
+    checkSplittable(env, regionToSplit);
     final TableName table = regionToSplit.getTable();
     final long rid = getDaughterRegionIdTimestamp(regionToSplit);
     this.daughter_1_RI = RegionInfoBuilder.newBuilder(table)
@@ -160,11 +160,10 @@ public class SplitTableRegionProcedure
    * Check whether the region is splittable
    * @param env MasterProcedureEnv
    * @param regionToSplit parent Region to be split
-   * @param splitRow if splitRow is not specified, will first try to get bestSplitRow from RS
    * @throws IOException
    */
   private void checkSplittable(final MasterProcedureEnv env,
-      final RegionInfo regionToSplit, final byte[] splitRow) throws IOException {
+      final RegionInfo regionToSplit) throws IOException {
     // Ask the remote RS if this region is splittable.
     // If we get an IOE, report it along w/ the failure so can see why we are not splittable at this time.
     if(regionToSplit.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
@@ -213,12 +212,12 @@ public class SplitTableRegionProcedure
 
     if (Bytes.equals(regionToSplit.getStartKey(), bestSplitRow)) {
       throw new DoNotRetryIOException(
-        "Split row is equal to startkey: " + Bytes.toStringBinary(splitRow));
+        "Split row is equal to startkey: " + Bytes.toStringBinary(bestSplitRow));
     }
 
     if (!regionToSplit.containsRow(bestSplitRow)) {
       throw new DoNotRetryIOException("Split row is not inside region key range splitKey:" +
-        Bytes.toStringBinary(splitRow) + " region: " + regionToSplit);
+        Bytes.toStringBinary(bestSplitRow) + " region: " + regionToSplit);
     }
   }
 
