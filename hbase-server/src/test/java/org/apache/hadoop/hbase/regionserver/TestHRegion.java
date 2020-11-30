@@ -7210,7 +7210,8 @@ public class TestHRegion {
       RegionInfoBuilder.newBuilder(tableName).setStartKey(a).setEndKey(c).build();
     final TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
-    region = HRegion.createHRegion(hri, TEST_UTIL.getDataTestDir(), conf, htd, TEST_UTIL.createWal(conf, TEST_UTIL.getDataTestDirOnTestFS(method + ".log"), hri));
+    region = HRegion.createHRegion(hri, TEST_UTIL.getDataTestDir(), conf, htd,
+      HBaseTestingUtility.createWal(conf, TEST_UTIL.getDataTestDirOnTestFS(method + ".log"), hri));
 
     Mutation[] mutations = new Mutation[] {
         new Put(a)
@@ -7488,8 +7489,7 @@ public class TestHRegion {
           });
         }
       } catch (Exception e) {
-        e.printStackTrace();
-        assertionError.set(new AssertionError(e.getMessage()));
+        assertionError.set(new AssertionError(e));
       }
     });
     writerThread.start();
@@ -7514,12 +7514,12 @@ public class TestHRegion {
               assertEquals(2L, Bytes.toLong(result.getValue(fam1, q3)));
               assertEquals("ab", Bytes.toString(result.getValue(fam1, q4)));
             } else {
-              fail("the qualifier " + q1 + " should be " + v1 + " or " + v2 + ", but " + q1Value);
+              fail("the qualifier " + Bytes.toString(q1) + " should be " + v1 + " or " + v2 +
+                ", but " + q1Value);
             }
           }
         } catch (Exception e) {
-          e.printStackTrace();
-          assertionError.set(new AssertionError(e.getMessage()));
+          assertionError.set(new AssertionError(e));
         } catch (AssertionError e) {
           assertionError.set(e);
         }
