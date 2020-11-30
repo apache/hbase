@@ -18,12 +18,19 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -45,58 +52,103 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
   }
 
   @Test
-  public void testSingleThreadedClient() throws InterruptedException, ExecutionException {
-    Random rand = ThreadLocalRandom.current();
-    String randomKey = String.valueOf(rand.nextInt());
-    String randomValue = String.valueOf(rand.nextInt());
-    // As long as the pool is not full, we'll get null back.
-    // This forces the user to create new values that can be used to populate
-    // the pool.
-    runThread(randomKey, randomValue, null);
-    assertEquals(1, poolMap.size(randomKey));
+  public void testGetOrCreate() throws IOException {
+    String key = "key";
+    String value = "value";
+    String result = poolMap.getOrCreate(key, () -> value);
+
+    assertEquals(value, result);
+    assertEquals(1, poolMap.values().size());
   }
 
   @Test
-  public void testMultiThreadedClients() throws InterruptedException, ExecutionException {
-    Random rand = ThreadLocalRandom.current();
+  public void testMultipleKeys() throws IOException {
+    for (int i = 0; i < KEY_COUNT; i++) {
+      String key = Integer.toString(i);
+      String value = Integer.toString(2 * i);
+      String result = poolMap.getOrCreate(key, () -> value);
+
+      assertEquals(value, result);
+    }
+
+    assertEquals(KEY_COUNT, poolMap.values().size());
+  }
+
+  @Test
+  public void testMultipleValues() throws IOException {
+    String key = "key";
+
     for (int i = 0; i < POOL_SIZE; i++) {
-      String randomKey = String.valueOf(rand.nextInt());
-      String randomValue = String.valueOf(rand.nextInt());
-      // As long as the pool is not full, we'll get null back
-      runThread(randomKey, randomValue, null);
-      // As long as we use distinct keys, each pool will have one value
-      assertEquals(1, poolMap.size(randomKey));
+      String value = Integer.toString(i);
+      String result = poolMap.getOrCreate(key, () -> value);
+
+      assertEquals(value, result);
     }
-    poolMap.clear();
-    String randomKey = String.valueOf(rand.nextInt());
-    for (int i = 0; i < POOL_SIZE - 1; i++) {
-      String randomValue = String.valueOf(rand.nextInt());
-      // As long as the pool is not full, we'll get null back
-      runThread(randomKey, randomValue, null);
-      // since we use the same key, the pool size should grow
-      assertEquals(i + 1, poolMap.size(randomKey));
-    }
-    // at the end of the day, there should be as many values as we put
-    assertEquals(POOL_SIZE - 1, poolMap.size(randomKey));
+
+    assertEquals(POOL_SIZE, poolMap.values().size());
   }
 
   @Test
-  public void testPoolCap() throws InterruptedException, ExecutionException {
-    Random rand = ThreadLocalRandom.current();
-    String randomKey = String.valueOf(rand.nextInt());
-    List<String> randomValues = new ArrayList<>();
-    for (int i = 0; i < POOL_SIZE * 2; i++) {
-      String randomValue = String.valueOf(rand.nextInt());
-      randomValues.add(randomValue);
-      if (i < POOL_SIZE - 1) {
-        // As long as the pool is not full, we'll get null back
-        runThread(randomKey, randomValue, null);
-      } else {
-        // when the pool becomes full, we expect the value we get back to be
-        // what we put earlier, in round-robin order
-        runThread(randomKey, randomValue, randomValues.get((i - POOL_SIZE + 1) % POOL_SIZE));
-      }
+  public void testRoundRobin() throws IOException {
+    String key = "key";
+
+    for (int i = 0; i < POOL_SIZE; i++) {
+      String value = Integer.toString(i);
+      poolMap.getOrCreate(key, () -> value);
     }
-    assertEquals(POOL_SIZE, poolMap.size(randomKey));
+
+    assertEquals(POOL_SIZE, poolMap.values().size());
+
+    /* pool is filled, get() should return elements round robin order */
+    for (int i = 0; i < 2 * POOL_SIZE; i++) {
+      String expected = Integer.toString(i % POOL_SIZE);
+      assertEquals(expected, poolMap.getOrCreate(key, () -> {
+        throw new IOException("must not call me");
+      }));
+    }
+
+    assertEquals(POOL_SIZE, poolMap.values().size());
+  }
+
+  @Test
+  public void testMultiThreadedRoundRobin() throws ExecutionException, InterruptedException {
+    String key = "key";
+    AtomicInteger id = new AtomicInteger();
+    List<String> results = Collections.synchronizedList(new ArrayList<>());
+
+    Runnable runnable = () -> {
+      try {
+        for (int i = 0; i < POOL_SIZE; i++) {
+          String value = Integer.toString(id.getAndIncrement());
+          String result = poolMap.getOrCreate(key, () -> value);
+          results.add(result);
+
+          Thread.yield();
+        }
+      } catch (IOException e) {
+        throw new CompletionException(e);
+      }
+    };
+
+    CompletableFuture<Void> future1 = CompletableFuture.runAsync(runnable);
+    CompletableFuture<Void> future2 = CompletableFuture.runAsync(runnable);
+
+    /* test for successful completion */
+    future1.get();
+    future2.get();
+
+    assertEquals(POOL_SIZE, poolMap.values().size());
+
+    /* check every elements occur twice */
+    Collections.sort(results);
+    Iterator<String> iterator = results.iterator();
+
+    for (int i = 0; i < POOL_SIZE; i++) {
+      String next1 = iterator.next();
+      String next2 = iterator.next();
+      assertEquals(next1, next2);
+    }
+
+    assertFalse(iterator.hasNext());
   }
 }
