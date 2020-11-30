@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -752,7 +752,6 @@ public class MergeTableRegionsProcedure
   /**
    * @return The merged region. Maybe be null if called to early or we failed.
    */
-  @VisibleForTesting
   RegionInfo getMergedRegion() {
     return this.mergedRegion;
   }

@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A chore service that periodically cleans up the compacted files when there are no active readers
@@ -38,7 +37,6 @@ public class CompactedHFilesDischarger extends ScheduledChore {
   private static final Logger LOG = LoggerFactory.getLogger(CompactedHFilesDischarger.class);
   private RegionServerServices regionServerServices;
   // Default is to use executor
-  @VisibleForTesting
   private boolean useExecutor = true;
 
   /**
@@ -59,7 +57,6 @@ public class CompactedHFilesDischarger extends ScheduledChore {
    * @param regionServerServices the region server that starts this chore
    * @param useExecutor true if to use the region server's executor service, false otherwise
    */
-  @VisibleForTesting
   public CompactedHFilesDischarger(final int period, final Stoppable stopper,
       final RegionServerServices regionServerServices, boolean useExecutor) {
     // Need to add the config classes
@@ -73,7 +70,6 @@ public class CompactedHFilesDischarger extends ScheduledChore {
    * cleanup. Use this method to set no-executor before you call run.
    * @return The old setting for <code>useExecutor</code>
    */
-  @VisibleForTesting
   boolean setUseExecutor(final boolean useExecutor) {
     boolean oldSetting = this.useExecutor;
     this.useExecutor = useExecutor;

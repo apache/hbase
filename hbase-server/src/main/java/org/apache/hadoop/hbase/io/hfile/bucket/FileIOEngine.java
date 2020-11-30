@@ -27,7 +27,6 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -36,7 +35,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -154,7 +152,6 @@ public class FileIOEngine extends PersistentIOEngine {
     return be.wrapAsCacheable(dstBuff);
   }
 
-  @VisibleForTesting
   void closeFileChannels() {
     for (FileChannel fileChannel: fileChannels) {
       try {
@@ -283,12 +280,10 @@ public class FileIOEngine extends PersistentIOEngine {
     return fileNum;
   }
 
-  @VisibleForTesting
   FileChannel[] getFileChannels() {
     return fileChannels;
   }
 
-  @VisibleForTesting
   void refreshFileConnection(int accessFileNum, IOException ioe) throws IOException {
     ReentrantLock channelLock = channelLocks[accessFileNum];
     channelLock.lock();

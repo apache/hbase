@@ -25,7 +25,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
@@ -82,7 +82,7 @@ class ClusterCompactionQueues {
     }
   }
 
-  @VisibleForTesting List<MajorCompactionRequest> getQueue(ServerName serverName) {
+  List<MajorCompactionRequest> getQueue(ServerName serverName) {
     lock.readLock().lock();
     try {
       return compactionQueues.get(serverName);

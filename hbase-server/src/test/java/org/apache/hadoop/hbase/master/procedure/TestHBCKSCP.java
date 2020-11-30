@@ -110,7 +110,6 @@ public class TestHBCKSCP extends TestSCPBase {
     // calling 'finish' and then remove it from dead servers so rsServerName
     // becomes an 'Unknown Server' even though it is still around.
     master.getServerManager().moveFromOnlineToDeadServers(rsServerName);
-    master.getServerManager().getDeadServers().finish(rsServerName);
     master.getServerManager().getDeadServers().removeDeadServer(rsServerName);
     master.getAssignmentManager().getRegionStates().removeServer(rsServerName);
     // Kill the server. Nothing should happen since an 'Unknown Server' as far

@@ -134,18 +134,16 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * HBaseFsck (hbck) is a tool for checking and repairing region consistency and
@@ -213,7 +211,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * Here is where hbase-1.x used to default the lock for hbck1.
    * It puts in place a lock when it goes to write/make changes.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static final String HBCK_LOCK_FILE = "hbase-hbck.lock";
   private static final int DEFAULT_MAX_LOCK_FILE_ATTEMPTS = 5;
   private static final int DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL = 200; // milliseconds
@@ -400,7 +398,7 @@ public class HBaseFsck extends Configured implements Closeable {
   /**
    * @return Return the tmp dir this tool writes too.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public static Path getTmpDir(Configuration conf) throws IOException {
     return new Path(CommonFSUtils.getRootDir(conf), HConstants.HBASE_TEMP_DIRECTORY);
   }

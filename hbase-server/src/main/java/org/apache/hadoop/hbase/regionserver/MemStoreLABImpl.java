@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
@@ -36,8 +35,9 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 /**
  * A memstore-local allocation buffer.
  * <p>
@@ -73,7 +73,6 @@ public class MemStoreLABImpl implements MemStoreLAB {
   private ReentrantLock lock = new ReentrantLock();
 
   // A set of chunks contained by this memstore LAB
-  @VisibleForTesting
   Set<Integer> chunks = new ConcurrentSkipListSet<Integer>();
   private final int dataChunkSize;
   private final int maxAlloc;
@@ -270,7 +269,6 @@ public class MemStoreLABImpl implements MemStoreLAB {
     }
   }
 
-  @VisibleForTesting
   int getOpenScannerCount() {
     return this.openScannerCount.get();
   }
@@ -397,12 +395,10 @@ public class MemStoreLABImpl implements MemStoreLAB {
     return this.chunkCreator.isOffheap();
   }
 
-  @VisibleForTesting
   Chunk getCurrentChunk() {
     return currChunk.get();
   }
 
-  @VisibleForTesting
   BlockingQueue<Chunk> getPooledChunks() {
     BlockingQueue<Chunk> pooledChunks = new LinkedBlockingQueue<>();
     for (Integer id : this.chunks) {
@@ -414,7 +410,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
     return pooledChunks;
   }
 
-  @VisibleForTesting Integer getNumOfChunksReturnedToPool() {
+  Integer getNumOfChunksReturnedToPool() {
     int i = 0;
     for (Integer id : this.chunks) {
       if (chunkCreator.isChunkInPool(id)) {

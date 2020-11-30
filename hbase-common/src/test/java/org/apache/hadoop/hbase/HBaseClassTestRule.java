@@ -42,7 +42,7 @@ import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.model.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
@@ -108,7 +108,6 @@ public final class HBaseClassTestRule implements TestRule {
    * @return the number of parameters for this given test class. If the test is not parameterized or
    *   if there is any issue determining the number of parameters, returns 1.
    */
-  @VisibleForTesting
   static int getNumParameters(Class<?> clazz) {
     RunWith[] runWiths = clazz.getAnnotationsByType(RunWith.class);
     boolean testParameterized = runWiths != null && Arrays.stream(runWiths).anyMatch(

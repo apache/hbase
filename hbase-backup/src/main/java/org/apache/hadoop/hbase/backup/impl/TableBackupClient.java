@@ -42,8 +42,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Base class for backup operation. Concrete implementation for
  * full and incremental backup are delegated to corresponding sub-classes:
@@ -55,7 +53,6 @@ public abstract class TableBackupClient {
 
   public static final String BACKUP_CLIENT_IMPL_CLASS = "backup.client.impl.class";
 
-  @VisibleForTesting
   public static final String BACKUP_TEST_MODE_STAGE = "backup.test.mode.stage";
 
   private static final Logger LOG = LoggerFactory.getLogger(TableBackupClient.class);
@@ -411,12 +408,10 @@ public abstract class TableBackupClient {
    */
   public abstract void execute() throws IOException;
 
-  @VisibleForTesting
   protected Stage getTestStage() {
     return Stage.valueOf("stage_"+ conf.getInt(BACKUP_TEST_MODE_STAGE, 0));
   }
 
-  @VisibleForTesting
   protected void failStageIf(Stage stage) throws IOException {
     Stage current = getTestStage();
     if (current == stage) {

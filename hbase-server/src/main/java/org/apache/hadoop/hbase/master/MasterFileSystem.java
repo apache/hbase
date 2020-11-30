@@ -43,8 +43,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * This class abstracts a bunch of operations the HMaster needs to interact with
  * the underlying file system like creating the initial layout, checking file
@@ -293,7 +291,6 @@ public class MasterFileSystem {
    * Make sure the hbase temp directory exists and is empty.
    * NOTE that this method is only executed once just after the master becomes the active one.
    */
-  @VisibleForTesting
   void checkTempDir(final Path tmpdir, final Configuration c, final FileSystem fs)
       throws IOException {
     // If the temp directory exists, clear the content (left over, from the previous run)

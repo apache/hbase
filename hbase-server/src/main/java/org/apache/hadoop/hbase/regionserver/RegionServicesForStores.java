@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -113,7 +112,6 @@ public class RegionServicesForStores {
     return region.getTableDescriptor().getColumnFamilyCount();
   }
 
-  @VisibleForTesting
   long getMemStoreSize() {
     return region.getMemStoreDataSize();
   }

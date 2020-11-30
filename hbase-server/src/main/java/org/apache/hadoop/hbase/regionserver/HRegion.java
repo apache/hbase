@@ -189,7 +189,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -319,7 +318,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   // Track data size in all memstores
   private final MemStoreSizing memStoreSizing = new ThreadSafeMemStoreSizing();
-  @VisibleForTesting
   RegionServicesForStores regionServicesForStores;
 
   // Debug possible data loss due to WAL off
@@ -581,7 +579,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /** A result object from prepare flush cache stage */
-  @VisibleForTesting
   static class PrepareFlushResult {
     final FlushResultImpl result; // indicating a failure result from prepare
     final TreeMap<byte[], StoreFlushContext> storeFlushCtxs;
@@ -746,7 +743,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @deprecated Use other constructors.
    */
   @Deprecated
-  @VisibleForTesting
   public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
       final Configuration confParam, final RegionInfo regionInfo,
       final TableDescriptor htd, final RegionServerServices rsServices) {
@@ -951,7 +947,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return What the next sequence (edit) id should be.
    * @throws IOException e
    */
-  @VisibleForTesting
   long initialize(final CancelableProgressable reporter) throws IOException {
 
     //Refuse to open the region if there is no column family in the table
@@ -1230,7 +1225,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return allStoreFiles;
   }
 
-  @VisibleForTesting
   protected void writeRegionOpenMarker(WAL wal, long openSeqId) throws IOException {
     Map<byte[], List<Path>> storeFiles = getStoreFiles();
     RegionEventDescriptor regionOpenDesc = ProtobufUtil.toRegionEventDescriptor(
@@ -1514,7 +1508,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @VisibleForTesting
   public MultiVersionConcurrencyControl getMVCC() {
     return mvcc;
   }
@@ -1637,7 +1630,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Exposed for some very specific unit tests.
    */
-  @VisibleForTesting
   public void setClosing(boolean closing) {
     this.closing.set(closing);
   }
@@ -1647,7 +1639,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Instead of blocking, the {@link HRegion#doClose} will throw exception if you set the timeout.
    * @param timeoutForWriteLock the second time to wait for the write lock in {@link HRegion#doClose}
    */
-  @VisibleForTesting
   public void setTimeoutForWriteLock(long timeoutForWriteLock) {
     assert timeoutForWriteLock >= 0;
     this.timeoutForWriteLock = timeoutForWriteLock;
@@ -2045,7 +2036,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this.htableDescriptor;
   }
 
-  @VisibleForTesting
   public void setTableDescriptor(TableDescriptor desc) {
     htableDescriptor = desc;
   }
@@ -2062,7 +2052,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Only used for unit test which doesn't start region server.
    */
-  @VisibleForTesting
   public void setBlockCache(BlockCache blockCache) {
     this.blockCache = blockCache;
   }
@@ -2074,7 +2063,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Only used for unit test which doesn't start region server.
    */
-  @VisibleForTesting
   public void setMobFileCache(MobFileCache mobFileCache) {
     this.mobFileCache = mobFileCache;
   }
@@ -2082,7 +2070,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * @return split policy for this region.
    */
-  @VisibleForTesting
   RegionSplitPolicy getSplitPolicy() {
     return this.splitPolicy;
   }
@@ -2126,7 +2113,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return the Region directory under WALRootDirectory
    * @throws IOException if there is an error getting WALRootDir
    */
-  @VisibleForTesting
   public Path getWALRegionDir() throws IOException {
     if (regionDir == null) {
       regionDir = CommonFSUtils.getWALRegionDir(conf, getRegionInfo().getTable(),
@@ -2235,7 +2221,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * <p>
    * It is used by utilities and testing
    */
-  @VisibleForTesting
   public void compactStores() throws IOException {
     for (HStore s : stores.values()) {
       Optional<CompactionContext> compaction = s.requestCompaction();
@@ -2250,7 +2235,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * <p>
    * It is used by utilities and testing
    */
-  @VisibleForTesting
   void compactStore(byte[] family, ThroughputController throughputController) throws IOException {
     HStore s = getStore(family);
     Optional<CompactionContext> compaction = s.requestCompaction();
@@ -3131,7 +3115,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return Next sequence number unassociated with any actual edit.
    * @throws IOException
    */
-  @VisibleForTesting
   protected long getNextSequenceId(final WAL wal) throws IOException {
     WriteEntry we = mvcc.begin();
     mvcc.completeAndWait(we);
@@ -3508,8 +3491,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       try {
         this.checkAndPrepareMutation(mutation, timestamp);
 
-        // store the family map reference to allow for mutations
-        familyCellMaps[index] = mutation.getFamilyCellMap();
+        if (mutation instanceof Put || mutation instanceof Delete) {
+          // store the family map reference to allow for mutations
+          familyCellMaps[index] = mutation.getFamilyCellMap();
+        }
+
         // store durability for the batch (highest durability of all operations in the batch)
         Durability tmpDur = region.getEffectiveDurability(mutation.getDurability());
         if (tmpDur.ordinal() > durability.ordinal()) {
@@ -3900,33 +3886,51 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             Bytes.toBytes(timestamp));
           miniBatchOp.incrementNumOfDeletes();
         } else if (mutation instanceof Increment || mutation instanceof Append) {
-          // For nonce operations
-          canProceed[index] = startNonceOperation(nonceGroup, nonce);
-          if (!canProceed[index]) {
-            // convert duplicate increment/append to get
-            List<Cell> results = region.get(toGet(mutation), false, nonceGroup, nonce);
-            retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS,
-              Result.create(results));
-            return true;
-          }
-
           boolean returnResults;
           if (mutation instanceof Increment) {
             returnResults = ((Increment) mutation).isReturnResults();
-            miniBatchOp.incrementNumOfIncrements();
           } else {
             returnResults = ((Append) mutation).isReturnResults();
-            miniBatchOp.incrementNumOfAppends();
           }
-          Result result = doCoprocessorPreCallAfterRowLock(mutation);
+
+          // For nonce operations
+          canProceed[index] = startNonceOperation(nonceGroup, nonce);
+          if (!canProceed[index]) {
+            Result result;
+            if (returnResults) {
+              // convert duplicate increment/append to get
+              List<Cell> results = region.get(toGet(mutation), false, nonceGroup, nonce);
+              result = Result.create(results);
+            } else {
+              result = Result.EMPTY_RESULT;
+            }
+            retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS, result);
+            return true;
+          }
+
+          Result result = null;
+          if (region.coprocessorHost != null) {
+            if (mutation instanceof Increment) {
+              result = region.coprocessorHost.preIncrementAfterRowLock((Increment) mutation);
+            } else {
+              result = region.coprocessorHost.preAppendAfterRowLock((Append) mutation);
+            }
+          }
           if (result != null) {
             retCodeDetails[index] = new OperationStatus(OperationStatusCode.SUCCESS,
               returnResults ? result : Result.EMPTY_RESULT);
             return true;
           }
+
           List<Cell> results = returnResults ? new ArrayList<>(mutation.size()) : null;
           familyCellMaps[index] = reckonDeltas(mutation, results, timestamp);
-          this.results[index] = results != null ? Result.create(results): Result.EMPTY_RESULT;
+          this.results[index] = results != null ? Result.create(results) : Result.EMPTY_RESULT;
+
+          if (mutation instanceof Increment) {
+            miniBatchOp.incrementNumOfIncrements();
+          } else {
+            miniBatchOp.incrementNumOfAppends();
+          }
         }
         region.rewriteCellTags(familyCellMaps[index], mutation);
 
@@ -4008,28 +4012,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return get;
     }
 
-    /**
-     * Do coprocessor pre-increment or pre-append after row lock call.
-     * @return Result returned out of the coprocessor, which means bypass all further processing
-     *   and return the preferred Result instead, or null which means proceed.
-     */
-    private Result doCoprocessorPreCallAfterRowLock(Mutation mutation) throws IOException {
-      assert mutation instanceof Increment || mutation instanceof Append;
-      Result result = null;
-      if (region.coprocessorHost != null) {
-        if (mutation instanceof Increment) {
-          result = region.coprocessorHost.preIncrementAfterRowLock((Increment) mutation);
-        } else {
-          result = region.coprocessorHost.preAppendAfterRowLock((Append) mutation);
-        }
-      }
-      return result;
-    }
-
     private Map<byte[], List<Cell>> reckonDeltas(Mutation mutation, List<Cell> results,
       long now) throws IOException {
       assert mutation instanceof Increment || mutation instanceof Append;
-      Map<byte[], List<Cell>> ret = new HashMap<>();
+      Map<byte[], List<Cell>> ret = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       // Process a Store/family at a time.
       for (Map.Entry<byte [], List<Cell>> entry: mutation.getFamilyCellMap().entrySet()) {
         final byte[] columnFamilyName = entry.getKey();
@@ -4072,14 +4058,28 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       byte[] columnFamily = store.getColumnFamilyDescriptor().getName();
       List<Pair<Cell, Cell>> cellPairs = new ArrayList<>(deltas.size());
 
+      // Sort the cells so that they match the order that they appear in the Get results.
+      // Otherwise, we won't be able to find the existing values if the cells are not specified
+      // in order by the client since cells are in an array list.
+      sort(deltas, store.getComparator());
+
       // Get previous values for all columns in this family.
+      Get get = new Get(mutation.getRow());
+      for (Cell cell: deltas) {
+        get.addColumn(columnFamily, CellUtil.cloneQualifier(cell));
+      }
       TimeRange tr;
       if (mutation instanceof Increment) {
         tr = ((Increment) mutation).getTimeRange();
       } else {
         tr = ((Append) mutation).getTimeRange();
       }
-      List<Cell> currentValues = get(mutation, store, deltas, tr);
+
+      if (tr != null) {
+        get.setTimeRange(tr.getMin(), tr.getMax());
+      }
+
+      List<Cell> currentValues = region.get(get, false);
 
       // Iterate the input columns and update existing values if they were found, otherwise
       // add new column initialized to the delta amount
@@ -4171,31 +4171,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         throw new DoNotRetryIOException("Field is not a long, it's " + len + " bytes wide");
       }
       return PrivateCellUtil.getValueAsLong(cell);
-    }
-
-    /**
-     * Do a specific Get on passed <code>columnFamily</code> and column qualifiers.
-     * @param mutation Mutation we are doing this Get for.
-     * @param store Which column family on row (TODO: Go all Gets in one go)
-     * @param coordinates Cells from <code>mutation</code> used as coordinates applied to Get.
-     * @return Return list of Cells found.
-     */
-    private List<Cell> get(Mutation mutation, HStore store, List<Cell> coordinates,
-      TimeRange tr) throws IOException {
-      // Sort the cells so that they match the order that they appear in the Get results.
-      // Otherwise, we won't be able to find the existing values if the cells are not specified
-      // in order by the client since cells are in an array list.
-      // TODO: I don't get why we are sorting. St.Ack 20150107
-      sort(coordinates, store.getComparator());
-      Get get = new Get(mutation.getRow());
-      for (Cell cell: coordinates) {
-        get.addColumn(store.getColumnFamilyDescriptor().getName(), CellUtil.cloneQualifier(cell));
-      }
-      // Increments carry time range. If an Increment instance, put it on the Get.
-      if (tr != null) {
-        get.setTimeRange(tr.getMin(), tr.getMax());
-      }
-      return region.get(get, false);
     }
 
     @Override
@@ -4372,6 +4347,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
 
+    // TODO Support Increment/Append operations
     private void checkAndMergeCPMutations(final MiniBatchOperationInProgress<Mutation> miniBatchOp,
         final List<RowLock> acquiredRowLocks, final long timestamp) throws IOException {
       visitBatchOperations(true, nextIndexToProcess + miniBatchOp.size(), (int i) -> {
@@ -4581,7 +4557,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Perform a batch of mutations.
    *
-   * It supports Put, Delete, Increment, Append mutations and will ignore other types passed.
    * Operations in a batch are stored with highest durability specified of for all operations in a
    * batch, except for {@link Durability#SKIP_WAL}.
    *
@@ -4939,11 +4914,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             // timestamp from get (see prepareDeleteTimestamps).
           }
           // All edits for the given row (across all column families) must happen atomically.
-          Result r = null;
+          Result r;
           if (mutation != null) {
             r = doBatchMutate(mutation, true).getResult();
           } else {
-            mutateRow(rowMutations);
+            r = mutateRow(rowMutations);
           }
           this.checkAndMutateChecksPassed.increment();
           return new CheckAndMutateResult(true, r);
@@ -5306,7 +5281,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return the sequence id of the last edit added to this region out of the
    * recovered edits log or <code>minSeqId</code> if nothing added from editlogs.
    */
-  @VisibleForTesting
   long replayRecoveredEditsIfAny(Map<byte[], Long> maxSeqIdInStores,
     final CancelableProgressable reporter, final MonitoredTask status) throws IOException {
     long minSeqIdForTheRegion = -1;
@@ -5772,7 +5746,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * the store memstores, only if the memstores do not have a higher seqId from an earlier wal
    * edit (because the events may be coming out of order).
    */
-  @VisibleForTesting
   PrepareFlushResult replayWALFlushStartMarker(FlushDescriptor flush) throws IOException {
     long flushSeqId = flush.getFlushSequenceNumber();
 
@@ -5883,7 +5856,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return null;
   }
 
-  @VisibleForTesting
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
     justification="Intentional; post memstore flush")
   void replayWALFlushCommitMarker(FlushDescriptor flush) throws IOException {
@@ -6171,7 +6143,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @VisibleForTesting
   PrepareFlushResult getPrepareFlushResult() {
     return prepareFlushResult;
   }
@@ -6535,7 +6506,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param s Store to add edit too.
    * @param cell Cell to add.
    */
-  @VisibleForTesting
   protected void restoreEdit(HStore s, Cell cell, MemStoreSizing memstoreAccounting) {
     s.add(cell, memstoreAccounting);
   }
@@ -6738,7 +6708,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @VisibleForTesting
   public int getReadLockCount() {
     return lock.getReadLockCount();
   }
@@ -6747,7 +6716,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return lockedRows;
   }
 
-  @VisibleForTesting
   class RowLockContext {
     private final HashedBytes row;
     final ReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
@@ -6824,7 +6792,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return lock;
     }
 
-    @VisibleForTesting
     public RowLockContext getContext() {
       return context;
     }
@@ -8114,7 +8081,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return r.openHRegion(reporter);
   }
 
-  @VisibleForTesting
   public NavigableMap<byte[], Integer> getReplicationScope() {
     return this.replicationScope;
   }
@@ -8329,11 +8295,30 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public void mutateRow(RowMutations rm) throws IOException {
-    // Don't need nonces here - RowMutations only supports puts and deletes
+  public Result mutateRow(RowMutations rm) throws IOException {
     final List<Mutation> m = rm.getMutations();
-    batchMutate(m.toArray(new Mutation[m.size()]), true, HConstants.NO_NONCE,
-        HConstants.NO_NONCE);
+    OperationStatus[] statuses = batchMutate(m.toArray(new Mutation[0]), true,
+      HConstants.NO_NONCE, HConstants.NO_NONCE);
+
+    List<Result> results = new ArrayList<>();
+    for (OperationStatus status : statuses) {
+      if (status.getResult() != null) {
+        results.add(status.getResult());
+      }
+    }
+
+    if (results.isEmpty()) {
+      return null;
+    }
+
+    // Merge the results of the Increment/Append operations
+    List<Cell> cells = new ArrayList<>();
+    for (Result result : results) {
+      if (result.rawCells() != null) {
+        cells.addAll(Arrays.asList(result.rawCells()));
+      }
+    }
+    return Result.create(cells);
   }
 
   /**
@@ -8890,7 +8875,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /** @param coprocessorHost the new coprocessor host */
-  @VisibleForTesting
   public void setCoprocessorHost(final RegionCoprocessorHost coprocessorHost) {
     this.coprocessorHost = coprocessorHost;
   }
@@ -9190,7 +9174,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     flushesQueued.increment();
   }
 
-  @VisibleForTesting
   public long getReadPoint() {
     return getReadPoint(IsolationLevel.READ_COMMITTED);
   }
@@ -9390,12 +9373,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @VisibleForTesting
   public void setReadRequestsCount(long readRequestsCount) {
     this.readRequestsCount.add(readRequestsCount);
   }
 
-  @VisibleForTesting
   public void setWriteRequestsCount(long writeRequestsCount) {
     this.writeRequestsCount.add(writeRequestsCount);
   }

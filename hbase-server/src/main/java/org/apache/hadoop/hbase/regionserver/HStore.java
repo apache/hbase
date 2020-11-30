@@ -96,8 +96,6 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -110,7 +108,7 @@ import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
@@ -119,6 +117,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
+
 /**
  * A Store holds a column family in a Region.  Its a memstore and a set of zero
  * or more StoreFiles, which stretch backwards over time.
@@ -725,7 +727,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     completeCompaction(toBeRemovedStoreFiles);
   }
 
-  @VisibleForTesting
   protected HStoreFile createStoreFileAndReader(final Path p) throws IOException {
     StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(),
         p, isPrimaryReplicaStore());
@@ -1538,7 +1539,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     }
   }
 
-  @VisibleForTesting
   protected List<HStoreFile> doCompaction(CompactionRequestImpl cr,
       Collection<HStoreFile> filesToCompact, User user, long compactionStartTime,
       List<Path> newFiles) throws IOException {
@@ -1633,7 +1633,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         this.region.getRegionInfo(), compactionDescriptor, this.region.getMVCC());
   }
 
-  @VisibleForTesting
   void replaceStoreFiles(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> result)
       throws IOException {
     this.lock.writeLock().lock();
@@ -1794,7 +1793,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
    * but instead makes a compaction candidate list by itself.
    * @param N Number of files.
    */
-  @VisibleForTesting
   public void compactRecentForTestingAssumingDefaultPolicy(int N) throws IOException {
     List<HStoreFile> filesToCompact;
     boolean isMajor;
@@ -2069,7 +2067,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
    * Update counts.
    * @param compactedFiles list of files that were compacted
    */
-  @VisibleForTesting
   protected void completeCompaction(Collection<HStoreFile> compactedFiles)
   // Rename this method! TODO.
     throws IOException {
@@ -2561,7 +2558,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
    * Used for tests.
    * @return cache configuration for this Store.
    */
-  @VisibleForTesting
   public CacheConfig getCacheConfig() {
     return this.cacheConf;
   }
@@ -2641,7 +2637,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
    * Returns the StoreEngine that is backing this concrete implementation of Store.
    * @return Returns the {@link StoreEngine} object used internally inside this HStore object.
    */
-  @VisibleForTesting
   public StoreEngine<?, ?, ?, ?> getStoreEngine() {
     return this.storeEngine;
   }

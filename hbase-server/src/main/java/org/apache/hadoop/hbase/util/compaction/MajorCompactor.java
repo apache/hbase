@@ -29,7 +29,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -50,7 +49,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
@@ -156,7 +155,8 @@ public class MajorCompactor extends Configured implements Tool {
     LOG.info("All regions major compacted successfully");
   }
 
-  @VisibleForTesting void initializeWorkQueues() throws IOException {
+  @InterfaceAudience.Private
+  void initializeWorkQueues() throws IOException {
     if (storesToCompact.isEmpty()) {
       connection.getTable(tableName).getDescriptor().getColumnFamilyNames()
           .forEach(a -> storesToCompact.add(Bytes.toString(a)));

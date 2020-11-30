@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
@@ -33,8 +32,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation of a file cleaner that checks if a empty directory with no subdirs and subfiles is
@@ -98,7 +95,7 @@ public class SnapshotScannerHDFSAclCleaner extends BaseHFileCleanerDelegate {
     }
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static boolean isArchiveDataDir(Path path) {
     if (path != null && path.getName().equals(HConstants.BASE_NAMESPACE_DIR)) {
       Path parent = path.getParent();
@@ -107,12 +104,12 @@ public class SnapshotScannerHDFSAclCleaner extends BaseHFileCleanerDelegate {
     return false;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static boolean isArchiveNamespaceDir(Path path) {
     return path != null && isArchiveDataDir(path.getParent());
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static boolean isArchiveTableDir(Path path) {
     return path != null && isArchiveNamespaceDir(path.getParent());
   }

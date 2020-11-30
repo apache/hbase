@@ -99,7 +99,7 @@ import org.apache.zookeeper.client.ConnectStringParser;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -791,7 +791,7 @@ public class CanaryTool implements Tool, Canary {
     this(executor, null);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   CanaryTool(ExecutorService executor, Sink sink) {
     this.executor = executor;
     this.sink = sink;

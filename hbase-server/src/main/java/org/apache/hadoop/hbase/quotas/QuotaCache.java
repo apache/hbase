@@ -23,7 +23,6 @@ import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -180,32 +179,26 @@ public class QuotaCache implements Stoppable {
     return computeIfAbsent(quotasMap, key, QuotaState::new, this::triggerCacheRefresh);
   }
 
-  @VisibleForTesting
   void triggerCacheRefresh() {
     refreshChore.triggerNow();
   }
 
-  @VisibleForTesting
   long getLastUpdate() {
     return refreshChore.lastUpdate;
   }
 
-  @VisibleForTesting
   Map<String, QuotaState> getNamespaceQuotaCache() {
     return namespaceQuotaCache;
   }
 
-  @VisibleForTesting
   Map<String, QuotaState> getRegionServerQuotaCache() {
     return regionServerQuotaCache;
   }
 
-  @VisibleForTesting
   Map<TableName, QuotaState> getTableQuotaCache() {
     return tableQuotaCache;
   }
 
-  @VisibleForTesting
   Map<String, UserQuotaState> getUserQuotaCache() {
     return userQuotaCache;
   }

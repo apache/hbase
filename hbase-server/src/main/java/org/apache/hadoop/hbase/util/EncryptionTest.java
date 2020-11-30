@@ -66,7 +66,7 @@ public class EncryptionTest {
         throw new IOException("Key provider " + providerClassName + " failed test: " +
           e.getMessage(), e);
       }
-    } else if (result.booleanValue() == false) {
+    } else if (!result) {
       throw new IOException("Key provider " + providerClassName + " previously failed test");
     }
   }
@@ -91,7 +91,7 @@ public class EncryptionTest {
         throw new IOException("Cipher provider " + providerClassName + " failed test: " +
           e.getMessage(), e);
       }
-    } else if (result.booleanValue() == false) {
+    } else if (!result) {
       throw new IOException("Cipher provider " + providerClassName + " previously failed test");
     }
   }
@@ -154,7 +154,7 @@ public class EncryptionTest {
         cipherResults.put(cipher, false);
         throw new IOException("Cipher " + cipher + " failed test: " + e.getMessage(), e);
       }
-    } else if (result.booleanValue() == false) {
+    } else if (!result) {
       throw new IOException("Cipher " + cipher + " previously failed test");
     }
   }
