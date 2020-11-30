@@ -820,7 +820,7 @@ public class TestImportExport {
   /**
    *  Add cell tags to delete mutations, run export and import tool and
    *  verify that tags are present in import table also.
-   * @throws Throwable
+   * @throws Throwable throws Throwable.
    */
   @Test
   public void testTagsAddition() throws Throwable {
@@ -927,7 +927,8 @@ public class TestImportExport {
 
     @Override
     public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
-                               MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
+                               MiniBatchOperationInProgress<Mutation> miniBatchOp)
+      throws IOException {
       if (c.getEnvironment().getRegion().getRegionInfo().getTable().isSystemTable()) {
         return;
       }
