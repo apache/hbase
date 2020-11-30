@@ -246,6 +246,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       String dstGroup) throws IOException {
     RSGroupInfo src = getRSGroupInfo(srcGroup);
     RSGroupInfo dst = getRSGroupInfo(dstGroup);
+    Set<Address> movedServers = new HashSet<>();
     // If destination is 'default' rsgroup, only add servers that are online. If not online, drop
     // it. If not 'default' group, add server to 'dst' rsgroup EVEN IF IT IS NOT online (could be a
     // rsgroup of dead servers that are to come back later).
@@ -263,12 +264,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         }
       }
       dst.addServer(el);
+      movedServers.add(el);
     }
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.put(src.getName(), src);
     newGroupMap.put(dst.getName(), dst);
     flushConfig(newGroupMap);
-    return dst.getServers();
+    return movedServers;
   }
 
   @Override
