@@ -342,13 +342,13 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   @Override
   public void run() {
     if (LOG.isTraceEnabled()) {
-      LOG.trace(threadName + ": starting, connections " + this.rpcClient.connections.size());
+      LOG.trace(threadName + ": starting");
     }
     while (waitForWork()) {
       readResponse();
     }
     if (LOG.isTraceEnabled()) {
-      LOG.trace(threadName + ": stopped, connections " + this.rpcClient.connections.size());
+      LOG.trace(threadName + ": stopped");
     }
   }
 
