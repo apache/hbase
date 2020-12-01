@@ -322,4 +322,14 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferKeyValue {
   public int getKeyLength() {
     return this.length;
   }
+
+  @Override
+  public boolean equals(Object other) {
+    return super.equals(other);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }

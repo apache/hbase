@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 
 /**
  * An HBase Key/Value. This is the fundamental HBase Type.
@@ -97,9 +98,8 @@ public class KeyValue implements ExtendedCell, ContiguousCellFormat, Cloneable {
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion
    * of KeyValue only.
-   * @deprecated Use {@link CellComparator#getInstance()} instead. Deprecated for hbase 2.0, remove for hbase 3.0.
+   * @deprecated Use {@link CellComparator#getInstance()} instead. Deprecated for hbase 2.0.
    */
-  @Deprecated
   public static final KVComparator COMPARATOR = new KVComparator();
   /**
    * A {@link KVComparator} for <code>hbase:meta</code> catalog table
@@ -1733,11 +1733,12 @@ public class KeyValue implements ExtendedCell, ContiguousCellFormat, Cloneable {
    * Compare KeyValues.  When we compare KeyValues, we only compare the Key
    * portion.  This means two KeyValues with same Key but different Values are
    * considered the same as far as this Comparator is concerned.
-   * @deprecated : Use {@link CellComparatorImpl}. Deprecated for hbase 2.0, remove for hbase 3.0.
+   * We need this for PutSortRedcuer where we add KVs. Though we use the {@ContiguousCellComparator}
+   * it still does not help in the performance as the reducer works per row basis.
    */
-  @Deprecated
   public static class KVComparator implements RawComparator<Cell>, SamePrefixComparator<byte[]> {
 
+    private static KVComparator INSTANCE = new KVComparator();
     /**
      * The HFileV2 file format's trailer contains this class name.  We reinterpret this and
      * instantiate the appropriate comparator.
@@ -1746,6 +1747,10 @@ public class KeyValue implements ExtendedCell, ContiguousCellFormat, Cloneable {
      */
     public String getLegacyKeyComparatorName() {
       return "org.apache.hadoop.hbase.KeyValue$KeyComparator";
+    }
+
+    public static KVComparator getInstance() {
+      return INSTANCE;
     }
 
     @Override // RawComparator
@@ -1858,9 +1863,83 @@ public class KeyValue implements ExtendedCell, ContiguousCellFormat, Cloneable {
      * rowkey, colfam/qual, timestamp, type, mvcc
      */
     @Override
-    public int compare(final Cell left, final Cell right) {
-      int compare = CellComparatorImpl.COMPARATOR.compare(left, right);
-      return compare;
+    public int compare(final Cell a, final Cell b) {
+      KeyValue left = (KeyValue) a;
+      KeyValue right = (KeyValue) b;
+      int leftRowLength = left.getRowLength();
+      int rightRowLength = right.getRowLength();
+      int diff = Bytes.compareTo(left.getRowArray(), left.getRowOffset(), leftRowLength,
+        right.getRowArray(), right.getRowOffset(), rightRowLength);
+      if (diff != 0) {
+        return diff;
+      }
+
+      // If the column is not specified, the "minimum" key type appears as latest in the sorted
+      // order, regardless of the timestamp. This is used for specifying the last key/value in a
+      // given row, because there is no "lexicographically last column" (it would be infinitely
+      // long).
+      // The "maximum" key type does not need this behavior. Copied from KeyValue. This is bad in
+      // that
+      // we can't do memcmp w/ special rules like this.
+      // TODO: Is there a test for this behavior?
+      int leftFamilyLengthPosition = left.getFamilyLengthPosition(leftRowLength);
+      byte leftFamilyLength = left.getFamilyLength(leftFamilyLengthPosition);
+      int leftKeyLength = left.getKeyLength();
+      int leftQualifierLength =
+          left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
+
+      // No need of left row length below here.
+
+      byte leftType = left.getTypeByte(leftKeyLength);
+      if (leftFamilyLength + leftQualifierLength == 0
+          && leftType == KeyValue.Type.Minimum.getCode()) {
+        // left is "bigger", i.e. it appears later in the sorted order
+        return 1;
+      }
+
+      int rightFamilyLengthPosition = right.getFamilyLengthPosition(rightRowLength);
+      byte rightFamilyLength = right.getFamilyLength(rightFamilyLengthPosition);
+      int rightKeyLength = right.getKeyLength();
+      int rightQualifierLength =
+          right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
+
+      // No need of right row length below here.
+
+      byte rightType = right.getTypeByte(rightKeyLength);
+      if (rightFamilyLength + rightQualifierLength == 0
+          && rightType == KeyValue.Type.Minimum.getCode()) {
+        return -1;
+      }
+
+      // Compare families.
+      int leftFamilyPosition = left.getFamilyInternalPosition(leftFamilyLengthPosition);
+      int rightFamilyPosition = right.getFamilyInternalPosition(rightFamilyLengthPosition);
+      diff = Bytes.compareTo(left.getFamilyArray(), leftFamilyPosition, leftFamilyLength,
+        right.getFamilyArray(), rightFamilyPosition, rightFamilyLength);
+      if (diff != 0) {
+        return diff;
+      }
+
+      // Compare qualifiers
+      diff = Bytes.compareTo(left.getQualifierArray(), leftFamilyPosition + leftFamilyLength,
+        leftQualifierLength, right.getQualifierArray(), rightFamilyPosition + rightFamilyLength,
+        rightQualifierLength);
+      if (diff != 0) {
+        return diff;
+      }
+
+      // Timestamps.
+      // Swap order we pass into compare so we get DESCENDING order.
+      diff = Long.compare(right.getTimestamp(rightKeyLength), left.getTimestamp(leftKeyLength));
+      if (diff != 0) {
+        return diff;
+      }
+
+      // Compare types. Let the delete types sort ahead of puts; i.e. types
+      // of higher numbers sort before those of lesser numbers. Maximum (255)
+      // appears ahead of everything, and minimum (0) appears after
+      // everything.
+      return (0xff & rightType) - (0xff & leftType);
     }
 
     public int compareTimestamps(final Cell left, final Cell right) {

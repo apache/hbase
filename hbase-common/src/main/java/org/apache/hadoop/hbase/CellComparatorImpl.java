@@ -25,17 +25,19 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Compare two HBase cells.  Do not use this method comparing <code>-ROOT-</code> or
- * <code>hbase:meta</code> cells.  Cells from these tables need a specialized comparator, one that
+ * Compare two HBase cells. Do not use this method comparing <code>-ROOT-</code> or
+ * <code>hbase:meta</code> cells. Cells from these tables need a specialized comparator, one that
  * takes account of the special formatting of the row where we have commas to delimit table from
- * regionname, from row.  See KeyValue for how it has a special comparator to do hbase:meta cells
- * and yet another for -ROOT-.
- * <p>While using this comparator for {{@link #compareRows(Cell, Cell)} et al, the hbase:meta cells
- * format should be taken into consideration, for which the instance of this comparator
- * should be used.  In all other cases the static APIs in this comparator would be enough
- * <p>HOT methods. We spend a good portion of CPU comparing. Anything that makes the compare
- * faster will likely manifest at the macro level. See also
- * {@link ContiguousCellFormatComparator}. Use it when mostly {@link ContiguousCellFormat} type cells.
+ * regionname, from row. See KeyValue for how it has a special comparator to do hbase:meta cells and
+ * yet another for -ROOT-.
+ * <p>
+ * While using this comparator for {{@link #compareRows(Cell, Cell)} et al, the hbase:meta cells
+ * format should be taken into consideration, for which the instance of this comparator should be
+ * used. In all other cases the static APIs in this comparator would be enough
+ * <p>
+ * HOT methods. We spend a good portion of CPU comparing. Anything that makes the compare faster
+ * will likely manifest at the macro level. See also {@link ContiguousCellFormatComparator}. Use it
+ * when mostly {@link ContiguousCellFormat} type cells.
  * </p>
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
@@ -62,11 +64,12 @@ public class CellComparatorImpl implements CellComparator {
   @Override
   public int compare(final Cell a, final Cell b, boolean ignoreSequenceid) {
     int diff = 0;
-    //"Peeling off" the most common cases where the Cells backed by KV format either onheap or offheap
+    // "Peeling off" the most common cases where the Cells backed by KV format either onheap or
+    // offheap
     if (a instanceof ContiguousCellFormat && b instanceof ContiguousCellFormat
         && getSimpleComparator() instanceof ContiguousCellFormatComparator) {
-      return ((ContiguousCellFormatComparator) getSimpleComparator()).compare((Cell) a, (Cell) b,
-        ignoreSequenceid);
+      return ((ContiguousCellFormatComparator) getSimpleComparator())
+          .compare((ContiguousCellFormat) a, (ContiguousCellFormat) b, ignoreSequenceid);
     } else {
       int leftRowLength = a.getRowLength();
       int rightRowLength = b.getRowLength();

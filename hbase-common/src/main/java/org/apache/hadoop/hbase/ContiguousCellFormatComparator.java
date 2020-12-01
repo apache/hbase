@@ -68,14 +68,16 @@ public class ContiguousCellFormatComparator implements Comparator {
   protected static final Logger LOG = LoggerFactory.getLogger(ContiguousCellFormatComparator.class);
   private final CellComparator fallback;
 
-  public ContiguousCellFormatComparator(Comparator fallback) {
-    this.fallback = (CellComparator)fallback;
+  public ContiguousCellFormatComparator(CellComparator fallback) {
+    this.fallback = fallback;
   }
 
+  @Override
   public int compare(Object l, Object r) {
-    return compare((Cell)l, (Cell)r, false);
+    return compare((ContiguousCellFormat) l, (ContiguousCellFormat) r, false);
   }
-  public int compare(Cell l, Cell r, boolean ignoreSeqId) {
+
+  public int compare(ContiguousCellFormat l, ContiguousCellFormat r, boolean ignoreSequenceid) {
     // We do this branching because the tests revealed that if we have entire code for mixed type
     // of ContiguousCellformat cells the compiler finds it difficult to inline the code and since
     // there are 2 impls of the ContiguousCellformat KV and BBKV the instance invocation on
@@ -83,19 +85,19 @@ public class ContiguousCellFormatComparator implements Comparator {
     // Creating specific branches like this helps to bring a big perf advantage and this also
     // works for the cases where the left and right cells are of the same type
     if ((l instanceof ByteBufferKeyValue) && (r instanceof ByteBufferKeyValue)) {
-      return compare((ByteBufferKeyValue) l, (ByteBufferKeyValue) r, ignoreSeqId);
+      return compare((ByteBufferKeyValue) l, (ByteBufferKeyValue) r, ignoreSequenceid);
     }
     if ((l instanceof KeyValue) && (r instanceof KeyValue)) {
-      return compare((KeyValue) l, (KeyValue) r, ignoreSeqId);
+      return compare((KeyValue) l, (KeyValue) r, ignoreSequenceid);
     }
     if ((l instanceof KeyValue) && (r instanceof ByteBufferKeyValue)) {
-      return compare((KeyValue) l, (ByteBufferKeyValue) r, ignoreSeqId);
+      return compare((KeyValue) l, (ByteBufferKeyValue) r, ignoreSequenceid);
     }
     if ((l instanceof ByteBufferKeyValue) && (r instanceof KeyValue)) {
-      return compare((ByteBufferKeyValue) l, (KeyValue) r, ignoreSeqId);
+      return compare((ByteBufferKeyValue) l, (KeyValue) r, ignoreSequenceid);
     }
     // Skip calling compare(Object, Object) and go direct to compare(Cell, Cell)
-    return this.fallback.compare((Cell) l, (Cell) r, ignoreSeqId);
+    return this.fallback.compare((Cell) l, (Cell) r, ignoreSequenceid);
   }
 
   // TODO: Come back here. We get a few percentage points extra of throughput if this is a
@@ -373,7 +375,6 @@ public class ContiguousCellFormatComparator implements Comparator {
     if (diff != 0) {
       return diff;
     }
-
     // Negate following comparisons so later edits show up first mvccVersion: later sorts first
     return ignoreSequenceid ? diff : Longs.compare(right.getSequenceId(), left.getSequenceId());
   }
@@ -386,8 +387,8 @@ public class ContiguousCellFormatComparator implements Comparator {
     // Compare Rows. Cache row length.
     int leftRowLength = left.getRowLength();
     int rightRowLength = right.getRowLength();
-    int diff = ByteBufferUtils.compareTo(left.getRowByteBuffer(), left.getRowPosition(), leftRowLength,
-      right.getRowArray(), right.getRowOffset(), rightRowLength);
+    int diff = ByteBufferUtils.compareTo(left.getRowByteBuffer(), left.getRowPosition(),
+      leftRowLength, right.getRowArray(), right.getRowOffset(), rightRowLength);
     if (diff != 0) {
       return diff;
     }
@@ -430,8 +431,8 @@ public class ContiguousCellFormatComparator implements Comparator {
     // Compare families.
     int leftFamilyPosition = left.getFamilyInternalPosition(leftFamilyLengthPosition);
     int rightFamilyPosition = right.getFamilyInternalPosition(rightFamilyLengthPosition);
-    diff = ByteBufferUtils.compareTo(left.getFamilyByteBuffer(), leftFamilyPosition, leftFamilyLength,
-      right.getFamilyArray(), rightFamilyPosition, rightFamilyLength);
+    diff = ByteBufferUtils.compareTo(left.getFamilyByteBuffer(), leftFamilyPosition,
+      leftFamilyLength, right.getFamilyArray(), rightFamilyPosition, rightFamilyLength);
     if (diff != 0) {
       return diff;
     }
@@ -607,5 +608,5 @@ public class ContiguousCellFormatComparator implements Comparator {
     return ByteBufferUtils.compareTo(left.getQualifierByteBuffer(),
       leftFamilyPosition + leftFamilyLength, leftQualifierLength, right.getQualifierByteBuffer(),
       rightFamilyPosition + rightFamilyLength, rightQualifierLength);
-  }  
+  }
 }
