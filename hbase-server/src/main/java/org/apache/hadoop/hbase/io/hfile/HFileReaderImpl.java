@@ -987,7 +987,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         Cell key, boolean seekBefore) throws IOException {
       if (this.curBlock == null || this.curBlock.getOffset() != seekToBlock.getOffset()) {
         updateCurrentBlock(seekToBlock);
-        seekToSameBlock = true;
+        seekToSameBlock = false;
       } else if (rewind) {
         blockBuffer.rewind();
       } else {
