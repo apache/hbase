@@ -174,7 +174,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
       if (!assignmentHelper.canPlaceFavoredNodes()) {
         return super.roundRobinAssignment(regions, servers);
       }
-      // Segregate the regions into two types:
+      // Divide the regions into two types:
       // 1. The regions that have favored node assignment, and where at least
       //    one of the favored node is still alive. In this case, try to adhere
       //    to the current favored nodes assignment as much as possible - i.e.,
@@ -190,10 +190,10 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
       //    need to come up with favored nodes assignments for them. The corner case
       //    in (1) above is that all the nodes are unavailable and in that case, we
       //    will note that this region doesn't have favored nodes.
-      Pair<Map<ServerName,List<RegionInfo>>, List<RegionInfo>> segregatedRegions =
-          segregateRegionsAndAssignRegionsWithFavoredNodes(regions, servers);
-      Map<ServerName,List<RegionInfo>> regionsWithFavoredNodesMap = segregatedRegions.getFirst();
-      List<RegionInfo> regionsWithNoFavoredNodes = segregatedRegions.getSecond();
+      Pair<Map<ServerName,List<RegionInfo>>, List<RegionInfo>> dividedRegions =
+          dividedRegionsAndAssignRegionsWithFavoredNodes(regions, servers);
+      Map<ServerName,List<RegionInfo>> regionsWithFavoredNodesMap = dividedRegions.getFirst();
+      List<RegionInfo> regionsWithNoFavoredNodes = dividedRegions.getSecond();
       assignmentMap = new HashMap<>();
       roundRobinAssignmentImpl(assignmentHelper, assignmentMap, regionsWithNoFavoredNodes,
           servers);
@@ -245,7 +245,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   }
 
   private Pair<Map<ServerName, List<RegionInfo>>, List<RegionInfo>>
-  segregateRegionsAndAssignRegionsWithFavoredNodes(List<RegionInfo> regions,
+  divideRegionsAndAssignRegionsWithFavoredNodes(List<RegionInfo> regions,
       List<ServerName> availableServers) {
     Map<ServerName, List<RegionInfo>> assignmentMapForFavoredNodes = new HashMap<>(regions.size() / 2);
     List<RegionInfo> regionsWithNoFavoredNodes = new ArrayList<>(regions.size()/2);
