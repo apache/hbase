@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -62,9 +61,6 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
@@ -161,18 +157,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   static {
     addCommandDescriptor(AsyncRandomReadTest.class, "asyncRandomRead",
-      "Run async random read test");
+        "Run async random read test");
     addCommandDescriptor(AsyncRandomWriteTest.class, "asyncRandomWrite",
-      "Run async random write test");
+        "Run async random write test");
     addCommandDescriptor(AsyncSequentialReadTest.class, "asyncSequentialRead",
-      "Run async sequential read test");
+        "Run async sequential read test");
     addCommandDescriptor(AsyncSequentialWriteTest.class, "asyncSequentialWrite",
-      "Run async sequential write test");
+        "Run async sequential write test");
     addCommandDescriptor(AsyncScanTest.class, "asyncScan",
-      "Run async scan test (read every row)");
-    addCommandDescriptor(RandomReadTest.class, RANDOM_READ, "Run random read test");
-    addCommandDescriptor(MetaRandomReadTest.class, "metaRandomRead",
-      "Run getRegionLocation test");
+        "Run async scan test (read every row)");
+    addCommandDescriptor(RandomReadTest.class, RANDOM_READ,
+      "Run random read test");
     addCommandDescriptor(RandomSeekScanTest.class, RANDOM_SEEK_SCAN,
       "Run random seek and scan 100 test");
     addCommandDescriptor(RandomScanWithRange10Test.class, "scanRange10",
@@ -189,12 +184,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       "Run sequential read test");
     addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite",
       "Run sequential write test");
-    addCommandDescriptor(MetaWriteTest.class, "metaWrite",
-      "Populate meta table;used with 1 thread; to be cleaned up by cleanMeta");
-    addCommandDescriptor(ScanTest.class, "scan", "Run scan test (read every row)");
+    addCommandDescriptor(ScanTest.class, "scan",
+      "Run scan test (read every row)");
     addCommandDescriptor(FilteredScanTest.class, "filterScan",
       "Run scan test using a filter to find a specific row based on it's value " +
-        "(make sure to use --rows=20)");
+      "(make sure to use --rows=20)");
     addCommandDescriptor(IncrementTest.class, "increment",
       "Increment on each row; clients overlap on keyspace so some concurrent operations");
     addCommandDescriptor(AppendTest.class, "append",
@@ -205,8 +199,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
       "CheckAndPut on each row; clients overlap on keyspace so some concurrent operations");
     addCommandDescriptor(CheckAndDeleteTest.class, "checkAndDelete",
       "CheckAndDelete on each row; clients overlap on keyspace so some concurrent operations");
-    addCommandDescriptor(CleanMetaTest.class, "cleanMeta",
-      "Remove fake region entries on meta table inserted by metaWrite; used with 1 thread");
   }
 
   /**
@@ -1479,31 +1471,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  /*
-  * Parent class for all meta tests: MetaWriteTest, MetaRandomReadTest and CleanMetaTest
-  */
-  static abstract class MetaTest extends TableTest {
-    protected int keyLength;
-
-    MetaTest(Connection con, TestOptions options, Status status) {
-      super(con, options, status);
-      keyLength = Integer.toString(opts.perClientRunRows).length();
-    }
-
-    @Override
-    void onTakedown() throws IOException {
-      // No clean up
-    }
-
-    /*
-    Generates Lexicographically ascending strings
-     */
-    protected byte[] getSplitKey(final int i) {
-      return Bytes.toBytes(String.format("%0" + keyLength + "d", i));
-    }
-
-  }
-
   static abstract class AsyncTableTest extends AsyncTest {
     protected AsyncTable<?> table;
 
@@ -2022,46 +1989,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  /*
-  * Send random reads against fake regions inserted by MetaWriteTest
-  */
-  static class MetaRandomReadTest extends MetaTest {
-    private RegionLocator regionLocator;
-
-    MetaRandomReadTest(Connection con, TestOptions options, Status status) {
-      super(con, options, status);
-      LOG.info("call getRegionLocation");
-    }
-
-    @Override
-    void onStartup() throws IOException {
-      super.onStartup();
-      this.regionLocator = connection.getRegionLocator(table.getName());
-    }
-
-    @Override
-    boolean testRow(final int i, final long startTime) throws IOException, InterruptedException {
-      if (opts.randomSleep > 0) {
-        Thread.sleep(rand.nextInt(opts.randomSleep));
-      }
-      HRegionLocation hRegionLocation = regionLocator.getRegionLocation(
-        getSplitKey(rand.nextInt(opts.perClientRunRows)), true);
-      LOG.debug("get location for region: " + hRegionLocation);
-      return true;
-    }
-
-    @Override
-    protected int getReportingPeriod() {
-      int period = opts.perClientRunRows / 10;
-      return period == 0 ? opts.perClientRunRows : period;
-    }
-
-    @Override
-    protected void testTakedown() throws IOException {
-      super.testTakedown();
-    }
-  }
-
   static class RandomWriteTest extends SequentialWriteTest {
     RandomWriteTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -2251,34 +2178,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  /*
-  * Delete all fake regions inserted to meta table by MetaWriteTest.
-  */
-  static class CleanMetaTest extends MetaTest {
-    CleanMetaTest(Connection con, TestOptions options, Status status) {
-      super(con, options, status);
-    }
-
-    @Override
-    boolean testRow(final int i, final long startTime) throws IOException {
-      try {
-        RegionInfo regionInfo = connection.getRegionLocator(table.getName())
-          .getRegionLocation(getSplitKey(i), false).getRegion();
-        LOG.debug("deleting region from meta: " + regionInfo);
-
-        Delete delete = MetaTableAccessor
-          .makeDeleteFromRegionInfo(regionInfo, HConstants.LATEST_TIMESTAMP);
-        try (Table t = MetaTableAccessor.getMetaHTable(connection)) {
-          t.delete(delete);
-        }
-      } catch (IOException ie) {
-        // Log and continue
-        LOG.error("cannot find region with start key: " + i);
-      }
-      return true;
-    }
-  }
-
   static class SequentialReadTest extends TableTest {
     SequentialReadTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -2368,32 +2267,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  /*
-  * Insert fake regions into meta table with contiguous split keys.
-  */
-  static class MetaWriteTest extends MetaTest {
-
-    MetaWriteTest(Connection con, TestOptions options, Status status) {
-      super(con, options, status);
-    }
-
-    @Override
-    boolean testRow(final int i, final long startTime) throws IOException {
-      List<RegionInfo> regionInfos = new ArrayList<RegionInfo>();
-      RegionInfo regionInfo = (RegionInfoBuilder.newBuilder(TableName.valueOf(TABLE_NAME))
-        .setStartKey(getSplitKey(i))
-        .setEndKey(getSplitKey(i + 1))
-        .build());
-      regionInfos.add(regionInfo);
-      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 1);
-
-      // write the serverName columns
-      MetaTableAccessor.updateRegionLocation(connection,
-        regionInfo, ServerName.valueOf("localhost", 60010, rand.nextLong()), i,
-        System.currentTimeMillis());
-      return true;
-    }
-  }
   static class FilteredScanTest extends TableTest {
     protected static final Logger LOG = LoggerFactory.getLogger(FilteredScanTest.class.getName());
 
