@@ -25,7 +25,6 @@ import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -62,7 +61,6 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY, true);
-    conf.setInt(HConstants.HBASE_BALANCER_MAX_BALANCING, 0);
     setUpTestBeforeClass();
     MASTER.balanceSwitch(true);
   }
