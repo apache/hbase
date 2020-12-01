@@ -129,9 +129,9 @@ public class TestImportExport {
   private static final long now = System.currentTimeMillis();
   private final TableName EXPORT_TABLE = TableName.valueOf("export_table");
   private final TableName IMPORT_TABLE = TableName.valueOf("import_table");
-  public static final byte TEST_TAG_TYPE = (byte)33;
+  public static final byte TEST_TAG_TYPE =  (byte) (Tag.CUSTOM_TAG_TYPE_RANGE + 1);
   public static final String TEST_ATTR = "source_op";
-  public static final String TEST_TAG = new String("test-tag");
+  public static final String TEST_TAG = "test_tag";
 
   @BeforeClass
   public static void beforeClass() throws Throwable {
@@ -859,6 +859,8 @@ public class TestImportExport {
       "1000", // max number of key versions per key to export
     };
     assertTrue(runExport(args));
+    // Assert tag exists in exportTable
+    assertTagExists(exportTable);
 
     // Create an import table with MetadataController.
     final TableName importTable = TableName.valueOf("importWithTestTagsAddition");
@@ -880,15 +882,13 @@ public class TestImportExport {
       FQ_OUTPUT_DIR
     };
     assertTrue(runImport(args));
-    // Make sure that tags exists in both exported and imported table.
-    assertTagExists(exportTable);
+    // Make sure that tags exists in imported table.
     assertTagExists(importTable);
   }
 
   private void assertTagExists(TableName table) throws IOException {
     List<Cell> values = new ArrayList<>();
     for (HRegion region : UTIL.getHBaseCluster().getRegions(table)) {
-      values.clear();
       Scan scan = new Scan();
       // Make sure to set rawScan to true so that we will get Delete Markers.
       scan.setRaw(true);
@@ -953,10 +953,8 @@ public class TestImportExport {
         m.getFamilyCellMap().clear();
         // Clear and add new Cells to the Mutation.
         for (Cell cell : updatedCells) {
-          if (m instanceof Delete) {
-            Delete d = (Delete) m;
-            d.add(cell);
-          }
+          Delete d = (Delete) m;
+          d.add(cell);
         }
       }
     }

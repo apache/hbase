@@ -489,8 +489,8 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Test @{@link ProtobufUtil#toCell(Cell)} and
-   * @{@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell)} conversion
+   * Test {@link ProtobufUtil#toCell(Cell)} and
+   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell)} conversion
    * methods when it contains tags.
    */
   @Test
