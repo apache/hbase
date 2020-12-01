@@ -932,7 +932,9 @@ public final class CellUtil {
 
   public static boolean matchingColumn(final Cell left, final byte lFamLen, final int lQualLength,
       final Cell right, final byte rFamLen, final int rQualLength) {
-    if (!matchingFamily(left, lFamLen, right, rFamLen)) return false;
+    if (!matchingFamily(left, lFamLen, right, rFamLen)) {
+      return false;
+    }
     return matchingQualifier(left, lQualLength, right, rQualLength);
   }
 
@@ -1601,15 +1603,17 @@ public final class CellUtil {
     if (right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) right).getRowByteBuffer(),
           ((ByteBufferExtendedCell) right).getRowPosition(), rrowlength, left.getRowArray(),
-          left.getRowOffset(), lrowlength);
+        left.getRowOffset(), lrowlength);
     }
     return Bytes.equals(left.getRowArray(), left.getRowOffset(), lrowlength, right.getRowArray(),
-        right.getRowOffset(), rrowlength);
+      right.getRowOffset(), rrowlength);
   }
   
   public static boolean matchingRows(final Cell left, final short lrowlength, final Cell right,
       final short rrowlength) {
-    if (lrowlength != rrowlength) return false;
+    if (lrowlength != rrowlength) {
+      return false;
+    }
     if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getRowByteBuffer(),
           ((ByteBufferExtendedCell) left).getRowPosition(), lrowlength,
