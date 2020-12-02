@@ -812,6 +812,7 @@ public class ReplicationSourceManager implements ReplicationListener {
               continue;
             }
             oldsources.add(src);
+            LOG.info("Added recovered source {}", src.getQueueId());
             for (String wal : walsSet) {
               src.enqueueLog(new Path(oldLogDir, wal));
             }
