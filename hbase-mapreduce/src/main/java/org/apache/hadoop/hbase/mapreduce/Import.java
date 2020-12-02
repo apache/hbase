@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -710,6 +711,7 @@ public class Import extends Configured implements Tool {
       // If there's a rename mapping for this CF, create a new KeyValue
       byte[] newCfName = cfRenameMap.get(CellUtil.cloneFamily(kv));
       if (newCfName != null) {
+        List<Tag> tags = PrivateCellUtil.getTags(kv);
         kv = new KeyValue(kv.getRowArray(), // row buffer
             kv.getRowOffset(),              // row offset
             kv.getRowLength(),              // row length
@@ -723,7 +725,8 @@ public class Import extends Configured implements Tool {
             KeyValue.Type.codeToType(kv.getTypeByte()), // KV Type
             kv.getValueArray(),             // value buffer
             kv.getValueOffset(),            // value offset
-            kv.getValueLength());           // value length
+            kv.getValueLength(),           // value length
+            tags.size() == 0 ? null: tags);
       }
     }
     return kv;
