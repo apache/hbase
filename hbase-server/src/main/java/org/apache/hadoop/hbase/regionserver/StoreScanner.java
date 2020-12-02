@@ -797,7 +797,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // we tend to go with next() rather than seek() based on the 'seekToSameBlock'
     // which is updated in the method 'seekOrSkipToNextColumn'. Do this when rowColBloom
     // is not used
-    if (!useRowColBloom && seekToSameBlock && bytesRead > switchToNextOnlyBytes) {
+    if (this.matcher.isUserScan() && !get && !useRowColBloom && seekToSameBlock
+        && bytesRead > switchToNextOnlyBytes) {
       // forcefully make it do next() only
       this.heap.next();
     } else {
