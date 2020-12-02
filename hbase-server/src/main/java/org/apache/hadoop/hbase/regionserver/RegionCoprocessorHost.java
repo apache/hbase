@@ -280,11 +280,10 @@ public class RegionCoprocessorHost
     out: for (RegionCoprocessorEnvironment env: coprocEnvironments) {
       if (env.getInstance() instanceof RegionObserver) {
         Class<?> clazz = env.getInstance().getClass();
-        while (clazz != null) {
+        for (;;) {
           if (clazz == Object.class) {
             // we dont need to look postScannerFilterRow into Object class
-            clazz = null;
-            continue;
+            break; // break the inner loop
           }
           try {
             clazz.getDeclaredMethod("postScannerFilterRow", ObserverContext.class,
