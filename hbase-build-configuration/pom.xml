@@ -109,7 +109,7 @@
               <compilerArgs>
                 <arg>-XDcompilePolicy=simple</arg>
                 <!-- All -Xep need to be on single line see: https://github.com/google/error-prone/pull/1115 -->
-                <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -Xep:FallThrough:OFF -Xep:ClassNewInstance:ERROR -Xep:MissingDefault:ERROR</arg>
+                <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -Xep:FallThrough:OFF -Xep:MutablePublicArray:OFF -Xep:ClassNewInstance:ERROR -Xep:MissingDefault:ERROR</arg>
                 <!-- Required when compiling with JDK 8 -->
                 <arg>-J-Xbootclasspath/p:${settings.localRepository}/com/google/errorprone/javac/${javac.version}/javac-${javac.version}.jar</arg>
               </compilerArgs>
