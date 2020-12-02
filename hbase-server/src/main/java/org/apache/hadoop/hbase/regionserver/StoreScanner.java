@@ -115,7 +115,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private final long preadMaxBytes;
   private final long switchToNextOnlyBytes;
   private long bytesRead;
-  private boolean seekToSameBlock;
+  private boolean seekToSameBlock = true;
 
   /** We don't ever expect to change this, the constant is just for clarity. */
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
@@ -793,11 +793,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   private void doSeekCol(Cell cell) throws IOException {
     // we check when ever a seek_next_col happens did the seek really land in a new block.
-    // If the seek always lands in the same current block while trying to do a next,
+    // If the seek always lands in the same current block while trying to do a next(),
     // we tend to go with next() rather than seek() based on the 'seekToSameBlock'
-    // which is updated in the method 'seekOrSkipToNextColumn'
-    if (seekToSameBlock && bytesRead > switchToNextOnlyBytes) {
-      // forcefully make it to next only
+    // which is updated in the method 'seekOrSkipToNextColumn'. Do this when rowColBloom
+    // is not used
+    if (!useRowColBloom && seekToSameBlock && bytesRead > switchToNextOnlyBytes) {
+      // forcefully make it do next() only
       this.heap.next();
     } else {
       seekOrSkipToNextColumn(cell);
@@ -838,9 +839,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       boolean prevIndexKeyNull = (getNextIndexedKey() == null);
       seekAsDirection(matcher.getKeyForNextColumn(cell));
       if (prevIndexKeyNull) {
-        // even if one seek has lead to another block - reset to false.
+        // Until we reach the switchToNextOnlyBytes we keep checking if there is any case
+        // where we have seeked to a block that could have been reached by a simple next.
+        // if so we keep setting this boolean to true.
         // TODO : For SEEK_NEXT_ROW also?
-        seekToSameBlock = this.heap.isSeekToSameBlock();
+        seekToSameBlock = seekToSameBlock && this.heap.isSeekToSameBlock();
       }
     }
   }
