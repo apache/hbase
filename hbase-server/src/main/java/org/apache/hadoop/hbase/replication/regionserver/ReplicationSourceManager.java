@@ -999,7 +999,7 @@ public class ReplicationSourceManager implements ReplicationListener {
               wals.add(wal);
             }
             oldsources.add(src);
-            LOG.trace("Added source for recovered queue: " + src.getQueueId());
+            LOG.info("Added source for recovered queue {}", src.getQueueId());
             for (String wal : walsSet) {
               LOG.trace("Enqueueing log from recovered queue for source: " + src.getQueueId());
               src.enqueueLog(new Path(oldLogDir, wal));
