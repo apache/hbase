@@ -18,22 +18,30 @@
 package org.apache.hadoop.hbase.shaded.protobuf;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.List;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -478,5 +486,41 @@ public class TestProtobufUtil {
         + "},"
         + "\"sharedLockCount\":0"
         + "}]", lockJson);
+  }
+
+  /**
+   * Test {@link ProtobufUtil#toCell(Cell)} and
+   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell)} conversion
+   * methods when it contains tags.
+   */
+  @Test
+  public void testCellConversionWithTags() {
+    String tagStr = "tag-1";
+    byte tagType = (byte)10;
+    Tag tag = new ArrayBackedTag(tagType, tagStr);
+
+    ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+    cellBuilder.setRow(Bytes.toBytes("row1"));
+    cellBuilder.setFamily(Bytes.toBytes("f1"));
+    cellBuilder.setQualifier(Bytes.toBytes("q1"));
+    cellBuilder.setValue(Bytes.toBytes("value1"));
+    cellBuilder.setType(Cell.Type.Delete);
+    cellBuilder.setTags(Collections.singletonList(tag));
+    Cell cell = cellBuilder.build();
+
+    ClientProtos.Result protoResult =
+        ProtobufUtil.toResult(Result.create(Collections.singletonList(cell)));
+    assertNotNull(protoResult);
+    assertEquals(1, protoResult.getCellCount());
+
+    CellProtos.Cell protoCell = protoResult.getCell(0);
+    ExtendedCellBuilder decodedBuilder =
+      ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+    Cell decodedCell = ProtobufUtil.toCell(decodedBuilder, protoCell);
+    List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
+    assertEquals(1,  decodedTags.size());
+    Tag decodedTag = decodedTags.get(0);
+    assertEquals(tagType, decodedTag.getType());
+    assertEquals(tagStr, Tag.getValueAsString(decodedTag));
   }
 }
