@@ -1967,8 +1967,7 @@ public final class ProtobufUtil {
       kvbuilder.setTimestamp(kv.getTimestamp());
       kvbuilder.setValue(wrap(((ByteBufferExtendedCell) kv).getValueByteBuffer(),
         ((ByteBufferExtendedCell) kv).getValuePosition(), kv.getValueLength()));
-      kvbuilder.setTags(wrap(((ByteBufferExtendedCell) kv).getTagsByteBuffer(),
-        ((ByteBufferExtendedCell) kv).getTagsPosition(), kv.getTagsLength()));
+      // TODO : Once tags become first class then we may have to set tags to kvbuilder.
     } else {
       kvbuilder.setRow(
         UnsafeByteOperations.unsafeWrap(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
@@ -1980,8 +1979,6 @@ public final class ProtobufUtil {
       kvbuilder.setTimestamp(kv.getTimestamp());
       kvbuilder.setValue(UnsafeByteOperations.unsafeWrap(kv.getValueArray(), kv.getValueOffset(),
         kv.getValueLength()));
-      kvbuilder.setTags(UnsafeByteOperations.unsafeWrap(kv.getTagsArray(), kv.getTagsOffset(),
-        kv.getTagsLength()));
     }
     return kvbuilder.build();
   }
@@ -1994,17 +1991,14 @@ public final class ProtobufUtil {
   }
 
   public static Cell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell) {
-    ExtendedCellBuilder builder = cellBuilder.clear()
-        .setRow(cell.getRow().toByteArray())
-        .setFamily(cell.getFamily().toByteArray())
-        .setQualifier(cell.getQualifier().toByteArray())
-        .setTimestamp(cell.getTimestamp())
-        .setType((byte) cell.getCellType().getNumber())
-        .setValue(cell.getValue().toByteArray());
-    if (cell.hasTags()) {
-      builder.setTags(cell.getTags().toByteArray());
-    }
-    return builder.build();
+    return cellBuilder.clear()
+            .setRow(cell.getRow().toByteArray())
+            .setFamily(cell.getFamily().toByteArray())
+            .setQualifier(cell.getQualifier().toByteArray())
+            .setTimestamp(cell.getTimestamp())
+            .setType((byte) cell.getCellType().getNumber())
+            .setValue(cell.getValue().toByteArray())
+            .build();
   }
 
   public static HBaseProtos.NamespaceDescriptor toProtoNamespaceDescriptor(NamespaceDescriptor ns) {
