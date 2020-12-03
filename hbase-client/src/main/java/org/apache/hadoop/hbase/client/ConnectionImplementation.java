@@ -996,6 +996,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         // exist. rethrow the error immediately. this should always be coming
         // from the HTable constructor.
         throw e;
+      } catch (DoNotRetryIOException dnrioe) {
+        // The client can throw a DNRIOE w/o rpc'ing -- a client-local throw
+        // if this connection has been closed and we are meant to exit.
+        throw dnrioe;
       } catch (IOException e) {
         ExceptionUtil.rethrowIfInterrupt(e);
         if (e instanceof RemoteException) {
