@@ -44,6 +44,9 @@ import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.admin.AdminServer;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
+import org.apache.zookeeper.server.DatadirCleanupManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * HBase's version of ZooKeeper's QuorumPeer. When HBase is set to manage
@@ -84,6 +87,20 @@ public final class HQuorumPeer {
 
   private static void runZKServer(QuorumPeerConfig zkConfig)
           throws IOException, AdminServer.AdminServerException {
+
+    /**
+     *  Start and schedule the purge task
+     *  autopurge.purgeInterval is 0 by default,so in fact the DatadirCleanupManager task will not
+     *  be started to clean the logs by default. Config is recommended only for standalone server.
+     */
+
+    DatadirCleanupManager purgeMgr=new DatadirCleanupManager(
+      zkConfig.getDataDir(),
+      zkConfig.getDataLogDir(),
+      zkConfig.getSnapRetainCount(),
+      zkConfig.getPurgeInterval());
+    purgeMgr.start();
+
     if (zkConfig.isDistributed()) {
       QuorumPeerMain qp = new QuorumPeerMain();
       qp.runFromConfig(zkConfig);
