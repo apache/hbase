@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
@@ -627,7 +628,16 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   private void checkClosed() throws DoNotRetryIOException {
     if (this.closed) {
-      throw new DoNotRetryIOException(toString() + " closed");
+      throw new ConnectionClosedException(toString() + " closed");
+    }
+  }
+
+  /**
+   * Thrown when connection is closed.
+   */
+  private static class ConnectionClosedException extends DoNotRetryIOException {
+    ConnectionClosedException(String message) {
+      super(message);
     }
   }
 
@@ -996,10 +1006,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         // exist. rethrow the error immediately. this should always be coming
         // from the HTable constructor.
         throw e;
-      } catch (DoNotRetryIOException dnrioe) {
-        // The client can throw a DNRIOE w/o rpc'ing -- a client-local throw
-        // if this connection has been closed and we are meant to exit.
-        throw dnrioe;
+      } catch (ConnectionClosedException cce) {
+        // This is instance of DoNotRetryIOE.
+        throw cce;
       } catch (IOException e) {
         ExceptionUtil.rethrowIfInterrupt(e);
         if (e instanceof RemoteException) {
