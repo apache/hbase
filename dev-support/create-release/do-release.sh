@@ -17,6 +17,10 @@
 # limitations under the License.
 #
 
+# Make a tmp dir into which we put files cleaned-up on exit.
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
 set -e
 # Use the adjacent do-release-docker.sh instead, if you can.
 # Otherwise, this runs core of the release creation.
@@ -84,19 +88,22 @@ if [ "$RUNNING_IN_DOCKER" = "1" ]; then
 else
   # Outside docker, need to ask for information about the release.
   get_release_info
+
+  # Run this stuff when not in docker to check gpg.
+  gpg_test_file="${TMPDIR}/gpg_test.$$.txt"
+  echo "Testing gpg signing ${GPG} ${GPG_ARGS[@]} --detach --armor --sign ${gpg_test_file}"
+  echo "foo" > "${gpg_test_file}"
+  if ! "${GPG}" "${GPG_ARGS[@]}" --detach --armor --sign "${gpg_test_file}" ; then
+    gpg_agent_help
+  fi
+  # In --batch mode we have to be explicit about what we are verifying
+  if ! "${GPG}" "${GPG_ARGS[@]}" --verify "${gpg_test_file}.asc" "${gpg_test_file}" ; then
+    gpg_agent_help
+  fi
 fi
 
 GPG_TTY="$(tty)"
 export GPG_TTY
-echo "Testing gpg signing."
-echo "foo" > gpg_test.txt
-if ! "${GPG}" "${GPG_ARGS[@]}" --detach --armor --sign gpg_test.txt ; then
-  gpg_agent_help
-fi
-# In --batch mode we have to be explicit about what we are verifying
-if ! "${GPG}" "${GPG_ARGS[@]}" --verify gpg_test.txt.asc gpg_test.txt ; then
-  gpg_agent_help
-fi
 
 if [[ -z "$RELEASE_STEP" ]]; then
   # If doing all stages, leave out 'publish-snapshot'
