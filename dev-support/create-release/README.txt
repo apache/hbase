@@ -9,19 +9,21 @@ To run a build w/o invoking docker (not recommended!), use _do_release.sh_.
 
 Both scripts will query interactively for needed parameters and passphrases.
 For explanation of the parameters, execute:
+
  $ release-build.sh --help
 
-Before starting the RC build, run a reconciliation of what is in
-JIRA with what is in the commit log. Make sure they align and that
-anomalies are explained up in JIRA.
+Before starting the RC build, run a reconciliation of what is in JIRA with
+what is in the commit log. Make sure they align and that anomalies are
+explained up in JIRA.
 
 See http://hbase.apache.org/book.html#maven.release
 
-Regardless of where your release build will run (locally, locally in docker, on a remote machine,
-etc) you will need a local gpg-agent with access to your secret keys. A quick way to tell gpg
-to clear out state and start a gpg-agent is via the following command phrase:
+Regardless of where your release build will run (locally, locally in docker,
+on a remote machine, etc) you will need a local gpg-agent with access to your
+secret keys. A quick way to tell gpg to clear out state and start a gpg-agent
+is via the following command phrase:
 
-$ gpgconf --kill all && gpg-connect-agent /bye
+ $ gpgconf --kill all && gpg-connect-agent /bye
 
 Before starting an RC build, make sure your local gpg-agent has configs
 to properly handle your credentials, especially if you want to avoid
@@ -32,6 +34,8 @@ on caching the unlocked secret via ~/.gnupg/gpg-agent.conf
   # in seconds, e.g. a day
   default-cache-ttl 86400
   max-cache-ttl 86400
+
+Similarly, run ssh-agent with your ssh key added if building with docker.
 
 Running a build on GCE is easy enough. Here are some notes if of use.
 Create an instance. 4CPU/15G/10G disk seems to work well enough.

@@ -302,7 +302,7 @@ if [ "${HOST_OS}" == "DARWIN" ]; then
       > "${WORKDIR}/gpg-agent-proxy.known_hosts"
   if [ -s "${WORKDIR}/gpg-agent-proxy.known_hosts" ]; then
     echo "Your ssh known_hosts does not include the entries for the gpg-agent proxy container."
-    echo "The following entry(ies) arre missing:"
+    echo "The following entry(ies) are missing:"
     sed -e 's/^/    /' "${WORKDIR}/gpg-agent-proxy.known_hosts"
     read -r -p "Okay to add these entries to ${HOME}/.ssh/known_hosts? [y/n] " ANSWER
     if [ "$ANSWER" != "y" ]; then
