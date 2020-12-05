@@ -26,6 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public class ConnectionClosedException extends HBaseIOException {
+  // TODO: Deprecate? Should inherit from DoNotRetryIOE but it does not.
 
   private static final long serialVersionUID = -8938225073412971497L;
 
