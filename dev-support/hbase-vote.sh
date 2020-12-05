@@ -40,9 +40,12 @@ Usage: ${SCRIPT} -s | --source <url> [-k | --key <signature>] [-f | --keys-file-
                                 https://downloads.apache.org/hbase/KEYS
   -o | --output-dir '</path>'   directory which has the stdout and stderr of each verification target
   -P |                          list of maven profiles to activate for test UT/IT, i.e. <-P runSmallTests> Defaults to runAllTests
-  -D |                          list of maven properties to set for the mvn invocations, i.e. <-D hadoop.profile=3.0> Defaults to unset
+  -D |                          list of maven properties to set for the mvn invocations, i.e. <-D hadoop.profile=3.0 -D skipTests> Defaults to unset
 __EOF
 }
+
+MVN_PROFILES=()
+MVN_PROPERTIES=()
 
 while ((${#})); do
   case "${1}" in
@@ -57,9 +60,9 @@ while ((${#})); do
     -o | --output-dir )
       OUTPUT_DIR="${2}"; shift 2 ;;
     -P )
-      MVN_PROFILES="-P ${2}"; shift 2 ;;
+      MVN_PROFILES+=("-P ${2}"); shift 2 ;;
     -D )
-      MVN_PROPERTIES="-D ${2}"; shift 2 ;;
+      MVN_PROPERTIES+=("-D ${2}"); shift 2 ;;
     * )
       usage >&2; exit 1             ;;
   esac
@@ -92,8 +95,8 @@ if [ ! -d "${OUTPUT_DIR}" ]; then
 fi
 
 # Maven profile must be provided
-if [ -z "${MVN_PROFILES}" ]; then
-    MVN_PROFILES="-P runAllTests"
+if [ ${#MVN_PROFILES[@]} -eq 0 ]; then
+    MVN_PROFILES=("-P runAllTests")
 fi
 
 OUTPUT_PATH_PREFIX="${OUTPUT_DIR}"/"${HBASE_RC_VERSION}"
@@ -145,17 +148,18 @@ function unzip_from_source() {
 
 function rat_test() {
     rm -f "${OUTPUT_PATH_PREFIX}"_rat_test
-    mvn clean apache-rat:check "${MVN_PROPERTIES}" 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_rat_test && RAT_CHECK_PASSED=1
+    mvn clean apache-rat:check "${MVN_PROPERTIES[@]}" 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_rat_test && RAT_CHECK_PASSED=1
 }
 
 function build_from_source() {
     rm -f "${OUTPUT_PATH_PREFIX}"_build_from_source
-    mvn clean install "${MVN_PROPERTIES}" -DskipTests 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_build_from_source && BUILD_FROM_SOURCE_PASSED=1
+    # Hardcode skipTests for faster build. Testing is covered later.
+    mvn clean install "${MVN_PROPERTIES[@]}" -DskipTests 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_build_from_source && BUILD_FROM_SOURCE_PASSED=1
 }
 
 function run_tests() {
     rm -f "${OUTPUT_PATH_PREFIX}"_run_tests
-    mvn package "${MVN_PROFILES}" "${MVN_PROPERTIES}" -Dsurefire.rerunFailingTestsCount=3 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_run_tests && UNIT_TEST_PASSED=1
+    mvn package "${MVN_PROFILES[@]}" "${MVN_PROPERTIES[@]}" -Dsurefire.rerunFailingTestsCount=3 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_run_tests && UNIT_TEST_PASSED=1
 }
 
 function execute() {
@@ -167,11 +171,11 @@ function print_when_exit() {
         * Signature: $( ((SIGNATURE_PASSED)) && echo "ok" || echo "failed" )
         * Checksum : $( ((CHECKSUM_PASSED)) && echo "ok" || echo "failed" )
         * Rat check (${JAVA_VERSION}): $( ((RAT_CHECK_PASSED)) && echo "ok" || echo "failed" )
-         - mvn clean apache-rat:check "${MVN_PROPERTIES}"
+         - mvn clean apache-rat:check ${MVN_PROPERTIES[@]}
         * Built from source (${JAVA_VERSION}): $( ((BUILD_FROM_SOURCE_PASSED)) && echo "ok" || echo "failed" )
-         - mvn clean install -DskipTests "${MVN_PROPERTIES}"
+         - mvn clean install ${MVN_PROPERTIES[@]} -DskipTests
         * Unit tests pass (${JAVA_VERSION}): $( ((UNIT_TEST_PASSED)) && echo "ok" || echo "failed" )
-         - mvn package ${MVN_PROFILES} "${MVN_PROPERTIES}" -Dsurefire.rerunFailingTestsCount=3
+         - mvn package ${MVN_PROFILES[@]} ${MVN_PROPERTIES[@]} -Dsurefire.rerunFailingTestsCount=3
 __EOF
   if ((CHECKSUM_PASSED)) && ((SIGNATURE_PASSED)) && ((RAT_CHECK_PASSED)) && ((BUILD_FROM_SOURCE_PASSED)) && ((UNIT_TEST_PASSED)) ; then
     exit 0
