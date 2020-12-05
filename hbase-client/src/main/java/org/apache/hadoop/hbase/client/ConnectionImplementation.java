@@ -628,15 +628,17 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   private void checkClosed() throws DoNotRetryIOException {
     if (this.closed) {
-      throw new ConnectionClosedException(toString() + " closed");
+      throw new LocalConnectionClosedException(toString() + " closed");
     }
   }
 
   /**
-   * Thrown when connection is closed.
+   * Like {@link ConnectionClosedException} but thrown from the checkClosed call which looks
+   * at the local this.closed flag. We use this rather than {@link ConnectionClosedException}
+   * because the latter does not inherit from DoNotRetryIOE (it should. TODO).
    */
-  private static class ConnectionClosedException extends DoNotRetryIOException {
-    ConnectionClosedException(String message) {
+  private static class LocalConnectionClosedException extends DoNotRetryIOException {
+    LocalConnectionClosedException(String message) {
       super(message);
     }
   }
@@ -1006,8 +1008,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         // exist. rethrow the error immediately. this should always be coming
         // from the HTable constructor.
         throw e;
-      } catch (ConnectionClosedException cce) {
-        // This is instance of DoNotRetryIOE.
+      } catch (LocalConnectionClosedException cce) {
+        // LocalConnectionClosedException is specialized instance of DoNotRetryIOE.
+        // Thrown when we check if this connection is closed. If it is, don't retry.
         throw cce;
       } catch (IOException e) {
         ExceptionUtil.rethrowIfInterrupt(e);
