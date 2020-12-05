@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
@@ -623,9 +624,20 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return this.conf;
   }
 
-  private void checkClosed() throws DoNotRetryIOException {
+  private void checkClosed() throws LocalConnectionClosedException {
     if (this.closed) {
-      throw new DoNotRetryIOException(toString() + " closed");
+      throw new LocalConnectionClosedException(toString() + " closed");
+    }
+  }
+
+  /**
+   * Like {@link ConnectionClosedException} but thrown from the checkClosed call which looks
+   * at the local this.closed flag. We use this rather than {@link ConnectionClosedException}
+   * because the latter does not inherit from DoNotRetryIOE (it should. TODO).
+   */
+  private static class LocalConnectionClosedException extends DoNotRetryIOException {
+    LocalConnectionClosedException(String message) {
+      super(message);
     }
   }
 
@@ -994,6 +1006,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         // exist. rethrow the error immediately. this should always be coming
         // from the HTable constructor.
         throw e;
+      } catch (LocalConnectionClosedException cce) {
+        // LocalConnectionClosedException is specialized instance of DoNotRetryIOE.
+        // Thrown when we check if this connection is closed. If it is, don't retry.
+        throw cce;
       } catch (IOException e) {
         ExceptionUtil.rethrowIfInterrupt(e);
         if (e instanceof RemoteException) {
