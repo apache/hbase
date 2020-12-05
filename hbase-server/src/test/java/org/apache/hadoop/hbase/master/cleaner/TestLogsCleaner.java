@@ -226,7 +226,7 @@ public class TestLogsCleaner {
   }
 
   @Test
-  public void testZooKeeperAbortDuringGetListOfReplicators() throws Exception {
+  public void testZooKeeperRecoveryDuringGetListOfReplicators() throws Exception {
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
 
     List<FileStatus> dummyFiles = Arrays.asList(
@@ -239,7 +239,7 @@ public class TestLogsCleaner {
     final AtomicBoolean getListOfReplicatorsFailed = new AtomicBoolean(false);
 
     try {
-      faultyZK.init();
+      faultyZK.init(false);
       ReplicationQueueStorage queueStorage = spy(ReplicationStorageFactory
           .getReplicationQueueStorage(faultyZK, conf));
       doAnswer(new Answer<Object>() {
@@ -263,6 +263,18 @@ public class TestLogsCleaner {
       assertTrue(getListOfReplicatorsFailed.get());
       assertFalse(toDelete.iterator().hasNext());
       assertFalse(cleaner.isStopped());
+
+      //zk recovery.
+      faultyZK.init(true);
+      cleaner.preClean();
+      Iterable<FileStatus> filesToDelete = cleaner.getDeletableFiles(dummyFiles);
+      Iterator<FileStatus> iter = filesToDelete.iterator();
+      assertTrue(iter.hasNext());
+      assertEquals(new Path("log1"), iter.next().getPath());
+      assertTrue(iter.hasNext());
+      assertEquals(new Path("log2"), iter.next().getPath());
+      assertFalse(iter.hasNext());
+
     } finally {
       faultyZK.close();
     }
@@ -426,10 +438,12 @@ public class TestLogsCleaner {
       super(conf, identifier, abortable);
     }
 
-    public void init() throws Exception {
+    public void init(boolean autoRecovery) throws Exception {
       this.zk = spy(super.getRecoverableZooKeeper());
-      doThrow(new KeeperException.ConnectionLossException())
-        .when(zk).getChildren("/hbase/replication/rs", null);
+      if (!autoRecovery) {
+        doThrow(new KeeperException.ConnectionLossException())
+          .when(zk).getChildren("/hbase/replication/rs", null);
+      }
     }
 
     @Override
