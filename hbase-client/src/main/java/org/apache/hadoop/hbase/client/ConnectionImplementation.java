@@ -626,7 +626,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return this.conf;
   }
 
-  private void checkClosed() throws DoNotRetryIOException {
+  private void checkClosed() throws LocalConnectionClosedException {
     if (this.closed) {
       throw new LocalConnectionClosedException(toString() + " closed");
     }
