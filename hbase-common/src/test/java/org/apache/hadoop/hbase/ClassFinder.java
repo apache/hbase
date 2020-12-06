@@ -23,9 +23,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Enumeration;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.jar.JarEntry;
@@ -187,7 +186,7 @@ public class ClassFinder {
       }
     }
 
-    Set<Class<?>> classes = new LinkedHashSet<>();
+    Set<Class<?>> classes = new HashSet<>();
     for (File directory : dirs) {
       classes.addAll(findClassesFromFiles(directory, packageName, proceedOnExceptions));
     }
@@ -208,7 +207,7 @@ public class ClassFinder {
       throw ioEx;
     }
 
-    Set<Class<?>> classes = new LinkedHashSet<>();
+    Set<Class<?>> classes = new HashSet<>();
     JarEntry entry;
     try {
       while (true) {
@@ -255,14 +254,13 @@ public class ClassFinder {
 
   private Set<Class<?>> findClassesFromFiles(File baseDirectory, String packageName,
       boolean proceedOnExceptions) throws ClassNotFoundException, LinkageError {
-    Set<Class<?>> classes = new LinkedHashSet<>();
+    Set<Class<?>> classes = new HashSet<>();
     if (!baseDirectory.exists()) {
       LOG.warn(baseDirectory.getAbsolutePath() + " does not exist");
       return classes;
     }
 
     File[] files = baseDirectory.listFiles(this.fileFilter);
-    Arrays.sort(files);
     if (files == null) {
       LOG.warn("Failed to get files from " + baseDirectory.getAbsolutePath());
       return classes;
