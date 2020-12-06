@@ -148,8 +148,6 @@ public final class ResponseConverter {
             actionResult.getResultOrExceptionCount() + " for region " + actions.getRegion());
       }
 
-      Object responseValue;
-
       // For RowMutations/CheckAndMutate action, if there is an exception, the exception is set
       // at the RegionActionResult level and the ResultOrException is null at the original index
       Integer index = (indexMap == null ? null : indexMap.get(i));
@@ -158,39 +156,22 @@ public final class ResponseConverter {
         // If there is an exception from the server, the exception is set at
         // the RegionActionResult level, which has been handled above.
         if (actions.hasCondition()) {
-          Result result = null;
-          if (actionResult.getResultOrExceptionCount() > 0) {
-            ResultOrException roe = actionResult.getResultOrException(0);
-            if (roe.hasResult()) {
-              Result r = ProtobufUtil.toResult(roe.getResult(), cells);
-              if (!r.isEmpty()) {
-                result = r;
-              }
-            }
-          }
-          responseValue = new CheckAndMutateResult(actionResult.getProcessed(), result);
+          results.add(regionName, index, getCheckAndMutateResult(actionResult, cells));
         } else {
-          responseValue = actionResult.getProcessed() ?
-            ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
-            ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
+          results.add(regionName, index, getMutateRowResult(actionResult, cells));
         }
-        results.add(regionName, index, responseValue);
         continue;
       }
 
       if (actions.hasCondition()) {
-        Result result = null;
-        if (actionResult.getResultOrExceptionCount() > 0) {
-          ResultOrException roe = actionResult.getResultOrException(0);
-          Result r = ProtobufUtil.toResult(roe.getResult(), cells);
-          if (!r.isEmpty()) {
-            result = r;
-          }
-        }
-        responseValue = new CheckAndMutateResult(actionResult.getProcessed(), result);
-        results.add(regionName, 0, responseValue);
+        results.add(regionName, 0, getCheckAndMutateResult(actionResult, cells));
       } else {
+        if (actionResult.hasProcessed()) {
+          results.add(regionName, 0, getMutateRowResult(actionResult, cells));
+          continue;
+        }
         for (ResultOrException roe : actionResult.getResultOrExceptionList()) {
+          Object responseValue;
           if (roe.hasException()) {
             responseValue = ProtobufUtil.toException(roe.getException());
           } else if (roe.hasResult()) {
@@ -198,12 +179,7 @@ public final class ResponseConverter {
           } else if (roe.hasServiceResult()) {
             responseValue = roe.getServiceResult();
           } else {
-            // Sometimes, the response is just "it was processed". Generally, this occurs for things
-            // like mutateRows where either we get back 'processed' (or not) and optionally some
-            // statistics about the regions we touched.
-            responseValue = actionResult.getProcessed() ?
-              ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE :
-              ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
+            responseValue = ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE;
           }
           results.add(regionName, roe.getIndex(), responseValue);
         }
@@ -218,6 +194,47 @@ public final class ResponseConverter {
     }
 
     return results;
+  }
+
+  private static CheckAndMutateResult getCheckAndMutateResult(RegionActionResult actionResult,
+    CellScanner cells) throws IOException {
+    Result result = null;
+    if (actionResult.getResultOrExceptionCount() > 0) {
+      // Get the result of the Increment/Append operations from the first element of the
+      // ResultOrException list
+      ResultOrException roe = actionResult.getResultOrException(0);
+      if (roe.hasResult()) {
+        Result r = ProtobufUtil.toResult(roe.getResult(), cells);
+        if (!r.isEmpty()) {
+          result = r;
+        }
+      }
+    }
+    return new CheckAndMutateResult(actionResult.getProcessed(), result);
+  }
+
+  private static Result getMutateRowResult(RegionActionResult actionResult, CellScanner cells)
+    throws IOException {
+    if (actionResult.getProcessed()) {
+      Result result = null;
+      if (actionResult.getResultOrExceptionCount() > 0) {
+        // Get the result of the Increment/Append operations from the first element of the
+        // ResultOrException list
+        ResultOrException roe = actionResult.getResultOrException(0);
+        Result r = ProtobufUtil.toResult(roe.getResult(), cells);
+        if (!r.isEmpty()) {
+          r.setExists(true);
+          result = r;
+        }
+      }
+      if (result != null) {
+        return result;
+      } else {
+        return ProtobufUtil.EMPTY_RESULT_EXISTS_TRUE;
+      }
+    } else {
+      return ProtobufUtil.EMPTY_RESULT_EXISTS_FALSE;
+    }
   }
 
   /**

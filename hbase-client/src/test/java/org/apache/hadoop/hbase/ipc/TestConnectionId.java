@@ -22,10 +22,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -43,7 +43,7 @@ public class TestConnectionId {
   private User testUser1 = User.createUserForTesting(testConfig, "test", new String[]{"testgroup"});
   private User testUser2 = User.createUserForTesting(testConfig, "test", new String[]{"testgroup"});
   private String serviceName = "test";
-  private InetSocketAddress address = new InetSocketAddress(999);
+  private Address address = Address.fromParts("localhost", 999);
   private ConnectionId connectionId1 = new ConnectionId(testUser1, serviceName, address);
   private ConnectionId connectionId2 = new ConnectionId(testUser2, serviceName, address);
 
@@ -66,7 +66,7 @@ public class TestConnectionId {
 
   @Test
   public void testToString() {
-    String expectedString = "0.0.0.0/0.0.0.0:999/test/test (auth:SIMPLE)";
+    String expectedString = "localhost:999/test/test (auth:SIMPLE)";
     assertEquals(expectedString, connectionId1.toString());
   }
 

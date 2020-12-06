@@ -293,8 +293,9 @@ public interface Region extends ConfigurationObserver {
   /**
    * Perform a batch of mutations.
    * <p>
-   * Note this supports only Put, Delete, Increment and Append mutations and will ignore other
-   * types passed.
+   * Please do not operate on a same column of a single row in a batch, we will not consider the
+   * previous operation in the same batch when performing the operations in the batch.
+   *
    * @param mutations the list of mutations
    * @return an array of OperationStatus which internally contains the
    *         OperationStatusCode and the exceptionMessage if any.
@@ -531,13 +532,14 @@ public interface Region extends ConfigurationObserver {
   Result increment(Increment increment) throws IOException;
 
   /**
-   * Performs multiple mutations atomically on a single row. Currently
-   * {@link Put} and {@link Delete} are supported.
+   * Performs multiple mutations atomically on a single row.
    *
    * @param mutations object that specifies the set of mutations to perform atomically
+   * @return results of Increment/Append operations. If no Increment/Append operations, it returns
+   *   null
    * @throws IOException
    */
-  void mutateRow(RowMutations mutations) throws IOException;
+  Result mutateRow(RowMutations mutations) throws IOException;
 
   /**
    * Perform atomic mutations within the region.

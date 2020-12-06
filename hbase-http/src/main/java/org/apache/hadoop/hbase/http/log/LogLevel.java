@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import javax.net.ssl.HttpsURLConnection;
@@ -46,9 +47,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
 
 /**
  * Change log level in runtime.
@@ -89,7 +87,6 @@ public final class LogLevel {
         protocol.equals(PROTOCOL_HTTPS)));
   }
 
-  @VisibleForTesting
   static class CLI extends Configured implements Tool {
     private Operations operation = Operations.UNKNOWN;
     private String protocol;
@@ -289,7 +286,7 @@ public final class LogLevel {
       // read from the servlet
 
       try (InputStreamReader streamReader =
-            new InputStreamReader(connection.getInputStream(), Charsets.UTF_8);
+            new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8);
            BufferedReader bufferedReader = new BufferedReader(streamReader)) {
         bufferedReader.lines().filter(Objects::nonNull).filter(line -> line.startsWith(MARKER))
             .forEach(line -> System.out.println(TAG.matcher(line).replaceAll("")));

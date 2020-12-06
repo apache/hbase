@@ -501,10 +501,17 @@ function update_releasenotes {
   local jira_project
   local timing_token
   timing_token="$(start_step)"
+  changelog="CHANGELOG.${jira_fix_version}.md"
+  releasenotes="RELEASENOTES.${jira_fix_version}.md"
+  if [ -f ${changelog} ]; then
+    rm ${changelog}
+  fi
+  if [ -f ${releasenotes} ]; then
+    rm ${releasenotes}
+  fi
   jira_project="$(get_jira_name "$(basename "$project_dir")")"
   "${YETUS_HOME}/bin/releasedocmaker" -p "${jira_project}" --fileversions -v "${jira_fix_version}" \
-      -l --sortorder=newer --skip-credits
-  pwd
+      -l --sortorder=newer --skip-credits || true
   # First clear out the changes written by previous RCs.
   if [ -f "${project_dir}/CHANGES.md" ]; then
     sed -i -e \
@@ -517,24 +524,35 @@ function update_releasenotes {
         "${project_dir}/RELEASENOTES.md" || true
   fi
 
+  # Yetus will not generate CHANGES if no JIRAs fixed against the release version
+  # (Could happen if a release were bungled such that we had to make a new one
+  # without changes)
+  if [ ! -f "${changelog}" ]; then
+    echo -e "## Release ${jira_fix_version} - Unreleased (as of `date`)\nNo changes\n" > "${changelog}"
+  fi
+  if [ ! -f "${releasenotes}" ]; then
+    echo -e "# hbase ${jira_fix_version} Release Notes\nNo changes\n" > "${releasenotes}"
+  fi
+
   # The releasedocmaker call above generates RELEASENOTES.X.X.X.md and CHANGELOG.X.X.X.md.
   if [ -f "${project_dir}/CHANGES.md" ]; then
     # To insert into project's CHANGES.md...need to cut the top off the
     # CHANGELOG.X.X.X.md file removing license and first line and then
     # insert it after the license comment closing where we have a
     # DO NOT REMOVE marker text!
-    sed -i -e '/## Release/,$!d' "CHANGELOG.${jira_fix_version}.md"
-    sed -i -e "/DO NOT REMOVE/r CHANGELOG.${jira_fix_version}.md" "${project_dir}/CHANGES.md"
+    sed -i -e '/## Release/,$!d' "${changelog}"
+    sed -i -e '2,${/^# HBASE Changelog/d;}' "${project_dir}/CHANGES.md"
+    sed -i -e "/DO NOT REMOVE/r ${changelog}" "${project_dir}/CHANGES.md"
   else
-    mv "CHANGELOG.${jira_fix_version}.md" "${project_dir}/CHANGES.md"
+    mv "${changelog}" "${project_dir}/CHANGES.md"
   fi
   if [ -f "${project_dir}/RELEASENOTES.md" ]; then
     # Similar for RELEASENOTES but slightly different.
-    sed -i -e '/Release Notes/,$!d' "RELEASENOTES.${jira_fix_version}.md"
-    sed -i -e "/DO NOT REMOVE/r RELEASENOTES.${jira_fix_version}.md" \
-        "${project_dir}/RELEASENOTES.md"
+    sed -i -e '/Release Notes/,$!d' "${releasenotes}"
+    sed -i -e '2,${/^# RELEASENOTES/d;}' "${project_dir}/RELEASENOTES.md"
+    sed -i -e "/DO NOT REMOVE/r ${releasenotes}" "${project_dir}/RELEASENOTES.md"
   else
-    mv "RELEASENOTES.${jira_fix_version}.md" "${project_dir}/RELEASENOTES.md"
+    mv "${releasenotes}" "${project_dir}/RELEASENOTES.md"
   fi
   stop_step "${timing_token}"
 }

@@ -1650,7 +1650,7 @@
     -->
     <checkstyle.version>8.28</checkstyle.version>
     <exec.maven.version>1.6.0</exec.maven.version>
-    <error-prone.version>2.3.4</error-prone.version>
+    <error-prone.version>2.4.0</error-prone.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
@@ -1667,7 +1667,7 @@
     <surefire.version>3.0.0-M4</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>3.4.0</hbase-thirdparty.version>
+    <hbase-thirdparty.version>3.4.1</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->

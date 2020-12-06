@@ -27,8 +27,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Runs periodically to determine if the WAL should be rolled.
  *
@@ -39,7 +37,6 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * TODO: change to a pool of threads
  */
 @InterfaceAudience.Private
-@VisibleForTesting
 public class LogRoller extends AbstractWALRoller<RegionServerServices> {
   private static final Logger LOG = LoggerFactory.getLogger(LogRoller.class);
 
@@ -64,7 +61,6 @@ public class LogRoller extends AbstractWALRoller<RegionServerServices> {
     requester.requestFlush(r, families, FlushLifeCycleTracker.DUMMY);
   }
 
-  @VisibleForTesting
   Map<WAL, RollController> getWalNeedsRoll() {
     return this.wals;
   }

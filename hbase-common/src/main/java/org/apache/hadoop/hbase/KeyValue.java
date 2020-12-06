@@ -40,8 +40,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * An HBase Key/Value. This is the fundamental HBase Type.
  * <p>
@@ -1232,7 +1230,6 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * and that we need access to the backing array to do some test case related assertions.
    * @return The byte array backing this KeyValue.
    */
-  @VisibleForTesting
   public byte [] getBuffer() {
     return this.bytes;
   }

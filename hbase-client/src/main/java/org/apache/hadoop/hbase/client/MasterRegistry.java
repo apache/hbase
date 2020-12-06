@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.DNS.ServerType;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
@@ -151,7 +150,6 @@ public class MasterRegistry implements ConnectionRegistry {
    * <p/>
    * Will be called in {@code HBaseTestingUtility}.
    */
-  @VisibleForTesting
   public static String getMasterAddr(Configuration conf) throws UnknownHostException {
     String masterAddrFromConf = conf.get(MASTER_ADDRS_KEY);
     if (!Strings.isNullOrEmpty(masterAddrFromConf)) {
@@ -331,7 +329,6 @@ public class MasterRegistry implements ConnectionRegistry {
             "getMasters()").thenApply(MasterRegistry::transformServerNames);
   }
 
-  @VisibleForTesting
   Set<ServerName> getParsedMasterServers() {
     return masterAddr2Stub.keySet();
   }

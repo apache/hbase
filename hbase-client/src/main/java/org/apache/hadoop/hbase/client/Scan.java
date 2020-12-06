@@ -383,6 +383,9 @@ public class Scan extends Query {
    * <p>
    * If the specified row does not exist, or the {@code inclusive} is {@code false}, the Scanner
    * will start from the next closest row after the specified row.
+   * <p>
+   * <b>Note:</b> When use {@link #setRowPrefixFilter(byte[])}, the result might be unexpected.
+   * </p>
    * @param startRow row to start scanner at or after
    * @param inclusive whether we should include the start row when scan
    * @return this
@@ -447,7 +450,13 @@ public class Scan extends Query {
    * after this method will yield undefined results.</b></p>
    * @param rowPrefix the prefix all rows must start with. (Set <i>null</i> to remove the filter.)
    * @return this
+   * @deprecated since 3.0.0. The scan result might be unexpected in some cases.
+   *   e.g. startRow : "112" and rowPrefixFilter : "11"
+   *   The Result of this scan might contains : "111"
+   *   This method implements the filter by setting startRow and stopRow,
+   *   but does not take care of the scenario where startRow has been set.
    */
+  @Deprecated
   public Scan setRowPrefixFilter(byte[] rowPrefix) {
     if (rowPrefix == null) {
       withStartRow(HConstants.EMPTY_START_ROW);

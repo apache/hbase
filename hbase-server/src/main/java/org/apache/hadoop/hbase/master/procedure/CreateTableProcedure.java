@@ -47,7 +47,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -421,7 +420,6 @@ public class CreateTableProcedure
     return !getTableName().isSystemTable();
   }
 
-  @VisibleForTesting
   RegionInfo getFirstRegionInfo() {
     if (newRegions == null || newRegions.isEmpty()) {
       return null;

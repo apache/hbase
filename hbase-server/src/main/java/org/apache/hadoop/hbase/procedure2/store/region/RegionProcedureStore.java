@@ -63,7 +63,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
@@ -87,7 +86,6 @@ public class RegionProcedureStore extends ProcedureStoreBase {
 
   private final LeaseRecovery leaseRecovery;
 
-  @VisibleForTesting
   final MasterRegion region;
 
   private int numThreads;

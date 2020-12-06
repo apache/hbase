@@ -23,7 +23,6 @@ package org.apache.hadoop.hbase.tool;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
@@ -33,7 +32,7 @@ public interface Canary {
     return new CanaryTool(conf, executor);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   static Canary create(Configuration conf, ExecutorService executor, CanaryTool.Sink sink) {
     return new CanaryTool(conf, executor, sink);
   }
