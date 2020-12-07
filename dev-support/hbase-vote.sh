@@ -144,18 +144,24 @@ function unzip_from_source() {
 }
 
 function rat_test() {
+    local cmd
     rm -f "${OUTPUT_PATH_PREFIX}"_rat_test
-    mvn clean apache-rat:check "${MVN_PROPERTIES}" 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_rat_test && RAT_CHECK_PASSED=1
+    cmd="mvn clean apache-rat:check ${MVN_PROPERTIES} 2>&1 | tee ${OUTPUT_PATH_PREFIX}_rat_test && RAT_CHECK_PASSED=1"
+    eval "${cmd}"
 }
 
 function build_from_source() {
+    local cmd
     rm -f "${OUTPUT_PATH_PREFIX}"_build_from_source
-    mvn clean install "${MVN_PROPERTIES}" -DskipTests 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_build_from_source && BUILD_FROM_SOURCE_PASSED=1
+    cmd="mvn clean install ${MVN_PROPERTIES} -DskipTests 2>&1 | tee ${OUTPUT_PATH_PREFIX}_build_from_source && BUILD_FROM_SOURCE_PASSED=1"
+    eval "${cmd}"
 }
 
 function run_tests() {
+    local cmd
     rm -f "${OUTPUT_PATH_PREFIX}"_run_tests
-    mvn package "${MVN_PROFILES}" "${MVN_PROPERTIES}" -Dsurefire.rerunFailingTestsCount=3 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_run_tests && UNIT_TEST_PASSED=1
+    cmd="mvn package ${MVN_PROFILES} ${MVN_PROPERTIES} -Dsurefire.rerunFailingTestsCount=3 2>&1 | tee ${OUTPUT_PATH_PREFIX}_run_tests && UNIT_TEST_PASSED=1"
+    eval "${cmd}"
 }
 
 function execute() {
@@ -167,11 +173,11 @@ function print_when_exit() {
         * Signature: $( ((SIGNATURE_PASSED)) && echo "ok" || echo "failed" )
         * Checksum : $( ((CHECKSUM_PASSED)) && echo "ok" || echo "failed" )
         * Rat check (${JAVA_VERSION}): $( ((RAT_CHECK_PASSED)) && echo "ok" || echo "failed" )
-         - mvn clean apache-rat:check "${MVN_PROPERTIES}"
+         - mvn clean apache-rat:check ${MVN_PROPERTIES}
         * Built from source (${JAVA_VERSION}): $( ((BUILD_FROM_SOURCE_PASSED)) && echo "ok" || echo "failed" )
-         - mvn clean install -DskipTests "${MVN_PROPERTIES}"
+         - mvn clean install -DskipTests ${MVN_PROPERTIES}
         * Unit tests pass (${JAVA_VERSION}): $( ((UNIT_TEST_PASSED)) && echo "ok" || echo "failed" )
-         - mvn package ${MVN_PROFILES} "${MVN_PROPERTIES}" -Dsurefire.rerunFailingTestsCount=3
+         - mvn package ${MVN_PROFILES} ${MVN_PROPERTIES} -Dsurefire.rerunFailingTestsCount=3
 __EOF
   if ((CHECKSUM_PASSED)) && ((SIGNATURE_PASSED)) && ((RAT_CHECK_PASSED)) && ((BUILD_FROM_SOURCE_PASSED)) && ((UNIT_TEST_PASSED)) ; then
     exit 0
