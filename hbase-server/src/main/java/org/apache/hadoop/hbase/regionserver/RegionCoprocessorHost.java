@@ -79,7 +79,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.AbstractReferenceMap;
@@ -102,7 +101,9 @@ public class RegionCoprocessorHost
   // optimization: no need to call postScannerFilterRow, if no coprocessor implements it
   private final boolean hasCustomPostScannerFilterRow;
 
-  @VisibleForTesting
+  /*
+   * Whether any configured CPs override postScannerFilterRow hook
+   */
   public boolean hasCustomPostScannerFilterRow() {
     return hasCustomPostScannerFilterRow;
   }

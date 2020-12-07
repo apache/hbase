@@ -84,7 +84,7 @@ public class TestRegionCoprocessorHost {
     init(null);
   }
 
-  public void init(Boolean flag) throws IOException {
+  private void init(Boolean flag) throws IOException {
     conf = HBaseConfiguration.create();
     conf.setBoolean(COPROCESSORS_ENABLED_CONF_KEY, true);
     conf.setBoolean(USER_COPROCESSORS_ENABLED_CONF_KEY, true);
