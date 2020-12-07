@@ -741,13 +741,6 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     return PrivateCellUtil.createCell(newCell, tags);
   }
 
-  @Override
-  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
-    return hasMore;
-  }
-
   /****************************** VisibilityEndpoint service related methods ******************************/
   @Override
   public synchronized void addLabels(RpcController controller, VisibilityLabelsRequest request,
