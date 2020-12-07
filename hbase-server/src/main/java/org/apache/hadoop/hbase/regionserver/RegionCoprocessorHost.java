@@ -79,7 +79,6 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.map.AbstractReferenceMap;
@@ -101,6 +100,13 @@ public class RegionCoprocessorHost
 
   // optimization: no need to call postScannerFilterRow, if no coprocessor implements it
   private final boolean hasCustomPostScannerFilterRow;
+
+  /*
+   * Whether any configured CPs override postScannerFilterRow hook
+   */
+  public boolean hasCustomPostScannerFilterRow() {
+    return hasCustomPostScannerFilterRow;
+  }
 
   /**
    *
@@ -275,11 +281,10 @@ public class RegionCoprocessorHost
     out: for (RegionCoprocessorEnvironment env: coprocEnvironments) {
       if (env.getInstance() instanceof RegionObserver) {
         Class<?> clazz = env.getInstance().getClass();
-        for(;;) {
-          if (clazz == null) {
-            // we must have directly implemented RegionObserver
-            hasCustomPostScannerFilterRow = true;
-            break out;
+        for (;;) {
+          if (clazz == Object.class) {
+            // we dont need to look postScannerFilterRow into Object class
+            break; // break the inner loop
           }
           try {
             clazz.getDeclaredMethod("postScannerFilterRow", ObserverContext.class,
