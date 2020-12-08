@@ -165,7 +165,7 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferKeyValue {
   }
 
   @Override
-  public void setSequenceId(long seqId) throws IOException {
+  public void setSequenceId(long seqId) {
     throw new IllegalArgumentException("This is a key only Cell");
   }
 
