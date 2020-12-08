@@ -686,6 +686,12 @@
       <email>wangzheng@apache.org</email>
       <timezone>+8</timezone>
     </developer>
+    <developer>
+      <id>sunxin</id>
+      <name>Xin Sun</name>
+      <email>sunxin@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
   </developers>
   <build>
     <extensions>
