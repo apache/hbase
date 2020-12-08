@@ -74,10 +74,10 @@ public class ContiguousCellFormatComparator implements Comparator {
 
   @Override
   public int compare(Object l, Object r) {
-    return compare((ContiguousCellFormat) l, (ContiguousCellFormat) r, false);
+    return compare((Cell) l, (Cell) r, false);
   }
 
-  public int compare(ContiguousCellFormat l, ContiguousCellFormat r, boolean ignoreSequenceid) {
+  public int compare(Cell l, Cell r, boolean ignoreSequenceid) {
     // We do this branching because the tests revealed that if we have entire code for mixed type
     // of ContiguousCellformat cells the compiler finds it difficult to inline the code and since
     // there are 2 impls of the ContiguousCellformat KV and BBKV the instance invocation on

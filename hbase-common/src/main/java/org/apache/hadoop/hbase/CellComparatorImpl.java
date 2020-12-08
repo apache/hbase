@@ -68,8 +68,8 @@ public class CellComparatorImpl implements CellComparator {
     // offheap
     if (a instanceof ContiguousCellFormat && b instanceof ContiguousCellFormat
         && getSimpleComparator() instanceof ContiguousCellFormatComparator) {
-      return ((ContiguousCellFormatComparator) getSimpleComparator())
-          .compare((ContiguousCellFormat) a, (ContiguousCellFormat) b, ignoreSequenceid);
+      return ((ContiguousCellFormatComparator) getSimpleComparator()).compare((Cell) a, (Cell) b,
+        ignoreSequenceid);
     } else {
       int leftRowLength = a.getRowLength();
       int rightRowLength = b.getRowLength();
