@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -63,5 +64,12 @@ public interface RawCell extends Cell {
     if (tagsLength > MAX_TAGS_LENGTH) {
       throw new IllegalArgumentException("tagslength " + tagsLength + " > " + MAX_TAGS_LENGTH);
     }
+  }
+
+  /**
+   * @return A new cell which is having the extra tags also added to it.
+   */
+  public static Cell createCell(Cell cell, List<Tag> tags) {
+    return PrivateCellUtil.createCell(cell, tags);
   }
 }
