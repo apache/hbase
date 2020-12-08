@@ -472,6 +472,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>niuyulin</id>
+      <name>Yulin Niu</name>
+      <email>niuyulin@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>nkeywal</id>
       <name>Nicolas Liochon</name>
       <email>nkeywal@apache.org</email>
