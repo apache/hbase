@@ -100,6 +100,25 @@ public class TestAdmin1 extends TestAdminBase {
   }
 
   @Test
+  public void testCompactATableWithSuperLongTableName() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
+    try {
+      ADMIN.createTable(htd);
+      try {
+        ADMIN.majorCompactRegion(tableName.getName());
+        ADMIN.majorCompactRegion(Bytes.toBytes("abcd"));
+      } catch (IllegalArgumentException iae) {
+        LOG.info("This is expected");
+      }
+    } finally {
+      ADMIN.disableTable(tableName);
+      ADMIN.deleteTable(tableName);
+    }
+  }
+
+  @Test
   public void testCompactionTimestamps() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
