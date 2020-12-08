@@ -40,6 +40,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.net.ssl.SSLContext;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
@@ -76,6 +80,7 @@ public class Client {
 
   private HttpClient httpClient;
   private Cluster cluster;
+  private Configuration conf;
   private boolean sslEnabled;
   private HttpResponse resp;
   private HttpGet httpGet = null;
@@ -93,16 +98,22 @@ public class Client {
     this(null);
   }
 
-  private void initialize(Cluster cluster, boolean sslEnabled, Optional<KeyStore> trustStore) {
+  private void initialize(Cluster cluster, Configuration conf, boolean sslEnabled,
+      Optional<KeyStore> trustStore) {
     this.cluster = cluster;
+    this.conf = conf;
     this.sslEnabled = sslEnabled;
     extraHeaders = new ConcurrentHashMap<>();
     String clspath = System.getProperty("java.class.path");
     LOG.debug("classpath " + clspath);
     HttpClientBuilder httpClientBuilder = HttpClients.custom();
 
-    RequestConfig requestConfig = RequestConfig.custom().
-      setConnectTimeout(2000).build();
+    int connTimeout = this.conf.getInt(Constants.REST_CLIENT_CONN_TIMEOUT,
+      Constants.DEFAULT_REST_CLIENT_CONN_TIMEOUT);
+    int socketTimeout = this.conf.getInt(Constants.REST_CLIENT_SOCKET_TIMEOUT,
+      Constants.DEFAULT_REST_CLIENT_SOCKET_TIMEOUT);
+    RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(connTimeout)
+        .setSocketTimeout(socketTimeout).build();
     httpClientBuilder.setDefaultRequestConfig(requestConfig);
 
     // Since HBASE-25267 we don't use the deprecated DefaultHttpClient anymore.
@@ -138,7 +149,17 @@ public class Client {
    * @param sslEnabled enable SSL or not
    */
   public Client(Cluster cluster, boolean sslEnabled) {
-    initialize(cluster, sslEnabled, Optional.empty());
+    initialize(cluster, HBaseConfiguration.create(), sslEnabled, Optional.empty());
+  }
+
+  /**
+   * Constructor
+   * @param cluster the cluster definition
+   * @param conf Configuration
+   * @param sslEnabled enable SSL or not
+   */
+  public Client(Cluster cluster, Configuration conf, boolean sslEnabled) {
+    initialize(cluster, conf, sslEnabled, Optional.empty());
   }
 
   /**
@@ -151,8 +172,23 @@ public class Client {
    *
    * @throws ClientTrustStoreInitializationException if the trust store file can not be loaded
    */
-  public Client(Cluster cluster, String trustStorePath,
-    Optional<String> trustStorePassword, Optional<String> trustStoreType) {
+  public Client(Cluster cluster, String trustStorePath, Optional<String> trustStorePassword,
+      Optional<String> trustStoreType) {
+    this(cluster, HBaseConfiguration.create(), trustStorePath, Optional.empty(), Optional.empty());
+  }
+
+  /**
+   * Constructor, allowing to define custom trust store (only for SSL connections)
+   * 
+   * @param cluster the cluster definition
+   * @param conf Configuration
+   * @param trustStorePath custom trust store to use for SSL connections
+   * @param trustStorePassword password to use for custom trust store
+   * @param trustStoreType type of custom trust store
+   * @throws ClientTrustStoreInitializationException if the trust store file can not be loaded
+   */
+  public Client(Cluster cluster, Configuration conf, String trustStorePath,
+      Optional<String> trustStorePassword, Optional<String> trustStoreType) {
 
     char[] password = trustStorePassword.map(String::toCharArray).orElse(null);
     String type = trustStoreType.orElse(KeyStore.getDefaultType());
@@ -163,15 +199,15 @@ public class Client {
     } catch (KeyStoreException e) {
       throw new ClientTrustStoreInitializationException("Invalid trust store type: " + type, e);
     }
-    try (InputStream inputStream =
-      new BufferedInputStream(Files.newInputStream(new File(trustStorePath).toPath()))) {
+    try (InputStream inputStream = new BufferedInputStream(
+      Files.newInputStream(new File(trustStorePath).toPath()))) {
       trustStore.load(inputStream, password);
     } catch (CertificateException | NoSuchAlgorithmException | IOException e) {
       throw new ClientTrustStoreInitializationException("Trust store load error: " + trustStorePath,
         e);
     }
 
-    initialize(cluster, true, Optional.of(trustStore));
+    initialize(cluster, conf, true, Optional.of(trustStore));
   }
 
   /**
