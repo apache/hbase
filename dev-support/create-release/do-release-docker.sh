@@ -76,7 +76,7 @@ Options:
   -s [step]    runs a single step of the process; valid steps are: tag|publish-dist|publish-release.
                If none specified, runs tag, then publish-dist, and then publish-release.
                'publish-snapshot' is also an allowed, less used, option.
-  -x           debug. do less clean up. (env file, gpg forwarding on mac)
+  -x           debug. Does less clean up (env file, gpg forwarding on mac)
 EOF
   exit 1
 }
@@ -147,7 +147,7 @@ done
 
 # We need to import that public key in the container in order to use the private key via the agent.
 GPG_KEY_FILE="$WORKDIR/gpg.key.public"
-echo "Exporting public key for ${GPG_KEY}"
+log "Exporting public key for ${GPG_KEY}"
 fcreate_secure "$GPG_KEY_FILE"
 $GPG "${GPG_ARGS[@]}" --export "${GPG_KEY}" > "${GPG_KEY_FILE}"
 
@@ -155,10 +155,10 @@ function cleanup {
   local id
   banner "Release Cleanup"
   if is_debug; then
-    echo "skipping due to debug run"
+    log "skipping due to debug run"
     return 0
   fi
-  echo "details in cleanup.log"
+  log "details in cleanup.log"
   if [ -f "${ENVFILE}" ]; then
     rm -f "$ENVFILE"
   fi
@@ -186,7 +186,7 @@ function cleanup {
 
 trap cleanup EXIT
 
-echo "Host OS: ${HOST_OS}"
+log "Host OS: ${HOST_OS}"
 if [ "${HOST_OS}" == "DARWIN" ]; then
   run_silent "Building gpg-agent-proxy image with tag ${IMGTAG}..." "docker-proxy-build.log" \
     docker build --build-arg "UID=${UID}" --build-arg "RM_USER=${USER}" \
@@ -198,7 +198,7 @@ run_silent "Building hbase-rm image with tag $IMGTAG..." "docker-build.log" \
       --build-arg "RM_USER=${USER}" "$SELF/hbase-rm"
 
 banner "Final prep for container launch."
-echo "Writing out environment for container."
+log "Writing out environment for container."
 # Write the release information to a file with environment variables to be used when running the
 # image.
 ENVFILE="$WORKDIR/env.list"
@@ -244,7 +244,7 @@ if [ -n "${GIT_REPO}" ]; then
       ;;
     # on the host but normally git wouldn't use the local optimization
     file://*)
-      echo "[INFO] converted file:// git repo to a local path, which changes git to assume --local."
+      log "Converted file:// git repo to a local path, which changes git to assume --local."
       GIT_REPO_MOUNT=(--mount "type=bind,src=${GIT_REPO#file://},dst=/opt/hbase-repo,consistency=delegated")
       echo "HOST_GIT_REPO=${GIT_REPO}" >> "${ENVFILE}"
       GIT_REPO="/opt/hbase-repo"
@@ -286,8 +286,8 @@ fi
 GPG_PROXY_MOUNT=()
 if [ "${HOST_OS}" == "DARWIN" ]; then
   GPG_PROXY_MOUNT=(--mount "type=volume,src=gpgagent,dst=/home/${USER}/.gnupg/")
-  echo "Setting up GPG agent proxy container needed on OS X."
-  echo "    we should clean this up for you. If that fails the container ID is below and in " \
+  log "Setting up GPG agent proxy container needed on OS X."
+  log "    we should clean this up for you. If that fails the container ID is below and in " \
       "gpg-proxy.cid"
   #TODO the key pair used should be configurable
   docker run --rm -p 62222:22 \
@@ -301,8 +301,8 @@ if [ "${HOST_OS}" == "DARWIN" ]; then
   sort "${HOME}/.ssh/known_hosts" | comm -1 -3 - "${WORKDIR}/gpg-agent-proxy.ssh-keyscan" \
       > "${WORKDIR}/gpg-agent-proxy.known_hosts"
   if [ -s "${WORKDIR}/gpg-agent-proxy.known_hosts" ]; then
-    echo "Your ssh known_hosts does not include the entries for the gpg-agent proxy container."
-    echo "The following entry(ies) are missing:"
+    log "Your ssh known_hosts does not include the entries for the gpg-agent proxy container."
+    log "The following entry(ies) are missing:"
     sed -e 's/^/    /' "${WORKDIR}/gpg-agent-proxy.known_hosts"
     read -r -p "Okay to add these entries to ${HOME}/.ssh/known_hosts? [y/n] " ANSWER
     if [ "$ANSWER" != "y" ]; then
@@ -310,8 +310,8 @@ if [ "${HOST_OS}" == "DARWIN" ]; then
     fi
     cat "${WORKDIR}/gpg-agent-proxy.known_hosts" >> "${HOME}/.ssh/known_hosts"
   fi
-  echo "Launching ssh reverse tunnel from the container to gpg agent."
-  echo "    we should clean this up for you. If that fails the PID is in gpg-proxy.ssh.pid"
+  log "Launching ssh reverse tunnel from the container to gpg agent."
+  log "    we should clean this up for you. If that fails the PID is in gpg-proxy.ssh.pid"
   ssh -p 62222 -R "/home/${USER}/.gnupg/S.gpg-agent:$(gpgconf --list-dir agent-extra-socket)" \
       -i "${HOME}/.ssh/id_rsa" -N -n localhost >gpg-proxy.ssh.log 2>&1 &
   echo $! > "${WORKDIR}/gpg-proxy.ssh.pid"
@@ -326,10 +326,10 @@ else
 fi
 
 banner "Building $RELEASE_TAG; output will be at $WORKDIR/output"
-echo "We should clean the container up when we are done. If that fails then the container ID " \
+log "We should clean the container up when we are done. If that fails then the container ID " \
     "is in release.cid"
 echo
-# Where possible we specifcy "consistency=delegated" when we do not need host access during the
+# Where possible we specify "consistency=delegated" when we do not need host access during the
 # build run. On Mac OS X specifically this gets us a big perf improvement.
 cmd=(docker run --rm -ti \
   --env-file "$ENVFILE" \
