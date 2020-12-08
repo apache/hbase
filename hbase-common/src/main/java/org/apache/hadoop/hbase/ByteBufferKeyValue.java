@@ -252,7 +252,7 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell implements Contig
   }
 
   @Override
-  public void setSequenceId(long seqId) throws IOException {
+  public void setSequenceId(long seqId) {
     this.seqId = seqId;
   }
 
