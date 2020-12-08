@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.cleaner;
 
 import java.io.IOException;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -44,63 +45,75 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
   private static final Logger LOG = LoggerFactory.getLogger(HFileLinkCleaner.class);
 
   private FileSystem fs = null;
+  private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   @Override
-  public synchronized boolean isFileDeletable(FileStatus fStat) {
-    if (this.fs == null) return false;
-    Path filePath = fStat.getPath();
-    // HFile Link is always deletable
-    if (HFileLink.isHFileLink(filePath)) return true;
+  public boolean isFileDeletable(FileStatus fStat) {
+    lock.readLock().lock();
+    try {
+      if (this.fs == null) {
+        return false;
+      }
+      Path filePath = fStat.getPath();
+      // HFile Link is always deletable
+      if (HFileLink.isHFileLink(filePath)) {
+        return true;
+      }
 
-    // If the file is inside a link references directory, means that it is a back ref link.
-    // The back ref can be deleted only if the referenced file doesn't exists.
-    Path parentDir = filePath.getParent();
-    if (HFileLink.isBackReferencesDir(parentDir)) {
-      Path hfilePath = null;
+      // If the file is inside a link references directory, means that it is a back ref link.
+      // The back ref can be deleted only if the referenced file doesn't exists.
+      Path parentDir = filePath.getParent();
+      if (HFileLink.isBackReferencesDir(parentDir)) {
+        Path hfilePath = null;
+        try {
+          // Also check if the HFile is in the HBASE_TEMP_DIRECTORY; this is where the referenced
+          // file gets created when cloning a snapshot.
+          hfilePath = HFileLink.getHFileFromBackReference(new Path(
+            CommonFSUtils.getRootDir(getConf()), HConstants.HBASE_TEMP_DIRECTORY), filePath);
+          if (fs.exists(hfilePath)) {
+            return false;
+          }
+          // check whether the HFileLink still exists in mob dir.
+          hfilePath = HFileLink.getHFileFromBackReference(MobUtils.getMobHome(getConf()), filePath);
+          if (fs.exists(hfilePath)) {
+            return false;
+          }
+          hfilePath = HFileLink.getHFileFromBackReference(CommonFSUtils.getRootDir(getConf()),
+            filePath);
+          return !fs.exists(hfilePath);
+        } catch (IOException e) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: "
+              + hfilePath);
+          }
+          return false;
+        }
+      }
+
+      // HFile is deletable only if has no links
+      Path backRefDir = null;
       try {
-        // Also check if the HFile is in the HBASE_TEMP_DIRECTORY; this is where the referenced
-        // file gets created when cloning a snapshot.
-        hfilePath = HFileLink.getHFileFromBackReference(
-          new Path(CommonFSUtils.getRootDir(getConf()), HConstants.HBASE_TEMP_DIRECTORY), filePath);
-        if (fs.exists(hfilePath)) {
-          return false;
-        }
-        // check whether the HFileLink still exists in mob dir.
-        hfilePath = HFileLink.getHFileFromBackReference(MobUtils.getMobHome(getConf()), filePath);
-        if (fs.exists(hfilePath)) {
-          return false;
-        }
-        hfilePath =
-          HFileLink.getHFileFromBackReference(CommonFSUtils.getRootDir(getConf()), filePath);
-        return !fs.exists(hfilePath);
+        backRefDir = HFileLink.getBackReferencesDir(parentDir, filePath.getName());
+        return CommonFSUtils.listStatus(fs, backRefDir) == null;
       } catch (IOException e) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: " +
-            hfilePath);
+          LOG.debug(
+            "Couldn't get the references, not deleting file, just in case. filePath=" +
+              filePath + ", backRefDir=" + backRefDir);
         }
         return false;
       }
-    }
-
-    // HFile is deletable only if has no links
-    Path backRefDir = null;
-    try {
-      backRefDir = HFileLink.getBackReferencesDir(parentDir, filePath.getName());
-      return CommonFSUtils.listStatus(fs, backRefDir) == null;
-    } catch (IOException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Couldn't get the references, not deleting file, just in case. filePath="
-            + filePath + ", backRefDir=" + backRefDir);
-      }
-      return false;
+    } finally {
+      lock.readLock().unlock();
     }
   }
 
   @Override
-  public synchronized void setConf(Configuration conf) {
+  public void setConf(Configuration conf) {
     super.setConf(conf);
 
     // setup filesystem
+    lock.writeLock().lock();
     try {
       this.fs = FileSystem.get(this.getConf());
     } catch (IOException e) {
@@ -109,6 +122,8 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
             + FileSystem.FS_DEFAULT_NAME_KEY + "="
             + getConf().get(FileSystem.FS_DEFAULT_NAME_KEY, FileSystem.DEFAULT_FS));
       }
+    } finally {
+      lock.writeLock().unlock();
     }
   }
 }
