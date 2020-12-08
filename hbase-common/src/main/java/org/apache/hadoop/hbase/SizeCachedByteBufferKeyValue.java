@@ -40,11 +40,7 @@ public class SizeCachedByteBufferKeyValue extends ByteBufferKeyValue {
     // avoid uninitialized checks with every time call
     this.rowLen = super.getRowLength();
     this.keyLen = keyLen;
-    try {
-      setSequenceId(seqId);
-    } catch (Exception e) {
-      //ignore
-    }
+    setSequenceId(seqId);
   }
 
   public SizeCachedByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId,
@@ -54,11 +50,7 @@ public class SizeCachedByteBufferKeyValue extends ByteBufferKeyValue {
     // avoid uninitialized checks with every time call
     this.rowLen = rowLen;
     this.keyLen = keyLen;
-    try {
-      setSequenceId(seqId);
-    } catch (Exception e) {
-      //ignore
-    }
+    setSequenceId(seqId);
   }
 
   @Override
