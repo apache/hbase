@@ -18,14 +18,14 @@
  */
 package org.apache.hadoop.hbase.executor;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.trace.TraceUtil;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +75,7 @@ public abstract class EventHandler implements Runnable, Comparable<EventHandler>
    * Default base class constructor.
    */
   public EventHandler(Server server, EventType eventType) {
-    this.parent = Tracer.getCurrentSpan();
+    this.parent = Span.current();
     this.server = server;
     this.eventType = eventType;
     seqid = seqids.incrementAndGet();
@@ -100,10 +100,14 @@ public abstract class EventHandler implements Runnable, Comparable<EventHandler>
 
   @Override
   public void run() {
-    try (TraceScope scope = TraceUtil.createTrace(this.getClass().getSimpleName(), parent)) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder(getClass().getSimpleName())
+      .setParent(Context.current().with(parent)).startSpan();
+    try (Scope scope = span.makeCurrent()) {
       process();
-    } catch(Throwable t) {
+    } catch (Throwable t) {
       handleException(t);
+    } finally {
+      span.end();
     }
   }
 

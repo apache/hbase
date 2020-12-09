@@ -29,6 +29,8 @@ import com.lmax.disruptor.LifecycleAware;
 import com.lmax.disruptor.TimeoutException;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -59,7 +61,6 @@ import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -364,7 +365,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           // use assert to make sure no change breaks the logic that
           // sequence and zigzagLatch will be set together
           assert sequence > 0L : "Failed to get sequence from ring buffer";
-          TraceUtil.addTimelineAnnotation("awaiting safepoint");
+          Span.current().addEvent("awaiting safepoint");
           syncFuture = zigzagLatch.waitSafePoint(publishSyncOnRingBuffer(sequence, false));
         }
       } catch (FailedSyncBeforeLogCloseException e) {
@@ -435,10 +436,11 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   private void closeWriter(Writer writer, Path path, boolean syncCloseCall) throws IOException {
+    Span span = Span.current();
     try {
-      TraceUtil.addTimelineAnnotation("closing writer");
+      span.addEvent("closing writer");
       writer.close();
-      TraceUtil.addTimelineAnnotation("writer closed");
+      span.addEvent("writer closed");
     } catch (IOException ioe) {
       int errors = closeErrorCount.incrementAndGet();
       boolean hasUnflushedEntries = isUnflushedEntries();
@@ -646,10 +648,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           long start = System.nanoTime();
           Throwable lastException = null;
           try {
-            TraceUtil.addTimelineAnnotation("syncing writer");
+            Span.current().addEvent("syncing writer");
             long unSyncedFlushSeq = highestUnsyncedTxid;
             writer.sync(sf.isForceSync());
-            TraceUtil.addTimelineAnnotation("writer synced");
+            Span.current().addEvent("writer synced");
             if (unSyncedFlushSeq > currentSequence) {
               currentSequence = unSyncedFlushSeq;
             }
@@ -792,7 +794,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   // Sync all known transactions
-  private void publishSyncThenBlockOnCompletion(TraceScope scope, boolean forceSync) throws IOException {
+  private void publishSyncThenBlockOnCompletion(Scope scope, boolean forceSync) throws IOException {
     SyncFuture syncFuture = publishSyncOnRingBuffer(forceSync);
     blockOnSync(syncFuture);
   }
@@ -824,7 +826,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
   @Override
   public void sync(boolean forceSync) throws IOException {
-    try (TraceScope scope = TraceUtil.createTrace("FSHLog.sync")) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("FSHLog.sync").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       publishSyncThenBlockOnCompletion(scope, forceSync);
     }
   }
@@ -840,7 +843,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       // Already sync'd.
       return;
     }
-    try (TraceScope scope = TraceUtil.createTrace("FSHLog.sync")) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("FSHLog.sync").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       publishSyncThenBlockOnCompletion(scope, forceSync);
     }
   }
