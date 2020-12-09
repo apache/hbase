@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.MAJOR_COMPACTION_K
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -176,7 +178,6 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -6585,8 +6586,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     RowLockImpl result = null;
 
     boolean success = false;
-    try (TraceScope scope = TraceUtil.createTrace("HRegion.getRowLock")) {
-      TraceUtil.addTimelineAnnotation("Getting a " + (readLock?"readLock":"writeLock"));
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("HRegion.getRowLock").startSpan();
+    try (Scope scope = span.makeCurrent()) {
+      span.addEvent("Getting a " + (readLock ? "readLock" : "writeLock"));
       // Keep trying until we have a lock or error out.
       // TODO: do we need to add a time component here?
       while (result == null) {
@@ -6623,7 +6625,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       if (timeout <= 0 || !result.getLock().tryLock(timeout, TimeUnit.MILLISECONDS)) {
-        TraceUtil.addTimelineAnnotation("Failed to get row lock");
+        span.addEvent("Failed to get row lock");
         String message = "Timed out waiting for lock for row: " + rowKey + " in region "
             + getRegionInfo().getEncodedName();
         if (reachDeadlineFirst) {
@@ -6641,7 +6643,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         LOG.debug("Thread interrupted waiting for lock on row: {}, in region {}", rowKey,
           getRegionInfo().getRegionNameAsString());
       }
-      TraceUtil.addTimelineAnnotation("Interrupted exception getting row lock");
+      span.addEvent("Interrupted exception getting row lock");
       throw throwOnInterrupt(ie);
     } catch (Error error) {
       // The maximum lock count for read lock is 64K (hardcoded), when this maximum count
@@ -6650,13 +6652,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.warn("Error to get row lock for {}, in region {}, cause: {}", Bytes.toStringBinary(row),
         getRegionInfo().getRegionNameAsString(), error);
       IOException ioe = new IOException(error);
-      TraceUtil.addTimelineAnnotation("Error getting row lock");
+      span.addEvent("Error getting row lock");
       throw ioe;
     } finally {
       // Clean up the counts just in case this was the thing keeping the context alive.
       if (!success && rowLockContext != null) {
         rowLockContext.cleanUp();
       }
+      span.end();
     }
   }
 
