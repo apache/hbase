@@ -165,6 +165,7 @@
                     <exclude>org.apache.logging.log4j:*</exclude>
                     <exclude>commons-logging:*</exclude>
                     <exclude>org.javassist:*</exclude>
+                    <exclude>io.opentelemetry:*</exclude>
                   </excludes>
                 </artifactSet>
                 <relocations>
@@ -449,7 +450,6 @@
                     <pattern>net/</pattern>
                     <shadedPattern>${shaded.prefix}.net.</shadedPattern>
                   </relocation>
-
                 </relocations>
                 <transformers>
                   <!-- Need to filter out some extraneous license files.

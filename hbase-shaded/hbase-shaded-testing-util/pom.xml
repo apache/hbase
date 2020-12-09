@@ -31,7 +31,6 @@
 
   <artifactId>hbase-shaded-testing-util</artifactId>
   <name>Apache HBase - Shaded - Testing Util</name>
-
   <dependencies>
     <!-- test-jar dependencies -->
     <dependency>
@@ -192,6 +191,7 @@
                   <exclude>org.apache.logging.log4j:*</exclude>
                   <exclude>commons-logging:*</exclude>
                   <exclude>org.javassist:*</exclude>
+                  <exclude>io.opentelemetry:*</exclude>
                 </excludes>
               </artifactSet>
             </configuration>
