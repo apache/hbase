@@ -164,8 +164,8 @@ public class TestExecutorService {
     private final AtomicBoolean lock;
     private AtomicInteger counter;
 
-    public TestEventHandler(Server server, EventType eventType,
-                            AtomicBoolean lock, AtomicInteger counter) {
+    public TestEventHandler(Server server, EventType eventType, AtomicBoolean lock,
+      AtomicInteger counter) {
       super(server, eventType);
       this.lock = lock;
       this.counter = counter;
