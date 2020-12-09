@@ -685,7 +685,7 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   maven_set_version "$RELEASE_VERSION"
   # Prepare for signing
   kick_gpg_agent
-  declare -a mvn_goals=(clean install)
+  declare -a mvn_goals=(clean)
   if ! is_dry_run; then
     mvn_goals=("${mvn_goals[@]}" deploy)
   fi
