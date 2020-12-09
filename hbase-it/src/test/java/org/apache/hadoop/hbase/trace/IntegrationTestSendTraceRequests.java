@@ -18,10 +18,19 @@
 
 package org.apache.hadoop.hbase.trace;
 
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
+import java.io.IOException;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
@@ -31,22 +40,14 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.core.Sampler;
-import org.apache.htrace.core.TraceScope;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
-
-import java.io.IOException;
-import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 @Category(IntegrationTests.class)
 public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
@@ -61,7 +62,6 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   private IntegrationTestingUtility util;
   private Random random = new Random();
   private Admin admin;
-  private SpanReceiverHost receiverHost;
 
   public static void main(String[] args) throws Exception {
     Configuration configuration = HBaseConfiguration.create();
@@ -95,7 +95,6 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   public void internalDoWork() throws Exception {
     util = createUtil();
     admin = util.getAdmin();
-    setupReceiver();
 
     deleteTable();
     createTable();
@@ -108,51 +107,52 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
     service.shutdown();
     service.awaitTermination(100, TimeUnit.SECONDS);
     Thread.sleep(90000);
-    receiverHost.closeReceivers();
     util.restoreCluster();
     util = null;
   }
 
   private void doScans(ExecutorService service, final LinkedBlockingQueue<Long> rks) {
+    for (int i = 0; i < 100; i++) {
+      Runnable runnable = new Runnable() {
+        private final LinkedBlockingQueue<Long> rowKeyQueue = rks;
 
-      for (int i = 0; i < 100; i++) {
-        Runnable runnable = new Runnable() {
-          private final LinkedBlockingQueue<Long> rowKeyQueue = rks;
-          @Override
-          public void run() {
-            ResultScanner rs = null;
-            TraceUtil.addSampler(Sampler.ALWAYS);
-            try (TraceScope scope = TraceUtil.createTrace("Scan")){
-              Table ht = util.getConnection().getTable(tableName);
-              Scan s = new Scan();
-              s.withStartRow(Bytes.toBytes(rowKeyQueue.take()));
-              s.setBatch(7);
-              rs = ht.getScanner(s);
-              // Something to keep the jvm from removing the loop.
-              long accum = 0;
+        @Override
+        public void run() {
+          ResultScanner rs = null;
+          Span span = TraceUtil.getGlobalTracer().spanBuilder("Scan").startSpan();
+          try (Scope scope = span.makeCurrent()) {
+            Table ht = util.getConnection().getTable(tableName);
+            Scan s = new Scan();
+            s.withStartRow(Bytes.toBytes(rowKeyQueue.take()));
+            s.setBatch(7);
+            rs = ht.getScanner(s);
+            // Something to keep the jvm from removing the loop.
+            long accum = 0;
 
-              for(int x = 0; x < 1000; x++) {
-                Result r = rs.next();
-                accum |= Bytes.toLong(r.getRow());
-              }
-
-              TraceUtil.addTimelineAnnotation("Accum result = " + accum);
-
-              ht.close();
-              ht = null;
-            } catch (IOException e) {
-              e.printStackTrace();
-              TraceUtil.addKVAnnotation("exception", e.getClass().getSimpleName());
-            } catch (Exception e) {
-            } finally {
-              if (rs != null) rs.close();
+            for (int x = 0; x < 1000; x++) {
+              Result r = rs.next();
+              accum |= Bytes.toLong(r.getRow());
             }
 
-          }
-        };
-        service.submit(runnable);
-      }
+            span.addEvent("Accum result = " + accum);
 
+            ht.close();
+            ht = null;
+          } catch (IOException e) {
+            e.printStackTrace();
+            span.addEvent("exception",
+              Attributes.of(AttributeKey.stringKey("exception"), e.getClass().getSimpleName()));
+          } catch (Exception e) {
+          } finally {
+            span.end();
+            if (rs != null) {
+              rs.close();
+            }
+          }
+        }
+      };
+      service.submit(runnable);
+    }
   }
 
   private void doGets(ExecutorService service, final LinkedBlockingQueue<Long> rowKeys)
@@ -173,9 +173,9 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
           }
 
           long accum = 0;
-          TraceUtil.addSampler(Sampler.ALWAYS);
           for (int x = 0; x < 5; x++) {
-            try (TraceScope scope = TraceUtil.createTrace("gets")) {
+            Span span = TraceUtil.getGlobalTracer().spanBuilder("gets").startSpan();
+            try (Scope scope = span.makeCurrent()) {
               long rk = rowKeyQueue.take();
               Result r1 = ht.get(new Get(Bytes.toBytes(rk)));
               if (r1 != null) {
@@ -185,10 +185,12 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
               if (r2 != null) {
                 accum |= Bytes.toLong(r2.getRow());
               }
-              TraceUtil.addTimelineAnnotation("Accum = " + accum);
+              span.addEvent("Accum = " + accum);
 
             } catch (IOException|InterruptedException ie) {
               // IGNORED
+            } finally {
+              span.end();
             }
           }
 
@@ -199,18 +201,22 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   }
 
   private void createTable() throws IOException {
-    TraceUtil.addSampler(Sampler.ALWAYS);
-    try (TraceScope scope = TraceUtil.createTrace("createTable")) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("createTable").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       util.createTable(tableName, familyName);
+    } finally {
+      span.end();
     }
   }
 
   private void deleteTable() throws IOException {
-    TraceUtil.addSampler(Sampler.ALWAYS);
-    try (TraceScope scope = TraceUtil.createTrace("deleteTable")) {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("deleteTable").startSpan();
+    try (Scope scope = span.makeCurrent()) {
       if (admin.tableExists(tableName)) {
         util.deleteTable(tableName);
       }
+    } finally {
+      span.end();
     }
   }
 
@@ -218,9 +224,9 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
     LinkedBlockingQueue<Long> rowKeys = new LinkedBlockingQueue<>(25000);
     BufferedMutator ht = util.getConnection().getBufferedMutator(this.tableName);
     byte[] value = new byte[300];
-    TraceUtil.addSampler(Sampler.ALWAYS);
     for (int x = 0; x < 5000; x++) {
-      try (TraceScope traceScope = TraceUtil.createTrace("insertData")) {
+      Span span = TraceUtil.getGlobalTracer().spanBuilder("insertData").startSpan();
+      try (Scope scope = span.makeCurrent()) {
         for (int i = 0; i < 5; i++) {
           long rk = random.nextLong();
           rowKeys.add(rk);
@@ -234,6 +240,8 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
         if ((x % 1000) == 0) {
           admin.flush(tableName);
         }
+      } finally {
+        span.end();
       }
     }
     admin.flush(tableName);
@@ -254,12 +262,5 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
     }
     return this.util;
-  }
-
-  private void setupReceiver() {
-    Configuration conf = new Configuration(util.getConfiguration());
-    conf.setBoolean("hbase.zipkin.is-in-client-mode", true);
-
-    this.receiverHost = SpanReceiverHost.getInstance(conf);
   }
 }
