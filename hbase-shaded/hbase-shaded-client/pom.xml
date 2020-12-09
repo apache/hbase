@@ -78,6 +78,7 @@
                                     <exclude>log4j:*</exclude>
                                     <exclude>commons-logging:*</exclude>
                                     <exclude>org.javassist:*</exclude>
+                                    <exclude>io.opentelemetry:*</exclude>
                                 </excludes>
                             </artifactSet>
                         </configuration>
