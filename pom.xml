@@ -1212,6 +1212,25 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-htrace</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.apache.htrace:**</exclude>
+                  </excludes>
+                  <message>
+                    Use OpenTelemetry instead
+                  </message>
+                  <searchTransitive>false</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <!-- must check after LICENSE is built at 'generate-resources' -->
             <phase>process-resources</phase>
@@ -1320,9 +1339,10 @@
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
                   <includeTestCode>true</includeTestCode>
                   <commentLineBufferSize>512</commentLineBufferSize>
-                  <reason>Do not use htrace v3</reason>
+                  <reason>Do not use htrace</reason>
                   <bannedImports>
                     <bannedImport>org.htrace.**</bannedImport>
+                    <bannedImport>org.apache.htrace.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
@@ -1645,7 +1665,7 @@
     <jruby.version>9.2.13.0</jruby.version>
     <junit.version>4.13</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
-    <htrace.version>4.2.0-incubating</htrace.version>
+    <opentelemetry.version>0.12.0</opentelemetry.version>
     <log4j.version>1.2.17</log4j.version>
     <mockito-core.version>2.28.2</mockito-core.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
@@ -2312,9 +2332,9 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.apache.htrace</groupId>
-        <artifactId>htrace-core4</artifactId>
-        <version>${htrace.version}</version>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-api</artifactId>
+        <version>${opentelemetry.version}</version>
       </dependency>
       <dependency>
         <groupId>com.lmax</groupId>

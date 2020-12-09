@@ -25,6 +25,8 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -58,8 +60,6 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
-import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -67,10 +67,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.core.ProbabilitySampler;
-import org.apache.htrace.core.Sampler;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,12 +124,10 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     private final boolean noSync;
     private final HRegion region;
     private final int syncInterval;
-    private final Sampler loopSampler;
     private final NavigableMap<byte[], Integer> scopes;
 
     WALPutBenchmark(final HRegion region, final TableDescriptor htd,
-        final long numIterations, final boolean noSync, final int syncInterval,
-        final double traceFreq) {
+        final long numIterations, final boolean noSync, final int syncInterval) {
       this.numIterations = numIterations;
       this.noSync = noSync;
       this.syncInterval = syncInterval;
@@ -143,24 +137,6 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       for(byte[] fam : htd.getColumnFamilyNames()) {
         scopes.put(fam, 0);
       }
-      String spanReceivers = getConf().get("hbase.trace.spanreceiver.classes");
-      if (spanReceivers == null || spanReceivers.isEmpty()) {
-        loopSampler = Sampler.NEVER;
-      } else {
-        if (traceFreq <= 0.0) {
-          LOG.warn("Tracing enabled but traceFreq=0.");
-          loopSampler = Sampler.NEVER;
-        } else if (traceFreq >= 1.0) {
-          loopSampler = Sampler.ALWAYS;
-          if (numIterations > 1000) {
-            LOG.warn("Full tracing of all iterations will produce a lot of data. Be sure your"
-              + " SpanReceiver can keep up.");
-          }
-        } else {
-          getConf().setDouble("hbase.sampler.fraction", traceFreq);
-          loopSampler = new ProbabilitySampler(new HBaseHTraceConfiguration(getConf()));
-        }
-      }
     }
 
     @Override
@@ -169,13 +145,14 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       byte[] value = new byte[valueSize];
       Random rand = new Random(Thread.currentThread().getId());
       WAL wal = region.getWAL();
-
-      try (TraceScope threadScope = TraceUtil.createTrace("WALPerfEval." + Thread.currentThread().getName())) {
+      Span threadSpan = TraceUtil.getGlobalTracer()
+        .spanBuilder("WALPerfEval." + Thread.currentThread().getName()).startSpan();
+      try (Scope threadScope = threadSpan.makeCurrent()) {
         int lastSync = 0;
-        TraceUtil.addSampler(loopSampler);
         for (int i = 0; i < numIterations; ++i) {
-          assert Tracer.getCurrentSpan() == threadScope.getSpan() : "Span leak detected.";
-          try (TraceScope loopScope = TraceUtil.createTrace("runLoopIter" + i)) {
+          assert Span.current() == threadSpan : "Span leak detected.";
+          Span loopSpan = TraceUtil.getGlobalTracer().spanBuilder("runLoopIter" + i).startSpan();
+          try (Scope loopScope = loopSpan.makeCurrent()) {
             long now = System.nanoTime();
             Put put = setupPut(rand, key, value, numFamilies);
             WALEdit walEdit = new WALEdit();
@@ -191,10 +168,14 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
               }
             }
             latencyHistogram.update(System.nanoTime() - now);
+          } finally {
+            loopSpan.end();
           }
         }
       } catch (Exception e) {
         LOG.error(getClass().getSimpleName() + " Thread failed", e);
+      } finally {
+        threadSpan.end();
       }
     }
   }
@@ -215,9 +196,6 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     boolean compress = false;
     String cipher = null;
     int numRegions = 1;
-    String spanReceivers = getConf().get("hbase.trace.spanreceiver.classes");
-    boolean trace = spanReceivers != null && !spanReceivers.isEmpty();
-    double traceFreq = 1.0;
     // Process command line args
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
@@ -257,7 +235,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         } else if (cmd.equals("-regions")) {
           numRegions = Integer.parseInt(args[++i]);
         } else if (cmd.equals("-traceFreq")) {
-          traceFreq = Double.parseDouble(args[++i]);
+          // keep it here for compatible
+          System.err.println("-traceFreq is not supported any more");
         } else if (cmd.equals("-h")) {
           printUsageAndExit();
         } else if (cmd.equals("--help")) {
@@ -306,13 +285,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     CommonFSUtils.setFsDefault(getConf(), CommonFSUtils.getRootDir(getConf()));
     FileSystem fs = FileSystem.get(getConf());
     LOG.info("FileSystem={}, rootDir={}", fs, rootRegionDir);
-
-    SpanReceiverHost receiverHost = trace ? SpanReceiverHost.getInstance(getConf()) : null;
-    final Sampler sampler = trace ? Sampler.ALWAYS : Sampler.NEVER;
-    TraceUtil.addSampler(sampler);
-    TraceScope scope = TraceUtil.createTrace("WALPerfEval");
-
-    try {
+    Span span = TraceUtil.getGlobalTracer().spanBuilder("WALPerfEval").startSpan();
+    try (Scope scope = span.makeCurrent()){
       rootRegionDir = rootRegionDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
       cleanRegionRootDir(fs, rootRegionDir);
       CommonFSUtils.setRootDir(getConf(), rootRegionDir);
@@ -329,8 +303,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           // a table per desired region means we can avoid carving up the key space
           final TableDescriptor htd = createHTableDescriptor(i, numFamilies);
           regions[i] = openRegion(fs, rootRegionDir, htd, wals, roll, roller);
-          benchmarks[i] = TraceUtil.wrap(new WALPutBenchmark(regions[i], htd, numIterations, noSync,
-              syncInterval, traceFreq), "");
+          benchmarks[i] =
+            new WALPutBenchmark(regions[i], htd, numIterations, noSync, syncInterval);
         }
         ConsoleReporter reporter = ConsoleReporter.forRegistry(metrics).
           outputTo(System.out).convertRatesTo(TimeUnit.SECONDS).filter(MetricFilter.ALL).build();
@@ -379,19 +353,14 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         if (cleanup) cleanRegionRootDir(fs, rootRegionDir);
       }
     } finally {
+      span.end();
       // We may be called inside a test that wants to keep on using the fs.
       if (!noclosefs) {
         fs.close();
       }
-      if (scope != null) {
-        scope.close();
-      }
-      if (receiverHost != null) {
-        receiverHost.closeReceivers();
-      }
     }
 
-    return(0);
+    return 0;
   }
 
   private static TableDescriptor createHTableDescriptor(final int regionNum,
