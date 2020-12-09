@@ -1004,8 +1004,8 @@
               <rules>
                 <bannedDependencies>
                   <excludes>
-                    <exclude>>org.glassfish.jersey.containers:**</exclude>
-                    <exclude>>org.glassfish.jersey.core:**</exclude>
+                    <exclude>org.glassfish.jersey.containers:**</exclude>
+                    <exclude>org.glassfish.jersey.core:**</exclude>
                   </excludes>
                   <message>
                     Use shaded jersey instead
