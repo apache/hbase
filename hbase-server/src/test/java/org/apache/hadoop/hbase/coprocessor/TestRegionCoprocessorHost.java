@@ -22,11 +22,14 @@ import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.REGION_COPROCE
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR;
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.USER_COPROCESSORS_ENABLED_CONF_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Optional;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -58,7 +61,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import java.io.IOException;
 
 @Category({SmallTests.class})
 public class TestRegionCoprocessorHost {
@@ -79,19 +81,36 @@ public class TestRegionCoprocessorHost {
 
   @Before
   public void setup() throws IOException {
+    init(null);
+  }
+
+  private void init(Boolean flag) throws IOException {
     conf = HBaseConfiguration.create();
     conf.setBoolean(COPROCESSORS_ENABLED_CONF_KEY, true);
     conf.setBoolean(USER_COPROCESSORS_ENABLED_CONF_KEY, true);
     TableName tableName = TableName.valueOf(name.getMethodName());
     regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
-    // config a same coprocessor with system coprocessor
-    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-      .setCoprocessor(SimpleRegionObserver.class.getName()).build();
+    TableDescriptor tableDesc = null;
+    if (flag == null) {
+      // configure a coprocessor which override postScannerFilterRow
+      tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+          .setCoprocessor(SimpleRegionObserver.class.getName()).build();
+    } else if (flag) {
+      // configure a coprocessor which don't override postScannerFilterRow
+      tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+          .setCoprocessor(TempRegionObserver.class.getName()).build();
+    } else {
+      // configure two coprocessors, one don't override postScannerFilterRow but another one does
+      conf.set(REGION_COPROCESSOR_CONF_KEY, TempRegionObserver.class.getName());
+      tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+          .setCoprocessor(SimpleRegionObserver.class.getName()).build();
+    }
     region = mock(HRegion.class);
     when(region.getRegionInfo()).thenReturn(regionInfo);
     when(region.getTableDescriptor()).thenReturn(tableDesc);
     rsServices = mock(RegionServerServices.class);
   }
+
   @Test
   public void testLoadDuplicateCoprocessor() throws Exception {
     conf.setBoolean(SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR, true);
@@ -158,6 +177,27 @@ public class TestRegionCoprocessorHost {
     verifyScanInfo(newScanInfo);
   }
 
+  @Test
+  public void testPostScannerFilterRow() throws IOException {
+    // By default SimpleRegionObserver is set as region coprocessor which implements
+    // postScannerFilterRow
+    RegionCoprocessorHost host = new RegionCoprocessorHost(region, rsServices, conf);
+    assertTrue("Region coprocessor implement postScannerFilterRow",
+      host.hasCustomPostScannerFilterRow());
+
+    // Set a region CP which doesn't implement postScannerFilterRow
+    init(true);
+    host = new RegionCoprocessorHost(region, rsServices, conf);
+    assertFalse("Region coprocessor implement postScannerFilterRow",
+      host.hasCustomPostScannerFilterRow());
+
+    // Set multiple region CPs, in which one implements postScannerFilterRow
+    init(false);
+    host = new RegionCoprocessorHost(region, rsServices, conf);
+    assertTrue("Region coprocessor doesn't implement postScannerFilterRow",
+      host.hasCustomPostScannerFilterRow());
+  }
+
   private void verifyScanInfo(ScanInfo newScanInfo) {
     assertEquals(KeepDeletedCells.TRUE, newScanInfo.getKeepDeletedCells());
     assertEquals(MAX_VERSIONS, newScanInfo.getMaxVersions());
@@ -175,4 +215,13 @@ public class TestRegionCoprocessorHost {
       CellComparator.getInstance(), true);
   }
 
+  /*
+   * Simple region coprocessor which doesn't override postScannerFilterRow
+   */
+  public static class TempRegionObserver implements RegionCoprocessor, RegionObserver {
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+  }
 }
