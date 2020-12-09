@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.client;
 
+import io.opentelemetry.api.trace.Tracer;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -49,7 +50,6 @@ import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -572,13 +572,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       asyncProcess.incTaskCounters(multiAction.getRegions(), server);
       SingleServerRequestRunnable runnable = createSingleServerRequest(
               multiAction, numAttempt, server, callsInProgress);
-      Tracer tracer = Tracer.curThreadTracer();
 
-      if (tracer == null) {
-        return Collections.singletonList(runnable);
-      } else {
-        return Collections.singletonList(tracer.wrap(runnable, "AsyncProcess.sendMultiAction"));
-      }
+      // remove trace for runnable because HBASE-25373 and OpenTelemetry do not cover TraceRunnable
+      return Collections.singletonList(runnable);
     }
 
     // group the actions by the amount of delay
@@ -598,12 +594,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     List<Runnable> toReturn = new ArrayList<>(actions.size());
     for (DelayingRunner runner : actions.values()) {
       asyncProcess.incTaskCounters(runner.getActions().getRegions(), server);
-      String traceText = "AsyncProcess.sendMultiAction";
       Runnable runnable = createSingleServerRequest(runner.getActions(), numAttempt, server, callsInProgress);
       // use a delay runner only if we need to sleep for some time
       if (runner.getSleepTime() > 0) {
         runner.setRunner(runnable);
-        traceText = "AsyncProcess.clientBackoff.sendMultiAction";
         runnable = runner;
         if (asyncProcess.connection.getConnectionMetrics() != null) {
           asyncProcess.connection.getConnectionMetrics()
@@ -614,7 +608,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           asyncProcess.connection.getConnectionMetrics().incrNormalRunners();
         }
       }
-      runnable = TraceUtil.wrap(runnable, traceText);
+      // remove trace for runnable because HBASE-25373 and OpenTelemetry do not cover TraceRunnable
       toReturn.add(runnable);
 
     }

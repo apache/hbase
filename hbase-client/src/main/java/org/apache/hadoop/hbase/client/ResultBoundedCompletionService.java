@@ -168,7 +168,8 @@ public class ResultBoundedCompletionService<V> {
 
   public void submit(RetryingCallable<V> task, int callTimeout, int id) {
     QueueingFuture<V> newFuture = new QueueingFuture<>(task, callTimeout, id);
-    executor.execute(TraceUtil.wrap(newFuture, "ResultBoundedCompletionService.submit"));
+    // remove trace for runnable because HBASE-25373 and OpenTelemetry do not cover TraceRunnable
+    executor.execute(newFuture);
     tasks[id] = newFuture;
   }
 
