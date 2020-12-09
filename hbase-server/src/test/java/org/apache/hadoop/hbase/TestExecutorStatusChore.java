@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -51,7 +52,7 @@ public class TestExecutorStatusChore {
   public void testMetricsCollect() throws Exception {
     int maxThreads = 5;
     int maxTries = 10;
-    int sleepInterval = 10;
+    int sleepInterval = 1000;
 
     Server mockedServer = mock(Server.class);
     when(mockedServer.getConfiguration()).thenReturn(HBaseConfiguration.create());
@@ -70,10 +71,9 @@ public class TestExecutorStatusChore {
 
     AtomicBoolean lock = new AtomicBoolean(true);
     AtomicInteger counter = new AtomicInteger(0);
-
     for (int i = 0; i < maxThreads + 1; i++) {
-      executorService.submit(new TestEventHandler(mockedServer,
-          EventType.RS_PARALLEL_SEEK, lock, counter));
+      executorService
+        .submit(new TestEventHandler(mockedServer, EventType.RS_PARALLEL_SEEK, lock, counter));
     }
 
     // The TestEventHandler will increment counter when it starts.
