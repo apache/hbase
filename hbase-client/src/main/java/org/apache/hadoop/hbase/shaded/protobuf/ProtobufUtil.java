@@ -1436,6 +1436,16 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResult(final Result result) {
+    return toResult(result, false);
+  }
+
+  /**
+   *  Convert a client Result to a protocol buffer Result
+   * @param result the client Result to convert
+   * @param encodeTags whether to includeTags in converted protobuf result or not.
+   * @return the converted protocol buffer Result
+   */
+  public static ClientProtos.Result toResult(final Result result, boolean encodeTags) {
     if (result.getExists() != null) {
       return toResult(result.getExists(), result.isStale());
     }
@@ -1447,7 +1457,7 @@ public final class ProtobufUtil {
 
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
     for (Cell c : cells) {
-      builder.addCell(toCell(c));
+      builder.addCell(toCell(c, encodeTags));
     }
 
     builder.setStale(result.isStale());
@@ -1494,6 +1504,17 @@ public final class ProtobufUtil {
    * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto) {
+    return toResult(proto, false);
+  }
+
+  /**
+   * Convert a protocol buffer Result to a client Result
+   *
+   * @param proto the protocol buffer Result to convert
+   * @param decodeTags whether to decode tags into converted client Result
+   * @return the converted client Result
+   */
+  public static Result toResult(final ClientProtos.Result proto, boolean decodeTags) {
     if (proto.hasExists()) {
       if (proto.getStale()) {
         return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE :EMPTY_RESULT_EXISTS_FALSE_STALE;
@@ -1509,7 +1530,7 @@ public final class ProtobufUtil {
     List<Cell> cells = new ArrayList<>(values.size());
     ExtendedCellBuilder builder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     for (CellProtos.Cell c : values) {
-      cells.add(toCell(builder, c));
+      cells.add(toCell(builder, c, decodeTags));
     }
     return Result.create(cells, null, proto.getStale(), proto.getPartial());
   }
@@ -1552,7 +1573,7 @@ public final class ProtobufUtil {
       if (cells == null) cells = new ArrayList<>(values.size());
       ExtendedCellBuilder builder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
       for (CellProtos.Cell c: values) {
-        cells.add(toCell(builder, c));
+        cells.add(toCell(builder, c, false));
       }
     }
 
@@ -2000,7 +2021,7 @@ public final class ProtobufUtil {
     throw new IOException(se);
   }
 
-  public static CellProtos.Cell toCell(final Cell kv) {
+  public static CellProtos.Cell toCell(final Cell kv, boolean encodeTags) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
     CellProtos.Cell.Builder kvbuilder = CellProtos.Cell.newBuilder();
@@ -2015,7 +2036,10 @@ public final class ProtobufUtil {
       kvbuilder.setTimestamp(kv.getTimestamp());
       kvbuilder.setValue(wrap(((ByteBufferExtendedCell) kv).getValueByteBuffer(),
         ((ByteBufferExtendedCell) kv).getValuePosition(), kv.getValueLength()));
-      // TODO : Once tags become first class then we may have to set tags to kvbuilder.
+      if (encodeTags) {
+        kvbuilder.setTags(wrap(((ByteBufferExtendedCell) kv).getTagsByteBuffer(),
+          ((ByteBufferExtendedCell) kv).getTagsPosition(), kv.getTagsLength()));
+      }
     } else {
       kvbuilder.setRow(
         UnsafeByteOperations.unsafeWrap(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
@@ -2027,6 +2051,10 @@ public final class ProtobufUtil {
       kvbuilder.setTimestamp(kv.getTimestamp());
       kvbuilder.setValue(UnsafeByteOperations.unsafeWrap(kv.getValueArray(), kv.getValueOffset(),
         kv.getValueLength()));
+      if (encodeTags) {
+        kvbuilder.setTags(UnsafeByteOperations.unsafeWrap(kv.getTagsArray(), kv.getTagsOffset(),
+          kv.getTagsLength()));
+      }
     }
     return kvbuilder.build();
   }
@@ -2038,15 +2066,19 @@ public final class ProtobufUtil {
     return UnsafeByteOperations.unsafeWrap(dup);
   }
 
-  public static Cell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell) {
-    return cellBuilder.clear()
-            .setRow(cell.getRow().toByteArray())
-            .setFamily(cell.getFamily().toByteArray())
-            .setQualifier(cell.getQualifier().toByteArray())
-            .setTimestamp(cell.getTimestamp())
-            .setType((byte) cell.getCellType().getNumber())
-            .setValue(cell.getValue().toByteArray())
-            .build();
+  public static Cell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell,
+                            boolean decodeTags) {
+    ExtendedCellBuilder builder = cellBuilder.clear()
+        .setRow(cell.getRow().toByteArray())
+        .setFamily(cell.getFamily().toByteArray())
+        .setQualifier(cell.getQualifier().toByteArray())
+        .setTimestamp(cell.getTimestamp())
+        .setType((byte) cell.getCellType().getNumber())
+        .setValue(cell.getValue().toByteArray());
+    if (decodeTags && cell.hasTags()) {
+      builder.setTags(cell.getTags().toByteArray());
+    }
+    return builder.build();
   }
 
   public static HBaseProtos.NamespaceDescriptor toProtoNamespaceDescriptor(NamespaceDescriptor ns) {
