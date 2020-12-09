@@ -38,6 +38,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
     python-pip='9.0.1-*' \
     subversion='1.9.7-*' \
     wget='1.19.4-*' \
+    openssh-client='1:7*' \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
   && update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java \
