@@ -1442,7 +1442,12 @@ public final class ProtobufUtil {
   /**
    *  Convert a client Result to a protocol buffer Result
    * @param result the client Result to convert
-   * @param encodeTags whether to includeTags in converted protobuf result or not.
+   * @param encodeTags whether to includeTags in converted protobuf result or not
+   *                   When @encodeTags is set to true, it will return all the tags in the response.
+   *                   These tags may contain some sensitive data like acl permissions, etc.
+   *                   Only the tools like Export, Import which needs to take backup needs to set
+   *                   it to true so that cell tags are persisted in backup.
+   *                   Refer to HBASE-25246 for more context.
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResult(final Result result, boolean encodeTags) {
@@ -1512,6 +1517,11 @@ public final class ProtobufUtil {
    *
    * @param proto the protocol buffer Result to convert
    * @param decodeTags whether to decode tags into converted client Result
+   *                   When @decodeTags is set to true, it will decode all the tags from the
+   *                   response. These tags may contain some sensitive data like acl permissions,
+   *                   etc. Only the tools like Export, Import which needs to take backup needs to
+   *                   set it to true so that cell tags are persisted in backup.
+   *                   Refer to HBASE-25246 for more context.
    * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto, boolean decodeTags) {
