@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.MetricsMaster.convertToProcedureMetrics;
-
+import java.util.Set;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -86,6 +86,14 @@ public class MetricsAssignmentManager {
    */
   public void updateRitDuration(long duration) {
     assignmentManagerSource.updateRitDuration(duration);
+  }
+
+  /**
+   * update the region hashes and states for regions in transition
+   * @param ritHashesAndStates set of "rit_hash:rit_state"
+   */
+  public void updateRITHashesAndStates(Set<String> ritHashesAndStates) {
+    assignmentManagerSource.updateRITHashesAndStates(ritHashesAndStates);
   }
 
   /*

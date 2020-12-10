@@ -68,6 +68,21 @@ public class RegionStates {
   public final static RegionStateStampComparator REGION_STATE_STAMP_COMPARATOR =
       new RegionStateStampComparator();
 
+  // This comparator sorts the RegionStates by duration then Region name.
+  // Comparing by duration alone can lead us to discard different RegionStates that happen
+  // to share a duration.
+  private static class RegionStateDurationComparator implements Comparator<RegionState> {
+    @Override
+    public int compare(RegionState l, RegionState r) {
+      return Long.compare(l.getRitDuration(), r.getRitDuration()) == 0 ?
+        Bytes.compareTo(l.getRegion().getRegionName(), r.getRegion().getRegionName()) :
+        Long.compare(l.getRitDuration(), r.getRitDuration());
+    }
+  }
+
+  public final static RegionStateDurationComparator REGION_STATE_DURATION_COMPARATOR =
+    new RegionStateDurationComparator();
+
   // TODO: Replace the ConcurrentSkipListMaps
   /**
    * RegionName -- i.e. RegionInfo.getRegionName() -- as bytes to {@link RegionStateNode}
@@ -638,6 +653,17 @@ public class RegionStates {
 
   public SortedSet<RegionState> getRegionsInTransitionOrderedByTimestamp() {
     final SortedSet<RegionState> rit = new TreeSet<RegionState>(REGION_STATE_STAMP_COMPARATOR);
+    for (RegionStateNode node: regionInTransition.values()) {
+      rit.add(node.toRegionState());
+    }
+    return rit;
+  }
+
+  /**
+   * Get regions in transition and their states, sorted by duration desc
+   */
+  public synchronized SortedSet<RegionState> getRegionsInTransitionOrderedByDuration() {
+    final SortedSet<RegionState> rit = new TreeSet<RegionState>(Collections.reverseOrder(REGION_STATE_DURATION_COMPARATOR));
     for (RegionStateNode node: regionInTransition.values()) {
       rit.add(node.toRegionState());
     }
