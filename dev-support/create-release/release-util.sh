@@ -512,7 +512,7 @@ function get_jira_name {
   if [[ -z "$jira_name" ]]; then
     error "Sorry, can't determine the Jira name for project $project"
   fi
-  echo "$jira_name"
+  log "$jira_name"
 }
 
 # Update the CHANGES.md
