@@ -340,8 +340,8 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
       Path path = context.getFilePath();
       checkFileVersion(path);
       this.hfileContext = createHFileContext(path, trailer, conf);
-    } catch (Throwable t) {
       context.getInputStreamWrapper().unbuffer();
+    } catch (Throwable t) {
       IOUtils.closeQuietly(context.getInputStreamWrapper());
       throw new CorruptHFileException("Problem reading HFile Trailer from file "
           + context.getFilePath(), t);
@@ -353,28 +353,36 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
    */
   public void initMetaAndIndex(HFile.Reader reader) throws IOException {
     ReaderContext context = reader.getContext();
-    HFileBlock.FSReader blockReader = reader.getUncachedBlockReader();
-    // Initialize an block iterator, and parse load-on-open blocks in the following.
-    blockIter = blockReader.blockRange(trailer.getLoadOnOpenDataOffset(),
-        context.getFileSize() - trailer.getTrailerSize());
-    // Data index. We also read statistics about the block index written after
-    // the root level.
-    this.dataIndexReader = new HFileBlockIndex
-        .CellBasedKeyBlockIndexReader(trailer.createComparator(), trailer.getNumDataIndexLevels());
-    dataIndexReader.readMultiLevelIndexRoot(blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
-        trailer.getDataIndexCount());
-    reader.setDataBlockIndexReader(dataIndexReader);
-    // Meta index.
-    this.metaIndexReader = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
-    metaIndexReader.readRootIndex(blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
+    try {
+      HFileBlock.FSReader blockReader = reader.getUncachedBlockReader();
+      // Initialize an block iterator, and parse load-on-open blocks in the following.
+      blockIter = blockReader.blockRange(trailer.getLoadOnOpenDataOffset(),
+          context.getFileSize() - trailer.getTrailerSize());
+      // Data index. We also read statistics about the block index written after
+      // the root level.
+      this.dataIndexReader =
+        new HFileBlockIndex.CellBasedKeyBlockIndexReader(trailer.createComparator(), trailer.getNumDataIndexLevels());
+      dataIndexReader
+        .readMultiLevelIndexRoot(blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
+      reader.setDataBlockIndexReader(dataIndexReader);
+      // Meta index.
+      this.metaIndexReader = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
+      metaIndexReader.readRootIndex(blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
         trailer.getMetaIndexCount());
-    reader.setMetaBlockIndexReader(metaIndexReader);
-    loadMetaInfo(blockIter, hfileContext);
-    reader.setDataBlockEncoder(HFileDataBlockEncoderImpl.createFromFileInfo(this));
-    // Load-On-Open info
-    HFileBlock b;
-    while ((b = blockIter.nextBlock()) != null) {
-      loadOnOpenBlocks.add(b);
+      reader.setMetaBlockIndexReader(metaIndexReader);
+      loadMetaInfo(blockIter, hfileContext);
+      reader.setDataBlockEncoder(HFileDataBlockEncoderImpl.createFromFileInfo(this));
+      // Load-On-Open info
+      HFileBlock b;
+      while ((b = blockIter.nextBlock()) != null) {
+        loadOnOpenBlocks.add(b);
+      }
+      // close the block reader
+      context.getInputStreamWrapper().unbuffer();
+    } catch (Throwable t) {
+      IOUtils.closeQuietly(context.getInputStreamWrapper());
+      throw new CorruptHFileException("Problem reading data index and meta index from file "
+        + context.getFilePath(), t);
     }
   }
 
