@@ -1425,6 +1425,13 @@ public class AssignmentManager {
       this.statTimestamp = EnvironmentEdgeManager.currentTime();
       update(regionStates.getRegionsStateInTransition(), statTimestamp);
       update(regionStates.getRegionFailedOpen(), statTimestamp);
+
+      if (ritsOverThreshold != null && !ritsOverThreshold.isEmpty()) {
+        LOG.trace("RIT hashes and states: " +
+          ritsOverThreshold.entrySet().stream()
+            .map(e -> e.getKey() + ":" + e.getValue().getState().name())
+            .collect(Collectors.joining("\n")));
+      }
     }
 
     private void update(final Collection<RegionState> regions, final long currentTime) {
