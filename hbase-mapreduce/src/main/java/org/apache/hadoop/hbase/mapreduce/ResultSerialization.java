@@ -128,7 +128,7 @@ public class ResultSerialization extends Configured implements Serialization<Res
     @Override
     public Result deserialize(Result mutation) throws IOException {
       ClientProtos.Result proto = ClientProtos.Result.parseDelimitedFrom(in);
-      return ProtobufUtil.toResult(proto);
+      return ProtobufUtil.toResult(proto, true);
     }
 
     @Override
@@ -152,7 +152,7 @@ public class ResultSerialization extends Configured implements Serialization<Res
 
     @Override
     public void serialize(Result result) throws IOException {
-      ProtobufUtil.toResult(result).writeDelimitedTo(out);
+      ProtobufUtil.toResult(result, true).writeDelimitedTo(out);
     }
   }
 }
