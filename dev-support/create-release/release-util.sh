@@ -29,7 +29,7 @@ PUBLISH_PROFILES=("-P" "apache-release,release")
 set -e
 
 function error {
-  echo "Error: $*" >&2
+  log "Error: $*" >&2
   exit 1
 }
 
@@ -54,8 +54,12 @@ function parse_version {
 function banner {
   local msg="$1"
   echo "========================"
-  echo "=== ${msg}"
+  log "${msg}"
   echo
+}
+
+function log {
+  echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") ${1}"
 }
 
 # current number of seconds since epoch
@@ -71,17 +75,17 @@ function run_silent {
   local -i stop_time
 
   banner "${BANNER}"
-  echo "Command: $*"
-  echo "Log file: $LOG_FILE"
+  log "Command: $*"
+  log "Log file: $LOG_FILE"
   start_time="$(get_ctime)"
 
   if ! "$@" 1>"$LOG_FILE" 2>&1; then
-    echo "Command FAILED. Check full logs for details."
+    log "Command FAILED. Check full logs for details."
     tail "$LOG_FILE"
     exit 1
   fi
   stop_time="$(get_ctime)"
-  echo "=== SUCCESS ($((stop_time - start_time)) seconds)"
+  log "SUCCESS ($((stop_time - start_time)) seconds)"
 }
 
 function fcreate_secure {
@@ -147,7 +151,7 @@ function get_release_info {
   local version
   version="$(curl -s "$ASF_REPO_WEBUI;a=blob_plain;f=pom.xml;hb=refs/heads/$GIT_BRANCH" |
     parse_version)"
-  echo "Current branch VERSION is $version."
+  log "Current branch VERSION is $version."
 
   NEXT_VERSION="$version"
   RELEASE_VERSION=""
@@ -199,7 +203,7 @@ function get_release_info {
   if git ls-remote --tags "$ASF_REPO" "$RELEASE_TAG" | grep -q "refs/tags/${RELEASE_TAG}$" ; then
     read -r -p "$RELEASE_TAG already exists. Continue anyway [y/n]? " ANSWER
     if [ "$ANSWER" != "y" ]; then
-      echo "Exiting."
+      log "Exiting."
       exit 1
     fi
     SKIP_TAG=1
@@ -209,7 +213,7 @@ function get_release_info {
 
   GIT_REF="$RELEASE_TAG"
   if is_dry_run; then
-    echo "This is a dry run. If tag does not actually exist, please confirm the ref that will be built for testing."
+    log "This is a dry run. If tag does not actually exist, please confirm the ref that will be built for testing."
     GIT_REF="$(read_config "GIT_REF" "$GIT_REF")"
   fi
   export GIT_REF
@@ -252,7 +256,7 @@ EOF
 
   read -r -p "Is this info correct [y/n]? " ANSWER
   if [ "$ANSWER" != "y" ]; then
-    echo "Exiting."
+    log "Exiting."
     exit 1
   fi
   GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
@@ -279,7 +283,7 @@ function is_debug {
 function check_get_passwords {
   for env in "$@"; do
     if [ -z "${!env}" ]; then
-      echo "The environment variable $env is not set. Please enter the password or passphrase."
+      log "The environment variable $env is not set. Please enter the password or passphrase."
       echo
       # shellcheck disable=SC2229
       stty -echo && printf "%s : " "$env" && read -r "$env" && printf '\n' && stty echo
@@ -293,7 +297,7 @@ function check_needed_vars {
   local missing=0
   for env in "$@"; do
     if [ -z "${!env}" ]; then
-      echo "$env must be set to run this script"
+      log "$env must be set to run this script"
       (( missing++ ))
     else
       # shellcheck disable=SC2163
@@ -322,7 +326,7 @@ function init_java {
     error "JAVA_HOME is not set."
   fi
   JAVA_VERSION=$("${JAVA_HOME}"/bin/javac -version 2>&1 | cut -d " " -f 2)
-  echo "java version: $JAVA_VERSION"
+  log "java version: $JAVA_VERSION"
   export JAVA_VERSION
 }
 
@@ -330,7 +334,7 @@ function init_python {
   if ! [ -x "$(command -v python2)"  ]; then
     error 'python2 needed by yetus. Install or add link? E.g: sudo ln -sf /usr/bin/python2.7 /usr/local/bin/python2'
   fi
-  echo "python version: $(python2 --version)"
+  log "python version: $(python2 --version)"
 }
 
 # Set MVN
@@ -357,7 +361,7 @@ function init_yetus {
   fi
   # Work around yetus bug by asking test-patch for the version instead of rdm.
   YETUS_VERSION=$("${YETUS_HOME}/bin/test-patch" --version)
-  echo "Apache Yetus version ${YETUS_VERSION}"
+  log "Apache Yetus version ${YETUS_VERSION}"
 }
 
 function configure_maven {
@@ -409,7 +413,7 @@ function git_clone_overwrite {
 
   if [[ -z "${GIT_REPO}" ]]; then
     asf_repo="gitbox.apache.org/repos/asf/${PROJECT}.git"
-    echo "[INFO] clone will be of the gitbox repo for ${PROJECT}."
+    log "Clone will be of the gitbox repo for ${PROJECT}."
     if [ -n "${ASF_USERNAME}" ] && [ -n "${ASF_PASSWORD}" ]; then
       # Ugly!
       encoded_username=$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''', '')")
@@ -419,7 +423,7 @@ function git_clone_overwrite {
       GIT_REPO="https://${asf_repo}"
     fi
   else
-    echo "[INFO] clone will be of provided git repo."
+    log "Clone will be of provided git repo."
   fi
   # N.B. we use the shared flag because the clone is short lived and if a local repo repo was
   #      given this will let us refer to objects there directly instead of hardlinks or copying.
@@ -440,7 +444,7 @@ function start_step {
   if [ -z "${name}" ]; then
     name="${FUNCNAME[1]}"
   fi
-  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') ${name} start" >&2
+  log "${name} start" >&2
   get_ctime
 }
 
@@ -452,7 +456,7 @@ function stop_step {
     name="${FUNCNAME[1]}"
   fi
   stop_time="$(get_ctime)"
-  echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') ${name} stop ($((stop_time - start_time)) seconds)"
+  log "${name} stop ($((stop_time - start_time)) seconds)"
 }
 
 # Writes report into cwd!
@@ -488,7 +492,7 @@ function get_jira_name {
   if [[ -z "$jira_name" ]]; then
     error "Sorry, can't determine the Jira name for project $project"
   fi
-  echo "$jira_name"
+  log "$jira_name"
 }
 
 # Update the CHANGES.md
@@ -625,7 +629,7 @@ make_binary_release() {
     done
   else
     cd .. || exit
-    echo "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
+    log "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
   fi
 
   stop_step "${timing_token}"
@@ -648,7 +652,7 @@ function kick_gpg_agent {
 # Do maven command to set version into local pom
 function maven_set_version { #input: <version_to_set>
   local this_version="$1"
-  echo "${MVN[@]}" versions:set -DnewVersion="$this_version"
+  log "${MVN[@]}" versions:set -DnewVersion="$this_version"
   "${MVN[@]}" versions:set -DnewVersion="$this_version" | grep -v "no value" # silence logs
 }
 
@@ -679,8 +683,8 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   fi
   # Publish ${PROJECT} to Maven repo
   # shellcheck disable=SC2154
-  echo "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
-  echo "Publish version is $RELEASE_VERSION"
+  log "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
+  log "Publish version is $RELEASE_VERSION"
   # Coerce the requested version
   maven_set_version "$RELEASE_VERSION"
   # Prepare for signing
@@ -689,9 +693,8 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   if ! is_dry_run; then
     mvn_goals=("${mvn_goals[@]}" deploy)
   fi
-  echo "${MVN[@]}" -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
-      "${mvn_goals[@]}"
-  echo "Logging to ${mvn_log_file}.  This will take a while..."
+  log "${MVN[@]}" -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" "${mvn_goals[@]}"
+  log "Logging to ${mvn_log_file}.  This will take a while..."
   rm -f "$mvn_log_file"
   # The tortuous redirect in the next command allows mvn's stdout and stderr to go to mvn_log_file,
   # while also sending stderr back to the caller.
@@ -700,7 +703,7 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
       "${mvn_goals[@]}" 1>> "$mvn_log_file" 2> >( tee -a "$mvn_log_file" >&2 ); then
     error "Deploy build failed, for details see log at '$mvn_log_file'."
   fi
-  echo "BUILD SUCCESS."
+  log "BUILD SUCCESS."
   stop_step "${timing_token}"
   return 0
 }
