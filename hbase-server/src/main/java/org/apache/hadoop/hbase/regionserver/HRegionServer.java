@@ -3942,4 +3942,13 @@ public class HRegionServer extends Thread implements
   public CompactedHFilesDischarger getCompactedHFilesDischarger() {
     return compactedFileDischarger;
   }
+
+  /**
+   * Return pause time configured in {@link HConstants#HBASE_RPC_SHORTOPERATION_PAUSE_TIME}}
+   * @return pause time
+   */
+  @InterfaceAudience.Private
+  public long getRetryPauseTime() {
+    return this.retryPauseTime;
+  }
 }
