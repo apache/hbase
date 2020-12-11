@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.protobuf;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.util.Collections;
@@ -29,12 +31,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
@@ -55,6 +59,9 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestProtobufUtil {
+  private static final String TAG_STR = "tag-1";
+  private static final byte TAG_TYPE = (byte)10;
+
   @Test
   public void testException() throws IOException {
     NameBytesPair.Builder builder = NameBytesPair.newBuilder();
@@ -378,5 +385,54 @@ public class TestProtobufUtil {
             serverName.getVersionedBytes(), 1);
     assertEquals(serverName, rs.getServerName());
     assertEquals(rs.getState(), RegionState.State.OPEN);
+  }
+
+  /**
+   * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
+   * {@link ProtobufUtil#toCell(CellProtos.Cell, boolean)} conversion
+   * methods when it contains tags and encode/decode tags is set to true.
+   */
+  @Test
+  public void testCellConversionWithTags() {
+    Cell cell = getCellWithTags();
+    CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, true);
+    assertNotNull(protoCell);
+
+    Cell decodedCell = getCellFromProtoResult(protoCell, true);
+    List<Tag> decodedTags = Tag.asList(decodedCell.getTagsArray(), decodedCell.getTagsOffset(),
+        decodedCell.getTagsLength());
+    assertEquals(1,  decodedTags.size());
+    Tag decodedTag = decodedTags.get(0);
+    assertEquals(TAG_TYPE, decodedTag.getType());
+    assertEquals(TAG_STR, Bytes.toStringBinary(decodedTag.getValue()));
+  }
+
+  private Cell getCellWithTags() {
+    Tag tag = new Tag(TAG_TYPE, TAG_STR);
+    KeyValue kv = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("f1"),
+      Bytes.toBytes("q1"), 10l, Bytes.toBytes("value1"), new Tag[] {tag});
+    return kv;
+  }
+
+  private Cell getCellFromProtoResult(CellProtos.Cell protoCell, boolean decodeTags) {
+    return ProtobufUtil.toCell(protoCell, decodeTags);
+  }
+
+  /**
+   * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
+   * {@link ProtobufUtil#toCell(CellProtos.Cell, boolean)} conversion
+   * methods when it contains tags and encode/decode tags is set to false.
+   */
+  @Test
+  public void testCellConversionWithoutTags() {
+    Cell cell = getCellWithTags();
+    CellProtos.Cell protoCell =
+      ProtobufUtil.toCell(cell, false);
+    assertNotNull(protoCell);
+
+    Cell decodedCell = getCellFromProtoResult(protoCell, false);
+    List<Tag> decodedTags = Tag.asList(decodedCell.getTagsArray(), decodedCell.getTagsOffset(),
+      decodedCell.getTagsLength());
+    assertEquals(0,  decodedTags.size());
   }
 }

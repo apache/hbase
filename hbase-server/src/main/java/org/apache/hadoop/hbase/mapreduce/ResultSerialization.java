@@ -132,7 +132,7 @@ public class ResultSerialization extends Configured implements Serialization<Res
       ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
       ProtobufUtil.mergeDelimitedFrom(builder, in);
       ClientProtos.Result proto = builder.build();
-      return ProtobufUtil.toResult(proto);
+      return ProtobufUtil.toResult(proto, true);
     }
 
     @Override
@@ -156,7 +156,7 @@ public class ResultSerialization extends Configured implements Serialization<Res
 
     @Override
     public void serialize(Result result) throws IOException {
-      ProtobufUtil.toResult(result).writeDelimitedTo(out);
+      ProtobufUtil.toResult(result, true).writeDelimitedTo(out);
     }
   }
 }

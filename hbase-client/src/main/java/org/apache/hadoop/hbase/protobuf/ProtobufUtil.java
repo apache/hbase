@@ -1506,6 +1506,21 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResult(final Result result) {
+    return toResult(result, false);
+  }
+
+  /**
+   *  Convert a client Result to a protocol buffer Result
+   * @param result the client Result to convert
+   * @param encodeTags whether to includeTags in converted protobuf result or not
+   *                   When @encodeTags is set to true, it will return all the tags in the response.
+   *                   These tags may contain some sensitive data like acl permissions, etc.
+   *                   Only the tools like Export, Import which needs to take backup needs to set
+   *                   it to true so that cell tags are persisted in backup.
+   *                   Refer to HBASE-25246 for more context.
+   * @return the converted protocol buffer Result
+   */
+  public static ClientProtos.Result toResult(final Result result, boolean encodeTags) {
     if (result.getExists() != null) {
       return toResult(result.getExists(), result.isStale());
     }
@@ -1517,7 +1532,7 @@ public final class ProtobufUtil {
 
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
     for (Cell c : cells) {
-      builder.addCell(toCell(c));
+      builder.addCell(toCell(c, encodeTags));
     }
 
     builder.setStale(result.isStale());
@@ -1564,6 +1579,22 @@ public final class ProtobufUtil {
    * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto) {
+    return toResult(proto, false);
+  }
+
+  /**
+   * Convert a protocol buffer Result to a client Result
+   *
+   * @param proto the protocol buffer Result to convert
+   * @param decodeTags whether to decode tags into converted client Result
+   *                   When @decodeTags is set to true, it will decode all the tags from the
+   *                   response. These tags may contain some sensitive data like acl permissions,
+   *                   etc. Only the tools like Export, Import which needs to take backup needs to
+   *                   set it to true so that cell tags are persisted in backup.
+   *                   Refer to HBASE-25246 for more context.
+   * @return the converted client Result
+   */
+  public static Result toResult(final ClientProtos.Result proto, boolean decodeTags) {
     if (proto.hasExists()) {
       if (proto.getStale()) {
         return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE :EMPTY_RESULT_EXISTS_FALSE_STALE;
@@ -1578,7 +1609,7 @@ public final class ProtobufUtil {
 
     List<Cell> cells = new ArrayList<Cell>(values.size());
     for (CellProtos.Cell c : values) {
-      cells.add(toCell(c));
+      cells.add(toCell(c, decodeTags));
     }
     return Result.create(cells, null, proto.getStale(), proto.getPartial());
   }
@@ -1620,7 +1651,7 @@ public final class ProtobufUtil {
     if (!values.isEmpty()){
       if (cells == null) cells = new ArrayList<Cell>(values.size());
       for (CellProtos.Cell c: values) {
-        cells.add(toCell(c));
+        cells.add(toCell(c, false));
       }
     }
 
@@ -2802,7 +2833,7 @@ public final class ProtobufUtil {
     throw new IOException(se);
   }
 
-  public static CellProtos.Cell toCell(final Cell kv) {
+  public static CellProtos.Cell toCell(final Cell kv, boolean encodeTags) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
     CellProtos.Cell.Builder kvbuilder = CellProtos.Cell.newBuilder();
@@ -2816,18 +2847,27 @@ public final class ProtobufUtil {
     kvbuilder.setTimestamp(kv.getTimestamp());
     kvbuilder.setValue(ByteStringer.wrap(kv.getValueArray(), kv.getValueOffset(),
         kv.getValueLength()));
+    if (encodeTags && kv.getTagsLength() > 0) {
+      kvbuilder.setTags(ByteStringer.wrap(kv.getTagsArray(), kv.getTagsOffset(),
+        kv.getTagsLength()));
+    }
     return kvbuilder.build();
   }
 
-  public static Cell toCell(final CellProtos.Cell cell) {
+  public static Cell toCell(final CellProtos.Cell cell, boolean decodeTags) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
+    byte[] tags = null;
+    if (decodeTags && cell.hasTags()) {
+      tags = cell.getTags().toByteArray();
+    }
     return CellUtil.createCell(cell.getRow().toByteArray(),
       cell.getFamily().toByteArray(),
       cell.getQualifier().toByteArray(),
       cell.getTimestamp(),
-      (byte)cell.getCellType().getNumber(),
-      cell.getValue().toByteArray());
+      KeyValue.Type.codeToType((byte)(cell.getCellType().getNumber())),
+      cell.getValue().toByteArray(),
+      tags);
   }
 
   public static HBaseProtos.NamespaceDescriptor toProtoNamespaceDescriptor(NamespaceDescriptor ns) {
