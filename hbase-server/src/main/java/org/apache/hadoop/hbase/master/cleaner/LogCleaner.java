@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -73,8 +75,22 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
    */
   public LogCleaner(final int period, final Stoppable stopper, Configuration conf, FileSystem fs,
     Path oldLogDir, DirScanPool pool) {
+    this(period, stopper, conf, fs, oldLogDir, pool, null);
+  }
+
+  /**
+   * @param period the period of time to sleep between each run
+   * @param stopper the stopper
+   * @param conf configuration to use
+   * @param fs handle to the FS
+   * @param oldLogDir the path to the archived logs
+   * @param pool the thread pool used to scan directories
+   * @param params members could be used in cleaner
+   */
+  public LogCleaner(final int period, final Stoppable stopper, Configuration conf, FileSystem fs,
+    Path oldLogDir, DirScanPool pool, Map<String, Object> params) {
     super("LogsCleaner", period, stopper, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS,
-      pool);
+      pool, params);
     this.pendingDelete = new LinkedBlockingQueue<>();
     int size = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
     this.oldWALsCleaner = createOldWalsCleaner(size);

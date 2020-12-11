@@ -20,8 +20,12 @@ package org.apache.hadoop.hbase.master.cleaner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Log cleaner that uses the timestamp of the wal to determine if it should be deleted. By default
@@ -34,6 +38,18 @@ public class TimeToLiveLogCleaner extends BaseTimeToLiveFileCleaner {
 
   // default ttl = 10 minutes
   public static final long DEFAULT_TTL = 600_000L;
+  private HMaster master;
+  private boolean separateOldLogDir = false;
+  private List<ServerName> serverNames;
+
+  @Override
+  public void init(Map<String, Object> params) {
+    if (params != null && params.containsKey(HMaster.MASTER)) {
+      this.master = (HMaster) params.get(HMaster.MASTER);
+      this.separateOldLogDir = master.getConfiguration()
+        .getBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR, false);
+    }
+  }
 
   @Override
   protected long getTtlMs(Configuration conf) {
@@ -43,5 +59,26 @@ public class TimeToLiveLogCleaner extends BaseTimeToLiveFileCleaner {
   @Override
   protected boolean valiateFilename(Path file) {
     return AbstractFSWALProvider.validateWALFilename(file.getName());
+  }
+
+  @Override
+  public boolean isEmptyDirDeletable(Path dir) {
+    if (separateOldLogDir) {
+      return isEmptyOldWALsDirDeletable(dir);
+    }
+    return true;
+  }
+
+  private boolean isEmptyOldWALsDirDeletable(Path dir) {
+    if (master !=null && dir != null) {
+      serverNames = master.getServerManager().getOnlineServersList();
+      String regionServerNameDir = dir.getName();
+      for (ServerName serverName : serverNames) {
+        if (regionServerNameDir.equals(serverName.getServerName())) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 }
