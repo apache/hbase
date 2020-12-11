@@ -410,7 +410,7 @@ public class TestProtobufUtil {
   private Cell getCellWithTags() {
     Tag tag = new Tag(TAG_TYPE, TAG_STR);
     KeyValue kv = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("f1"),
-      Bytes.toBytes("q1"), 10l, Bytes.toBytes("value1"), new Tag[] {tag});
+      Bytes.toBytes("q1"), 10L, Bytes.toBytes("value1"), new Tag[] {tag});
     return kv;
   }
 
