@@ -47,6 +47,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationLogCleaner.class);
   private ZKWatcher zkw = null;
+  private boolean shareZK = false;
   private ReplicationQueueStorage queueStorage;
   private boolean stopped = false;
   private Set<String> wals;
@@ -102,6 +103,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
         Object master = params.get(HMaster.MASTER);
         if (master != null && master instanceof HMaster) {
           zkw = ((HMaster) master).getZooKeeper();
+          shareZK = true;
         }
       }
       if (zkw == null) {
@@ -136,7 +138,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   public void stop(String why) {
     if (this.stopped) return;
     this.stopped = true;
-    if (this.zkw != null) {
+    if (!shareZK && this.zkw != null) {
       LOG.info("Stopping " + this.zkw);
       this.zkw.close();
     }
