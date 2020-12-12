@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -295,7 +296,10 @@ public class TestClassFinder {
     Set<Class<?>> pkgClasses = allClassesFinder.findClasses(
         ClassFinder.class.getPackage().getName(), false);
     Set<Class<?>> defaultClasses = allClassesFinder.findClasses(false);
-    assertArrayEquals(pkgClasses.toArray(), defaultClasses.toArray());
+    Object[] pkgClassesArray = pkgClasses.toArray();
+    Object[] defaultClassesArray = defaultClasses.toArray();
+    assertEquals(pkgClassesArray.length, defaultClassesArray.length);
+    assertThat(pkgClassesArray, arrayContainingInAnyOrder(defaultClassesArray));
   }
 
   private static class FileAndPath {
