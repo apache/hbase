@@ -855,7 +855,7 @@ public class TestImportExport {
     d.setAttribute(TEST_ATTR, Bytes.toBytes(TEST_TAG));
     exportT.delete(d);
 
-    // Run export too with KeyValueCodecWithTags as Codec. This will ensure that export tool
+    // Run export tool with KeyValueCodecWithTags as Codec. This will ensure that export tool
     // will use KeyValueCodecWithTags.
     String[] args = new String[] {
       "-D" + ExportUtils.RAW_SCAN + "=true",
