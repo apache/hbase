@@ -309,8 +309,8 @@ public class ChaosZKClient {
   }
 
   static class TaskObject {
-    private String command;
-    private String taskHostname;
+    private final String command;
+    private final String taskHostname;
 
     public TaskObject(String command, String taskHostname) {
       this.command = command;
