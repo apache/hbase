@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -25,6 +26,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import java.nio.ByteBuffer;
 
 @Category(SmallTests.class)
 public class TestTagRewriteCell {
@@ -32,6 +34,23 @@ public class TestTagRewriteCell {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestTagRewriteCell.class);
+
+  @Test
+  public void testSerializedSize(){
+    Cell originalCell = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(Bytes.toBytes("row"))
+      .setFamily(Bytes.toBytes("family"))
+      .setQualifier(Bytes.toBytes("qualifier"))
+      .setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode())
+      .setValue(Bytes.toBytes("value"))
+      .build();
+
+    ByteBuffer byteBuffer = ByteBuffer.allocate(100);
+    Cell cell = PrivateCellUtil.createCell(originalCell, "".getBytes());
+    int lengthWriten = KeyValueUtil.appendTo(cell, byteBuffer, 0, true);
+    assertEquals(cell.getSerializedSize(), lengthWriten);
+  }
 
   @Test
   public void testHeapSize() {
