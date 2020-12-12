@@ -23,7 +23,7 @@ usage="Usage: chaos-daemon.sh (start|stop) chaosagent"
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
-  echo $usage
+  echo "$usage"
   exit 1
 fi
 
@@ -37,16 +37,16 @@ shift
 check_before_start(){
     #ckeck if the process is not running
     mkdir -p "$HBASE_PID_DIR"
-    if [ -f $CHAOS_PID ]; then
-      if kill -0 `cat $CHAOS_PID` > /dev/null 2>&1; then
-        echo $command running as process `cat $CHAOS_PID`.  Stop it first.
+    if [ -f "$CHAOS_PID" ]; then
+      if kill -0 "$(cat "$CHAOS_PID")" > /dev/null 2>&1; then
+        echo "$command" running as process "$(cat "$CHAOS_PID")".  Stop it first.
         exit 1
       fi
     fi
 }
 
 bin=`dirname "${BASH_SOURCE-$0}"`
-bin=`cd "$bin">/dev/null; pwd`
+bin=$(cd "$bin">/dev/null || exit; pwd)
 
 . "$bin"/hbase-config.sh
 . "$bin"/hbase-common.sh

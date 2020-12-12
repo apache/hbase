@@ -50,7 +50,7 @@ public class ChaosZKClient {
   private static final int TASK_EXECUTION_TIMEOUT = 5 * 60 * 1000;
   private volatile String taskStatus = null;
 
-  private String quorum;
+  private final String quorum;
   private ZooKeeper zk;
 
   public ChaosZKClient(String quorum) {
@@ -58,7 +58,7 @@ public class ChaosZKClient {
     try {
       this.createNewZKConnection();
     } catch (IOException e) {
-      LOG.error("Error creating ZooKeeper Connection: " + e);
+      LOG.error("Error creating ZooKeeper Connection: ", e);
     }
   }
 
@@ -93,11 +93,11 @@ public class ChaosZKClient {
           return zk.exists(CHAOS_AGENT_PARENT_ZNODE + ZNODE_PATH_SEPARATOR + hostname,
             false) != null;
         } catch (KeeperException  | InterruptedException ie) {
-          LOG.error("ERROR " + ie);
+          LOG.error("ERROR ", ie);
         }
       }
     } catch (InterruptedException e) {
-      LOG.error("Error checking for given hostname: " + hostname + " ERROR: " + e);
+      LOG.error("Error checking for given hostname: {} ERROR: ", hostname, e);
     }
     return false;
   }
@@ -189,89 +189,80 @@ public class ChaosZKClient {
 
   //CALLBACKS
 
-  AsyncCallback.DataCallback getStatusCallback = new AsyncCallback.DataCallback() {
-    @Override
-    public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat) {
-      switch (KeeperException.Code.get(rc)) {
-        case CONNECTIONLOSS:
-          //Connectionloss while getting status of task, getting again
-          recreateZKConnection();
-          getStatus(path, ctx);
-          break;
+  AsyncCallback.DataCallback getStatusCallback = (rc, path, ctx, data, stat) -> {
+    switch (KeeperException.Code.get(rc)) {
+      case CONNECTIONLOSS:
+        //Connectionloss while getting status of task, getting again
+        recreateZKConnection();
+        getStatus(path, ctx);
+        break;
 
-        case OK:
-          if (ctx!=null) {
+      case OK:
+        if (ctx!=null) {
 
-            String status = new String(data);
-            taskStatus = status;
-            switch (status) {
-              case TASK_COMPLETION_STRING:
-              case TASK_BOOLEAN_TRUE:
-              case TASK_BOOLEAN_FALSE:
-                LOG.info("Task executed completely : Status --> " + status);
-                break;
+          String status = new String(data);
+          taskStatus = status;
+          switch (status) {
+            case TASK_COMPLETION_STRING:
+            case TASK_BOOLEAN_TRUE:
+            case TASK_BOOLEAN_FALSE:
+              LOG.info("Task executed completely : Status --> " + status);
+              break;
 
-              case TASK_ERROR_STRING:
-                LOG.info("There was error while executing task : Status --> " + status);
-                break;
+            case TASK_ERROR_STRING:
+              LOG.info("There was error while executing task : Status --> " + status);
+              break;
 
-              default:
-                LOG.warn("Status of task is undefined!! : Status --> " + status);
-            }
-
-            deleteTask(path);
+            default:
+              LOG.warn("Status of task is undefined!! : Status --> " + status);
           }
-          break;
 
-        default:
-          LOG.error("ERROR while getting status of task: " + path + " ERROR: " +
-            KeeperException.create(KeeperException.Code.get(rc)));
-      }
+          deleteTask(path);
+        }
+        break;
+
+      default:
+        LOG.error("ERROR while getting status of task: " + path + " ERROR: " +
+          KeeperException.create(KeeperException.Code.get(rc)));
     }
   };
 
-  AsyncCallback.StatCallback setStatusWatchCallback = new AsyncCallback.StatCallback() {
-    @Override
-    public void processResult(int rc, String path, Object ctx, Stat stat) {
-      switch (KeeperException.Code.get(rc)) {
-        case CONNECTIONLOSS:
-          //ConnectionLoss while setting watch on status ZNode, setting again.
-          recreateZKConnection();
-          setStatusWatch(path, (TaskObject) ctx);
-          break;
+  AsyncCallback.StatCallback setStatusWatchCallback = (rc, path, ctx, stat) -> {
+    switch (KeeperException.Code.get(rc)) {
+      case CONNECTIONLOSS:
+        //ConnectionLoss while setting watch on status ZNode, setting again.
+        recreateZKConnection();
+        setStatusWatch(path, (TaskObject) ctx);
+        break;
 
-        case OK:
-          if(stat != null) {
-            getStatus(path, null);
-          }
-          break;
+      case OK:
+        if(stat != null) {
+          getStatus(path, null);
+        }
+        break;
 
-        default:
-          LOG.error("ERROR while setting watch on task ZNode: " + path + " ERROR: " +
-            KeeperException.create(KeeperException.Code.get(rc)));
-      }
+      default:
+        LOG.error("ERROR while setting watch on task ZNode: " + path + " ERROR: " +
+          KeeperException.create(KeeperException.Code.get(rc)));
     }
   };
 
-  AsyncCallback.StringCallback submitTaskCallback = new AsyncCallback.StringCallback() {
-    @Override
-    public void processResult(int rc, String path, Object ctx, String name) {
-      switch (KeeperException.Code.get(rc)) {
-        case CONNECTIONLOSS:
-          // Connection to server was lost while submitting task, submitting again.
-          recreateZKConnection();
-          submitTask((TaskObject) ctx);
-          break;
+  AsyncCallback.StringCallback submitTaskCallback = (rc, path, ctx, name) -> {
+    switch (KeeperException.Code.get(rc)) {
+      case CONNECTIONLOSS:
+        // Connection to server was lost while submitting task, submitting again.
+        recreateZKConnection();
+        submitTask((TaskObject) ctx);
+        break;
 
-        case OK:
-          LOG.info("Task created : " + name);
-          setStatusWatch(name, (TaskObject) ctx);
-          break;
+      case OK:
+        LOG.info("Task created : " + name);
+        setStatusWatch(name, (TaskObject) ctx);
+        break;
 
-        default:
-          LOG.error("Error submitting task: " + name + " ERROR:" +
-            KeeperException.create(KeeperException.Code.get(rc)));
-      }
+      default:
+        LOG.error("Error submitting task: " + name + " ERROR:" +
+          KeeperException.create(KeeperException.Code.get(rc)));
     }
   };
 
@@ -307,12 +298,12 @@ public class ChaosZKClient {
     try {
       zk.close();
     } catch (InterruptedException e) {
-      LOG.error("Error closing ZK connection : " + e);
+      LOG.error("Error closing ZK connection : ", e);
     } finally {
       try {
         createNewZKConnection();
       } catch (IOException e) {
-        LOG.error("Error creating new ZK COnnection for agent: " + e);
+        LOG.error("Error creating new ZK COnnection for agent: ", e);
       }
     }
   }

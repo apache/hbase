@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 
 /***
  * An agent for executing destructive actions for ChaosMonkey.
- * Uses ZooKeeper Watchersc and LocalShell, to do the killing
+ * Uses ZooKeeper Watchers and LocalShell, to do the killing
  * and getting status of service on targeted host without SSH.
  * uses given ZNode Structure:
  *  /perfChaosTest (root)
@@ -73,7 +73,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class ChaosAgent implements Watcher, Closeable, Runnable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ChaosAgent.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(ChaosAgent.class);
   static AtomicBoolean stopChaosAgent = new AtomicBoolean();
   private ZooKeeper zk;
   private String quorum;
@@ -296,7 +296,7 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
     @Override
     public void processResult(int rc, String path, Object ctx, List<String> children) {
       switch (KeeperException.Code.get(rc)) {
-        case CONNECTIONLOSS:
+        case CONNECTIONLOSS: {
           // Connection to the server has been lost, getting tasks again.
           try {
             recreateZKConnection();
@@ -305,8 +305,9 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
           }
           getTasks();
           break;
+        }
 
-        case OK:
+        case OK: {
           if (children != null) {
             try {
 
@@ -338,6 +339,8 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
                 " for agent : " + agentName + " Error : " + e);
             }
           }
+          break;
+        }
 
         default:
           LOG.error("Error occurred while getting task",
@@ -469,8 +472,7 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
       throw new Shell.ExitCodeException(e.getExitCode(), "stderr: " + e.getMessage()
         + ", stdout: " + output);
     }
-    LOG.info("Executed Shell command, exit code: " + shell.getExitCode() +
-      " , output:" + shell.getOutput());
+    LOG.info("Executed Shell command, exit code: {}, output n{}", shell.getExitCode(), shell.getOutput());
 
     return new Pair<>(shell.getExitCode(), shell.getOutput());
   }
@@ -478,9 +480,9 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
   private <E extends Exception> void retryOrThrow(RetryCounter retryCounter, E ex,
     String user, String cmd) throws E {
     if (retryCounter.shouldRetry()) {
-      LOG.warn("Local command: " + cmd + " , user:" + user
-        + " failed at attempt " + retryCounter.getAttemptTimes() + ". Retrying until maxAttempts: "
-        + retryCounter.getMaxAttempts() + ". Exception: " + ex.getMessage());
+      LOG.warn("Local command: {}, user: {}, failed at attempt {}. Retrying until maxAttempts: {}."
+        + "Exception {}", cmd, user,retryCounter.getAttemptTimes(), retryCounter.getMaxAttempts(),
+        ex.getMessage());
       return;
     }
     throw ex;
@@ -512,7 +514,7 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
         Thread.sleep(500);
       }
     } catch (InterruptedException e) {
-      LOG.error("Error while running Chaos Agent");
+      LOG.error("Error while running Chaos Agent", e);
     }
 
   }
@@ -534,7 +536,7 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
           try {
             createZKConnection(null);
           } catch (IOException e) {
-            LOG.error("Error creating Zookeeper connection");
+            LOG.error("Error creating Zookeeper connection", e);
           }
         default:
           LOG.error("Unknown State");
@@ -546,25 +548,19 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
   private void recreateZKConnection() throws Exception{
     try {
       zk.close();
-    } catch (InterruptedException e) {
-      LOG.error("Error closing ZK connection : " + e);
-      throw new RuntimeException(e) ;
-    } finally {
-      try {
         createZKConnection(newTaskCreatedWatcher);
         createEphemeralZNode(ChaosConstants.CHAOS_AGENT_REGISTRATION_EPIMERAL_ZNODE +
           ChaosConstants.ZNODE_PATH_SEPARATOR + agentName, new byte[0]);
       } catch (IOException e) {
-        LOG.error("Error creating new ZK COnnection for agent: " + agentName + e);
-        throw new RuntimeException(e);
+        LOG.error("Error creating new ZK COnnection for agent: {}", agentName + e);
+        throw e;
       }
     }
-  }
 
   /**
    * Executes Command locally.
    */
-  protected class LocalShell extends Shell.ShellCommandExecutor {
+  protected static class LocalShell extends Shell.ShellCommandExecutor {
 
     private String user;
     private String execCommand;
@@ -573,10 +569,6 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
       super(new String[]{execCommand});
       this.user = user;
       this.execCommand = execCommand;
-    }
-
-    public LocalShell(String[] execString, File dir, Map<String, String> env, long timeout) {
-      super(execString, dir, env, timeout);
     }
 
     @Override

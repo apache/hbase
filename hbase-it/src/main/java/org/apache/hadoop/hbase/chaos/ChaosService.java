@@ -50,31 +50,31 @@ public class ChaosService {
 
     try {
       CommandLine cmdline = new GnuParser().parse(getOptions(), args);
-      if (cmdline.hasOption(ChaosServiceName.chaosagent.toString())) {
-        String actionStr = cmdline.getOptionValue(ChaosServiceName.chaosagent.toString());
+      if (cmdline.hasOption(ChaosServiceName.CHAOSAGENT.toString().toLowerCase())) {
+        String actionStr = cmdline.getOptionValue(ChaosServiceName.CHAOSAGENT.toString().toLowerCase());
         try {
-          ExecutorAction action = ExecutorAction.valueOf(actionStr.toLowerCase());
-          if (action == ExecutorAction.start) {
-            ChaosServiceStart(conf, ChaosServiceName.chaosagent);
-          } else if (action == ExecutorAction.stop) {
+          ExecutorAction action = ExecutorAction.valueOf(actionStr.toUpperCase());
+          if (action == ExecutorAction.START) {
+            ChaosServiceStart(conf, ChaosServiceName.CHAOSAGENT);
+          } else if (action == ExecutorAction.STOP) {
             ChaosServiceStop();
           }
         } catch (IllegalArgumentException e) {
-          LOG.error("action passed:" + actionStr +
-            " . Unexpected action. Please provide only start/stop.");
+          LOG.error("action passed: {} Unexpected action. Please provide only start/stop.",
+            actionStr, e);
           throw new RuntimeException(e);
         }
       } else {
         LOG.error("Invalid Options");
       }
     } catch (Exception e) {
-      LOG.error("Error while starting ChaosService : " + e);
+      LOG.error("Error while starting ChaosService : ", e);
     }
   }
 
   private static void ChaosServiceStart(Configuration conf, ChaosServiceName serviceName) {
     switch (serviceName) {
-      case chaosagent:
+      case CHAOSAGENT:
         ChaosAgent.stopChaosAgent.set(false);
         try {
           Thread t = new Thread(new ChaosAgent(conf,
@@ -82,8 +82,8 @@ public class ChaosService {
           t.start();
           t.join();
         } catch (InterruptedException | UnknownHostException e) {
-          LOG.error("Failed while executing next task execution of ChaosAgent on : " +
-            serviceName + " : " + e);
+          LOG.error("Failed while executing next task execution of ChaosAgent on : {}",
+            serviceName, e);
         }
         break;
       default:
@@ -97,7 +97,7 @@ public class ChaosService {
 
   private static Options getOptions() {
     Options options = new Options();
-    options.addOption(new Option("c", ChaosServiceName.chaosagent.toString(),
+    options.addOption(new Option("c", ChaosServiceName.CHAOSAGENT.toString().toLowerCase(),
       true, "expecting a start/stop argument"));
     options.addOption(new Option("D", ChaosServiceName.GENERIC.toString(),
       true, "generic D param"));
@@ -126,13 +126,13 @@ public class ChaosService {
   }
 
   enum ChaosServiceName {
-    chaosagent,
+    CHAOSAGENT,
     GENERIC
   }
 
 
   enum ExecutorAction {
-    start,
-    stop
+    START,
+    STOP
   }
 }
