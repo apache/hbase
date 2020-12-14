@@ -502,22 +502,56 @@ public class TestMasterReplication {
       utilities[0].restartHBaseCluster(1);
       admin = utilities[0].getAdmin();
 
-      // Both retains the value of base configuration 1 value as before restart.
-      // Peer 1 (Update value), Peer 2 (Base Value)
-      Assert.assertEquals(firstCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("1").
+      // Configurations should be updated after restart again
+      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("1").
         getConfiguration().get(firstCustomPeerConfigKey));
       Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("2").
         getConfiguration().get(firstCustomPeerConfigKey));
 
-      // Peer 1 gets new base config as part of restart.
       Assert.assertEquals(secondCustomPeerConfigValue, admin.getReplicationPeerConfig("1").
         getConfiguration().get(secondCustomPeerConfigKey));
-      // Peer 2 retains the updated value as before restart.
-      Assert.assertEquals(secondCustomPeerConfigUpdatedValue, admin.getReplicationPeerConfig("2").
+      Assert.assertEquals(secondCustomPeerConfigValue, admin.getReplicationPeerConfig("2").
         getConfiguration().get(secondCustomPeerConfigKey));
     } finally {
       shutDownMiniClusters();
       baseConfiguration.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
+    }
+  }
+
+  @Test
+  public void testBasePeerConfigsRemovalForPeerMutations()
+    throws Exception {
+    LOG.info("testBasePeerConfigsForPeerMutations");
+    String firstCustomPeerConfigKey = "hbase.xxx.custom_config";
+    String firstCustomPeerConfigValue = "test";
+
+    try {
+      baseConfiguration.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
+        firstCustomPeerConfigKey.concat("=").concat(firstCustomPeerConfigValue));
+      startMiniClusters(2);
+      addPeer("1", 0, 1);
+      Admin admin = utilities[0].getAdmin();
+
+      // Validates base configs 1 is present for both peer.
+      Assert.assertEquals(firstCustomPeerConfigValue, admin.getReplicationPeerConfig("1").
+        getConfiguration().get(firstCustomPeerConfigKey));
+
+      utilities[0].getConfiguration().set(ReplicationPeerConfigUtil.
+        HBASE_REPLICATION_PEER_REMOVE_BASE_CONFIG, firstCustomPeerConfigKey);
+      utilities[0].getConfiguration().unset(ReplicationPeerConfigUtil.
+        HBASE_REPLICATION_PEER_BASE_CONFIG);
+
+      utilities[0].shutdownMiniHBaseCluster();
+      utilities[0].restartHBaseCluster(1);
+      admin = utilities[0].getAdmin();
+
+      // Configurations should be removed after restart again
+      Assert.assertNull(admin.getReplicationPeerConfig("1")
+        .getConfiguration().get(firstCustomPeerConfigKey));
+    } finally {
+      shutDownMiniClusters();
+      baseConfiguration.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
+      baseConfiguration.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_REMOVE_BASE_CONFIG);
     }
   }
 

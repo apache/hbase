@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
@@ -220,8 +219,7 @@ public class TestZKReplicationPeerStorage {
       STORAGE.getNewSyncReplicationStateNode(peerId)));
   }
 
-  @Test
-  public void testBaseReplicationPeerConfig() {
+  @Test public void testBaseReplicationPeerConfig() {
     String customPeerConfigKey = "hbase.xxx.custom_config";
     String customPeerConfigValue = "test";
     String customPeerConfigUpdatedValue = "testUpdated";
@@ -241,7 +239,7 @@ public class TestZKReplicationPeerStorage {
         concat(customPeerConfigSecondKey).concat("=").concat(customPeerConfigSecondValue));
 
     ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
-      addBasePeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
+      updateReplicationBasePeerConfigs(conf, existingReplicationPeerConfig);
 
     // validates base configs are present in replicationPeerConfig
     assertEquals(customPeerConfigValue, updatedReplicationPeerConfig.getConfiguration().
@@ -249,17 +247,47 @@ public class TestZKReplicationPeerStorage {
     assertEquals(customPeerConfigSecondValue, updatedReplicationPeerConfig.getConfiguration().
       get(customPeerConfigSecondKey));
 
-    // validates base configs does not override value if config already present
+    // validates base configs get updated values even if config already present
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
       customPeerConfigKey.concat("=").concat(customPeerConfigUpdatedValue).concat(";").
         concat(customPeerConfigSecondKey).concat("=").concat(customPeerConfigSecondUpdatedValue));
 
     ReplicationPeerConfig replicationPeerConfigAfterValueUpdate = ReplicationPeerConfigUtil.
-      addBasePeerConfigsIfNotPresent(conf,updatedReplicationPeerConfig);
+      updateReplicationBasePeerConfigs(conf, updatedReplicationPeerConfig);
 
-    assertEquals(customPeerConfigValue, replicationPeerConfigAfterValueUpdate.
+    assertEquals(customPeerConfigUpdatedValue, replicationPeerConfigAfterValueUpdate.
       getConfiguration().get(customPeerConfigKey));
-    assertEquals(customPeerConfigSecondValue, replicationPeerConfigAfterValueUpdate.
+    assertEquals(customPeerConfigSecondUpdatedValue, replicationPeerConfigAfterValueUpdate.
       getConfiguration().get(customPeerConfigSecondKey));
+  }
+
+  @Test public void testBaseReplicationRemovePeerConfig() {
+    String customPeerConfigKey = "hbase.xxx.custom_config";
+    String customPeerConfigValue = "test";
+    ReplicationPeerConfig existingReplicationPeerConfig = getConfig(1);
+
+    // custom config not present
+    assertEquals(existingReplicationPeerConfig.getConfiguration().get(customPeerConfigKey), null);
+
+    Configuration conf = UTIL.getConfiguration();
+    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
+      customPeerConfigKey.concat("=").concat(customPeerConfigValue));
+
+    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
+      updateReplicationBasePeerConfigs(conf, existingReplicationPeerConfig);
+
+    // validates base configs are present in replicationPeerConfig
+    assertEquals(customPeerConfigValue, updatedReplicationPeerConfig.getConfiguration().
+      get(customPeerConfigKey));
+
+    // validates base configs get removed
+    conf = UTIL.getConfiguration();
+    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_REMOVE_BASE_CONFIG,
+      customPeerConfigKey);
+
+    ReplicationPeerConfig replicationPeerConfigRemoved = ReplicationPeerConfigUtil.
+      updateReplicationBasePeerConfigs(conf, updatedReplicationPeerConfig);
+
+    assertNull(replicationPeerConfigRemoved.getConfiguration().get(customPeerConfigKey));
   }
 }
