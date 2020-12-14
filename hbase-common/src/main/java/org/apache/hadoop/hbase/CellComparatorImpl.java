@@ -244,7 +244,7 @@ public class CellComparatorImpl implements CellComparator {
 
       // Timestamps.
       // Swap order we pass into compare so we get DESCENDING order.
-      diff = Long.compare(left.getTimestamp(rightKeyLength), right.getTimestamp(leftKeyLength));
+      diff = Long.compare(right.getTimestamp(rightKeyLength), left.getTimestamp(leftKeyLength));
       if (diff != 0) {
         return diff;
       }
