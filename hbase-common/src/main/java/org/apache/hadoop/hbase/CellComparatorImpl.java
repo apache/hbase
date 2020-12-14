@@ -69,7 +69,7 @@ public class CellComparatorImpl implements CellComparator {
       }
       // Negate following comparisons so later edits show up first mvccVersion: later sorts first
       return ignoreSequenceid ? diff
-          : Longs.compare(((ExtendedCell) a).getSequenceId(), ((ExtendedCell) b).getSequenceId());
+          : Longs.compare(((ExtendedCell) b).getSequenceId(), ((ExtendedCell) a).getSequenceId());
     } else {
       diff = compareRows(a, b);
       if (diff != 0) {
