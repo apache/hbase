@@ -32,6 +32,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -41,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 
 /**
  * An HBase Key/Value. This is the fundamental HBase Type.
@@ -76,7 +79,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * length and actual tag bytes length.
  */
 @InterfaceAudience.Private
-public class KeyValue implements ExtendedCell, Cloneable {
+public class KeyValue implements ExtendedCell, Cloneable, ContiguousCellFormat {
   private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<>();
 
   private static final Logger LOG = LoggerFactory.getLogger(KeyValue.class);
@@ -1351,14 +1354,14 @@ public class KeyValue implements ExtendedCell, Cloneable {
    */
   @Override
   public int getFamilyOffset() {
-    return getFamilyOffset(getRowLength());
+    return getFamilyOffset(getFamilyLengthPosition(getRowLength()));
   }
 
   /**
    * @return Family offset
    */
-  private int getFamilyOffset(int rlength) {
-    return this.offset + ROW_KEY_OFFSET + rlength + Bytes.SIZEOF_BYTE;
+  int getFamilyOffset(int familyLenPosition) {
+    return familyLenPosition + Bytes.SIZEOF_BYTE;
   }
 
   /**
@@ -1366,14 +1369,18 @@ public class KeyValue implements ExtendedCell, Cloneable {
    */
   @Override
   public byte getFamilyLength() {
-    return getFamilyLength(getFamilyOffset());
+    return getFamilyLength(getFamilyLengthPosition(getRowLength()));
   }
 
   /**
    * @return Family length
    */
-  public byte getFamilyLength(int foffset) {
-    return this.bytes[foffset-1];
+  public byte getFamilyLength(int famLenPos) {
+    return this.bytes[famLenPos];
+  }
+
+  int getFamilyLengthPosition(int rowLength) {
+    return this.offset + KeyValue.ROW_KEY_OFFSET + rowLength;
   }
 
   /**
@@ -1396,7 +1403,14 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @return Qualifier offset
    */
   private int getQualifierOffset(int foffset) {
-    return foffset + getFamilyLength(foffset);
+    return getQualifierOffset(foffset, getFamilyLength());
+  }
+
+  /**
+   * @return Qualifier offset
+   */
+  int getQualifierOffset(int foffset, int flength) {
+    return foffset + flength;
   }
 
   /**
@@ -1411,7 +1425,14 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @return Qualifier length
    */
   private int getQualifierLength(int rlength, int flength) {
-    return getKeyLength() - (int) getKeyDataStructureSize(rlength, flength, 0);
+    return getQualifierLength(getKeyLength(), rlength, flength);
+  }
+
+  /**
+   * @return Qualifier length
+   */
+  int getQualifierLength(int keyLength, int rlength, int flength) {
+    return keyLength - (int) getKeyDataStructureSize(rlength, flength, 0);
   }
 
   /**
@@ -1504,7 +1525,11 @@ public class KeyValue implements ExtendedCell, Cloneable {
    */
   @Override
   public byte getTypeByte() {
-    return this.bytes[this.offset + getKeyLength() - 1 + ROW_OFFSET];
+    return getTypeByte(getKeyLength());
+  }
+
+  byte getTypeByte(int keyLength) {
+    return this.bytes[this.offset + keyLength - 1 + ROW_OFFSET];
   }
 
   /**
@@ -1878,8 +1903,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
      * @param rlength
      * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
-    public int compareRows(byte [] left, int loffset, int llength,
-        byte [] right, int roffset, int rlength) {
+    public int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+        int rlength) {
       return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
     }
 
@@ -2452,6 +2477,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
       return this.bytes[getFamilyOffset() - 1];
     }
 
+    int getFamilyLengthPosition(int rowLength) {
+      return this.offset + Bytes.SIZEOF_SHORT + rowLength;
+    }
+
     @Override
     public int getFamilyOffset() {
       return this.offset + Bytes.SIZEOF_SHORT + getRowLength() + Bytes.SIZEOF_BYTE;
@@ -2484,8 +2513,13 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
     @Override
     public byte getTypeByte() {
-      return this.bytes[this.offset + getKeyLength() - 1];
+      return getTypeByte(getKeyLength());
     }
+
+    byte getTypeByte(int keyLength) {
+      return this.bytes[this.offset + keyLength - 1];
+    }
+
 
     private int getQualifierLength(int rlength, int flength) {
       return getKeyLength() - (int) getKeyDataStructureSize(rlength, flength, 0);

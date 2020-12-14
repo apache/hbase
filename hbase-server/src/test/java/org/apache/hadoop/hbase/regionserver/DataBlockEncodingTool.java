@@ -221,7 +221,8 @@ public class DataBlockEncodingTool {
 
       int kLen = currentKV.getKeyLength();
       int vLen = currentKV.getValueLength();
-      int cfLen = currentKV.getFamilyLength(currentKV.getFamilyOffset());
+      int cfOffset = currentKV.getFamilyOffset();
+      int cfLen = currentKV.getFamilyLength();
       int restLen = currentKV.getLength() - kLen - vLen;
 
       totalKeyLength += kLen;

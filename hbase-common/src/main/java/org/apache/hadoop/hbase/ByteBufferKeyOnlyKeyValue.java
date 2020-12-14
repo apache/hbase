@@ -161,7 +161,11 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public byte getTypeByte() {
-    return ByteBufferUtils.toByte(this.buf, this.offset + this.length - 1);
+    return getTypeByte(this.length);
+  }
+
+  byte getTypeByte(int keyLen) {
+    return ByteBufferUtils.toByte(this.buf, this.offset + keyLen - 1);
   }
 
   @Override
@@ -236,7 +240,11 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
 
   // The position in BB where the family length is added.
   private int getFamilyLengthPosition() {
-    return this.offset + Bytes.SIZEOF_SHORT + getRowLength();
+    return getFamilyLengthPosition(getRowLength());
+  }
+
+  int getFamilyLengthPosition(int rowLength) {
+    return this.offset + Bytes.SIZEOF_SHORT + rowLength;
   }
 
   @Override
