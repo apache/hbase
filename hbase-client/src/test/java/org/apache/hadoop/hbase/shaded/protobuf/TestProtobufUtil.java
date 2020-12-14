@@ -559,4 +559,21 @@ public class TestProtobufUtil {
     List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
     assertEquals(0,  decodedTags.size());
   }
+
+  /**
+   * Test {@link ProtobufUtil#toCell(Cell, boolean)} and
+   * {@link ProtobufUtil#toCell(ExtendedCellBuilder, CellProtos.Cell, boolean)} conversion
+   * methods when it contains tags and encoding of tags is set to true
+   * and decoding of tags is set to false.
+   */
+  @Test
+  public void testTagEncodeTrueDecodeFalse() {
+    Cell cell = getCellWithTags();
+    CellProtos.Cell protoCell = ProtobufUtil.toCell(cell, true);
+    assertNotNull(protoCell);
+
+    Cell decodedCell = getCellFromProtoResult(protoCell, false);
+    List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
+    assertEquals(0,  decodedTags.size());
+  }
 }
