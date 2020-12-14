@@ -25,12 +25,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
+
 /**
  * This Cell is an implementation of {@link ByteBufferExtendedCell} where the data resides in
  * off heap/ on heap ByteBuffer
  */
 @InterfaceAudience.Private
-public class ByteBufferKeyValue extends ByteBufferExtendedCell {
+public class ByteBufferKeyValue extends ByteBufferExtendedCell implements ContiguousCellFormat {
 
   protected final ByteBuffer buf;
   protected final int offset;
