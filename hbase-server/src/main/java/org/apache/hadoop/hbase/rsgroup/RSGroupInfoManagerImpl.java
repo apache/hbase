@@ -1130,6 +1130,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         if (region.isSplitParent()) {
           continue;
         }
+
+        // isSplitParent() and isSplit() is not always reliable. So for those scenarios, better to
+        // have a check here.
+        if(null == server) {
+          continue;
+        }
         result.computeIfAbsent(tn, k -> new HashMap<>())
           .computeIfAbsent(server, k -> new ArrayList<>()).add(region);
       }

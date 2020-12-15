@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
@@ -620,5 +621,39 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
 
     TEST_UTIL.deleteTable(tableName);
     ADMIN.deleteNamespace(ns);
+  }
+
+  @Test
+  public void testHBASE25301() throws IOException, InterruptedException {
+    String pgroup = "pgroup";
+    ADMIN.addRSGroup(pgroup);
+
+    ServerName serverName0 = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName();
+    ServerName serverName1 = TEST_UTIL.getMiniHBaseCluster().getRegionServer(1).getServerName();
+    ADMIN.moveServersToRSGroup(Sets.newHashSet(serverName0.getAddress(), serverName1.getAddress()),
+      pgroup);
+
+    TableName table1 = TableName.valueOf("table1");
+    TableName table2 = TableName.valueOf("table2");
+    TEST_UTIL.createTable(table1, "cf");
+    TEST_UTIL.createTable(table2, "cf");
+
+    ADMIN.setRSGroup(Sets.newHashSet(table1, table2), pgroup);
+
+    List<RegionInfo> regionInfoList = ADMIN.getRegions(table1);
+    regionInfoList.addAll(ADMIN.getRegions(table2));
+    for (RegionInfo regionInfo : regionInfoList) {
+      ADMIN.move(regionInfo.getEncodedNameAsBytes(), serverName0);
+    }
+
+    ADMIN.split(table2, "50".getBytes());
+    // Waiting briefly so that daughter regions are created but parent is not cleaned yet.
+    Thread.sleep(2000);
+    ADMIN.balancerSwitch(true, true);
+    try {
+      ADMIN.balanceRSGroup(pgroup);
+    } catch (IOException e) {
+      fail("Exception not expected. " + e);
+    }
   }
 }
