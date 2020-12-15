@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -468,16 +469,17 @@ public final class ReplicationPeerConfigUtil {
    * @return ReplicationPeerConfig containing updated configs.
    */
   public static ReplicationPeerConfig updateReplicationBasePeerConfigs(Configuration conf,
-    ReplicationPeerConfig receivedPeerConfig) {
+    ReplicationPeerConfig receivedPeerConfig) throws ReplicationException {
     String removeBasePeerConfigs = conf.get(HBASE_REPLICATION_PEER_REMOVE_BASE_CONFIG, "");
     ReplicationPeerConfigBuilder copiedPeerConfigBuilder = ReplicationPeerConfig.
       newBuilder(receivedPeerConfig);
 
+    Set<String> removeBasePeerConfigSet = Sets.newHashSet();
     // remove the peer configurations specified in the conf
     if (removeBasePeerConfigs.length() != 0) {
-      List<String> removeBasePeerConfigList = Splitter.on(';').trimResults()
-        .omitEmptyStrings().splitToList(removeBasePeerConfigs);
-      for (String peerConfigToRemove : removeBasePeerConfigList) {
+      removeBasePeerConfigSet.addAll(Splitter.on(';').trimResults()
+        .omitEmptyStrings().splitToList(removeBasePeerConfigs));
+      for (String peerConfigToRemove : removeBasePeerConfigSet) {
         copiedPeerConfigBuilder.removeConfiguration(peerConfigToRemove);
       }
     }
@@ -487,6 +489,13 @@ public final class ReplicationPeerConfigUtil {
     if (basePeerConfigs.length() != 0) {
       Map<String, String> basePeerConfigMap = Splitter.on(';').trimResults().omitEmptyStrings()
         .withKeyValueSeparator("=").split(basePeerConfigs);
+      Set<String> intersectionInConfigs = Sets.intersection(removeBasePeerConfigSet,
+        basePeerConfigMap.keySet());
+      if (intersectionInConfigs.size() > 0) {
+        throw new ReplicationException("There are configs added and removed " +
+          intersectionInConfigs.toString());
+      }
+
       for (Map.Entry<String, String> entry : basePeerConfigMap.entrySet()) {
         String configName = entry.getKey();
         String configValue = entry.getValue();
