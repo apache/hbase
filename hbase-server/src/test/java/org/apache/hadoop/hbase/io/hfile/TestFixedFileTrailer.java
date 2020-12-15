@@ -130,6 +130,11 @@ public class TestFixedFileTrailer {
           t.createComparator(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName()).getClass());
       assertEquals(MetaCellComparator.class,
           t.createComparator(KeyValue.META_COMPARATOR.getClass().getName()).getClass());
+      assertEquals(MetaCellComparator.class,
+        t.createComparator("org.apache.hadoop.hbase.CellComparator$MetaCellComparator").getClass());
+      assertEquals(MetaCellComparator.class,
+        t.createComparator("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator")
+            .getClass());
       assertEquals(MetaCellComparator.class, t.createComparator(
           MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
       assertEquals(MetaCellComparator.META_COMPARATOR.getClass(), t.createComparator(
@@ -139,7 +144,8 @@ public class TestFixedFileTrailer {
       assertNull(t.createComparator(Bytes.BYTES_RAWCOMPARATOR.getClass().getName()));
       assertNull(t.createComparator("org.apache.hadoop.hbase.KeyValue$RawBytesComparator"));
     } catch (IOException e) {
-      fail("Unexpected exception while testing FixedFileTrailer#createComparator()");
+      fail("Unexpected exception while testing FixedFileTrailer#createComparator(), "
+          + e.getMessage());
     }
 
     // Test an invalid comparatorClassName
