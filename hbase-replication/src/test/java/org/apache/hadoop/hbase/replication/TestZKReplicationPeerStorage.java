@@ -26,7 +26,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -75,8 +74,6 @@ public class TestZKReplicationPeerStorage {
 
   @After
   public void cleanCustomConfigurations() {
-    UTIL.getConfiguration()
-      .unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_REMOVE_BASE_CONFIG);
     UTIL.getConfiguration().unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
   }
 
@@ -290,8 +287,8 @@ public class TestZKReplicationPeerStorage {
       get(customPeerConfigKey));
 
     conf.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
-    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_REMOVE_BASE_CONFIG,
-      customPeerConfigKey);
+    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
+      customPeerConfigKey.concat("=").concat(""));
 
     ReplicationPeerConfig replicationPeerConfigRemoved = ReplicationPeerConfigUtil.
       updateReplicationBasePeerConfigs(conf, updatedReplicationPeerConfig);
@@ -299,29 +296,19 @@ public class TestZKReplicationPeerStorage {
     assertNull(replicationPeerConfigRemoved.getConfiguration().get(customPeerConfigKey));
   }
 
-  @Test
-  public void testBaseReplicationPeerConfigInAddAndRemove() {
+  @Test public void testBaseReplicationRemovePeerConfigWithNoExistingConfig()
+    throws ReplicationException {
     String customPeerConfigKey = "hbase.xxx.custom_config";
-    String customPeerConfigValue = "test";
     ReplicationPeerConfig existingReplicationPeerConfig = getConfig(1);
 
     // custom config not present
     assertEquals(existingReplicationPeerConfig.getConfiguration().get(customPeerConfigKey), null);
-
     Configuration conf = UTIL.getConfiguration();
     conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
-      customPeerConfigKey.concat("=").concat(customPeerConfigValue));
-    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_REMOVE_BASE_CONFIG,
-      customPeerConfigKey);
+      customPeerConfigKey.concat("=").concat(""));
 
-    Exception exceptionThrown = null;
-    try {
-      ReplicationPeerConfigUtil
-        .updateReplicationBasePeerConfigs(conf, existingReplicationPeerConfig);
-    } catch (Exception e) {
-      exceptionThrown = e;
-    }
-    assertNotNull("Expection should be thrown", exceptionThrown);
-    assertEquals(ReplicationException.class, exceptionThrown.getClass());
+    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
+      updateReplicationBasePeerConfigs(conf, existingReplicationPeerConfig);
+    assertNull(updatedReplicationPeerConfig.getConfiguration().get(customPeerConfigKey));
   }
 }
