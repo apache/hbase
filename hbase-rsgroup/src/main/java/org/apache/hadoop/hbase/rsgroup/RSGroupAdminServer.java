@@ -199,11 +199,13 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    * @param movedServers  the servers that are moved to new group
    * @param movedTables the tables that are moved to new group
    * @param srcGrpServers all servers in the source group, excluding the movedServers
-   * @param targetGrp     the target group
+   * @param targetGroupName the target group
+   * @param sourceGroupName the source group
    * @throws IOException if any error while moving regions
    */
   private void moveServerRegionsFromGroup(Set<Address> movedServers, Set<TableName> movedTables,
-    Set<Address> srcGrpServers, RSGroupInfo targetGrp) throws IOException {
+    Set<Address> srcGrpServers, String targetGroupName,
+    String sourceGroupName) throws IOException {
     // Get server names corresponding to given Addresses
     List<ServerName> movedServerNames = new ArrayList<>(movedServers.size());
     List<ServerName> srcGrpServerNames = new ArrayList<>(srcGrpServers.size());
@@ -229,7 +231,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
           if (!movedTables.contains(region.getTable()) && !srcGrpServers
             .contains(getRegionAddress(region))) {
             LOG.info("Moving server region {}, which do not belong to RSGroup {}",
-              region.getShortNameToLog(), targetGrp.getName());
+              region.getShortNameToLog(), targetGroupName);
             // Move region back to source RSGroup servers
             ServerName dest =
               this.master.getLoadBalancer().randomAssignment(region, srcGrpServerNames);
@@ -243,17 +245,16 @@ public class RSGroupAdminServer implements RSGroupAdmin {
               assignmentFutures.add(Pair.newPair(region, future));
             } catch (Exception ioe) {
               errorInRegionMove = true;
-              LOG.error("Move region {} from group failed, will retry, current retry time is {}",
+              LOG.error("Move region {} failed, will retry, current retry time is {}",
                 region.getShortNameToLog(), retry, ioe);
             }
           }
         }
       }
       boolean allRegionsMoved =
-        waitForRegionMovement(assignmentFutures, targetGrp.getName(), retry);
+        waitForRegionMovement(assignmentFutures, sourceGroupName, retry);
       if (allRegionsMoved && !errorInRegionMove) {
-        LOG.info("All regions from server(s) {} moved to target group {}.", movedServerNames,
-          targetGrp.getName());
+        LOG.info("All regions from {} are moved back to {}", movedServerNames, sourceGroupName);
         return;
       } else {
         retry++;
@@ -277,9 +278,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    * completion even if some region movement fails.
    */
   private boolean waitForRegionMovement(List<Pair<RegionInfo, Future<byte[]>>> regionMoveFutures,
-    String tgtGrpName, int retryCount) {
+    String groupName, int retryCount) {
     LOG.info("Moving {} region(s) to group {}, current retry={}", regionMoveFutures.size(),
-      tgtGrpName, retryCount);
+      groupName, retryCount);
     boolean allRegionsMoved = true;
     for (Pair<RegionInfo, Future<byte[]>> pair : regionMoveFutures) {
       try {
@@ -295,7 +296,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       } catch (Exception e) {
         allRegionsMoved = false;
         LOG.error("Move region {} to group {} failed, will retry on next attempt",
-          pair.getFirst().getShortNameToLog(), tgtGrpName, e);
+          pair.getFirst().getShortNameToLog(), groupName, e);
       }
     }
     return allRegionsMoved;
@@ -426,7 +427,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
           targetGroupName);
       moveServerRegionsFromGroup(movedServers, Collections.emptySet(),
         rsGroupInfoManager.getRSGroup(srcGrp.getName()).getServers(),
-        rsGroupInfoManager.getRSGroup(targetGroupName));
+        targetGroupName, srcGrp.getName());
       LOG.info("Move servers done: {} => {}", srcGrp.getName(), targetGroupName);
     }
   }
@@ -579,7 +580,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       //move regions on these servers which do not belong to group tables
       moveServerRegionsFromGroup(servers, tables,
         rsGroupInfoManager.getRSGroup(srcGroup).getServers(),
-        rsGroupInfoManager.getRSGroup(targetGroup));
+        targetGroup, srcGroup);
       //move regions of these tables which are not on group servers
       moveTableRegionsToGroup(tables, rsGroupInfoManager.getRSGroup(targetGroup));
     }
