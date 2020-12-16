@@ -477,10 +477,13 @@ public final class ReplicationPeerConfigUtil {
       for (Map.Entry<String, String> entry : basePeerConfigMap.entrySet()) {
         String configName = entry.getKey();
         String configValue = entry.getValue();
+        // If the config is provided with empty value, for eg. k1="",
+        // we remove it from peer config. Providing config with empty value
+        // is required so that it doesn't remove any other config unknowingly.
         if (Strings.isNullOrEmpty(configValue)) {
           copiedPeerConfigBuilder.removeConfiguration(configName);
         } else if (!receivedPeerConfigMap.getOrDefault(configName, "").equals(configValue)) {
-          // do not update the configuration if exact config already exists
+          // update the configuration if exact config and value doesn't exists
           copiedPeerConfigBuilder.putConfiguration(configName, configValue);
         }
       }

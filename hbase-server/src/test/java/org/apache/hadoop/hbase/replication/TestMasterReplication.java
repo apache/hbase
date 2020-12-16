@@ -447,7 +447,7 @@ public class TestMasterReplication {
    *
    */
   @Test
-  public void testBasePeerConfigsForPeerMutations()
+  public void testBasePeerConfigsForReplicationPeer()
     throws Exception {
     LOG.info("testBasePeerConfigsForPeerMutations");
     String firstCustomPeerConfigKey = "hbase.xxx.custom_config";
@@ -517,7 +517,7 @@ public class TestMasterReplication {
   }
 
   @Test
-  public void testBasePeerConfigsRemovalForPeerMutations()
+  public void testBasePeerConfigsRemovalForReplicationPeer()
     throws Exception {
     LOG.info("testBasePeerConfigsForPeerMutations");
     String firstCustomPeerConfigKey = "hbase.xxx.custom_config";
@@ -554,7 +554,7 @@ public class TestMasterReplication {
   }
 
   @Test
-  public void testRemoveBasePeerConfigWithoutExistingConfigForPeerMutations()
+  public void testRemoveBasePeerConfigWithoutExistingConfigForReplicationPeer()
     throws Exception {
     LOG.info("testBasePeerConfigsForPeerMutations");
     String firstCustomPeerConfigKey = "hbase.xxx.custom_config";
