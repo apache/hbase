@@ -102,8 +102,9 @@ public class TestRegionMoveAndAbandon {
     LOG.info("Killing RS {}", rs1.getServerName());
     // Stop RS1
     cluster.killRegionServer(rs1.getServerName());
+    UTIL.waitFor(30_000, () -> rs1.isStopped() && !rs1.isAlive());
     // Region should get moved to RS2
-    UTIL.waitTableAvailable(TableName.NAMESPACE_TABLE_NAME, 30_000);
+    UTIL.waitTableAvailable(TableName.NAMESPACE_TABLE_NAME, 60_000);
     // Restart the master
     LOG.info("Killing master {}", cluster.getMaster().getServerName());
     cluster.killMaster(cluster.getMaster().getServerName());
