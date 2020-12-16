@@ -28,6 +28,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 interface CatalogReplicaLoadBalanceSelector {
 
+  int UNINITIALIZED_NUM_OF_REPLICAS = -1;
+
   /**
    * This method is called when input location is stale, i.e, when clients run into
    * org.apache.hadoop.hbase.NotServingRegionException.
