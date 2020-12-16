@@ -1016,8 +1016,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
               assignmentFutures.add(Pair.newPair(region, future));
             } catch (IOException ioe) {
               failedRegions.add(region.getRegionNameAsString());
-              LOG.debug("Move region {} from server {} failed, will retry, current retry time is {}",
-                region.getShortNameToLog(), owner.getHostname(), retry, ioe);
+              LOG.debug("Move region {} failed, will retry, current retry time is {}",
+                region.getShortNameToLog(), retry, ioe);
               toThrow = ioe;
             }
           }
@@ -1025,8 +1025,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       }
       waitForRegionMovement(assignmentFutures, failedRegions, sourceGroupName, retry);
       if (failedRegions.isEmpty()) {
-        LOG.info("All regions from server(s) {} moved to source group {}.", movedServerNames,
-          sourceGroupName);
+        LOG.info("All regions from {} are moved back to {}", movedServerNames, sourceGroupName);
         return;
       } else {
         try {
