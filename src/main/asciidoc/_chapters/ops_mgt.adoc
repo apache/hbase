@@ -591,6 +591,9 @@ $ bin/hbase org.apache.hadoop.hbase.mapreduce.Export <tablename> <outputdir> [<v
 
 By default, the `Export` tool only exports the newest version of a given cell, regardless of the number of versions stored. To export more than one version, replace *_<versions>_* with the desired number of versions.
 
+For mapreduce based Export, if you want to export cell tags then set the following config property
+`hbase.client.rpc.codec` to `org.apache.hadoop.hbase.codec.KeyValueCodecWithTags`
+
 Note: caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration.
 
 === Import
@@ -607,6 +610,9 @@ To import 0.94 exported files in a 0.96 cluster or onwards, you need to set syst
 ----
 $ bin/hbase -Dhbase.import.version=0.94 org.apache.hadoop.hbase.mapreduce.Import <tablename> <inputdir>
 ----
+
+If you want to import cell tags then set the following config property
+`hbase.client.rpc.codec` to `org.apache.hadoop.hbase.codec.KeyValueCodecWithTags`
 
 === ImportTsv
 

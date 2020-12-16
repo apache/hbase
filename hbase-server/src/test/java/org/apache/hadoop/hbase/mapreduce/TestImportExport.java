@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.apache.hadoop.hbase.HConstants.RPC_CODEC_CONF_KEY;
+import static org.apache.hadoop.hbase.ipc.RpcClient.DEFAULT_CODEC_CLASS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -40,6 +42,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -49,6 +52,17 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagRewriteCell;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
@@ -106,6 +120,9 @@ public class TestImportExport {
   private static final String EXPORT_BATCH_SIZE = "100";
 
   private static long now = System.currentTimeMillis();
+  public static final byte TEST_TAG_TYPE =  (byte) (65);
+  public static final String TEST_ATTR = "source_op";
+  public static final String TEST_TAG = "test_tag";
 
   @Rule
   public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
@@ -731,6 +748,200 @@ public class TestImportExport {
 
     public boolean isWALVisited() {
       return isVisited;
+    }
+  }
+
+  /**
+   *  Add cell tags to delete mutations, run export and import tool and
+   *  verify that tags are present in import table also.
+   * @throws Throwable throws Throwable.
+   */
+  @Test
+  public void testTagsAddition() throws Throwable {
+    final TableName exportTable = TableName.valueOf("exportWithTestTagsAddition");
+    HTableDescriptor desc = new HTableDescriptor(exportTable)
+      .addCoprocessor(MetadataController.class.getName());
+    desc.addFamily(new HColumnDescriptor(FAMILYA)
+        .setMaxVersions(5)
+        .setKeepDeletedCells(true));
+
+    UTIL.getHBaseAdmin().createTable(desc);
+    Table exportT = UTIL.getConnection().getTable(exportTable);
+
+    //Add first version of QUAL
+    Put p = new Put(ROW1);
+    p.addColumn(FAMILYA, QUAL, now, QUAL);
+    exportT.put(p);
+
+    //Add Delete family marker
+    Delete d = new Delete(ROW1, now+3);
+    // Add test attribute to delete mutation.
+    d.setAttribute(TEST_ATTR, Bytes.toBytes(TEST_TAG));
+    exportT.delete(d);
+
+    // Run export tool with KeyValueCodecWithTags as Codec. This will ensure that export tool
+    // will use KeyValueCodecWithTags.
+    String[] args = new String[] {
+      "-D" + Export.RAW_SCAN + "=true",
+      // This will make sure that codec will encode and decode tags in rpc call.
+      "-Dhbase.client.rpc.codec=org.apache.hadoop.hbase.codec.KeyValueCodecWithTags",
+      exportTable.getNameAsString(),
+      FQ_OUTPUT_DIR,
+      "1000", // max number of key versions per key to export
+    };
+    assertTrue(runExport(args));
+    // Assert tag exists in exportTable
+    checkWhetherTagExists(exportTable, true);
+
+    // Create an import table with MetadataController.
+    final TableName importTable = TableName.valueOf("importWithTestTagsAddition");
+    HTableDescriptor importTableDesc = new HTableDescriptor(importTable)
+      .addCoprocessor(MetadataController.class.getName());
+    importTableDesc.addFamily(new HColumnDescriptor(FAMILYA)
+      .setMaxVersions(5)
+      .setKeepDeletedCells(true));
+    UTIL.getHBaseAdmin().createTable(importTableDesc);
+
+    // Run import tool.
+    args = new String[] {
+      // This will make sure that codec will encode and decode tags in rpc call.
+      "-Dhbase.client.rpc.codec=org.apache.hadoop.hbase.codec.KeyValueCodecWithTags",
+      importTable.getNameAsString(),
+      FQ_OUTPUT_DIR
+    };
+    assertTrue(runImport(args));
+    // Make sure that tags exists in imported table.
+    checkWhetherTagExists(importTable, true);
+  }
+
+  private void checkWhetherTagExists(TableName table, boolean tagExists) throws IOException {
+    List<Cell> values = new ArrayList<>();
+    for (HRegion region : UTIL.getHBaseCluster().getRegions(table)) {
+      Scan scan = new Scan();
+      // Make sure to set rawScan to true so that we will get Delete Markers.
+      scan.setRaw(true);
+      scan.setMaxVersions();
+      scan.withStartRow(ROW1);
+      // Need to use RegionScanner instead of table#getScanner since the latter will
+      // not return tags since it will go through rpc layer and remove tags intentionally.
+      RegionScanner scanner = region.getScanner(scan);
+      scanner.next(values);
+      if (!values.isEmpty()) {
+        break;
+      }
+    }
+    boolean deleteFound = false;
+    for (Cell cell: values) {
+      if (CellUtil.isDelete(cell)) {
+        deleteFound = true;
+        List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLength());
+        // If tagExists flag is true then validate whether tag contents are as expected.
+        if (tagExists) {
+          Assert.assertEquals(1, tags.size());
+          for (Tag tag : tags) {
+            Assert.assertEquals(TEST_TAG, Bytes.toStringBinary(tag.getValue()));
+          }
+        } else {
+          // If tagExists flag is disabled then check for 0 size tags.
+          assertEquals(0, tags.size());
+        }
+      }
+    }
+    Assert.assertTrue(deleteFound);
+  }
+
+  /*
+    This co-proc will add a cell tag to delete mutation.
+   */
+  public static  class MetadataController
+    extends BaseRegionObserver /*implements CoprocessorService*/ {
+    @Override
+    public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
+            MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
+      if (c.getEnvironment().getRegion().getRegionInfo().getTable().isSystemTable()) {
+        return;
+      }
+
+      for (int i = 0; i < miniBatchOp.size(); i++) {
+        Mutation m = miniBatchOp.getOperation(i);
+        if (!(m instanceof Delete)) {
+          continue;
+        }
+        byte[] sourceOpAttr = m.getAttribute(TEST_ATTR);
+        if (sourceOpAttr == null) {
+          continue;
+        }
+        Tag sourceOpTag = new Tag(TEST_TAG_TYPE, sourceOpAttr);
+        List<Cell> updatedCells = new ArrayList<>();
+        for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance(); ) {
+          Cell cell = cellScanner.current();
+          List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
+            cell.getTagsLength());
+          tags.add(sourceOpTag);
+          Cell updatedCell = new TagRewriteCell(cell, Tag.fromList(tags));
+          updatedCells.add(updatedCell);
+        }
+        m.getFamilyCellMap().clear();
+        // Clear and add new Cells to the Mutation.
+        for (Cell cell : updatedCells) {
+          Delete d = (Delete) m;
+          d.addDeleteMarker(cell);
+        }
+      }
+    }
+  }
+
+  /**
+   * Set hbase.client.rpc.codec and hbase.client.default.rpc.codec both to empty string
+   * This means it will use no Codec. Make sure that we don't return Tags in response.
+   * @throws Exception Exception
+   */
+  @Test
+  public void testTagsWithEmptyCodec() throws Exception {
+    final TableName tableName = TableName.valueOf("testTagsWithEmptyCodec");
+    HTableDescriptor desc = new HTableDescriptor(tableName)
+      .addCoprocessor(MetadataController.class.getName());
+    desc.addFamily(new HColumnDescriptor(FAMILYA)
+      .setMaxVersions(5)
+      .setKeepDeletedCells(true));
+
+    UTIL.getHBaseAdmin().createTable(desc);
+    Configuration conf = new Configuration(UTIL.getConfiguration());
+    conf.set(RPC_CODEC_CONF_KEY, "");
+    conf.set(DEFAULT_CODEC_CLASS, "");
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+         Table table = connection.getTable(tableName)) {
+      //Add first version of QUAL
+      Put p = new Put(ROW1);
+      p.addColumn(FAMILYA, QUAL, now, QUAL);
+      table.put(p);
+
+      //Add Delete family marker
+      Delete d = new Delete(ROW1, now+3);
+      // Add test attribute to delete mutation.
+      d.setAttribute(TEST_ATTR, Bytes.toBytes(TEST_TAG));
+      table.delete(d);
+
+      // Since RPC_CODEC_CONF_KEY and DEFAULT_CODEC_CLASS is set to empty, it will use
+      // empty Codec and it shouldn't encode/decode tags.
+      Scan scan = new Scan().withStartRow(ROW1).setRaw(true);
+      ResultScanner scanner = table.getScanner(scan);
+      int count = 0;
+      Result result;
+      while ((result = scanner.next()) != null) {
+        List<Cell> cells = result.listCells();
+        assertEquals(2, cells.size());
+        Cell cell = cells.get(0);
+        assertTrue(CellUtil.isDelete(cell));
+        List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLength());
+        assertEquals(0, tags.size());
+        count++;
+      }
+      assertEquals(1, count);
+    } finally {
+      UTIL.deleteTable(tableName);
     }
   }
 }

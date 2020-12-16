@@ -41,13 +41,13 @@ public class TestPBCell {
   public void testRoundTrip() {
     final Cell cell = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("fam"),
       Bytes.toBytes("qual"), Bytes.toBytes("val"));
-    CellProtos.Cell c = ProtobufUtil.toCell(cell), decoded;
+    CellProtos.Cell c = ProtobufUtil.toCell(cell, false), decoded;
     PositionedByteRange pbr = new SimplePositionedByteRange(c.getSerializedSize());
     pbr.setPosition(0);
     int encodedLength = CODEC.encode(pbr, c);
     pbr.setPosition(0);
     decoded = CODEC.decode(pbr);
     assertEquals(encodedLength, pbr.getPosition());
-    assertTrue(CellComparator.equals(cell, ProtobufUtil.toCell(decoded)));
+    assertTrue(CellComparator.equals(cell, ProtobufUtil.toCell(decoded, false)));
   }
 }

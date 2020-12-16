@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -495,6 +496,10 @@ public class Import {
       // If there's a rename mapping for this CF, create a new KeyValue
       byte[] newCfName = cfRenameMap.get(CellUtil.cloneFamily(kv));
       if(newCfName != null) {
+        List<Tag> tags = null;
+        if (kv.getTagsLength() > 0) {
+          tags = Tag.asList(kv.getTagsArray(), kv.getTagsOffset(), kv.getTagsLength());
+        }
           kv = new KeyValue(kv.getRowArray(), // row buffer 
                   kv.getRowOffset(),        // row offset
                   kv.getRowLength(),        // row length
@@ -508,7 +513,8 @@ public class Import {
                   KeyValue.Type.codeToType(kv.getTypeByte()), // KV Type
                   kv.getValueArray(),       // value buffer 
                   kv.getValueOffset(),      // value offset
-                  kv.getValueLength());     // value length
+                  kv.getValueLength(),      // value length
+                  tags);
       }
     }
     return kv;
