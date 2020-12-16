@@ -74,7 +74,7 @@ public class MessageCodec implements Codec {
 
     @Override
     protected Cell parseCell() throws IOException {
-      return ProtobufUtil.toCell(cellBuilder, CellProtos.Cell.parseDelimitedFrom(this.in));
+      return ProtobufUtil.toCell(cellBuilder, CellProtos.Cell.parseDelimitedFrom(this.in), false);
     }
   }
 
