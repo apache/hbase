@@ -130,57 +130,65 @@ public class HFileReaderV2 extends AbstractHFileReader {
       new HFileBlock.FSReaderImpl(fsdis, fileSize, hfs, path, hfileContext);
     this.fsBlockReader = fsBlockReaderV2; // upcast
 
-    // Comparator class name is stored in the trailer in version 2.
-    comparator = trailer.createComparator();
-    dataBlockIndexReader = new HFileBlockIndex.BlockIndexReader(comparator,
+    try {
+      // Comparator class name is stored in the trailer in version 2.
+      comparator = trailer.createComparator();
+      dataBlockIndexReader = new HFileBlockIndex.BlockIndexReader(comparator,
         trailer.getNumDataIndexLevels(), this);
-    metaBlockIndexReader = new HFileBlockIndex.BlockIndexReader(
+      metaBlockIndexReader = new HFileBlockIndex.BlockIndexReader(
         KeyValue.RAW_COMPARATOR, 1);
 
-    // Parse load-on-open data.
+      // Parse load-on-open data.
 
-    HFileBlock.BlockIterator blockIter = fsBlockReaderV2.blockRange(
+      HFileBlock.BlockIterator blockIter = fsBlockReaderV2.blockRange(
         trailer.getLoadOnOpenDataOffset(),
         fileSize - trailer.getTrailerSize());
 
-    // Data index. We also read statistics about the block index written after
-    // the root level.
-    dataBlockIndexReader.readMultiLevelIndexRoot(
+      // Data index. We also read statistics about the block index written after
+      // the root level.
+      dataBlockIndexReader.readMultiLevelIndexRoot(
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
         trailer.getDataIndexCount());
 
-    // Meta index.
-    metaBlockIndexReader.readRootIndex(
+      // Meta index.
+      metaBlockIndexReader.readRootIndex(
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
         trailer.getMetaIndexCount());
 
-    // File info
-    fileInfo = new FileInfo();
-    fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
-    byte[] creationTimeBytes = fileInfo.get(FileInfo.CREATE_TIME_TS);
-    this.hfileContext.setFileCreateTime(creationTimeBytes == null? 0:
-      Bytes.toLong(creationTimeBytes));
-    lastKey = fileInfo.get(FileInfo.LASTKEY);
-    avgKeyLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_KEY_LEN));
-    avgValueLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_VALUE_LEN));
-    byte [] keyValueFormatVersion =
+      // File info
+      fileInfo = new FileInfo();
+      fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
+      byte[] creationTimeBytes = fileInfo.get(FileInfo.CREATE_TIME_TS);
+      this.hfileContext.setFileCreateTime(creationTimeBytes == null? 0:
+        Bytes.toLong(creationTimeBytes));
+      lastKey = fileInfo.get(FileInfo.LASTKEY);
+      avgKeyLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_KEY_LEN));
+      avgValueLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_VALUE_LEN));
+      byte [] keyValueFormatVersion =
         fileInfo.get(HFileWriterV2.KEY_VALUE_VERSION);
-    includesMemstoreTS = keyValueFormatVersion != null &&
+      includesMemstoreTS = keyValueFormatVersion != null &&
         Bytes.toInt(keyValueFormatVersion) ==
-            HFileWriterV2.KEY_VALUE_VER_WITH_MEMSTORE;
-    fsBlockReaderV2.setIncludesMemstoreTS(includesMemstoreTS);
-    if (includesMemstoreTS) {
-      decodeMemstoreTS = Bytes.toLong(fileInfo.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY)) > 0;
-    }
+          HFileWriterV2.KEY_VALUE_VER_WITH_MEMSTORE;
+      fsBlockReaderV2.setIncludesMemstoreTS(includesMemstoreTS);
+      if (includesMemstoreTS) {
+        decodeMemstoreTS = Bytes.toLong(fileInfo.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY)) > 0;
+      }
 
-    // Read data block encoding algorithm name from file info.
-    dataBlockEncoder = HFileDataBlockEncoderImpl.createFromFileInfo(fileInfo);
-    fsBlockReaderV2.setDataBlockEncoder(dataBlockEncoder);
+      // Read data block encoding algorithm name from file info.
+      dataBlockEncoder = HFileDataBlockEncoderImpl.createFromFileInfo(fileInfo);
+      fsBlockReaderV2.setDataBlockEncoder(dataBlockEncoder);
 
-    // Store all other load-on-open blocks for further consumption.
-    HFileBlock b;
-    while ((b = blockIter.nextBlock()) != null) {
-      loadOnOpenBlocks.add(b);
+      // Store all other load-on-open blocks for further consumption.
+      HFileBlock b;
+      while ((b = blockIter.nextBlock()) != null) {
+        loadOnOpenBlocks.add(b);
+      }
+      // close the block reader
+      fsdis.unbuffer();
+    } catch (Throwable t) {
+      fsBlockReaderV2.closeStreams();
+      throw new CorruptHFileException("Problem reading data index and meta index from file "
+        + path, t);
     }
 
     // Prefetch file blocks upon open if requested
