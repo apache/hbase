@@ -108,7 +108,6 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
   private final TableName tableName;
   private final IntSupplier getNumOfReplicas;
   private volatile boolean isStopped = false;
-  private final static int UNINITIALIZED_NUM_OF_REPLICAS = -1;
 
   CatalogReplicaLoadBalanceSimpleSelector(TableName tableName, AsyncConnectionImpl conn,
     IntSupplier getNumOfReplicas) {
@@ -117,7 +116,7 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
     this.getNumOfReplicas = getNumOfReplicas;
 
     // This numOfReplicas is going to be lazy initialized.
-    this.numOfReplicas = UNINITIALIZED_NUM_OF_REPLICAS;
+    this.numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
     // Start chores
     this.conn.getChoreService().scheduleChore(getCacheCleanupChore(this));
     this.conn.getChoreService().scheduleChore(getRefreshReplicaCountChore(this));
@@ -146,7 +145,7 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
    */
   private int getRandomReplicaId() {
     int cachedNumOfReplicas = this.numOfReplicas;
-    if (cachedNumOfReplicas == UNINITIALIZED_NUM_OF_REPLICAS) {
+    if (cachedNumOfReplicas == CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS) {
       cachedNumOfReplicas = refreshCatalogReplicaCount();
       this.numOfReplicas = cachedNumOfReplicas;
     }
@@ -262,16 +261,16 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
   private int refreshCatalogReplicaCount() {
     int newNumOfReplicas = this.getNumOfReplicas.getAsInt();
     LOG.debug("Refreshed replica count {}", newNumOfReplicas);
-    if (newNumOfReplicas == 1) {
-      LOG.warn("Table {}'s region replica count is 1, maybe a misconfiguration or failure to "
-        + "fetch the replica count", tableName);
-    }
-    int cachedNumOfReplicas = this.numOfReplicas;
-
-    // If the returned number of replicas is 1, it is mostly caused by failure to fetch the
+    // If the returned number of replicas is -1, it is caused by failure to fetch the
     // replica count. Do not update the numOfReplicas in this case.
+    if (newNumOfReplicas == CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS) {
+      LOG.error("Failed to fetch Table {}'s region replica count", tableName);
+      return this.numOfReplicas;
+    }
+
+    int cachedNumOfReplicas = this.numOfReplicas;
     if ((cachedNumOfReplicas == UNINITIALIZED_NUM_OF_REPLICAS) ||
-      ((cachedNumOfReplicas != newNumOfReplicas) && (newNumOfReplicas != 1))) {
+      (cachedNumOfReplicas != newNumOfReplicas)) {
       this.numOfReplicas = newNumOfReplicas;
     }
     return newNumOfReplicas;
