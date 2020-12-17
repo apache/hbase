@@ -79,7 +79,7 @@ import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
  * length and actual tag bytes length.
  */
 @InterfaceAudience.Private
-public class KeyValue implements ExtendedCell, Cloneable, ContiguousCellFormat {
+public class KeyValue implements ExtendedCell, Cloneable {
   private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<>();
 
   private static final Logger LOG = LoggerFactory.getLogger(KeyValue.class);
