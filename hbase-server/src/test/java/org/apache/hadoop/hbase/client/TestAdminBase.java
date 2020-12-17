@@ -33,6 +33,7 @@ import org.junit.rules.TestName;
 public class TestAdminBase {
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static int NB_SERVERS = 3;
   protected static Admin ADMIN;
 
   @Rule
@@ -47,7 +48,7 @@ public class TestAdminBase {
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 30);
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 30);
     TEST_UTIL.getConfiguration().setBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, true);
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster(NB_SERVERS);
     ADMIN = TEST_UTIL.getAdmin();
   }
 
