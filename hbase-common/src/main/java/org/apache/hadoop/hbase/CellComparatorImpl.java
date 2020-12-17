@@ -59,7 +59,6 @@ public class CellComparatorImpl implements CellComparator {
 
   @Override
   public int compare(final Cell l, final Cell r, boolean ignoreSequenceid) {
-
     int diff = 0;
     // "Peel off" the most common path.
     if (l instanceof KeyValue && r instanceof KeyValue) {
@@ -73,10 +72,13 @@ public class CellComparatorImpl implements CellComparator {
         return diff;
       }
     } else if (l instanceof ByteBufferKeyValue && r instanceof KeyValue) {
-      diff = compareBBKVvsKV((ByteBufferKeyValue) l, (KeyValue) r);
+      diff = compareKVVsBBKV((KeyValue) r, (ByteBufferKeyValue) l);
       if (diff != 0) {
-        return diff;
+        // negate- Findbugs will complain?
+        return -diff;
       }
+      // if ignoreSequenceid then the diff will be 0.
+      return ignoreSequenceid ? diff : Long.compare(r.getSequenceId(), l.getSequenceId());
     } else if (l instanceof ByteBufferKeyValue && r instanceof ByteBufferKeyValue) {
       diff = compareBBKV((ByteBufferKeyValue) l, (ByteBufferKeyValue) r);
       if (diff != 0) {
@@ -84,7 +86,7 @@ public class CellComparatorImpl implements CellComparator {
       }
     } else {
       int leftRowLength = l.getRowLength();
-      int rightRowLength = l.getRowLength();
+      int rightRowLength = r.getRowLength();
       diff = compareRows(l, leftRowLength, r, rightRowLength);
       if (diff != 0) {
         return diff;
@@ -161,86 +163,6 @@ public class CellComparatorImpl implements CellComparator {
       left.getQualifierPosition(leftFamilyPosition, leftFamilyLength), leftQualifierLength,
       right.getQualifierByteBuffer(),
       right.getQualifierPosition(rightFamilyPosition, rightFamilyLength), rightQualifierLength);
-    if (diff != 0) {
-      return diff;
-    }
-
-    // Timestamps.
-    // Swap order we pass into compare so we get DESCENDING order.
-    diff = Long.compare(right.getTimestamp(rightKeyLength), left.getTimestamp(leftKeyLength));
-    if (diff != 0) {
-      return diff;
-    }
-
-    // Compare types. Let the delete types sort ahead of puts; i.e. types
-    // of higher numbers sort before those of lesser numbers. Maximum (255)
-    // appears ahead of everything, and minimum (0) appears after
-    // everything.
-    return (0xff & rightType) - (0xff & leftType);
-  }
-
-  private static int compareBBKVvsKV(final ByteBufferKeyValue left, final KeyValue right) {
-    int diff;
-    // Compare Rows. Cache row length.
-    int leftRowLength = left.getRowLength();
-    int rightRowLength = right.getRowLength();
-    diff = ByteBufferUtils.compareTo(left.getRowByteBuffer(), left.getRowPosition(),
-      leftRowLength, right.getRowArray(), right.getRowOffset(), rightRowLength);
-    if (diff != 0) {
-      return diff;
-    }
-
-    // If the column is not specified, the "minimum" key type appears as latest in the sorted
-    // order, regardless of the timestamp. This is used for specifying the last key/value in a
-    // given row, because there is no "lexicographically last column" (it would be infinitely
-    // long).
-    // The "maximum" key type does not need this behavior. Copied from KeyValue. This is bad in
-    // that
-    // we can't do memcmp w/ special rules like this.
-    // TODO: Is there a test for this behavior?
-    int leftFamilyLengthPosition = left.getFamilyLengthPosition(leftRowLength);
-    int leftFamilyLength = left.getFamilyLength(leftFamilyLengthPosition);
-    int leftKeyLength = left.getKeyLength();
-    int leftQualifierLength =
-        left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
-
-    // No need of left row length below here.
-
-    byte leftType = left.getTypeByte(leftKeyLength);
-    if (leftFamilyLength + leftQualifierLength == 0
-        && leftType == KeyValue.Type.Minimum.getCode()) {
-      // left is "bigger", i.e. it appears later in the sorted order
-      return 1;
-    }
-
-    int rightFamilyLengthPosition = right.getFamilyLengthPosition(rightRowLength);
-    int rightFamilyLength = right.getFamilyLength(rightFamilyLengthPosition);
-    int rightKeyLength = right.getKeyLength();
-    int rightQualifierLength =
-        right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
-
-    // No need of right row length below here.
-
-    byte rightType = right.getTypeByte(rightKeyLength);
-    if (rightFamilyLength + rightQualifierLength == 0
-        && rightType == KeyValue.Type.Minimum.getCode()) {
-      return -1;
-    }
-
-    // Compare families.
-    int leftFamilyPosition = left.getFamilyPosition(leftFamilyLengthPosition);
-    int rightFamilyPosition = right.getFamilyOffset(rightFamilyLengthPosition);
-    diff = ByteBufferUtils.compareTo(left.getFamilyByteBuffer(), leftFamilyPosition,
-      leftFamilyLength, right.getFamilyArray(), rightFamilyPosition, rightFamilyLength);
-    if (diff != 0) {
-      return diff;
-    }
-
-    // Compare qualifiers
-    diff = ByteBufferUtils.compareTo(left.getQualifierByteBuffer(),
-      left.getQualifierPosition(leftFamilyPosition, leftFamilyLength), leftQualifierLength,
-      right.getQualifierArray(), right.getQualifierOffset(rightFamilyPosition, rightFamilyLength),
-      rightQualifierLength);
     if (diff != 0) {
       return diff;
     }
