@@ -566,7 +566,6 @@ public class TestMasterReplication {
       addPeer("1", 0, 1);
       Admin admin = utilities[0].getAdmin();
 
-      // Validates base configs 1 is present for both peer.
       Assert.assertNull("Config should not be there", admin.getReplicationPeerConfig("1").
         getConfiguration().get(firstCustomPeerConfigKey));
     } finally {
