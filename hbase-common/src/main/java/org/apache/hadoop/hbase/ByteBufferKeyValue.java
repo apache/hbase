@@ -33,7 +33,7 @@ import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
  * off heap/ on heap ByteBuffer
  */
 @InterfaceAudience.Private
-public class ByteBufferKeyValue extends ByteBufferExtendedCell implements ContiguousCellFormat {
+public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   protected final ByteBuffer buf;
   protected final int offset;
