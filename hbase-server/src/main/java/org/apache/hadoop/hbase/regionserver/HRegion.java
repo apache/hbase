@@ -8135,7 +8135,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // MetricsRegionWrapperImpl is already init and not close,
       // add region close when open failed
       try {
-        this.close();
+        this.close(true);
       } catch (Throwable e) {
         LOG.warn("Open region: {} failed. Try close region but got exception ", this.getRegionInfo(),
           e);
