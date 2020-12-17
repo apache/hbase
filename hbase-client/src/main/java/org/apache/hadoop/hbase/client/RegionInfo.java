@@ -418,6 +418,20 @@ public interface RegionInfo extends Comparable<RegionInfo> {
     }
   }
 
+  static boolean isMD5Hash(String encodedRegionName) {
+    if (encodedRegionName.length() != MD5_HEX_LENGTH) {
+      return false;
+    }
+
+    for (int i = 0; i < encodedRegionName.length(); i++) {
+      char c = encodedRegionName.charAt(i);
+      if (!((c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9'))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /**
    * Check whether two regions are adjacent; i.e. lies just before or just
    * after in a table.
