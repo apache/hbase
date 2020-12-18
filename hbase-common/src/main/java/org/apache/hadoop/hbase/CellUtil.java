@@ -742,8 +742,9 @@ public final class CellUtil {
     byte rfamlength = right.getFamilyLength();
     int lqlength = left.getQualifierLength();
     int rqlength = right.getQualifierLength();
+
     // match length
-    if ((lrowlength + lfamlength + lqlength) != (rrowlength + rfamlength + rqlength)) {
+    if ((lrowlength != rrowlength) || (lfamlength != rfamlength) || (lqlength != rqlength)) {
       return false;
     }
 
@@ -760,9 +761,9 @@ public final class CellUtil {
     int rfamlength = right.getFamilyLength();
     int lqlength = left.getQualifierLength();
     int rqlength = right.getQualifierLength();
+
     // match length
-    if ((lrowlength + lfamlength + lqlength) !=
-        (rrowlength + rfamlength + rqlength)) {
+    if ((lrowlength != rrowlength) || (lfamlength != rfamlength) || (lqlength != rqlength)) {
       return false;
     }
 
