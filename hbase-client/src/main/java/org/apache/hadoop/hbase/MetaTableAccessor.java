@@ -279,7 +279,9 @@ public class MetaTableAccessor {
       parsedInfo = parseRegionInfoFromRegionName(regionName);
       row = getMetaKeyForRegion(parsedInfo);
     } catch (Exception parseEx) {
-      // Ignore. This is used with tableName passed as regionName.
+      // If it is not a valid regionName(i.e, tableName), it needs to return null here
+      // as querying meta table wont help.
+      return null;
     }
     Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
