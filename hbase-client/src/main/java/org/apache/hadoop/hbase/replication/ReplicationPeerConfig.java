@@ -295,6 +295,12 @@ public class ReplicationPeerConfig {
     }
 
     @Override
+    public ReplicationPeerConfigBuilder removeConfiguration(String key) {
+      this.configuration.remove(key);
+      return this;
+    }
+
+    @Override
     public ReplicationPeerConfigBuilder putPeerData(byte[] key, byte[] value) {
       this.peerData.put(key, value);
       return this;
