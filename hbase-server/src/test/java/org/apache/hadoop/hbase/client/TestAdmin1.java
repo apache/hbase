@@ -41,8 +41,10 @@ import org.apache.hadoop.hbase.master.CatalogJanitor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -69,6 +71,36 @@ public class TestAdmin1 extends TestAdminBase {
   public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestAdmin1.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAdmin1.class);
+
+  @Test
+  public void testCompactRegionWithTableName() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    try {
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName).
+        setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
+      ADMIN.createTable(htd);
+      Region metaRegion = null;
+      for (int i = 0; i < NB_SERVERS; i++) {
+        HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i);
+        List<HRegion> onlineRegions = rs.getRegions(TableName.META_TABLE_NAME);
+        if (!onlineRegions.isEmpty()) {
+          metaRegion = onlineRegions.get(0);
+          break;
+        }
+      }
+
+      long metaReadCountBeforeCompact = metaRegion.getReadRequestsCount();
+      try {
+        ADMIN.majorCompactRegion(tableName.getName());
+      } catch (IllegalArgumentException iae) {
+        LOG.info("This is expected");
+      }
+      assertEquals(metaReadCountBeforeCompact, metaRegion.getReadRequestsCount());
+    } finally {
+      ADMIN.disableTable(tableName);
+      ADMIN.deleteTable(tableName);
+    }
+  }
 
   @Test
   public void testSplitFlushCompactUnknownTable() throws InterruptedException {

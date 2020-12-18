@@ -1946,8 +1946,15 @@ public class HBaseAdmin implements Admin {
     }
     Pair<RegionInfo, ServerName> pair = MetaTableAccessor.getRegion(connection, regionName);
     if (pair == null) {
-      final AtomicReference<Pair<RegionInfo, ServerName>> result = new AtomicReference<>(null);
       final String encodedName = Bytes.toString(regionName);
+      // When it is not a valid regionName, it is possible that it could be an encoded regionName.
+      // To match the encoded regionName, it has to scan the meta table and compare entry by entry.
+      // Since it scans meta table, so it has to be the MD5 hash, it can filter out
+      // most of invalid cases.
+      if (!RegionInfo.isMD5Hash(encodedName)) {
+        return null;
+      }
+      final AtomicReference<Pair<RegionInfo, ServerName>> result = new AtomicReference<>(null);
       MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
         @Override
         public boolean visit(Result data) throws IOException {
