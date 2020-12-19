@@ -60,7 +60,7 @@
       </div>
   </div>
   <p>We do not list procedures that have completed successfully; their number makes it hard to spot the problematics.</p>
-  <table class="table table-striped" width="90%" >
+  <table class="table table-striped" id="tab_Procedures" width="90%" >
     <tr>
         <th>Id</th>
         <th>Parent</th>
