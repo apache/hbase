@@ -2388,56 +2388,51 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     if (regionNameOrEncodedRegionName == null) {
       return failedFuture(new IllegalArgumentException("Passed region name can't be null"));
     }
-
-    CompletableFuture<Optional<HRegionLocation>> future;
-    if (RegionInfo.isEncodedRegionName(regionNameOrEncodedRegionName)) {
-      String encodedName = Bytes.toString(regionNameOrEncodedRegionName);
-      if (encodedName.length() < RegionInfo.MD5_HEX_LENGTH) {
-        // old format encodedName, should be meta region
-        future = connection.registry.getMetaRegionLocations()
-          .thenApply(locs -> Stream.of(locs.getRegionLocations())
-            .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
+    try {
+      CompletableFuture<Optional<HRegionLocation>> future;
+      if (RegionInfo.isEncodedRegionName(regionNameOrEncodedRegionName)) {
+        String encodedName = Bytes.toString(regionNameOrEncodedRegionName);
+        if (encodedName.length() < RegionInfo.MD5_HEX_LENGTH) {
+          // old format encodedName, should be meta region
+          future = connection.registry.getMetaRegionLocations()
+            .thenApply(locs -> Stream.of(locs.getRegionLocations())
+              .filter(loc -> loc.getRegion().getEncodedName().equals(encodedName)).findFirst());
+        } else {
+          future = ClientMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
+            regionNameOrEncodedRegionName);
+        }
       } else {
-        future = ClientMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
-          regionNameOrEncodedRegionName);
-      }
-    } else {
-      // Not all regionNameOrEncodedRegionName here is going to be a valid region name,
-      // it needs to throw out IllegalArgumentException in case tableName is passed in.
-      RegionInfo regionInfo;
-      try {
-        regionInfo = CatalogFamilyFormat.parseRegionInfoFromRegionName(
-          regionNameOrEncodedRegionName);
-      } catch (IOException ioe) {
-        throw new IllegalArgumentException(ioe.getMessage());
+        RegionInfo regionInfo =
+          CatalogFamilyFormat.parseRegionInfoFromRegionName(regionNameOrEncodedRegionName);
+        if (regionInfo.isMetaRegion()) {
+          future = connection.registry.getMetaRegionLocations()
+            .thenApply(locs -> Stream.of(locs.getRegionLocations())
+              .filter(loc -> loc.getRegion().getReplicaId() == regionInfo.getReplicaId())
+              .findFirst());
+        } else {
+          future =
+            ClientMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
+        }
       }
 
-      if (regionInfo.isMetaRegion()) {
-        future = connection.registry.getMetaRegionLocations()
-          .thenApply(locs -> Stream.of(locs.getRegionLocations())
-            .filter(loc -> loc.getRegion().getReplicaId() == regionInfo.getReplicaId())
-            .findFirst());
-      } else {
-        future =
-          ClientMetaTableAccessor.getRegionLocation(metaTable, regionNameOrEncodedRegionName);
-      }
+      CompletableFuture<HRegionLocation> returnedFuture = new CompletableFuture<>();
+      addListener(future, (location, err) -> {
+        if (err != null) {
+          returnedFuture.completeExceptionally(err);
+          return;
+        }
+        if (!location.isPresent() || location.get().getRegion() == null) {
+          returnedFuture.completeExceptionally(
+            new UnknownRegionException("Invalid region name or encoded region name: " +
+              Bytes.toStringBinary(regionNameOrEncodedRegionName)));
+        } else {
+          returnedFuture.complete(location.get());
+        }
+      });
+      return returnedFuture;
+    } catch (IOException e) {
+      return failedFuture(e);
     }
-
-    CompletableFuture<HRegionLocation> returnedFuture = new CompletableFuture<>();
-    addListener(future, (location, err) -> {
-      if (err != null) {
-        returnedFuture.completeExceptionally(err);
-        return;
-      }
-      if (!location.isPresent() || location.get().getRegion() == null) {
-        returnedFuture.completeExceptionally(
-          new UnknownRegionException("Invalid region name or encoded region name: " +
-            Bytes.toStringBinary(regionNameOrEncodedRegionName)));
-      } else {
-        returnedFuture.complete(location.get());
-      }
-    });
-    return returnedFuture;
   }
 
   /**
