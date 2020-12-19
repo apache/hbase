@@ -363,23 +363,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   @InterfaceAudience.Private // For use by internals only.
   public static boolean isEncodedRegionName(byte[] regionName) {
     // If not parseable as region name, presume encoded. TODO: add stringency; e.g. if hex.
-    if (parseRegionNameOrReturnNull(regionName) == null) {
-      if (regionName.length > MD5_HEX_LENGTH) {
-        return false;
-      } else if (regionName.length == MD5_HEX_LENGTH) {
-        return true;
-      } else {
-        String encodedName = Bytes.toString(regionName);
-        try {
-          Integer.parseInt(encodedName);
-          // If this is a valid integer, it could be hbase:meta's encoded region name.
-          return true;
-        } catch(NumberFormatException er) {
-          return false;
-        }
-      }
-    }
-    return false;
+    return parseRegionNameOrReturnNull(regionName) == null && regionName.length <= MD5_HEX_LENGTH;
   }
 
   /**
