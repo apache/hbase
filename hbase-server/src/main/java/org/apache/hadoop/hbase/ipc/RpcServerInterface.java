@@ -25,14 +25,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
-import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 @InterfaceAudience.Private
@@ -45,22 +43,6 @@ public interface RpcServerInterface {
 
   void setSocketSendBufSize(int size);
   InetSocketAddress getListenerAddress();
-
-  /**
-   * @deprecated As of release 1.3, this will be removed in HBase 3.0
-   */
-  @Deprecated
-  Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
-    Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
-  throws IOException;
-
-  /**
-   * @deprecated As of release 2.0, this will be removed in HBase 3.0
-   */
-  @Deprecated
-  Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md, Message param,
-      CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status, long startTime,
-      int timeout) throws IOException;
 
   Pair<Message, CellScanner> call(RpcCall call, MonitoredRPCHandler status)
       throws IOException;
