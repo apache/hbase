@@ -180,7 +180,10 @@ public class ChaosZKClient {
     public void process(WatchedEvent watchedEvent) {
       LOG.info("Setting status watch for task: " + watchedEvent.getPath());
       if(watchedEvent.getType() == Event.EventType.NodeDataChanged) {
-        assert watchedEvent.getPath().contains(TASK_PREFIX);
+        if(!watchedEvent.getPath().contains(TASK_PREFIX)) {
+          throw new RuntimeException(KeeperException.create(
+            KeeperException.Code.DATAINCONSISTENCY));
+        }
         getStatus(watchedEvent.getPath(), (Object) watchedEvent.getPath());
 
       }

@@ -132,8 +132,11 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
     @Override
     public void process(WatchedEvent watchedEvent) {
       if (watchedEvent.getType() == Event.EventType.NodeChildrenChanged) {
-        assert (ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE +
-          ChaosConstants.ZNODE_PATH_SEPARATOR + agentName).equals(watchedEvent.getPath());
+        if (!(ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE +
+          ChaosConstants.ZNODE_PATH_SEPARATOR + agentName).equals(watchedEvent.getPath())) {
+          throw new RuntimeException(KeeperException.create(
+            KeeperException.Code.DATAINCONSISTENCY));
+        }
 
         LOG.info("Change in Tasks Node, checking for Tasks again.");
         getTasks();
