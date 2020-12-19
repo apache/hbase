@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
@@ -68,22 +70,10 @@ public class TestDeadServer {
   @Test public void testIsDead() {
     DeadServer ds = new DeadServer();
     ds.putIfAbsent(hostname123);
-    ds.processing(hostname123);
-    assertTrue(ds.areDeadServersInProgress());
-    ds.finish(hostname123);
-    assertFalse(ds.areDeadServersInProgress());
 
     ds.putIfAbsent(hostname1234);
-    ds.processing(hostname1234);
-    assertTrue(ds.areDeadServersInProgress());
-    ds.finish(hostname1234);
-    assertFalse(ds.areDeadServersInProgress());
 
     ds.putIfAbsent(hostname12345);
-    ds.processing(hostname12345);
-    assertTrue(ds.areDeadServersInProgress());
-    ds.finish(hostname12345);
-    assertFalse(ds.areDeadServersInProgress());
 
     // Already dead =       127.0.0.1,9090,112321
     // Coming back alive =  127.0.0.1,9090,223341
@@ -104,15 +94,19 @@ public class TestDeadServer {
   }
 
   @Test
-  public void testCrashProcedureReplay() {
+  public void testCrashProcedureReplay() throws Exception {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     final ProcedureExecutor<MasterProcedureEnv> pExecutor = master.getMasterProcedureExecutor();
     ServerCrashProcedure proc = new ServerCrashProcedure(
       pExecutor.getEnvironment(), hostname123, false, false);
 
+    pExecutor.stop();
     ProcedureTestingUtility.submitAndWait(pExecutor, proc);
+    assertTrue(master.getServerManager().areDeadServersInProgress());
 
-    assertFalse(master.getServerManager().getDeadServers().areDeadServersInProgress());
+    ProcedureTestingUtility.restart(pExecutor);
+    ProcedureTestingUtility.waitProcedure(pExecutor, proc);
+    assertFalse(master.getServerManager().areDeadServersInProgress());
   }
 
   @Test
@@ -163,17 +157,14 @@ public class TestDeadServer {
     d.putIfAbsent(hostname1234);
     Assert.assertEquals(2, d.size());
 
-    d.finish(hostname123);
     d.removeDeadServer(hostname123);
     Assert.assertEquals(1, d.size());
-    d.finish(hostname1234);
     d.removeDeadServer(hostname1234);
     Assert.assertTrue(d.isEmpty());
 
     d.putIfAbsent(hostname1234);
     Assert.assertFalse(d.removeDeadServer(hostname123_2));
     Assert.assertEquals(1, d.size());
-    d.finish(hostname1234);
     Assert.assertTrue(d.removeDeadServer(hostname1234));
     Assert.assertTrue(d.isEmpty());
   }

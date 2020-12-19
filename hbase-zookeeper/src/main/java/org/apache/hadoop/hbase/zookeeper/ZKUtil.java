@@ -26,6 +26,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -445,16 +446,15 @@ public final class ZKUtil {
     } catch(KeeperException.NoNodeException ke) {
       LOG.debug(zkw.prefix("Unable to list children of znode " + znode + " " +
           "because node does not exist (not an error)"));
-      return null;
     } catch (KeeperException e) {
       LOG.warn(zkw.prefix("Unable to list children of znode " + znode + " "), e);
       zkw.keeperException(e);
-      return null;
     } catch (InterruptedException e) {
       LOG.warn(zkw.prefix("Unable to list children of znode " + znode + " "), e);
       zkw.interruptedException(e);
-      return null;
     }
+
+    return null;
   }
 
   /**
@@ -2070,10 +2070,12 @@ public final class ZKUtil {
     int port = sp.length > 1 ? Integer.parseInt(sp[1])
         : HConstants.DEFAULT_ZOOKEEPER_CLIENT_PORT;
 
-    InetSocketAddress sockAddr = new InetSocketAddress(host, port);
     try (Socket socket = new Socket()) {
+      InetSocketAddress sockAddr = new InetSocketAddress(host, port);
+      if (sockAddr.isUnresolved()) {
+        throw new UnknownHostException(host + " cannot be resolved");
+      }
       socket.connect(sockAddr, timeout);
-
       socket.setSoTimeout(timeout);
       try (PrintWriter out = new PrintWriter(new BufferedWriter(
           new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)), true);

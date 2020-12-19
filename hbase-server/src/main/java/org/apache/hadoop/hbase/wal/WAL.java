@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * A Write Ahead Log (WAL) provides service for reading, writing waledits. This interface provides
  * APIs for WAL users (such as RegionServer) to use the WAL (do append, sync, etc).
@@ -221,7 +219,6 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * @deprecated Since version 1.2.0. Removing because not used and exposes subtle internal
    * workings. Use {@link #getEarliestMemStoreSeqNum(byte[], byte[])}
    */
-  @VisibleForTesting
   @Deprecated
   long getEarliestMemStoreSeqNum(byte[] encodedRegionName);
 

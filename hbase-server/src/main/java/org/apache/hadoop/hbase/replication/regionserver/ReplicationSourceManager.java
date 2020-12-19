@@ -77,7 +77,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -197,7 +197,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    * this server (in case it later gets moved back). We synchronize on this instance testing for
    * presence and if absent, while creating so only created and started once.
    */
-  @VisibleForTesting
   AtomicReference<ReplicationSourceInterface> catalogReplicationSource = new AtomicReference<>();
 
   /**
@@ -395,7 +394,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param peerId the id of the replication peer
    * @return the source that was created
    */
-  @VisibleForTesting
   ReplicationSourceInterface addSource(String peerId) throws IOException {
     ReplicationPeer peer = replicationPeers.getPeer(peerId);
     ReplicationSourceInterface src = createSource(peerId, peer);
@@ -673,7 +671,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param inclusive whether we should also remove the given log file
    * @param source the replication source
    */
-  @VisibleForTesting
   void cleanOldLogs(String log, boolean inclusive, ReplicationSourceInterface source) {
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log);
     if (source.isRecovered()) {
@@ -777,7 +774,6 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   // public because of we call it in TestReplicationEmptyWALRecovery
-  @VisibleForTesting
   public void preLogRoll(Path newLog) throws IOException {
     String logName = newLog.getName();
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(logName);
@@ -827,7 +823,6 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   // public because of we call it in TestReplicationEmptyWALRecovery
-  @VisibleForTesting
   public void postLogRoll(Path newLog) throws IOException {
     // This only updates the sources we own, not the recovered ones
     for (ReplicationSourceInterface source : this.sources.values()) {
@@ -879,7 +874,6 @@ public class ReplicationSourceManager implements ReplicationListener {
     // the rs will abort (See HBASE-20475).
     private final Map<String, ReplicationPeerImpl> peersSnapshot;
 
-    @VisibleForTesting
     public NodeFailoverWorker(ServerName deadRS) {
       super("Failover-for-" + deadRS);
       this.deadRS = deadRS;
@@ -1005,7 +999,7 @@ public class ReplicationSourceManager implements ReplicationListener {
               wals.add(wal);
             }
             oldsources.add(src);
-            LOG.trace("Added source for recovered queue: " + src.getQueueId());
+            LOG.info("Added source for recovered queue {}", src.getQueueId());
             for (String wal : walsSet) {
               LOG.trace("Enqueueing log from recovered queue for source: " + src.getQueueId());
               src.enqueueLog(new Path(oldLogDir, wal));
@@ -1034,7 +1028,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Get a copy of the wals of the normal sources on this rs
    * @return a sorted set of wal names
    */
-  @VisibleForTesting
   public Map<String, Map<String, NavigableSet<String>>> getWALs() {
     return Collections.unmodifiableMap(walsById);
   }
@@ -1043,7 +1036,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Get a copy of the wals of the recovered sources on this rs
    * @return a sorted set of wal names
    */
-  @VisibleForTesting
   Map<String, Map<String, NavigableSet<String>>> getWalsByIdRecoveredQueues() {
     return Collections.unmodifiableMap(walsByIdRecoveredQueues);
   }
@@ -1068,12 +1060,10 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Get the normal source for a given peer
    * @return the normal source for the give peer if it exists, otherwise null.
    */
-  @VisibleForTesting
   public ReplicationSourceInterface getSource(String peerId) {
     return this.sources.get(peerId);
   }
 
-  @VisibleForTesting
   List<String> getAllQueues() throws IOException {
     List<String> allQueues = Collections.emptyList();
     try {
@@ -1084,21 +1074,18 @@ public class ReplicationSourceManager implements ReplicationListener {
     return allQueues;
   }
 
-  @VisibleForTesting
   int getSizeOfLatestPath() {
     synchronized (latestPaths) {
       return latestPaths.size();
     }
   }
 
-  @VisibleForTesting
   Set<Path> getLastestPath() {
     synchronized (latestPaths) {
       return Sets.newHashSet(latestPaths.values());
     }
   }
 
-  @VisibleForTesting
   public AtomicLong getTotalBufferUsed() {
     return totalBufferUsed;
   }

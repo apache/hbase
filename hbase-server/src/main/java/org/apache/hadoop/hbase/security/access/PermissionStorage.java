@@ -70,7 +70,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -501,7 +500,6 @@ public final class PermissionStorage {
       null, false);
   }
 
-  @VisibleForTesting
   public static ListMultimap<String, UserPermission> getNamespacePermissions(Configuration conf,
       String namespace) throws IOException {
     return getPermissions(conf, Bytes.toBytes(toNamespaceEntry(namespace)), null, null, null, null,
@@ -780,7 +778,6 @@ public final class PermissionStorage {
     return list;
   }
 
-  @VisibleForTesting
   public static ListMultimap<String, UserPermission> readUserPermission(byte[] data,
       Configuration conf) throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(data)) {

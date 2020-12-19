@@ -39,8 +39,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Helper class for generating/parsing
  * {@value org.apache.hadoop.hbase.HConstants#CATALOG_FAMILY_STR} family cells in meta table.
@@ -276,7 +274,6 @@ public class CatalogFamilyFormat {
   }
 
   /** The delimiter for meta columns for replicaIds &gt; 0 */
-  @VisibleForTesting
   static final char META_REPLICA_ID_DELIMITER = '_';
 
   /**
@@ -285,7 +282,6 @@ public class CatalogFamilyFormat {
    * @param serverColumn the column qualifier
    * @return an int for the replicaId
    */
-  @VisibleForTesting
   static int parseReplicaIdFromServerColumn(byte[] serverColumn) {
     String serverStr = Bytes.toString(serverColumn);
 

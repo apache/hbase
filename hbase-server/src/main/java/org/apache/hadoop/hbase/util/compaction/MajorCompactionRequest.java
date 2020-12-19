@@ -38,7 +38,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @InterfaceAudience.Private
@@ -55,7 +54,6 @@ class MajorCompactionRequest {
     this.region = region;
   }
 
-  @VisibleForTesting
   MajorCompactionRequest(Configuration configuration, RegionInfo region,
       Set<String> stores) {
     this(configuration, region);
@@ -81,7 +79,6 @@ class MajorCompactionRequest {
     this.stores = stores;
   }
 
-  @VisibleForTesting
   Optional<MajorCompactionRequest> createRequest(Configuration configuration,
       Set<String> stores, long timestamp) throws IOException {
     Set<String> familiesToCompact = getStoresRequiringCompaction(stores, timestamp);
@@ -145,7 +142,6 @@ class MajorCompactionRequest {
     return false;
   }
 
-  @VisibleForTesting
   Connection getConnection(Configuration configuration) throws IOException {
     return ConnectionFactory.createConnection(configuration);
   }
@@ -166,13 +162,11 @@ class MajorCompactionRequest {
 
   }
 
-  @VisibleForTesting
   List<Path> getReferenceFilePaths(FileSystem fileSystem, Path familyDir)
       throws IOException {
     return FSUtils.getReferenceFilePaths(fileSystem, familyDir);
   }
 
-  @VisibleForTesting
   HRegionFileSystem getFileSystem(Connection connection) throws IOException {
     Admin admin = connection.getAdmin();
     return HRegionFileSystem.openRegionFromFileSystem(admin.getConfiguration(),

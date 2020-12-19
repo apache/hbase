@@ -125,6 +125,7 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.quotas.FileSystemUtilizationChore;
@@ -175,7 +176,6 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -192,7 +192,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
@@ -253,7 +252,7 @@ public class HRegionServer extends Thread implements
   /**
    * For testing only!  Set to true to skip notifying region assignment to master .
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MS_SHOULD_BE_FINAL")
   public static boolean TEST_SKIP_REPORTING_TRANSITION = false;
 
@@ -319,14 +318,16 @@ public class HRegionServer extends Thread implements
 
   /**
    * Map of encoded region names to the DataNode locations they should be hosted on
-   * We store the value as InetSocketAddress since this is used only in HDFS
+   * We store the value as Address since InetSocketAddress is required by the HDFS
    * API (create() that takes favored nodes as hints for placing file blocks).
    * We could have used ServerName here as the value class, but we'd need to
    * convert it to InetSocketAddress at some point before the HDFS API call, and
    * it seems a bit weird to store ServerName since ServerName refers to RegionServers
-   * and here we really mean DataNode locations.
+   * and here we really mean DataNode locations. We don't store it as InetSocketAddress
+   * here because the conversion on demand from Address to InetSocketAddress will
+   * guarantee the resolution results will be fresh when we need it.
    */
-  private final Map<String, InetSocketAddress[]> regionFavoredNodesMap = new ConcurrentHashMap<>();
+  private final Map<String, Address[]> regionFavoredNodesMap = new ConcurrentHashMap<>();
 
   private LeaseManager leaseManager;
 
@@ -545,7 +546,7 @@ public class HRegionServer extends Thread implements
    */
   protected final ConfigurationManager configurationManager;
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   CompactedHFilesDischarger compactedFileDischarger;
 
   private volatile ThroughputController flushThroughputController;
@@ -750,17 +751,28 @@ public class HRegionServer extends Thread implements
     // Get fs instance used by this RS. Do we use checksum verification in the hbase? If hbase
     // checksum verification enabled, then automatically switch off hdfs checksum verification.
     boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
-    CommonFSUtils.setFsDefault(this.conf, CommonFSUtils.getWALRootDir(this.conf));
+    String walDirUri = CommonFSUtils.getDirUri(this.conf,
+      new Path(conf.get(CommonFSUtils.HBASE_WAL_DIR, conf.get(HConstants.HBASE_DIR))));
+    // set WAL's uri
+    if (walDirUri != null) {
+      CommonFSUtils.setFsDefault(this.conf, walDirUri);
+    }
+    // init the WALFs
     this.walFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.walRootDir = CommonFSUtils.getWALRootDir(this.conf);
     // Set 'fs.defaultFS' to match the filesystem on hbase.rootdir else
     // underlying hadoop hdfs accessors will be going against wrong filesystem
     // (unless all is set to defaults).
-    CommonFSUtils.setFsDefault(this.conf, CommonFSUtils.getRootDir(this.conf));
+    String rootDirUri =
+        CommonFSUtils.getDirUri(this.conf, new Path(conf.get(HConstants.HBASE_DIR)));
+    if (rootDirUri != null) {
+      CommonFSUtils.setFsDefault(this.conf, rootDirUri);
+    }
+    // init the filesystem
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
     this.tableDescriptors = new FSTableDescriptors(this.dataFs, this.dataRootDir,
-      !canUpdateTableDescriptor(), cacheTableDescriptor());
+        !canUpdateTableDescriptor(), cacheTableDescriptor());
   }
 
   protected void login(UserProvider user, String host) throws IOException {
@@ -1233,7 +1245,7 @@ public class HRegionServer extends Thread implements
     return writeCount;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
       throws IOException {
     RegionServerStatusService.BlockingInterface rss = rssStub;
@@ -2510,7 +2522,7 @@ public class HRegionServer extends Thread implements
     return rpcServices.rpcServer;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public RSRpcServices getRSRpcServices() {
     return rpcServices;
   }
@@ -2600,7 +2612,7 @@ public class HRegionServer extends Thread implements
    * logs but it does close socket in case want to bring up server on old
    * hostname+port immediately.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected void kill() {
     this.killed = true;
     abort("Simulated kill");
@@ -2709,7 +2721,7 @@ public class HRegionServer extends Thread implements
    * @param refresh If true then master address will be read from ZK, otherwise use cached data
    * @return master + port, or null if server has been stopped
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   protected synchronized ServerName createRegionServerStatusStub(boolean refresh) {
     if (rssStub != null) {
       return masterAddressTracker.getMasterAddress();
@@ -3484,11 +3496,11 @@ public class HRegionServer extends Thread implements
   @Override
   public void updateRegionFavoredNodesMapping(String encodedRegionName,
       List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> favoredNodes) {
-    InetSocketAddress[] addr = new InetSocketAddress[favoredNodes.size()];
+    Address[] addr = new Address[favoredNodes.size()];
     // Refer to the comment on the declaration of regionFavoredNodesMap on why
-    // it is a map of region name to InetSocketAddress[]
+    // it is a map of region name to Address[]
     for (int i = 0; i < favoredNodes.size(); i++) {
-      addr[i] = InetSocketAddress.createUnresolved(favoredNodes.get(i).getHostName(),
+      addr[i] = Address.fromParts(favoredNodes.get(i).getHostName(),
           favoredNodes.get(i).getPort());
     }
     regionFavoredNodesMap.put(encodedRegionName, addr);
@@ -3496,13 +3508,14 @@ public class HRegionServer extends Thread implements
 
   /**
    * Return the favored nodes for a region given its encoded name. Look at the
-   * comment around {@link #regionFavoredNodesMap} on why it is InetSocketAddress[]
-   *
+   * comment around {@link #regionFavoredNodesMap} on why we convert to InetSocketAddress[]
+   * here.
+   * @param encodedRegionName
    * @return array of favored locations
    */
   @Override
   public InetSocketAddress[] getFavoredNodesForRegion(String encodedRegionName) {
-    return regionFavoredNodesMap.get(encodedRegionName);
+    return Address.toSocketAddress(regionFavoredNodesMap.get(encodedRegionName));
   }
 
   @Override
@@ -3548,12 +3561,12 @@ public class HRegionServer extends Thread implements
     movedRegionInfoCache.invalidate(encodedName);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public MovedRegionInfo getMovedRegion(String encodedRegionName) {
     return movedRegionInfoCache.getIfPresent(encodedRegionName);
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public int movedRegionCacheExpiredTime() {
         return TIMEOUT_REGION_MOVED;
   }
@@ -3649,7 +3662,7 @@ public class HRegionServer extends Thread implements
   /**
    * @return : Returns the ConfigurationManager object for testing purposes.
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   ConfigurationManager getConfigurationManager() {
     return configurationManager;
   }
@@ -3713,7 +3726,7 @@ public class HRegionServer extends Thread implements
    * For testing
    * @return whether all wal roll request finished for this regionserver
    */
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public boolean walRollRequestFinished() {
     return this.walRoller.walRollFinished();
   }
@@ -3777,6 +3790,9 @@ public class HRegionServer extends Thread implements
   @Override
   public boolean reportFileArchivalForQuotas(TableName tableName,
       Collection<Entry<String, Long>> archivedFiles) {
+    if (TEST_SKIP_REPORTING_TRANSITION) {
+      return false;
+    }
     RegionServerStatusService.BlockingInterface rss = rssStub;
     if (rss == null || rsSpaceQuotaManager == null) {
       // the current server could be stopping.
@@ -3918,7 +3934,7 @@ public class HRegionServer extends Thread implements
     return asyncClusterConnection;
   }
 
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public CompactedHFilesDischarger getCompactedHFilesDischarger() {
     return compactedFileDischarger;
   }

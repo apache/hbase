@@ -25,7 +25,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Maintains the set of all the classes which would like to get notified
@@ -140,7 +139,6 @@ public class ConfigurationManager {
   /**
    * @return true if contains the observer, for unit test only
    */
-  @VisibleForTesting
   public boolean containsObserver(ConfigurationObserver observer) {
     synchronized (configurationObservers) {
       return configurationObservers.contains(observer);

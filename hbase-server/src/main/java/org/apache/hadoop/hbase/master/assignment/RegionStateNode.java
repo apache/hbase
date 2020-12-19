@@ -36,8 +36,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * Current Region State. Most fields are synchronized with meta region, i.e, we will update meta
  * immediately after we modify this RegionStateNode, and usually under the lock. The only exception
@@ -77,7 +75,6 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
     }
   }
 
-  @VisibleForTesting
   final Lock lock = new ReentrantLock();
   private final RegionInfo regionInfo;
   private final ProcedureEvent<?> event;

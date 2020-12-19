@@ -30,8 +30,6 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * The asynchronous locator for meta region.
  */
@@ -136,13 +134,11 @@ class AsyncMetaRegionLocator {
   }
 
   // only used for testing whether we have cached the location for a region.
-  @VisibleForTesting
   RegionLocations getRegionLocationInCache() {
     return metaRegionLocations.get();
   }
 
   // only used for testing whether we have cached the location for a table.
-  @VisibleForTesting
   int getNumberOfCachedRegionLocations() {
     RegionLocations locs = metaRegionLocations.get();
     return locs != null ? locs.numNonNullElements() : 0;

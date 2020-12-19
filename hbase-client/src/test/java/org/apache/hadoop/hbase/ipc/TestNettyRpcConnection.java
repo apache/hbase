@@ -26,9 +26,9 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.net.InetSocketAddress;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -59,7 +59,7 @@ public class TestNettyRpcConnection {
   public static void setUp() throws IOException {
     CLIENT = new NettyRpcClient(HBaseConfiguration.create());
     CONN = new NettyRpcConnection(CLIENT,
-      new ConnectionId(User.getCurrent(), "test", new InetSocketAddress("localhost", 1234)));
+      new ConnectionId(User.getCurrent(), "test", Address.fromParts("localhost", 1234)));
   }
 
   @AfterClass

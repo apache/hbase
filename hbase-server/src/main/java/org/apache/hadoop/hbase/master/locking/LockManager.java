@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Functions to acquire lock on table/namespace/regions.
@@ -192,7 +191,6 @@ public final class LockManager {
       return "MasterLock: proc = " + proc.toString();
     }
 
-    @VisibleForTesting
     LockProcedure getProc() {
       return proc;
     }

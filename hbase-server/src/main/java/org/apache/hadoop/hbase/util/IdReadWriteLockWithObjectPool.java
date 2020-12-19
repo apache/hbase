@@ -23,8 +23,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 @InterfaceAudience.Private
 public class IdReadWriteLockWithObjectPool<T> extends IdReadWriteLock<T>{
   // The number of lock we want to easily support. It's not a maximum.
@@ -84,7 +82,6 @@ public class IdReadWriteLockWithObjectPool<T> extends IdReadWriteLock<T>{
   }
 
   /** For testing */
-  @VisibleForTesting
   int purgeAndGetEntryPoolSize() {
     gc();
     Threads.sleep(200);
@@ -97,7 +94,6 @@ public class IdReadWriteLockWithObjectPool<T> extends IdReadWriteLock<T>{
     System.gc();
   }
 
-  @VisibleForTesting
   public ReferenceType getReferenceType() {
     return this.refType;
   }

@@ -32,8 +32,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 /**
  * ChoreService is a service that can be used to schedule instances of {@link ScheduledChore} to run
  * periodically while sharing threads. The ChoreService is backed by a
@@ -95,7 +93,6 @@ public class ChoreService implements ChoreServicer {
    *          spawned by this service
    */
   @InterfaceAudience.Private
-  @VisibleForTesting
   public ChoreService(final String coreThreadPoolPrefix) {
     this(coreThreadPoolPrefix, MIN_CORE_POOL_SIZE, false);
   }

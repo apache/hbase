@@ -1,4 +1,6 @@
 /**
+ * Copyright The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +17,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.HBaseIOException;
+import java.nio.ByteBuffer;
 import org.apache.yetus.audience.InterfaceAudience;
 
-@SuppressWarnings("serial")
-@InterfaceAudience.Private
-public class ClusterSchemaException extends HBaseIOException {
-  public ClusterSchemaException(String message) {
-    super(message);
-  }
+/**
+ *  Builder implementation to create {@link Tag}
+ *  Call setTagValue(byte[]) method to create {@link ArrayBackedTag}
+ */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+public interface TagBuilder {
+  /**
+   * Set type of the tag.
+   * @param tagType type of the tag
+   * @return {@link TagBuilder}
+   */
+  TagBuilder setTagType(byte tagType);
 
-  public ClusterSchemaException(String message, Throwable cause) {
-    super(message, cause);
-  }
+  /**
+   * Set the value of the tag.
+   * @param tagBytes tag bytes.
+   * @return {@link TagBuilder}
+   */
+  TagBuilder setTagValue(byte[] tagBytes);
 
-  public ClusterSchemaException(Throwable cause) {
-    super(cause);
-  }
+  /**
+   * Build the tag.
+   * @return {@link Tag}
+   */
+  Tag build();
 }

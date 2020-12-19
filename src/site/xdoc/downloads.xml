@@ -45,6 +45,29 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
+        2.4.0
+      </td>
+      <td style="test-align: left">
+        2020/12/15
+      </td>
+      <td style="test-align: left">
+        <a href="https://downloads.apache.org/hbase/2.4.0/api_compare_2.4.0RC1_to_2.3.0.html">2.4.0 vs 2.3.0</a>
+      </td>
+      <td style="test-align: left">
+        <a href="https://downloads.apache.org/hbase/2.4.0/CHANGES.md">Changes</a>
+      </td>
+      <td style="test-align: left">
+        <a href="https://downloads.apache.org/hbase/2.4.0/RELEASENOTES.md">Release Notes</a>
+      </td>
+      <td style="test-align: left">
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.0/hbase-2.4.0-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.4.0/hbase-2.4.0-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.0/hbase-2.4.0-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.0/hbase-2.4.0-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.4.0/hbase-2.4.0-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.0/hbase-2.4.0-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.0/hbase-2.4.0-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.4.0/hbase-2.4.0-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.0/hbase-2.4.0-client-bin.tar.gz.asc">asc</a>)
+      </td>
+      <td />
+    </tr>
+    <tr>
+      <td style="test-align: left">
         2.3.3
       </td>
       <td style="test-align: left">
