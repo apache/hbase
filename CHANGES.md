@@ -20,7 +20,7 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.4.0-rm_test - Unreleased (as of Wed Dec  9 01:24:02 UTC 2020)
+## Release 2.4.0-rm_test - Unreleased (as of Sat Dec 19 01:59:14 UTC 2020)
 No changes
 
 ## Release 2.4.0 - Unreleased (as of 2020-12-03)
