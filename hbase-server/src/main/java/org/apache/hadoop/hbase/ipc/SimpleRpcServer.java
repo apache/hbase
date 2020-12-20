@@ -40,24 +40,23 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
-import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
-import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * The RPC server with native java NIO implementation deriving from Hadoop to
@@ -307,7 +306,7 @@ public class SimpleRpcServer extends RpcServer {
         // If the connectionManager can't take it, close the connection.
         if (c == null) {
           if (channel.isOpen()) {
-            IOUtils.cleanup(null, channel);
+            IOUtils.cleanupWithLogger(LOG, channel);
           }
           continue;
         }
@@ -416,10 +415,12 @@ public class SimpleRpcServer extends RpcServer {
   @Override
   public void setSocketSendBufSize(int size) { this.socketSendBufferSize = size; }
 
-  /** Starts the service.  Must be called before any calls will be handled. */
+  /** Starts the service. Must be called before any calls will be handled. */
   @Override
   public synchronized void start() {
-    if (started) return;
+    if (started) {
+      return;
+    }
     authTokenSecretMgr = createSecretManager();
     if (authTokenSecretMgr != null) {
       setSecretManager(authTokenSecretMgr);
@@ -433,7 +434,7 @@ public class SimpleRpcServer extends RpcServer {
     started = true;
   }
 
-  /** Stops the service.  No new calls will be handled after this is called. */
+  /** Stops the service. No new calls will be handled after this is called. */
   @Override
   public synchronized void stop() {
     LOG.info("Stopping server on " + port);
@@ -449,10 +450,9 @@ public class SimpleRpcServer extends RpcServer {
     notifyAll();
   }
 
-  /** Wait for the server to be stopped.
-   * Does not wait for all subthreads to finish.
-   *  See {@link #stop()}.
-   * @throws InterruptedException e
+  /**
+   * Wait for the server to be stopped. Does not wait for all subthreads to finish.
+   * @see #stop()
    */
   @Override
   public synchronized void join() throws InterruptedException {
@@ -503,13 +503,14 @@ public class SimpleRpcServer extends RpcServer {
    * @param channel writable byte channel to write to
    * @param bufferChain Chain of buffers to write
    * @return number of bytes written
-   * @throws java.io.IOException e
    * @see java.nio.channels.WritableByteChannel#write(java.nio.ByteBuffer)
    */
   protected long channelWrite(GatheringByteChannel channel, BufferChain bufferChain)
-  throws IOException {
-    long count =  bufferChain.write(channel, NIO_BUFFER_LIMIT);
-    if (count > 0) this.metrics.sentBytes(count);
+    throws IOException {
+    long count = bufferChain.write(channel, NIO_BUFFER_LIMIT);
+    if (count > 0) {
+      this.metrics.sentBytes(count);
+    }
     return count;
   }
 
@@ -523,22 +524,20 @@ public class SimpleRpcServer extends RpcServer {
    * @throws UnknownHostException if the address isn't a valid host name
    * @throws IOException other random errors from bind
    */
-  public static void bind(ServerSocket socket, InetSocketAddress address,
-                          int backlog) throws IOException {
+  public static void bind(ServerSocket socket, InetSocketAddress address, int backlog)
+    throws IOException {
     try {
       socket.bind(address, backlog);
     } catch (BindException e) {
       BindException bindException =
-        new BindException("Problem binding to " + address + " : " +
-            e.getMessage());
+        new BindException("Problem binding to " + address + " : " + e.getMessage());
       bindException.initCause(e);
       throw bindException;
     } catch (SocketException e) {
       // If they try to bind to a different host's address, give a better
       // error message.
       if ("Unresolved address".equals(e.getMessage())) {
-        throw new UnknownHostException("Invalid hostname for server: " +
-                                       address.getHostName());
+        throw new UnknownHostException("Invalid hostname for server: " + address.getHostName());
       }
       throw e;
     }
