@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
@@ -30,6 +29,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelFutureListener;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.ByteToMessageDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.CorruptedFrameException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
@@ -124,10 +124,8 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
     RPCProtos.RequestHeader header = getHeader(in, headerSize);
 
     // Notify the client about the offending request
-    NettyServerCall reqTooBig =
-      new NettyServerCall(header.getCallId(), connection.service, null, null, null, null,
-        connection, 0, connection.addr, System.currentTimeMillis(), 0,
-        connection.rpcServer.bbAllocator, connection.rpcServer.cellBlockBuilder, null);
+    NettyServerCall reqTooBig = connection.createCall(header.getCallId(), connection.service, null,
+      null, null, null, 0, connection.addr, 0, null);
 
     connection.rpcServer.metrics.exception(SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION);
 
