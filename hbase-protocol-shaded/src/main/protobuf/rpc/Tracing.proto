@@ -23,12 +23,12 @@ option java_outer_classname = "TracingProtos";
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-//Used to pass through the information necessary to continue
-//a trace after an RPC is made. All we need is the traceid
-//(so we know the overarching trace this message is a part of), and
-//the id of the current span when this message was sent, so we know
-//what span caused the new span we will create when this message is received.
+// OpenTelemetry propagates trace context through https://www.w3.org/TR/trace-context/, which
+// is a text-based approach that passes properties with http headers. Here we will also use this
+// approach so we just need a map to store the key value pair.
+
 message RPCTInfo {
-  optional int64 trace_id = 1;
-  optional int64 parent_id = 2;
+  optional int64 trace_id = 1 [deprecated = true];
+  optional int64 parent_id = 2 [deprecated = true];
+  map<string, string> headers = 3;
 }
