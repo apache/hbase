@@ -47,6 +47,14 @@ public final class TraceUtil {
     }
   }
 
+  public static void updateTracer(Configuration c) {
+    if (tracer == null || c == null) {
+      return;
+    }
+    conf = new HBaseHTraceConfiguration(c);
+    tracer = new Tracer.Builder("Tracer").conf(conf).build();
+  }
+
   /**
    * Wrapper method to create new TraceScope with the given description
    * @return TraceScope or null when not tracing

@@ -3757,6 +3757,7 @@ public class HRegionServer extends Thread implements
     } catch (IOException e) {
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
+    TraceUtil.updateTracer(newConf);
   }
 
   @Override
