@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase.filter;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -269,6 +271,20 @@ public class TestParseFilter {
     RegexStringComparator regexStringComparator =
       (RegexStringComparator) qualifierFilter.getComparator();
     assertEquals("pre*", new String(regexStringComparator.getValue()));
+  }
+
+  @Test
+  public void testQualifierFilterNoCase() throws IOException {
+    String filterString = "QualifierFilter(=, 'regexstringnocase:pre*')";
+    QualifierFilter qualifierFilter =
+      doTestFilter(filterString, QualifierFilter.class);
+    assertEquals(CompareFilter.CompareOp.EQUAL, qualifierFilter.getOperator());
+    assertTrue(qualifierFilter.getComparator() instanceof RegexStringComparator);
+    RegexStringComparator regexStringComparator =
+      (RegexStringComparator) qualifierFilter.getComparator();
+    assertEquals("pre*", new String(regexStringComparator.getValue(), StandardCharsets.UTF_8));
+    int regexComparatorFlags = regexStringComparator.getEngine().getFlags();
+    assertEquals(Pattern.CASE_INSENSITIVE | Pattern.DOTALL, regexComparatorFlags);
   }
 
   @Test
@@ -655,11 +671,11 @@ public class TestParseFilter {
     FirstKeyOnlyFilter firstKeyOnlyFilter =
       doTestFilter(filterString, FirstKeyOnlyFilter.class);
   }
-  
+
   @Test
   public void testRegisterFilter() {
     ParseFilter.registerFilter("MyFilter", "some.class");
-    
+
     assertTrue(f.getSupportedFilters().contains("MyFilter"));
   }
 

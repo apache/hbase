@@ -247,6 +247,13 @@ public final class ParseConstants {
                                                              's','t','r','i','n','g'};
 
   /**
+   * RegexStringNoCaseType byte array
+   */
+  public static final byte [] regexStringNoCaseType = new byte [] {'r','e','g','e','x',
+                                                                   's','t','r','i','n','g',
+                                                                   'n','o','c','a','s','e'};
+
+  /**
    * SubstringType byte array
    */
   public static final byte [] substringType = new byte [] {'s','u','b','s','t','r','i','n','g'};
