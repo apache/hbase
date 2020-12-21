@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -35,10 +34,8 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -49,7 +46,6 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -138,37 +134,5 @@ public class TestRegionOpen {
       return;
     }
     fail("Should have thrown IOE when attempting to open a non-existing region.");
-  }
-
-  /*
-   * Before applying the fix run this test case, error message
-   * "java.io.IOException: The new max sequence id 1 is less than the old max sequence id 17"
-   * can be found the log.
-   * After applying the fix run this test case above message should not be logged.
-   */
-  //@Test(timeout = 60000)
-  @Ignore
-  public void testRegionOpenFailure() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final byte[] FAMILY = Bytes.toBytes("fq");
-    Admin admin = HTU.getAdmin();
-    admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
-    assertTrue("Table creation was not success", admin.tableExists(tableName));
-
-    // Put some records to increase the read sequence id
-    final Table table = HTU.getConnection().getTable(tableName);
-    for (int i = 0; i < 10; i++) {
-      Put put = new Put(Bytes.toBytes("row" + i));
-      put.addColumn(FAMILY, Bytes.toBytes("q1"), Bytes.toBytes("value" + i));
-      table.put(put);
-    }
-    admin.flush(tableName);
-
-    TableDescriptorBuilder.newBuilder(table.getDescriptor());
-    final ColumnFamilyDescriptorBuilder newFamilyDesc =
-      ColumnFamilyDescriptorBuilder.newBuilder(table.getDescriptor().getColumnFamily(FAMILY));
-    newFamilyDesc.setEncryptionType("InvalidEncryptionType");
-    admin.modifyColumnFamily(tableName, newFamilyDesc.build());
   }
 }
