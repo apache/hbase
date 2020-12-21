@@ -24,8 +24,12 @@ import java.util.Optional;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An extended version of cell that gives more power to CPs
+ * An extended version of Cell that allows CPs manipulate Tags.
  */
+// Added by HBASE-19092 to expose Tags to CPs (history server) w/o exposing ExtendedCell.
+// Why is this in hbase-common and not in hbase-server where it is used?
+// RawCell is an odd name for a class that is only for CPs that want to manipulate Tags on
+// server-side only w/o exposing ExtendedCell -- super rare, super exotic.
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public interface RawCell extends Cell {
   static final int MAX_TAGS_LENGTH = (2 * Short.MAX_VALUE) + 1;
