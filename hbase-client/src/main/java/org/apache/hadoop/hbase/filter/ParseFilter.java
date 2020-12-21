@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.EmptyStackException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.Set;
 import java.util.Stack;
 
@@ -812,6 +813,9 @@ public class ParseFilter {
       return new BinaryPrefixComparator(comparatorValue);
     else if (Bytes.equals(comparatorType, ParseConstants.regexStringType))
       return new RegexStringComparator(new String(comparatorValue, StandardCharsets.UTF_8));
+    else if (Bytes.equals(comparatorType, ParseConstants.regexStringNoCaseType))
+      return new RegexStringComparator(new String(comparatorValue, StandardCharsets.UTF_8),
+                                       Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     else if (Bytes.equals(comparatorType, ParseConstants.substringType))
       return new SubstringComparator(new String(comparatorValue, StandardCharsets.UTF_8));
     else
