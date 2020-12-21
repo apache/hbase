@@ -17,7 +17,7 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM maven:3.5-jdk-8
+FROM maven:3.6.3-jdk-8
 
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
        git \
