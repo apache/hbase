@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
@@ -82,8 +83,11 @@ public final class TableDescriptorChecker {
 
     // check max file size
     long maxFileSizeLowerLimit = 2 * 1024 * 1024L; // 2M is the default lower limit
-    long maxFileSize = td.getMaxFileSize();
-    if (maxFileSize < 0) {
+    String maxFileSizeValue = td.getValue(TableDescriptorBuilder.MAX_FILESIZE);
+    long maxFileSize = maxFileSizeValue == null? -1 : Long.parseLong(maxFileSizeValue);
+    // if not set MAX_FILESIZE in TableDescriptor,
+    // use maxFileSizeLowerLimit instead to skip this check
+    if (maxFileSizeValue == null) {
       maxFileSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE, maxFileSizeLowerLimit);
     }
     if (maxFileSize < conf.getLong("hbase.hregion.max.filesize.limit", maxFileSizeLowerLimit)) {
@@ -96,8 +100,11 @@ public final class TableDescriptorChecker {
 
     // check flush size
     long flushSizeLowerLimit = 1024 * 1024L; // 1M is the default lower limit
-    long flushSize = td.getMemStoreFlushSize();
-    if (flushSize < 0) {
+    String flushSizeValue = td.getValue(TableDescriptorBuilder.MEMSTORE_FLUSHSIZE);
+    long flushSize = flushSizeValue == null? -1 : Long.parseLong(flushSizeValue);
+    // if not set MEMSTORE_FLUSHSIZE in TableDescriptor,
+    // use flushSizeLowerLimit instead to skip this check
+    if (flushSizeValue == null) {
       flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeLowerLimit);
     }
     if (flushSize < conf.getLong("hbase.hregion.memstore.flush.size.limit", flushSizeLowerLimit)) {
