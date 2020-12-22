@@ -34,8 +34,7 @@ import org.apache.yetus.audience.InterfaceStability;
  * format should be taken into consideration, for which the instance of this comparator
  * should be used.  In all other cases the static APIs in this comparator would be enough
  * <p>HOT methods. We spend a good portion of CPU comparing. Anything that makes the compare
- * faster will likely manifest at the macro level. See also
- * {@link BBKVComparator}. Use it when mostly {@link ByteBufferKeyValue}s.
+ * faster will likely manifest at the macro level.
  * </p>
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
