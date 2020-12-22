@@ -22,7 +22,6 @@ import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -34,12 +33,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Stream;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.junit.AfterClass;
@@ -178,48 +174,5 @@ public class TestZKReplicationPeerStorage {
       fail("Should throw a ReplicationException when get peer config of a peerId");
     } catch (ReplicationException e) {
     }
-  }
-
-  @Test
-  public void testBaseReplicationPeerConfig() {
-    String customPeerConfigKey = "hbase.xxx.custom_config";
-    String customPeerConfigValue = "test";
-    String customPeerConfigUpdatedValue = "testUpdated";
-
-    String customPeerConfigSecondKey = "hbase.xxx.custom_second_config";
-    String customPeerConfigSecondValue = "testSecond";
-    String customPeerConfigSecondUpdatedValue = "testSecondUpdated";
-
-    ReplicationPeerConfig existingReplicationPeerConfig = getConfig(1);
-
-    // custom config not present
-    assertEquals(existingReplicationPeerConfig.getConfiguration().get(customPeerConfigKey), null);
-
-    Configuration conf = UTIL.getConfiguration();
-    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
-      customPeerConfigKey.concat("=").concat(customPeerConfigValue).concat(";").
-        concat(customPeerConfigSecondKey).concat("=").concat(customPeerConfigSecondValue));
-
-    ReplicationPeerConfig updatedReplicationPeerConfig = ReplicationPeerConfigUtil.
-      addBasePeerConfigsIfNotPresent(conf,existingReplicationPeerConfig);
-
-    // validates base configs are present in replicationPeerConfig
-    assertEquals(customPeerConfigValue, updatedReplicationPeerConfig.getConfiguration().
-      get(customPeerConfigKey));
-    assertEquals(customPeerConfigSecondValue, updatedReplicationPeerConfig.getConfiguration().
-      get(customPeerConfigSecondKey));
-
-    // validates base configs does not override value if config already present
-    conf.set(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG,
-      customPeerConfigKey.concat("=").concat(customPeerConfigUpdatedValue).concat(";").
-        concat(customPeerConfigSecondKey).concat("=").concat(customPeerConfigSecondUpdatedValue));
-
-    ReplicationPeerConfig replicationPeerConfigAfterValueUpdate = ReplicationPeerConfigUtil.
-      addBasePeerConfigsIfNotPresent(conf,updatedReplicationPeerConfig);
-
-    assertEquals(customPeerConfigValue, replicationPeerConfigAfterValueUpdate.
-      getConfiguration().get(customPeerConfigKey));
-    assertEquals(customPeerConfigSecondValue, replicationPeerConfigAfterValueUpdate.
-      getConfiguration().get(customPeerConfigSecondKey));
   }
 }
