@@ -270,7 +270,6 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                         </%if>
                     </div>
                     <div class="tab-pane" id="tab_userSnapshots">
-                        <& userSnapshots &>
                     </div>
                 </div>
             </div>
@@ -660,40 +659,6 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 </%if>
 </%def>
 
-<%def userSnapshots>
-<%java>
-   List<SnapshotDescription> snapshots = master.isInitialized() ?
-     master.getSnapshotManager().getCompletedSnapshots() : null;
-</%java>
-<%if (snapshots != null && snapshots.size() > 0)%>
-<table class="table table-striped">
-    <tr>
-        <th>Snapshot Name</th>
-        <th>Table</th>
-        <th>Creation Time</th>
-        <th>Owner</th>
-        <th>TTL</th>
-    </tr>
-    <%for SnapshotDescription snapshotDesc : snapshots%>
-    <%java>
-        TableName snapshotTable = TableName.valueOf(snapshotDesc.getTable());
-    </%java>
-    <tr>
-        <td><a href="snapshot.jsp?name=<% snapshotDesc.getName() %>"><% snapshotDesc.getName() %></a> </td>
-        <td><a href="table.jsp?name=<% snapshotTable.getNameAsString() %>"><% snapshotTable.getNameAsString() %></a>
-        </td>
-        <td><% new Date(snapshotDesc.getCreationTime()) %></td>
-        <td><% snapshotDesc.getOwner() %></td>
-
-        <td>
-          <% snapshotDesc.getTtl() == 0 ? "FOREVER": PrettyPrinter.format(String.valueOf(snapshotDesc.getTtl()), PrettyPrinter.Unit.TIME_INTERVAL) %>
-        </td>
-    </tr>
-    </%for>
-    <p><% snapshots.size() %> snapshot(s) in set. [<a href="/snapshotsStats.jsp">Snapshot Storefile stats</a>]</p>
-</table>
-</%if>
-</%def>
 
 
 <%def deadRegionServers>
