@@ -166,6 +166,7 @@ public class CellComparatorImpl implements CellComparator {
 
     // Timestamps.
     // Swap order we pass into compare so we get DESCENDING order.
+    // TODO : Ensure we read the bytes and do the compare instead of the value.
     diff = Long.compare(right.getTimestamp(rightKeyLength), left.getTimestamp(leftKeyLength));
     if (diff != 0) {
       return diff;

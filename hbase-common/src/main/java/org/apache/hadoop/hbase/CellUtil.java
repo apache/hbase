@@ -471,7 +471,7 @@ public final class CellUtil {
     return matchingQualifier(left, lqlength, right, rqlength);
   }
 
-  public static boolean matchingQualifier(final Cell left, final int lqlength, final Cell right,
+  private static boolean matchingQualifier(final Cell left, final int lqlength, final Cell right,
       final int rqlength) {
     if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
@@ -526,7 +526,7 @@ public final class CellUtil {
     return matchingQualifier(left, right);
   }
 
-  public static boolean matchingColumn(final Cell left, final byte lFamLen, final int lQualLength,
+  private static boolean matchingColumn(final Cell left, final byte lFamLen, final int lQualLength,
       final Cell right, final byte rFamLen, final int rQualLength) {
     if (!matchingFamily(left, lFamLen, right, rFamLen)) {
       return false;
@@ -738,13 +738,20 @@ public final class CellUtil {
   public static boolean matchingRowColumn(final Cell left, final Cell right) {
     short lrowlength = left.getRowLength();
     short rrowlength = right.getRowLength();
+    // match length
+    if (lrowlength != rrowlength) {
+      return false;
+    }
+
     byte lfamlength = left.getFamilyLength();
     byte rfamlength = right.getFamilyLength();
+    if (lfamlength != rfamlength) {
+      return false;
+    }
+
     int lqlength = left.getQualifierLength();
     int rqlength = right.getQualifierLength();
-
-    // match length
-    if ((lrowlength != rrowlength) || (lfamlength != rfamlength) || (lqlength != rqlength)) {
+    if (lqlength != rqlength) {
       return false;
     }
 
