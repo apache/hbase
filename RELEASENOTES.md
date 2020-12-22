@@ -44,6 +44,9 @@ No changes
 # hbase 2.4.0-rm_test Release Notes
 No changes
 
+# hbase 2.4.0-rm_test Release Notes
+No changes
+
 # HBASE  2.4.0 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
