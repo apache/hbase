@@ -136,19 +136,21 @@ if [[ "$1" == "tag" ]]; then
 
   git config user.name "$GIT_NAME"
   git config user.email "$GIT_EMAIL"
+  git config user.signingkey "${GPG_KEY}"
 
   # Create release version
   maven_set_version "$RELEASE_VERSION"
+  find . -name pom.xml -exec git add {} \;
   git add RELEASENOTES.md CHANGES.md
 
-  git commit -a -m "Preparing ${PROJECT} release $RELEASE_TAG; tagging and updates to CHANGES.md and RELEASENOTES.md"
+  git commit -s -m "Preparing ${PROJECT} release $RELEASE_TAG; tagging and updates to CHANGES.md and RELEASENOTES.md"
   log "Creating tag $RELEASE_TAG at the head of $GIT_BRANCH"
-  git tag "$RELEASE_TAG"
+  git tag -s -m "Via create-release" "$RELEASE_TAG"
 
   # Create next version
   maven_set_version "$NEXT_VERSION"
-
-  git commit -a -m "Preparing development version $NEXT_VERSION"
+  find . -name pom.xml -exec git add {} \;
+  git commit -s -m "Preparing development version $NEXT_VERSION"
 
   if ! is_dry_run; then
     # Push changes
