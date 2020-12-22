@@ -40,10 +40,15 @@ public class ChaosUtils {
     String port =
       Integer.toString(conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 2181));
     String[] serverHosts = conf.getStrings(HConstants.ZOOKEEPER_QUORUM, "localhost");
+    StringBuilder sb = new StringBuilder();
     for (int i = 0; i < serverHosts.length; i++) {
       serverHosts[i] = serverHosts[i] + ":" + port;
+      sb.append(serverHosts[i]);
+      if (i < serverHosts.length - 1) {
+        sb.append(",");
+      }
     }
-    return String.join(",", serverHosts);
+    return sb.toString();
   }
 
 }
