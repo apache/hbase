@@ -2523,7 +2523,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       List<HStoreFile> storeFiles = new ArrayList<>(fileNames.size());
       for (String file : fileNames) {
         // open the file as a store file (hfile link, etc)
-        StoreFileInfo storeFileInfo = getRegionFileSystem().getStoreFileInfo(getColumnFamilyName(), file);
+        StoreFileInfo storeFileInfo =
+          getRegionFileSystem().getStoreFileInfo(getColumnFamilyName(), file);
         HStoreFile storeFile = createStoreFileAndReader(storeFileInfo);
         storeFiles.add(storeFile);
         HStore.this.storeSize.addAndGet(storeFile.getReader().length());
@@ -2798,8 +2799,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         LOG.debug("Moving the files {} to archive", filesToRemove);
         // Only if this is successful it has to be removed
         try {
-          getRegionFileSystem().removeStoreFiles(this.getColumnFamilyDescriptor().getNameAsString(),
-  filesToRemove);
+          getRegionFileSystem()
+            .removeStoreFiles(this.getColumnFamilyDescriptor().getNameAsString(), filesToRemove);
         } catch (FailedArchiveException fae) {
           // Even if archiving some files failed, we still need to clear out any of the
           // files which were successfully archived.  Otherwise we will receive a

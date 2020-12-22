@@ -607,7 +607,7 @@ public class TestHeapSize  {
   @Test
   public void testAutoCalcFixedOverHead() {
     Class[] classList = new Class[] { HFileContext.class, HRegion.class, BlockCacheKey.class,
-        HFileBlock.class, HStore.class, LruBlockCache.class, HStoreContext.class };
+      HFileBlock.class, HStore.class, LruBlockCache.class, HStoreContext.class };
     for (Class cl : classList) {
       // do estimate in advance to ensure class is loaded
       ClassSize.estimateBase(cl, false);

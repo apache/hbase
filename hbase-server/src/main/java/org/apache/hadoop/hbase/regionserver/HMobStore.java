@@ -226,8 +226,8 @@ public class HMobStore extends HStore {
       boolean isCompaction) throws IOException {
     return MobUtils.createWriter(conf, getFileSystem(), getColumnFamilyDescriptor(),
       new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, getCacheConfig(),
-        getEncryptionContext(), StoreUtils.getChecksumType(conf), StoreUtils.getBytesPerChecksum(conf),
-        blocksize, BloomType.NONE, isCompaction);
+      getEncryptionContext(), StoreUtils.getChecksumType(conf),
+      StoreUtils.getBytesPerChecksum(conf), blocksize, BloomType.NONE, isCompaction);
   }
 
   /**
