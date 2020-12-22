@@ -966,15 +966,15 @@ public final class HConstants {
   public static final int DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT = 10000;
 
   /**
-   * Pause time for short operation RPC
+   * Retry pause time for short operation RPC
    */
-  public static final String HBASE_RPC_SHORTOPERATION_PAUSE_TIME =
-      "hbase.rpc.shortoperation.pause.time";
+  public static final String HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME =
+      "hbase.rpc.shortoperation.retry.pause.time";
 
   /**
-   * Default value of {@link #HBASE_RPC_SHORTOPERATION_PAUSE_TIME}
+   * Default value of {@link #HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME}
    */
-  public static final long DEFAULT_HBASE_RPC_SHORTOPERATION_PAUSE_TIME = 1000;
+  public static final long DEFAULT_HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME = 1000;
 
   /**
    * Value indicating the server name was saved with no sequence number.

@@ -618,8 +618,8 @@ public class HRegionServer extends Thread implements
       this.shortOperationTimeout = conf.getInt(HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT);
 
-      this.retryPauseTime = conf.getLong(HConstants.HBASE_RPC_SHORTOPERATION_PAUSE_TIME,
-        HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_PAUSE_TIME);
+      this.retryPauseTime = conf.getLong(HConstants.HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME,
+        HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME);
 
       this.abortRequested = new AtomicBoolean(false);
       this.stopped = false;
@@ -3944,7 +3944,7 @@ public class HRegionServer extends Thread implements
   }
 
   /**
-   * Return pause time configured in {@link HConstants#HBASE_RPC_SHORTOPERATION_PAUSE_TIME}}
+   * Return pause time configured in {@link HConstants#HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME}}
    * @return pause time
    */
   @InterfaceAudience.Private
