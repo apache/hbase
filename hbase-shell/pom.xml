@@ -23,7 +23,7 @@
   <parent>
     <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>2.4.2-rm_test-STAGING</version>
+    <version>2.4.1-rm_test_gcp</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-shell</artifactId>
