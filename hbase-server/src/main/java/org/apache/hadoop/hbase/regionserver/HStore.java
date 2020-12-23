@@ -234,7 +234,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   private AtomicLong compactedCellsSize = new AtomicLong();
   private AtomicLong majorCompactedCellsSize = new AtomicLong();
 
-  private StoreContext storeContext;
+  private final StoreContext storeContext;
 
   /**
    * Constructor
@@ -1254,12 +1254,12 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
                                 .withBlockSize(blocksize)
                                 .withHBaseCheckSum(true)
                                 .withDataBlockEncoding(getColumnFamilyDescriptor()
-                                      .getDataBlockEncoding())
+                                  .getDataBlockEncoding())
                                 .withEncryptionContext(cryptoContext)
                                 .withCreateTime(EnvironmentEdgeManager.currentTime())
                                 .withColumnFamily(getColumnFamilyDescriptor().getName())
                                 .withTableName(region.getTableDescriptor()
-                                    .getTableName().getName())
+                                  .getTableName().getName())
                                 .withCellComparator(getComparator())
                                 .build();
     return hFileContext;
