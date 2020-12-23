@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.trace;
 
-import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -30,6 +30,6 @@ public final class TraceUtil {
   }
 
   public static Tracer getGlobalTracer() {
-    return OpenTelemetry.getGlobalTracer(INSTRUMENTATION_NAME);
+    return GlobalOpenTelemetry.getTracer(INSTRUMENTATION_NAME);
   }
 }
