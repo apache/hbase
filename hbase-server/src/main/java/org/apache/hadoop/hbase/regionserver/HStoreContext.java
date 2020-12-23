@@ -174,7 +174,7 @@ public class HStoreContext implements HeapSize {
       return this;
     }
 
-    public HStoreContext build () {
+    public HStoreContext build() {
       return new HStoreContext(this);
     }
   }
