@@ -147,9 +147,8 @@ public class StoreUtils {
    * @return The checksum algorithm that is set in the configuration
    */
   public static ChecksumType getChecksumType(Configuration conf) {
-    String checksumName = conf.get(HConstants.CHECKSUM_TYPE_NAME);
-    return checksumName == null ? ChecksumType.getDefaultChecksumType() :
-        ChecksumType.nameToType(checksumName);
+    return ChecksumType.nameToType(
+      conf.get(HConstants.CHECKSUM_TYPE_NAME, ChecksumType.getDefaultChecksumType().getName()));
   }
 
   /**

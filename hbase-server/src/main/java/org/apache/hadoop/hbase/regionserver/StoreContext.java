@@ -35,7 +35,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * need of passing around the complete store.
  */
 @InterfaceAudience.Private
-public class HStoreContext implements HeapSize {
+public final class StoreContext implements HeapSize {
   public static final long FIXED_OVERHEAD = ClassSize.estimateBase(HStore.class, false);
 
   private final HFileContext defaultFileContext;
@@ -49,7 +49,7 @@ public class HStoreContext implements HeapSize {
   private final Path familyStoreDirectoryPath;
   private final RegionCoprocessorHost coprocessorHost;
 
-  private HStoreContext(Builder builder) {
+  private StoreContext(Builder builder) {
     this.defaultFileContext = builder.defaultFileContext;
     this.cacheConf = builder.cacheConf;
     this.regionFileSystem = builder.regionFileSystem;
@@ -174,8 +174,8 @@ public class HStoreContext implements HeapSize {
       return this;
     }
 
-    public HStoreContext build() {
-      return new HStoreContext(this);
+    public StoreContext build() {
+      return new StoreContext(this);
     }
   }
 

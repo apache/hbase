@@ -234,7 +234,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   private AtomicLong compactedCellsSize = new AtomicLong();
   private AtomicLong majorCompactedCellsSize = new AtomicLong();
 
-  private HStoreContext storeContext;
+  private StoreContext storeContext;
 
   /**
    * Constructor
@@ -331,8 +331,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     cacheOnWriteLogged = false;
   }
 
-  private HStoreContext initializeStoreContext(ColumnFamilyDescriptor family) throws IOException {
-    return new HStoreContext.Builder()
+  private StoreContext initializeStoreContext(ColumnFamilyDescriptor family) throws IOException {
+    return new StoreContext.Builder()
         .withBloomType(family.getBloomFilterType())
         .withCacheConfig(createCacheConf(family))
         .withCellComparator(region.getCellComparator())
