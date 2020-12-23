@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -281,6 +282,9 @@ public class SecureTestUtil {
           // is buried in the stack trace
           Throwable ex = e;
           do {
+            if (ex instanceof RemoteWithExtrasException) {
+              ex = ((RemoteWithExtrasException) ex).unwrapRemoteException();
+            }
             if (ex instanceof AccessDeniedException) {
               isAccessDeniedException = true;
               break;
