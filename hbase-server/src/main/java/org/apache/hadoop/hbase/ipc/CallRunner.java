@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.ipc;
 
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -72,15 +74,6 @@ public class CallRunner {
     return call;
   }
 
-  /**
-   * Keep for backward compatibility.
-   * @deprecated As of release 2.0, this will be removed in HBase 3.0
-   */
-  @Deprecated
-  public ServerCall<?> getCall() {
-    return (ServerCall<?>) call;
-  }
-
   public void setStatus(MonitoredRPCHandler status) {
     this.status = status;
   }
@@ -129,7 +122,8 @@ public class CallRunner {
       String serviceName = getServiceName();
       String methodName = getMethodName();
       String traceString = serviceName + "." + methodName;
-      Span span = TraceUtil.getGlobalTracer().spanBuilder(traceString).startSpan();
+      Span span = TraceUtil.getGlobalTracer().spanBuilder(traceString)
+        .setParent(Context.current().with(((ServerCall<?>) call).getSpan())).startSpan();
       try (Scope traceScope = span.makeCurrent()) {
         if (!this.rpcServer.isStarted()) {
           InetSocketAddress address = rpcServer.getListenerAddress();
@@ -140,8 +134,12 @@ public class CallRunner {
         resultPair = this.rpcServer.call(call, this.status);
       } catch (TimeoutIOException e){
         RpcServer.LOG.warn("Can not complete this request in time, drop it: " + call);
+        span.recordException(e);
+        span.setStatus(StatusCode.ERROR);
         return;
       } catch (Throwable e) {
+        span.recordException(e);
+        span.setStatus(StatusCode.ERROR);
         if (e instanceof ServerNotRunningYetException) {
           // If ServerNotRunningYetException, don't spew stack trace.
           if (RpcServer.LOG.isTraceEnabled()) {
@@ -160,6 +158,7 @@ public class CallRunner {
         RpcServer.CurCall.set(null);
         if (resultPair != null) {
           this.rpcServer.addCallSize(call.getSize() * -1);
+          span.setStatus(StatusCode.OK);
           sucessful = true;
         }
         span.end();
