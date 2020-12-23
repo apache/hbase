@@ -1218,53 +1218,33 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         }
       }
     }
-    InetSocketAddress[] favoredNodes = null;
-    if (region.getRegionServerServices() != null) {
-      favoredNodes = region.getRegionServerServices().getFavoredNodesForRegion(
-          region.getRegionInfo().getEncodedName());
-    }
-    HFileContext hFileContext = createFileContext(compression, includeMVCCReadpoint, includesTag,
-      getEncryptionContext());
+    HFileContext hFileContext = createFileContext(compression, includeMVCCReadpoint, includesTag);
     Path familyTempDir = new Path(getRegionFileSystem().getTempDir(), getColumnFamilyName());
-    StoreFileWriter.Builder builder = new StoreFileWriter.Builder(conf, writerCacheConf,
-        this.getFileSystem())
-            .withOutputDir(familyTempDir)
-            .withBloomType(storeContext.getBloomFilterType())
-            .withMaxKeyCount(maxKeyCount)
-            .withFavoredNodes(favoredNodes)
-            .withFileContext(hFileContext)
-            .withShouldDropCacheBehind(shouldDropBehind)
-            .withCompactedFilesSupplier(this::getCompactedFiles)
-            .withFileStoragePolicy(fileStoragePolicy);
+    StoreFileWriter.Builder builder =
+      new StoreFileWriter.Builder(conf, writerCacheConf, getFileSystem())
+        .withOutputDir(familyTempDir)
+        .withBloomType(storeContext.getBloomFilterType())
+        .withMaxKeyCount(maxKeyCount)
+        .withFavoredNodes(storeContext.getFavoredNodesSupplier().get())
+        .withFileContext(hFileContext)
+        .withShouldDropCacheBehind(shouldDropBehind)
+        .withCompactedFilesSupplier(storeContext.getCompactedFilesSupplier())
+        .withFileStoragePolicy(fileStoragePolicy);
     return builder.build();
   }
 
   private HFileContext createFileContext(Compression.Algorithm compression,
-      boolean includeMVCCReadpoint, boolean includesTag, Encryption.Context cryptoContext) {
+    boolean includeMVCCReadpoint, boolean includesTag) {
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
     }
-    HFileContext hFileContext = new HFileContextBuilder()
-                                .withIncludesMvcc(includeMVCCReadpoint)
-                                .withIncludesTags(includesTag)
-                                .withCompression(compression)
-                                .withCompressTags(getColumnFamilyDescriptor().isCompressTags())
-                                .withChecksumType(StoreUtils.getChecksumType(conf))
-                                .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf))
-                                .withBlockSize(blocksize)
-                                .withHBaseCheckSum(true)
-                                .withDataBlockEncoding(getColumnFamilyDescriptor()
-                                  .getDataBlockEncoding())
-                                .withEncryptionContext(cryptoContext)
-                                .withCreateTime(EnvironmentEdgeManager.currentTime())
-                                .withColumnFamily(getColumnFamilyDescriptor().getName())
-                                .withTableName(region.getTableDescriptor()
-                                  .getTableName().getName())
-                                .withCellComparator(getComparator())
-                                .build();
-    return hFileContext;
+    HFileContext fileContext = storeContext.getDefaultFileContext();
+    fileContext.setIncludesMvcc(includeMVCCReadpoint);
+    fileContext.setIncludesTags(includesTag);
+    fileContext.setCompression(compression);
+    fileContext.setFileCreateTime(EnvironmentEdgeManager.currentTime());
+    return fileContext;
   }
-
 
   private long getTotalSize(Collection<HStoreFile> sfs) {
     return sfs.stream().mapToLong(sf -> sf.getReader().length()).sum();
