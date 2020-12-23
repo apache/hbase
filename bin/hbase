@@ -475,6 +475,11 @@ add_jdk11_deps_to_classpath() {
   done
 }
 
+enable_trace() {
+  agent_jar=$(find lib/trace -type f -name "opentelemetry-javaagent-*")
+  HBASE_OPTS="$HBASE_OPTS -javaagent:$agent_jar $HBASE_TRACE_OPTS"
+}
+
 #Add the development env class path stuff
 if $in_dev_env; then
   add_maven_deps_to_classpath "cached_classpath.txt"
@@ -765,6 +770,11 @@ if [ "${addJDK11Jars}" = "true" ]; then
     fi
 elif [ "${DEBUG}" = "true" ]; then
   echo "JDK11 jars skipped from classpath."
+fi
+
+if [[ -n "${HBASE_TRACE_OPTS}" ]]; then
+  echo "Attach opentelemetry agent to enable trace"
+  enable_trace
 fi
 
 # Have JVM dump heap if we run out of memory.  Files will be 'launch directory'
