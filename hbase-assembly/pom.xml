@@ -339,5 +339,11 @@
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
     </dependency>
+    <!-- Include OpenTelemetry agent -->
+    <dependency>
+      <groupId>io.opentelemetry.javaagent</groupId>
+      <artifactId>opentelemetry-javaagent</artifactId>
+      <classifier>all</classifier>
+    </dependency>
   </dependencies>
 </project>
