@@ -347,5 +347,11 @@
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-1.2-api</artifactId>
     </dependency>
+    <!-- Include OpenTelemetry agent -->
+    <dependency>
+      <groupId>io.opentelemetry.javaagent</groupId>
+      <artifactId>opentelemetry-javaagent</artifactId>
+      <classifier>all</classifier>
+    </dependency>
   </dependencies>
 </project>
