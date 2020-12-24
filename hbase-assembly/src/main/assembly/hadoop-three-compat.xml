@@ -113,6 +113,7 @@
               <exclude>org.apache.yetus:audience-annotations</exclude>
               <exclude>org.slf4j:slf4j-api</exclude>
               <exclude>org.slf4j:slf4j-log4j12</exclude>
+              <exclude>io.opentelemetry.javaagent:*</exclude>
             </excludes>
           </dependencySet>
         </dependencySets>
@@ -225,7 +226,7 @@
       <outputDirectory>lib/jdk11</outputDirectory>
       <useTransitiveDependencies>true</useTransitiveDependencies>
       <includes>
-          <include>com.sun.activation:javax.activation</include>
+        <include>com.sun.activation:javax.activation</include>
         <!-- The following artifacts are transitive dependencies of com.sun.xml.ws:jaxws-ri:pom
              They are needed to be included in lib/jdk11 to be added to classpath during
              Java 11 runtime
@@ -255,6 +256,12 @@
         <include>jakarta.xml.bind:jakarta.xml.bind-api</include>
         <include>jakarta.xml.soap:jakarta.xml.soap-api</include>
         <include>jakarta.jws:jakarta.jws-api</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/trace</outputDirectory>
+      <includes>
+        <include>io.opentelemetry.javaagent:*</include>
       </includes>
     </dependencySet>
   </dependencySets>
