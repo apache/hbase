@@ -112,6 +112,7 @@
               <exclude>org.apache.yetus:audience-annotations</exclude>
               <exclude>org.slf4j:slf4j-api</exclude>
               <exclude>org.slf4j:slf4j-log4j12</exclude>
+              <exclude>io.opentelemetry.javaagent:*</exclude>
             </excludes>
           </dependencySet>
         </dependencySets>
@@ -254,6 +255,12 @@
         <include>jakarta.xml.bind:jakarta.xml.bind-api</include>
         <include>jakarta.xml.soap:jakarta.xml.soap-api</include>
         <include>jakarta.jws:jakarta.jws-api</include>
+      </includes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/trace</outputDirectory>
+      <includes>
+        <include>io.opentelemetry.javaagent:*</include>
       </includes>
     </dependencySet>
   </dependencySets>
