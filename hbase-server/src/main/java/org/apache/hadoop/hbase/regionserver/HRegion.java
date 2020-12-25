@@ -2754,10 +2754,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if (wal != null) {
             writeEntry = mvcc.begin();
             long flushOpSeqId = writeEntry.getWriteNumber();
+            mvcc.completeAndWait(writeEntry);
             FlushResultImpl flushResult =
                 new FlushResultImpl(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, flushOpSeqId,
                     "Nothing to flush", writeFlushRequestMarkerToWAL(wal, writeFlushWalMarker));
-            mvcc.completeAndWait(writeEntry);
             // Set to null so we don't complete it again down in finally block.
             writeEntry = null;
             return new PrepareFlushResult(flushResult, myseqid);

@@ -36,13 +36,13 @@ import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects.ToStringHe
  */
 @InterfaceAudience.Private
 public class MultiVersionConcurrencyControl {
-  private static final Logger LOG = LoggerFactory.getLogger(MultiVersionConcurrencyControl.class);
   private static final long READPOINT_ADVANCE_WAIT_TIME = 10L;
 
   final String regionName;
   final AtomicLong readPoint = new AtomicLong(0);
   final AtomicLong writePoint = new AtomicLong(0);
-  private final Object readWaiters = new Object();
+
+  private final ThreadLocal<WriteEntry> cachedWriteEntries;
   /**
    * Represents no value, or not set.
    */
@@ -62,6 +62,12 @@ public class MultiVersionConcurrencyControl {
 
   public MultiVersionConcurrencyControl(String regionName) {
     this.regionName = regionName;
+    this.cachedWriteEntries = new ThreadLocal<WriteEntry>() {
+      @Override
+      protected WriteEntry initialValue() {
+        return new WriteEntry();
+      }
+    };
   }
 
   /**
@@ -140,7 +146,7 @@ public class MultiVersionConcurrencyControl {
   public WriteEntry begin(Runnable action) {
     synchronized (writeQueue) {
       long nextWriteNumber = writePoint.incrementAndGet();
-      WriteEntry e = new WriteEntry(nextWriteNumber);
+      WriteEntry e = cachedWriteEntries.get().setWriteNumber(nextWriteNumber).markCompleted(false);
       writeQueue.add(e);
       action.run();
       return e;
@@ -185,7 +191,7 @@ public class MultiVersionConcurrencyControl {
    */
   public boolean complete(WriteEntry writeEntry) {
     synchronized (writeQueue) {
-      writeEntry.markCompleted();
+      writeEntry.markCompleted(true);
       long nextReadValue = NONE;
       boolean ranOnce = false;
       while (!writeQueue.isEmpty()) {
@@ -201,7 +207,8 @@ public class MultiVersionConcurrencyControl {
 
         if (queueFirst.isCompleted()) {
           nextReadValue = queueFirst.getWriteNumber();
-          writeQueue.removeFirst();
+          readPoint.set(nextReadValue);
+          writeQueue.removeFirst().done();
         } else {
           break;
         }
@@ -210,13 +217,6 @@ public class MultiVersionConcurrencyControl {
       if (!ranOnce) {
         throw new RuntimeException("There is no first!");
       }
-
-      if (nextReadValue > 0) {
-        synchronized (readWaiters) {
-          readPoint.set(nextReadValue);
-          readWaiters.notifyAll();
-        }
-      }
       return readPoint.get() >= writeEntry.getWriteNumber();
     }
   }
@@ -224,28 +224,8 @@ public class MultiVersionConcurrencyControl {
   /**
    * Wait for the global readPoint to advance up to the passed in write entry number.
    */
-  void waitForRead(WriteEntry e) {
-    boolean interrupted = false;
-    int count = 0;
-    synchronized (readWaiters) {
-      while (readPoint.get() < e.getWriteNumber()) {
-        if (count % 100 == 0 && count > 0) {
-          long totalWaitTillNow = READPOINT_ADVANCE_WAIT_TIME * count;
-          LOG.warn("STUCK for : " + totalWaitTillNow + " millis. " + this);
-        }
-        count++;
-        try {
-          readWaiters.wait(READPOINT_ADVANCE_WAIT_TIME);
-        } catch (InterruptedException ie) {
-          // We were interrupted... finish the loop -- i.e. cleanup --and then
-          // on our way out, reset the interrupt flag.
-          interrupted = true;
-        }
-      }
-    }
-    if (interrupted) {
-      Thread.currentThread().interrupt();
-    }
+  private void waitForRead(WriteEntry writeEntry) {
+    writeEntry.waitReadPoint(this);
   }
 
   @Override
@@ -272,33 +252,59 @@ public class MultiVersionConcurrencyControl {
    */
   @InterfaceAudience.Private
   public static class WriteEntry {
-    private final long writeNumber;
+    private long writeNumber = 0L;
     private boolean completed = false;
+    private static final Logger LOG = LoggerFactory.getLogger(WriteEntry.class);
 
-    WriteEntry(long writeNumber) {
-      this.writeNumber = writeNumber;
+    synchronized WriteEntry markCompleted(boolean completed) {
+      this.completed = completed;
+      return this;
     }
 
-    void markCompleted() {
-      this.completed = true;
-    }
-
-    boolean isCompleted() {
+    synchronized boolean isCompleted() {
       return this.completed;
     }
 
-    public long getWriteNumber() {
+    public synchronized long getWriteNumber() {
       return this.writeNumber;
     }
 
+    synchronized WriteEntry setWriteNumber(long writeNumber) {
+      this.writeNumber = writeNumber;
+      return this;
+    }
+    synchronized void done() {
+      notify();
+    }
+
+    synchronized void waitReadPoint(MultiVersionConcurrencyControl mvcc) {
+      boolean interrupted = false;
+      int count = 0;
+      while (mvcc.readPoint.get() < getWriteNumber()) {
+        if (count % 100 == 0 && count > 0) {
+          long totalWaitTillNow = READPOINT_ADVANCE_WAIT_TIME * count;
+          LOG.warn("STUCK for : " + totalWaitTillNow + " millis. " + mvcc);
+        }
+        count++;
+        try {
+          wait(READPOINT_ADVANCE_WAIT_TIME);
+        } catch (InterruptedException ie) {
+          // We were interrupted... finish the loop -- i.e. cleanup --and then
+          // on our way out, reset the interrupt flag.
+          interrupted = true;
+        }
+      }
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
+    }
+
     @Override
-    public String toString() {
+    synchronized public String toString() {
       return this.writeNumber + ", " + this.completed;
     }
   }
 
-  public static final long FIXED_SIZE = ClassSize.align(
-      ClassSize.OBJECT +
-      2 * Bytes.SIZEOF_LONG +
-      2 * ClassSize.REFERENCE);
+  static final long FIXED_SIZE =
+      ClassSize.align(ClassSize.OBJECT + 2 * Bytes.SIZEOF_LONG + 2 * ClassSize.REFERENCE);
 }
