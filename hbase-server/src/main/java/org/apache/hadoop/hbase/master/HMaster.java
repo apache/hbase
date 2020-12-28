@@ -2785,6 +2785,19 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
+   * Report whether this master is started
+   *
+   * This method is used for testing.
+   *
+   * @return true if master is ready to go, false if not.
+   */
+
+  @Override
+  public boolean isOnline() {
+    return serviceStarted;
+  }
+
+  /**
    * Report whether this master is in maintenance mode.
    *
    * @return true if master is in maintenanceMode
