@@ -88,6 +88,12 @@ public class TestBytes extends TestCase {
     }
   }
 
+  public void testUnsafeDisableWithConfiguration() throws Exception {
+    // Verify if "hbase.unsafe.usage.enabled" config flag is read during initialization which is set
+    // as false in the hbase-site.xml test resource
+    assertFalse(UnsafeAvailChecker.isAvailable());
+  }
+
   public void testNullHashCode() {
     byte [] b = null;
     Exception ee = null;
