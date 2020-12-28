@@ -1463,7 +1463,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>dfs.client.read.shortcircuit</name>
-    <value>false</value>
+    <value></value>
     <description>
       If set to true, this configuration parameter enables short-circuit local
       reads.
