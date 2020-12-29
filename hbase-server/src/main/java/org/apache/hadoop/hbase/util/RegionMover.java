@@ -121,8 +121,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
 
   @Override
   public void close() {
-    IOUtils.closeQuietly(this.admin);
-    IOUtils.closeQuietly(this.conn);
+    IOUtils.closeQuietly(this.admin, e -> LOG.warn("failed to close admin", e));
+    IOUtils.closeQuietly(this.conn, e -> LOG.warn("failed to close conn", e));
   }
 
   /**

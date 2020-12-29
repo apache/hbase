@@ -505,7 +505,8 @@ public final class HFile {
           throw new IllegalArgumentException("Invalid HFile version " + trailer.getMajorVersion());
       }
     } catch (Throwable t) {
-      IOUtils.closeQuietly(context.getInputStreamWrapper());
+      IOUtils.closeQuietly(context.getInputStreamWrapper(),
+        e -> LOG.warn("failed to close input stream wrapper", e));
       throw new CorruptHFileException("Problem reading HFile Trailer from file "
           + context.getFilePath(), t);
     } finally {

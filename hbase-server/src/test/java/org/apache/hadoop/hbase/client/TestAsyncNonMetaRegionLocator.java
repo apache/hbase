@@ -63,6 +63,8 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 @Category({ MediumTests.class, ClientTests.class })
 @RunWith(Parameterized.class)
 public class TestAsyncNonMetaRegionLocator {
@@ -116,7 +118,7 @@ public class TestAsyncNonMetaRegionLocator {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    IOUtils.closeQuietly(CONN);
+    Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 

@@ -34,6 +34,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 /**
  * Fix an infinite loop in {@link AsyncNonMetaRegionLocator}, see the comments on HBASE-21943 for
  * more details.
@@ -69,7 +71,7 @@ public class TestAsyncTableLocateRegionForDeletedTable {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    IOUtils.closeQuietly(ASYNC_CONN);
+    Closeables.close(ASYNC_CONN, true);
     assertTrue(ASYNC_CONN.isClosed());
     TEST_UTIL.shutdownMiniCluster();
   }
