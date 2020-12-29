@@ -54,7 +54,7 @@ public class MetricsRegionServer {
   private Timer bulkLoadTimer;
   private Meter serverReadQueryMeter;
   private Meter serverWriteQueryMeter;
-  protected long slowMetricTime = 1000L;
+  protected long slowMetricTime;
   protected static final int DEFAULT_SLOW_METRIC_TIME = 1000; // milliseconds
 
   public MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper, Configuration conf,
