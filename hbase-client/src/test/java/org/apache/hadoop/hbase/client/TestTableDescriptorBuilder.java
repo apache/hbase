@@ -352,7 +352,7 @@ public class TestTableDescriptorBuilder {
     assertEquals(
       "'testStringCustomizedValues', " +
         "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL', "
-        + "MAX_FILESIZE => '10737942528 B (10 GB 512 KB)'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
+        + "MAX_FILESIZE => '10737942528 B (10GB 512KB)'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
       htd.toStringCustomizedValues());
   }
 

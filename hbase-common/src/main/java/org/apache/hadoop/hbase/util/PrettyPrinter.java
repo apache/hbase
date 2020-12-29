@@ -231,31 +231,31 @@ public final class PrettyPrinter {
     sb.append(size).append(" B (");
     if (tb > 0) {
       sb.append(tb);
-      sb.append(" TB");
+      sb.append("TB");
     }
 
     if (gb > 0) {
       sb.append(tb > 0 ? " " : "");
       sb.append(gb);
-      sb.append(" GB");
+      sb.append("GB");
     }
 
     if (mb > 0) {
       sb.append(tb + gb > 0 ? " " : "");
       sb.append(mb);
-      sb.append(" MB");
+      sb.append("MB");
     }
 
     if (kb > 0) {
       sb.append(tb + gb + mb > 0 ? " " : "");
       sb.append(kb);
-      sb.append(" KB");
+      sb.append("KB");
     }
 
     if (b > 0) {
       sb.append(tb + gb + mb + kb > 0 ? " " : "");
       sb.append(b);
-      sb.append(" B");
+      sb.append("B");
     }
 
     sb.append(")");
