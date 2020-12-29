@@ -435,6 +435,9 @@ public class HRegionServer extends Thread implements
 
   private final int shortOperationTimeout;
 
+  // Time to pause if master says 'please hold'
+  private final long retryPauseTime;
+
   private final RegionServerAccounting regionServerAccounting;
 
   private SlowLogTableOpsChore slowLogTableOpsChore = null;
@@ -614,6 +617,9 @@ public class HRegionServer extends Thread implements
 
       this.shortOperationTimeout = conf.getInt(HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT);
+
+      this.retryPauseTime = conf.getLong(HConstants.HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME,
+        HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME);
 
       this.abortRequested = new AtomicBoolean(false);
       this.stopped = false;
@@ -2436,10 +2442,8 @@ public class HRegionServer extends Thread implements
     final ReportRegionStateTransitionRequest request =
         createReportRegionStateTransitionRequest(context);
 
-    // Time to pause if master says 'please hold'. Make configurable if needed.
-    final long initPauseTime = 1000;
     int tries = 0;
-    long pauseTime;
+    long pauseTime = this.retryPauseTime;
     // Keep looping till we get an error. We want to send reports even though server is going down.
     // Only go down if clusterConnection is null. It is set to null almost as last thing as the
     // HRegionServer does down.
@@ -2470,9 +2474,9 @@ public class HRegionServer extends Thread implements
                 || ioe instanceof CallQueueTooBigException;
         if (pause) {
           // Do backoff else we flood the Master with requests.
-          pauseTime = ConnectionUtils.getPauseTime(initPauseTime, tries);
+          pauseTime = ConnectionUtils.getPauseTime(this.retryPauseTime, tries);
         } else {
-          pauseTime = initPauseTime; // Reset.
+          pauseTime = this.retryPauseTime; // Reset.
         }
         LOG.info("Failed report transition " +
           TextFormat.shortDebugString(request) + "; retry (#" + tries + ")" +
@@ -3937,5 +3941,14 @@ public class HRegionServer extends Thread implements
   @InterfaceAudience.Private
   public CompactedHFilesDischarger getCompactedHFilesDischarger() {
     return compactedFileDischarger;
+  }
+
+  /**
+   * Return pause time configured in {@link HConstants#HBASE_RPC_SHORTOPERATION_RETRY_PAUSE_TIME}}
+   * @return pause time
+   */
+  @InterfaceAudience.Private
+  public long getRetryPauseTime() {
+    return this.retryPauseTime;
   }
 }
