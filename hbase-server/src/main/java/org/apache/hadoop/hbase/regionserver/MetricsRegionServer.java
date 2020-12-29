@@ -71,7 +71,7 @@ public class MetricsRegionServer {
     // create and use metrics from the new hbase-metrics based registry.
     bulkLoadTimer = metricRegistry.timer("Bulkload");
 
-    slowMetricTime = conf.getLong(SLOW_METRIC_TIME,DEFAULT_SLOW_METRIC_TIME);
+    slowMetricTime = conf.getLong(SLOW_METRIC_TIME, DEFAULT_SLOW_METRIC_TIME);
     quotaSource = CompatibilitySingletonFactory.getInstance(MetricsRegionServerQuotaSource.class);
     serverReadQueryMeter = metricRegistry.meter("ServerReadQueryPerSecond");
     serverWriteQueryMeter = metricRegistry.meter("ServerWriteQueryPerSecond");
