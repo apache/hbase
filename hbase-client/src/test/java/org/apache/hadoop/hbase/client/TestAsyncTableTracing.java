@@ -24,8 +24,8 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
-import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Span.Kind;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;

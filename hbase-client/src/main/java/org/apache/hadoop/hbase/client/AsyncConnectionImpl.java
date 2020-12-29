@@ -29,7 +29,6 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
-import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.Optional;
@@ -62,7 +61,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
