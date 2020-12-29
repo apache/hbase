@@ -70,6 +70,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * Gets the {@link AsyncTableRegionLocator} for this table.
    */
   AsyncTableRegionLocator getRegionLocator();
+
   /**
    * Get timeout of each rpc request in this Table instance. It will be overridden by a more
    * specific rpc timeout config such as readRpcTimeout or writeRpcTimeout.
@@ -184,7 +185,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    *         {@link CompletableFuture}.
    */
   default CompletableFuture<Long> incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
-      long amount) {
+    long amount) {
     return incrementColumnValue(row, family, qualifier, amount, Durability.SYNC_WAL);
   }
 
@@ -204,12 +205,12 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    *         {@link CompletableFuture}.
    */
   default CompletableFuture<Long> incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
-      long amount, Durability durability) {
+    long amount, Durability durability) {
     Preconditions.checkNotNull(row, "row is null");
     Preconditions.checkNotNull(family, "family is null");
     return increment(
       new Increment(row).addColumn(family, qualifier, amount).setDurability(durability))
-          .thenApply(r -> Bytes.toLong(r.getValue(family, qualifier)));
+        .thenApply(r -> Bytes.toLong(r.getValue(family, qualifier)));
   }
 
   /**
@@ -233,16 +234,15 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * </pre>
    *
    * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
-   *   any more.
+   *             any more.
    */
   @Deprecated
   CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family);
 
   /**
    * A helper class for sending checkAndMutate request.
-   *
    * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
-   *   any more.
+   *             any more.
    */
   @Deprecated
   interface CheckAndMutateBuilder {
@@ -319,16 +319,15 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * </pre>
    *
    * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
-   *   any more.
+   *             any more.
    */
   @Deprecated
   CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter);
 
   /**
    * A helper class for sending checkAndMutate request with a filter.
-   *
    * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
-   *   any more.
+   *             any more.
    */
   @Deprecated
   interface CheckAndMutateWithFilterBuilder {
@@ -361,9 +360,8 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
   }
 
   /**
-   * checkAndMutate that atomically checks if a row matches the specified condition. If it does,
-   * it performs the specified action.
-   *
+   * checkAndMutate that atomically checks if a row matches the specified condition. If it does, it
+   * performs the specified action.
    * @param checkAndMutate The CheckAndMutate object.
    * @return A {@link CompletableFuture}s that represent the result for the CheckAndMutate.
    */
@@ -373,22 +371,19 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * Batch version of checkAndMutate. The specified CheckAndMutates are batched only in the sense
    * that they are sent to a RS in one RPC, but each CheckAndMutate operation is still executed
    * atomically (and thus, each may fail independently of others).
-   *
    * @param checkAndMutates The list of CheckAndMutate.
-   * @return A list of {@link CompletableFuture}s that represent the result for each
-   *   CheckAndMutate.
+   * @return A list of {@link CompletableFuture}s that represent the result for each CheckAndMutate.
    */
-  List<CompletableFuture<CheckAndMutateResult>> checkAndMutate(
-    List<CheckAndMutate> checkAndMutates);
+  List<CompletableFuture<CheckAndMutateResult>>
+    checkAndMutate(List<CheckAndMutate> checkAndMutates);
 
   /**
    * A simple version of batch checkAndMutate. It will fail if there are any failures.
-   *
    * @param checkAndMutates The list of rows to apply.
    * @return A {@link CompletableFuture} that wrapper the result list.
    */
-  default CompletableFuture<List<CheckAndMutateResult>> checkAndMutateAll(
-    List<CheckAndMutate> checkAndMutates) {
+  default CompletableFuture<List<CheckAndMutateResult>>
+    checkAndMutateAll(List<CheckAndMutate> checkAndMutates) {
     return allOf(checkAndMutate(checkAndMutates));
   }
 
@@ -484,7 +479,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    */
   default List<CompletableFuture<Boolean>> exists(List<Get> gets) {
     return get(toCheckExistenceOnly(gets)).stream()
-        .<CompletableFuture<Boolean>> map(f -> f.thenApply(r -> r.getExists())).collect(toList());
+      .<CompletableFuture<Boolean>> map(f -> f.thenApply(r -> r.getExists())).collect(toList());
   }
 
   /**
@@ -592,7 +587,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * @see ServiceCaller
    */
   <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      ServiceCaller<S, R> callable, byte[] row);
+    ServiceCaller<S, R> callable, byte[] row);
 
   /**
    * The callback when we want to execute a coprocessor call on a range of regions.
@@ -731,5 +726,5 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    *          for more details.
    */
   <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      ServiceCaller<S, R> callable, CoprocessorCallback<R> callback);
+    ServiceCaller<S, R> callable, CoprocessorCallback<R> callback);
 }
