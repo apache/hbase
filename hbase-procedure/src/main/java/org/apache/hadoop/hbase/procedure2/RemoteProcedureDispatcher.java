@@ -79,6 +79,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
 
   private TimeoutExecutorThread timeoutExecutor;
   private ThreadPoolExecutor threadPool;
+  private Function timeoutExecutorError = null;
 
   protected RemoteProcedureDispatcher(Configuration conf) {
     this.corePoolSize = conf.getInt(THREAD_POOL_SIZE_CONF_KEY, DEFAULT_THREAD_POOL_SIZE);
@@ -198,6 +199,14 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     return true;
   }
 
+  public interface Function {
+    void exe(Throwable t);
+  }
+
+  public void setTimeoutExecutorErrorFunc(Function func) {
+    this.timeoutExecutorError = func;
+  }
+
   // ============================================================================================
   //  Task Helpers
   // ============================================================================================
@@ -306,15 +315,22 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     @Override
     public void run() {
       while (running.get()) {
-        final DelayedWithTimeout task = DelayedUtil.takeWithoutInterrupt(queue);
-        if (task == null || task == DelayedUtil.DELAYED_POISON) {
-          // the executor may be shutting down, and the task is just the shutdown request
-          continue;
-        }
-        if (task instanceof DelayedTask) {
-          threadPool.execute(((DelayedTask) task).getObject());
-        } else {
-          ((BufferNode) task).dispatch();
+        try {
+          final DelayedWithTimeout task = DelayedUtil.takeWithoutInterrupt(queue);
+          if (task == null || task == DelayedUtil.DELAYED_POISON) {
+            // the executor may be shutting down, and the task is just the shutdown request
+            continue;
+          }
+          if (task instanceof DelayedTask) {
+            threadPool.execute(((DelayedTask) task).getObject());
+          } else {
+            ((BufferNode) task).dispatch();
+          }
+        } catch (Throwable e) {
+          LOG.error("Caught error", e);
+          if (timeoutExecutorError != null) {
+            timeoutExecutorError.exe(e);
+          }
         }
       }
     }

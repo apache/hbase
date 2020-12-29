@@ -91,6 +91,10 @@ public class RSProcedureDispatcher
 
   @Override
   public boolean start() {
+    super.setTimeoutExecutorErrorFunc(t -> {
+      master.abort("Aborting master", t);
+    });
+
     if (!super.start()) {
       return false;
     }
