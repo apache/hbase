@@ -83,13 +83,11 @@ public final class TableDescriptorChecker {
 
     // check max file size
     long maxFileSizeLowerLimit = 2 * 1024 * 1024L; // 2M is the default lower limit
-    String maxFileSizeValue = td.getValue(TableDescriptorBuilder.MAX_FILESIZE);
-    long maxFileSize = maxFileSizeValue == null? -1 : Long.parseLong(maxFileSizeValue);
-    // if not set MAX_FILESIZE in TableDescriptor,
-    // use maxFileSizeLowerLimit instead to skip this check
-    if (maxFileSizeValue == null) {
-      maxFileSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE, maxFileSizeLowerLimit);
-    }
+    // if not set MAX_FILESIZE in TableDescriptor, and not set HREGION_MAX_FILESIZE in
+    // hbase-site.xml, use maxFileSizeLowerLimit instead to skip this check
+    long maxFileSize = td.getValue(TableDescriptorBuilder.MAX_FILESIZE) == null ?
+      conf.getLong(HConstants.HREGION_MAX_FILESIZE, maxFileSizeLowerLimit) :
+      Long.parseLong(td.getValue(TableDescriptorBuilder.MAX_FILESIZE));
     if (maxFileSize < conf.getLong("hbase.hregion.max.filesize.limit", maxFileSizeLowerLimit)) {
       String message =
           "MAX_FILESIZE for table descriptor or " + "\"hbase.hregion.max.filesize\" (" +
@@ -100,13 +98,11 @@ public final class TableDescriptorChecker {
 
     // check flush size
     long flushSizeLowerLimit = 1024 * 1024L; // 1M is the default lower limit
-    String flushSizeValue = td.getValue(TableDescriptorBuilder.MEMSTORE_FLUSHSIZE);
-    long flushSize = flushSizeValue == null? -1 : Long.parseLong(flushSizeValue);
-    // if not set MEMSTORE_FLUSHSIZE in TableDescriptor,
-    // use flushSizeLowerLimit instead to skip this check
-    if (flushSizeValue == null) {
-      flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeLowerLimit);
-    }
+    // if not set MEMSTORE_FLUSHSIZE in TableDescriptor, and not set HREGION_MEMSTORE_FLUSH_SIZE in
+    // hbase-site.xml, use flushSizeLowerLimit instead to skip this check
+    long flushSize = td.getValue(TableDescriptorBuilder.MEMSTORE_FLUSHSIZE) == null ?
+      conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeLowerLimit) :
+      Long.parseLong(td.getValue(TableDescriptorBuilder.MEMSTORE_FLUSHSIZE));
     if (flushSize < conf.getLong("hbase.hregion.memstore.flush.size.limit", flushSizeLowerLimit)) {
       String message = "MEMSTORE_FLUSHSIZE for table descriptor or " +
           "\"hbase.hregion.memstore.flush.size\" (" + flushSize +
