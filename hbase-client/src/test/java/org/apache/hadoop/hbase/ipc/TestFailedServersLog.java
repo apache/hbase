@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 
 import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
