@@ -227,10 +227,6 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       "AsyncTable.get", tableName);
   }
 
-  private String getSpanName(String methodName) {
-    return getClass().getSimpleName() + "." + methodName;
-  }
-
   @Override
   public CompletableFuture<Void> put(Put put) {
     validatePut(put, conn.connConf.getMaxKeyValueSize());
