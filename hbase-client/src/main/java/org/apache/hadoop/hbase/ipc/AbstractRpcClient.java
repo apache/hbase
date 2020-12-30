@@ -393,10 +393,11 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   }
 
   private Call callMethod(final Descriptors.MethodDescriptor md, final HBaseRpcController hrc,
-      final Message param, Message returnType, final User ticket,
-      final Address addr, final RpcCallback<Message> callback) {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RpcClient.callMethod." + md.getFullName())
-      .startSpan();
+    final Message param, Message returnType, final User ticket, final Address addr,
+    final RpcCallback<Message> callback) {
+    Span span = TraceUtil.createSpan("RpcClient.callMethod")
+      .setAttribute(TraceUtil.RPC_SERVICE_KEY, md.getService().getName())
+      .setAttribute(TraceUtil.RPC_METHOD_KEY, md.getName());
     try (Scope scope = span.makeCurrent()) {
       final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
       cs.setStartTime(EnvironmentEdgeManager.currentTime());
