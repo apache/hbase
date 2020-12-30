@@ -19,8 +19,9 @@ package org.apache.hadoop.hbase.security.token;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Arrays;

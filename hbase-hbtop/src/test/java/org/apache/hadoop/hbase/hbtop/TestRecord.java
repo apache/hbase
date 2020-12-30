@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.hbtop;
 
 import static org.apache.hadoop.hbase.hbtop.Record.entry;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.hbtop.field.Field;
