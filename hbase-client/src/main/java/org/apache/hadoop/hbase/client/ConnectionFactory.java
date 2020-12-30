@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -277,31 +278,33 @@ public class ConnectionFactory {
    * @return AsyncConnection object wrapped by CompletableFuture
    */
   public static CompletableFuture<AsyncConnection> createAsyncConnection(Configuration conf,
-      final User user) {
-    CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
-    ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf);
-    addListener(registry.getClusterId(), (clusterId, error) -> {
-      if (error != null) {
-        registry.close();
-        future.completeExceptionally(error);
-        return;
-      }
-      if (clusterId == null) {
-        registry.close();
-        future.completeExceptionally(new IOException("clusterid came back null"));
-        return;
-      }
-      Class<? extends AsyncConnection> clazz = conf.getClass(HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
-        AsyncConnectionImpl.class, AsyncConnection.class);
-      try {
-        future.complete(
-          user.runAs((PrivilegedExceptionAction<? extends AsyncConnection>) () -> ReflectionUtils
-            .newInstance(clazz, conf, registry, clusterId, null, user)));
-      } catch (Exception e) {
-        registry.close();
-        future.completeExceptionally(e);
-      }
-    });
-    return future;
+    final User user) {
+    return TraceUtil.tracedFuture(() -> {
+      CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
+      ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf);
+      addListener(registry.getClusterId(), (clusterId, error) -> {
+        if (error != null) {
+          registry.close();
+          future.completeExceptionally(error);
+          return;
+        }
+        if (clusterId == null) {
+          registry.close();
+          future.completeExceptionally(new IOException("clusterid came back null"));
+          return;
+        }
+        Class<? extends AsyncConnection> clazz = conf.getClass(HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
+          AsyncConnectionImpl.class, AsyncConnection.class);
+        try {
+          future.complete(
+            user.runAs((PrivilegedExceptionAction<? extends AsyncConnection>) () -> ReflectionUtils
+              .newInstance(clazz, conf, registry, clusterId, null, user)));
+        } catch (Exception e) {
+          registry.close();
+          future.completeExceptionally(e);
+        }
+      });
+      return future;
+    }, ConnectionFactory.class.getSimpleName() + ".createAsyncConnection");
   }
 }
