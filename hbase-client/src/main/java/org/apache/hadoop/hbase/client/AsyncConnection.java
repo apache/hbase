@@ -64,8 +64,8 @@ public interface AsyncConnection extends Closeable {
   /**
    * Retrieve an {@link AsyncTable} implementation for accessing a table.
    * <p>
-   * The returned instance will use default configs. Use {@link #getTableBuilder(TableName)} if
-   * you want to customize some configs.
+   * The returned instance will use default configs. Use {@link #getTableBuilder(TableName)} if you
+   * want to customize some configs.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
