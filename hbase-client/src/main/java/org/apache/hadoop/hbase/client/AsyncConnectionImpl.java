@@ -27,6 +27,8 @@ import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRI
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.Optional;
@@ -51,6 +53,7 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -121,7 +124,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   private volatile ConnectionOverAsyncConnection conn;
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
-      SocketAddress localAddress, User user) {
+    SocketAddress localAddress, User user) {
     this.conf = conf;
     this.user = user;
 
@@ -135,8 +138,8 @@ class AsyncConnectionImpl implements AsyncConnection {
     } else {
       this.metrics = Optional.empty();
     }
-    this.rpcClient = RpcClientFactory.createClient(
-        conf, clusterId, localAddress, metrics.orElse(null));
+    this.rpcClient =
+      RpcClientFactory.createClient(conf, clusterId, localAddress, metrics.orElse(null));
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.rpcTimeout =
       (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
@@ -159,14 +162,13 @@ class AsyncConnectionImpl implements AsyncConnection {
         LOG.warn("{} is true, but {} is not set", STATUS_PUBLISHED, STATUS_LISTENER_CLASS);
       } else {
         try {
-          listener = new ClusterStatusListener(
-            new ClusterStatusListener.DeadServerHandler() {
-              @Override
-              public void newDead(ServerName sn) {
-                locator.clearCache(sn);
-                rpcClient.cancelConnections(sn);
-              }
-            }, conf, listenerClass);
+          listener = new ClusterStatusListener(new ClusterStatusListener.DeadServerHandler() {
+            @Override
+            public void newDead(ServerName sn) {
+              locator.clearCache(sn);
+              rpcClient.cancelConnections(sn);
+            }
+          }, conf, listenerClass);
         } catch (IOException e) {
           LOG.warn("Failed create of ClusterStatusListener, not a critical, ignoring...", e);
         }
@@ -206,28 +208,30 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public void close() {
-    if (!closed.compareAndSet(false, true)) {
-      return;
-    }
-    LOG.info("Connection has been closed by {}.", Thread.currentThread().getName());
-    if(LOG.isDebugEnabled()){
-      logCallStack(Thread.currentThread().getStackTrace());
-    }
-    IOUtils.closeQuietly(clusterStatusListener,
-      e -> LOG.warn("failed to close clusterStatusListener", e));
-    IOUtils.closeQuietly(rpcClient, e -> LOG.warn("failed to close rpcClient", e));
-    IOUtils.closeQuietly(registry, e -> LOG.warn("failed to close registry", e));
-    synchronized (this) {
-      if (choreService != null) {
-        choreService.shutdown();
-        choreService = null;
+    TraceUtil.trace(() -> {
+      if (!closed.compareAndSet(false, true)) {
+        return;
       }
-    }
-    metrics.ifPresent(MetricsConnection::shutdown);
-    ConnectionOverAsyncConnection c = this.conn;
-    if (c != null) {
-      c.closePool();
-    }
+      LOG.info("Connection has been closed by {}.", Thread.currentThread().getName());
+      if (LOG.isDebugEnabled()) {
+        logCallStack(Thread.currentThread().getStackTrace());
+      }
+      IOUtils.closeQuietly(clusterStatusListener,
+        e -> LOG.warn("failed to close clusterStatusListener", e));
+      IOUtils.closeQuietly(rpcClient, e -> LOG.warn("failed to close rpcClient", e));
+      IOUtils.closeQuietly(registry, e -> LOG.warn("failed to close registry", e));
+      synchronized (this) {
+        if (choreService != null) {
+          choreService.shutdown();
+          choreService = null;
+        }
+      }
+      metrics.ifPresent(MetricsConnection::shutdown);
+      ConnectionOverAsyncConnection c = this.conn;
+      if (c != null) {
+        c.closePool();
+      }
+    }, "AsyncConnection.close");
   }
 
   private void logCallStack(StackTraceElement[] stackTraceElements) {
@@ -341,7 +345,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName,
-      ExecutorService pool) {
+    ExecutorService pool) {
     return new AsyncTableBuilderBase<ScanResultConsumer>(tableName, connConf) {
 
       @Override
@@ -382,7 +386,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName,
-      ExecutorService pool) {
+    ExecutorService pool) {
     return new AsyncBufferedMutatorBuilderImpl(connConf, getTableBuilder(tableName, pool),
       RETRY_TIMER);
   }
@@ -406,28 +410,36 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public CompletableFuture<Hbck> getHbck() {
-    CompletableFuture<Hbck> future = new CompletableFuture<>();
-    addListener(registry.getActiveMaster(), (sn, error) -> {
-      if (error != null) {
-        future.completeExceptionally(error);
-      } else {
-        try {
-          future.complete(getHbck(sn));
-        } catch (IOException e) {
-          future.completeExceptionally(e);
+    return TraceUtil.tracedFuture(() -> {
+      CompletableFuture<Hbck> future = new CompletableFuture<>();
+      addListener(registry.getActiveMaster(), (sn, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+        } else {
+          try {
+            future.complete(getHbck(sn));
+          } catch (IOException e) {
+            future.completeExceptionally(e);
+          }
         }
-      }
-    });
-    return future;
+      });
+      return future;
+    }, getClass().getName() + ".getHbck");
   }
 
   @Override
   public Hbck getHbck(ServerName masterServer) throws IOException {
-    // we will not create a new connection when creating a new protobuf stub, and for hbck there
-    // will be no performance consideration, so for simplification we will create a new stub every
-    // time instead of caching the stub here.
-    return new HBaseHbck(MasterProtos.HbckService.newBlockingStub(
-      rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout)), rpcControllerFactory);
+    Span span = TraceUtil.createSpan(getClass().getName() + ".getHbck")
+      .setAttribute(TraceUtil.SERVER_NAME_KEY, masterServer.getServerName());
+    try (Scope scope = span.makeCurrent()) {
+      // we will not create a new connection when creating a new protobuf stub, and for hbck there
+      // will be no performance consideration, so for simplification we will create a new stub every
+      // time instead of caching the stub here.
+      return new HBaseHbck(
+        MasterProtos.HbckService
+          .newBlockingStub(rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout)),
+        rpcControllerFactory);
+    }
   }
 
   Optional<MetricsConnection> getConnectionMetrics() {
