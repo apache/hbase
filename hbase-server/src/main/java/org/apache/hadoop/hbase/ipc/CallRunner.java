@@ -121,9 +121,10 @@ public class CallRunner {
       RpcServer.CurCall.set(call);
       String serviceName = getServiceName();
       String methodName = getMethodName();
-      String traceString = serviceName + "." + methodName;
-      Span span = TraceUtil.getGlobalTracer().spanBuilder(traceString)
-        .setParent(Context.current().with(((ServerCall<?>) call).getSpan())).startSpan();
+      Span span = TraceUtil.getGlobalTracer().spanBuilder("RpcServer.callMethod")
+        .setParent(Context.current().with(((ServerCall<?>) call).getSpan())).startSpan()
+        .setAttribute(TraceUtil.RPC_SERVICE_KEY, serviceName)
+        .setAttribute(TraceUtil.RPC_METHOD_KEY, methodName);
       try (Scope traceScope = span.makeCurrent()) {
         if (!this.rpcServer.isStarted()) {
           InetSocketAddress address = rpcServer.getListenerAddress();
