@@ -1225,7 +1225,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         .withOutputDir(familyTempDir)
         .withBloomType(storeContext.getBloomFilterType())
         .withMaxKeyCount(maxKeyCount)
-        .withFavoredNodes(storeContext.getFavoredNodesSupplier().get())
+        .withFavoredNodes(storeContext.getFavoredNodes())
         .withFileContext(hFileContext)
         .withShouldDropCacheBehind(shouldDropBehind)
         .withCompactedFilesSupplier(storeContext.getCompactedFilesSupplier())

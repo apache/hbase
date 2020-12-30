@@ -86,8 +86,8 @@ public final class StoreContext implements HeapSize {
     return compactedFilesSupplier;
   }
 
-  public Supplier<InetSocketAddress[]> getFavoredNodesSupplier() {
-    return favoredNodesSupplier;
+  public InetSocketAddress[] getFavoredNodes() {
+    return favoredNodesSupplier.get();
   }
 
   public ColumnFamilyDescriptor getFamily() {
