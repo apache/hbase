@@ -28,7 +28,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -47,6 +46,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestZKConnectionRegistry {
@@ -69,7 +70,7 @@ public class TestZKConnectionRegistry {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    IOUtils.closeQuietly(REGISTRY);
+    Closeables.close(REGISTRY, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
