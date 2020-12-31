@@ -21,9 +21,9 @@ import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -39,6 +39,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestCatalogReplicaLoadBalanceSimpleSelector {
@@ -80,7 +82,7 @@ public class TestCatalogReplicaLoadBalanceSimpleSelector {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    IOUtils.closeQuietly(CONN);
+    Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 

@@ -138,6 +138,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -511,7 +512,7 @@ public class HBaseFsck extends Configured implements Closeable {
       RetryCounter retryCounter = lockFileRetryCounterFactory.create();
       do {
         try {
-          IOUtils.closeQuietly(hbckOutFd);
+          Closeables.close(hbckOutFd, true);
           CommonFSUtils.delete(CommonFSUtils.getCurrentFileSystem(getConf()), HBCK_LOCK_PATH, true);
           LOG.info("Finishing hbck");
           return;
@@ -564,7 +565,7 @@ public class HBaseFsck extends Configured implements Closeable {
     Runtime.getRuntime().addShutdownHook(new Thread() {
       @Override
       public void run() {
-        IOUtils.closeQuietly(HBaseFsck.this);
+        IOUtils.closeQuietly(HBaseFsck.this, e -> LOG.warn("", e));
         cleanupHbckZnode();
         unlockHbck();
       }
@@ -863,9 +864,9 @@ public class HBaseFsck extends Configured implements Closeable {
         zkw.close();
         zkw = null;
       }
-      IOUtils.closeQuietly(admin);
-      IOUtils.closeQuietly(meta);
-      IOUtils.closeQuietly(connection);
+      IOUtils.closeQuietly(admin, e -> LOG.warn("", e));
+      IOUtils.closeQuietly(meta, e -> LOG.warn("", e));
+      IOUtils.closeQuietly(connection, e -> LOG.warn("", e));
     }
   }
 
@@ -3845,7 +3846,7 @@ public class HBaseFsck extends Configured implements Closeable {
         setRetCode(code);
       }
     } finally {
-      IOUtils.closeQuietly(this);
+      IOUtils.closeQuietly(this, e -> LOG.warn("", e));
     }
     return this;
   }
