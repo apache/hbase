@@ -91,13 +91,10 @@ public class RSProcedureDispatcher
 
   @Override
   public boolean start() {
-    super.setTimeoutExecutorErrorFunc(t -> {
-      master.abort("Aborting master", t);
-    });
-
     if (!super.start()) {
       return false;
     }
+    setUncaughtExceptionHandler(this::abort);
     if (master.isStopped()) {
       LOG.debug("Stopped");
       return false;
@@ -128,6 +125,11 @@ public class RSProcedureDispatcher
       return false;
     }
     return true;
+  }
+
+  private void abort(Thread t, Throwable e) {
+    LOG.error("Caught error", e);
+    master.abort("Aborting master", e);
   }
 
   @Override

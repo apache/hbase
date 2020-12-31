@@ -79,7 +79,6 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
 
   private TimeoutExecutorThread timeoutExecutor;
   private ThreadPoolExecutor threadPool;
-  private Function timeoutExecutorError = null;
 
   protected RemoteProcedureDispatcher(Configuration conf) {
     this.corePoolSize = conf.getInt(THREAD_POOL_SIZE_CONF_KEY, DEFAULT_THREAD_POOL_SIZE);
@@ -105,6 +104,10 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
       new ThreadFactoryBuilder().setNameFormat(this.getClass().getSimpleName() + "-pool-%d")
         .setDaemon(true).setUncaughtExceptionHandler(getUncaughtExceptionHandler()).build());
     return true;
+  }
+
+  protected void setUncaughtExceptionHandler(UncaughtExceptionHandler eh) {
+    timeoutExecutor.setUncaughtExceptionHandler(eh);
   }
 
   public boolean stop() {
@@ -197,14 +200,6 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
 
     node.abortOperationsInQueue();
     return true;
-  }
-
-  public interface Function {
-    void exe(Throwable t);
-  }
-
-  public void setTimeoutExecutorErrorFunc(Function func) {
-    this.timeoutExecutorError = func;
   }
 
   // ============================================================================================
@@ -315,22 +310,15 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     @Override
     public void run() {
       while (running.get()) {
-        try {
-          final DelayedWithTimeout task = DelayedUtil.takeWithoutInterrupt(queue);
-          if (task == null || task == DelayedUtil.DELAYED_POISON) {
-            // the executor may be shutting down, and the task is just the shutdown request
-            continue;
-          }
-          if (task instanceof DelayedTask) {
-            threadPool.execute(((DelayedTask) task).getObject());
-          } else {
-            ((BufferNode) task).dispatch();
-          }
-        } catch (Throwable e) {
-          LOG.error("Caught error", e);
-          if (timeoutExecutorError != null) {
-            timeoutExecutorError.exe(e);
-          }
+        final DelayedWithTimeout task = DelayedUtil.takeWithoutInterrupt(queue);
+        if (task == null || task == DelayedUtil.DELAYED_POISON) {
+          // the executor may be shutting down, and the task is just the shutdown request
+          continue;
+        }
+        if (task instanceof DelayedTask) {
+          threadPool.execute(((DelayedTask) task).getObject());
+        } else {
+          ((BufferNode) task).dispatch();
         }
       }
     }
