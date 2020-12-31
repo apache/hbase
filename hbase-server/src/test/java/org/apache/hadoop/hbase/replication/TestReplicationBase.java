@@ -24,7 +24,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -53,6 +52,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
  * This class is only a base for other integration-level replication tests.
@@ -203,9 +204,9 @@ public class TestReplicationBase {
     conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);
   }
 
-  static void restartSourceCluster(int numSlaves)
-      throws Exception {
-    IOUtils.closeQuietly(hbaseAdmin, htable1);
+  static void restartSourceCluster(int numSlaves) throws Exception {
+    Closeables.close(hbaseAdmin, true);
+    Closeables.close(htable1, true);
     UTIL1.shutdownMiniHBaseCluster();
     UTIL1.restartHBaseCluster(numSlaves);
     // Invalidate the cached connection state.
@@ -216,7 +217,7 @@ public class TestReplicationBase {
   }
 
   static void restartTargetHBaseCluster(int numSlaves) throws Exception {
-    IOUtils.closeQuietly(htable2);
+    Closeables.close(htable2, true);
     UTIL2.restartHBaseCluster(numSlaves);
     // Invalidate the cached connection state
     CONF2 = UTIL2.getConfiguration();

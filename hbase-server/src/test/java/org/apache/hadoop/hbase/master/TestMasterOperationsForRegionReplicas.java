@@ -33,8 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -107,7 +105,8 @@ public class TestMasterOperationsForRegionReplicas {
   }
 
   private static void resetConnections() throws IOException {
-    IOUtils.closeQuietly(ADMIN, CONNECTION);
+    Closeables.close(ADMIN, true);
+    Closeables.close(CONNECTION, true);
     CONNECTION = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     ADMIN = CONNECTION.getAdmin();
   }

@@ -201,9 +201,10 @@ class AsyncConnectionImpl implements AsyncConnection {
     if(LOG.isDebugEnabled()){
       logCallStack(Thread.currentThread().getStackTrace());
     }
-    IOUtils.closeQuietly(clusterStatusListener);
-    IOUtils.closeQuietly(rpcClient);
-    IOUtils.closeQuietly(registry);
+    IOUtils.closeQuietly(clusterStatusListener,
+      e -> LOG.warn("failed to close clusterStatusListener", e));
+    IOUtils.closeQuietly(rpcClient, e -> LOG.warn("failed to close rpcClient", e));
+    IOUtils.closeQuietly(registry, e -> LOG.warn("failed to close registry", e));
     if (choreService != null) {
       choreService.shutdown();
     }

@@ -43,7 +43,11 @@ import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair;
@@ -61,6 +65,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HFileProtos;
  */
 @InterfaceAudience.Private
 public class HFileInfo implements SortedMap<byte[], byte[]> {
+
+  private static final Logger LOG = LoggerFactory.getLogger(HFileInfo.class);
+
   static final String RESERVED_PREFIX = "hfile.";
   static final byte[] RESERVED_PREFIX_BYTES = Bytes.toBytes(RESERVED_PREFIX);
   static final byte [] LASTKEY = Bytes.toBytes(RESERVED_PREFIX + "LASTKEY");
@@ -342,7 +349,8 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
       this.hfileContext = createHFileContext(path, trailer, conf);
       context.getInputStreamWrapper().unbuffer();
     } catch (Throwable t) {
-      IOUtils.closeQuietly(context.getInputStreamWrapper());
+      IOUtils.closeQuietly(context.getInputStreamWrapper(),
+        e -> LOG.warn("failed to close input stream wrapper", e));
       throw new CorruptHFileException("Problem reading HFile Trailer from file "
           + context.getFilePath(), t);
     }
@@ -380,9 +388,10 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
       // close the block reader
       context.getInputStreamWrapper().unbuffer();
     } catch (Throwable t) {
-      IOUtils.closeQuietly(context.getInputStreamWrapper());
-      throw new CorruptHFileException("Problem reading data index and meta index from file "
-        + context.getFilePath(), t);
+      IOUtils.closeQuietly(context.getInputStreamWrapper(),
+        e -> LOG.warn("failed to close input stream wrapper", e));
+      throw new CorruptHFileException(
+        "Problem reading data index and meta index from file " + context.getFilePath(), t);
     }
   }
 
