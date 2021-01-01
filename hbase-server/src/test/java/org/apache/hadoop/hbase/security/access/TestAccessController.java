@@ -31,7 +31,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
@@ -88,6 +91,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
@@ -387,6 +391,25 @@ public class TestAccessController extends SecureTestUtil {
       try(Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
         Hbck hbck = conn.getHbck()){
         hbck.setTableStateInMeta(new TableState(TEST_TABLE, TableState.State.DISABLED));
+      }
+      return null;
+    };
+
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+        USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testUnauthorizedSetRegionStateInMeta() throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    final List<RegionInfo> regions = admin.getRegions(TEST_TABLE);
+    RegionInfo closeRegion = regions.get(0);
+    Map<String, RegionState.State> newStates = new HashMap<>();
+    newStates.put(closeRegion.getEncodedName(), RegionState.State.CLOSED);
+    AccessTestAction action = () -> {
+      try(Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+        Hbck hbck = conn.getHbck()){
+        hbck.setRegionStateInMeta(newStates);
       }
       return null;
     };
