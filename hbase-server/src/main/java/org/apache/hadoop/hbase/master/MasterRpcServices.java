@@ -2550,6 +2550,7 @@ public class MasterRpcServices extends RSRpcServices implements
   @Override
   public SetRegionStateInMetaResponse setRegionStateInMeta(RpcController controller,
     SetRegionStateInMetaRequest request) throws ServiceException {
+    rpcPreCheck("setRegionStateInMeta");
     SetRegionStateInMetaResponse.Builder builder = SetRegionStateInMetaResponse.newBuilder();
     try {
       for (RegionSpecifierAndState s : request.getStatesList()) {
