@@ -21,6 +21,7 @@
 # * Java 8
 FROM ubuntu:18.04
 
+
 # Install extra needed repos and refresh.
 #
 # This is all in a single "RUN" command so that if anything changes, "apt update" is run to fetch
@@ -33,7 +34,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
     libcurl4-openssl-dev='7.58.0-*' \
     libxml2-dev='2.9.4+dfsg1-*' \
     lsof='4.89+dfsg-*' \
-    maven='3.6.0-*' \
     openjdk-8-jdk='8u*' \
     python-pip='9.0.1-*' \
     subversion='1.9.7-*' \
@@ -43,10 +43,23 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
   && update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java \
   && pip install \
     python-dateutil==2.8.1
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Install mvn 3.6.3.
+ARG MAVEN_VERSION=3.6.3
+ARG SHA=c35a1803a6e70a126e80b2b3ae33eed961f83ed74d18fcd16909b2d44d7dada3203f1ffe726c17ef8dcca2dcaa9fca676987befeadc9b9f759967a8cb77181c0
+ARG BASE_URL=https://apache.osuosl.org/maven/maven-3/${MAVEN_VERSION}/binaries
+RUN mkdir -p /opt/maven \
+  && curl -fsSL -o /tmp/apache-maven.tar.gz ${BASE_URL}/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
+  && echo "${SHA}  /tmp/apache-maven.tar.gz" | sha512sum -c - \
+  && tar -xzf /tmp/apache-maven.tar.gz -C /opt/maven --strip-components=1 \
+  && rm -f /tmp/apache-maven.tar.gz \
+  && ln -s /opt/maven/bin/mvn /usr/bin/mvn
+
 # Install Apache Yetus
 ENV YETUS_VERSION 0.12.0
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN wget -qO- "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz" | \
+RUN curl "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz" | \
         tar xvz -C /opt
 ENV YETUS_HOME /opt/apache-yetus-${YETUS_VERSION}
 
