@@ -625,15 +625,95 @@ upgrade protobuf later, then we don't have to add the profile '-Paarch64' anymor
 .Building against HBase 1.x
 [NOTE]
 ====
-HBase 1.x requires Java 7 to build.
-See <<java,java>> for Java requirements per HBase release.
+See old refguides for how to build HBase 1.x.
+The below is for building hbase2.
+====
+
+[[maven.release]]
+=== Making a Release Candidate
+Only committers can make releases of hbase artifacts.
+
+.Before You Begin
+Check to be sure recent builds have been passing for the branch from where you
+are going to take your release. You should also have tried recent branch tips
+out on a cluster under load, perhaps by running the `hbase-it` integration test
+suite for a few hours to 'burn in' the near-candidate bits.
+
+You will need a published signing key added to the hbase
+link:https://dist.apache.org/repos/dist/release/hbase/KEYS[KEYS] file.
+(For how to add a KEY, see _Step 1._ in link:https://cwiki.apache.org/confluence/display/HADOOP2/HowToRelease[How To Release],
+the Hadoop version of this document).
+
+Next make sure JIRA is properly primed, that all issues targeted against
+the prospective release have been resolved and are present in git on the
+particular branch. If any outstanding issues, move them out of the release by
+adjusting the fix version to remove this pending release as a target.
+Any JIRA with a fix version that matches the release candidate
+target release will be included in the generated _CHANGES.md/RELEASENOTES.md_
+files that ship with the release so make sure JIRA is correct before you begin.
+
+After doing the above, you can move to the manufacture of an RC.
+
+Building an RC is involved so we've scripted it. The script builds in a Docker
+container to ensure we have a consistent environment building. It will ask you
+for passwords for apache and for your gpg signing key so it can sign and commit
+on your behalf. The passwords are passed to gpg-agent in the container and
+purged along with the container when the build is done.
+
+The script will:
+
+ * Set version to the release version 
+ * Updates RELEASENOTES.md and CHANGES.md
+ * Tag the RC
+ * Set version to next SNAPSHOT version. 
+ * Builds, signs, and hashes all artifacts. 
+ * Generates the api compatibility report
+ * Pushes release tgzs to the dev dir in a apache dist. 
+ * Pushes to repository.apache.org staging. 
+ * Creates vote email template.
+
+The _dev-support/create-release/do-release-docker.sh_ Release Candidate (RC)
+Generating script is maintained in the master branch but can generate RCs
+for any 2.x+ branch (The script does not work against branch-1). Check out
+and update the master branch when making RCs. See
+_dev-support/create-release/README.txt_ for how to configure your
+environment and run the script.
+
+[NOTE]
+====
+_dev-support/create-release/do-release-docker.sh_ supercedes the previous
+_dev-support/make_rc.sh_ script. It is more comprehensive automating all
+steps, rather than a portion, building a RC.
+====
+
+==== Release Candidate Procedure
+Here we outline the steps involved generating a Release Candidate, the steps
+automated by the _dev-support/create-release/do-release-docker.sh_ script
+described in the previous section. Running these steps manually tends to
+be error-prone so is not recommended. The below is informational only.
+
+The process below makes use of various tools, mainly _git_ and _maven_.
+
+.Specifying the Heap Space for Maven
+[NOTE]
+====
+You may run into OutOfMemoryErrors building, particularly building the site and
+documentation. Up the heap for Maven by setting the `MAVEN_OPTS` variable.
+You can prefix the variable to the Maven command, as in the following example:
+
+----
+MAVEN_OPTS="-Xmx4g -XX:MaxPermSize=256m" mvn package
+----
+
+You could also set this in an environment variable or alias in your shell.
 ====
 
 [[maven.settings.xml]]
 .Example _~/.m2/settings.xml_ File
 ====
 Publishing to maven requires you sign the artifacts you want to upload.
-For the build to sign them for you, you a properly configured _settings.xml_ in your local repository under _.m2_, such as the following.
+For the build to sign them for you, you a properly configured _settings.xml_
+in your local repository under _.m2_, such as the following.
 
 [source,xml]
 ----
@@ -673,190 +753,6 @@ For the build to sign them for you, you a properly configured _settings.xml_ in 
   </profiles>
 </settings>
 ----
-====
-
-[[maven.release]]
-=== Making a Release Candidate
-Only committers can make releases of hbase artifacts.
-
-.Before You Begin
-Check to be sure recent builds have been passing for the branch from where you
-are going to take your release. You should also have tried recent branch tips
-out on a cluster under load, perhaps by running the `hbase-it` integration test
-suite for a few hours to 'burn in' the near-candidate bits.
-
-You will need a published signing key added to the hbase
-link:https://dist.apache.org/repos/dist/release/hbase/KEYS[KEYS] file.
-(For how to add a KEY, see _Step 1._ in link:https://cwiki.apache.org/confluence/display/HADOOP2/HowToRelease[How To Release],
-the Hadoop version of this document).
-
-Next make sure JIRA is properly primed, that all issues targeted against
-the prospective release have been resolved and are present in git on the
-particular branch. If any outstanding issues, move them out of the release by
-adjusting the fix version to remove this pending release as a target.
-Any JIRA with a fix version that matches the release candidate
-target release will be included in the generated _CHANGES.md/RELEASENOTES.md_
-files that ship with the release so make sure JIRA is correct before you begin.
-
-After doing the above, you can move to the manufacture of an RC.
-Building an RC is involved. We've tried to script it. In the next section
-we describe the script. It is followed by a description of the steps
-involved which the script automates.
-
-[[do-release-docker.sh]]
-==== Release Candidate Generating Script
-
-The _dev-support/create-release/do-release-docker.sh_ Release Candidate (RC)
-Generating script is maintained in the master branch but can generate RCs
-for any 2.x+ branch (The script does not work against branch-1). Check out
-and update the master branch when making RCs.
-
-The script builds in a Docker container to ensure we have a consistent
-environment building. It will ask you for passwords for apache and for your
-gpg signing key so it can sign and commit on your behalf. The passwords
-are passed to gpg-agent in the container and purged along with the container
-when the build is done.
-
-[NOTE]
-====
-_dev-support/create-release/do-release-docker.sh_ supercedes the previous
-_dev-support/make_rc.sh_ script. It is more comprehensive automating all
-steps, rather than a portion, building a RC.
-====
-
-The script will:
-
- * Set version to the release version 
- * Updates RELEASENOTES.md and CHANGES.md
- * Tag the RC
- * Set version to next SNAPSHOT version. 
- * Builds, signs, and hashes all artifacts. 
- * Generates the api compatibility report
- * Pushes release tgzs to the dev dir in a apache dist. 
- * Pushes to repository.apache.org staging. 
- * Creates vote email template.
-
-The RC building script is _dev-support/create-release/do-release-docker.sh_.
-Pass _-h_ to _dev-support/create-release/do-release-docker.sh_ to
-see available options:
-
-```
-Usage: do-release-docker.sh [options]
-
-This script runs the release scripts inside a docker image.
-
-Options:
-
-  -d [path]  required. working directory. output will be written to "output" in here.
-  -n         dry run mode. Checks and local builds, but does not upload anything.
-  -t [tag]   tag for the hbase-rm docker image to use for building (default: "latest").
-  -j [path]  path to local JDK installation to use building. By default the script will
-               use openjdk8 installed in the docker image.
-  -s [step]  runs a single step of the process; valid steps are: tag, build, publish. if
-               none specified, runs tag, then build, and then publish.
-```
-
-Running the below command will do all steps above using the
-'rm' working directory under Downloads as workspace: 
-```
-  $ ./dev-support/create-release/do-release-docker.sh -d ~/Downloads/rm  
-```
-
-The script will ask you a set of questions about the release version
-and branch, the version to generate the compatibility report against,
-and so on, before it starts executing (If you set the appropriate
-environment variables, the script will skip asking you questions --
-which can come in handy if you end up having to re-run the script
-multiple times).
-
-On branch 2.1, a Release Candidate (RC) creation can take many hours
-(~8 hours) so run your build on a machine you know will be
-around for this swath of time. Start the build inside a _screen_
-or _tmux_ session in case you become disconnected from your
-build box.
-
-The build is made of three stages: tag, build, and
-publish. If the script fails, you may resort to 'fixing' the
-failure manually and then asking the script to run the
-subsequent stage rather than start over.
-
-When the scripts run, they use the passed working directory.
-Under the working directory is an _output_ dir. In here is
-where the checkouts go, where we build up the _svn_ directory
-to _svn_ commit to _apache/dist/dev_, etc. Each step also
-dumps a log file in here: e.g. _tag.log_ for the tagging
-step and _build.log_ for building.
-
-The _tagging_ step will checkout hbase, set the version number
-in all the poms – e.g. if branch-2.0 is at 2.0.6-SNAPSHOT
-and you are making a 2.0.5 RC, it will set the versions in
-all poms to 2.0.5 – appropriately. It then generate CHANGES.md
-and RELEASENOTES.md by checking out yetus and then
-calling its generator scripts. It then commits the poms with
-their new versions along with the changed CHANGES.md and
-RELEASENOTES.md, tags, and pushes up all changes to the
-apache repo.
-
-The _build_ step will checkout hbase, build all including
-javadoc and doc (javadoc takes the bulk of the time – 4 hours plus),
-run assemblies to produce src and bin tarballs, sign and hash it
-all, and then make a dir under apache dist dev named for the RC.
-It will copy all artifacts in here including top-level CHANGES.md
-and RELEASENOTES.md. It will generate api diff docs and put them
-into this RC dir too. When done, it commits the svn RC.
-
-The publish step will checkout hbase, build, and then copy up all
-artifacts to repository.apache.org (signed and hashed). When done,
-it will dump out an email template with all the correct links in place.
-
-Check the artifacts pushed to the dev distribution directory and up
-in repository.apache.org. If all looks good, check the generated
-email and send to the dev list.
-
-Under the create-release dir, scripts should make some sense:
-```
-do-release-docker.sh   # Main entrance.
-do-release.sh .        # More checks. Not usable really other than by setting env variables before running it.
-release-tag.sh         # Does tagging steps.
-release-build.sh .     # Does the build and publish step.
-release-util.sh        # Utility used by all of the above.
-vote.tmpl              # Template for email to send out.
-hbase-rm               # Has docker image we use.
-```
-
-If the RC fails, the script will do the right thing when it comes
-to edit of the _CHANGES.md_ and _RELEASENOTES.md_ removing the old
-and updating the files with the updated content (No harm verifying
-though).
-
-One trick for checking stuff especially in utility is to do as follows:
-
-```
-$ source release-util.sh ; generate_api_report ../../ rel/2.1.3 2.14RC1
-```
-
-i.e. source the release-util.sh script and then run one of its functions
-passing args. Helped debugging stuff.
-
-[[rc_procedure]]
-==== Release Candidate Procedure
-Here we describe the steps involved generating a Release Candidate, the steps
-automated by the script described in the previous section.
-
-The process below makes use of various tools, mainly _git_ and _maven_.
-
-.Specifying the Heap Space for Maven
-[NOTE]
-====
-You may run into OutOfMemoryErrors building, particularly building the site and
-documentation. Up the heap for Maven by setting the `MAVEN_OPTS` variable.
-You can prefix the variable to the Maven command, as in the following example:
-
-----
-MAVEN_OPTS="-Xmx4g -XX:MaxPermSize=256m" mvn package
-----
-
-You could also set this in an environment variable or alias in your shell.
 ====
 
 ===== Update the _CHANGES.md_  and _RELEASENOTES.md_ files and the POM files.
