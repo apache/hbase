@@ -91,6 +91,10 @@ if [ $# -ne 1 ]; then
   exit_with_usage
 fi
 
+if [[ "$1" == "-h" ]]; then
+  exit_with_usage
+fi
+
 if [[ "$*" == *"help"* ]]; then
   exit_with_usage
 fi
