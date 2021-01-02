@@ -105,6 +105,7 @@ String parent = "";
                       <th>Description</th>
                       <th>State</th>
                       <th>Status</th>
+                      <th>Completion Time</th>
                 </tr>
                 <%for MonitoredTask task : tasks %>
                     <tr class="<& stateCss; state = task.getState() &>">
@@ -116,6 +117,7 @@ String parent = "";
                       <td><% task.getStatus() %>
                           (since <% StringUtils.formatTimeDiff(now, task.getStatusTime()) %>
                           ago)</td>
+                      <td><% task.getCompletionTimestamp() < 0 ? task.getState() : new Date(task.getCompletionTimestamp()) %></td>
                     </tr>
                 </%for>
             </table>
