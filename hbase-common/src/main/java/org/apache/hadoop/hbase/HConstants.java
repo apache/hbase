@@ -700,6 +700,14 @@ public final class HConstants {
   public static final int HOUR_IN_SECONDS = 60 * 60;
   public static final int MINUTE_IN_SECONDS = 60;
 
+  /**
+   * KB, MB, GB, TB equivalent to how many bytes
+   */
+  public static final long KB_IN_BYTES = 1024;
+  public static final long MB_IN_BYTES = 1024 * KB_IN_BYTES;
+  public static final long GB_IN_BYTES = 1024 * MB_IN_BYTES;
+  public static final long TB_IN_BYTES = 1024 * GB_IN_BYTES;
+
   //TODO: although the following are referenced widely to format strings for
   //      the shell. They really aren't a part of the public API. It would be
   //      nice if we could put them somewhere where they did not need to be

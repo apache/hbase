@@ -41,11 +41,17 @@ public final class PrettyPrinter {
           "((\\d+)\\s*MINUTES?)?\\s*((\\d+)\\s*SECONDS?)?\\s*\\)?";
   private static final Pattern INTERVAL_PATTERN = Pattern.compile(INTERVAL_REGEX,
           Pattern.CASE_INSENSITIVE);
+  private static final String SIZE_REGEX = "((\\d+)\\s*B?\\s*\\()?\\s*" +
+    "((\\d+)\\s*TB?)?\\s*((\\d+)\\s*GB?)?\\s*" +
+    "((\\d+)\\s*MB?)?\\s*((\\d+)\\s*KB?)?\\s*((\\d+)\\s*B?)?\\s*\\)?";
+  private static final Pattern SIZE_PATTERN = Pattern.compile(SIZE_REGEX,
+    Pattern.CASE_INSENSITIVE);
 
   public enum Unit {
     TIME_INTERVAL,
     LONG,
     BOOLEAN,
+    BYTE,
     NONE
   }
 
@@ -62,6 +68,9 @@ public final class PrettyPrinter {
       case BOOLEAN:
         byte[] booleanBytes = Bytes.toBytesBinary(value);
         human.append(String.valueOf(Bytes.toBoolean(booleanBytes)));
+        break;
+      case BYTE:
+        human.append(humanReadableByte(Long.parseLong(value)));
         break;
       default:
         human.append(value);
@@ -81,6 +90,9 @@ public final class PrettyPrinter {
     switch (unit) {
       case TIME_INTERVAL:
         value.append(humanReadableIntervalToSec(pretty));
+        break;
+      case BYTE:
+        value.append(humanReadableSizeToBytes(pretty));
         break;
       default:
         value.append(pretty);
@@ -189,6 +201,116 @@ public final class PrettyPrinter {
               "format do not match");
     }
     return ttl;
+  }
+
+  /**
+   * Convert a long size to a human readable string.
+   * Example: 10763632640 -> 10763632640 B (10GB 25MB)
+   * @param size the size in bytes
+   * @return human readable string
+   */
+  private static String humanReadableByte(final long size) {
+    StringBuilder sb = new StringBuilder();
+    long tb, gb, mb, kb, b;
+
+    if (size < HConstants.KB_IN_BYTES) {
+      sb.append(size);
+      sb.append(" B");
+      return sb.toString();
+    }
+
+    tb = size / HConstants.TB_IN_BYTES;
+    gb = (size - HConstants.TB_IN_BYTES * tb) / HConstants.GB_IN_BYTES;
+    mb = (size - HConstants.TB_IN_BYTES * tb
+      - HConstants.GB_IN_BYTES * gb) / HConstants.MB_IN_BYTES;
+    kb = (size - HConstants.TB_IN_BYTES * tb - HConstants.GB_IN_BYTES * gb
+      - HConstants.MB_IN_BYTES * mb) / HConstants.KB_IN_BYTES;
+    b = (size - HConstants.TB_IN_BYTES * tb - HConstants.GB_IN_BYTES * gb
+      - HConstants.MB_IN_BYTES * mb - HConstants.KB_IN_BYTES * kb);
+
+    sb.append(size).append(" B (");
+    if (tb > 0) {
+      sb.append(tb);
+      sb.append("TB");
+    }
+
+    if (gb > 0) {
+      sb.append(tb > 0 ? " " : "");
+      sb.append(gb);
+      sb.append("GB");
+    }
+
+    if (mb > 0) {
+      sb.append(tb + gb > 0 ? " " : "");
+      sb.append(mb);
+      sb.append("MB");
+    }
+
+    if (kb > 0) {
+      sb.append(tb + gb + mb > 0 ? " " : "");
+      sb.append(kb);
+      sb.append("KB");
+    }
+
+    if (b > 0) {
+      sb.append(tb + gb + mb + kb > 0 ? " " : "");
+      sb.append(b);
+      sb.append("B");
+    }
+
+    sb.append(")");
+    return sb.toString();
+  }
+
+  /**
+   * Convert a human readable size to bytes.
+   * Examples of the human readable size are: 50 GB 20 MB 1 KB , 25000 B etc.
+   * The units of size specified can be in uppercase as well as lowercase. Also, if a
+   * single number is specified without any time unit, it is assumed to be in bytes.
+   * @param humanReadableSize human readable size
+   * @return value in bytes
+   * @throws HBaseException
+   */
+  private static long humanReadableSizeToBytes(final String humanReadableSize)
+      throws HBaseException {
+    if (humanReadableSize == null) {
+      return -1;
+    }
+
+    try {
+      return Long.parseLong(humanReadableSize);
+    } catch(NumberFormatException ex) {
+      LOG.debug("Given size value is not a number, parsing for human readable format");
+    }
+
+    String tb = null;
+    String gb = null;
+    String mb = null;
+    String kb = null;
+    String b = null;
+    String expectedSize = null;
+    long size = 0;
+
+    Matcher matcher = PrettyPrinter.SIZE_PATTERN.matcher(humanReadableSize);
+    if (matcher.matches()) {
+      expectedSize = matcher.group(2);
+      tb = matcher.group(4);
+      gb = matcher.group(6);
+      mb = matcher.group(8);
+      kb = matcher.group(10);
+      b = matcher.group(12);
+    }
+    size += tb != null ? Long.parseLong(tb)*HConstants.TB_IN_BYTES:0;
+    size += gb != null ? Long.parseLong(gb)*HConstants.GB_IN_BYTES:0;
+    size += mb != null ? Long.parseLong(mb)*HConstants.MB_IN_BYTES:0;
+    size += kb != null ? Long.parseLong(kb)*HConstants.KB_IN_BYTES:0;
+    size += b != null ? Long.parseLong(b):0;
+
+    if (expectedSize != null && Long.parseLong(expectedSize) != size) {
+      throw new HBaseException("Malformed size string: values in byte and human readable" +
+        "format do not match");
+    }
+    return size;
   }
 
   /**
