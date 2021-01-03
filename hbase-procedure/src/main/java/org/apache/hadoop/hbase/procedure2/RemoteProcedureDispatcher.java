@@ -106,7 +106,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     return true;
   }
 
-  protected void setUncaughtExceptionHandler(UncaughtExceptionHandler eh) {
+  protected void setTimeoutExecutorUncaughtExceptionHandler(UncaughtExceptionHandler eh) {
     timeoutExecutor.setUncaughtExceptionHandler(eh);
   }
 

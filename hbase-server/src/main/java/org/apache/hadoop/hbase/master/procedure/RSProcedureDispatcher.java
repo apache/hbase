@@ -94,7 +94,7 @@ public class RSProcedureDispatcher
     if (!super.start()) {
       return false;
     }
-    setUncaughtExceptionHandler(this::abort);
+    setTimeoutExecutorUncaughtExceptionHandler(this::abort);
     if (master.isStopped()) {
       LOG.debug("Stopped");
       return false;
@@ -129,7 +129,9 @@ public class RSProcedureDispatcher
 
   private void abort(Thread t, Throwable e) {
     LOG.error("Caught error", e);
-    master.abort("Aborting master", e);
+    if (!master.isStopped() && !master.isStopping() && !master.isAborted()) {
+      master.abort("Aborting master", e);
+    }
   }
 
   @Override
