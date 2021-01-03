@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -218,6 +219,33 @@ public class TestTableDescriptorBuilder {
     assertEquals(1111L, desc.getMaxFileSize());
   }
 
+  @Test
+  public void testSetMaxFileSize() throws HBaseException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+
+    String maxFileSize = "1073741824";
+    builder.setMaxFileSize(maxFileSize);
+    assertEquals(1073741824, builder.build().getMaxFileSize());
+
+    maxFileSize = "1GB";
+    builder.setMaxFileSize(maxFileSize);
+    assertEquals(1073741824, builder.build().getMaxFileSize());
+
+    maxFileSize = "10GB 25MB";
+    builder.setMaxFileSize(maxFileSize);
+    assertEquals(10763632640L, builder.build().getMaxFileSize());
+
+    // ignore case
+    maxFileSize = "10GB 512mb 512KB 512b";
+    builder.setMaxFileSize(maxFileSize);
+    assertEquals(11274813952L, builder.build().getMaxFileSize());
+
+    maxFileSize = "10737942528 B (10GB 512KB)";
+    builder.setMaxFileSize(maxFileSize);
+    assertEquals(10737942528L, builder.build().getMaxFileSize());
+  }
+
   /**
    * Test default value handling for memStoreFlushSize
    */
@@ -229,6 +257,33 @@ public class TestTableDescriptorBuilder {
     desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
       .setMemStoreFlushSize(1111L).build();
     assertEquals(1111L, desc.getMemStoreFlushSize());
+  }
+
+  @Test
+  public void testSetMemStoreFlushSize() throws HBaseException {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+
+    String memstoreFlushSize = "1073741824";
+    builder.setMemStoreFlushSize(memstoreFlushSize);
+    assertEquals(1073741824, builder.build().getMemStoreFlushSize());
+
+    memstoreFlushSize = "1GB";
+    builder.setMemStoreFlushSize(memstoreFlushSize);
+    assertEquals(1073741824, builder.build().getMemStoreFlushSize());
+
+    memstoreFlushSize = "10GB 25MB";
+    builder.setMemStoreFlushSize(memstoreFlushSize);
+    assertEquals(10763632640L, builder.build().getMemStoreFlushSize());
+
+    // ignore case
+    memstoreFlushSize = "10GB 512mb 512KB 512b";
+    builder.setMemStoreFlushSize(memstoreFlushSize);
+    assertEquals(11274813952L, builder.build().getMemStoreFlushSize());
+
+    memstoreFlushSize = "10737942528 B (10GB 512KB)";
+    builder.setMemStoreFlushSize(memstoreFlushSize);
+    assertEquals(10737942528L, builder.build().getMemStoreFlushSize());
   }
 
   @Test
@@ -281,7 +336,7 @@ public class TestTableDescriptorBuilder {
   }
 
   @Test
-  public void testStringCustomizedValues() {
+  public void testStringCustomizedValues() throws HBaseException {
     byte[] familyName = Bytes.toBytes("cf");
     ColumnFamilyDescriptor hcd =
       ColumnFamilyDescriptorBuilder.newBuilder(familyName).setBlocksize(1000).build();
@@ -291,6 +346,13 @@ public class TestTableDescriptorBuilder {
     assertEquals(
       "'testStringCustomizedValues', " +
         "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
+      htd.toStringCustomizedValues());
+
+    htd = TableDescriptorBuilder.newBuilder(htd).setMaxFileSize("10737942528").build();
+    assertEquals(
+      "'testStringCustomizedValues', " +
+        "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL', "
+        + "MAX_FILESIZE => '10737942528 B (10GB 512KB)'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
       htd.toStringCustomizedValues());
   }
 
