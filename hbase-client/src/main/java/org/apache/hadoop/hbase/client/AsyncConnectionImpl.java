@@ -28,8 +28,6 @@ import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLE
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -56,11 +54,11 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
@@ -187,6 +185,9 @@ class AsyncConnectionImpl implements AsyncConnection {
    * @return ChoreService
    */
   synchronized ChoreService getChoreService() {
+    if (isClosed()) {
+      throw new IllegalStateException("connection is already closed");
+    }
     if (choreService == null) {
       choreService = new ChoreService("AsyncConn Chore Service");
     }
@@ -216,8 +217,11 @@ class AsyncConnectionImpl implements AsyncConnection {
       e -> LOG.warn("failed to close clusterStatusListener", e));
     IOUtils.closeQuietly(rpcClient, e -> LOG.warn("failed to close rpcClient", e));
     IOUtils.closeQuietly(registry, e -> LOG.warn("failed to close registry", e));
-    if (choreService != null) {
-      choreService.shutdown();
+    synchronized (this) {
+      if (choreService != null) {
+        choreService.shutdown();
+        choreService = null;
+      }
     }
     metrics.ifPresent(MetricsConnection::shutdown);
     ConnectionOverAsyncConnection c = this.conn;
