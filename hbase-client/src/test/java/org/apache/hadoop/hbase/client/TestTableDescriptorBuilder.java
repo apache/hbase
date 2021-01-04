@@ -260,7 +260,6 @@ public class TestTableDescriptorBuilder {
     assertEquals(10737942528L, builder.build().getMaxFileSize());
   }
 
-
   /**
    * Test default value handling for memStoreFlushSize
    */
