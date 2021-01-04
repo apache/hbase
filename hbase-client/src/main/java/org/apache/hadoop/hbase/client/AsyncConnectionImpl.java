@@ -185,7 +185,7 @@ class AsyncConnectionImpl implements AsyncConnection {
    * @return ChoreService
    */
   synchronized ChoreService getChoreService() {
-    if (closed.get()) {
+    if (isClosed()) {
       throw new IllegalStateException("connection is already closed");
     }
     if (choreService == null) {
