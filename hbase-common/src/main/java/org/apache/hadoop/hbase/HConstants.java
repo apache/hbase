@@ -1639,6 +1639,11 @@ public final class HConstants {
    */
   public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
+  /**
+   *  The value of WALCellCodec.WAL_CELL_CODEC_CLASS_KEY when use phoenix
+   */
+  public static final String INDEX_WAL_EDIT_CODE = "org.apache.hadoop.hbase.regionserver.wal.IndexedWALEditCodec";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

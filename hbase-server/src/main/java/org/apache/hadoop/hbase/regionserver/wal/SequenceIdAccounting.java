@@ -30,6 +30,8 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ImmutableByteArray;
@@ -259,6 +261,27 @@ class SequenceIdAccounting {
   }
 
   /**
+   * @param sequenceids Map to search for lowest value with phoenix.
+   * @return Lowest value found in <code>sequenceids</code>.
+   */
+  private static long getLowestSequenceIdWithPhoenix(Map<ImmutableByteArray, Long> sequenceids) {
+    long lowest = HConstants.NO_SEQNUM;
+    Map<ImmutableByteArray,Long> tgt = sequenceids;
+    for(ImmutableByteArray cf : tgt.keySet()){
+      if(cf.toString().equals("METAFAMILY")){
+        LOG.info("Column is METAFAMILY! continue ...");
+        continue;
+      }else{
+        Long sid = tgt.get(cf);
+        if (lowest == HConstants.NO_SEQNUM || sid.longValue() < lowest) {
+          lowest = sid.longValue();
+        }
+      }
+    }
+    return lowest;
+  }
+
+  /**
    * @param src
    * @return New Map that has same keys as <code>src</code> but instead of a Map for a value, it
    *         instead has found the smallest sequence id and it returns that as the value instead.
@@ -270,6 +293,25 @@ class SequenceIdAccounting {
     Map<byte[], Long> tgt = new HashMap<>();
     for (Map.Entry<byte[], T> entry : src.entrySet()) {
       long lowestSeqId = getLowestSequenceId(entry.getValue());
+      if (lowestSeqId != HConstants.NO_SEQNUM) {
+        tgt.put(entry.getKey(), lowestSeqId);
+      }
+    }
+    return tgt;
+  }
+
+  /**
+   * @param src
+   * @return New Map that has same keys as <code>src</code> but instead of a Map for a value, it
+   *         instead has found the smallest sequence id and it returns that as the value instead.
+   */
+  private Map<byte[], Long> flattenToLowestSequenceIdWithPhoenix(Map<byte[], ConcurrentMap<ImmutableByteArray, Long>> src) {
+    if (src == null || src.isEmpty()) {
+      return null;
+    }
+    Map<byte[], Long> tgt = new HashMap<>();
+    for (Map.Entry<byte[],ConcurrentMap<ImmutableByteArray, Long>>  entry : src.entrySet()) {
+      long lowestSeqId = getLowestSequenceIdWithPhoenix(entry.getValue());
       if (lowestSeqId != HConstants.NO_SEQNUM) {
         tgt.put(entry.getKey(), lowestSeqId);
       }
@@ -427,14 +469,18 @@ class SequenceIdAccounting {
    *          causing this method to return false.
    * @return true if all sequenceids are lower, older than, the old sequenceids in this instance.
    */
-  boolean areAllLower(Map<byte[], Long> sequenceids, Collection<byte[]> keysBlocking) {
+  boolean areAllLower(Map<byte[], Long> sequenceids, Collection<byte[]> keysBlocking, Configuration conf) {
     Map<byte[], Long> flushing = null;
     Map<byte[], Long> unflushed = null;
     synchronized (this.tieLock) {
       // Get a flattened -- only the oldest sequenceid -- copy of current flushing and unflushed
       // data structures to use in tests below.
       flushing = flattenToLowestSequenceId(this.flushingSequenceIds);
-      unflushed = flattenToLowestSequenceId(this.lowestUnflushedSequenceIds);
+      if(conf != null && conf.get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY).equals(HConstants.INDEX_WAL_EDIT_CODE)){
+        unflushed = flattenToLowestSequenceIdWithPhoenix(this.lowestUnflushedSequenceIds);
+      } else {
+        unflushed = flattenToLowestSequenceId(this.lowestUnflushedSequenceIds);
+      }
     }
     boolean result = true;
     for (Map.Entry<byte[], Long> e : sequenceids.entrySet()) {

@@ -710,7 +710,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         regionsBlockingThisWal = regionsBlockingWal;
       }
       Map<byte[], Long> sequenceNums = e.getValue().encodedName2HighestSequenceId;
-      if (this.sequenceIdAccounting.areAllLower(sequenceNums, regionsBlockingThisWal)) {
+      if (this.sequenceIdAccounting.areAllLower(sequenceNums, regionsBlockingThisWal, conf)) {
         if (logsToArchive == null) {
           logsToArchive = new ArrayList<>();
         }
