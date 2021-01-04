@@ -40,8 +40,10 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -246,6 +248,16 @@ public class TableDescriptorBuilder {
     DEFAULT_VALUES.keySet().stream()
             .map(s -> new Bytes(Bytes.toBytes(s))).forEach(RESERVED_KEYWORDS::add);
     RESERVED_KEYWORDS.add(IS_META_KEY);
+  }
+
+  public static PrettyPrinter.Unit getUnit(String key) {
+    switch (key) {
+      case MAX_FILESIZE:
+      case MEMSTORE_FLUSHSIZE:
+        return PrettyPrinter.Unit.BYTE;
+      default:
+        return PrettyPrinter.Unit.NONE;
+    }
   }
 
   @InterfaceAudience.Private
@@ -473,8 +485,19 @@ public class TableDescriptorBuilder {
     return this;
   }
 
+  public TableDescriptorBuilder setMaxFileSize(String maxFileSize) throws HBaseException {
+    desc.setMaxFileSize(maxFileSize);
+    return this;
+  }
+
   public TableDescriptorBuilder setMemStoreFlushSize(long memstoreFlushSize) {
     desc.setMemStoreFlushSize(memstoreFlushSize);
+    return this;
+  }
+
+  public TableDescriptorBuilder setMemStoreFlushSize(String memStoreFlushSize)
+    throws HBaseException {
+    desc.setMemStoreFlushSize(memStoreFlushSize);
     return this;
   }
 
@@ -1006,6 +1029,11 @@ public class TableDescriptorBuilder {
       return setValue(MAX_FILESIZE_KEY, Long.toString(maxFileSize));
     }
 
+    public ModifyableTableDescriptor setMaxFileSize(String maxFileSize) throws HBaseException {
+      return setMaxFileSize(Long.parseLong(PrettyPrinter.
+        valueOf(maxFileSize, PrettyPrinter.Unit.BYTE)));
+    }
+
     /**
      * Returns the size of the memstore after which a flush to filesystem is
      * triggered.
@@ -1029,6 +1057,12 @@ public class TableDescriptorBuilder {
      */
     public ModifyableTableDescriptor setMemStoreFlushSize(long memstoreFlushSize) {
       return setValue(MEMSTORE_FLUSHSIZE_KEY, Long.toString(memstoreFlushSize));
+    }
+
+    public ModifyableTableDescriptor setMemStoreFlushSize(String memStoreFlushSize)
+      throws HBaseException {
+      return setMemStoreFlushSize(Long.parseLong(PrettyPrinter.valueOf(memStoreFlushSize,
+        PrettyPrinter.Unit.BYTE)));
     }
 
     /**
@@ -1193,7 +1227,7 @@ public class TableDescriptorBuilder {
           printCommaForAttr = true;
           s.append(key);
           s.append(" => ");
-          s.append('\'').append(value).append('\'');
+          s.append('\'').append(PrettyPrinter.format(value, getUnit(key))).append('\'');
         }
 
         if (!userKeys.isEmpty()) {
@@ -1213,7 +1247,7 @@ public class TableDescriptorBuilder {
             printCommaForCfg = true;
             s.append('\'').append(key).append('\'');
             s.append(" => ");
-            s.append('\'').append(value).append('\'');
+            s.append('\'').append(PrettyPrinter.format(value, getUnit(key))).append('\'');
           }
           s.append("}");
         }
