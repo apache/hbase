@@ -48,18 +48,20 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
-import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The implementation of AsyncConnection.
@@ -182,6 +184,9 @@ class AsyncConnectionImpl implements AsyncConnection {
    * @return ChoreService
    */
   synchronized ChoreService getChoreService() {
+    if (isClosed()) {
+      throw new IllegalStateException("connection is already closed");
+    }
     if (choreService == null) {
       choreService = new ChoreService("AsyncConn Chore Service");
     }
@@ -207,8 +212,11 @@ class AsyncConnectionImpl implements AsyncConnection {
     IOUtils.closeQuietly(clusterStatusListener);
     IOUtils.closeQuietly(rpcClient);
     IOUtils.closeQuietly(registry);
-    if (choreService != null) {
-      choreService.shutdown();
+    synchronized (this) {
+      if (choreService != null) {
+        choreService.shutdown();
+        choreService = null;
+      }
     }
     metrics.ifPresent(MetricsConnection::shutdown);
     closed = true;
