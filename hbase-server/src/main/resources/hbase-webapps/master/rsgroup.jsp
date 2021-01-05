@@ -434,10 +434,7 @@
     </div>
 
     <% if (rsGroupTables != null && rsGroupTables.size() > 0) {
-        List<TableDescriptor> tables;
-        try (Admin admin = master.getConnection().getAdmin()) {
-            tables = master.isInitialized() ? admin.listTableDescriptors(true) : null;
-        }
+        List<TableDescriptor> tables = master.isInitialized() ? master.listTableDescriptors(null, null, null, true) : new ArrayList<>();
          Map<TableName, TableDescriptor> tableDescriptors = tables.stream().collect(
            Collectors.toMap(TableDescriptor::getTableName, Function.identity()));
     %>

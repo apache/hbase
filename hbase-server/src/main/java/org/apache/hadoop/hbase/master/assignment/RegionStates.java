@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -543,10 +544,11 @@ public class RegionStates {
       tableRegions.put(states[i], new ArrayList<RegionInfo>());
     }
 
-    for (RegionStateNode node: regionsMap.values()) {
-      if (node.getTable().equals(tableName)) {
-        tableRegions.get(node.getState()).add(node.getRegionInfo());
+    for (RegionStateNode node: regionsMap.tailMap(tableName.getName()).values()) {
+      if (!node.getTable().equals(tableName)) {
+        break;
       }
+      tableRegions.get(node.getState()).add(node.getRegionInfo());
     }
     return tableRegions;
   }
@@ -803,5 +805,22 @@ public class RegionStates {
     }
     sb.append("]");
     return sb.toString();
+  }
+
+  /**
+   * WEB UI
+   */
+  public synchronized Map<RegionInfo, ServerName> getRegionLocations(TableName tableName) {
+    Map<RegionInfo, ServerName> tableRegions = new TreeMap<>();
+    for (RegionStateNode regionStateNode : regionsMap.tailMap(tableName.getName()).values()) {
+      if (!regionStateNode.getTable().equals(tableName)) {
+        break;
+      }
+      if (regionStateNode.toRegionState().isSplitOrMerge()) {
+        continue;
+      }
+      tableRegions.put(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation());
+    }
+    return tableRegions;
   }
 }

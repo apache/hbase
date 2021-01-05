@@ -635,7 +635,6 @@
         stateMap.put(regionInfo.getEncodedName(), regionState);
     }
   }
-  RegionLocator r = master.getConnection().getRegionLocator(table.getName());
 
   try {
 %>
@@ -820,12 +819,11 @@
   String totalLocalityForSsd = "";
   Map<ServerName, Integer> regDistribution = new TreeMap<>();
   Map<ServerName, Integer> primaryRegDistribution = new TreeMap<>();
-  List<HRegionLocation> regions = r.getAllRegionLocations();
   Map<RegionInfo, RegionMetrics> regionsToLoad = new LinkedHashMap<>();
-  Map<RegionInfo, ServerName> regionsToServer = new LinkedHashMap<>();
-  for (HRegionLocation hriEntry : regions) {
-    RegionInfo regionInfo = hriEntry.getRegion();
-    ServerName addr = hriEntry.getServerName();
+  Map<RegionInfo, ServerName> regionsToServer = master.getAssignmentManager().getRegionStates().getRegionLocations(table.getName());
+  for (Map.Entry<RegionInfo, ServerName> hriEntry : regionsToServer.entrySet()) {
+    RegionInfo regionInfo = hriEntry.getKey();
+    ServerName addr = hriEntry.getValue();
     regionsToServer.put(regionInfo, addr);
 
     if (addr != null) {
@@ -874,7 +872,7 @@
     totalLocalityForSsd = String.format("%.1f",
       ((float) totalBlocksLocalWithSsdWeight / totalBlocksTotalWeight));
   }
-  if(regions != null && regions.size() > 0) { %>
+  if(regionsToServer != null && regionsToServer.size() > 0) { %>
 <h2>Table Regions</h2>
 <div class="tabbable">
   <ul class="nav nav-pills">
@@ -887,7 +885,7 @@
       <table id="tableBaseStatsTable" class="tablesorter table table-striped">
         <thead>
           <tr>
-            <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
+            <th>Name(<%= String.format("%,1d", regionsToServer.size())%>)</th>
             <th>Region Server</th>
             <th>ReadRequests<br>(<%= String.format("%,1d", totalReadReq)%>)</th>
             <th>WriteRequests<br>(<%= String.format("%,1d", totalWriteReq)%>)</th>
@@ -903,9 +901,9 @@
         <tbody>
         <%
           List<Map.Entry<RegionInfo, RegionMetrics>> entryList = new ArrayList<>(regionsToLoad.entrySet());
-          numRegions = regions.size();
+          numRegions = regionsToServer.size();
           int numRegionsRendered = 0;
-          // render all regions
+          // render all regionsToServer
           if (numRegionsToRender < 0) {
             numRegionsToRender = numRegions;
           }
@@ -976,7 +974,7 @@
       <table id="tableLocalityStatsTable" class="tablesorter table table-striped">
         <thead>
           <tr>
-            <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
+            <th>Name(<%= String.format("%,1d", regionsToServer.size())%>)</th>
             <th>Region Server</th>
             <th>Locality<br>(<%= totalLocality %>)</th>
             <th>LocalityForSsd<br>(<%= totalLocalityForSsd %>)</th>
@@ -1016,7 +1014,7 @@
       <table id="tableCompactStatsTable" class="tablesorter table table-striped">
         <thead>
           <tr>
-            <th>Name(<%= String.format("%,1d", regions.size())%>)</th>
+            <th>Name(<%= String.format("%,1d", regionsToServer.size())%>)</th>
             <th>Region Server</th>
             <th>Num. Compacting Cells<br>(<%= String.format("%,1d", totalCompactingCells)%>)</th>
             <th>Num. Compacted Cells<br>(<%= String.format("%,1d", totalCompactedCells)%>)</th>

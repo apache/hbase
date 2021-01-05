@@ -2949,6 +2949,18 @@ public class HRegionServer extends Thread implements
     return this.onlineRegions;
   }
 
+  /**
+   * WEB UI
+   */
+  public List<RegionInfo> getOnlineRegionInfos() {
+    List<RegionInfo> allRegionInfos;
+    synchronized (this.onlineRegions) {
+      allRegionInfos = onlineRegions.values().stream().map(HRegion::getRegionInfo)
+        .collect(Collectors.toList());
+    }
+    return allRegionInfos;
+  }
+
   public int getNumberOfOnlineRegions() {
     return this.onlineRegions.size();
   }

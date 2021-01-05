@@ -21,9 +21,9 @@
   import="java.util.Date"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.Admin"
-  import="org.apache.hadoop.hbase.client.SnapshotDescription"
   import="org.apache.hadoop.hbase.http.InfoServer"
   import="org.apache.hadoop.hbase.master.HMaster"
+  import="org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription"
   import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
   import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.TableName"
@@ -40,11 +40,11 @@
   long snapshotTtl = 0;
   if(snapshotName != null && master.isInitialized()) {
     try (Admin admin = master.getConnection().getAdmin()) {
-      for (SnapshotDescription snapshotDesc: admin.listSnapshots()) {
+      for (SnapshotDescription snapshotDesc: master.getSnapshotManager().getCompletedSnapshots()) {
         if (snapshotName.equals(snapshotDesc.getName())) {
           snapshot = snapshotDesc;
-          stats = SnapshotInfo.getSnapshotStats(conf, snapshot);
-          snapshotTable = snapshot.getTableName();
+          stats = SnapshotInfo.getSnapshotStats(conf, snapshot, null);
+          snapshotTable = TableName.valueOf(snapshot.getTable());
           snapshotTtl = snapshot.getTtl();
           tableExists = admin.tableExists(snapshotTable);
           break;
