@@ -1234,7 +1234,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       RSGroupInfo srcGrp = getRSGroupOfServer(firstServer);
       if (srcGrp == null) {
         // Be careful. This exception message is tested for in TestRSGroupAdmin2...
-        throw new ConstraintException("Server " + firstServer + " does not exist or offline.");
+        throw new ConstraintException("Server " + firstServer
+          + " is either offline or it does not exist.");
       }
 
       // Only move online servers (when moving from 'default') or servers from other
