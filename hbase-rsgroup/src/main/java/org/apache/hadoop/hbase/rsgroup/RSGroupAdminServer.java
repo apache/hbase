@@ -160,9 +160,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     Address firstServer = servers.iterator().next();
     RSGroupInfo tmpSrcGrp = rsGroupInfoManager.getRSGroupOfServer(firstServer);
     if (tmpSrcGrp == null) {
-      // Be careful. This exception message is tested for in TestRSGroupsBase...
-      throw new ConstraintException("Source RSGroup for server " + firstServer
-              + " does not exist.");
+      // Be careful. This exception message is tested for in TestRSGroupsAdmin2...
+      throw new ConstraintException("Server " + firstServer
+        + " is either offline or it does not exist.");
     }
     RSGroupInfo srcGrp = new RSGroupInfo(tmpSrcGrp);
     if (srcGrp.getName().equals(targetGroupName)) {
@@ -292,9 +292,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       Address firstServer = servers.iterator().next();
       RSGroupInfo srcGrp = rsGroupInfoManager.getRSGroupOfServer(firstServer);
       if (srcGrp == null) {
-        // Be careful. This exception message is tested for in TestRSGroupsBase...
-        throw new ConstraintException("Source RSGroup for server " + firstServer
-            + " does not exist.");
+        // Be careful. This exception message is tested for in TestRSGroupsAdmin2...
+        throw new ConstraintException("Server " + firstServer
+          + " is either offline or it does not exist.");
       }
       if (srcGrp.getName().equals(targetGroupName)) {
         throw new ConstraintException("Target RSGroup " + targetGroupName +
