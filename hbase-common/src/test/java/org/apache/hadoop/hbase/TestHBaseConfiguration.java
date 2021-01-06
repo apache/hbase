@@ -115,6 +115,19 @@ public class TestHBaseConfiguration {
     conf.set("hbase.security.authentication", "KERBeros");
     Assert.assertTrue(User.isHBaseSecurityEnabled(conf));
   }
+  
+  @Test
+  public void testGetConfigOfShortcircuitRead() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    Configuration.addDefaultResource("hdfs-default.xml");
+    assertEquals("hdfs-default.xml",
+            conf.getPropertySources("dfs.client.read.shortcircuit")[0]);
+    assertEquals("false", conf.get("dfs.client.read.shortcircuit"));
+    Configuration.addDefaultResource("hdfs-site.xml");
+    assertEquals("hdfs-site.xml",
+            conf.getPropertySources("dfs.client.read.shortcircuit")[0]);
+    assertEquals("true", conf.get("dfs.client.read.shortcircuit"));
+  }
 
   private static class ReflectiveCredentialProviderClient {
     public static final String HADOOP_CRED_PROVIDER_FACTORY_CLASS_NAME =
