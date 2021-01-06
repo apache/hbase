@@ -1344,7 +1344,7 @@ public final class ProtobufUtil {
     List<CellProtos.Cell> values = proto.getCellList();
 
     if (proto.hasExists()) {
-      if ((values != null && !values.isEmpty()) ||
+      if ((!values.isEmpty()) ||
           (proto.hasAssociatedCellCount() && proto.getAssociatedCellCount() > 0)) {
         throw new IllegalArgumentException("bad proto: exists with cells is no allowed " + proto);
       }
