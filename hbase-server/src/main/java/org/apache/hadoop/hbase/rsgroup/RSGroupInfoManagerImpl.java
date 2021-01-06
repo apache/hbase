@@ -1233,9 +1233,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       Address firstServer = servers.iterator().next();
       RSGroupInfo srcGrp = getRSGroupOfServer(firstServer);
       if (srcGrp == null) {
-        // Be careful. This exception message is tested for in TestRSGroupsBase...
-        throw new ConstraintException("Source RSGroup for server " + firstServer
-            + " does not exist.");
+        throw new ConstraintException("Server " + firstServer + " does not exist or offline.");
       }
 
       // Only move online servers (when moving from 'default') or servers from other
