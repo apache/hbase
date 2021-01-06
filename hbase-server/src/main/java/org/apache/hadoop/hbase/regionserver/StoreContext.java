@@ -24,21 +24,22 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This carries the information on some of the meta data about the HStore. This
- * meta data can be used across the HFileWriter/Readers and other HStore consumers without the
+ * This carries the immutable information and references on some of the meta data about the HStore.
+ * This meta data can be used across the HFileWriter/Readers and other HStore consumers without the
  * need of passing around the complete store.
  */
 @InterfaceAudience.Private
 public final class StoreContext implements HeapSize {
   public static final long FIXED_OVERHEAD = ClassSize.estimateBase(HStore.class, false);
 
-  private final HFileContext defaultFileContext;
+  private final int blockSize;
+  private final Encryption.Context encryptionContext;
   private final CacheConfig cacheConf;
   private final HRegionFileSystem regionFileSystem;
   private final CellComparator comparator;
@@ -50,7 +51,8 @@ public final class StoreContext implements HeapSize {
   private final RegionCoprocessorHost coprocessorHost;
 
   private StoreContext(Builder builder) {
-    this.defaultFileContext = builder.defaultFileContext;
+    this.blockSize = builder.blockSize;
+    this.encryptionContext = builder.encryptionContext;
     this.cacheConf = builder.cacheConf;
     this.regionFileSystem = builder.regionFileSystem;
     this.comparator = builder.comparator;
@@ -62,8 +64,12 @@ public final class StoreContext implements HeapSize {
     this.coprocessorHost = builder.coprocessorHost;
   }
 
-  public HFileContext getDefaultFileContext() {
-    return defaultFileContext;
+  public int getBlockSize() {
+    return blockSize;
+  }
+
+  public Encryption.Context getEncryptionContext() {
+    return encryptionContext;
   }
 
   public CacheConfig getCacheConf() {
@@ -108,11 +114,12 @@ public final class StoreContext implements HeapSize {
 
   @Override
   public long heapSize() {
-    return FIXED_OVERHEAD + defaultFileContext.heapSize();
+    return FIXED_OVERHEAD;
   }
 
   public static class Builder {
-    private HFileContext defaultFileContext;
+    private int blockSize;
+    private Encryption.Context encryptionContext;
     private CacheConfig cacheConf;
     private HRegionFileSystem regionFileSystem;
     private CellComparator comparator;
@@ -123,8 +130,13 @@ public final class StoreContext implements HeapSize {
     private Path familyStoreDirectoryPath;
     private RegionCoprocessorHost coprocessorHost;
 
-    public Builder withDefaultHFileContext(HFileContext defaultFileContext) {
-      this.defaultFileContext = defaultFileContext;
+    public Builder withBlockSize(int blockSize) {
+      this.blockSize = blockSize;
+      return this;
+    }
+
+    public Builder withEncryptionContext(Encryption.Context encryptionContext) {
+      this.encryptionContext = encryptionContext;
       return this;
     }
 

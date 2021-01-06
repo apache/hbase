@@ -211,7 +211,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   private final Set<ChangedReadersObserver> changedReaderObservers =
     Collections.newSetFromMap(new ConcurrentHashMap<ChangedReadersObserver, Boolean>());
 
-  protected final int blocksize;
   private HFileDataBlockEncoder dataBlockEncoder;
 
   final StoreEngine<?, ?, ?, ?> storeEngine;
@@ -257,12 +256,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     this.storeContext = initializeStoreContext(family);
 
     // Assemble the store's home directory and Ensure it exists.
-    getRegionFileSystem().createStoreDir(getColumnFamilyName());
-
-    this.blocksize = getColumnFamilyDescriptor().getBlocksize();
+    getRegionFileSystem().createStoreDir(family.getNameAsString());
 
     // set block storage policy for store directory
-    String policyName = getColumnFamilyDescriptor().getStoragePolicy();
+    String policyName = family.getStoragePolicy();
     if (null == policyName) {
       policyName = this.conf.get(BLOCK_STORAGE_POLICY_KEY, DEFAULT_BLOCK_STORAGE_POLICY);
     }
@@ -333,18 +330,19 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
   private StoreContext initializeStoreContext(ColumnFamilyDescriptor family) throws IOException {
     return new StoreContext.Builder()
-        .withBloomType(family.getBloomFilterType())
-        .withCacheConfig(createCacheConf(family))
-        .withCellComparator(region.getCellComparator())
-        .withColumnFamilyDescriptor(family)
-        .withCompactedFilesSupplier(this::getCompactedFiles)
-        .withRegionFileSystem(region.getRegionFileSystem())
-        .withDefaultHFileContext(getDefaultHFileContext(family))
-        .withFavoredNodesSupplier(this::getFavoredNodes)
-        .withFamilyStoreDirectoryPath(region.getRegionFileSystem()
-            .getStoreDir(family.getNameAsString()))
-        .withRegionCoprocessorHost(region.getCoprocessorHost())
-        .build();
+      .withBlockSize(family.getBlocksize())
+      .withEncryptionContext(EncryptionUtil.createEncryptionContext(conf, family))
+      .withBloomType(family.getBloomFilterType())
+      .withCacheConfig(createCacheConf(family))
+      .withCellComparator(region.getCellComparator())
+      .withColumnFamilyDescriptor(family)
+      .withCompactedFilesSupplier(this::getCompactedFiles)
+      .withRegionFileSystem(region.getRegionFileSystem())
+      .withFavoredNodesSupplier(this::getFavoredNodes)
+      .withFamilyStoreDirectoryPath(region.getRegionFileSystem()
+        .getStoreDir(family.getNameAsString()))
+      .withRegionCoprocessorHost(region.getCoprocessorHost())
+      .build();
   }
 
   private InetSocketAddress[] getFavoredNodes() {
@@ -354,23 +352,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
           region.getRegionInfo().getEncodedName());
     }
     return favoredNodes;
-  }
-
-  private HFileContext getDefaultHFileContext(ColumnFamilyDescriptor family) throws IOException {
-    HFileContext hFileContext = new HFileContextBuilder()
-        .withCompression(HFile.DEFAULT_COMPRESSION_ALGORITHM)
-        .withCompressTags(family.isCompressTags())
-        .withChecksumType(StoreUtils.getChecksumType(conf))
-        .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf))
-        .withBlockSize(family.getBlocksize())
-        .withHBaseCheckSum(true)
-        .withDataBlockEncoding(family.getDataBlockEncoding())
-        .withEncryptionContext(EncryptionUtil.createEncryptionContext(conf, family))
-        .withColumnFamily(family.getName())
-        .withTableName(region.getTableDescriptor().getTableName().getName())
-        .withCellComparator(region.getCellComparator())
-        .build();
-    return hFileContext;
   }
 
   /**
@@ -449,6 +430,15 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     return ttl;
   }
 
+  StoreContext getStoreContext() {
+    return storeContext;
+  }
+
+  @Override
+  public int getBlockSize() {
+    return this.storeContext.getBlockSize();
+  }
+
   @Override
   public String getColumnFamilyName() {
     return this.storeContext.getFamily().getNameAsString();
@@ -506,10 +496,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   @Override
   public ColumnFamilyDescriptor getColumnFamilyDescriptor() {
     return this.storeContext.getFamily();
-  }
-
-  public Encryption.Context getEncryptionContext() {
-    return storeContext.getDefaultFileContext().getEncryptionContext();
   }
 
   @Override
@@ -1218,7 +1204,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
         }
       }
     }
-    HFileContext hFileContext = createFileContext(compression, includeMVCCReadpoint, includesTag);
+    Encryption.Context encryptionContext = storeContext.getEncryptionContext();
+    HFileContext hFileContext = createFileContext(compression, includeMVCCReadpoint, includesTag,
+      encryptionContext);
     Path familyTempDir = new Path(getRegionFileSystem().getTempDir(), getColumnFamilyName());
     StoreFileWriter.Builder builder =
       new StoreFileWriter.Builder(conf, writerCacheConf, getFileSystem())
@@ -1234,16 +1222,28 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
   }
 
   private HFileContext createFileContext(Compression.Algorithm compression,
-    boolean includeMVCCReadpoint, boolean includesTag) {
+    boolean includeMVCCReadpoint, boolean includesTag, Encryption.Context encryptionContext) {
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
     }
-    HFileContext fileContext = storeContext.getDefaultFileContext();
-    fileContext.setIncludesMvcc(includeMVCCReadpoint);
-    fileContext.setIncludesTags(includesTag);
-    fileContext.setCompression(compression);
-    fileContext.setFileCreateTime(EnvironmentEdgeManager.currentTime());
-    return fileContext;
+    ColumnFamilyDescriptor family = getColumnFamilyDescriptor();
+    HFileContext hFileContext = new HFileContextBuilder()
+      .withIncludesMvcc(includeMVCCReadpoint)
+      .withIncludesTags(includesTag)
+      .withCompression(compression)
+      .withCompressTags(family.isCompressTags())
+      .withChecksumType(StoreUtils.getChecksumType(conf))
+      .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf))
+      .withBlockSize(getBlockSize())
+      .withHBaseCheckSum(true)
+      .withDataBlockEncoding(family.getDataBlockEncoding())
+      .withEncryptionContext(encryptionContext)
+      .withCreateTime(EnvironmentEdgeManager.currentTime())
+      .withColumnFamily(getColumnFamilyDescriptor().getName())
+      .withTableName(getTableName().getName())
+      .withCellComparator(getComparator())
+      .build();
+    return hFileContext;
   }
 
   private long getTotalSize(Collection<HStoreFile> sfs) {

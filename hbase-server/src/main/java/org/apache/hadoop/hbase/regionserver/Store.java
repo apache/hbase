@@ -46,6 +46,8 @@ public interface Store {
   int PRIORITY_USER = 1;
   int NO_PRIORITY = Integer.MIN_VALUE;
 
+  int getBlockSize();
+
   // General Accessors
   CellComparator getComparator();
 
