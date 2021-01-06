@@ -185,7 +185,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       rsGroupAdmin.moveServers(Sets.newHashSet(Address.fromString("foo:9999")), "foo");
       fail("Bogus servers shouldn't have been successfully moved.");
     } catch (IOException ex) {
-      String exp = "Source RSGroup for server foo:9999 does not exist.";
+      String exp = "Server foo:9999 is either offline or it does not exist.";
       String msg = "Expected '" + exp + "' in exception message: ";
       assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
     }
@@ -333,7 +333,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
         Sets.newHashSet(tableName), newGroup.getName());
       fail("Bogus servers shouldn't have been successfully moved.");
     } catch (IOException ex) {
-      String exp = "Source RSGroup for server foo:9999 does not exist.";
+      String exp = "Server foo:9999 is either offline or it does not exist.";
       String msg = "Expected '" + exp + "' in exception message: ";
       assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
     }
