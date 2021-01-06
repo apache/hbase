@@ -20,16 +20,11 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.4.1-rm_test_gcp - Unreleased (as of Wed Dec 23 21:37:30 UTC 2020)
+## Release 2.4.1-rm_test - Unreleased (as of Wed Jan  6 05:44:51 UTC 2021)
 No changes
 
-## Release 2.4.1-rm_test_mac - Unreleased (as of Wed Dec 23 05:56:14 UTC 2020)
 No changes
 
-## Release 2.4.1-rm_test-2 - Unreleased (as of Wed Dec 23 04:41:28 UTC 2020)
-No changes
-
-## Release 2.4.1-rm_test - Unreleased (as of Wed Dec 23 01:10:53 UTC 2020)
 No changes
 
 No changes
