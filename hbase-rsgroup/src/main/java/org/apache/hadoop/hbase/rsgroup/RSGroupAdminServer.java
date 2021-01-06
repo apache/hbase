@@ -160,7 +160,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     RSGroupInfo tmpSrcGrp = rsGroupInfoManager.getRSGroupOfServer(firstServer);
     if (tmpSrcGrp == null) {
       // Be careful. This exception message is tested for in TestRSGroupsAdmin2...
-      throw new ConstraintException("Server " + firstServer + " does not exist or offline.");
+      throw new ConstraintException("Server " + firstServer
+        + " is either offline or it does not exist.");
     }
     RSGroupInfo srcGrp = new RSGroupInfo(tmpSrcGrp);
 
@@ -397,7 +398,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       RSGroupInfo srcGrp = rsGroupInfoManager.getRSGroupOfServer(firstServer);
       if (srcGrp == null) {
         // Be careful. This exception message is tested for in TestRSGroupsAdmin2...
-        throw new ConstraintException("Server " + firstServer + " does not exist or offline.");
+        throw new ConstraintException("Server " + firstServer
+          + " is either offline or it does not exist.");
       }
       // Only move online servers (when moving from 'default') or servers from other
       // groups. This prevents bogus servers from entering groups
