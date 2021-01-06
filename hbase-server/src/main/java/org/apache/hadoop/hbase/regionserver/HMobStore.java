@@ -227,7 +227,8 @@ public class HMobStore extends HStore {
     return MobUtils.createWriter(conf, getFileSystem(), getColumnFamilyDescriptor(),
       new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, getCacheConfig(),
       getStoreContext().getEncryptionContext(), StoreUtils.getChecksumType(conf),
-      StoreUtils.getBytesPerChecksum(conf), getBlockSize(), BloomType.NONE, isCompaction);
+      StoreUtils.getBytesPerChecksum(conf), getStoreContext().getBlockSize(), BloomType.NONE,
+      isCompaction);
   }
 
   /**

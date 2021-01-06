@@ -256,28 +256,26 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     this.storeContext = initializeStoreContext(family);
 
     // Assemble the store's home directory and Ensure it exists.
-    getRegionFileSystem().createStoreDir(family.getNameAsString());
+    region.getRegionFileSystem().createStoreDir(family.getNameAsString());
 
     // set block storage policy for store directory
     String policyName = family.getStoragePolicy();
     if (null == policyName) {
       policyName = this.conf.get(BLOCK_STORAGE_POLICY_KEY, DEFAULT_BLOCK_STORAGE_POLICY);
     }
-    getRegionFileSystem().setStoragePolicy(getColumnFamilyName(), policyName.trim());
+    region.getRegionFileSystem().setStoragePolicy(family.getNameAsString(), policyName.trim());
 
-    this.dataBlockEncoder = new HFileDataBlockEncoderImpl(getColumnFamilyDescriptor()
-        .getDataBlockEncoding());
+    this.dataBlockEncoder = new HFileDataBlockEncoderImpl(family.getDataBlockEncoding());
 
     // used by ScanQueryMatcher
     long timeToPurgeDeletes =
         Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
     LOG.trace("Time to purge deletes set to {}ms in {}", timeToPurgeDeletes, this);
     // Get TTL
-    long ttl = determineTTLFromFamily(getColumnFamilyDescriptor());
+    long ttl = determineTTLFromFamily(family);
     // Why not just pass a HColumnDescriptor in here altogether?  Even if have
     // to clone it?
-    scanInfo = new ScanInfo(conf, getColumnFamilyDescriptor(), ttl, timeToPurgeDeletes,
-        getComparator());
+    scanInfo = new ScanInfo(conf, family, ttl, timeToPurgeDeletes, region.getCellComparator());
     this.memstore = getMemstore();
 
     this.offPeakHours = OffPeakHours.getInstance(conf);
@@ -294,7 +292,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       this.compactionCheckMultiplier = DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER;
     }
 
-    this.storeEngine = createStoreEngine(this, this.conf, getComparator());
+    this.storeEngine = createStoreEngine(this, this.conf, region.getCellComparator());
     List<HStoreFile> hStoreFiles = loadStoreFiles(warmup);
     // Move the storeSize calculation out of loadStoreFiles() method, because the secondary read
     // replica's refreshStoreFiles() will also use loadStoreFiles() to refresh its store files and
@@ -409,7 +407,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
    */
   protected StoreEngine<?, ?, ?, ?> createStoreEngine(HStore store, Configuration conf,
       CellComparator kvComparator) throws IOException {
-    return StoreEngine.create(store, conf, getComparator());
+    return StoreEngine.create(store, conf, kvComparator);
   }
 
   /**
@@ -432,11 +430,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
 
   StoreContext getStoreContext() {
     return storeContext;
-  }
-
-  @Override
-  public int getBlockSize() {
-    return this.storeContext.getBlockSize();
   }
 
   @Override
@@ -1234,7 +1227,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
       .withCompressTags(family.isCompressTags())
       .withChecksumType(StoreUtils.getChecksumType(conf))
       .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf))
-      .withBlockSize(getBlockSize())
+      .withBlockSize(family.getBlocksize())
       .withHBaseCheckSum(true)
       .withDataBlockEncoding(family.getDataBlockEncoding())
       .withEncryptionContext(encryptionContext)
