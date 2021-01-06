@@ -138,10 +138,6 @@ public class HFileContext implements HeapSize, Cloneable {
     return compressAlgo;
   }
 
-  public void setCompression(Compression.Algorithm compressAlgo) {
-    this.compressAlgo = compressAlgo;
-  }
-
   public boolean isUseHBaseChecksum() {
     return usesHBaseChecksum;
   }

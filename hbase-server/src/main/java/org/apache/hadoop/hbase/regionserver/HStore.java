@@ -247,10 +247,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation,
     // CompoundConfiguration will look for keys in reverse order of addition, so we'd
     // add global config first, then table and cf overrides, then cf metadata.
     this.conf = new CompoundConfiguration()
-        .add(confParam)
-        .addBytesMap(region.getTableDescriptor().getValues())
-        .addStringMap(family.getConfiguration())
-        .addBytesMap(family.getValues());
+      .add(confParam)
+      .addBytesMap(region.getTableDescriptor().getValues())
+      .addStringMap(family.getConfiguration())
+      .addBytesMap(family.getValues());
 
     this.region = region;
     this.storeContext = initializeStoreContext(family);
