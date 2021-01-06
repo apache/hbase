@@ -159,9 +159,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     Address firstServer = servers.iterator().next();
     RSGroupInfo tmpSrcGrp = rsGroupInfoManager.getRSGroupOfServer(firstServer);
     if (tmpSrcGrp == null) {
-      // Be careful. This exception message is tested for in TestRSGroupsBase...
-      throw new ConstraintException("Source RSGroup for server " + firstServer
-              + " does not exist.");
+      // Be careful. This exception message is tested for in TestRSGroupsAdmin2...
+      throw new ConstraintException("Server " + firstServer + " does not exist or offline.");
     }
     RSGroupInfo srcGrp = new RSGroupInfo(tmpSrcGrp);
 
