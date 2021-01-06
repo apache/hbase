@@ -246,7 +246,12 @@ public class DisableTableProcedure
       setFailure("master-disable-table",
         new ConstraintException("Cannot disable " + this.tableName));
       canTableBeDisabled = false;
-    } else if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
+    } else if (tableName.isSystemTable()) {
+      setFailure("master-disable-table",
+        new ConstraintException("Cannot disable " + this.tableName));
+      canTableBeDisabled = false;
+    }
+    else if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
       setFailure("master-disable-table", new TableNotFoundException(tableName));
       canTableBeDisabled = false;
     } else if (!skipTableStateCheck) {
@@ -267,7 +272,6 @@ public class DisableTableProcedure
         canTableBeDisabled = false;
       }
     }
-
     // We are done the check. Future actions in this procedure could be done asynchronously.
     releaseSyncLatch();
 
