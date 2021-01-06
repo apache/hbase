@@ -156,11 +156,11 @@ public abstract class EventHandler implements Runnable, Comparable<EventHandler>
     if (o == null) {
       return 1;
     }
-    if(getPriority() != o.getPriority()) {
+    if (getPriority() != o.getPriority()) {
       return (getPriority() < o.getPriority()) ? -1 : 1;
-     }
+    }
     return (this.seqid < o.seqid) ? -1 : 1;
-   }
+  }
 
 
   @Override
