@@ -1003,8 +1003,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         Arrays.sort(mArray, (v1, v2) -> Row.COMPARATOR.compare(v1, v2));
       }
 
-      OperationStatus[] codes = region.batchMutate(mArray, atomic, HConstants.NO_NONCE,
-        HConstants.NO_NONCE);
+      OperationStatus[] codes = region.batchMutate(mArray, atomic);
 
       // When atomic is true, it indicates that the mutateRow API or the batch API with
       // RowMutations is called. In this case, we need to merge the results of the
