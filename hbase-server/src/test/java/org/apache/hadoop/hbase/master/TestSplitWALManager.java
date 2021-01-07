@@ -122,7 +122,7 @@ public class TestSplitWALManager {
     SplitTableRegionProcedure splitProcedure = new SplitTableRegionProcedure(
       env, regionInfos.get(0), Bytes.toBytes("row5"));
     // Populate some rows in the table
-    LOG.info("Beginning put data to the table: " + TABLE.toString());
+    LOG.info("Beginning put data to the table: " + TABLE_NAME.toString());
     int rowCount = 5;
     for (int i = 0; i < rowCount; i++) {
       byte[] row = Bytes.toBytes("row" + i);
