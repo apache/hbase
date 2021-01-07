@@ -84,8 +84,7 @@ public class SplitWALManager {
     this.splitWorkerAssigner = new SplitWorkerAssigner(this.master,
         conf.getInt(HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER));
     this.rootDir = master.getMasterFileSystem().getWALRootDir();
-    this.fs = master.getMasterFileSystem().getFileSystem();
-
+    this.fs = master.getMasterFileSystem().getWALFileSystem();
   }
 
   public List<Procedure> splitWALs(ServerName crashedServer, boolean splitMeta)
