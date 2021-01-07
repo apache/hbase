@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
  * @see ExecutorService
  */
 @InterfaceAudience.Private
-public abstract class EventHandler implements Runnable, Comparable<Runnable> {
+public abstract class EventHandler implements Runnable, Comparable<EventHandler> {
   private static final Logger LOG = LoggerFactory.getLogger(EventHandler.class);
 
   // type of event this object represents
@@ -152,13 +152,16 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    * priority beyond FIFO, they should override {@link #getPriority()}.
    */
   @Override
-  public int compareTo(Runnable o) {
-    EventHandler eh = (EventHandler)o;
-    if(getPriority() != eh.getPriority()) {
-      return (getPriority() < eh.getPriority()) ? -1 : 1;
+  public int compareTo(EventHandler o) {
+    if (o == null) {
+      return 1;
     }
-    return (this.seqid < eh.seqid) ? -1 : 1;
+    if (getPriority() != o.getPriority()) {
+      return (getPriority() < o.getPriority()) ? -1 : 1;
+    }
+    return (this.seqid < o.seqid) ? -1 : 1;
   }
+
 
   @Override
   public String toString() {
