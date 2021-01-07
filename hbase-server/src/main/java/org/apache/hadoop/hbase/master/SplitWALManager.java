@@ -85,8 +85,7 @@ public class SplitWALManager {
     this.splitWorkerAssigner = new SplitWorkerAssigner(this.master,
         conf.getInt(HBASE_SPLIT_WAL_MAX_SPLITTER, DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER));
     this.rootDir = master.getMasterFileSystem().getWALRootDir();
-    // TODO: This should be the WAL FS, not the Master FS?
-    this.fs = master.getMasterFileSystem().getFileSystem();
+    this.fs = master.getMasterFileSystem().getWALFileSystem();
     this.walArchiveDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
   }
 
