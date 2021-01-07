@@ -123,10 +123,14 @@ public class TestHBaseConfiguration {
     assertEquals("hdfs-default.xml",
             conf.getPropertySources("dfs.client.read.shortcircuit")[0]);
     assertEquals("false", conf.get("dfs.client.read.shortcircuit"));
-    Configuration.addDefaultResource("hdfs-site.xml");
-    assertEquals("hdfs-site.xml",
+    assertNull(conf.get("dfs.domain.socket.path"));
+    Configuration.addDefaultResource("hdfs-scr-enabled.xml");
+    assertEquals("hdfs-scr-enabled.xml",
             conf.getPropertySources("dfs.client.read.shortcircuit")[0]);
+    assertEquals("hdfs-scr-enabled.xml",
+            conf.getPropertySources("dfs.domain.socket.path")[0]);
     assertEquals("true", conf.get("dfs.client.read.shortcircuit"));
+    assertEquals("/var/lib/hadoop-hdfs/dn_socket", conf.get("dfs.domain.socket.path"));
   }
 
   private static class ReflectiveCredentialProviderClient {
