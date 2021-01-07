@@ -251,8 +251,7 @@ class SequenceIdAccounting {
   private static long getLowestSequenceId(Map<?, Long> sequenceids) {
     long lowest = HConstants.NO_SEQNUM;
     for (Map.Entry<? , Long> entry : sequenceids.entrySet()){
-      if (entry.getKey() instanceof ImmutableByteArray && entry.getKey().toString().equals("METAFAMILY")){
-        LOG.info("ColumnFamily is METAFAMILY! continue ...");
+      if (entry.getKey().toString().equals("METAFAMILY")){
         continue;
       }
       Long sid = entry.getValue();
