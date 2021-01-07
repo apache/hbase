@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -101,22 +100,22 @@ public class TestSplitWALManager {
 
   @Test
   public void testWALArchiveWithDifferentWalAndRootFS() throws Exception{
-    HBaseTestingUtility TEST_UTIL_2 = new HBaseTestingUtility();
+    HBaseTestingUtility test_util_2 = new HBaseTestingUtility();
     Path dir = TEST_UTIL.getDataTestDirOnTestFS("testWalDir");
-    TEST_UTIL_2.getConfiguration().set(CommonFSUtils.HBASE_WAL_DIR, dir.toString());
-    CommonFSUtils.setWALRootDir(TEST_UTIL_2.getConfiguration(), dir);
-    TEST_UTIL_2.startMiniCluster(3);
-    HMaster TU2_master = TEST_UTIL_2.getHBaseCluster().getMaster();
-    LOG.info("The Master FS is pointing to: " + TU2_master.getMasterFileSystem()
+    test_util_2.getConfiguration().set(CommonFSUtils.HBASE_WAL_DIR, dir.toString());
+    CommonFSUtils.setWALRootDir(test_util_2.getConfiguration(), dir);
+    test_util_2.startMiniCluster(3);
+    HMaster master2 = test_util_2.getHBaseCluster().getMaster();
+    LOG.info("The Master FS is pointing to: " + master2.getMasterFileSystem()
       .getFileSystem().getUri());
-    LOG.info("The WAL FS is pointing to: " + TU2_master.getMasterFileSystem()
+    LOG.info("The WAL FS is pointing to: " + master2.getMasterFileSystem()
       .getWALFileSystem().getUri());
-    Table TABLE = TEST_UTIL_2.createTable(TABLE_NAME, FAMILY);
-    TEST_UTIL_2.waitTableAvailable(TABLE_NAME);
-    Admin admin = TEST_UTIL_2.getAdmin();
-    MasterProcedureEnv env = TEST_UTIL_2.getMiniHBaseCluster().getMaster()
+    Table table = test_util_2.createTable(TABLE_NAME, FAMILY);
+    test_util_2.waitTableAvailable(TABLE_NAME);
+    Admin admin = test_util_2.getAdmin();
+    MasterProcedureEnv env = test_util_2.getMiniHBaseCluster().getMaster()
       .getMasterProcedureExecutor().getEnvironment();
-    final ProcedureExecutor<MasterProcedureEnv> executor = TEST_UTIL_2.getMiniHBaseCluster()
+    final ProcedureExecutor<MasterProcedureEnv> executor = test_util_2.getMiniHBaseCluster()
       .getMaster().getMasterProcedureExecutor();
     List<RegionInfo> regionInfos = admin.getRegions(TABLE_NAME);
     SplitTableRegionProcedure splitProcedure = new SplitTableRegionProcedure(
@@ -128,28 +127,27 @@ public class TestSplitWALManager {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
       put.addColumn(FAMILY, FAMILY, FAMILY);
-      TABLE.put(put);
+      table.put(put);
     }
     executor.submitProcedure(splitProcedure);
     LOG.info("Submitted SplitProcedure.");
-    TEST_UTIL_2.waitFor(30000, () -> executor.getProcedures().stream()
+    test_util_2.waitFor(30000, () -> executor.getProcedures().stream()
       .filter(p -> p instanceof TransitRegionStateProcedure)
       .map(p -> (TransitRegionStateProcedure) p)
       .anyMatch(p -> TABLE_NAME.equals(p.getTableName())));
-    TEST_UTIL_2.getMiniHBaseCluster().killRegionServer(
-      TEST_UTIL_2.getMiniHBaseCluster().getRegionServer(0).getServerName());
-    TEST_UTIL_2.getMiniHBaseCluster().startRegionServer();
-    TEST_UTIL_2.waitUntilNoRegionsInTransition();
+    test_util_2.getMiniHBaseCluster().killRegionServer(
+      test_util_2.getMiniHBaseCluster().getRegionServer(0).getServerName());
+    test_util_2.getMiniHBaseCluster().startRegionServer();
+    test_util_2.waitUntilNoRegionsInTransition();
     Scan scan = new Scan();
-    ResultScanner results = TABLE.getScanner(scan);
+    ResultScanner results = table.getScanner(scan);
     int scanRowCount = 0;
-    Result result = null;
-    while ((result = results.next()) != null) {
+    while (results.next() != null) {
       scanRowCount++;
     }
     Assert.assertEquals("Got " + scanRowCount + " rows when " + rowCount +
       " were expected.", rowCount, scanRowCount);
-    TEST_UTIL_2.shutdownMiniCluster();
+    test_util_2.shutdownMiniCluster();
   }
 
   @Test
