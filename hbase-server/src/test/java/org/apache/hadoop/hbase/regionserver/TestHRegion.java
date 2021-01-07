@@ -137,7 +137,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.Region.RowLock;
 import org.apache.hadoop.hbase.regionserver.TestHStore.FaultyFileSystem;
@@ -3768,7 +3767,7 @@ public class TestHRegion {
     region.put(put);
 
     Scan scan = null;
-    HRegion.RegionScannerImpl is = null;
+    RegionScannerImpl is = null;
 
     // Testing to see how many scanners that is produced by getScanner,
     // starting
