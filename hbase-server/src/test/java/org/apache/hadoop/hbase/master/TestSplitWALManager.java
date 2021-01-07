@@ -100,22 +100,22 @@ public class TestSplitWALManager {
 
   @Test
   public void testWALArchiveWithDifferentWalAndRootFS() throws Exception{
-    HBaseTestingUtility test_util_2 = new HBaseTestingUtility();
+    HBaseTestingUtility testUtil2 = new HBaseTestingUtility();
     Path dir = TEST_UTIL.getDataTestDirOnTestFS("testWalDir");
-    test_util_2.getConfiguration().set(CommonFSUtils.HBASE_WAL_DIR, dir.toString());
-    CommonFSUtils.setWALRootDir(test_util_2.getConfiguration(), dir);
-    test_util_2.startMiniCluster(3);
-    HMaster master2 = test_util_2.getHBaseCluster().getMaster();
+    testUtil2.getConfiguration().set(CommonFSUtils.HBASE_WAL_DIR, dir.toString());
+    CommonFSUtils.setWALRootDir(testUtil2.getConfiguration(), dir);
+    testUtil2.startMiniCluster(3);
+    HMaster master2 = testUtil2.getHBaseCluster().getMaster();
     LOG.info("The Master FS is pointing to: " + master2.getMasterFileSystem()
       .getFileSystem().getUri());
     LOG.info("The WAL FS is pointing to: " + master2.getMasterFileSystem()
       .getWALFileSystem().getUri());
-    Table table = test_util_2.createTable(TABLE_NAME, FAMILY);
-    test_util_2.waitTableAvailable(TABLE_NAME);
-    Admin admin = test_util_2.getAdmin();
-    MasterProcedureEnv env = test_util_2.getMiniHBaseCluster().getMaster()
+    Table table = testUtil2.createTable(TABLE_NAME, FAMILY);
+    testUtil2.waitTableAvailable(TABLE_NAME);
+    Admin admin = testUtil2.getAdmin();
+    MasterProcedureEnv env = testUtil2.getMiniHBaseCluster().getMaster()
       .getMasterProcedureExecutor().getEnvironment();
-    final ProcedureExecutor<MasterProcedureEnv> executor = test_util_2.getMiniHBaseCluster()
+    final ProcedureExecutor<MasterProcedureEnv> executor = testUtil2.getMiniHBaseCluster()
       .getMaster().getMasterProcedureExecutor();
     List<RegionInfo> regionInfos = admin.getRegions(TABLE_NAME);
     SplitTableRegionProcedure splitProcedure = new SplitTableRegionProcedure(
@@ -131,14 +131,14 @@ public class TestSplitWALManager {
     }
     executor.submitProcedure(splitProcedure);
     LOG.info("Submitted SplitProcedure.");
-    test_util_2.waitFor(30000, () -> executor.getProcedures().stream()
-      .filter(p -> p instanceof TransitRegionStateProcedure)
-      .map(p -> (TransitRegionStateProcedure) p)
-      .anyMatch(p -> TABLE_NAME.equals(p.getTableName())));
-    test_util_2.getMiniHBaseCluster().killRegionServer(
-      test_util_2.getMiniHBaseCluster().getRegionServer(0).getServerName());
-    test_util_2.getMiniHBaseCluster().startRegionServer();
-    test_util_2.waitUntilNoRegionsInTransition();
+    testUtil2.waitFor(30000, () -> executor.getProcedures().stream()
+      .filter(p -> p instanceof SplitTableRegionProcedure)
+      .map(p -> (SplitTableRegionProcedure) p)
+      .anyMatch(p -> TABLE_NAME.equals(p.getTableName())) && splitProcedure.isSuccess());
+    testUtil2.getMiniHBaseCluster().killRegionServer(
+      testUtil2.getMiniHBaseCluster().getRegionServer(0).getServerName());
+    testUtil2.getMiniHBaseCluster().startRegionServer();
+    testUtil2.waitUntilNoRegionsInTransition();
     Scan scan = new Scan();
     ResultScanner results = table.getScanner(scan);
     int scanRowCount = 0;
@@ -147,7 +147,7 @@ public class TestSplitWALManager {
     }
     Assert.assertEquals("Got " + scanRowCount + " rows when " + rowCount +
       " were expected.", rowCount, scanRowCount);
-    test_util_2.shutdownMiniCluster();
+    testUtil2.shutdownMiniCluster();
   }
 
   @Test
