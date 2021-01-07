@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -93,5 +95,14 @@ public final class Strings {
     }
     int numPaddingCharacters = length - input.length();
     return StringUtils.repeat(padding, numPaddingCharacters) + input;
+  }
+
+  public static void main (String[] args) {
+    Set<Short> s = new HashSet<>();
+    for (short i = 0; i < 100; i++) {
+      s.add(i);
+      s.remove(i - 1);
+    }
+    System.out.println(s.size());
   }
 }
