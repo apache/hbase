@@ -26,6 +26,9 @@ No changes
 # hbase 2.3.4 Release Notes
 No changes
 
+# hbase 2.3.4 Release Notes
+No changes
+
 # HBASE  2.3.3 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
