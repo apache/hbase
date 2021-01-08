@@ -151,6 +151,8 @@ public class TestMetricsRegionServer {
     for (int i=0; i < 17; i ++) {
       rsm.updatePut(null, 17);
       rsm.updateDelete(null, 17);
+      rsm.updatePut(null, 1006);
+      rsm.updateDelete(null, 1003);
       rsm.updateCheckAndDelete(null, 17);
       rsm.updateCheckAndPut(null, 17);
       rsm.updateCheckAndMutate(null, 17);
@@ -161,17 +163,17 @@ public class TestMetricsRegionServer {
     HELPER.assertCounter("getNumOps", 28, serverSource);
     HELPER.assertCounter("incrementNumOps", 30, serverSource);
     HELPER.assertCounter("putBatchNumOps", 32, serverSource);
-    HELPER.assertCounter("putNumOps", 17, serverSource);
-    HELPER.assertCounter("deleteNumOps", 17, serverSource);
+    HELPER.assertCounter("putNumOps", 34, serverSource);
+    HELPER.assertCounter("deleteNumOps", 34, serverSource);
     HELPER.assertCounter("checkAndDeleteNumOps", 17, serverSource);
     HELPER.assertCounter("checkAndPutNumOps", 17, serverSource);
     HELPER.assertCounter("checkAndMutateNumOps", 17, serverSource);
 
     HELPER.assertCounter("slowAppendCount", 12, serverSource);
-    HELPER.assertCounter("slowDeleteCount", 13, serverSource);
+    HELPER.assertCounter("slowDeleteCount", 17, serverSource);
     HELPER.assertCounter("slowGetCount", 14, serverSource);
     HELPER.assertCounter("slowIncrementCount", 15, serverSource);
-    HELPER.assertCounter("slowPutCount", 16, serverSource);
+    HELPER.assertCounter("slowPutCount", 17, serverSource);
   }
 
   @Test
