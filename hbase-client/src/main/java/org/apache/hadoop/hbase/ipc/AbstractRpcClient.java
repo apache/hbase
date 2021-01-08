@@ -397,7 +397,9 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     final RpcCallback<Message> callback) {
     Span span = TraceUtil.createSpan("RpcClient.callMethod")
       .setAttribute(TraceUtil.RPC_SERVICE_KEY, md.getService().getName())
-      .setAttribute(TraceUtil.RPC_METHOD_KEY, md.getName());
+      .setAttribute(TraceUtil.RPC_METHOD_KEY, md.getName())
+      .setAttribute(TraceUtil.REMOTE_HOST_KEY, addr.getHostName())
+      .setAttribute(TraceUtil.REMOTE_PORT_KEY, addr.getPort());
     try (Scope scope = span.makeCurrent()) {
       final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
       cs.setStartTime(EnvironmentEdgeManager.currentTime());
