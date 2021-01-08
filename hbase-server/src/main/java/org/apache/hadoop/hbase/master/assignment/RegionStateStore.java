@@ -164,8 +164,7 @@ public class RegionStateStore {
       ServerName regionLocation = MetaTableAccessor.getTargetServerName(result, replicaId);
       final long openSeqNum = hrl.getSeqNum();
 
-      // TODO: move under trace, now is visible for debugging
-      LOG.info(
+      LOG.debug(
         "Load hbase:meta entry region={}, regionState={}, lastHost={}, " +
           "regionLocation={}, openSeqNum={}",
         regionInfo.getEncodedName(), state, lastHost, regionLocation, openSeqNum);
