@@ -54,6 +54,10 @@ public final class TraceUtil {
   public static final AttributeKey<String> SERVER_NAME_KEY =
     AttributeKey.stringKey("db.hbase.server.name");
 
+  public static final AttributeKey<String> REMOTE_HOST_KEY = SemanticAttributes.NET_PEER_NAME;
+
+  public static final AttributeKey<Long> REMOTE_PORT_KEY = SemanticAttributes.NET_PEER_PORT;
+
   private TraceUtil() {
   }
 
