@@ -1341,6 +1341,19 @@
                     <bannedImport>org.glassfish.jersey.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <commentLineBufferSize>512</commentLineBufferSize>
+                  <reason>
+                    You should never use this style of annotations(i.e, 'this is for test only')
+                    in IA.Public or IA.LimitedPrivate classes. Use IA.Private to tell users this is
+                    not for public use.
+                    For IA.Private classes, use RestrictedApi annotation in error prone instead.
+                  </reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting</bannedImport>
+                  </bannedImports>
+                </restrictImports>
               </rules>
             </configuration>
           </execution>
