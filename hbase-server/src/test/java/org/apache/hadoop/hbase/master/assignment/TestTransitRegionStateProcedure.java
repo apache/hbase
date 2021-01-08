@@ -131,8 +131,8 @@ public class TestTransitRegionStateProcedure {
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(tableName);
     HRegion region = rs.getRegions(tableName).get(0);
-    region.setReadRequestsCount(1);
-    region.setWriteRequestsCount(2);
+    region.addReadRequestsCount(1);
+    region.addWriteRequestsCount(2);
     long openSeqNum = region.getOpenSeqNum();
     TransitRegionStateProcedure proc =
       TransitRegionStateProcedure.reopen(env, region.getRegionInfo());
