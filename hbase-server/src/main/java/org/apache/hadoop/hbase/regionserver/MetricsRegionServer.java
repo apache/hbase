@@ -113,15 +113,15 @@ public class MetricsRegionServer {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updatePutBatch(tn, t);
     }
-    if (t > slowMetricTime) {
-      serverSource.incrSlowPut();
-    }
     serverSource.updatePutBatch(t);
   }
 
   public void updatePut(TableName tn, long t) {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updatePut(tn, t);
+    }
+    if (t > slowMetricTime) {
+      serverSource.incrSlowPut();
     }
     serverSource.updatePut(t);
     userAggregate.updatePut(t);
@@ -131,6 +131,9 @@ public class MetricsRegionServer {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updateDelete(tn, t);
     }
+    if (t > slowMetricTime) {
+      serverSource.incrSlowDelete();
+    }
     serverSource.updateDelete(t);
     userAggregate.updateDelete(t);
   }
@@ -138,9 +141,6 @@ public class MetricsRegionServer {
   public void updateDeleteBatch(TableName tn, long t) {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updateDeleteBatch(tn, t);
-    }
-    if (t > slowMetricTime) {
-      serverSource.incrSlowDelete();
     }
     serverSource.updateDeleteBatch(t);
   }
