@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
@@ -128,7 +127,7 @@ public class TestScanWithBloomError {
     Scan scan = new Scan(ROW_BYTES, ROW_BYTES);
     addColumnSetToScan(scan, colSet);
     RegionScannerImpl scanner = region.getScanner(scan);
-    KeyValueHeap storeHeap = scanner.getStoreHeapForTesting();
+    KeyValueHeap storeHeap = scanner.storeHeap;
     assertEquals(0, storeHeap.getHeap().size());
     StoreScanner storeScanner =
         (StoreScanner) storeHeap.getCurrentForTesting();

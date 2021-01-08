@@ -119,7 +119,6 @@ import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.LeaseManager.Lease;
 import org.apache.hadoop.hbase.regionserver.LeaseManager.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
