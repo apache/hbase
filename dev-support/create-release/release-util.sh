@@ -16,6 +16,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+# Source this file if you want to use any of its utiilty (also useful
+# testing the below functions). Do "$ . ./release-util.sh" and then
+# you can do stuff like call the CHANGES updating function
+# update_releasenotes:
+#
+#  $ update_releasenotes ~/checkouts/hbase.apache.git 2.3.4
+#
+# Just make sure any environment variables needed are predefined
+# in your context.
+#
 DRY_RUN=${DRY_RUN:-1} #default to dry run
 DEBUG=${DEBUG:-0}
 GPG=${GPG:-gpg}
@@ -25,8 +36,6 @@ if [ -n "${GPG_KEY}" ]; then
 fi
 # Maven Profiles for publishing snapshots and release to Maven Central and Dist
 PUBLISH_PROFILES=("-P" "apache-release,release")
-
-set -e
 
 function error {
   log "Error: $*" >&2
@@ -478,6 +487,7 @@ function generate_api_report {
 }
 
 # Look up the Jira name associated with project.
+# Returns result on stdout.
 # Currently all the 'hbase-*' projects share the same HBASE jira name.  This works because,
 # by convention, the HBASE jira "Fix Version" field values have the sub-project name pre-pended,
 # as in "hbase-operator-tools-1.0.0".
@@ -492,7 +502,7 @@ function get_jira_name {
   if [[ -z "$jira_name" ]]; then
     error "Sorry, can't determine the Jira name for project $project"
   fi
-  log "$jira_name"
+  echo "$jira_name"
 }
 
 # Update the CHANGES.md
