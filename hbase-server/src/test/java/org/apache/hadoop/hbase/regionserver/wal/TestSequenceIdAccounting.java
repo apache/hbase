@@ -129,6 +129,7 @@ public class TestSequenceIdAccounting {
     assertTrue(sida.areAllLower(m, null));
     m.put(ENCODED_REGION_NAME, sequenceid);
     assertFalse(sida.areAllLower(m, null));
+
     // Test the METAFAMILY is filtered in SequenceIdAccounting.lowestUnflushedSequenceIds
     SequenceIdAccounting meta_sida = new SequenceIdAccounting();
     Map<byte[], Long> meta_m = new HashMap<>();
