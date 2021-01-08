@@ -20,9 +20,6 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.3.4 - Unreleased (as of Fri Jan  8 07:23:38 UTC 2021)
-No changes
-
 ## Release 2.3.3 - Unreleased (as of 2020-10-28)
 
 

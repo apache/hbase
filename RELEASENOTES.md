@@ -20,15 +20,6 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-# hbase 2.3.4 Release Notes
-No changes
-
-# hbase 2.3.4 Release Notes
-No changes
-
-# hbase 2.3.4 Release Notes
-No changes
-
 # HBASE  2.3.3 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
