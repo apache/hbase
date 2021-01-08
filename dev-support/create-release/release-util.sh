@@ -478,8 +478,18 @@ function generate_api_report {
   local timing_token
   timing_token="$(start_step)"
   # Generate api report.
+  # Filter out some jar types. Filters are tricky. Python regex on
+  # file basename. Exclude the saved-aside original jars... they are
+  # not included in resulting artifact. Also, do not include the
+  # hbase-shaded-testing-util.*  jars. This jar is unzip'able on mac
+  # os x as is because has it a META_INF/LICENSE file and then a
+  # META_INF/license directory for the included jar's licenses;
+  # it fails to unjar on mac os x which this tool does making its checks
+  # (Its exclusion should be fine; it is just an aggregate of other jars).
   "${project}"/dev-support/checkcompatibility.py --annotation \
     org.apache.yetus.audience.InterfaceAudience.Public  \
+    -e "original-hbase.*.jar" \
+    -e "hbase-shaded-testing-util.*.jar" \
     "$previous_tag" "$release_tag"
   previous_version="$(echo "${previous_tag}" | sed -e 's/rel\///')"
   cp "${project}/target/compat-check/report.html" "./api_compare_${previous_version}_to_${release_tag}.html"
