@@ -23,6 +23,9 @@
 # hbase 2.4.1-rm_test Release Notes
 No changes
 
+# hbase 2.4.1-rm_test Release Notes
+No changes
+
 # hbase 2.4.1-rm_test_gcp Release Notes
 No changes
 
