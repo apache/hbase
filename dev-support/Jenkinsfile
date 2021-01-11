@@ -197,7 +197,7 @@ pipeline {
             TESTS = 'all,-unit,-findbugs'
             // on branches that don't support jdk7, this will already be JAVA_HOME, so we'll end up not
             // doing multijdk there.
-            MULTIJDK = '/usr/lib/jvm/java-8-openjdk-amd64'
+            MULTIJDK = '/usr/local/openjdk-8'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_GENERAL}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_GENERAL}"
           }
@@ -347,7 +347,7 @@ pipeline {
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_HADOOP2}"
             // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
             // and is needed on branches that do both jdk7 and jdk8
-            SET_JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
+            SET_JAVA_HOME = '/usr/local/openjdk-8'
           }
           steps {
             // Must do prior to anything else, since if one of them timesout we'll stash the commentfile
@@ -432,7 +432,7 @@ pipeline {
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_HADOOP3}"
             // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
             // and is needed on branches that do both jdk7 and jdk8
-            SET_JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
+            SET_JAVA_HOME = '/usr/local/openjdk-8'
             // Activates hadoop 3.0 profile in maven runs.
             HADOOP_PROFILE = '3.0'
           }
