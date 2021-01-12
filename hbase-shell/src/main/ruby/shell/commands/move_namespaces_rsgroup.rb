@@ -31,8 +31,10 @@ CMD
 
       def command(dest, namespaces)
         rsgroup_admin.move_namespaces(dest, namespaces)
-        arg = {METHOD => 'set','hbase.rsgroup.name'=>dest}
-        admin.alter_namespace(namespaces[0], arg)
+        namespaces.each_with_index do |nm, i|
+          arg = {METHOD => 'set','hbase.rsgroup.name'=>dest}
+          admin.alter_namespace(nm, arg)
+        end
       end
     end
   end
