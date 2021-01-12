@@ -1454,8 +1454,7 @@ module Hbase
       raise(ArgumentError, 'Namespace name must be of type String') unless namespace_name.is_a?(String)
       nsd = @admin.getNamespaceDescriptor(namespace_name)
       raise(ArgumentError, 'Namespace does not exist') unless nsd
-      res = nsd.getConfigurationValue("hbase.rsgroup.name")
-      res
+      nsd.getConfigurationValue("hbase.rsgroup.name")
     end
 
     #----------------------------------------------------------------------------------------------
