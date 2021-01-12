@@ -20,6 +20,7 @@
  */
 -->
   <modelVersion>4.0.0</modelVersion>
+  <!-- Hack to force hbase-server tests to run -->
   <parent>
     <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
