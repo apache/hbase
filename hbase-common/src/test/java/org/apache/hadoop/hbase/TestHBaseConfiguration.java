@@ -115,23 +115,6 @@ public class TestHBaseConfiguration {
     conf.set("hbase.security.authentication", "KERBeros");
     Assert.assertTrue(User.isHBaseSecurityEnabled(conf));
   }
-  
-  @Test
-  public void testGetConfigOfShortcircuitRead() throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    Configuration.addDefaultResource("hdfs-default.xml");
-    assertEquals("hdfs-default.xml",
-            conf.getPropertySources("dfs.client.read.shortcircuit")[0]);
-    assertEquals("false", conf.get("dfs.client.read.shortcircuit"));
-    assertNull(conf.get("dfs.domain.socket.path"));
-    Configuration.addDefaultResource("hdfs-scr-enabled.xml");
-    assertEquals("hdfs-scr-enabled.xml",
-            conf.getPropertySources("dfs.client.read.shortcircuit")[0]);
-    assertEquals("hdfs-scr-enabled.xml",
-            conf.getPropertySources("dfs.domain.socket.path")[0]);
-    assertEquals("true", conf.get("dfs.client.read.shortcircuit"));
-    assertEquals("/var/lib/hadoop-hdfs/dn_socket", conf.get("dfs.domain.socket.path"));
-  }
 
   private static class ReflectiveCredentialProviderClient {
     public static final String HADOOP_CRED_PROVIDER_FACTORY_CLASS_NAME =
