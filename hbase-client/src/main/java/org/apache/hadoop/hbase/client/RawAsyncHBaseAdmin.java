@@ -2409,7 +2409,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         regionInfo = CatalogFamilyFormat.parseRegionInfoFromRegionName(
           regionNameOrEncodedRegionName);
       } catch (IOException ioe) {
-        throw new IllegalArgumentException(ioe.getMessage());
+        return failedFuture(new IllegalArgumentException(ioe.getMessage()));
       }
 
       if (regionInfo.isMetaRegion()) {

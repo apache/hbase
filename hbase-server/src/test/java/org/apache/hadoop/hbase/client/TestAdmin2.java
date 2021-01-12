@@ -299,10 +299,10 @@ public class TestAdmin2 extends TestAdminBase {
         if (regionInfo.getRegionNameAsString().contains(name)) {
           info = regionInfo;
           try {
-            ADMIN.unassign(Bytes.toBytes("sample"), true);
-          } catch (IllegalArgumentException iae) {
-            // "Sample" is an invalid region name/encoded region name, it expects
-            // an IllegalArgumentException, ignore it.
+            ADMIN.unassign(Bytes.toBytes(
+              "test,,1358563771069.acc1ad1b7962564fc3a43e5907e8db33."), true);
+          } catch (UnknownRegionException nsre) {
+            // expected, ignore it
           }
         }
       }
