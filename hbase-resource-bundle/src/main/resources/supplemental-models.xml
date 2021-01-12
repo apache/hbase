@@ -1080,6 +1080,20 @@ Copyright (c) 2004-2013 QOS.ch
   </supplement>
   <supplement>
     <project>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <name>SLF4J LOG4J-12 Binding</name>
