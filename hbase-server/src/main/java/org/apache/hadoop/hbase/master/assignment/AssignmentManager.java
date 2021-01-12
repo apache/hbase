@@ -1427,7 +1427,7 @@ public class AssignmentManager {
       update(regionStates.getRegionFailedOpen(), statTimestamp);
 
       if (ritsOverThreshold != null && !ritsOverThreshold.isEmpty()) {
-        LOG.trace("RIT hashes and states: " +
+        LOG.trace("RIT hashes and states: {}",
           ritsOverThreshold.entrySet().stream()
             .map(e -> e.getKey() + ":" + e.getValue().getState().name())
             .collect(Collectors.joining("\n")));
