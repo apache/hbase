@@ -1440,7 +1440,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>dfs.client.read.shortcircuit</name>
-    <value>false</value>
+    <value></value>
     <description>
       If set to true, this configuration parameter enables short-circuit local
       reads.
@@ -1448,7 +1448,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>dfs.domain.socket.path</name>
-    <value>none</value>
+    <value></value>
     <description>
       This is a path to a UNIX domain socket that will be used for
       communication between the DataNode and local HDFS clients, if
