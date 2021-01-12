@@ -27,13 +27,6 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HBASE-25449](https://issues.apache.org/jira/browse/HBASE-25449) | *Major* | **'dfs.client.read.shortcircuit' should not be set in hbase-default.xml**
-
-The presence of HDFS short-circuit read configuration properties in hbase-default.xml inadvertently causes short-circuit reads to not happen inside of RegionServers, despite short-circuit reads being enabled in hdfs-site.xml.
-
-
----
-
 * [HBASE-25441](https://issues.apache.org/jira/browse/HBASE-25441) | *Critical* | **add security check for some APIs in RSRpcServices**
 
 RsRpcServices APIs that can be accessed only through Admin rights:
