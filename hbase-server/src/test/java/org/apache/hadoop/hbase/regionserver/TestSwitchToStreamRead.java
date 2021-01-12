@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -102,7 +101,7 @@ public class TestSwitchToStreamRead {
   public void test() throws IOException {
     try (RegionScannerImpl scanner = REGION.getScanner(new Scan())) {
       StoreScanner storeScanner =
-        (StoreScanner) (scanner).getStoreHeapForTesting().getCurrentForTesting();
+        (StoreScanner) scanner.storeHeap.getCurrentForTesting();
       for (KeyValueScanner kvs : storeScanner.getAllScannersForTesting()) {
         if (kvs instanceof StoreFileScanner) {
           StoreFileScanner sfScanner = (StoreFileScanner) kvs;
@@ -151,8 +150,7 @@ public class TestSwitchToStreamRead {
 
   private void testFilter(Filter filter) throws IOException {
     try (RegionScannerImpl scanner = REGION.getScanner(new Scan().setFilter(filter))) {
-      StoreScanner storeScanner =
-        (StoreScanner) (scanner).getStoreHeapForTesting().getCurrentForTesting();
+      StoreScanner storeScanner = (StoreScanner) scanner.storeHeap.getCurrentForTesting();
       for (KeyValueScanner kvs : storeScanner.getAllScannersForTesting()) {
         if (kvs instanceof StoreFileScanner) {
           StoreFileScanner sfScanner = (StoreFileScanner) kvs;

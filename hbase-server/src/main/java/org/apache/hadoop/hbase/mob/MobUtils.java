@@ -56,9 +56,9 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -540,8 +540,8 @@ public final class MobUtils {
       Compression.Algorithm compression, CacheConfig cacheConfig, Encryption.Context cryptoContext,
       boolean isCompaction) throws IOException {
     return createWriter(conf, fs, family, new Path(basePath, mobFileName.getFileName()),
-      maxKeyCount, compression, cacheConfig, cryptoContext, HStore.getChecksumType(conf),
-      HStore.getBytesPerChecksum(conf), family.getBlocksize(), BloomType.NONE, isCompaction);
+      maxKeyCount, compression, cacheConfig, cryptoContext, StoreUtils.getChecksumType(conf),
+      StoreUtils.getBytesPerChecksum(conf), family.getBlocksize(), BloomType.NONE, isCompaction);
   }
 
   /**

@@ -120,7 +120,6 @@ import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.LeaseManager.Lease;
 import org.apache.hadoop.hbase.regionserver.LeaseManager.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
@@ -1003,8 +1002,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         Arrays.sort(mArray, (v1, v2) -> Row.COMPARATOR.compare(v1, v2));
       }
 
-      OperationStatus[] codes = region.batchMutate(mArray, atomic, HConstants.NO_NONCE,
-        HConstants.NO_NONCE);
+      OperationStatus[] codes = region.batchMutate(mArray, atomic);
 
       // When atomic is true, it indicates that the mutateRow API or the batch API with
       // RowMutations is called. In this case, we need to merge the results of the

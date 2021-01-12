@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -37,15 +36,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class ReversedRegionScannerImpl extends RegionScannerImpl {
 
-  /**
-   * @param scan
-   * @param additionalScanners
-   * @param region
-   * @throws IOException
-   */
-  ReversedRegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
-      throws IOException {
-    region.super(scan, additionalScanners, region);
+  ReversedRegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region,
+    long nonceGroup, long nonce) throws IOException {
+    super(scan, additionalScanners, region, nonceGroup, nonce);
   }
 
   @Override

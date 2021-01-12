@@ -59,7 +59,7 @@ RUN mkdir -p /opt/maven \
 
 # Install Apache Yetus
 ENV YETUS_VERSION 0.12.0
-RUN curl "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz" | \
+RUN curl -L "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=/yetus/${YETUS_VERSION}/apache-yetus-${YETUS_VERSION}-bin.tar.gz" | \
         tar xvz -C /opt
 ENV YETUS_HOME /opt/apache-yetus-${YETUS_VERSION}
 

@@ -26,6 +26,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,7 +44,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -137,8 +137,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.regionserver.HRegion.MutationBatchOperation;
-import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.Region.RowLock;
 import org.apache.hadoop.hbase.regionserver.TestHStore.FaultyFileSystem;
@@ -1679,9 +1677,7 @@ public class TestHRegion {
     long syncs = prepareRegionForBachPut(puts, source, false);
 
     // 1. Straight forward case, should succeed
-    MutationBatchOperation batchOp = new MutationBatchOperation(region, puts, true,
-        HConstants.NO_NONCE, HConstants.NO_NONCE);
-    OperationStatus[] codes = this.region.batchMutate(batchOp);
+    OperationStatus[] codes = this.region.batchMutate(puts, true);
     assertEquals(10, codes.length);
     for (int i = 0; i < 10; i++) {
       assertEquals(OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
@@ -1695,15 +1691,11 @@ public class TestHRegion {
     MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(CONF);
     final AtomicReference<IOException> retFromThread = new AtomicReference<>();
     final CountDownLatch finishedPuts = new CountDownLatch(1);
-    final MutationBatchOperation finalBatchOp = new MutationBatchOperation(region, puts, true,
-        HConstants
-        .NO_NONCE,
-        HConstants.NO_NONCE);
     TestThread putter = new TestThread(ctx) {
       @Override
       public void doWork() throws IOException {
         try {
-          region.batchMutate(finalBatchOp);
+          region.batchMutate(puts, true);
         } catch (IOException ioe) {
           LOG.error("test failed!", ioe);
           retFromThread.set(ioe);
@@ -1730,10 +1722,8 @@ public class TestHRegion {
     // 3. Exception thrown in validation
     LOG.info("Next a batch put with one invalid family");
     puts[5].addColumn(Bytes.toBytes("BAD_CF"), qual, value);
-    batchOp = new MutationBatchOperation(region, puts, true, HConstants.NO_NONCE,
-        HConstants.NO_NONCE);
     thrown.expect(NoSuchColumnFamilyException.class);
-    this.region.batchMutate(batchOp);
+    this.region.batchMutate(puts, true);
   }
 
   @Test
@@ -3172,23 +3162,19 @@ public class TestHRegion {
     List<Cell> kvs = new ArrayList<>();
     kvs.add(new KeyValue(row1, fam4, null, null));
 
+    byte[] forUnitTestsOnly = Bytes.toBytes("ForUnitTestsOnly");
+
     // testing existing family
-    byte[] family = fam2;
     NavigableMap<byte[], List<Cell>> deleteMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    deleteMap.put(family, kvs);
-    region.delete(deleteMap, Durability.SYNC_WAL);
+    deleteMap.put(fam2, kvs);
+    region.delete(new Delete(forUnitTestsOnly, HConstants.LATEST_TIMESTAMP, deleteMap));
 
     // testing non existing family
-    boolean ok = false;
-    family = fam4;
-    try {
-      deleteMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      deleteMap.put(family, kvs);
-      region.delete(deleteMap, Durability.SYNC_WAL);
-    } catch (Exception e) {
-      ok = true;
-    }
-    assertTrue("Family " + new String(family, StandardCharsets.UTF_8) + " does exist", ok);
+    NavigableMap<byte[], List<Cell>> deleteMap2 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    deleteMap2.put(fam4, kvs);
+    assertThrows("Family " + Bytes.toString(fam4) + " does exist",
+      NoSuchColumnFamilyException.class,
+      () -> region.delete(new Delete(forUnitTestsOnly, HConstants.LATEST_TIMESTAMP, deleteMap2)));
   }
 
   @Test
@@ -3549,6 +3535,8 @@ public class TestHRegion {
     byte[] col2 = Bytes.toBytes("col2");
     byte[] col3 = Bytes.toBytes("col3");
 
+    byte[] forUnitTestsOnly = Bytes.toBytes("ForUnitTestsOnly");
+
     // Setting up region
     this.region = initHRegion(tableName, method, CONF, fam1);
     // Building checkerList
@@ -3559,12 +3547,12 @@ public class TestHRegion {
 
     NavigableMap<byte[], List<Cell>> deleteMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     deleteMap.put(fam1, kvs);
-    region.delete(deleteMap, Durability.SYNC_WAL);
+    region.delete(new Delete(forUnitTestsOnly, HConstants.LATEST_TIMESTAMP, deleteMap));
 
     // extract the key values out the memstore:
     // This is kinda hacky, but better than nothing...
     long now = System.currentTimeMillis();
-    AbstractMemStore memstore = (AbstractMemStore)region.getStore(fam1).memstore;
+    AbstractMemStore memstore = (AbstractMemStore) region.getStore(fam1).memstore;
     Cell firstCell = memstore.getActive().first();
     assertTrue(firstCell.getTimestamp() <= now);
     now = firstCell.getTimestamp();
@@ -3779,7 +3767,7 @@ public class TestHRegion {
     region.put(put);
 
     Scan scan = null;
-    HRegion.RegionScannerImpl is = null;
+    RegionScannerImpl is = null;
 
     // Testing to see how many scanners that is produced by getScanner,
     // starting
@@ -7657,7 +7645,7 @@ public class TestHRegion {
         LOG.warn("hbase.hstore.compaction.complete is set to false");
         List<HStoreFile> sfs = new ArrayList<>(newFiles.size());
         final boolean evictOnClose =
-            cacheConf != null? cacheConf.shouldEvictOnClose(): true;
+            getCacheConfig() != null? getCacheConfig().shouldEvictOnClose(): true;
         for (Path newFile : newFiles) {
           // Create storefile around what we wrote with a reader on it.
           HStoreFile sf = createStoreFileAndReader(newFile);

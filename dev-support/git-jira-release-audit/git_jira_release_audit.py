@@ -122,16 +122,21 @@ class _DB:
         """Commit any pending changes to the database."""
         self.conn.commit()
 
-    def apply_git_tag(self, branch, git_sha, git_tag):
+    def apply_git_tag(self, branch, git_tag, git_shas):
         """Annotate a commit in the commits database as being a part of the specified release.
 
         Args:
             branch (str): The name of the git branch from which the commit originates.
-            git_sha (str): The commit's SHA.
             git_tag (str): The first release tag following the commit.
+            git_shas: The commits' SHAs.
         """
-        self.conn.execute("UPDATE git_commits SET git_tag = ? WHERE branch = ? AND git_sha = ?",
-                          (git_tag, branch, git_sha))
+        self.conn.execute(
+            (
+                f"UPDATE git_commits SET git_tag = ?"
+                f"  WHERE branch = ?"
+                f"    AND git_sha in ({','.join('?' for _ in git_shas)})"
+            ),
+            [git_tag, branch] + git_shas)
 
     def apply_fix_version(self, jira_id, fix_version):
         """Annotate a Jira issue in the jira database as being part of the specified release
@@ -327,12 +332,7 @@ class _RepoReader:
         return None
 
     def _set_release_tag(self, branch, tag, shas):
-        cnt = 0
-        for sha in shas:
-            self._db.apply_git_tag(branch, sha, tag)
-            cnt += 1
-            if cnt % 50 == 0:
-                self._db.flush_commits()
+        self._db.apply_git_tag(branch, tag, shas)
         self._db.flush_commits()
 
     def _resolve_ambiguity(self, commit):

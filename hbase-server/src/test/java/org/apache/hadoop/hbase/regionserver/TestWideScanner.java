@@ -157,7 +157,7 @@ public class TestWideScanner {
 
         // trigger ChangedReadersObservers
         Iterator<KeyValueScanner> scanners =
-          ((HRegion.RegionScannerImpl) s).storeHeap.getHeap().iterator();
+          ((RegionScannerImpl) s).storeHeap.getHeap().iterator();
         while (scanners.hasNext()) {
           StoreScanner ss = (StoreScanner) scanners.next();
           ss.updateReaders(Collections.emptyList(), Collections.emptyList());
