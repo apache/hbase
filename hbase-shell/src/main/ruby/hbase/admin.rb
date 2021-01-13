@@ -1414,7 +1414,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # modify a namespace
     def alter_namespace(namespace_name, *args)
-      # Fail if table name is not a string
+      # Fail if namespace name is not a string
       raise(ArgumentError, 'Namespace name must be of type String') unless namespace_name.is_a?(String)
 
       nsd = @admin.getNamespaceDescriptor(namespace_name)
