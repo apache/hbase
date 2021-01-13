@@ -122,7 +122,10 @@ YETUS_ARGS+=("--whitespace-tabs-ignore-list=.*/generated/.*")
 YETUS_ARGS+=("--tests-filter=${TESTS_FILTER}")
 YETUS_ARGS+=("--personality=${SOURCEDIR}/dev-support/hbase-personality.sh")
 YETUS_ARGS+=("--quick-hadoopcheck")
-YETUS_ARGS+=("--skip-errorprone")
+if [[ "${SKIP_ERRORPRONE}" = "true" ]]; then
+  # skip error prone
+  YETUS_ARGS+=("--skip-errorprone")
+fi
 # effectively treat dev-support as a custom maven module
 YETUS_ARGS+=("--skip-dirs=dev-support")
 # For testing with specific hadoop version. Activates corresponding profile in maven runs.
