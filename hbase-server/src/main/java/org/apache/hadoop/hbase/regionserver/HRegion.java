@@ -23,8 +23,6 @@ import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.context.Scope;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
