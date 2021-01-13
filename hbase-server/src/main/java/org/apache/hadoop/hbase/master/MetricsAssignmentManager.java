@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.MetricsMaster.convertToProcedureMetrics;
+
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
