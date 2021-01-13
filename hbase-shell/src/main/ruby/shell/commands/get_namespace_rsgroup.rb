@@ -31,7 +31,9 @@ EOF
 
       def command(namespace_name)
         group_name = admin.get_namespace_rsgroup(namespace_name)
-        formatter.row([group_name])
+        unless group_name.nil?
+          formatter.row([group_name])
+        end
         formatter.footer(1)
       end
     end
