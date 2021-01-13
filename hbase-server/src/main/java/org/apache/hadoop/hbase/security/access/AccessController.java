@@ -1852,14 +1852,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     scannerOwners.remove(s);
   }
 
-  @Override
-  @Deprecated // Removed in later versions by HBASE-25277
-  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
-    return hasMore;
-  }
-
   /**
    * Verify, when servicing an RPC, that the caller is the scanner owner.
    * If so, we assume that access control is correctly enforced based on
