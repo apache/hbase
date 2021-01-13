@@ -35,6 +35,8 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25329](https://issues.apache.org/jira/browse/HBASE-25329) | Dump region hashes in logs for the regions that are stuck in transition for more than a configured amount of time |  Minor | . |
+| [HBASE-25476](https://issues.apache.org/jira/browse/HBASE-25476) | Enable error prone check in pre commit |  Major | build |
 | [HBASE-25211](https://issues.apache.org/jira/browse/HBASE-25211) | Rack awareness in region\_mover |  Major | . |
 | [HBASE-25483](https://issues.apache.org/jira/browse/HBASE-25483) | set the loadMeta log level to debug. |  Major | MTTR, Region Assignment |
 | [HBASE-25435](https://issues.apache.org/jira/browse/HBASE-25435) | Slow metric value can be configured |  Minor | metrics |
@@ -49,6 +51,8 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25504](https://issues.apache.org/jira/browse/HBASE-25504) | [branch-2.4] Restore method removed by HBASE-25277 to LP(CONFIG) coprocessors |  Major | compatibility, Coprocessors, security |
+| [HBASE-25503](https://issues.apache.org/jira/browse/HBASE-25503) | HBase code download is failing on windows with invalid path error |  Major | . |
 | [HBASE-24813](https://issues.apache.org/jira/browse/HBASE-24813) | ReplicationSource should clear buffer usage on ReplicationSourceManager upon termination |  Major | Replication |
 | [HBASE-25459](https://issues.apache.org/jira/browse/HBASE-25459) | WAL can't be cleaned in some scenes |  Major | . |
 | [HBASE-25434](https://issues.apache.org/jira/browse/HBASE-25434) | SlowDelete & SlowPut metric value should use updateDelete & updatePut |  Major | regionserver |
@@ -74,6 +78,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25502](https://issues.apache.org/jira/browse/HBASE-25502) | IntegrationTestMTTR fails with TableNotFoundException |  Major | integration tests |
 | [HBASE-25334](https://issues.apache.org/jira/browse/HBASE-25334) | TestRSGroupsFallback.testFallback is flaky |  Major | . |
 | [HBASE-25370](https://issues.apache.org/jira/browse/HBASE-25370) | Fix flaky test TestClassFinder#testClassFinderDefaultsToOwnPackage |  Major | test |
 
