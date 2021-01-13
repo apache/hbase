@@ -20,6 +20,54 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.1 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-25333](https://issues.apache.org/jira/browse/HBASE-25333) | *Major* | **Add maven enforcer rule to ban VisibleForTesting imports**
+
+Ban the imports of guava VisiableForTesting, which means you should not use this annotation in HBase any more.
+For IA.Public and IA.LimitedPrivate classes, typically you should not expose any test related fields/methods there, and if you want to hide something, use IA.Private on the specific fields/methods.
+For IA.Private classes, if you want to expose something only for tests, use the RestrictedApi annotation from error prone, where it could cause a compilation error if someone break the rule in the future.
+
+
+---
+
+* [HBASE-25441](https://issues.apache.org/jira/browse/HBASE-25441) | *Critical* | **add security check for some APIs in RSRpcServices**
+
+RsRpcServices APIs that can be accessed only through Admin rights:
+- stopServer
+- updateFavoredNodes
+- updateConfiguration
+- clearRegionBlockCache
+- clearSlowLogsResponses
+
+
+---
+
+* [HBASE-25432](https://issues.apache.org/jira/browse/HBASE-25432) | *Blocker* | **we should add security checks for setTableStateInMeta and fixMeta**
+
+setTableStateInMeta and fixMeta can be accessed only through Admin rights
+
+
+---
+
+* [HBASE-25318](https://issues.apache.org/jira/browse/HBASE-25318) | *Minor* | **Configure where IntegrationTestImportTsv generates HFiles**
+
+Added IntegrationTestImportTsv.generatedHFileFolder configuration property to override the default location in IntegrationTestImportTsv. Useful for running the integration test when HDFS Transparent Encryption is enabled.
+
+
+---
+
+* [HBASE-25456](https://issues.apache.org/jira/browse/HBASE-25456) | *Critical* | **setRegionStateInMeta need security check**
+
+setRegionStateInMeta can be accessed only through Admin rights
+
+
+
 # HBASE  2.4.0 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
