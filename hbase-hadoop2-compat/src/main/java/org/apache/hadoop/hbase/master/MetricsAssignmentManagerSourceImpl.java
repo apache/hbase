@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.master;
 
-import java.util.Set;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.OperationMetrics;
 import org.apache.hadoop.metrics2.MetricHistogram;
@@ -120,12 +118,6 @@ public class MetricsAssignmentManagerSourceImpl
   @Override
   public void updateUnknownServerOpenRegions(int unknownRegions) {
     unknownServerOpenRegions.set(unknownRegions);
-  }
-
-  @Override
-  public void updateRITHashesAndStates(Set<String> ritHashesAndStates) {
-    metricsRegistry.tag(RIT_HASHES_AND_STATES_NAME, "",
-      StringUtils.join(ritHashesAndStates, ";"), true);
   }
 
   @Override

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.master;
 
-import java.util.Set;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.hadoop.hbase.metrics.OperationMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,7 +52,6 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String RIT_DURATION_NAME = "ritDuration";
   String DEAD_SERVER_OPEN_REGIONS = "deadServerOpenRegions";
   String UNKNOWN_SERVER_OPEN_REGIONS = "unknownServerOpenRegions";
-  String RIT_HASHES_AND_STATES_NAME = "ritHashesAndStates";
 
   String RIT_COUNT_DESC = "Current number of Regions In Transition (Gauge).";
   String RIT_COUNT_OVER_THRESHOLD_DESC =
@@ -99,8 +97,6 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   void updateDeadServerOpenRegions(int deadRegions);
 
   void updateUnknownServerOpenRegions(int unknownRegions);
-
-  void updateRITHashesAndStates(Set<String> ritHashesAndStates);
 
   /**
    * TODO: Remove. This may not be needed now as assign and unassign counts are tracked separately

@@ -78,7 +78,7 @@ public class TestAssignmentManagerMetrics {
     conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
 
     // set RIT stuck warning threshold to a small value
-    conf.setInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 1);
+    conf.setInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 20);
 
     // set msgInterval to 1 second
     conf.setInt("hbase.regionserver.msginterval", MSG_INTERVAL);
@@ -131,13 +131,6 @@ public class TestAssignmentManagerMetrics {
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_NAME, 0, amSource);
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 0,
           amSource);
-      METRICS_HELPER.assertTag(MetricsAssignmentManagerSource.RIT_HASHES_AND_STATES_NAME,
-        "", amSource);
-
-      // the region that should be in "FAILED_OPEN" state after altering table with non-existing
-      // coprocessor
-      String ritHashAndState = TEST_UTIL.getHBaseCluster().getRegions(TABLENAME).get(0)
-        .getRegionInfo().getRegionNameAsString() + ":" + "FAILED_OPEN";
 
       // alter table with a non-existing coprocessor
 
@@ -170,8 +163,6 @@ public class TestAssignmentManagerMetrics {
         amSource);
       METRICS_HELPER.assertCounter(MetricsAssignmentManagerSource.ASSIGN_METRIC_PREFIX
         + "SubmittedCount", 3, amSource);
-      METRICS_HELPER.assertTag(MetricsAssignmentManagerSource.RIT_HASHES_AND_STATES_NAME,
-        ritHashAndState, amSource);
     }
   }
 }

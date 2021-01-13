@@ -1355,7 +1355,6 @@ public class AssignmentManager {
     private long oldestRITTime = 0;
     private int totalRITsTwiceThreshold = 0;
     private int totalRITs = 0;
-    private Set<String> oldestRITHashesAndStates = new HashSet<>();
 
     public RegionInTransitionStat(final Configuration conf) {
       this.ritThreshold =
@@ -1381,10 +1380,6 @@ public class AssignmentManager {
     public int getTotalRITsOverThreshold() {
       Map<String, RegionState> m = this.ritsOverThreshold;
       return m != null ? m.size() : 0;
-    }
-
-    public Set<String> getOldestRITHashesAndStates() {
-      return oldestRITHashesAndStates;
     }
 
     public boolean hasRegionsTwiceOverThreshold() {
@@ -1421,12 +1416,18 @@ public class AssignmentManager {
     protected void update(final AssignmentManager am) {
       final RegionStates regionStates = am.getRegionStates();
       this.statTimestamp = EnvironmentEdgeManager.currentTime();
-      update(regionStates.getRegionsInTransitionOrderedByDuration(), statTimestamp);
+      update(regionStates.getRegionsStateInTransition(), statTimestamp);
       update(regionStates.getRegionFailedOpen(), statTimestamp);
+
+      if (LOG.isDebugEnabled() && ritsOverThreshold != null && !ritsOverThreshold.isEmpty()) {
+        LOG.debug("RITs over threshold: {}",
+          ritsOverThreshold.entrySet().stream()
+            .map(e -> e.getKey() + ":" + e.getValue().getState().name())
+            .collect(Collectors.joining("\n")));
+      }
     }
 
     private void update(final Collection<RegionState> regions, final long currentTime) {
-      int counter = 0;
       for (RegionState state: regions) {
         totalRITs++;
         final long ritTime = currentTime - state.getStamp();
@@ -1440,12 +1441,6 @@ public class AssignmentManager {
         if (oldestRITTime < ritTime) {
           oldestRITTime = ritTime;
         }
-        if (counter < 500) { // Record 500 oldest RITs
-          oldestRITHashesAndStates.add(
-            state.getRegion().getRegionNameAsString() + ":" + state.getState().name()
-          );
-        }
-        counter += 1;
       }
     }
   }
@@ -1454,10 +1449,6 @@ public class AssignmentManager {
     metrics.updateRITOldestAge(ritStat.getOldestRITTime());
     metrics.updateRITCount(ritStat.getTotalRITs());
     metrics.updateRITCountOverThreshold(ritStat.getTotalRITsOverThreshold());
-    if ((EnvironmentEdgeManager.currentTime() - ritStat.ritThreshold / 2) >= ritStat.statTimestamp){
-      LOG.debug("Oldest RIT hashes and states: "+ritStat.getOldestRITHashesAndStates().toString());
-      metrics.updateRITHashesAndStates(ritStat.getOldestRITHashesAndStates());
-    }
   }
 
   private void updateDeadServerRegionMetrics(int deadRegions, int unknownRegions) {
