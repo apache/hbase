@@ -149,6 +149,8 @@ public class Client {
    *
    * @throws ClientTrustStoreInitializationException if the trust store file can not be loaded
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "OBL_UNSATISFIED_OBLIGATION",
+          justification = "Correct use of try-with-resource")
   public Client(Cluster cluster, String trustStorePath,
     Optional<String> trustStorePassword, Optional<String> trustStoreType) {
 
