@@ -232,8 +232,7 @@ public class IntegrationTestMTTR {
     }
 
     // Create the table.  If this fails then fail everything.
-    TableDescriptor tableDescriptor = util.getAdmin().getDescriptor(tableName);
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
     // Make the max file size huge so that splits don't happen during the test.
     builder.setMaxFileSize(Long.MAX_VALUE);
