@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -360,4 +361,11 @@ public interface TableDescriptor {
     }
     return !enabled;
   }
+
+  /**
+   * Get the region server group this table belongs to. The regions of this table will be placed
+   * only on the region servers within this group. If not present, will be placed on
+   * {@link org.apache.hadoop.hbase.rsgroup.RSGroupInfo#DEFAULT_GROUP}.
+   */
+  Optional<String> getRegionServerGroup();
 }
