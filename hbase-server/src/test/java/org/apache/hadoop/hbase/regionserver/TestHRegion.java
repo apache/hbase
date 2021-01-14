@@ -7638,7 +7638,7 @@ public class TestHRegion {
         LOG.warn("hbase.hstore.compaction.complete is set to false");
         List<HStoreFile> sfs = new ArrayList<>(newFiles.size());
         final boolean evictOnClose =
-            cacheConf != null? cacheConf.shouldEvictOnClose(): true;
+            getCacheConfig() != null? getCacheConfig().shouldEvictOnClose(): true;
         for (Path newFile : newFiles) {
           // Create storefile around what we wrote with a reader on it.
           HStoreFile sf = createStoreFileAndReader(newFile);
