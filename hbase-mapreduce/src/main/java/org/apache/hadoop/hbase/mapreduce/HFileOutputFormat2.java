@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -386,16 +387,15 @@ public class HFileOutputFormat2
         DataBlockEncoding encoding = overriddenEncoding;
         encoding = encoding == null ? datablockEncodingMap.get(tableAndFamily) : encoding;
         encoding = encoding == null ? DataBlockEncoding.NONE : encoding;
-        HFileContextBuilder contextBuilder = new HFileContextBuilder()
-          .withCompression(compression).withChecksumType(HStore.getChecksumType(conf))
-          .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(blockSize)
+        HFileContextBuilder contextBuilder = new HFileContextBuilder().withCompression(compression)
+          .withDataBlockEncoding(encoding).withChecksumType(StoreUtils.getChecksumType(conf))
+          .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf)).withBlockSize(blockSize)
           .withColumnFamily(family).withTableName(tableName);
 
         if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
           contextBuilder.withIncludesTags(true);
         }
 
-        contextBuilder.withDataBlockEncoding(encoding);
         HFileContext hFileContext = contextBuilder.build();
         if (null == favoredNodes) {
           wl.writer = new StoreFileWriter.Builder(conf, CacheConfig.DISABLED, fs)

@@ -64,9 +64,9 @@ import org.apache.hadoop.hbase.mob.compactions.MobCompactor;
 import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionPartitionId;
 import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -581,7 +581,7 @@ public final class MobUtils {
     return createWriter(conf, fs, family,
       new Path(basePath, UUID.randomUUID().toString().replaceAll("-", "")), maxKeyCount,
       family.getCompactionCompressionType(), cacheConfig, cryptoContext,
-      HStore.getChecksumType(conf), HStore.getBytesPerChecksum(conf), family.getBlocksize(),
+      StoreUtils.getChecksumType(conf), StoreUtils.getBytesPerChecksum(conf), family.getBlocksize(),
       family.getBloomFilterType(), isCompaction);
   }
 
@@ -658,7 +658,7 @@ public final class MobUtils {
       throws IOException {
     return createWriter(conf, fs, family,
       new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, cacheConfig,
-      cryptoContext, HStore.getChecksumType(conf), HStore.getBytesPerChecksum(conf),
+      cryptoContext, StoreUtils.getChecksumType(conf), StoreUtils.getBytesPerChecksum(conf),
       family.getBlocksize(), BloomType.NONE, isCompaction);
   }
 
