@@ -106,16 +106,24 @@ module Hbase
       @shell.command(:create, ns_table_name, 'f')
 
       @shell.command('move_namespaces_rsgroup',
-                     group_name,
-                     [namespace_name])
+                           group_name,
+                           [namespace_name])
       assert_equal(1, @admin.listTablesInRSGroup(group_name).count)
 
       group = @hbase.rsgroup_admin.get_rsgroup(group_name)
       assert_not_nil(group)
       assert_true(@admin.listTablesInRSGroup(group_name).contains(org.apache.hadoop.hbase.TableName.valueOf(ns_table_name)))
 
+      ns_table_name2 = 'test_namespace:test_ns_table2'
+      @shell.command(:create, ns_table_name2, 'f')
+
+      assert_true(@admin.listTablesInRSGroup(group_name).contains(org.apache.hadoop.hbase.TableName.valueOf(ns_table_name2)))
+      assert_equal(2, @admin.listTablesInRSGroup(group_name).count)
+
       @shell.command(:disable, ns_table_name)
       @shell.command(:drop, ns_table_name)
+      @shell.command(:disable, ns_table_name2)
+      @shell.command(:drop, ns_table_name2)
       @shell.command(:drop_namespace, namespace_name)
       remove_rsgroup(group_name)
     end
