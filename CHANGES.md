@@ -20,7 +20,7 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.3.4 - Unreleased (as of 2021-01-12)
+## Release 2.3.4 - Unreleased (as of 2021-01-14)
 
 
 
@@ -35,10 +35,13 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25449](https://issues.apache.org/jira/browse/HBASE-25449) | 'dfs.client.read.shortcircuit' should not be set in hbase-default.xml |  Major | conf |
+| [HBASE-25476](https://issues.apache.org/jira/browse/HBASE-25476) | Enable error prone check in pre commit |  Major | build |
 | [HBASE-25483](https://issues.apache.org/jira/browse/HBASE-25483) | set the loadMeta log level to debug. |  Major | MTTR, Region Assignment |
 | [HBASE-25435](https://issues.apache.org/jira/browse/HBASE-25435) | Slow metric value can be configured |  Minor | metrics |
 | [HBASE-25318](https://issues.apache.org/jira/browse/HBASE-25318) | Configure where IntegrationTestImportTsv generates HFiles |  Minor | integration tests |
 | [HBASE-24850](https://issues.apache.org/jira/browse/HBASE-24850) | CellComparator perf improvement |  Critical | Performance, scan |
+| [HBASE-25425](https://issues.apache.org/jira/browse/HBASE-25425) | Some notes on RawCell |  Trivial | . |
 | [HBASE-25420](https://issues.apache.org/jira/browse/HBASE-25420) | Some minor improvements in rpc implementation |  Minor | rpc |
 | [HBASE-25246](https://issues.apache.org/jira/browse/HBASE-25246) | Backup/Restore hbase cell tags. |  Major | backup&restore |
 | [HBASE-25328](https://issues.apache.org/jira/browse/HBASE-25328) | Add builder method to create Tags. |  Minor | . |
@@ -61,6 +64,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25356](https://issues.apache.org/jira/browse/HBASE-25356) | HBaseAdmin#getRegion() needs to filter out non-regionName and non-encodedRegionName |  Major | shell |
 | [HBASE-25459](https://issues.apache.org/jira/browse/HBASE-25459) | WAL can't be cleaned in some scenes |  Major | . |
 | [HBASE-25434](https://issues.apache.org/jira/browse/HBASE-25434) | SlowDelete & SlowPut metric value should use updateDelete & updatePut |  Major | regionserver |
 | [HBASE-25441](https://issues.apache.org/jira/browse/HBASE-25441) | add security check for some APIs in RSRpcServices |  Critical | . |
@@ -95,6 +99,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25502](https://issues.apache.org/jira/browse/HBASE-25502) | IntegrationTestMTTR fails with TableNotFoundException |  Major | integration tests |
 | [HBASE-25370](https://issues.apache.org/jira/browse/HBASE-25370) | Fix flaky test TestClassFinder#testClassFinderDefaultsToOwnPackage |  Major | test |
 
 
@@ -110,6 +115,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25083](https://issues.apache.org/jira/browse/HBASE-25083) | make sure the next hbase 1.y release has Hadoop 2.10 as a minimum version |  Major | documentation, hadoop2 |
 | [HBASE-25342](https://issues.apache.org/jira/browse/HBASE-25342) | Upgrade error prone to 2.4.0 |  Major | build |
 | [HBASE-25452](https://issues.apache.org/jira/browse/HBASE-25452) | Use MatcherAssert.assertThat instead of org.junit.Assert.assertThat |  Major | test |
 | [HBASE-25400](https://issues.apache.org/jira/browse/HBASE-25400) | [Flakey Tests] branch-2 TestRegionMoveAndAbandon |  Major | . |
