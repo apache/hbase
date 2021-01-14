@@ -106,8 +106,8 @@ module Hbase
       @shell.command(:create, ns_table_name, 'f')
 
       @shell.command('move_namespaces_rsgroup',
-                           group_name,
-                           [namespace_name])
+                     group_name,
+                     [namespace_name])
       assert_equal(1, @admin.listTablesInRSGroup(group_name).count)
 
       group = @hbase.rsgroup_admin.get_rsgroup(group_name)
