@@ -27,6 +27,13 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-25449](https://issues.apache.org/jira/browse/HBASE-25449) | *Major* | **'dfs.client.read.shortcircuit' should not be set in hbase-default.xml**
+
+The presence of HDFS short-circuit read configuration properties in hbase-default.xml inadvertently causes short-circuit reads to not happen inside of RegionServers, despite short-circuit reads being enabled in hdfs-site.xml.
+
+
+---
+
 * [HBASE-25333](https://issues.apache.org/jira/browse/HBASE-25333) | *Major* | **Add maven enforcer rule to ban VisibleForTesting imports**
 
 Ban the imports of guava VisiableForTesting, which means you should not use this annotation in HBase any more.

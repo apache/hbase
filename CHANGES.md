@@ -35,6 +35,8 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25249](https://issues.apache.org/jira/browse/HBASE-25249) | Adding StoreContext |  Major | . |
+| [HBASE-25449](https://issues.apache.org/jira/browse/HBASE-25449) | 'dfs.client.read.shortcircuit' should not be set in hbase-default.xml |  Major | conf |
 | [HBASE-25329](https://issues.apache.org/jira/browse/HBASE-25329) | Dump region hashes in logs for the regions that are stuck in transition for more than a configured amount of time |  Minor | . |
 | [HBASE-25476](https://issues.apache.org/jira/browse/HBASE-25476) | Enable error prone check in pre commit |  Major | build |
 | [HBASE-25211](https://issues.apache.org/jira/browse/HBASE-25211) | Rack awareness in region\_mover |  Major | . |
@@ -42,6 +44,7 @@
 | [HBASE-25435](https://issues.apache.org/jira/browse/HBASE-25435) | Slow metric value can be configured |  Minor | metrics |
 | [HBASE-25318](https://issues.apache.org/jira/browse/HBASE-25318) | Configure where IntegrationTestImportTsv generates HFiles |  Minor | integration tests |
 | [HBASE-24850](https://issues.apache.org/jira/browse/HBASE-24850) | CellComparator perf improvement |  Critical | Performance, scan |
+| [HBASE-25425](https://issues.apache.org/jira/browse/HBASE-25425) | Some notes on RawCell |  Trivial | . |
 | [HBASE-25420](https://issues.apache.org/jira/browse/HBASE-25420) | Some minor improvements in rpc implementation |  Minor | rpc |
 | [HBASE-25246](https://issues.apache.org/jira/browse/HBASE-25246) | Backup/Restore hbase cell tags. |  Major | backup&restore |
 | [HBASE-25328](https://issues.apache.org/jira/browse/HBASE-25328) | Add builder method to create Tags. |  Minor | . |
@@ -51,6 +54,8 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25356](https://issues.apache.org/jira/browse/HBASE-25356) | HBaseAdmin#getRegion() needs to filter out non-regionName and non-encodedRegionName |  Major | shell |
+| [HBASE-25279](https://issues.apache.org/jira/browse/HBASE-25279) | Non-daemon thread in ZKWatcher |  Critical | Zookeeper |
 | [HBASE-25504](https://issues.apache.org/jira/browse/HBASE-25504) | [branch-2.4] Restore method removed by HBASE-25277 to LP(CONFIG) coprocessors |  Major | compatibility, Coprocessors, security |
 | [HBASE-25503](https://issues.apache.org/jira/browse/HBASE-25503) | HBase code download is failing on windows with invalid path error |  Major | . |
 | [HBASE-24813](https://issues.apache.org/jira/browse/HBASE-24813) | ReplicationSource should clear buffer usage on ReplicationSourceManager upon termination |  Major | Replication |
@@ -65,10 +70,10 @@
 | [HBASE-25463](https://issues.apache.org/jira/browse/HBASE-25463) | Fix comment error |  Minor | shell |
 | [HBASE-25457](https://issues.apache.org/jira/browse/HBASE-25457) | Possible race in AsyncConnectionImpl between getChoreService and close |  Major | Client |
 | [HBASE-25456](https://issues.apache.org/jira/browse/HBASE-25456) | setRegionStateInMeta need security check |  Critical | . |
-| [HBASE-25279](https://issues.apache.org/jira/browse/HBASE-25279) | Non-daemon thread in ZKWatcher |  Critical | . |
 | [HBASE-25383](https://issues.apache.org/jira/browse/HBASE-25383) | HBase doesn't update and remove the peer config from hbase.replication.source.custom.walentryfilters if the config is already set on the peer. |  Major | . |
 | [HBASE-25371](https://issues.apache.org/jira/browse/HBASE-25371) | When openRegion fails during initial verification(before initializing and setting seq num), exception is observed during region close. |  Major | Region Assignment |
 | [HBASE-25404](https://issues.apache.org/jira/browse/HBASE-25404) | Procedures table Id under master web UI gets word break to single character |  Minor | UI |
+| [HBASE-25277](https://issues.apache.org/jira/browse/HBASE-25277) | postScannerFilterRow impacts Scan performance a lot in HBase 2.x |  Critical | Coprocessors, scan |
 | [HBASE-25365](https://issues.apache.org/jira/browse/HBASE-25365) | The log in move\_servers\_rsgroup is incorrect |  Minor | . |
 | [HBASE-25372](https://issues.apache.org/jira/browse/HBASE-25372) | Fix typo in ban-jersey section of the enforcer plugin in pom.xml |  Major | build |
 | [HBASE-25361](https://issues.apache.org/jira/browse/HBASE-25361) | [Flakey Tests] branch-2 TestMetaRegionLocationCache.testStandByMetaLocations |  Major | flakies |
@@ -95,6 +100,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-25083](https://issues.apache.org/jira/browse/HBASE-25083) | make sure the next hbase 1.y release has Hadoop 2.10 as a minimum version |  Major | documentation, hadoop2 |
 | [HBASE-25333](https://issues.apache.org/jira/browse/HBASE-25333) | Add maven enforcer rule to ban VisibleForTesting imports |  Major | build, pom |
 | [HBASE-25452](https://issues.apache.org/jira/browse/HBASE-25452) | Use MatcherAssert.assertThat instead of org.junit.Assert.assertThat |  Major | test |
 | [HBASE-25400](https://issues.apache.org/jira/browse/HBASE-25400) | [Flakey Tests] branch-2 TestRegionMoveAndAbandon |  Major | . |
