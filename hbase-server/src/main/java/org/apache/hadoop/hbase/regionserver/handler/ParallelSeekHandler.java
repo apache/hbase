@@ -57,6 +57,7 @@ public class ParallelSeekHandler extends EventHandler {
     } catch (IOException e) {
       LOG.error("", e);
       setErr(e);
+      scanner.close();
     } finally {
       latch.countDown();
     }
