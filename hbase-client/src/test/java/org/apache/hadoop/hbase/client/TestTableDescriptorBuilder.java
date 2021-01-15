@@ -348,11 +348,15 @@ public class TestTableDescriptorBuilder {
         "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
       htd.toStringCustomizedValues());
 
-    htd = TableDescriptorBuilder.newBuilder(htd).setMaxFileSize("10737942528").build();
+    htd = TableDescriptorBuilder.newBuilder(htd)
+      .setMaxFileSize("10737942528")
+      .setMemStoreFlushSize("256MB")
+      .build();
     assertEquals(
       "'testStringCustomizedValues', " +
         "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL', "
-        + "MAX_FILESIZE => '10737942528 B (10GB 512KB)'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
+        + "MAX_FILESIZE => '10737942528 B (10GB 512KB)', "
+        + "MEMSTORE_FLUSHSIZE => '268435456 B (256MB)'}}, {NAME => 'cf', BLOCKSIZE => '1000'}",
       htd.toStringCustomizedValues());
   }
 
