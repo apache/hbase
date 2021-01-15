@@ -251,6 +251,7 @@ public class TableDescriptorBuilder {
   public static PrettyPrinter.Unit getUnit(String key) {
     switch (key) {
       case MAX_FILESIZE:
+      case MEMSTORE_FLUSHSIZE:
         return PrettyPrinter.Unit.BYTE;
       default:
         return PrettyPrinter.Unit.NONE;
