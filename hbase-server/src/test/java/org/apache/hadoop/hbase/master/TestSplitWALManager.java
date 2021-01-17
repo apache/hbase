@@ -251,6 +251,7 @@ public class TestSplitWALManager {
   @Test
   public void testSplitLogsWithDifferentWalAndRootFS() throws Exception{
     HBaseTestingUtility testUtil2 = new HBaseTestingUtility();
+    testUtil2.getConfiguration().setBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, false);
     testUtil2.getConfiguration().setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 1);
     Path dir = TEST_UTIL.getDataTestDirOnTestFS("testWalDir");
     testUtil2.getConfiguration().set(CommonFSUtils.HBASE_WAL_DIR, dir.toString());
