@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
@@ -232,8 +233,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     }
     if (t != null) {
       this.isError = true;
-      span.recordException(t);
-      span.setStatus(StatusCode.ERROR);
+      TraceUtil.setError(span, t);
     } else {
       span.setStatus(StatusCode.OK);
     }
