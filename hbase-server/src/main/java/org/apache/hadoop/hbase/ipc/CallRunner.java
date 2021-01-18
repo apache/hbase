@@ -135,12 +135,10 @@ public class CallRunner {
         resultPair = this.rpcServer.call(call, this.status);
       } catch (TimeoutIOException e){
         RpcServer.LOG.warn("Can not complete this request in time, drop it: " + call);
-        span.recordException(e);
-        span.setStatus(StatusCode.ERROR);
+        TraceUtil.setError(span, e);
         return;
       } catch (Throwable e) {
-        span.recordException(e);
-        span.setStatus(StatusCode.ERROR);
+        TraceUtil.setError(span, e);
         if (e instanceof ServerNotRunningYetException) {
           // If ServerNotRunningYetException, don't spew stack trace.
           if (RpcServer.LOG.isTraceEnabled()) {
