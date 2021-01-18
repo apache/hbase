@@ -137,7 +137,7 @@ public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
 
     Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
         (Map) mockClusterServersWithTables(clusterState);
-    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
+    List<RegionPlan> plans = loadBalancer.clusterBalancePlans(LoadOfAllTable);
     Set<RegionInfo> regionsMoveFromServerA = new HashSet<>();
     Set<ServerName> targetServers = new HashSet<>();
     for(RegionPlan plan : plans) {

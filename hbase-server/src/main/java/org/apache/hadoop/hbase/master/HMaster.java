@@ -98,7 +98,6 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
-import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
@@ -185,6 +184,7 @@ import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -1404,6 +1404,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       cleanerPool.shutdownNow();
       cleanerPool = null;
     }
+    if (this.balancer != null) {
+      this.balancer.stop("normal stop");
+    }
 
     LOG.debug("Stopping service threads");
 
@@ -1661,31 +1664,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       return false;
     }
 
-    synchronized (this.balancer) {
-        // Only allow one balance run at at time.
-      if (this.assignmentManager.hasRegionsInTransition()) {
-        List<RegionStateNode> regionsInTransition = assignmentManager.getRegionsInTransition();
-        // if hbase:meta region is in transition, result of assignment cannot be recorded
-        // ignore the force flag in that case
-        boolean metaInTransition = assignmentManager.isMetaRegionInTransition();
-        String prefix = force && !metaInTransition ? "R" : "Not r";
-        List<RegionStateNode> toPrint = regionsInTransition;
-        int max = 5;
-        boolean truncated = false;
-        if (regionsInTransition.size() > max) {
-          toPrint = regionsInTransition.subList(0, max);
-          truncated = true;
-        }
-        LOG.info(prefix + " not running balancer because " + regionsInTransition.size() +
-          " region(s) in transition: " + toPrint + (truncated? "(truncated list)": ""));
-        if (!force || metaInTransition) return false;
-      }
-      if (this.serverManager.areDeadServersInProgress()) {
-        LOG.info("Not running balancer because processing dead regionserver(s): " +
-          this.serverManager.getDeadServers());
-        return false;
-      }
-
+    try {
       if (this.cpHost != null) {
         try {
           if (this.cpHost.preBalance()) {
@@ -1697,37 +1676,26 @@ public class HMaster extends HRegionServer implements MasterServices {
           return false;
         }
       }
-
-      Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-        this.assignmentManager.getRegionStates()
-          .getAssignmentsForBalancer(tableStateManager, this.serverManager.getOnlineServersList());
-      for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
-        serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
+      List<RegionPlan> sucPlans = Collections.emptyList();
+      try {
+        //Give the balancer the current cluster state.
+        this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
+        sucPlans = balancer.balance(force).get();
+      } catch (InterruptedException | ExecutionException e) {
+        LOG.error("Balance groups error", e);
       }
-
-      //Give the balancer the current cluster state.
-      this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
-
-      List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
-
-      if (skipRegionManagementAction("balancer")) {
-        // make one last check that the cluster isn't shutting down before proceeding.
-        return false;
-      }
-
-      List<RegionPlan> sucRPs = executeRegionPlansWithThrottling(plans);
-
       if (this.cpHost != null) {
         try {
-          this.cpHost.postBalance(sucRPs);
+          this.cpHost.postBalance(sucPlans);
         } catch (IOException ioe) {
           // balancing already succeeded so don't change the result
           LOG.error("Error invoking master coprocessor postBalance()", ioe);
         }
       }
+
+    } catch (IOException e) {
+      LOG.error("Balance cluster error", e);
     }
-    // If LoadBalancer did not generate any plans, it means the cluster is already balanced.
-    // Return true indicating a success.
     return true;
   }
 

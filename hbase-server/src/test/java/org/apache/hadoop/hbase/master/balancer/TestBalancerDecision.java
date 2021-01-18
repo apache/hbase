@@ -69,7 +69,7 @@ public class TestBalancerDecision extends BalancerTestBase {
           Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
           Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
             (Map) mockClusterServersWithTables(servers);
-          List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
+          List<RegionPlan> plans = loadBalancer.clusterBalancePlans(LoadOfAllTable);
           boolean emptyPlans = plans == null || plans.isEmpty();
           Assert.assertTrue(emptyPlans || needsBalanceIdleRegion(mockCluster));
         }

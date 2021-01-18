@@ -562,7 +562,7 @@ public class BalancerTestBase {
     // Run the balancer.
     Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
         (Map) mockClusterServersWithTables(serverMap);
-    List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
+    List<RegionPlan> plans = loadBalancer.clusterBalancePlans(LoadOfAllTable);
     assertNotNull("Initial cluster balance should produce plans.", plans);
 
     // Check to see that this actually got to a stable place.
@@ -576,7 +576,7 @@ public class BalancerTestBase {
       if (assertFullyBalanced) {
         assertClusterAsBalanced(balancedCluster);
         LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
-        List<RegionPlan> secondPlans = loadBalancer.balanceCluster(LoadOfAllTable);
+        List<RegionPlan> secondPlans = loadBalancer.clusterBalancePlans(LoadOfAllTable);
         assertNull("Given a requirement to be fully balanced, second attempt at plans should " +
             "produce none.", secondPlans);
       }
