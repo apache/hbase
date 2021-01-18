@@ -424,8 +424,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
               onCallFinished(call, hrc, addr, callback);
             } finally {
               if (hrc.failed()) {
-                span.setStatus(StatusCode.ERROR);
-                span.recordException(hrc.getFailed());
+                TraceUtil.setError(span, hrc.getFailed());
               } else {
                 span.setStatus(StatusCode.OK);
               }
