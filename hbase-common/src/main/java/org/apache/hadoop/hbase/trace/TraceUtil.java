@@ -26,6 +26,7 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.attributes.SemanticAttributes;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -57,6 +58,9 @@ public final class TraceUtil {
   public static final AttributeKey<String> REMOTE_HOST_KEY = SemanticAttributes.NET_PEER_NAME;
 
   public static final AttributeKey<Long> REMOTE_PORT_KEY = SemanticAttributes.NET_PEER_PORT;
+
+  public static final AttributeKey<Boolean> ROW_LOCK_READ_LOCK_KEY =
+    AttributeKey.booleanKey("db.hbase.rowlock.readlock");
 
   private TraceUtil() {
   }
@@ -139,14 +143,18 @@ public final class TraceUtil {
     }
   }
 
+  public static void setError(Span span, Throwable error) {
+    span.recordException(error);
+    span.setStatus(StatusCode.ERROR);
+  }
+
   /**
    * Finish the {@code span} when the given {@code future} is completed.
    */
   private static void endSpan(CompletableFuture<?> future, Span span) {
     FutureUtils.addListener(future, (resp, error) -> {
       if (error != null) {
-        span.recordException(error);
-        span.setStatus(StatusCode.ERROR);
+        setError(span, error);
       } else {
         span.setStatus(StatusCode.OK);
       }
@@ -164,8 +172,32 @@ public final class TraceUtil {
       action.run();
       span.setStatus(StatusCode.OK);
     } catch (Throwable e) {
-      span.recordException(e);
-      span.setStatus(StatusCode.ERROR);
+      setError(span, e);
+      throw e;
+    } finally {
+      span.end();
+    }
+  }
+
+  @FunctionalInterface
+  public interface IOExceptionCallable<V> {
+    V call() throws IOException;
+  }
+
+  public static <T> T trace(IOExceptionCallable<T> callable, String spanName) throws IOException {
+    return trace(callable, () -> createSpan(spanName));
+  }
+
+  public static <T> T trace(IOExceptionCallable<T> callable, Supplier<Span> creator)
+    throws IOException {
+    Span span = creator.get();
+    try (Scope scope = span.makeCurrent()) {
+      T ret = callable.call();
+      span.setStatus(StatusCode.OK);
+      return ret;
+    } catch (Throwable e) {
+      setError(span, e);
+      throw e;
     } finally {
       span.end();
     }
