@@ -372,7 +372,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * should always approach the optimal state given enough steps.
    */
   @Override
-  public synchronized List<RegionPlan> balanceTable(TableName tableName, Map<ServerName,
+  public synchronized List<RegionPlan> balanceTablePlans(TableName tableName, Map<ServerName,
     List<RegionInfo>> loadOfOneTable) {
     List<RegionPlan> plans = balanceMasterRegions(loadOfOneTable);
     if (plans != null || loadOfOneTable == null || loadOfOneTable.size() <= 1) {

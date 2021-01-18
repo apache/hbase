@@ -37,7 +37,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * RegionServers.
  *
  * <p>Cluster-wide load balancing will occur only when there are no regions in
- * transition and according to a fixed period of a time using {@link #balanceCluster(Map)}.
+ * transition and according to a fixed period of a time using {@link #balanceClusterPlans(Map)}.
  *
  * <p>On cluster startup, bulk assignment can be used to determine
  * locations for all Regions in a cluster.
@@ -93,15 +93,15 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
   void setMasterServices(MasterServices masterServices);
 
   /**
-   * Perform the major balance operation for cluster, will invoke {@link #balanceTable} to do actual
-   * balance. Normally not need override this method, except
+   * Perform the major balance operation for cluster, will invoke {@link #balanceTablePlans} to do
+   * actual balance. Normally not need override this method, except
    * {@link org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer} and
    * {@link org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer}
    * @param loadOfAllTable region load of servers for all table
    * @return a list of regions to be moved, including source and destination, or null if cluster is
    *         already balanced
    */
-  List<RegionPlan> balanceCluster(Map<TableName,
+  List<RegionPlan> balanceClusterPlans(Map<TableName,
       Map<ServerName, List<RegionInfo>>> loadOfAllTable) throws IOException;
 
   /**
@@ -111,7 +111,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @param loadOfOneTable region load of servers for the specific one table
    * @return List of plans
    */
-  List<RegionPlan> balanceTable(TableName tableName,
+  List<RegionPlan> balanceTablePlans(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable);
 
   /**

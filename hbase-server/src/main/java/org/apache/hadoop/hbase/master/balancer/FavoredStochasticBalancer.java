@@ -700,7 +700,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * implementation. For the misplaced regions, we assign a bogus server to it and AM takes care.
    */
   @Override
-  public synchronized List<RegionPlan> balanceTable(TableName tableName,
+  public synchronized List<RegionPlan> balanceTablePlans(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
 
     if (this.services != null) {
@@ -737,13 +737,14 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
         }
       }
       LOG.debug("Found misplaced regions: " + misplacedRegions + ", not on favored nodes.");
-      List<RegionPlan> regionPlansFromBalance = super.balanceTable(tableName, correctAssignments);
+      List<RegionPlan> regionPlansFromBalance = super.balanceTablePlans(tableName,
+        correctAssignments);
       if (regionPlansFromBalance != null) {
         regionPlans.addAll(regionPlansFromBalance);
       }
       return regionPlans;
     } else {
-      return super.balanceTable(tableName, loadOfOneTable);
+      return super.balanceTablePlans(tableName, loadOfOneTable);
     }
   }
 }

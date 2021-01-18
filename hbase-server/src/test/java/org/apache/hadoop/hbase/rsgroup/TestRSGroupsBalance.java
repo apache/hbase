@@ -154,13 +154,46 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
   }
 
   @Test
+  public void testMisplacedRegionsByBalanceCluster() throws Exception {
+    String namespace = TABLE_PREFIX + "_" + getNameWithoutIndex(name.getMethodName());
+    TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
+    final TableName tableName = TableName.valueOf(namespace, TABLE_PREFIX + "_" +
+      getNameWithoutIndex(name.getMethodName()));
+
+    final RSGroupInfo rsGroupInfo =
+      addGroup(getGroupName(name.getMethodName()), 1);
+
+    TEST_UTIL.createMultiRegionTable(tableName, new byte[] { 'f' }, 15);
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    TEST_UTIL.getAdmin().modifyNamespace(NamespaceDescriptor.create(namespace)
+      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, rsGroupInfo.getName()).build());
+
+    for(RSGroupInfo info : ADMIN.listRSGroups()){
+      System.out.println("group:" + info.getName());
+    }
+
+    assertEquals(3, ADMIN.listRSGroups().size());
+    ADMIN.balancerSwitch(true, true);
+    ADMIN.balance();
+    TEST_UTIL.waitFor(60000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        ServerName serverName =
+          ServerName.valueOf(rsGroupInfo.getServers().iterator().next().toString(), 1);
+        return ADMIN.getConnection().getAdmin().getRegions(serverName).size() == 15;
+      }
+    });
+  }
+
+  @Test
   public void testMisplacedRegions() throws Exception {
     String namespace = TABLE_PREFIX + "_" + getNameWithoutIndex(name.getMethodName());
     TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
-    final TableName tableName =
-      TableName.valueOf(namespace, TABLE_PREFIX + "_" + getNameWithoutIndex(name.getMethodName()));
+    final TableName tableName = TableName.valueOf(namespace, TABLE_PREFIX + "_" +
+        getNameWithoutIndex(name.getMethodName()));
 
-    final RSGroupInfo rsGroupInfo = addGroup(getGroupName(name.getMethodName()), 1);
+    final RSGroupInfo rsGroupInfo =
+      addGroup(getGroupName(name.getMethodName()), 1);
 
     TEST_UTIL.createMultiRegionTable(tableName, new byte[] { 'f' }, 15);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
@@ -183,7 +216,8 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     });
   }
 
-  @Test public void testGetRSGroupAssignmentsByTable() throws Exception {
+  @Test
+  public void testGetRSGroupAssignmentsByTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY, 10);
     // disable table
@@ -192,9 +226,9 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     TEST_UTIL.getAdmin().disableTable(disableTableName);
 
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    RSGroupInfoManagerImpl gm = (RSGroupInfoManagerImpl) master.getRSGroupInfoManager();
+    RSGroupBasedLoadBalancer balancer = master.getLoadBalancer();
     Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-      gm.getRSGroupAssignmentsByTable(master.getTableStateManager(), RSGroupInfo.DEFAULT_GROUP);
+      balancer.getRSGroupAssignmentsByTable(RSGroupInfo.DEFAULT_GROUP);
     assertFalse(assignments.containsKey(disableTableName));
     assertTrue(assignments.containsKey(tableName));
   }

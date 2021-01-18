@@ -1702,17 +1702,17 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public abstract List<RegionPlan> balanceTable(TableName tableName,
+  public abstract List<RegionPlan> balanceTablePlans(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable);
 
   @Override
-  public List<RegionPlan>
-      balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+  public List<RegionPlan> balanceClusterPlans(Map<TableName, Map<ServerName,
+    List<RegionInfo>>> loadOfAllTable) {
     if (isByTable) {
       List<RegionPlan> result = new ArrayList<>();
       loadOfAllTable.forEach((tableName, loadOfOneTable) -> {
         LOG.info("Start Generate Balance plan for table: " + tableName);
-        List<RegionPlan> partialPlans = balanceTable(tableName, loadOfOneTable);
+        List<RegionPlan> partialPlans = balanceTablePlans(tableName, loadOfOneTable);
         if (partialPlans != null) {
           result.addAll(partialPlans);
         }
@@ -1720,7 +1720,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return result;
     } else {
       LOG.info("Start Generate Balance plan for cluster.");
-      return balanceTable(HConstants.ENSEMBLE_TABLE_NAME, toEnsumbleTableLoad(loadOfAllTable));
+      return balanceTablePlans(HConstants.ENSEMBLE_TABLE_NAME, toEnsumbleTableLoad(loadOfAllTable));
     }
   }
 

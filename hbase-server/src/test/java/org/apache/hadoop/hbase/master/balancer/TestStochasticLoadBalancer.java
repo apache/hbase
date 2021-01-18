@@ -183,7 +183,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     loadBalancer.setClusterMetrics(clusterStatus);
 
     List<RegionPlan> plans =
-        loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, clusterState);
+        loadBalancer.balanceTablePlans(HConstants.ENSEMBLE_TABLE_NAME, clusterState);
     Set<RegionInfo> regionsMoveFromServerA = new HashSet<>();
     Set<ServerName> targetServers = new HashSet<>();
     for (RegionPlan plan : plans) {
@@ -258,7 +258,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
           Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
           Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
               (Map) mockClusterServersWithTables(servers);
-          List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
+          List<RegionPlan> plans = loadBalancer.balanceClusterPlans(LoadOfAllTable);
           boolean emptyPlans = plans == null || plans.isEmpty();
           assertTrue(emptyPlans || needsBalanceIdleRegion(mockCluster));
         }
@@ -486,7 +486,8 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     List<ServerAndLoad> list = convertToList(serverMap);
 
 
-    List<RegionPlan> plans = loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+    List<RegionPlan> plans = loadBalancer.balanceTablePlans(HConstants.ENSEMBLE_TABLE_NAME,
+      serverMap);
     assertNotNull(plans);
 
     // Apply the plan to the mock cluster.
@@ -500,7 +501,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     serverMap.put(deadSn, new ArrayList<>(0));
 
-    plans = loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+    plans = loadBalancer.balanceTablePlans(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     assertNull(plans);
   }
 

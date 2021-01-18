@@ -112,6 +112,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
     TEST_UTIL.startMiniCluster();
     // Wait for the ACL table to become available
     TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
+    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
 
     // create a set of test users
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });

@@ -89,7 +89,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
   }
 
   @Override
-  public List<RegionPlan> balanceTable(TableName tableName,
+  public List<RegionPlan> balanceTablePlans(TableName tableName,
       Map<ServerName, List<RegionInfo>> loadOfOneTable) {
     // TODO. Look at is whether Stochastic loadbalancer can be integrated with this
     List<RegionPlan> plans = new ArrayList<>();
