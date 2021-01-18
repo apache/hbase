@@ -103,8 +103,7 @@ class AsyncRegionLocator {
       CompletableFuture<T> future = action.get();
       FutureUtils.addListener(future, (resp, error) -> {
         if (error != null) {
-          span.recordException(error);
-          span.setStatus(StatusCode.ERROR);
+          TraceUtil.setError(span, error);
         } else {
           List<String> regionNames = getRegionNames.apply(resp);
           if (!regionNames.isEmpty()) {
