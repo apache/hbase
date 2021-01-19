@@ -304,16 +304,13 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       throw new IllegalStateException(
         "Cannot calculate average size of a table without any regions.");
     }
-    final int regionCount = tableRegions.size();
-    final long totalSizeMb = tableRegions.stream()
-      .mapToLong(this::getRegionSizeMB)
-      .sum();
     TableName table = tableRegions.get(0).getTable();
     int targetRegionCount = -1;
     long targetRegionSize = -1;
+    double avgRegionSize;
     try {
       TableDescriptor tableDescriptor = masterServices.getTableDescriptors().get(table);
-      if (tableDescriptor != null && LOG.isDebugEnabled()) {
+      if (tableDescriptor != null) {
         targetRegionCount = tableDescriptor.getNormalizerTargetRegionCount();
         targetRegionSize = tableDescriptor.getNormalizerTargetRegionSize();
         LOG.debug("Table {} configured with target region count {}, target region size {}", table,
@@ -323,18 +320,22 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       LOG.warn("TableDescriptor for {} unavailable, table-level target region count and size"
         + " configurations cannot be considered.", table, e);
     }
-
-    double avgRegionSize;
     if (targetRegionSize > 0) {
       avgRegionSize = targetRegionSize;
-    } else if (targetRegionCount > 0) {
-      avgRegionSize = totalSizeMb / (double) targetRegionCount;
     } else {
-      avgRegionSize = totalSizeMb / (double) regionCount;
+      final int regionCount = tableRegions.size();
+      final long totalSizeMb = tableRegions.stream()
+        .mapToLong(this::getRegionSizeMB)
+        .sum();
+      if (targetRegionCount > 0) {
+        avgRegionSize = totalSizeMb / (double) targetRegionCount;
+      } else {
+        avgRegionSize = totalSizeMb / (double) regionCount;
+      }
+      LOG.debug("Table {}, total aggregated regions size: {} and average region size {}", table,
+        totalSizeMb, avgRegionSize);
     }
 
-    LOG.debug("Table {}, total aggregated regions size: {} and average region size {}", table,
-      totalSizeMb, avgRegionSize);
     return avgRegionSize;
   }
 
