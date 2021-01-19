@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -106,12 +107,11 @@ public class TestAdmin1 extends TestAdminBase {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     try {
       ADMIN.createTable(htd);
-      try {
-        ADMIN.majorCompactRegion(tableName.getName());
-        ADMIN.majorCompactRegion(Bytes.toBytes("abcd"));
-      } catch (IllegalArgumentException iae) {
-        LOG.info("This is expected");
-      }
+      assertThrows(IllegalArgumentException.class,
+        () -> ADMIN.majorCompactRegion(tableName.getName()));
+
+      assertThrows(IllegalArgumentException.class,
+        () -> ADMIN.majorCompactRegion(Bytes.toBytes("abcd")));
     } finally {
       ADMIN.disableTable(tableName);
       ADMIN.deleteTable(tableName);
