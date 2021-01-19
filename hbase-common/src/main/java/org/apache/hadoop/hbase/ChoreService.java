@@ -367,7 +367,8 @@ public class ChoreService {
       return;
     }
     scheduler.shutdownNow();
-    LOG.info("Chore service for: {} had {} on shutdown", coreThreadPoolPrefix, scheduledChores.keySet());
+    LOG.info("Chore service for: {} had {} on shutdown", coreThreadPoolPrefix,
+      scheduledChores.keySet());
     cancelAllChores(true);
     scheduledChores.clear();
     choresMissingStartTime.clear();
