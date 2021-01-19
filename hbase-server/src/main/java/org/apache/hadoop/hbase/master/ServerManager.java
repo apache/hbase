@@ -936,7 +936,7 @@ public class ServerManager {
    */
   public void stop() {
     if (flushedSeqIdFlusher != null) {
-      flushedSeqIdFlusher.cancel();
+      flushedSeqIdFlusher.shutdown();
     }
     if (persistFlushedSequenceId) {
       try {
