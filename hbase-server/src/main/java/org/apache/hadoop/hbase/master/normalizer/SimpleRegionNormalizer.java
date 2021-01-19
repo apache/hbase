@@ -364,6 +364,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         if (rangeMembers.isEmpty() // when there are no range members, seed the range with whatever
                                    // we have. this way we're prepared in case the next region is
                                    // 0-size.
+          || (rangeMembers.size() == 1 && sumRangeMembersSizeMb == 0) // when there is only one
+                                                                      // region and the size is 0,
+                                                                      // seed the range with
+                                                                      // whatever we have.
           || regionSizeMb == 0 // always add an empty region to the current range.
           || (regionSizeMb + sumRangeMembersSizeMb <= avgRegionSizeMb)) { // add the current region
                                                                           // to the range when
