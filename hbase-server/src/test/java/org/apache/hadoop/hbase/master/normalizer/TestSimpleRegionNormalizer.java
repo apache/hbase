@@ -449,6 +449,38 @@ public class TestSimpleRegionNormalizer {
   }
 
   @Test
+  public void testMergeEmptyRegions2() {
+    conf.setBoolean(SPLIT_ENABLED_KEY, false);
+    conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 8);
+    final Map<byte[], Integer> regionSizes =
+      createRegionSizesMap(regionInfos, 0, 10, 1, 0, 9, 0, 10, 0);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+
+    assertFalse(normalizer.isSplitEnabled());
+    assertEquals(0, normalizer.getMergeMinRegionSizeMb());
+    List<NormalizationPlan> plans = normalizer.computePlansForTable(tableName);
+    assertThat(plans, contains(
+      new MergeNormalizationPlan.Builder()
+        .addTarget(regionInfos.get(0), 0)
+        .addTarget(regionInfos.get(1), 10)
+        .build(),
+      new MergeNormalizationPlan.Builder()
+        .addTarget(regionInfos.get(2), 1)
+        .addTarget(regionInfos.get(3), 0)
+        .build(),
+      new MergeNormalizationPlan.Builder()
+        .addTarget(regionInfos.get(4), 9)
+        .addTarget(regionInfos.get(5), 0)
+        .build(),
+      new MergeNormalizationPlan.Builder()
+        .addTarget(regionInfos.get(6), 10)
+        .addTarget(regionInfos.get(7), 0)
+        .build()));
+  }
+
+  @Test
   public void testSplitAndMultiMerge() {
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
     final TableName tableName = name.getTableName();
