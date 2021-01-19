@@ -627,5 +627,6 @@ Shell.load_command_group(
     rename_rsgroup
     alter_rsgroup_config
     show_rsgroup_config
+    get_namespace_rsgroup
   ]
 )
