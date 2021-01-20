@@ -18,18 +18,18 @@
 
 package org.apache.hadoop.hbase.master;
 
-import java.io.IOException;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -38,7 +38,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test for Regions Recovery Config Manager
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestRegionsRecoveryConfigManager {
 
   @ClassRule
@@ -51,8 +51,6 @@ public class TestRegionsRecoveryConfigManager {
 
   private HMaster hMaster;
 
-  private RegionsRecoveryChore regionsRecoveryChore;
-
   private RegionsRecoveryConfigManager regionsRecoveryConfigManager;
 
   private Configuration conf;
@@ -62,10 +60,8 @@ public class TestRegionsRecoveryConfigManager {
     conf = HBASE_TESTING_UTILITY.getConfiguration();
     conf.unset("hbase.regions.recovery.store.file.ref.count");
     conf.unset("hbase.master.regions.recovery.check.interval");
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-      .masterClass(TestHMaster.class)
-      .numRegionServers(1)
-      .numDataNodes(1).build();
+    StartMiniClusterOption option = StartMiniClusterOption.builder().masterClass(TestHMaster.class)
+      .numRegionServers(1).numDataNodes(1).build();
     HBASE_TESTING_UTILITY.startMiniCluster(option);
     cluster = HBASE_TESTING_UTILITY.getMiniHBaseCluster();
   }
@@ -77,44 +73,44 @@ public class TestRegionsRecoveryConfigManager {
 
   @Test
   public void testChoreSchedule() throws Exception {
-
     this.hMaster = cluster.getMaster();
-
-    Stoppable stoppable = new StoppableImplementation();
-    this.regionsRecoveryChore = new RegionsRecoveryChore(stoppable, conf, hMaster);
 
     this.regionsRecoveryConfigManager = new RegionsRecoveryConfigManager(this.hMaster);
     // not yet scheduled
-    Assert.assertFalse(hMaster.getChoreService().isChoreScheduled(regionsRecoveryChore));
+    assertFalse(
+      hMaster.getChoreService().isChoreScheduled(regionsRecoveryConfigManager.getChore()));
 
     this.regionsRecoveryConfigManager.onConfigurationChange(conf);
     // not yet scheduled
-    Assert.assertFalse(hMaster.getChoreService().isChoreScheduled(regionsRecoveryChore));
+    assertFalse(
+      hMaster.getChoreService().isChoreScheduled(regionsRecoveryConfigManager.getChore()));
 
     conf.setInt("hbase.master.regions.recovery.check.interval", 10);
     this.regionsRecoveryConfigManager.onConfigurationChange(conf);
     // not yet scheduled - missing config: hbase.regions.recovery.store.file.ref.count
-    Assert.assertFalse(hMaster.getChoreService().isChoreScheduled(regionsRecoveryChore));
+    assertFalse(
+      hMaster.getChoreService().isChoreScheduled(regionsRecoveryConfigManager.getChore()));
 
     conf.setInt("hbase.regions.recovery.store.file.ref.count", 10);
     this.regionsRecoveryConfigManager.onConfigurationChange(conf);
     // chore scheduled
-    Assert.assertTrue(hMaster.getChoreService().isChoreScheduled(regionsRecoveryChore));
+    assertTrue(hMaster.getChoreService().isChoreScheduled(regionsRecoveryConfigManager.getChore()));
 
     conf.setInt("hbase.regions.recovery.store.file.ref.count", 20);
     this.regionsRecoveryConfigManager.onConfigurationChange(conf);
     // chore re-scheduled
-    Assert.assertTrue(hMaster.getChoreService().isChoreScheduled(regionsRecoveryChore));
+    assertTrue(hMaster.getChoreService().isChoreScheduled(regionsRecoveryConfigManager.getChore()));
 
     conf.setInt("hbase.regions.recovery.store.file.ref.count", 20);
     this.regionsRecoveryConfigManager.onConfigurationChange(conf);
     // chore scheduling untouched
-    Assert.assertTrue(hMaster.getChoreService().isChoreScheduled(regionsRecoveryChore));
+    assertTrue(hMaster.getChoreService().isChoreScheduled(regionsRecoveryConfigManager.getChore()));
 
     conf.unset("hbase.regions.recovery.store.file.ref.count");
     this.regionsRecoveryConfigManager.onConfigurationChange(conf);
     // chore un-scheduled
-    Assert.assertFalse(hMaster.getChoreService().isChoreScheduled(regionsRecoveryChore));
+    assertFalse(
+      hMaster.getChoreService().isChoreScheduled(regionsRecoveryConfigManager.getChore()));
   }
 
   // Make it public so that JVMClusterUtil can access it.
@@ -123,24 +119,4 @@ public class TestRegionsRecoveryConfigManager {
       super(conf);
     }
   }
-
-  /**
-   * Simple helper class that just keeps track of whether or not its stopped.
-   */
-  private static class StoppableImplementation implements Stoppable {
-
-    private boolean stop = false;
-
-    @Override
-    public void stop(String why) {
-      this.stop = true;
-    }
-
-    @Override
-    public boolean isStopped() {
-      return this.stop;
-    }
-
-  }
-
 }
