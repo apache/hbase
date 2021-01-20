@@ -40,7 +40,7 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   /**
    * Description
    */
-  String METRICS_DESCRIPTION = "Metrics about HBase master assingment manager.";
+  String METRICS_DESCRIPTION = "Metrics about HBase master assignment manager.";
 
   String RIT_COUNT_NAME = "ritCount";
   String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";

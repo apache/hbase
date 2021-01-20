@@ -3538,6 +3538,7 @@ public class AssignmentManager extends ZooKeeperListener {
     int totalRITs = 0;
     int totalRITsOverThreshold = 0;
     long oldestRITTime = 0;
+    Map<String, RegionState> ritsOverThreshold = null;
     int ritThreshold = this.server.getConfiguration().
       getInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 60000);
     for (RegionState state: regionStates.getRegionsInTransition()) {
@@ -3545,10 +3546,23 @@ public class AssignmentManager extends ZooKeeperListener {
       long ritTime = currentTime - state.getStamp();
       if (ritTime > ritThreshold) { // more than the threshold
         totalRITsOverThreshold++;
+        if (ritsOverThreshold == null) {
+          ritsOverThreshold = new HashMap<>();
+        }
+        ritsOverThreshold.put(state.getRegion().getEncodedName(), state);
       }
       if (oldestRITTime < ritTime) {
         oldestRITTime = ritTime;
       }
+    }
+    if (LOG.isDebugEnabled() && ritsOverThreshold != null && !ritsOverThreshold.isEmpty()) {
+      StringBuilder sb = new StringBuilder();
+      for (Map.Entry<String, RegionState> rit: ritsOverThreshold.entrySet()) {
+        sb.append(rit.getKey()).append(":")
+          .append(rit.getValue().getState().name()).append("\n");
+      }
+      sb.delete(sb.length()-1, sb.length());
+      LOG.debug("RITs over threshold: " + sb.toString());
     }
     if (this.metricsAssignmentManager != null) {
       this.metricsAssignmentManager.updateRITOldestAge(oldestRITTime);
