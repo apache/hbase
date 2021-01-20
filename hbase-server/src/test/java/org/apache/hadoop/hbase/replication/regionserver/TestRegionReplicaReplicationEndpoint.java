@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -66,6 +68,7 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -153,7 +156,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
       HTableDescriptor htd = HTU.createTableDescriptor(
         "testReplicationPeerIsCreated_no_region_replicas");
-      HTU.getAdmin().createTable(htd);
+      createOrEnableTableWithRetries(htd, true);
       try {
         peerConfig = admin.getReplicationPeerConfig(peerId);
         fail("Should throw ReplicationException, because replication peer id=" + peerId
@@ -164,7 +167,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
       htd = HTU.createTableDescriptor("testReplicationPeerIsCreated");
       htd.setRegionReplication(2);
-      HTU.getAdmin().createTable(htd);
+      createOrEnableTableWithRetries(htd, true);
 
       // assert peer configuration is correct
       peerConfig = admin.getReplicationPeerConfig(peerId);
@@ -196,7 +199,7 @@ public class TestRegionReplicaReplicationEndpoint {
       }
 
       HTableDescriptor htd = HTU.createTableDescriptor("testRegionReplicaReplicationPeerIsCreatedForModifyTable");
-      HTU.getAdmin().createTable(htd);
+      createOrEnableTableWithRetries(htd, true);
 
       // assert that replication peer is not created yet
       try {
@@ -210,7 +213,7 @@ public class TestRegionReplicaReplicationEndpoint {
       HTU.getAdmin().disableTable(htd.getTableName());
       htd.setRegionReplication(2);
       HTU.getAdmin().modifyTable(htd.getTableName(), htd);
-      HTU.getAdmin().enableTable(htd.getTableName());
+      createOrEnableTableWithRetries(htd, false);
 
       // assert peer configuration is correct
       peerConfig = admin.getReplicationPeerConfig(peerId);
@@ -229,7 +232,7 @@ public class TestRegionReplicaReplicationEndpoint {
         + regionReplication);
     HTableDescriptor htd = HTU.createTableDescriptor(tableName.toString());
     htd.setRegionReplication(regionReplication);
-    HTU.getAdmin().createTable(htd);
+    createOrEnableTableWithRetries(htd, true);
     TableName tableNameNoReplicas =
         TableName.valueOf("testRegionReplicaReplicationWithReplicas_NO_REPLICAS");
     HTU.deleteTableIfAny(tableNameNoReplicas);
@@ -320,7 +323,7 @@ public class TestRegionReplicaReplicationEndpoint {
     HTableDescriptor htd = HTU.createTableDescriptor(tableName);
     htd.setRegionReplication(regionReplication);
     htd.setRegionMemstoreReplication(false);
-    HTU.getAdmin().createTable(htd);
+    createOrEnableTableWithRetries(htd, true);
 
     Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
     Table table = connection.getTable(tableName);
@@ -355,7 +358,7 @@ public class TestRegionReplicaReplicationEndpoint {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor htd = HTU.createTableDescriptor(tableName);
     htd.setRegionReplication(regionReplication);
-    HTU.getAdmin().createTable(htd);
+    createOrEnableTableWithRetries(htd, true);
 
 
     Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
@@ -407,13 +410,13 @@ public class TestRegionReplicaReplicationEndpoint {
     htd.setRegionReplication(regionReplication);
     HTU.deleteTableIfAny(tableName);
 
-    HTU.getAdmin().createTable(htd);
+    createOrEnableTableWithRetries(htd, true);
     TableName toBeDisabledTable = TableName.valueOf(
       dropTable ? "droppedTable" : (disableReplication ? "disableReplication" : "disabledTable"));
     HTU.deleteTableIfAny(toBeDisabledTable);
     htd = HTU.createTableDescriptor(toBeDisabledTable.toString());
     htd.setRegionReplication(regionReplication);
-    HTU.getAdmin().createTable(htd);
+    createOrEnableTableWithRetries(htd, true);
 
     // both tables are created, now pause replication
     HTU.getAdmin().disableReplicationPeer(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER);
@@ -453,7 +456,7 @@ public class TestRegionReplicaReplicationEndpoint {
     } else if (disableReplication) {
       htd.setRegionReplication(regionReplication - 2);
       HTU.getAdmin().modifyTable(toBeDisabledTable, htd);
-      HTU.getAdmin().enableTable(toBeDisabledTable);
+      createOrEnableTableWithRetries(htd, false);
     }
     sinkWriter.append(toBeDisabledTable, encodedRegionName,
       HConstants.EMPTY_BYTE_ARRAY, Lists.newArrayList(entry, entry));
@@ -486,7 +489,7 @@ public class TestRegionReplicaReplicationEndpoint {
       HTU.getAdmin().disableTable(toBeDisabledTable); // disable the table
       htd.setRegionReplication(regionReplication);
       HTU.getAdmin().modifyTable(toBeDisabledTable, htd);
-      HTU.getAdmin().enableTable(toBeDisabledTable);
+      createOrEnableTableWithRetries(htd, false);
     }
 
     try {
@@ -506,6 +509,28 @@ public class TestRegionReplicaReplicationEndpoint {
       tableToBeDisabled.close();
       HTU.deleteTableIfAny(toBeDisabledTable);
       connection.close();
+    }
+  }
+
+  private void createOrEnableTableWithRetries(TableDescriptor htd, boolean createTableOperation) {
+    // Helper function to run create/enable table operations with a retry feature
+    boolean continueToRetry = true;
+    int tries = 0;
+    while (continueToRetry && tries < 50) {
+      try {
+        continueToRetry = false;
+        if (createTableOperation) {
+          HTU.getAdmin().createTable(htd);
+        } else {
+          HTU.getAdmin().enableTable(htd.getTableName());
+        }
+      } catch (IOException e) {
+        if (e.getCause() instanceof ReplicationException) {
+          continueToRetry = true;
+          tries++;
+          Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+        }
+      }
     }
   }
 }
