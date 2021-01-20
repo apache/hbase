@@ -1513,7 +1513,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void stopChores() {
     if (getChoreService() != null) {
       shutdownChore(expiredMobFileCleanerChore);
-      shutdownChore(expiredMobFileCleanerChore);
+      shutdownChore(mobCompactChore);
       shutdownChore(balancerChore);
       if (regionNormalizerManager != null) {
         shutdownChore(regionNormalizerManager.getRegionNormalizerChore());
