@@ -2642,6 +2642,11 @@ public class HRegionServer extends Thread implements
     }
   }
 
+  protected final void shutdownChore(ScheduledChore chore) {
+    if (chore != null) {
+      chore.shutdown();
+    }
+  }
   /**
    * Wait on all threads to finish. Presumption is that all closes and stops
    * have already been called.
@@ -2649,15 +2654,16 @@ public class HRegionServer extends Thread implements
   protected void stopServiceThreads() {
     // clean up the scheduled chores
     if (this.choreService != null) {
-      choreService.cancelChore(nonceManagerChore);
-      choreService.cancelChore(compactionChecker);
-      choreService.cancelChore(periodicFlusher);
-      choreService.cancelChore(healthCheckChore);
-      choreService.cancelChore(executorStatusChore);
-      choreService.cancelChore(storefileRefresher);
-      choreService.cancelChore(fsUtilizationChore);
-      choreService.cancelChore(slowLogTableOpsChore);
-      // clean up the remaining scheduled chores (in case we missed out any)
+      shutdownChore(nonceManagerChore);
+      shutdownChore(compactionChecker);
+      shutdownChore(periodicFlusher);
+      shutdownChore(healthCheckChore);
+      shutdownChore(executorStatusChore);
+      shutdownChore(storefileRefresher);
+      shutdownChore(fsUtilizationChore);
+      shutdownChore(slowLogTableOpsChore);
+      // cancel the remaining scheduled chores (in case we missed out any)
+      // TODO: cancel will not cleanup the chores, so we need make sure we do not miss any
       choreService.shutdown();
     }
 
