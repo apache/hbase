@@ -456,7 +456,7 @@ public class SplitLogManager {
       choreService.shutdown();
     }
     if (timeoutMonitor != null) {
-      timeoutMonitor.cancel(true);
+      timeoutMonitor.shutdown(true);
     }
   }
 

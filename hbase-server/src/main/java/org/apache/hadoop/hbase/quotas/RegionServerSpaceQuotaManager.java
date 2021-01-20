@@ -98,11 +98,11 @@ public class RegionServerSpaceQuotaManager {
 
   public synchronized void stop() {
     if (spaceQuotaRefresher != null) {
-      spaceQuotaRefresher.cancel();
+      spaceQuotaRefresher.shutdown();
       spaceQuotaRefresher = null;
     }
     if (regionSizeReporter != null) {
-      regionSizeReporter.cancel();
+      regionSizeReporter.shutdown();
       regionSizeReporter = null;
     }
     started = false;

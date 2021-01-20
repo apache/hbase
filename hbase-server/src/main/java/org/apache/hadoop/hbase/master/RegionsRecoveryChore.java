@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HConstants;
@@ -70,7 +69,6 @@ public class RegionsRecoveryChore extends ScheduledChore {
    */
   RegionsRecoveryChore(final Stoppable stopper, final Configuration configuration,
       final HMaster hMaster) {
-
     super(REGIONS_RECOVERY_CHORE_NAME, stopper, configuration.getInt(
       HConstants.REGIONS_RECOVERY_INTERVAL, HConstants.DEFAULT_REGIONS_RECOVERY_INTERVAL));
     this.hMaster = hMaster;
@@ -125,7 +123,6 @@ public class RegionsRecoveryChore extends ScheduledChore {
 
   private Map<TableName, List<byte[]>> getTableToRegionsByRefCount(
       final Map<ServerName, ServerMetrics> serverMetricsMap) {
-
     final Map<TableName, List<byte[]>> tableToReopenRegionsMap = new HashMap<>();
     for (ServerMetrics serverMetrics : serverMetricsMap.values()) {
       Map<byte[], RegionMetrics> regionMetricsMap = serverMetrics.getRegionMetrics();
@@ -146,13 +143,11 @@ public class RegionsRecoveryChore extends ScheduledChore {
       }
     }
     return tableToReopenRegionsMap;
-
   }
 
   private void prepareTableToReopenRegionsMap(
       final Map<TableName, List<byte[]>> tableToReopenRegionsMap,
       final byte[] regionName, final int regionStoreRefCount) {
-
     final RegionInfo regionInfo = hMaster.getAssignmentManager().getRegionInfo(regionName);
     final TableName tableName = regionInfo.getTable();
     if (TableName.isMetaTableName(tableName)) {
@@ -166,21 +161,4 @@ public class RegionsRecoveryChore extends ScheduledChore {
     tableToReopenRegionsMap.get(tableName).add(regionName);
 
   }
-
-  // hashcode/equals implementation to ensure at-most one object of RegionsRecoveryChore
-  // is scheduled at a time - RegionsRecoveryConfigManager
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    return o != null && getClass() == o.getClass();
-  }
-
-  @Override
-  public int hashCode() {
-    return 31;
-  }
-
 }

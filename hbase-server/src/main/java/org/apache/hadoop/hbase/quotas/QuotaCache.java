@@ -100,7 +100,7 @@ public class QuotaCache implements Stoppable {
   public void stop(final String why) {
     if (refreshChore != null) {
       LOG.debug("Stopping QuotaRefresherChore chore.");
-      refreshChore.cancel(true);
+      refreshChore.shutdown(true);
     }
     stopped = true;
   }

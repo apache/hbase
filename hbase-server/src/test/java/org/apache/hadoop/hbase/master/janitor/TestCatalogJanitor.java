@@ -110,7 +110,7 @@ public class TestCatalogJanitor {
 
   @After
   public void teardown() {
-    this.janitor.cancel(true);
+    this.janitor.shutdown(true);
     this.masterServices.stop("DONE");
   }
 
