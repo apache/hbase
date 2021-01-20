@@ -57,7 +57,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -1485,11 +1484,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     try {
       snapshotCleanupTracker.setSnapshotCleanupEnabled(on);
       if (on) {
-        if (!getChoreService().isChoreScheduled(this.snapshotCleanerChore)) {
-          getChoreService().scheduleChore(this.snapshotCleanerChore);
-        }
+        getChoreService().scheduleChore(this.snapshotCleanerChore);
       } else {
-        getChoreService().cancelChore(this.snapshotCleanerChore);
+        this.snapshotCleanerChore.cancel();
       }
     } catch (KeeperException e) {
       LOG.error("Error updating snapshot cleanup mode to {}", on, e);
@@ -1513,24 +1510,23 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private void stopChores() {
-    ChoreService choreService = getChoreService();
-    if (choreService != null) {
-      choreService.cancelChore(this.expiredMobFileCleanerChore);
-      choreService.cancelChore(this.mobCompactChore);
-      choreService.cancelChore(this.balancerChore);
+    if (getChoreService() != null) {
+      shutdownChore(expiredMobFileCleanerChore);
+      shutdownChore(expiredMobFileCleanerChore);
+      shutdownChore(balancerChore);
       if (regionNormalizerManager != null) {
-        choreService.cancelChore(regionNormalizerManager.getRegionNormalizerChore());
+        shutdownChore(regionNormalizerManager.getRegionNormalizerChore());
       }
-      choreService.cancelChore(this.clusterStatusChore);
-      choreService.cancelChore(this.catalogJanitorChore);
-      choreService.cancelChore(this.clusterStatusPublisherChore);
-      choreService.cancelChore(this.snapshotQuotaChore);
-      choreService.cancelChore(this.logCleaner);
-      choreService.cancelChore(this.hfileCleaner);
-      choreService.cancelChore(this.replicationBarrierCleaner);
-      choreService.cancelChore(this.snapshotCleanerChore);
-      choreService.cancelChore(this.hbckChore);
-      choreService.cancelChore(this.regionsRecoveryChore);
+      shutdownChore(clusterStatusChore);
+      shutdownChore(catalogJanitorChore);
+      shutdownChore(clusterStatusPublisherChore);
+      shutdownChore(snapshotQuotaChore);
+      shutdownChore(logCleaner);
+      shutdownChore(hfileCleaner);
+      shutdownChore(replicationBarrierCleaner);
+      shutdownChore(snapshotCleanerChore);
+      shutdownChore(hbckChore);
+      shutdownChore(regionsRecoveryChore);
     }
   }
 
