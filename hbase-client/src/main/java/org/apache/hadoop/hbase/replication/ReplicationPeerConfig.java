@@ -79,41 +79,6 @@ public class ReplicationPeerConfig {
     return Collections.unmodifiableMap(newTableCFsMap);
   }
 
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder} to create new ReplicationPeerConfig.
-   */
-  @Deprecated
-  public ReplicationPeerConfig() {
-    this.peerData = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    this.configuration = new HashMap<>(0);
-    this.serial = false;
-  }
-
-  /**
-   * Set the clusterKey which is the concatenation of the slave cluster's:
-   * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setClusterKey(String)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setClusterKey(String clusterKey) {
-    this.clusterKey = clusterKey;
-    return this;
-  }
-
-  /**
-   * Sets the ReplicationEndpoint plugin class for this peer.
-   * @param replicationEndpointImpl a class implementing ReplicationEndpoint
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setReplicationEndpointImpl(String)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setReplicationEndpointImpl(String replicationEndpointImpl) {
-    this.replicationEndpointImpl = replicationEndpointImpl;
-    return this;
-  }
-
   public String getClusterKey() {
     return clusterKey;
   }
@@ -134,86 +99,24 @@ public class ReplicationPeerConfig {
     return (Map<TableName, List<String>>) tableCFsMap;
   }
 
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setTableCFsMap(Map)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setTableCFsMap(Map<TableName,
-                                              ? extends Collection<String>> tableCFsMap) {
-    this.tableCFsMap = tableCFsMap;
-    return this;
-  }
-
   public Set<String> getNamespaces() {
     return this.namespaces;
-  }
-
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setNamespaces(Set)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setNamespaces(Set<String> namespaces) {
-    this.namespaces = namespaces;
-    return this;
   }
 
   public long getBandwidth() {
     return this.bandwidth;
   }
 
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setBandwidth(long)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setBandwidth(long bandwidth) {
-    this.bandwidth = bandwidth;
-    return this;
-  }
-
   public boolean replicateAllUserTables() {
     return this.replicateAllUserTables;
-  }
-
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setReplicateAllUserTables(boolean)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setReplicateAllUserTables(boolean replicateAllUserTables) {
-    this.replicateAllUserTables = replicateAllUserTables;
-    return this;
   }
 
   public Map<TableName, List<String>> getExcludeTableCFsMap() {
     return (Map<TableName, List<String>>) excludeTableCFsMap;
   }
 
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setExcludeTableCFsMap(Map)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setExcludeTableCFsMap(Map<TableName,
-                                              ? extends Collection<String>> tableCFsMap) {
-    this.excludeTableCFsMap = tableCFsMap;
-    return this;
-  }
-
   public Set<String> getExcludeNamespaces() {
     return this.excludeNamespaces;
-  }
-
-  /**
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0. Use
-   *             {@link ReplicationPeerConfigBuilder#setExcludeNamespaces(Set)} instead.
-   */
-  @Deprecated
-  public ReplicationPeerConfig setExcludeNamespaces(Set<String> namespaces) {
-    this.excludeNamespaces = namespaces;
-    return this;
   }
 
   public String getRemoteWALDir() {

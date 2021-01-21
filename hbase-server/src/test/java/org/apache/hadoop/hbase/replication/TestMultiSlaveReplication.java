@@ -145,8 +145,8 @@ public class TestMultiSlaveReplication {
       Table htable2 = utility2.getConnection().getTable(tableName);
       Table htable3 = utility3.getConnection().getTable(tableName);
 
-      ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-      rpc.setClusterKey(utility2.getClusterKey());
+      ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+        .setClusterKey(utility2.getClusterKey()).build();
       admin1.addReplicationPeer("1", rpc);
 
       // put "row" and wait 'til it got around, then delete
@@ -163,8 +163,8 @@ public class TestMultiSlaveReplication {
       // after the log was rolled put a new row
       putAndWait(row3, famName, htable1, htable2);
 
-      rpc = new ReplicationPeerConfig();
-      rpc.setClusterKey(utility3.getClusterKey());
+      rpc = ReplicationPeerConfig.newBuilder()
+        .setClusterKey(utility3.getClusterKey()).build();
       admin1.addReplicationPeer("2", rpc);
 
       // put a row, check it was replicated to all clusters

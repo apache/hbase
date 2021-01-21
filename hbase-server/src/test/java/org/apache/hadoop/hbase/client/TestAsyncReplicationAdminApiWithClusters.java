@@ -24,8 +24,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
@@ -86,8 +86,8 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
       ConnectionFactory.createAsyncConnection(TEST_UTIL2.getConfiguration()).get();
     admin2 = connection.getAdmin();
 
-    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(TEST_UTIL2.getClusterKey());
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(TEST_UTIL2.getClusterKey()).build();
     ASYNC_CONN.getAdmin().addReplicationPeer(ID_SECOND, rpc).join();
   }
 
@@ -231,11 +231,13 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     assertFalse("Table should not exists in the peer cluster",
       admin2.tableExists(tableName2).get());
 
-    Map<TableName, ? extends Collection<String>> tableCfs = new HashMap<>();
+    Map<TableName, List<String>> tableCfs = new HashMap<>();
     tableCfs.put(tableName, null);
-    ReplicationPeerConfig rpc = admin.getReplicationPeerConfig(ID_SECOND).get();
-    rpc.setReplicateAllUserTables(false);
-    rpc.setTableCFsMap(tableCfs);
+    ReplicationPeerConfig rpc = ReplicationPeerConfig
+      .newBuilder(admin.getReplicationPeerConfig(ID_SECOND).get())
+      .setReplicateAllUserTables(false)
+      .setTableCFsMap(tableCfs)
+      .build();
     try {
       // Only add tableName to replication peer config
       admin.updateReplicationPeerConfig(ID_SECOND, rpc).join();
@@ -245,15 +247,16 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
 
       // Add tableName2 to replication peer config, too
       tableCfs.put(tableName2, null);
-      rpc.setTableCFsMap(tableCfs);
+      rpc = ReplicationPeerConfig.newBuilder(rpc).setTableCFsMap(tableCfs).build();
       admin.updateReplicationPeerConfig(ID_SECOND, rpc).join();
       admin.enableTableReplication(tableName2).join();
       assertTrue(
         "Table should be created if user has explicitly added table into table cfs collection",
         admin2.tableExists(tableName2).get());
     } finally {
-      rpc.setTableCFsMap(null);
-      rpc.setReplicateAllUserTables(true);
+      rpc = ReplicationPeerConfig.newBuilder(rpc)
+        .setTableCFsMap(null)
+        .setReplicateAllUserTables(true).build();
       admin.updateReplicationPeerConfig(ID_SECOND, rpc).join();
     }
   }

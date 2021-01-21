@@ -108,10 +108,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testAddRemovePeer() throws Exception {
-    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
-    rpc1.setClusterKey(KEY_ONE);
-    ReplicationPeerConfig rpc2 = new ReplicationPeerConfig();
-    rpc2.setClusterKey(KEY_TWO);
+    ReplicationPeerConfig rpc1 = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE).build();
+    ReplicationPeerConfig rpc2 = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_TWO).build();
     // Add a valid peer
     admin.addReplicationPeer(ID_ONE, rpc1).join();
     // try adding the same (fails)
@@ -142,10 +140,11 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testPeerConfig() throws Exception {
-    ReplicationPeerConfig config = new ReplicationPeerConfig();
-    config.setClusterKey(KEY_ONE);
-    config.getConfiguration().put("key1", "value1");
-    config.getConfiguration().put("key2", "value2");
+    ReplicationPeerConfig config = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(KEY_ONE)
+      .putConfiguration("key1", "value1")
+      .putConfiguration("key2", "value2")
+      .build();
     admin.addReplicationPeer(ID_ONE, config).join();
 
     List<ReplicationPeerDescription> peers = admin.listReplicationPeers().get();
@@ -160,8 +159,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testEnableDisablePeer() throws Exception {
-    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
-    rpc1.setClusterKey(KEY_ONE);
+    ReplicationPeerConfig rpc1 = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE).build();
     admin.addReplicationPeer(ID_ONE, rpc1).join();
     List<ReplicationPeerDescription> peers = admin.listReplicationPeers().get();
     assertEquals(1, peers.size());
@@ -176,8 +174,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testAppendPeerTableCFs() throws Exception {
-    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
-    rpc1.setClusterKey(KEY_ONE);
+    ReplicationPeerConfig rpc1 = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE).build();
     final TableName tableName1 = TableName.valueOf(tableName.getNameAsString() + "t1");
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "t2");
     final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "t3");
@@ -187,7 +184,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
     // Add a valid peer
     admin.addReplicationPeer(ID_ONE, rpc1).join();
-    rpc1.setReplicateAllUserTables(false);
+    rpc1 = ReplicationPeerConfig.newBuilder(rpc1).setReplicateAllUserTables(false).build();
     admin.updateReplicationPeerConfig(ID_ONE, rpc1).join();
 
     Map<TableName, List<String>> tableCFs = new HashMap<>();
@@ -280,15 +277,14 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testRemovePeerTableCFs() throws Exception {
-    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
-    rpc1.setClusterKey(KEY_ONE);
+    ReplicationPeerConfig rpc1 = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE).build();
     final TableName tableName1 = TableName.valueOf(tableName.getNameAsString() + "t1");
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "t2");
     final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "t3");
     final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "t4");
     // Add a valid peer
     admin.addReplicationPeer(ID_ONE, rpc1).join();
-    rpc1.setReplicateAllUserTables(false);
+    rpc1 = ReplicationPeerConfig.newBuilder(rpc1).setReplicateAllUserTables(false).build();
     admin.updateReplicationPeerConfig(ID_ONE, rpc1).join();
 
     Map<TableName, List<String>> tableCFs = new HashMap<>();
@@ -369,10 +365,9 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     String ns1 = "ns1";
     String ns2 = "ns2";
 
-    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(KEY_ONE);
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE).build();
     admin.addReplicationPeer(ID_ONE, rpc).join();
-    rpc.setReplicateAllUserTables(false);
+    rpc = ReplicationPeerConfig.newBuilder(rpc).setReplicateAllUserTables(false).build();
     admin.updateReplicationPeerConfig(ID_ONE, rpc).join();
 
     // add ns1 and ns2 to peer config
@@ -380,7 +375,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     Set<String> namespaces = new HashSet<>();
     namespaces.add(ns1);
     namespaces.add(ns2);
-    rpc.setNamespaces(namespaces);
+    rpc = ReplicationPeerConfig.newBuilder(rpc).setNamespaces(namespaces).build();
     admin.updateReplicationPeerConfig(ID_ONE, rpc).join();
     namespaces = admin.getReplicationPeerConfig(ID_ONE).get().getNamespaces();
     assertEquals(2, namespaces.size());
@@ -391,7 +386,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     rpc = admin.getReplicationPeerConfig(ID_ONE).get();
     namespaces = new HashSet<>();
     namespaces.add(ns1);
-    rpc.setNamespaces(namespaces);
+    rpc = ReplicationPeerConfig.newBuilder(rpc).setNamespaces(namespaces).build();
     admin.updateReplicationPeerConfig(ID_ONE, rpc).join();
     namespaces = admin.getReplicationPeerConfig(ID_ONE).get().getNamespaces();
     assertEquals(1, namespaces.size());
@@ -407,21 +402,20 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     final TableName tableName1 = TableName.valueOf(ns1 + ":" + tableName.getNameAsString() + "1");
     final TableName tableName2 = TableName.valueOf(ns2 + ":" + tableName.getNameAsString() + "2");
 
-    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(KEY_ONE);
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE).build();
     admin.addReplicationPeer(ID_ONE, rpc).join();
-    rpc.setReplicateAllUserTables(false);
+    rpc = ReplicationPeerConfig.newBuilder(rpc).setReplicateAllUserTables(false).build();
     admin.updateReplicationPeerConfig(ID_ONE, rpc).join();
 
     rpc = admin.getReplicationPeerConfig(ID_ONE).get();
     Set<String> namespaces = new HashSet<String>();
     namespaces.add(ns1);
-    rpc.setNamespaces(namespaces);
+    rpc = ReplicationPeerConfig.newBuilder(rpc).setNamespaces(namespaces).build();
     admin.updateReplicationPeerConfig(ID_ONE, rpc).get();
     rpc = admin.getReplicationPeerConfig(ID_ONE).get();
     Map<TableName, List<String>> tableCfs = new HashMap<>();
     tableCfs.put(tableName1, new ArrayList<>());
-    rpc.setTableCFsMap(tableCfs);
+    rpc = ReplicationPeerConfig.newBuilder(rpc).setTableCFsMap(tableCfs).build();
     try {
       admin.updateReplicationPeerConfig(ID_ONE, rpc).join();
       fail(
@@ -433,12 +427,12 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     rpc = admin.getReplicationPeerConfig(ID_ONE).get();
     tableCfs.clear();
     tableCfs.put(tableName2, new ArrayList<>());
-    rpc.setTableCFsMap(tableCfs);
+    rpc = ReplicationPeerConfig.newBuilder(rpc).setTableCFsMap(tableCfs).build();
     admin.updateReplicationPeerConfig(ID_ONE, rpc).get();
     rpc = admin.getReplicationPeerConfig(ID_ONE).get();
     namespaces.clear();
     namespaces.add(ns2);
-    rpc.setNamespaces(namespaces);
+    rpc = ReplicationPeerConfig.newBuilder(rpc).setNamespaces(namespaces).build();
     try {
       admin.updateReplicationPeerConfig(ID_ONE, rpc).join();
       fail(
@@ -452,14 +446,13 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testPeerBandwidth() throws Exception {
-    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-    rpc.setClusterKey(KEY_ONE);
+    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE).build();
 
     admin.addReplicationPeer(ID_ONE, rpc).join();
     rpc = admin.getReplicationPeerConfig(ID_ONE).get();
     assertEquals(0, rpc.getBandwidth());
 
-    rpc.setBandwidth(2097152);
+    rpc = ReplicationPeerConfig.newBuilder(rpc).setBandwidth(2097152).build();
     admin.updateReplicationPeerConfig(ID_ONE, rpc).join();
     assertEquals(2097152, admin.getReplicationPeerConfig(ID_ONE).join().getBandwidth());
 
