@@ -26,7 +26,6 @@ import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.c
 
 import com.lmax.disruptor.RingBuffer;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Scope;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -571,6 +570,35 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return rollWriter(false);
   }
 
+  @Override
+  public final void sync() throws IOException {
+    sync(useHsync);
+  }
+
+  @Override
+  public final void sync(long txid) throws IOException {
+    sync(txid, useHsync);
+  }
+
+  @Override
+  public final void sync(boolean forceSync) throws IOException {
+    TraceUtil.trace(() -> {
+      doSync(forceSync);
+      return null;
+    }, () -> createSpan("WAL.sync"));
+  }
+
+  @Override
+  public final void sync(long txid, boolean forceSync) throws IOException {
+    TraceUtil.trace(() -> {
+      doSync(txid, forceSync);
+      return null;
+    }, () -> createSpan("WAL.sync"));
+  }
+
+  protected abstract void doSync(boolean forceSync) throws IOException;
+
+  protected abstract void doSync(long txid, boolean forceSync) throws IOException;
   /**
    * This is a convenience method that computes a new filename with a given file-number.
    * @param filenum to use
@@ -672,7 +700,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         this.sequenceIdAccounting.findLower(firstWALEntry.getValue().encodedName2HighestSequenceId);
     }
     if (regions != null) {
-      List<String> listForPrint = new ArrayList();
+      List<String> listForPrint = new ArrayList<>();
       for (Map.Entry<byte[], List<byte[]>> r : regions.entrySet()) {
         StringBuilder families = new StringBuilder();
         for (int i = 0; i < r.getValue().size(); i++) {
@@ -815,6 +843,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
   }
 
+  private Span createSpan(String name) {
+    return TraceUtil.createSpan(name).setAttribute(TraceUtil.WAL_IMPL, implClassName);
+  }
+
   /**
    * Cleans up current writer closing it and then puts in place the passed in {@code nextWriter}.
    * <p/>
@@ -832,13 +864,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * @throws IOException if there is a problem flushing or closing the underlying FS
    */
   Path replaceWriter(Path oldPath, Path newPath, W nextWriter) throws IOException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("FSHFile.replaceWriter").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    return TraceUtil.trace(() -> {
       doReplaceWriter(oldPath, newPath, nextWriter);
       return newPath;
-    } finally {
-      span.end();
-    }
+    }, () -> createSpan("WAL.replaceWriter"));
   }
 
   protected final void blockOnSync(SyncFuture syncFuture) throws IOException {
@@ -876,8 +905,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return ioe;
   }
 
-  @Override
-  public Map<byte[], List<byte[]>> rollWriter(boolean force) throws IOException {
+  private Map<byte[], List<byte[]>> rollWriterInternal(boolean force) throws IOException {
     rollWriterLock.lock();
     try {
       if (this.closed) {
@@ -888,8 +916,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         return null;
       }
       Map<byte[], List<byte[]>> regionsToFlush = null;
-      Span span = TraceUtil.getGlobalTracer().spanBuilder("FSHLog.rollWriter").startSpan();
-      try (Scope scope = span.makeCurrent()) {
+      try {
         Path oldPath = getOldPath();
         Path newPath = getNewPath();
         // Any exception from here on is catastrophic, non-recoverable so we currently abort.
@@ -914,15 +941,18 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         // If the underlying FileSystem can't do what we ask, treat as IO failure so
         // we'll abort.
         throw new IOException(
-            "Underlying FileSystem can't meet stream requirements. See RS log " + "for details.",
-            exception);
-      } finally {
-        span.end();
+          "Underlying FileSystem can't meet stream requirements. See RS log " + "for details.",
+          exception);
       }
       return regionsToFlush;
     } finally {
       rollWriterLock.unlock();
     }
+  }
+
+  @Override
+  public Map<byte[], List<byte[]>> rollWriter(boolean force) throws IOException {
+    return TraceUtil.trace(() -> rollWriterInternal(force), () -> createSpan("WAL.rollWriter"));
   }
 
   // public only until class moves to o.a.h.h.wal
@@ -1099,7 +1129,6 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
           .append(TimeUnit.NANOSECONDS.toMillis(timeInNanos))
           .append(" ms, current pipeline: ")
           .append(Arrays.toString(getPipeline())).toString();
-      Span.current().addEvent(msg);
       LOG.info(msg);
       if (timeInNanos > this.rollOnSyncNs) {
         // A single sync took too long.
@@ -1122,8 +1151,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   protected final long stampSequenceIdAndPublishToRingBuffer(RegionInfo hri, WALKeyImpl key,
-    WALEdit edits, boolean inMemstore, RingBuffer<RingBufferTruck> ringBuffer)
-    throws IOException {
+    WALEdit edits, boolean inMemstore, RingBuffer<RingBufferTruck> ringBuffer) throws IOException {
     if (this.closed) {
       throw new IOException(
         "Cannot append; log is closed, regionName = " + hri.getRegionNameAsString());
@@ -1135,14 +1163,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     long txid = txidHolder.longValue();
     ServerCall<?> rpcCall = RpcServer.getCurrentCall().filter(c -> c instanceof ServerCall)
       .filter(c -> c.getCellScanner() != null).map(c -> (ServerCall) c).orElse(null);
-    Span span = TraceUtil.getGlobalTracer().spanBuilder(implClassName + ".append").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    try {
       FSWALEntry entry = new FSWALEntry(txid, key, edits, hri, inMemstore, rpcCall);
       entry.stampRegionSequenceId(we);
       ringBuffer.get(txid).load(entry);
     } finally {
       ringBuffer.publish(txid);
-      span.end();
     }
     return txid;
   }
@@ -1176,13 +1202,14 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   @Override
   public long appendData(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException {
-    return append(info, key, edits, true);
+    return TraceUtil.trace(() -> append(info, key, edits, true),
+      () -> createSpan("WAL.appendData"));
   }
 
   @Override
-  public long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits)
-    throws IOException {
-    return append(info, key, edits, false);
+  public long appendMarker(RegionInfo info, WALKeyImpl key, WALEdit edits) throws IOException {
+    return TraceUtil.trace(() -> append(info, key, edits, false),
+      () -> createSpan("WAL.appendMarker"));
   }
 
   /**
