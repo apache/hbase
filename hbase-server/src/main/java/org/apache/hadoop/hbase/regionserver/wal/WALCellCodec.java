@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.io.IOUtils;
@@ -179,6 +180,22 @@ public class WALCellCodec implements Codec {
         throw new IOException("Missing dictionary entry for index " + dictIdx);
       }
       return entry;
+    }
+  }
+
+  static class NoneCompressor implements ByteStringCompressor {
+
+    @Override
+    public ByteString compress(byte[] data, Dictionary dict) {
+      return ByteStringer.wrap(data);
+    }
+  }
+
+  static class NoneUncompressor implements ByteStringUncompressor {
+
+    @Override
+    public byte[] uncompress(ByteString data, Dictionary dictIndex) {
+      return data.toByteArray();
     }
   }
 
@@ -360,5 +377,13 @@ public class WALCellCodec implements Codec {
   public ByteStringUncompressor getByteStringUncompressor() {
     // TODO: ideally this should also encapsulate compressionContext
     return this.statelessUncompressor;
+  }
+
+  public static ByteStringCompressor getNoneCompressor() {
+    return new NoneCompressor();
+  }
+
+  public static ByteStringUncompressor getNoneUncompressor() {
+    return new NoneUncompressor();
   }
 }
