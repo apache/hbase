@@ -107,17 +107,15 @@ public class ReplicationProtbufUtil {
     // Accumulate all the KVs seen in here.
     List<List<? extends Cell>> allCells = new ArrayList<List<? extends Cell>>(entries.length);
     int size = 0;
-    WALProtos.FamilyScope.Builder scopeBuilder = WALProtos.FamilyScope.newBuilder();
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();
     AdminProtos.ReplicateWALEntryRequest.Builder builder =
       AdminProtos.ReplicateWALEntryRequest.newBuilder();
-    HBaseProtos.UUID.Builder uuidBuilder = HBaseProtos.UUID.newBuilder();
     for (Entry entry: entries) {
       entryBuilder.clear();
       WALKey key = entry.getKey();
       WALProtos.WALKey.Builder keyBuilder;
       try {
-        keyBuilder = entry.getKey().getBuilder(WALCellCodec.getNoneCompressor());
+        keyBuilder = key.getBuilder(WALCellCodec.getNoneCompressor());
       } catch (IOException e) {
         throw new IOException(
           "There should not throw exception since NoneCompressor do not throw any exceptions", e);
