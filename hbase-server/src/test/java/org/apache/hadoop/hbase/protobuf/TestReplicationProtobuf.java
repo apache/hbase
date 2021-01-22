@@ -21,13 +21,25 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -57,20 +69,54 @@ public class TestReplicationProtobuf {
     all.add(b);
     all.add(c);
     CellScanner scanner = ReplicationProtbufUtil.getCellScanner(all, 0);
-    testAdvancetHasSameRow(scanner, akv);
+    testAdvanceHasSameRow(scanner, akv);
     // Skip over aa
     scanner.advance();
     // Skip over aaa
     scanner.advance();
-    testAdvancetHasSameRow(scanner, bkv);
-    testAdvancetHasSameRow(scanner, ckv);
+    testAdvanceHasSameRow(scanner, bkv);
+    testAdvanceHasSameRow(scanner, ckv);
     assertFalse(scanner.advance());
   }
 
-  private void testAdvancetHasSameRow(CellScanner scanner, final KeyValue kv) throws IOException {
+  private void testAdvanceHasSameRow(CellScanner scanner, final KeyValue kv) throws IOException {
     scanner.advance();
     assertTrue(Bytes.equals(scanner.current().getRowArray(), scanner.current().getRowOffset(),
         scanner.current().getRowLength(),
       kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
+  }
+
+  @Test
+  public void testWALEntryProtobufConstruction() throws Exception {
+    byte[] encodedRegionName = Bytes.toBytes("region");
+    TableName tableName = TableName.valueOf("table");
+    long ts =  EnvironmentEdgeManager.currentTime();
+    MultiVersionConcurrencyControl mvcc = null;
+    Map<String, byte[]> extendedAttributes = new HashMap<String, byte[]>(1);
+    String attrKey = "attr";
+    byte[] attrValue = Bytes.toBytes("attrVal");
+    extendedAttributes.put(attrKey, attrValue);
+    WALKey key = new WALKey(encodedRegionName, tableName, ts, mvcc, extendedAttributes);
+    Cell cell = CellUtil.createCell(Bytes.toBytes("row"), Bytes.toBytes("f"), Bytes.toBytes("q"),
+      ts, KeyValue.Type.Put.getCode(), Bytes.toBytes("val"));
+    WALEdit edit = new WALEdit(1);
+    edit.add(cell);
+    WAL.Entry entry = new WAL.Entry(key, edit);
+
+    Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> pair =
+      ReplicationProtbufUtil.buildReplicateWALEntryRequest(new WAL.Entry[] {entry});
+    AdminProtos.ReplicateWALEntryRequest request = pair.getFirst();
+    AdminProtos.WALEntry protoWALEntry = request.getEntry(0);
+    WALProtos.WALKey protoWALKey = protoWALEntry.getKey();
+    assertArrayEquals(encodedRegionName, protoWALKey.getEncodedRegionName().toByteArray());
+    assertEquals(tableName, TableName.valueOf(protoWALKey.getTableName().toByteArray()));
+    assertEquals(ts, protoWALKey.getWriteTime());
+    assertEquals(extendedAttributes.size(), protoWALKey.getExtendedAttributesCount());
+    for (WALProtos.Attribute attr : protoWALKey.getExtendedAttributesList()) {
+      assertArrayEquals(extendedAttributes.get(attr.getKey()), attr.getValue().toByteArray());
+    }
+    //the WALEdit's cells don't go on the protobuf; they're in a cell block
+    // elsewhere in the RPC protocol. We just mark the cell count
+    assertEquals(edit.size(), protoWALEntry.getAssociatedCellCount());
   }
 }
