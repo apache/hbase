@@ -103,15 +103,15 @@ class CustomFSHLog extends FSHLog {
   }
 
   @Override
-  public void sync(boolean forceSync) throws IOException {
+  protected void doSync(boolean forceSync) throws IOException {
     syncFlag = forceSync;
-    super.sync(forceSync);
+    super.doSync(forceSync);
   }
 
   @Override
-  public void sync(long txid, boolean forceSync) throws IOException {
+  protected void doSync(long txid, boolean forceSync) throws IOException {
     syncFlag = forceSync;
-    super.sync(txid, forceSync);
+    super.doSync(txid, forceSync);
   }
 
   void resetSyncFlag() {
