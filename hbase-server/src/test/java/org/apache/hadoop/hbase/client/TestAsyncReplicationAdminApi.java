@@ -175,7 +175,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testAppendPeerTableCFs() throws Exception {
-    ReplicationPeerConfig rpc1 = ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE).build();
+    ReplicationPeerConfigBuilder rpcBuilder =
+      ReplicationPeerConfig.newBuilder().setClusterKey(KEY_ONE);
     final TableName tableName1 = TableName.valueOf(tableName.getNameAsString() + "t1");
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "t2");
     final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "t3");
@@ -184,9 +185,9 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     final TableName tableName6 = TableName.valueOf(tableName.getNameAsString() + "t6");
 
     // Add a valid peer
-    admin.addReplicationPeer(ID_ONE, rpc1).join();
-    rpc1 = ReplicationPeerConfig.newBuilder(rpc1).setReplicateAllUserTables(false).build();
-    admin.updateReplicationPeerConfig(ID_ONE, rpc1).join();
+    admin.addReplicationPeer(ID_ONE, rpcBuilder.build()).join();
+    rpcBuilder.setReplicateAllUserTables(false);
+    admin.updateReplicationPeerConfig(ID_ONE, rpcBuilder.build()).join();
 
     Map<TableName, List<String>> tableCFs = new HashMap<>();
 
