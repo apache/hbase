@@ -3056,7 +3056,8 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preUpdateReplicationPeerConfig(
-          ObserverContextImpl.createAndPrepare(CP_ENV), "test", new ReplicationPeerConfig());
+          ObserverContextImpl.createAndPrepare(CP_ENV), "test",
+          ReplicationPeerConfig.newBuilder().build());
         return null;
       }
     };
